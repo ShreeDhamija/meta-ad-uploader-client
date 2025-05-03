@@ -36,7 +36,7 @@ export default function Login() {
                     <Button
                         onClick={handleFacebookLogin}
                         variant="secondary"
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md"
+                        className="w-full bg-black hover:bg-blue-700 text-white rounded-xl shadow-md"
                     >
                         Login with Facebook
                     </Button>
