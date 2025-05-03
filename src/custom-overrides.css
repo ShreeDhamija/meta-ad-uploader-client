@@ -1,0 +1,43 @@
+/* 1. Remove blue outline on focus for popover/combobox components */
+html body #root [role="combobox"]:focus,
+html body #root [role="combobox"]:focus-visible,
+html body #root button[role="combobox"]:focus,
+html body #root button[role="combobox"]:focus-visible,
+html body #root .popover-trigger:focus,
+html body #root .popover-trigger:focus-visible,
+html body #root button:focus,
+html body #root button:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+    border-color: rgba(209, 213, 219, 1) !important;
+    /* gray-300 */
+}
+
+/* 2. Override autofill styling for input fields */
+html body #root input:-webkit-autofill,
+html body #root input:-webkit-autofill:hover,
+html body #root input:-webkit-autofill:focus,
+html body #root input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: rgba(0, 0, 0, 0.87) !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+    background-color: white !important;
+}
+
+/* For Firefox */
+html body #root input:autofill {
+    background-color: white !important;
+    color: rgba(0, 0, 0, 0.87) !important;
+}
+
+/* 3. Reset text selection color to browser default */
+html body #root *::selection {
+    background-color: Highlight !important;
+    color: HighlightText !important;
+}
+
+/* For Firefox */
+html body #root *::-moz-selection {
+    background-color: Highlight !important;
+    color: HighlightText !important;
+}

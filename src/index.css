@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn theme variables */
+    background-color: #f2f2f2;
+    background-image: radial-gradient(#d7d7d7 0.9px, #f0f0f0 0.9px);
+    background-size: 18px 18px;
+  }
+
+  .dark {
+    /* shadcn dark theme variables */
+  }
+
+  * {}
+
+  body {
+    background-color: #f2f2f2;
+    background-image: radial-gradient(#d7d7d7 0.9px, #f0f0f0 0.9px);
+    background-size: 18px 18px;
+    @apply text-foreground;
+  }
+
+  .bg-popover {
+    background-color: transparent !important;
+  }
+}
