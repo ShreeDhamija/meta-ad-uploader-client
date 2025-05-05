@@ -78,7 +78,7 @@ export default function ViewAds() {
                         </SelectTrigger>
                         <SelectContent className="bg-white rounded-xl">
                             {adAccounts.map((account) => (
-                                <SelectItem key={account.id} value={account.id}>
+                                <SelectItem key={account.id} value={account.id} className="rounded-lg">
                                     {account.name}
                                 </SelectItem>
                             ))}
