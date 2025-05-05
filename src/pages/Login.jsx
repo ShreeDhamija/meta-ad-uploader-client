@@ -31,7 +31,7 @@ export default function Login() {
                             className=" shadom-sm w-[48px] h-[48px] mx-auto rounded-md mb-2"
                         />
                         <h2 className="text-2xl font-bold tracking-tight">Welcome back</h2>
-                        <p className="text-sm text-muted-foreground">Login with your social account</p>
+                        <p className="text-sm text-muted-foreground">Login with your facebook account</p>
                     </div>
                     <Button
                         onClick={handleFacebookLogin}
