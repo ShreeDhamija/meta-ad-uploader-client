@@ -10,6 +10,8 @@ export default function ViewAds() {
     const [selectedAdAccountId, setSelectedAdAccountId] = useState("");
     const [previews, setPreviews] = useState([]);
     const [loadingPreviews, setLoadingPreviews] = useState(false);
+    const [loadedPreviews, setLoadedPreviews] = useState({});
+
 
     useEffect(() => {
         async function fetchAdAccounts() {
@@ -20,7 +22,7 @@ export default function ViewAds() {
                 });
                 const data = await response.json();
                 if (data.adAccounts) {
-                    setAdAccounts(data.adAccounts);
+                    setAdAccounts(data.adAccounts.reverse());
                     if (data.adAccounts.length > 0) {
                         setSelectedAdAccountId(data.adAccounts[0].id);
                     }
