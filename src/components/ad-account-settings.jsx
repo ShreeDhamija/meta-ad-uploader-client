@@ -48,12 +48,12 @@ export default function AdAccountSettings({
   const [openDuplicateAdSet, setOpenDuplicateAdSet] = useState(false)
   const [duplicateAdSetSearchValue, setDuplicateAdSetSearchValue] = useState("")
   const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
-  console.log("🔍 selectedCampaignData", selectedCampaignData);
+  //console.log("🔍 selectedCampaignData", selectedCampaignData);
 
   const isAdvantagePlusCampaign = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"].includes(
     selectedCampaignData?.smart_promotion_type
   );
-  console.log("🛑 isAdvantagePlusCampaign:", isAdvantagePlusCampaign);
+  //console.log("🛑 isAdvantagePlusCampaign:", isAdvantagePlusCampaign);
 
 
   const sortCampaigns = (campaigns) => {
@@ -106,9 +106,9 @@ export default function AdAccountSettings({
         }
 
         const sortedCampaigns = sortCampaigns(data.campaigns);
-        console.log("📦 Fetched campaigns from server:", data.campaigns);
+        //console.log("📦 Fetched campaigns from server:", data.campaigns);
         setCampaigns(sortedCampaigns);
-        console.log("🧠 setCampaigns with:", sortedCampaigns);
+        //console.log("🧠 setCampaigns with:", sortedCampaigns);
 
 
       }
