@@ -36,10 +36,16 @@ export default function Login() {
                     <Button
                         onClick={handleFacebookLogin}
                         variant="secondary"
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-md"
+                        className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
                     >
+                        <img
+                            src="https://meta-ad-uploader-server-production.up.railway.app/facebooklogo.png"
+                            alt="Facebook"
+                            className="w-5 h-5"
+                        />
                         Login with Facebook
                     </Button>
+
 
                     <div className="relative">
                         <div className="absolute inset-0 flex items-center">
