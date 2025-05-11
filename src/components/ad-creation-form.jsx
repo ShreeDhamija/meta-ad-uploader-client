@@ -676,7 +676,7 @@ export default function AdCreationForm({
             <div className="space-y-2">
               <Label htmlFor="adName">Ad Name (Internal Name)</Label>
               <br />
-              <Label className="text-gray-600 text-[12px] leading-5">
+              <Label className="text-gray-500 text-[12px] leading-5 font-normal">
                 You can generate an ad name from the properties below or enter custom text
               </Label>
 
@@ -874,7 +874,10 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="link">Link (URL)</Label>
+              <Label htmlFor="Link (URL)">Link (URL)</Label>
+              <p className="text-gray-500 text-[12px] font-regular">
+                Your UTMs will be auto applied from your Configuration Settings
+              </p>
               <Input
                 id="link"
                 type="url"
@@ -985,10 +988,10 @@ export default function AdCreationForm({
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating Ads...
+                Publishing Ads...
               </>
             ) : (
-              "Create Ad"
+              "Publish Ads"
             )}
           </Button>
         </form>

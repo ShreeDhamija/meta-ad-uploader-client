@@ -435,7 +435,7 @@ export default function AdAccountSettings({
 
           <div className="space-y-2 ">
             <div className="flex items-center justify-between">
-              <Label>Create a new or select existing Ad Sets to launch in</Label>
+              <Label>Launch in a new or existing ad set</Label>
               <RefreshCcw
                 className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
                 onClick={refreshAdSets}
@@ -454,7 +454,7 @@ export default function AdAccountSettings({
                     ? "Posting to a New Ad Set"
                     : selectedAdSets.length > 0
                       ? `${selectedAdSets.length} AdSet${selectedAdSets.length > 1 ? "s" : ""} selected`
-                      : "Select AdSets"}
+                      : "Select Ad Sets"}
 
                   <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                 </Button>
@@ -491,7 +491,7 @@ export default function AdAccountSettings({
                           }}
                           className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 !bg-gray-100"
                         >
-                          <span className="text-sm font-semibold">+ Post to a New Ad Set</span>
+                          <span className="text-sm font-semibold">+ Launch in a New Ad Set</span>
                         </CommandItem>
                       )}
                     </CommandGroup>
@@ -549,7 +549,9 @@ export default function AdAccountSettings({
                   <X className="h-3 w-3 text-gray-700" />
                 </button>
                 <div className="flex-1 space-y-2">
-                  <Label htmlFor="duplicateAdSet">Select an Ad Set to Duplicate</Label>
+                  <Label htmlFor="duplicateAdSet">Select an ad set shell to duplicate</Label>
+                  <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative”</Label>
+
                   <Popover open={openDuplicateAdSet} onOpenChange={setOpenDuplicateAdSet}>
                     <PopoverTrigger asChild>
                       <Button

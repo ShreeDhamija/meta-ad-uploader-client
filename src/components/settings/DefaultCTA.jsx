@@ -27,13 +27,19 @@ export default function DefaultCTA({ defaultCTA, setDefaultCTA }) {
     return (
         <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-4 w-full max-w-3xl">
             {/* Section Header */}
-            <div className="flex items-center gap-2">
-                <img
-                    src="https://meta-ad-uploader-server-production.up.railway.app/icons/cta.svg"
-                    alt="CTA icon"
-                    className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
-                />
-                <span className="text-sm font-medium">Default CTA</span>
+            <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                    <img
+                        src="https://meta-ad-uploader-server-production.up.railway.app/icons/cta.svg"
+                        alt="CTA icon"
+                        className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
+                    />
+                    <span className="text-sm font-medium">Default CTA</span>
+
+                </div>
+                <p className="text-gray-500 text-[12px] font-regular">
+                    Your ads will use this CTA by default if not edited while posting
+                </p>
             </div>
 
             {/* Dropdown */}

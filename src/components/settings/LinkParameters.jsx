@@ -55,7 +55,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
 
             {/* Default Link */}
             <div className="space-y-1">
-                <label className="text-sm font-semibold">Default Link</label>
+                <label className="text-sm font-semibold">Default Ad Landing Page Link</label>
                 <p className="text-xs text-gray-500">
                     Your ads will lead to this link by default if not edited while posting
                 </p>

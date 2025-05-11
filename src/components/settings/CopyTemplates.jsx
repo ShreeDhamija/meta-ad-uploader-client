@@ -122,8 +122,8 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
             <span className="text-sm font-medium text-zinc-950">Copy Templates</span>
           </div>
           <p className="text-xs text-gray-500 leading-tight">
-            You can add multiple text options to use in dynamic creatives.<br />
-            Using a template for non dynamic creative will only pull the first text options added
+            Add up to 5 Primary Texts and Headlines below, <br>
+            </br>Then save as a template to easily add to your ads in the future
           </p>
         </div>
 

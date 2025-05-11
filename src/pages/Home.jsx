@@ -64,10 +64,10 @@ export default function Home() {
     if (authLoading) return null; // or a loading spinner if you want
 
     useEffect(() => {
-        if (!isLoggedIn) {
-            navigate("/login");
-            return;
-        }
+        // if (!isLoggedIn) {
+        //     navigate("/login");
+        //     return;
+        // }
 
         const { values, order } = adNameFormula;
 
