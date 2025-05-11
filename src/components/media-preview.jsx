@@ -4,6 +4,7 @@ import { Trash } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
+import { Label } from "@radix-ui/react-label"
 
 export default function MediaPreview({ files, setFiles, videoThumbs }) {
   const removeFile = (name) => {
@@ -29,6 +30,7 @@ export default function MediaPreview({ files, setFiles, videoThumbs }) {
               <CardDescription className="text-left">
                 {`${files.length} file${files.length > 1 ? "s" : ""} selected`}
               </CardDescription>
+              <Label className="text-gray-500 text-[12px] font-regular">All media will be posted as a new ad unless posting to a dynamic ad set</Label>
             </div>
             <Button
               variant="destructive"
