@@ -550,7 +550,7 @@ export default function AdAccountSettings({
                 </button>
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="duplicateAdSet" className="block" >Select an ad set shell to duplicate</Label>
-                  <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative”</Label>
+                  <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
 
                   <Popover open={openDuplicateAdSet} onOpenChange={setOpenDuplicateAdSet}>
                     <PopoverTrigger asChild>

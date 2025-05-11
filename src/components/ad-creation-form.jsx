@@ -957,7 +957,8 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-2">
-              <Label>Upload Media</Label>
+              <Label className="block">Upload Media</Label>
+              <Label className="text-gray-500 text-[12px] font-regular">All media will be posted as a new ad set unless posting to a dynamic ad set</Label>
               <div
                 {...getRootProps()}
                 className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"

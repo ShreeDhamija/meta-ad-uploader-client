@@ -30,7 +30,6 @@ export default function MediaPreview({ files, setFiles, videoThumbs }) {
               <CardDescription className="text-left">
                 {`${files.length} file${files.length > 1 ? "s" : ""} selected`}
               </CardDescription>
-              <Label className="text-gray-500 text-[12px] font-regular">All media will be posted as a new ad unless posting to a dynamic ad set</Label>
             </div>
             <Button
               variant="destructive"
