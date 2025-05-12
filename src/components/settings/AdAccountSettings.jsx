@@ -52,10 +52,10 @@ export default function AdAccountSettings() {
   });
 
 
-  const filteredAccounts = adAccounts.filter((acct) =>
-    (acct.name?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
-    acct.id.toLowerCase().includes(searchValue.toLowerCase())
-  );
+  // const filteredAccounts = adAccounts.filter((acct) =>
+  //   (acct.name?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
+  //   acct.id.toLowerCase().includes(searchValue.toLowerCase())
+  // );
 
 
 
@@ -93,59 +93,6 @@ export default function AdAccountSettings() {
       {/* Ad Account Dropdown */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-600">Select Ad Account</label>
-        {/* <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              className="w-full justify-between rounded-xl bg-white shadow-sm hover:bg-white"
-            >
-              {selectedAdAccount
-                ? adAccounts.find((acct) => acct.id === selectedAdAccount)?.name || selectedAdAccount
-                : "Select an Ad Account"}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
-            align="start"
-            sideOffset={4}
-          >
-            <Command loop={false}>
-              <CommandInput
-                placeholder="Search ad accounts..."
-                value={searchValue}
-                onValueChange={setSearchValue}
-              />
-              <CommandList
-                className="max-h-[500px] overflow-y-auto"
-                selectOnFocus={false}
-              >
-                {adAccounts
-                  .filter((acct) =>
-                    (acct.name?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
-                    (acct.id?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
-                  )
-                  .map((acct) => (
-                    <CommandItem
-                      key={acct.id}
-                      value={acct.id}
-                      onSelect={() => {
-                        setSelectedAdAccount(acct.id)
-                        setOpenAdAccount(false)
-                      }}
-                      className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
-                    >
-                      {acct.name || acct.id}
-                    </CommandItem>
-                  ))}
-              </CommandList>
-            </Command>
-
-
-
-          </PopoverContent>
-        </Popover> */}
         <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
           <PopoverTrigger asChild>
             <Button
@@ -165,6 +112,46 @@ export default function AdAccountSettings() {
             sideOffset={4}
           >
             <Command
+              filter={() => 1}
+              loop={false}
+              defaultValue={selectedAdAccount}
+            >
+              <CommandInput
+                placeholder="Search ad accounts..."
+                value={searchValue}
+                onValueChange={setSearchValue}
+              />
+              <CommandEmpty>No ad account found.</CommandEmpty>
+              <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                <CommandGroup>
+                  {adAccounts
+                    .filter((acct) =>
+                      (acct.name?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
+                      acct.id.toLowerCase().includes(searchValue.toLowerCase())
+                    )
+                    .map((acct) => (
+                      <CommandItem
+                        key={acct.id}
+                        value={acct.id}
+                        onSelect={() => {
+                          setSelectedAdAccount(acct.id)
+                          setOpenAdAccount(false)
+                        }}
+                        className={`
+              px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150
+              ${selectedAdAccount === acct.id ? "bg-gray-100 font-semibold" : ""}
+              hover:bg-gray-100
+            `}
+                        data-selected={acct.id === selectedAdAccount}
+                      >
+                        {acct.name || acct.id}
+                      </CommandItem>
+                    ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+
+            {/* <Command
               filter={(value, search) => 1}
               loop={false}
               defaultValue={selectedAdAccount}
@@ -203,7 +190,7 @@ export default function AdAccountSettings() {
                   )}
                 </CommandGroup>
               </CommandList>
-            </Command>
+            </Command> */}
           </PopoverContent>
         </Popover>
 
