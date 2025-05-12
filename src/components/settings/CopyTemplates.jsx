@@ -283,9 +283,13 @@ export default function CopyTemplates({
                 setCopyTemplates(settings.copyTemplates || {});
                 setDefaultTemplateName(settings.defaultTemplateName || "");
                 setSelectedTemplate(templateName);
-
+                if (settings.copyTemplates?.[templateName]) {
+                  setSelectedTemplate(templateName);
+                } else {
+                  setSelectedTemplate(settings.defaultTemplateName || "");
+                }
                 // You can optionally update the entire settings object too
-                setSettings(settings);
+                //setSettings(settings);
 
               } catch (err) {
                 toast.error("Failed to set default: " + err.message);
