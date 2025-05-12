@@ -491,7 +491,7 @@ export default function AdAccountSettings({
                           }}
                           className={`
                             h-10 w-full px-4 py-3 m-1 rounded-xl 
-                            !bg-zinc-700 !text-white shadow-sm 
+                            !bg-zinc-700 !text-white shadow-md 
                             flex items-center justify-center 
                             text-sm font-semibold cursor-pointer 
                             transition-all duration-150 hover:!bg-black
@@ -566,7 +566,7 @@ export default function AdAccountSettings({
                         aria-expanded={openDuplicateAdSet}
                         disabled={!isLoggedIn || adSets.length === 0}
                         style={{ maxWidth: "450px" }}
-                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow !max-w-[450px] overflow-hidden whitespace-nowrap "
+                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow !max-w-[450px] overflow-hidden whitespace-nowrap hover:!bg-white"
                       >
                         <div className="w-full overflow-hidden">
                           <span className="block truncate flex-1 text-left">
