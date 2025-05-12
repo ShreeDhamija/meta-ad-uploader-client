@@ -14,16 +14,11 @@ import { saveCopyTemplate } from "@/lib/saveCopyTemplate";
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate";
 import { Textarea } from "../ui/textarea"
 
-
-
-
 export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCopyTemplates, defaultTemplateName, setDefaultTemplateName, }) {
   const [templateName, setTemplateName] = useState("")
   const [selectedTemplate, setSelectedTemplate] = useState("Default Template")
   const [primaryTexts, setPrimaryTexts] = useState([""])
   const [headlines, setHeadlines] = useState([""])
-  const [hasAutoSelected, setHasAutoSelected] = useState(false);
-
 
   const handleAdd = (setter, state) => {
     if (state.length < 5) setter([...state, ""])
@@ -79,64 +74,6 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
     }
   }, [selectedTemplate]);
 
-  // useEffect(() => {
-  //   if (!copyTemplates || hasAutoSelected) return;
-
-  //   const keys = Object.keys(copyTemplates);
-  //   if (keys.length === 0) {
-  //     setSelectedTemplate("");
-  //     setPrimaryTexts([""]);
-  //     setHeadlines([""]);
-  //     return;
-  //   }
-
-  //   const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
-  //     ? defaultTemplateName
-  //     : keys[0];
-
-  //   const selected = copyTemplates[initialTemplateName];
-  //   if (!selected) return;
-
-  //   setSelectedTemplate(initialTemplateName);
-  //   setTemplateName(selected.name);
-  //   setPrimaryTexts(selected.primaryTexts || [""]);
-  //   setHeadlines(selected.headlines || [""]);
-
-  //   setHasAutoSelected(true); // ✅ prevent repeat application
-  // }, [copyTemplates, defaultTemplateName]);
-
-  // useEffect(() => {
-
-  //   const keys = Object.keys(copyTemplates || {});
-  //   if (!selectedAdAccount || keys.length === 0) {
-  //     setSelectedTemplate("");
-  //     setTemplateName("");
-  //     setPrimaryTexts([""]);
-  //     setHeadlines([""]);
-  //     return;
-  //   }
-
-  //   if (copyTemplates[selectedTemplate]) return;
-
-
-  //   const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
-  //     ? defaultTemplateName
-  //     : keys[0];
-
-  //   const selected = copyTemplates[initialTemplateName];
-  //   if (selected) {
-  //     setSelectedTemplate(initialTemplateName);
-  //     setTemplateName(selected.name);
-  //     setPrimaryTexts(selected.primaryTexts || [""]);
-  //     setHeadlines(selected.headlines || [""]);
-  //   } else {
-  //     setSelectedTemplate("");
-  //     setTemplateName("");
-  //     setPrimaryTexts([""]);
-  //     setHeadlines([""]);
-  //   }
-  // }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
-
   useEffect(() => {
     if (!selectedAdAccount) return;
 
@@ -149,8 +86,14 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
       return;
     }
 
-    // ✅ Prevent overriding current template unless it's invalid
-    if (selectedTemplate && keys.includes(selectedTemplate)) return;
+    // If the current selectedTemplate exists in copyTemplates, keep it
+    if (selectedTemplate && keys.includes(selectedTemplate)) {
+      const selected = copyTemplates[selectedTemplate];
+      setTemplateName(selected.name);
+      setPrimaryTexts(selected.primaryTexts || [""]);
+      setHeadlines(selected.headlines || [""]);
+      return;
+    }
 
     const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
       ? defaultTemplateName
@@ -165,11 +108,8 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
     }
   }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
 
-
-
   return (
     <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
-      {/* Title + Dropdown Row */}
       {/* Title + Dropdown Row */}
       <div className="flex items-start justify-between mb-6">
         {/* Title + Description */}
@@ -183,31 +123,12 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
             <span className="text-sm font-medium text-zinc-950">Copy Templates</span>
           </div>
           <p className="text-xs text-gray-500 leading-tight">
-            Add up to 5 Primary Texts and Headlines below, <br>
-            </br>Then save as a template to easily add to your ads in the future
+            Add up to 5 Primary Texts and Headlines below, <br></br>
+            Then save as a template to easily add to your ads in the future
           </p>
         </div>
 
         {/* Dropdown */}
-        {/* <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-          <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
-            <SelectValue placeholder="Select a template" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
-            {Object.entries(copyTemplates)
-              .sort(([a], [b]) => {
-                if (a === defaultTemplateName) return -1;
-                if (b === defaultTemplateName) return 1;
-                return 0;
-              })
-              .map(([name]) => (
-                <SelectItem key={name} value={name} className="text-sm data-[state=checked]:rounded-lg 
-    data-[highlighted]:rounded-lg">
-                  {name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select> */}
         <Select
           value={Object.keys(copyTemplates).includes(selectedTemplate) ? selectedTemplate : ""}
           onValueChange={setSelectedTemplate}
@@ -230,10 +151,7 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
               ))}
           </SelectContent>
         </Select>
-
-
       </div>
-
 
       {/* Template Name */}
       <div className="space-y-1">
@@ -306,7 +224,6 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
         )}
       </div>
 
-
       {/* Save Button Row */}
       <div className="space-y-2 pt-2">
         <div>
@@ -334,7 +251,6 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
               ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
               : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
               }`}
-            //disabled={defaultTemplateName === selectedTemplate}
             onClick={async () => {
               if (!templateName.trim() || defaultTemplateName === selectedTemplate) return;
 
@@ -345,7 +261,7 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
                   headlines,
                 };
 
-                // ✅ Save to backend with default flag
+                // Save to backend with default flag
                 await saveCopyTemplate(
                   selectedAdAccount,
                   templateName,
@@ -353,34 +269,28 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
                   true
                 );
 
-                // ✅ Forcefully update copyTemplates and defaultTemplateName in one render
+                // Update copyTemplates and defaultTemplateName 
                 setCopyTemplates((prev) => ({
                   ...prev,
-                  [templateName]: updatedTemplate, // Use templateName to ensure consistency
-                }))
+                  [templateName]: updatedTemplate,
+                }));
 
-                setDefaultTemplateName(templateName)
+                setDefaultTemplateName(templateName);
 
-
-                // ✅ Fully reset UI state based on updated template
-                setSelectedTemplate(""); // trigger effect
-                setTimeout(() => {
-                  setSelectedTemplate(selectedTemplate); // re-select the same template
-                }, 0);
+                // Ensure the newly created default template remains selected
+                setSelectedTemplate(templateName);
 
                 toast.success("Set as default template");
               } catch (err) {
                 toast.error("Failed to set default: " + err.message);
               }
             }}
-
           >
             <CircleCheck className="w-4 h-4" />
             {defaultTemplateName === selectedTemplate
               ? "Default Template"
               : "Set as Default Template"}
           </Button>
-
 
           <Button
             variant="destructive"
@@ -404,8 +314,6 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
           </Button>
         </div>
       </div>
-
-
     </div>
   )
 }
