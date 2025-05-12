@@ -489,9 +489,15 @@ export default function AdAccountSettings({
                             setSelectedAdSets([]) // Clear any selected ad sets when choosing to create a new one
                             setOpenAdSet(false)
                           }}
-                          className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 !bg-gray-100"
+                          className={`
+                            h-14 w-full m-1 px-4 py-3 rounded-xl 
+                            bg-zinc-950 text-white shadow-md 
+                            flex items-center justify-center 
+                            text-sm font-semibold cursor-pointer 
+                            transition-all duration-150 hover:bg-black
+                          `}
                         >
-                          <span className="text-sm font-semibold">+ Launch in a New Ad Set</span>
+                          🚀 Launch in a New Ad Set
                         </CommandItem>
                       )}
                     </CommandGroup>
