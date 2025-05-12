@@ -93,7 +93,7 @@ export default function AdAccountSettings() {
       {/* Ad Account Dropdown */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-600">Select Ad Account</label>
-        <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
+        {/* <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -150,22 +150,42 @@ export default function AdAccountSettings() {
                 </CommandGroup>
               </CommandList>
             </Command>
+          </PopoverContent>
+        </Popover> */}
 
-            {/* <Command
-              filter={(value, search) => 1}
-              loop={false}
-              defaultValue={selectedAdAccount}
+        <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              className="w-full justify-between rounded-xl bg-white shadow-sm hover:bg-white"
             >
+              {selectedAdAccount
+                ? adAccounts.find((acct) => acct.id === selectedAdAccount)?.name || selectedAdAccount
+                : "Select an Ad Account"}
+              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+            align="start"
+            sideOffset={4}
+          >
+            <Command filter={() => 1} loop={false}>
               <CommandInput
                 placeholder="Search ad accounts..."
                 value={searchValue}
                 onValueChange={setSearchValue}
+                className="bg-white"
               />
-              <CommandEmpty>No ad account found.</CommandEmpty>
               <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                 <CommandGroup>
-                  {filteredAccounts.length > 0 ? (
-                    filteredAccounts.map((acct) => (
+                  {adAccounts
+                    .filter((acct) =>
+                      (acct.name?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
+                      acct.id.toLowerCase().includes(searchValue.toLowerCase())
+                    )
+                    .map((acct) => (
                       <CommandItem
                         key={acct.id}
                         value={acct.id}
@@ -182,17 +202,13 @@ export default function AdAccountSettings() {
                       >
                         {acct.name || acct.id}
                       </CommandItem>
-                    ))
-                  ) : (
-                    <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                      No ad account found.
-                    </CommandItem>
-                  )}
+                    ))}
                 </CommandGroup>
               </CommandList>
-            </Command> */}
+            </Command>
           </PopoverContent>
         </Popover>
+
 
       </div>
       <PageSelectors
