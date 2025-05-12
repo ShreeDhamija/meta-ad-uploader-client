@@ -79,12 +79,37 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
     }
   }, [selectedTemplate]);
 
-  useEffect(() => {
-    if (!copyTemplates || hasAutoSelected) return;
+  // useEffect(() => {
+  //   if (!copyTemplates || hasAutoSelected) return;
 
-    const keys = Object.keys(copyTemplates);
-    if (keys.length === 0) {
+  //   const keys = Object.keys(copyTemplates);
+  //   if (keys.length === 0) {
+  //     setSelectedTemplate("");
+  //     setPrimaryTexts([""]);
+  //     setHeadlines([""]);
+  //     return;
+  //   }
+
+  //   const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
+  //     ? defaultTemplateName
+  //     : keys[0];
+
+  //   const selected = copyTemplates[initialTemplateName];
+  //   if (!selected) return;
+
+  //   setSelectedTemplate(initialTemplateName);
+  //   setTemplateName(selected.name);
+  //   setPrimaryTexts(selected.primaryTexts || [""]);
+  //   setHeadlines(selected.headlines || [""]);
+
+  //   setHasAutoSelected(true); // ✅ prevent repeat application
+  // }, [copyTemplates, defaultTemplateName]);
+
+  useEffect(() => {
+    const keys = Object.keys(copyTemplates || {});
+    if (!selectedAdAccount || keys.length === 0) {
       setSelectedTemplate("");
+      setTemplateName("");
       setPrimaryTexts([""]);
       setHeadlines([""]);
       return;
@@ -95,15 +120,19 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
       : keys[0];
 
     const selected = copyTemplates[initialTemplateName];
-    if (!selected) return;
+    if (selected) {
+      setSelectedTemplate(initialTemplateName);
+      setTemplateName(selected.name);
+      setPrimaryTexts(selected.primaryTexts || [""]);
+      setHeadlines(selected.headlines || [""]);
+    } else {
+      setSelectedTemplate("");
+      setTemplateName("");
+      setPrimaryTexts([""]);
+      setHeadlines([""]);
+    }
+  }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
 
-    setSelectedTemplate(initialTemplateName);
-    setTemplateName(selected.name);
-    setPrimaryTexts(selected.primaryTexts || [""]);
-    setHeadlines(selected.headlines || [""]);
-
-    setHasAutoSelected(true); // ✅ prevent repeat application
-  }, [copyTemplates, defaultTemplateName]);
 
 
 
@@ -230,6 +259,7 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
           <Button
             className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
             onClick={handleSaveTemplate}
+            disabled={!templateName.trim()}
           >
             Save Template
           </Button>
