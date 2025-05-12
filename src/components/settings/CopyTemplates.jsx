@@ -313,21 +313,31 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
               }`}
             //disabled={defaultTemplateName === selectedTemplate}
             onClick={async () => {
-              if (defaultTemplateName === selectedTemplate) return;
+              if (!templateName.trim() || defaultTemplateName === selectedTemplate) return;
               try {
+                const updatedTemplate = {
+                  name: templateName,
+                  primaryTexts,
+                  headlines,
+                };
+
                 await saveCopyTemplate(
                   selectedAdAccount,
                   selectedTemplate,
-                  copyTemplates[selectedTemplate],
-                  true
+                  updatedTemplate,
+                  true // ✅ mark as default
                 );
+
+                // ✅ Ensure the saved template is reflected in state
                 setCopyTemplates((prev) => ({
                   ...prev,
-                  [selectedTemplate]: {
-                    ...copyTemplates[selectedTemplate],
-                  },
+                  [selectedTemplate]: updatedTemplate,
                 }));
+
+                // ✅ Update default name & stay selected
                 setDefaultTemplateName(selectedTemplate);
+                setSelectedTemplate(selectedTemplate);
+
                 toast.success("Set as default template");
               } catch (err) {
                 toast.error("Failed to set default: " + err.message);
