@@ -1,4 +1,164 @@
-import { useState, useEffect } from "react"
+// Add this at the top of the file
+import { useRef } from "react";
+
+export default function CopyTemplates({
+  selectedAdAccount,
+  copyTemplates,
+  setCopyTemplates,
+  defaultTemplateName,
+  setDefaultTemplateName,
+}) {
+  const [templateName, setTemplateName] = useState("")
+  const [selectedTemplate, setSelectedTemplate] = useState(defaultTemplateName || "")
+  const [primaryTexts, setPrimaryTexts] = useState([""])
+  const [headlines, setHeadlines] = useState([""])
+
+  // Ref to track component lifecycle and debugging
+  const renderCountRef = useRef(0);
+  const prevCopyTemplatesRef = useRef(copyTemplates);
+  const prevDefaultTemplateNameRef = useRef(defaultTemplateName);
+
+  // Extensive logging useEffect
+  useEffect(() => {
+    renderCountRef.current += 1;
+    console.group('CopyTemplates Component Update');
+    console.log('Render Count:', renderCountRef.current);
+    console.log('Selected Ad Account:', selectedAdAccount);
+    console.log('Current CopyTemplates:', copyTemplates);
+    console.log('Default Template Name:', defaultTemplateName);
+    console.log('Selected Template:', selectedTemplate);
+    console.log('Template Name:', templateName);
+    console.log('Primary Texts:', primaryTexts);
+    console.log('Headlines:', headlines);
+
+    // Track changes
+    if (prevCopyTemplatesRef.current !== copyTemplates) {
+      console.log('CopyTemplates CHANGED:', {
+        prev: prevCopyTemplatesRef.current,
+        current: copyTemplates
+      });
+      prevCopyTemplatesRef.current = copyTemplates;
+    }
+
+    if (prevDefaultTemplateNameRef.current !== defaultTemplateName) {
+      console.log('Default Template Name CHANGED:', {
+        prev: prevDefaultTemplateNameRef.current,
+        current: defaultTemplateName
+      });
+      prevDefaultTemplateNameRef.current = defaultTemplateName;
+    }
+
+    console.groupEnd();
+  });
+
+  // Synchronization effect for defaultTemplateName
+  useEffect(() => {
+    console.log('DefaultTemplateName Sync Effect Triggered', {
+      defaultTemplateName,
+      selectedTemplate,
+      copyTemplatesKeys: Object.keys(copyTemplates)
+    });
+
+    if (defaultTemplateName && (!selectedTemplate || !copyTemplates[selectedTemplate])) {
+      console.log('Updating selected template to default', defaultTemplateName);
+      setSelectedTemplate(defaultTemplateName);
+    }
+  }, [defaultTemplateName, copyTemplates]);
+
+  // Rest of the component remains the same, but I'll add logging to key methods
+
+  const handleSaveTemplate = async () => {
+    console.log('Save Template Called', {
+      templateName,
+      primaryTexts,
+      headlines,
+      selectedAdAccount
+    });
+
+    try {
+      const newTemplate = {
+        name: templateName,
+        primaryTexts,
+        headlines,
+      };
+
+      console.log('Attempting to save template to backend');
+      const saveResult = await saveCopyTemplate(selectedAdAccount, templateName, newTemplate);
+      console.log('Backend save result:', saveResult);
+
+      setCopyTemplates((prev) => {
+        const updated = {
+          ...prev,
+          [templateName]: newTemplate
+        };
+        console.log('Updated CopyTemplates after save:', updated);
+        return updated;
+      });
+
+      setSelectedTemplate(templateName);
+      toast.success("Template saved");
+    } catch (err) {
+      console.error('Save Template Error:', err);
+      toast.error("Failed to save template: " + err.message);
+    }
+  };
+
+  // Modify the Set as Default button handler
+  const handleSetDefault = async () => {
+    console.log('Set Default Called', {
+      templateName,
+      currentDefaultTemplate: defaultTemplateName,
+      selectedTemplate
+    });
+
+    if (!templateName.trim() || defaultTemplateName === selectedTemplate) {
+      console.log('Set default conditions not met');
+      return;
+    }
+
+    try {
+      const updatedTemplate = {
+        name: templateName,
+        primaryTexts,
+        headlines,
+      };
+
+      console.log('Attempting to set default template');
+
+      // Ensure template exists in copyTemplates
+      setCopyTemplates((prev) => {
+        const updated = { ...prev, [templateName]: updatedTemplate };
+        console.log('CopyTemplates before backend save:', updated);
+        return updated;
+      });
+
+      // Save to backend with default flag
+      const backendResult = await saveCopyTemplate(
+        selectedAdAccount,
+        templateName,
+        updatedTemplate,
+        true
+      );
+      console.log('Backend set default result:', backendResult);
+
+      // Update default template name
+      setDefaultTemplateName(templateName);
+
+      // Ensure the template remains selected
+      setSelectedTemplate(templateName);
+
+      toast.success("Set as default template");
+    } catch (err) {
+      console.error('Set Default Error:', err);
+      toast.error("Failed to set default: " + err.message);
+    }
+  };
+
+  // In the render method, replace the existing Set as Default button onClick with:
+  onClick = { handleSetDefault }
+
+  // Rest of the component remains the same
+} import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
