@@ -9,6 +9,8 @@ import { CirclePlus, CircleCheck, Trash2 } from "lucide-react"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import { Textarea } from "../ui/textarea"
+import useAdAccountSettings from "@/lib/useAdAccountSettings";
+
 
 export default function CopyTemplates({
   selectedAdAccount,
@@ -22,6 +24,7 @@ export default function CopyTemplates({
   const [primaryTexts, setPrimaryTexts] = useState([""])
   const [headlines, setHeadlines] = useState([""])
   const [hasAutoSelected, setHasAutoSelected] = useState(false)
+  const { setSettings } = useAdAccountSettings(selectedAdAccount);
 
   const handleAdd = (setter, state) => {
     if (state.length < 5) setter([...state, ""])
@@ -330,39 +333,43 @@ export default function CopyTemplates({
               }`}
             //disabled={defaultTemplateName === selectedTemplate}
             onClick={async () => {
-              if (!templateName.trim() || defaultTemplateName === selectedTemplate) return
+              if (!templateName.trim() || defaultTemplateName === selectedTemplate) return;
 
               try {
                 const updatedTemplate = {
                   name: templateName,
                   primaryTexts,
                   headlines,
-                }
+                };
 
-                // Save to backend with default flag
                 await saveCopyTemplate(
                   selectedAdAccount,
-                  templateName, // Use templateName instead of selectedTemplate
+                  templateName,
                   updatedTemplate,
-                  true,
-                )
+                  true
+                );
 
-                // Update state in parent component
-                setCopyTemplates((prev) => ({
-                  ...prev,
-                  [templateName]: updatedTemplate, // Use templateName to ensure consistency
-                }))
+                toast.success("Set as default template");
 
-                setDefaultTemplateName(templateName)
+                // ✅ Re-fetch settings using your existing hook
+                const res = await fetch(`/settings/ad-account?adAccountId=${selectedAdAccount}`, {
+                  credentials: "include",
+                });
+                const data = await res.json();
+                const settings = data.settings || {};
 
-                // Keep the current template selected
-                setSelectedTemplate(templateName)
+                setCopyTemplates(settings.copyTemplates || {});
+                setDefaultTemplateName(settings.defaultTemplateName || "");
+                setSelectedTemplate(templateName);
 
-                toast.success("Set as default template")
+                // You can optionally update the entire settings object too
+                setSettings(settings);
+
               } catch (err) {
-                toast.error("Failed to set default: " + err.message)
+                toast.error("Failed to set default: " + err.message);
               }
             }}
+
           >
             <CircleCheck className="w-4 h-4" />
             {defaultTemplateName === selectedTemplate ? "Default Template" : "Set as Default Template"}
