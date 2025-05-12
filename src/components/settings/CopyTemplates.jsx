@@ -138,31 +138,27 @@ export default function CopyTemplates({
           </p>
         </div>
         <Select
-          value={Object.keys(copyTemplates).includes(selectedTemplate) ? selectedTemplate : ""}
+          value={selectedTemplate || ""}
           onValueChange={setSelectedTemplate}
         >
-          <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
+          <SelectTrigger>
             <SelectValue placeholder="Select a template" />
           </SelectTrigger>
-          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
+          <SelectContent>
             {Object.entries(copyTemplates)
               .sort(([a], [b]) => {
-                if (a === defaultTemplateName) return -1
-                if (b === defaultTemplateName) return 1
-                return 0
+                if (a === defaultTemplateName) return -1;
+                if (b === defaultTemplateName) return 1;
+                return 0;
               })
               .map(([name]) => (
-                <SelectItem
-                  key={name}
-                  value={name}
-                  className="text-sm data-[state=checked]:rounded-lg 
-                data-[highlighted]:rounded-lg"
-                >
+                <SelectItem key={name} value={name}>
                   {name}
                 </SelectItem>
               ))}
           </SelectContent>
         </Select>
+
       </div>
 
       {/* Template Name */}
@@ -274,6 +270,7 @@ export default function CopyTemplates({
                   headlines,
                 };
 
+                // Save as default template
                 await saveCopyTemplate(
                   selectedAdAccount,
                   templateName,
@@ -283,34 +280,38 @@ export default function CopyTemplates({
 
                 toast.success("Set as default template");
 
-                // ✅ Fetch updated settings
+                // Re-fetch updated settings from backend
                 const res = await fetch(
                   `https://meta-ad-uploader-server-production.up.railway.app/settings/ad-account?adAccountId=${selectedAdAccount}`,
                   { credentials: "include" }
                 );
+
                 const data = await res.json();
                 const settings = data.settings || {};
 
-                // ✅ Apply clean object references to trigger re-render
-                setCopyTemplates({ ...settings.copyTemplates });
-                setDefaultTemplateName(settings.defaultTemplateName || "");
+                // Prepare a single cohesive state update
+                const freshTemplates = { ...settings.copyTemplates };
+                const freshDefault = settings.defaultTemplateName || "";
 
-                // ✅ Don't let useEffect override your selected template
-                setTimeout(() => {
-                  if (settings.copyTemplates?.[templateName]) {
-                    setSelectedTemplate(templateName);
-                  } else {
-                    setSelectedTemplate(settings.defaultTemplateName || "");
-                  }
-                }, 10);
+                // Immediately ensure the newly created template is in the dropdown
+                if (!freshTemplates[templateName]) {
+                  freshTemplates[templateName] = updatedTemplate;
+                }
 
-                // (optional) If you're syncing global state too:
+                // Batch React state updates synchronously
+                setCopyTemplates(freshTemplates);
+                setDefaultTemplateName(freshDefault);
+                setSelectedTemplate(templateName);
+                setTemplateName(updatedTemplate.name);
+                setPrimaryTexts(updatedTemplate.primaryTexts || [""]);
+                setHeadlines(updatedTemplate.headlines || [""]);
+
+                // Optional: Sync global state as well
                 setSettings(settings);
 
               } catch (err) {
                 toast.error("Failed to set default: " + err.message);
               }
-
             }}
 
           >
