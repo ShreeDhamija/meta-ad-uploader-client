@@ -105,15 +105,52 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
   //   setHasAutoSelected(true); // ✅ prevent repeat application
   // }, [copyTemplates, defaultTemplateName]);
 
+  // useEffect(() => {
+
+  //   const keys = Object.keys(copyTemplates || {});
+  //   if (!selectedAdAccount || keys.length === 0) {
+  //     setSelectedTemplate("");
+  //     setTemplateName("");
+  //     setPrimaryTexts([""]);
+  //     setHeadlines([""]);
+  //     return;
+  //   }
+
+  //   if (copyTemplates[selectedTemplate]) return;
+
+
+  //   const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
+  //     ? defaultTemplateName
+  //     : keys[0];
+
+  //   const selected = copyTemplates[initialTemplateName];
+  //   if (selected) {
+  //     setSelectedTemplate(initialTemplateName);
+  //     setTemplateName(selected.name);
+  //     setPrimaryTexts(selected.primaryTexts || [""]);
+  //     setHeadlines(selected.headlines || [""]);
+  //   } else {
+  //     setSelectedTemplate("");
+  //     setTemplateName("");
+  //     setPrimaryTexts([""]);
+  //     setHeadlines([""]);
+  //   }
+  // }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
+
   useEffect(() => {
+    if (!selectedAdAccount) return;
+
     const keys = Object.keys(copyTemplates || {});
-    if (!selectedAdAccount || keys.length === 0) {
+    if (keys.length === 0) {
       setSelectedTemplate("");
       setTemplateName("");
       setPrimaryTexts([""]);
       setHeadlines([""]);
       return;
     }
+
+    // ✅ Prevent overriding current template unless it's invalid
+    if (selectedTemplate && keys.includes(selectedTemplate)) return;
 
     const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
       ? defaultTemplateName
@@ -125,14 +162,8 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
       setTemplateName(selected.name);
       setPrimaryTexts(selected.primaryTexts || [""]);
       setHeadlines(selected.headlines || [""]);
-    } else {
-      setSelectedTemplate("");
-      setTemplateName("");
-      setPrimaryTexts([""]);
-      setHeadlines([""]);
     }
   }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
-
 
 
 
@@ -290,6 +321,12 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
                   copyTemplates[selectedTemplate],
                   true
                 );
+                setCopyTemplates((prev) => ({
+                  ...prev,
+                  [selectedTemplate]: {
+                    ...copyTemplates[selectedTemplate],
+                  },
+                }));
                 setDefaultTemplateName(selectedTemplate);
                 toast.success("Set as default template");
               } catch (err) {
