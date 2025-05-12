@@ -490,8 +490,8 @@ export default function AdAccountSettings({
                             setOpenAdSet(false)
                           }}
                           className={`
-                            h-8 w-full px-4 py-3 m-1 rounded-xl 
-                            !bg-zinc-800 !text-white shadow-sm 
+                            h-10 w-full px-4 py-3 m-1 rounded-xl 
+                            !bg-zinc-700 !text-white shadow-sm 
                             flex items-center justify-center 
                             text-sm font-semibold cursor-pointer 
                             transition-all duration-150 hover:!bg-black
