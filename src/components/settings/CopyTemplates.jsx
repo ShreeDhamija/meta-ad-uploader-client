@@ -367,6 +367,7 @@ export default function CopyTemplates({
 
               } catch (err) {
                 toast.error("Failed to set default: " + err.message);
+                console.log(err.message);
               }
             }}
 
