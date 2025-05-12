@@ -337,6 +337,7 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
             //disabled={defaultTemplateName === selectedTemplate}
             onClick={async () => {
               if (!templateName.trim() || defaultTemplateName === selectedTemplate) return;
+
               try {
                 const updatedTemplate = {
                   name: templateName,
@@ -344,28 +345,34 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
                   headlines,
                 };
 
+                // ✅ Save to backend with default flag
                 await saveCopyTemplate(
                   selectedAdAccount,
                   selectedTemplate,
                   updatedTemplate,
-                  true // ✅ mark as default
+                  true
                 );
 
-                // ✅ Ensure the saved template is reflected in state
-                setCopyTemplates((prev) => ({
-                  ...prev,
-                  [selectedTemplate]: updatedTemplate,
-                }));
+                // ✅ Forcefully update copyTemplates and defaultTemplateName in one render
+                setCopyTemplates((prev) => {
+                  const updated = { ...prev, [selectedTemplate]: updatedTemplate };
+                  return updated;
+                });
 
-                // ✅ Update default name & stay selected
                 setDefaultTemplateName(selectedTemplate);
-                setSelectedTemplate(selectedTemplate);
+
+                // ✅ Fully reset UI state based on updated template
+                setSelectedTemplate(""); // trigger effect
+                setTimeout(() => {
+                  setSelectedTemplate(selectedTemplate); // re-select the same template
+                }, 0);
 
                 toast.success("Set as default template");
               } catch (err) {
                 toast.error("Failed to set default: " + err.message);
               }
             }}
+
           >
             <CircleCheck className="w-4 h-4" />
             {defaultTemplateName === selectedTemplate
