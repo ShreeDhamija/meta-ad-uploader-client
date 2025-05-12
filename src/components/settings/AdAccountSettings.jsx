@@ -111,7 +111,10 @@ export default function AdAccountSettings() {
                 value={searchValue}
                 onValueChange={setSearchValue}
               />
-              <CommandList className="max-h-[500px] overflow-y-auto">
+              <CommandList
+                className="max-h-[500px] overflow-y-auto"
+                selectOnFocus={false}
+              >
                 {adAccounts
                   .filter((acct) =>
                     (acct.name?.toLowerCase() || acct.id.toLowerCase()).includes(searchValue.toLowerCase())
@@ -131,6 +134,7 @@ export default function AdAccountSettings() {
                   ))}
               </CommandList>
             </Command>
+
 
           </PopoverContent>
         </Popover>
