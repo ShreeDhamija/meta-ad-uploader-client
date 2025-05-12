@@ -81,31 +81,41 @@ export default function CopyTemplates({
   }, [selectedTemplate])
 
   useEffect(() => {
-    if (!selectedAdAccount) return
+    if (!selectedAdAccount) return;
 
-    const keys = Object.keys(copyTemplates || {})
+    const keys = Object.keys(copyTemplates || {});
     if (keys.length === 0) {
-      setSelectedTemplate("")
-      setTemplateName("")
-      setPrimaryTexts([""])
-      setHeadlines([""])
-      return
+      setSelectedTemplate("");
+      setTemplateName("");
+      setPrimaryTexts([""]);
+      setHeadlines([""]);
+      return;
     }
 
-    // ✅ Prevent overriding current template unless it's invalid
-    if (selectedTemplate && keys.includes(selectedTemplate)) return
+    // ✅ If currently selected template exists, don't override it
+    if (selectedTemplate && keys.includes(selectedTemplate)) return;
 
-    const initialTemplateName =
-      defaultTemplateName && keys.includes(defaultTemplateName) ? defaultTemplateName : keys[0]
+    // ✅ Select default if available, else first available
+    const fallbackTemplateName =
+      defaultTemplateName && keys.includes(defaultTemplateName)
+        ? defaultTemplateName
+        : keys[0];
 
-    const selected = copyTemplates[initialTemplateName]
-    if (selected) {
-      setSelectedTemplate(initialTemplateName)
-      setTemplateName(selected.name)
-      setPrimaryTexts(selected.primaryTexts || [""])
-      setHeadlines(selected.headlines || [""])
+    const fallbackTemplate = copyTemplates[fallbackTemplateName];
+
+    if (fallbackTemplate) {
+      setSelectedTemplate(fallbackTemplateName);
+      setTemplateName(fallbackTemplate.name);
+      setPrimaryTexts(fallbackTemplate.primaryTexts || [""]);
+      setHeadlines(fallbackTemplate.headlines || [""]);
+    } else {
+      setSelectedTemplate("");
+      setTemplateName("");
+      setPrimaryTexts([""]);
+      setHeadlines([""]);
     }
-  }, [selectedAdAccount, copyTemplates, defaultTemplateName])
+  }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
+
 
   return (
     <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
@@ -273,32 +283,34 @@ export default function CopyTemplates({
 
                 toast.success("Set as default template");
 
-                // ✅ Re-fetch settings using your existing hook
-                const res = await fetch(`https://meta-ad-uploader-server-production.up.railway.app/settings/ad-account?adAccountId=${selectedAdAccount}`, {
-                  credentials: "include",
-                });
+                // ✅ Fetch updated settings
+                const res = await fetch(
+                  `https://meta-ad-uploader-server-production.up.railway.app/settings/ad-account?adAccountId=${selectedAdAccount}`,
+                  { credentials: "include" }
+                );
                 const data = await res.json();
                 const settings = data.settings || {};
 
-                setCopyTemplates(settings.copyTemplates || {});
+                // ✅ Apply clean object references to trigger re-render
+                setCopyTemplates({ ...settings.copyTemplates });
                 setDefaultTemplateName(settings.defaultTemplateName || "");
-                console.log(settings.defaultTemplateName);
-                setSelectedTemplate(templateName);
-                console.log(templateName);
-                if (settings.copyTemplates?.[templateName]) {
-                  setSelectedTemplate(templateName);
-                  console.log(templateName);
-                } else {
-                  setSelectedTemplate(settings.defaultTemplateName || "");
-                  console.log(settings.defaultTemplateName);
-                }
-                // You can optionally update the entire settings object too
-                //setSettings(settings);
+
+                // ✅ Don't let useEffect override your selected template
+                setTimeout(() => {
+                  if (settings.copyTemplates?.[templateName]) {
+                    setSelectedTemplate(templateName);
+                  } else {
+                    setSelectedTemplate(settings.defaultTemplateName || "");
+                  }
+                }, 10);
+
+                // (optional) If you're syncing global state too:
+                setSettings(settings);
 
               } catch (err) {
                 toast.error("Failed to set default: " + err.message);
-                console.log(err.message);
               }
+
             }}
 
           >
