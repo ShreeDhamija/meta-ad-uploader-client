@@ -72,14 +72,38 @@ export default function CopyTemplates({
   }
 
   useEffect(() => {
-    if (!copyTemplates || !selectedTemplate) return
-    const selected = copyTemplates[selectedTemplate]
+    if (!copyTemplates || !selectedTemplate) return;
+
+    const selected = copyTemplates[selectedTemplate];
+
     if (selected) {
-      setTemplateName(selected.name)
-      setPrimaryTexts(selected.primaryTexts || [""])
-      setHeadlines(selected.headlines || [""])
+      setTemplateName(selected.name);
+      setPrimaryTexts(selected.primaryTexts || [""]);
+      setHeadlines(selected.headlines || [""]);
+    } else {
+      // If selectedTemplate no longer exists, fallback to default or first available
+      const fallbackTemplateName =
+        defaultTemplateName && copyTemplates[defaultTemplateName]
+          ? defaultTemplateName
+          : Object.keys(copyTemplates)[0] || "";
+
+      const fallbackTemplate = copyTemplates[fallbackTemplateName];
+
+      if (fallbackTemplate) {
+        setSelectedTemplate(fallbackTemplateName);
+        setTemplateName(fallbackTemplate.name);
+        setPrimaryTexts(fallbackTemplate.primaryTexts || [""]);
+        setHeadlines(fallbackTemplate.headlines || [""]);
+      } else {
+        // If no templates exist at all
+        setSelectedTemplate("");
+        setTemplateName("");
+        setPrimaryTexts([""]);
+        setHeadlines([""]);
+      }
     }
-  }, [selectedTemplate])
+  }, [selectedTemplate, copyTemplates, defaultTemplateName]); // ← ✅ ADD copyTemplates and defaultTemplateName here clearly
+
 
   useEffect(() => {
     if (!selectedAdAccount) return;
@@ -139,7 +163,7 @@ export default function CopyTemplates({
           </p>
         </div>
         <Select
-          value={Object.keys(copyTemplates).includes(selectedTemplate) ? selectedTemplate : ""}
+          value={selectedTemplate || ""}
           onValueChange={setSelectedTemplate}
         >
           <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
