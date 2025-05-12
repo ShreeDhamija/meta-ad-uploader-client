@@ -167,7 +167,7 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
               .sort(([a], [b]) => {
                 if (a === defaultTemplateName) return -1;
                 if (b === defaultTemplateName) return 1;
-                return a.localeCompare(b);
+                return 0;
               })
               .map(([name]) => (
                 <SelectItem key={name} value={name} className="text-sm data-[state=checked]:rounded-lg 
