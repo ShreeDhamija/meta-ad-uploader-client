@@ -282,11 +282,14 @@ export default function CopyTemplates({
 
                 setCopyTemplates(settings.copyTemplates || {});
                 setDefaultTemplateName(settings.defaultTemplateName || "");
+                console.log(settings.defaultTemplateName);
                 setSelectedTemplate(templateName);
+                console.log(templateName);
                 if (settings.copyTemplates?.[templateName]) {
                   setSelectedTemplate(templateName);
                 } else {
                   setSelectedTemplate(settings.defaultTemplateName || "");
+                  console.log(settings.defaultTemplateName);
                 }
                 // You can optionally update the entire settings object too
                 //setSettings(settings);
