@@ -163,7 +163,7 @@ export default function AdAccountSettings() {
             setSelectedInstagram={setSelectedInstagram}
           />
 
-          {/* <CopyTemplates
+          <CopyTemplates
             selectedAdAccount={selectedAdAccount}
             copyTemplates={copyTemplates}
             setCopyTemplates={setCopyTemplates}
@@ -171,20 +171,9 @@ export default function AdAccountSettings() {
             setDefaultTemplateName={(name) =>
               setAdSettings((prev) => ({ ...prev, defaultTemplateName: name }))
             }
-          /> */}
-
-          <CopyTemplates
-            selectedAdAccount={selectedAdAccount}
-            copyTemplates={adSettings.copyTemplates || {}}
-            setCopyTemplates={(templates) => setAdSettings((prev) => ({ ...prev, copyTemplates: templates }))}
-            defaultTemplateName={adSettings.defaultTemplateName}
-            setDefaultTemplateName={(name) => setAdSettings((prev) => ({ ...prev, defaultTemplateName: name }))}
-            refreshSettings={async () => {
-              const res = await fetch(`https://meta-ad-uploader-server-production.up.railway.app/settings/ad-account?adAccountId=${selectedAdAccount}`, { credentials: "include" });
-              const data = await res.json();
-              setAdSettings(data.settings || {});
-            }}
           />
+
+
 
           <LinkParameters
             defaultLink={defaultLink}
