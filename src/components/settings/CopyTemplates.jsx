@@ -18,6 +18,7 @@ export default function CopyTemplates({
   setCopyTemplates,
   defaultTemplateName,
   setDefaultTemplateName,
+  refreshSettings,
 }) {
   const [templateName, setTemplateName] = useState("")
   const [selectedTemplate, setSelectedTemplate] = useState("Default Template")
@@ -137,7 +138,7 @@ export default function CopyTemplates({
             the future
           </p>
         </div>
-        {/* <Select
+        <Select
           value={Object.keys(copyTemplates).includes(selectedTemplate) ? selectedTemplate : ""}
           onValueChange={setSelectedTemplate}
         >
@@ -161,22 +162,6 @@ export default function CopyTemplates({
                   {name}
                 </SelectItem>
               ))}
-          </SelectContent>
-        </Select> */}
-
-        <Select
-          value={selectedTemplate}
-          onValueChange={setSelectedTemplate}
-        >
-          <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
-            <SelectValue placeholder="Select a template" />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(copyTemplates).map(([name]) => (
-              <SelectItem key={name} value={name}>
-                {name} {name === defaultTemplateName ? "(Default)" : ""}
-              </SelectItem>
-            ))}
           </SelectContent>
         </Select>
       </div>
@@ -290,49 +275,19 @@ export default function CopyTemplates({
                   headlines,
                 };
 
-                // Save as default template
-                await saveCopyTemplate(
-                  selectedAdAccount,
-                  templateName,
-                  updatedTemplate,
-                  true
-                );
-
+                await saveCopyTemplate(selectedAdAccount, templateName, updatedTemplate, true);
                 toast.success("Set as default template");
 
-                // Re-fetch updated settings from backend
-                const res = await fetch(
-                  `https://meta-ad-uploader-server-production.up.railway.app/settings/ad-account?adAccountId=${selectedAdAccount}`,
-                  { credentials: "include" }
-                );
+                // ✅ Crucial step: refresh settings via parent component
+                await refreshSettings();
 
-                const data = await res.json();
-                const settings = data.settings || {};
-
-                // Prepare a single cohesive state update
-                const freshTemplates = { ...settings.copyTemplates };
-                const freshDefault = settings.defaultTemplateName || "";
-
-                // Immediately ensure the newly created template is in the dropdown
-                if (!freshTemplates[templateName]) {
-                  freshTemplates[templateName] = updatedTemplate;
-                }
-
-                // Batch React state updates synchronously
-                setCopyTemplates(freshTemplates);
-                setDefaultTemplateName(freshDefault);
+                // Now your parent state is updated globally—no need to set locally here anymore.
                 setSelectedTemplate(templateName);
-                setTemplateName(updatedTemplate.name);
-                setPrimaryTexts(updatedTemplate.primaryTexts || [""]);
-                setHeadlines(updatedTemplate.headlines || [""]);
-
-                // Optional: Sync global state as well
-                setSettings(settings);
-
               } catch (err) {
                 toast.error("Failed to set default: " + err.message);
               }
             }}
+
 
           >
             <CircleCheck className="w-4 h-4" />
