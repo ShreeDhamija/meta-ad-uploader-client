@@ -99,7 +99,7 @@ export default function AdCreationForm({
     .map((key) => {
       if (key === "adType") return adType;
       if (key === "dateType") return dateFormat;
-      if (key === "fileName") return includeFileName ? "File" : null;
+      if (key === "fileName") return includeFileName ? "File Name" : null;
     })
     .filter(Boolean);
 

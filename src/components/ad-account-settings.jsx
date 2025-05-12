@@ -81,6 +81,20 @@ export default function AdAccountSettings({
     });
   };
 
+  const sortAdSets = (adSets) => {
+    const priority = { ACTIVE: 1, PAUSED: 2 };
+    return [...adSets].sort((a, b) => {
+      const aPriority = priority[a.status] || 3;
+      const bPriority = priority[b.status] || 3;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+
+      const aSpend = parseFloat(a.spend || 0);
+      const bSpend = parseFloat(b.spend || 0);
+      return bSpend - aSpend;
+    });
+  };
+
+
 
 
   const handleAdAccountChange = async (value) => {
@@ -147,7 +161,7 @@ export default function AdAccountSettings({
       )
       const data = await res.json()
       if (data.adSets) {
-        setAdSets(data.adSets)
+        setAdSets(sortAdSets(data.adSets))
       }
     } catch (err) {
       toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error occurred"}`)
@@ -227,7 +241,7 @@ export default function AdAccountSettings({
       )
       const data = await res.json()
       if (data.adSets) {
-        setAdSets(data.adSets)
+        setAdSets(sortAdSets(data.adSets))
         toast.success("Ad Sets refreshed successfully!")
       }
     } catch (err) {
@@ -525,7 +539,13 @@ export default function AdAccountSettings({
                                     <Check className="w-3 h-3 text-green-500" />
                                   </Checkbox.Indicator>
                                 </Checkbox>
-                                <Label className="flex-1 cursor-pointer">{adset.name || adset.id}</Label>
+                                <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
+                                  <span className="truncate">{adset.name || adset.id}</span>
+                                  {adset.status === "ACTIVE" && (
+                                    <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                                  )}
+                                </Label>
+
                               </div>
                             </CommandItem>
                           )
@@ -601,9 +621,7 @@ export default function AdAccountSettings({
                           <CommandGroup>
                             {adSets
                               .filter((adset) =>
-                                (adset.name || adset.id)
-                                  .toLowerCase()
-                                  .includes(duplicateAdSetSearchValue.toLowerCase()),
+                                (adset.name || adset.id).toLowerCase().includes(duplicateAdSetSearchValue.toLowerCase())
                               )
                               .map((adset) => (
                                 <CommandItem
@@ -613,12 +631,21 @@ export default function AdAccountSettings({
                                     setDuplicateAdSet(adset.id)
                                     setOpenDuplicateAdSet(false)
                                   }}
-                                  className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150"
+                                  className={cn(
+                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                    adset.status !== "ACTIVE" && "text-gray-400"
+                                  )}
                                 >
-                                  {adset.name || adset.id}
+                                  <div className="flex justify-between items-center w-full truncate">
+                                    <span className="truncate">{adset.name || adset.id}</span>
+                                    {adset.status === "ACTIVE" && (
+                                      <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                    )}
+                                  </div>
                                 </CommandItem>
                               ))}
                           </CommandGroup>
+
                         </CommandList>
                       </Command>
                     </PopoverContent>
