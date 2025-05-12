@@ -348,18 +348,19 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
                 // ✅ Save to backend with default flag
                 await saveCopyTemplate(
                   selectedAdAccount,
-                  selectedTemplate,
+                  templateName,
                   updatedTemplate,
                   true
                 );
 
                 // ✅ Forcefully update copyTemplates and defaultTemplateName in one render
-                setCopyTemplates((prev) => {
-                  const updated = { ...prev, [selectedTemplate]: updatedTemplate };
-                  return updated;
-                });
+                setCopyTemplates((prev) => ({
+                  ...prev,
+                  [templateName]: updatedTemplate, // Use templateName to ensure consistency
+                }))
 
-                setDefaultTemplateName(selectedTemplate);
+                setDefaultTemplateName(templateName)
+
 
                 // ✅ Fully reset UI state based on updated template
                 setSelectedTemplate(""); // trigger effect
