@@ -189,7 +189,7 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
         </div>
 
         {/* Dropdown */}
-        <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+        {/* <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
           <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
             <SelectValue placeholder="Select a template" />
           </SelectTrigger>
@@ -207,7 +207,30 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
                 </SelectItem>
               ))}
           </SelectContent>
+        </Select> */}
+        <Select
+          value={Object.keys(copyTemplates).includes(selectedTemplate) ? selectedTemplate : ""}
+          onValueChange={setSelectedTemplate}
+        >
+          <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
+            <SelectValue placeholder="Select a template" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
+            {Object.entries(copyTemplates)
+              .sort(([a], [b]) => {
+                if (a === defaultTemplateName) return -1;
+                if (b === defaultTemplateName) return 1;
+                return 0;
+              })
+              .map(([name]) => (
+                <SelectItem key={name} value={name} className="text-sm data-[state=checked]:rounded-lg 
+                data-[highlighted]:rounded-lg">
+                  {name}
+                </SelectItem>
+              ))}
+          </SelectContent>
         </Select>
+
 
       </div>
 
