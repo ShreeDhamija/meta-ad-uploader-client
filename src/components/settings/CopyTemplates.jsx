@@ -287,6 +287,7 @@ export default function CopyTemplates({
                 console.log(templateName);
                 if (settings.copyTemplates?.[templateName]) {
                   setSelectedTemplate(templateName);
+                  console.log(templateName);
                 } else {
                   setSelectedTemplate(settings.defaultTemplateName || "");
                   console.log(settings.defaultTemplateName);
