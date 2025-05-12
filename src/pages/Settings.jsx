@@ -35,7 +35,7 @@ export default function Settings() {
     }
 
     if (authLoading) return null; // or a loading spinner if you want
-    if (!isLoggedIn) return <Navigate to="/login" />
+    //if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <div className="flex">

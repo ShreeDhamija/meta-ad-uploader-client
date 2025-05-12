@@ -33,9 +33,9 @@ export default function AdAccountSettings() {
   const [openAdAccount, setOpenAdAccount] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [selectedPage, setSelectedPage] = useState(null)
-  const [openPageDropdown, setOpenPageDropdown] = useState(false)
+  //const [openPageDropdown, setOpenPageDropdown] = useState(false)
   const [selectedInstagram, setSelectedInstagram] = useState(null)
-  const [openInstagramDropdown, setOpenInstagramDropdown] = useState(false)
+  //const [openInstagramDropdown, setOpenInstagramDropdown] = useState(false)
   const defaultPage = pages.find((page) => page.id && page.name)
   const defaultInstagram = pages.find((page) => page.instagramAccount)?.instagramAccount
   const { settings: adSettings, setSettings: setAdSettings } = useAdAccountSettings(selectedAdAccount);
@@ -52,10 +52,7 @@ export default function AdAccountSettings() {
   });
 
 
-  // const filteredAccounts = adAccounts.filter((acct) =>
-  //   (acct.name?.toLowerCase() || "").includes(searchValue.toLowerCase()) ||
-  //   acct.id.toLowerCase().includes(searchValue.toLowerCase())
-  // );
+
 
 
 
@@ -92,7 +89,11 @@ export default function AdAccountSettings() {
     <div className="space-y-6 w-full max-w-3xl">
       {/* Ad Account Dropdown */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-600">Select Ad Account</label>
+        <label className="text-md font-medium text-gray-800">Select Ad Account</label>
+        <p className="text-sm text-gray-500">
+          Select an ad account to configure settings
+        </p>
+
         <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
           <PopoverTrigger asChild>
             <Button
@@ -152,67 +153,72 @@ export default function AdAccountSettings() {
 
 
       </div>
-      <PageSelectors
-        selectedPage={selectedPage}
-        setSelectedPage={setSelectedPage}
-        selectedInstagram={selectedInstagram}
-        setSelectedInstagram={setSelectedInstagram}
-      />
+      <fieldset disabled={!selectedAdAccount}>
+        <div className={!selectedAdAccount ? "opacity-70 cursor-not-allowed space-y-6" : "space-y-6"}>
 
-      <CopyTemplates
-        selectedAdAccount={selectedAdAccount}
-        copyTemplates={copyTemplates}
-        setCopyTemplates={setCopyTemplates}
-        defaultTemplateName={adSettings.defaultTemplateName}
-        setDefaultTemplateName={(name) =>
-          setAdSettings((prev) => ({ ...prev, defaultTemplateName: name }))
-        }
-      />
+          <PageSelectors
+            selectedPage={selectedPage}
+            setSelectedPage={setSelectedPage}
+            selectedInstagram={selectedInstagram}
+            setSelectedInstagram={setSelectedInstagram}
+          />
 
-      <LinkParameters
-        defaultLink={defaultLink}
-        setDefaultLink={setDefaultLink}
-        utmPairs={utmPairs}
-        setUtmPairs={setUtmPairs}
-      />
-      <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
-      <CreativeEnhancements
-        enhancements={enhancements}
-        setEnhancements={setEnhancements}
-      />
-
-      <div className="pt-2">
-        <Button
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[45px]"
-          onClick={async () => {
-            if (!selectedAdAccount) {
-              alert("Select an Ad Account first");
-              return;
+          <CopyTemplates
+            selectedAdAccount={selectedAdAccount}
+            copyTemplates={copyTemplates}
+            setCopyTemplates={setCopyTemplates}
+            defaultTemplateName={adSettings.defaultTemplateName}
+            setDefaultTemplateName={(name) =>
+              setAdSettings((prev) => ({ ...prev, defaultTemplateName: name }))
             }
-            const cleanedUTMs = utmPairs.filter(pair => pair.key && pair.value);
-            const adAccountSettings = {
-              defaultPage: selectedPage,
-              defaultInstagram: selectedInstagram,
-              defaultLink,
-              defaultCTA,
-              ...(cleanedUTMs.length > 0 && { defaultUTMs: cleanedUTMs }),
-              creativeEnhancements: enhancements
-            };
+          />
 
-            try {
-              await saveSettings({
-                adAccountId: selectedAdAccount,
-                adAccountSettings
-              });
-              toast.success("Ad account settings saved!");
-            } catch (err) {
-              toast.error("Failed to save ad account settings: " + err.message);
-            }
-          }}
-        >
-          Save Settings
-        </Button>
-      </div>
+          <LinkParameters
+            defaultLink={defaultLink}
+            setDefaultLink={setDefaultLink}
+            utmPairs={utmPairs}
+            setUtmPairs={setUtmPairs}
+          />
+          <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
+          <CreativeEnhancements
+            enhancements={enhancements}
+            setEnhancements={setEnhancements}
+          />
+
+          <div className="pt-2">
+            <Button
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[45px]"
+              onClick={async () => {
+                if (!selectedAdAccount) {
+                  alert("Select an Ad Account first");
+                  return;
+                }
+                const cleanedUTMs = utmPairs.filter(pair => pair.key && pair.value);
+                const adAccountSettings = {
+                  defaultPage: selectedPage,
+                  defaultInstagram: selectedInstagram,
+                  defaultLink,
+                  defaultCTA,
+                  ...(cleanedUTMs.length > 0 && { defaultUTMs: cleanedUTMs }),
+                  creativeEnhancements: enhancements
+                };
+
+                try {
+                  await saveSettings({
+                    adAccountId: selectedAdAccount,
+                    adAccountSettings
+                  });
+                  toast.success("Ad account settings saved!");
+                } catch (err) {
+                  toast.error("Failed to save ad account settings: " + err.message);
+                }
+              }}
+            >
+              Save Settings
+            </Button>
+          </div>
+        </div>
+      </fieldset>
     </div>
   )
 }
