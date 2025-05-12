@@ -478,7 +478,7 @@ export default function AdAccountSettings({
                     onValueChange={setAdSetSearchValue}
                   />
                   <CommandEmpty>No ad sets found.</CommandEmpty>
-                  <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                  <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar px-2" selectOnFocus={false}>
                     <CommandGroup>
                       {!isAdvantagePlusCampaign && (
                         <CommandItem
@@ -490,11 +490,11 @@ export default function AdAccountSettings({
                             setOpenAdSet(false)
                           }}
                           className={`
-                            h-14 w-full m-1 px-4 py-3 rounded-xl 
-                            bg-zinc-950 text-white shadow-md 
+                            h-12 w-full px-4 py-3 m-1 rounded-xl 
+                            !bg-zinc-950 !text-white shadow-sm 
                             flex items-center justify-center 
                             text-sm font-semibold cursor-pointer 
-                            transition-all duration-150 hover:bg-black
+                            transition-all duration-150 hover:!bg-black
                           `}
                         >
                           🚀 Launch in a New Ad Set
