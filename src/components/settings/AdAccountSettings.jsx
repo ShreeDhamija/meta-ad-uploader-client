@@ -119,7 +119,7 @@ export default function AdAccountSettings() {
               <CommandInput
                 placeholder="Search ad accounts..."
                 value={searchValue}
-                onValueChange={setSearchValue}
+                onInputChange={setSearchValue}
               />
               <CommandEmpty>No ad account found.</CommandEmpty>
               <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
