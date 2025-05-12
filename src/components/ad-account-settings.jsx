@@ -490,8 +490,8 @@ export default function AdAccountSettings({
                             setOpenAdSet(false)
                           }}
                           className={`
-                            h-12 w-full px-4 py-3 m-1 rounded-xl 
-                            !bg-zinc-950 !text-white shadow-sm 
+                            h-8 w-full px-4 py-3 m-1 rounded-xl 
+                            !bg-zinc-800 !text-white shadow-sm 
                             flex items-center justify-center 
                             text-sm font-semibold cursor-pointer 
                             transition-all duration-150 hover:!bg-black
@@ -511,7 +511,7 @@ export default function AdAccountSettings({
                               value={adset.name || adset.id} // Helps with filtering
                               onSelect={() => handleAdSetCheckboxChange(adset.id, !isSelected)}
                               className={cn(
-                                "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                "py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
                                 isSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
                               )}
                             >
