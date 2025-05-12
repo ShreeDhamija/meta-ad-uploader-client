@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { CirclePlus, CircleCheck, Trash2 } from "lucide-react";
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate";
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate";
+import { Textarea } from "../ui/textarea"
 
 
 
@@ -167,7 +168,7 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
         <label className="text-[14px] text-gray-600">Primary Text</label>
         {primaryTexts.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
-            <Input
+            <Textarea
               placeholder="Enter primary text..."
               value={text}
               onChange={(e) => handleChange(i, setPrimaryTexts, primaryTexts, e.target.value)}

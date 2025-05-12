@@ -121,11 +121,9 @@ export default function Home() {
     return (
         <div className="w-full max-w-[1220px] mx-auto py-8 px-2 sm:px-4 md:px-6 mt-[20px]">
             <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
-
             <div className="flex flex-col xl:flex-row gap-6">
                 <div className="w-full xl:w-[500px] flex-shrink-0 space-y-6">
                     <AdAccountSettings
-                        //isLoggedIn={isLoggedIn}
                         isLoading={isLoading}
                         setIsLoading={setIsLoading}
                         adAccounts={adAccounts}
@@ -148,7 +146,6 @@ export default function Home() {
                     />
 
                     <AdCreationForm
-                        //isLoggedIn={isLoggedIn}
                         isLoading={isLoading}
                         setIsLoading={setIsLoading}
                         pages={pages}

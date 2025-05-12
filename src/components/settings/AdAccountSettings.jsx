@@ -105,30 +105,33 @@ export default function AdAccountSettings() {
             align="start"
             sideOffset={4}
           >
-            <Command filter={() => 1}>
+            <Command loop={false}>
               <CommandInput
                 placeholder="Search ad accounts..."
                 value={searchValue}
                 onValueChange={setSearchValue}
-
               />
               <CommandList className="max-h-[500px] overflow-y-auto">
-                {adAccounts.map((acct) => (
-                  <CommandItem
-                    key={acct.id}
-                    value={acct.id}
-                    onSelect={() => {
-                      setSelectedAdAccount(acct.id)
-                      setOpenAdAccount(false)
-
-                    }}
-                    className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
-                  >
-                    {acct.name || acct.id}
-                  </CommandItem>
-                ))}
+                {adAccounts
+                  .filter((acct) =>
+                    (acct.name?.toLowerCase() || acct.id.toLowerCase()).includes(searchValue.toLowerCase())
+                  )
+                  .map((acct) => (
+                    <CommandItem
+                      key={acct.id}
+                      value={acct.id}
+                      onSelect={() => {
+                        setSelectedAdAccount(acct.id)
+                        setOpenAdAccount(false)
+                      }}
+                      className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                    >
+                      {acct.name || acct.id}
+                    </CommandItem>
+                  ))}
               </CommandList>
             </Command>
+
           </PopoverContent>
         </Popover>
       </div>

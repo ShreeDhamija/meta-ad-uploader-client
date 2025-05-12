@@ -9,7 +9,7 @@ export default function Header() {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
   const navigate = useNavigate()
 
-  if (!isLoggedIn) return null
+
 
   return (
     <header className="flex justify-between items-center py-3 mb-4">
@@ -24,11 +24,11 @@ export default function Header() {
       </div>
 
       {/* Action Buttons (Right) */}
-      <div className="flex items-center gap-2 bg-white shadow-md border border-gray-300 rounded-[40px] px-4 py-2 ml-2">
+      <div className="flex items-center gap-2 bg-white shadow-md border border-gray-300 rounded-[40px] px-3 py-2 ml-2">
         <button
           onClick={() => navigate("/settings")}
           title="Settings"
-          className="p-1 rounded-full transition !bg-transparent hover:!bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0"
+          className="flex items-center gap-1 p-1 rounded-full transition !bg-transparent hover:!bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0"
           style={{
             backgroundColor: "transparent",
             outline: "none",
@@ -37,8 +37,8 @@ export default function Header() {
           }}
         >
           <Settings className="w-5 h-5 text-gray-700" />
+          <span className="text-gray-700 text-sm">Preferences</span>
         </button>
-
         <div className="h-8 w-px bg-gray-300" />
 
         <button
@@ -55,7 +55,7 @@ export default function Header() {
           <LogOutIcon className="w-5 h-5 text-red-600" />
         </button>
       </div>
-    </header>
+    </header >
 
   )
 }
