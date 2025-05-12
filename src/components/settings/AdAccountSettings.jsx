@@ -117,7 +117,8 @@ export default function AdAccountSettings() {
               >
                 {adAccounts
                   .filter((acct) =>
-                    (acct.name?.toLowerCase() || acct.id.toLowerCase()).includes(searchValue.toLowerCase())
+                    (acct.name?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+                    (acct.id?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
                   )
                   .map((acct) => (
                     <CommandItem
@@ -134,6 +135,7 @@ export default function AdAccountSettings() {
                   ))}
               </CommandList>
             </Command>
+
 
 
           </PopoverContent>
