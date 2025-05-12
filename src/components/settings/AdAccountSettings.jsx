@@ -137,8 +137,12 @@ export default function AdAccountSettings() {
                           px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150
                           hover:bg-gray-100
                           ${selectedAdAccount === acct.id ? "bg-gray-100 font-semibold" : ""}
-                          data-[highlighted]:bg-transparent data-[highlighted]:text-inherit
                         `}
+                        style={{
+                          backgroundColor: 'transparent',
+                          color: 'inherit'
+                        }}
+
 
                         data-selected={acct.id === selectedAdAccount}
                       >
