@@ -80,63 +80,6 @@ export default function CopyTemplates({
     }
   }, [selectedTemplate])
 
-  // useEffect(() => {
-  //   if (!copyTemplates || hasAutoSelected) return;
-
-  //   const keys = Object.keys(copyTemplates);
-  //   if (keys.length === 0) {
-  //     setSelectedTemplate("");
-  //     setPrimaryTexts([""]);
-  //     setHeadlines([""]);
-  //     return;
-  //   }
-
-  //   const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
-  //     ? defaultTemplateName
-  //     : keys[0];
-
-  //   const selected = copyTemplates[initialTemplateName];
-  //   if (!selected) return;
-
-  //   setSelectedTemplate(initialTemplateName);
-  //   setTemplateName(selected.name);
-  //   setPrimaryTexts(selected.primaryTexts || [""]);
-  //   setHeadlines(selected.headlines || [""]);
-
-  //   setHasAutoSelected(true); // ✅ prevent repeat application
-  // }, [copyTemplates, defaultTemplateName]);
-
-  // useEffect(() => {
-
-  //   const keys = Object.keys(copyTemplates || {});
-  //   if (!selectedAdAccount || keys.length === 0) {
-  //     setSelectedTemplate("");
-  //     setTemplateName("");
-  //     setPrimaryTexts([""]);
-  //     setHeadlines([""]);
-  //     return;
-  //   }
-
-  //   if (copyTemplates[selectedTemplate]) return;
-
-  //   const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
-  //     ? defaultTemplateName
-  //     : keys[0];
-
-  //   const selected = copyTemplates[initialTemplateName];
-  //   if (selected) {
-  //     setSelectedTemplate(initialTemplateName);
-  //     setTemplateName(selected.name);
-  //     setPrimaryTexts(selected.primaryTexts || [""]);
-  //     setHeadlines(selected.headlines || [""]);
-  //   } else {
-  //     setSelectedTemplate("");
-  //     setTemplateName("");
-  //     setPrimaryTexts([""]);
-  //     setHeadlines([""]);
-  //   }
-  // }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
-
   useEffect(() => {
     if (!selectedAdAccount) return
 
@@ -184,27 +127,6 @@ export default function CopyTemplates({
             the future
           </p>
         </div>
-
-        {/* Dropdown */}
-        {/* <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-          <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
-            <SelectValue placeholder="Select a template" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
-            {Object.entries(copyTemplates)
-              .sort(([a], [b]) => {
-                if (a === defaultTemplateName) return -1;
-                if (b === defaultTemplateName) return 1;
-                return 0;
-              })
-              .map(([name]) => (
-                <SelectItem key={name} value={name} className="text-sm data-[state=checked]:rounded-lg 
-    data-[highlighted]:rounded-lg">
-                  {name}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select> */}
         <Select
           value={Object.keys(copyTemplates).includes(selectedTemplate) ? selectedTemplate : ""}
           onValueChange={setSelectedTemplate}
@@ -352,7 +274,7 @@ export default function CopyTemplates({
                 toast.success("Set as default template");
 
                 // ✅ Re-fetch settings using your existing hook
-                const res = await fetch(`/settings/ad-account?adAccountId=${selectedAdAccount}`, {
+                const res = await fetch(`https://meta-ad-uploader-server-production.up.railway.app/settings/ad-account?adAccountId=${selectedAdAccount}`, {
                   credentials: "include",
                 });
                 const data = await res.json();
