@@ -1,50 +1,110 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useReducer, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
 import { toast } from "sonner"
 import { CirclePlus, CircleCheck, Trash2 } from "lucide-react"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import { Textarea } from "../ui/textarea"
 
-// Debug helper function
-const logState = (action, data) => {
-  console.log(`[${new Date().toISOString()}] ${action}:`, data)
+const initialState = {
+  templates: {},
+  defaultName: "",
+  selectedName: "",
 }
 
-export default function CopyTemplates({
-  selectedAdAccount,
-  copyTemplates,
-  setCopyTemplates,
-  defaultTemplateName,
-  setDefaultTemplateName,
-}) {
-  // Refs to track state changes
-  const copyTemplatesRef = useRef(copyTemplates)
-  const defaultTemplateNameRef = useRef(defaultTemplateName)
+function reducer(state, action) {
+  switch (action.type) {
+    case "SET_ALL":
+      return {
+        templates: action.payload.templates || {},
+        defaultName: action.payload.defaultName || "",
+        selectedName:
+          action.payload.defaultName && action.payload.templates?.[action.payload.defaultName]
+            ? action.payload.defaultName
+            : Object.keys(action.payload.templates || {})[0] || "",
+      }
 
-  // Local state
+    case "SAVE_TEMPLATE":
+      return {
+        ...state,
+        templates: {
+          ...state.templates,
+          [action.payload.name]: action.payload.data,
+        },
+        selectedName: action.payload.name,
+      }
+
+    case "SET_DEFAULT":
+      return {
+        ...state,
+        defaultName: action.payload,
+        selectedName: action.payload,
+      }
+
+    case "DELETE_TEMPLATE": {
+      const updated = { ...state.templates }
+      delete updated[action.payload]
+      const keys = Object.keys(updated)
+      return {
+        ...state,
+        templates: updated,
+        selectedName: keys[0] || "",
+        defaultName:
+          state.defaultName === action.payload ? keys[0] || "" : state.defaultName,
+      }
+    }
+
+    case "SELECT_TEMPLATE":
+      return {
+        ...state,
+        selectedName: action.payload,
+      }
+
+    default:
+      return state
+  }
+}
+
+export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSettings }) {
+  const [state, dispatch] = useReducer(reducer, initialState)
+  const { templates, defaultName, selectedName } = state
+
   const [templateName, setTemplateName] = useState("")
-  const [selectedTemplate, setSelectedTemplate] = useState("")
   const [primaryTexts, setPrimaryTexts] = useState([""])
   const [headlines, setHeadlines] = useState([""])
   const [isProcessing, setIsProcessing] = useState(false)
 
-  // Update refs when props change
   useEffect(() => {
-    copyTemplatesRef.current = copyTemplates
-    logState("copyTemplates updated", copyTemplates)
-  }, [copyTemplates])
+    if (!selectedAdAccount || !adSettings) return
+
+    dispatch({
+      type: "SET_ALL",
+      payload: {
+        templates: adSettings.copyTemplates || {},
+        defaultName: adSettings.defaultTemplateName || "",
+      },
+    })
+  }, [selectedAdAccount, adSettings])
 
   useEffect(() => {
-    defaultTemplateNameRef.current = defaultTemplateName
-    logState("defaultTemplateName updated", defaultTemplateName)
-  }, [defaultTemplateName])
+    const t = templates[selectedName]
+    if (t) {
+      setTemplateName(t.name || "")
+      setPrimaryTexts(t.primaryTexts || [""])
+      setHeadlines(t.headlines || [""])
+    }
+  }, [selectedName, templates])
 
-  // Helper functions
   const handleAdd = (setter, state) => {
     if (state.length < 5) setter([...state, ""])
   }
@@ -61,206 +121,100 @@ export default function CopyTemplates({
     setter(updated)
   }
 
-  // Load template data when selection changes
-  useEffect(() => {
-    logState("selectedTemplate changed", selectedTemplate)
-
-    if (!copyTemplates || !selectedTemplate) return
-
-    const selected = copyTemplates[selectedTemplate]
-    if (selected) {
-      logState("Loading template data", selected)
-      setTemplateName(selected.name)
-      setPrimaryTexts(selected.primaryTexts || [""])
-      setHeadlines(selected.headlines || [""])
-    }
-  }, [selectedTemplate, copyTemplates])
-
-  // Initialize template selection when ad account changes or templates load
-  useEffect(() => {
-    // Skip if no ad account selected
-    if (!selectedAdAccount) return;
-
-    const keys = Object.keys(copyTemplates || {});
-
-    // If no templates, clear all state
-    if (keys.length === 0) {
-      setSelectedTemplate("");
-      setTemplateName("");
-      setPrimaryTexts([""]);
-      setHeadlines([""]);
-      return;
-    }
-
-    // If currently selected template is still valid, do nothing
-    if (selectedTemplate && keys.includes(selectedTemplate)) {
-      return;
-    }
-
-    // Try using default template name if available
-    const initialTemplateName =
-      defaultTemplateName && keys.includes(defaultTemplateName)
-        ? defaultTemplateName
-        : keys[0]; // fallback to first template
-
-    const selected = copyTemplates[initialTemplateName];
-    if (selected) {
-      setSelectedTemplate(initialTemplateName);
-      setTemplateName(selected.name);
-      setPrimaryTexts(selected.primaryTexts || [""]);
-      setHeadlines(selected.headlines || [""]);
-    } else {
-      // Edge case: somehow defaultTemplateName is set but not found
-      setSelectedTemplate("");
-      setTemplateName("");
-      setPrimaryTexts([""]);
-      setHeadlines([""]);
-    }
-  }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
-
-
-  // Create a new template
   const handleNewTemplate = () => {
-    logState("Creating new template", null)
     setTemplateName("")
     setPrimaryTexts([""])
     setHeadlines([""])
-    // Don't change selectedTemplate yet - wait until save
   }
 
-  // Save template
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
       toast.error("Template name is required")
       return
     }
 
+    const newTemplate = {
+      name: templateName,
+      primaryTexts,
+      headlines,
+    }
+
     setIsProcessing(true)
-    logState("Saving template", { templateName, primaryTexts, headlines })
-
     try {
-      const newTemplate = {
-        name: templateName,
-        primaryTexts,
-        headlines,
-      }
-
-      // Save to backend
       await saveCopyTemplate(selectedAdAccount, templateName, newTemplate)
 
-      // Update local state in parent component
-      setCopyTemplates((prev) => {
-        const updated = {
-          ...prev,
-          [templateName]: newTemplate,
-        }
-        logState("Updated copyTemplates after save", updated)
-        return updated
+      dispatch({
+        type: "SAVE_TEMPLATE",
+        payload: { name: templateName, data: newTemplate },
       })
 
-      // Update selection after save
-      setSelectedTemplate(templateName)
       toast.success("Template saved")
     } catch (err) {
-      toast.error("Failed to save template: " + err.message)
-      logState("Save template error", err.message)
+      toast.error("Failed to save template")
     } finally {
       setIsProcessing(false)
     }
   }
 
-  // Set template as default
   const handleSetAsDefault = async () => {
-    if (!templateName.trim() || defaultTemplateName === templateName) return;
+    if (!templateName.trim() || defaultName === templateName) return
 
-    setIsProcessing(true);
-    logState("Setting as default", { templateName, currentDefault: defaultTemplateName });
-
-    try {
-      const updatedTemplate = {
-        name: templateName,
-        primaryTexts,
-        headlines,
-      };
-
-      await saveCopyTemplate(selectedAdAccount, templateName, updatedTemplate, true);
-
-      // First update the templates
-      setCopyTemplates((prev) => {
-        const updated = {
-          ...prev,
-          [templateName]: updatedTemplate,
-        };
-        logState("Updated copyTemplates after setting default", updated);
-        return updated;
-      });
-
-      // THEN update default template
-      setDefaultTemplateName(templateName);
-
-      toast.success("Set as default template");
-    } catch (err) {
-      toast.error("Failed to set default: " + err.message);
-      logState("Set default error", err.message);
-    } finally {
-      setIsProcessing(false);
+    const updatedTemplate = {
+      name: templateName,
+      primaryTexts,
+      headlines,
     }
-  };
-
-
-  // Delete template
-  const handleDeleteTemplate = async () => {
-    if (!selectedTemplate) return
 
     setIsProcessing(true)
-    logState("Deleting template", selectedTemplate)
-
     try {
-      await deleteCopyTemplate(selectedAdAccount, selectedTemplate)
+      await saveCopyTemplate(selectedAdAccount, templateName, updatedTemplate, true)
 
-      setCopyTemplates((prev) => {
-        const updated = { ...prev }
-        delete updated[selectedTemplate]
-        logState("Updated copyTemplates after delete", updated)
-        return updated
-      })
+      dispatch({ type: "SAVE_TEMPLATE", payload: { name: templateName, data: updatedTemplate } })
+      dispatch({ type: "SET_DEFAULT", payload: templateName })
 
-      // Clear selection if we deleted the selected template
-      setSelectedTemplate("")
-      setTemplateName("")
-      setPrimaryTexts([""])
-      setHeadlines([""])
+      setAdSettings((prev) => ({
+        ...prev,
+        defaultTemplateName: templateName,
+        copyTemplates: {
+          ...prev.copyTemplates,
+          [templateName]: updatedTemplate,
+        },
+      }))
+
+      toast.success("Set as default template")
+    } catch (err) {
+      toast.error("Failed to set default template")
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const handleDeleteTemplate = async () => {
+    if (!selectedName) return
+
+    setIsProcessing(true)
+    try {
+      await deleteCopyTemplate(selectedAdAccount, selectedName)
+
+      dispatch({ type: "DELETE_TEMPLATE", payload: selectedName })
 
       toast.success("Template deleted")
     } catch (err) {
-      toast.error("Failed to delete: " + err.message)
-      logState("Delete template error", err.message)
+      toast.error("Failed to delete template")
     } finally {
       setIsProcessing(false)
     }
   }
 
-  // Get available templates for dropdown
-  const availableTemplates = Object.entries(copyTemplates || {}).sort(([a], [b]) => {
-    if (a === defaultTemplateName) return -1
-    if (b === defaultTemplateName) return 1
+  const availableTemplates = Object.entries(templates).sort(([a], [b]) => {
+    if (a === defaultName) return -1
+    if (b === defaultName) return 1
     return 0
   })
 
   return (
     <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
-      {/* Debug info - remove in production */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="bg-gray-100 p-2 text-xs rounded mb-2 overflow-auto max-h-20">
-          <div>Selected: {selectedTemplate || "none"}</div>
-          <div>Default: {defaultTemplateName || "none"}</div>
-          <div>Available: {Object.keys(copyTemplates || {}).join(", ") || "none"}</div>
-        </div>
-      )}
-
-      {/* Title + Dropdown Row */}
       <div className="flex items-start justify-between mb-6">
-        {/* Title + Description */}
         <div className="flex flex-col gap-[12px]">
           <div className="flex items-center gap-2">
             <img
@@ -271,18 +225,14 @@ export default function CopyTemplates({
             <span className="text-sm font-medium text-zinc-950">Copy Templates</span>
           </div>
           <p className="text-xs text-gray-500 leading-tight">
-            Add up to 5 Primary Texts and Headlines below, <br></br>Then save as a template to easily add to your ads in
+            Add up to 5 Primary Texts and Headlines below, <br />Then save as a template to easily add to your ads in
             the future
           </p>
         </div>
 
-        {/* Dropdown */}
         <Select
-          value={selectedTemplate}
-          onValueChange={(value) => {
-            logState("Template selected from dropdown", value)
-            setSelectedTemplate(value)
-          }}
+          value={selectedName}
+          onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
         >
           <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
             <SelectValue placeholder="Select a template" />
@@ -294,14 +244,13 @@ export default function CopyTemplates({
                 value={name}
                 className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg"
               >
-                {name} {name === defaultTemplateName ? "(Default)" : ""}
+                {name} {name === defaultName ? "(Default)" : ""}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Template Name */}
       <div className="space-y-1">
         <label className="text-[14px] text-gray-600">Template Name</label>
         <Input
@@ -313,7 +262,6 @@ export default function CopyTemplates({
         />
       </div>
 
-      {/* Primary Texts */}
       <div className="space-y-2">
         <label className="text-[14px] text-gray-600">Primary Text</label>
         {primaryTexts.map((text, i) => (
@@ -345,7 +293,6 @@ export default function CopyTemplates({
         )}
       </div>
 
-      {/* Headlines */}
       <div className="space-y-2">
         <label className="text-[14px] text-gray-600">Headline</label>
         {headlines.map((text, i) => (
@@ -377,17 +324,14 @@ export default function CopyTemplates({
         )}
       </div>
 
-      {/* Save Button Row */}
       <div className="space-y-2 pt-2">
-        <div>
-          <Button
-            className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
-            onClick={handleSaveTemplate}
-            disabled={!templateName.trim() || isProcessing}
-          >
-            {isProcessing ? "Saving..." : "Save Template"}
-          </Button>
-        </div>
+        <Button
+          className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
+          onClick={handleSaveTemplate}
+          disabled={!templateName.trim() || isProcessing}
+        >
+          {isProcessing ? "Saving..." : "Save Template"}
+        </Button>
 
         <div className="flex gap-4">
           <Button
@@ -401,22 +345,22 @@ export default function CopyTemplates({
           </Button>
 
           <Button
-            className={`w-full rounded-xl h-[40px] flex items-center gap-2 transition-colors ${defaultTemplateName === templateName
+            className={`w-full rounded-xl h-[40px] flex items-center gap-2 transition-colors ${defaultName === templateName
               ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
               : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
               }`}
             onClick={handleSetAsDefault}
-            disabled={!templateName.trim() || defaultTemplateName === templateName || isProcessing}
+            disabled={!templateName.trim() || defaultName === templateName || isProcessing}
           >
             <CircleCheck className="w-4 h-4" />
-            {defaultTemplateName === templateName ? "Default Template" : "Set as Default Template"}
+            {defaultName === templateName ? "Default Template" : "Set as Default Template"}
           </Button>
 
           <Button
             variant="destructive"
             className="w-full rounded-xl h-[40px] hover:bg-red-600 flex items-center gap-2"
             onClick={handleDeleteTemplate}
-            disabled={!selectedTemplate || isProcessing}
+            disabled={!selectedName || isProcessing}
           >
             <Trash2 className="w-4 h-4" />
             Delete Template
