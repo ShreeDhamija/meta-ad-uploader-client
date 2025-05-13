@@ -1,29 +1,27 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { toast } from "sonner"
-import { CirclePlus, CircleCheck, Trash2 } from "lucide-react";
-import { saveCopyTemplate } from "@/lib/saveCopyTemplate";
-import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate";
+import { CirclePlus, CircleCheck, Trash2 } from "lucide-react"
+import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
+import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import { Textarea } from "../ui/textarea"
 
-
-
-
-export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCopyTemplates, defaultTemplateName, setDefaultTemplateName, }) {
+export default function CopyTemplates({
+  selectedAdAccount,
+  copyTemplates,
+  setCopyTemplates,
+  defaultTemplateName,
+  setDefaultTemplateName,
+}) {
   const [templateName, setTemplateName] = useState("")
   const [selectedTemplate, setSelectedTemplate] = useState("Default Template")
   const [primaryTexts, setPrimaryTexts] = useState([""])
   const [headlines, setHeadlines] = useState([""])
-  const [hasAutoSelected, setHasAutoSelected] = useState(false);
-
+  const [hasAutoSelected, setHasAutoSelected] = useState(false)
 
   const handleAdd = (setter, state) => {
     if (state.length < 5) setter([...state, ""])
@@ -47,37 +45,37 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
         name: templateName,
         primaryTexts,
         headlines,
-      };
+      }
 
-      await saveCopyTemplate(selectedAdAccount, templateName, newTemplate);
+      await saveCopyTemplate(selectedAdAccount, templateName, newTemplate)
 
       setCopyTemplates((prev) => ({
         ...prev,
         [templateName]: newTemplate,
-      }));
-      setSelectedTemplate(templateName);
-      toast.success("Template saved");
+      }))
+      setSelectedTemplate(templateName)
+      toast.success("Template saved")
     } catch (err) {
-      toast.error("Failed to save template: " + err.message);
+      toast.error("Failed to save template: " + err.message)
     }
-  };
+  }
 
   const handleNewTemplate = () => {
-    setTemplateName("");
-    setSelectedTemplate("New Template");
-    setPrimaryTexts([""]);
-    setHeadlines([""]);
-  };
+    setTemplateName("")
+    setSelectedTemplate("New Template")
+    setPrimaryTexts([""])
+    setHeadlines([""])
+  }
 
   useEffect(() => {
-    if (!copyTemplates || !selectedTemplate) return;
-    const selected = copyTemplates[selectedTemplate];
+    if (!copyTemplates || !selectedTemplate) return
+    const selected = copyTemplates[selectedTemplate]
     if (selected) {
-      setTemplateName(selected.name);
-      setPrimaryTexts(selected.primaryTexts || [""]);
-      setHeadlines(selected.headlines || [""]);
+      setTemplateName(selected.name)
+      setPrimaryTexts(selected.primaryTexts || [""])
+      setHeadlines(selected.headlines || [""])
     }
-  }, [selectedTemplate]);
+  }, [selectedTemplate])
 
   // useEffect(() => {
   //   if (!copyTemplates || hasAutoSelected) return;
@@ -118,7 +116,6 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
 
   //   if (copyTemplates[selectedTemplate]) return;
 
-
   //   const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
   //     ? defaultTemplateName
   //     : keys[0];
@@ -138,34 +135,31 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
   // }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
 
   useEffect(() => {
-    if (!selectedAdAccount) return;
+    if (!selectedAdAccount) return
 
-    const keys = Object.keys(copyTemplates || {});
+    const keys = Object.keys(copyTemplates || {})
     if (keys.length === 0) {
-      setSelectedTemplate("");
-      setTemplateName("");
-      setPrimaryTexts([""]);
-      setHeadlines([""]);
-      return;
+      setSelectedTemplate("")
+      setTemplateName("")
+      setPrimaryTexts([""])
+      setHeadlines([""])
+      return
     }
 
     // ✅ Prevent overriding current template unless it's invalid
-    if (selectedTemplate && keys.includes(selectedTemplate)) return;
+    if (selectedTemplate && keys.includes(selectedTemplate)) return
 
-    const initialTemplateName = defaultTemplateName && keys.includes(defaultTemplateName)
-      ? defaultTemplateName
-      : keys[0];
+    const initialTemplateName =
+      defaultTemplateName && keys.includes(defaultTemplateName) ? defaultTemplateName : keys[0]
 
-    const selected = copyTemplates[initialTemplateName];
+    const selected = copyTemplates[initialTemplateName]
     if (selected) {
-      setSelectedTemplate(initialTemplateName);
-      setTemplateName(selected.name);
-      setPrimaryTexts(selected.primaryTexts || [""]);
-      setHeadlines(selected.headlines || [""]);
+      setSelectedTemplate(initialTemplateName)
+      setTemplateName(selected.name)
+      setPrimaryTexts(selected.primaryTexts || [""])
+      setHeadlines(selected.headlines || [""])
     }
-  }, [selectedAdAccount, copyTemplates, defaultTemplateName]);
-
-
+  }, [selectedAdAccount, copyTemplates, defaultTemplateName])
 
   return (
     <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
@@ -183,8 +177,8 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
             <span className="text-sm font-medium text-zinc-950">Copy Templates</span>
           </div>
           <p className="text-xs text-gray-500 leading-tight">
-            Add up to 5 Primary Texts and Headlines below, <br>
-            </br>Then save as a template to easily add to your ads in the future
+            Add up to 5 Primary Texts and Headlines below, <br></br>Then save as a template to easily add to your ads in
+            the future
           </p>
         </div>
 
@@ -218,22 +212,23 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
           <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
             {Object.entries(copyTemplates)
               .sort(([a], [b]) => {
-                if (a === defaultTemplateName) return -1;
-                if (b === defaultTemplateName) return 1;
-                return 0;
+                if (a === defaultTemplateName) return -1
+                if (b === defaultTemplateName) return 1
+                return 0
               })
               .map(([name]) => (
-                <SelectItem key={name} value={name} className="text-sm data-[state=checked]:rounded-lg 
-                data-[highlighted]:rounded-lg">
+                <SelectItem
+                  key={name}
+                  value={name}
+                  className="text-sm data-[state=checked]:rounded-lg 
+                data-[highlighted]:rounded-lg"
+                >
                   {name}
                 </SelectItem>
               ))}
           </SelectContent>
         </Select>
-
-
       </div>
-
 
       {/* Template Name */}
       <div className="space-y-1">
@@ -306,7 +301,6 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
         )}
       </div>
 
-
       {/* Save Button Row */}
       <div className="space-y-2 pt-2">
         <div>
@@ -336,66 +330,60 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
               }`}
             //disabled={defaultTemplateName === selectedTemplate}
             onClick={async () => {
-              if (!templateName.trim() || defaultTemplateName === selectedTemplate) return;
+              if (!templateName.trim() || defaultTemplateName === selectedTemplate) return
 
               try {
                 const updatedTemplate = {
                   name: templateName,
                   primaryTexts,
                   headlines,
-                };
+                }
 
                 // ✅ Save to backend with default flag
-                await saveCopyTemplate(
-                  selectedAdAccount,
-                  templateName,
-                  updatedTemplate,
-                  true
-                );
+                await saveCopyTemplate(selectedAdAccount, templateName, updatedTemplate, true)
 
-                // ✅ Forcefully update copyTemplates and defaultTemplateName in one render
-                setCopyTemplates((prev) => ({
-                  ...prev,
-                  [templateName]: updatedTemplate, // Use templateName to ensure consistency
-                }))
+                // Update both states in a more predictable way
+                setCopyTemplates((prev) => {
+                  const updated = {
+                    ...prev,
+                    [templateName]: updatedTemplate,
+                  }
 
-                setDefaultTemplateName(templateName)
+                  // After updating copyTemplates, update the default template name
+                  // This ensures the state updates happen in the correct order
+                  setDefaultTemplateName(templateName)
 
+                  return updated
+                })
 
-                // ✅ Fully reset UI state based on updated template
-                setSelectedTemplate(""); // trigger effect
-                setTimeout(() => {
-                  setSelectedTemplate(selectedTemplate); // re-select the same template
-                }, 0);
+                // No need to reset and re-select the template
+                // Just ensure we're using the correct template name
+                setSelectedTemplate(templateName)
 
-                toast.success("Set as default template");
+                toast.success("Set as default template")
               } catch (err) {
-                toast.error("Failed to set default: " + err.message);
+                toast.error("Failed to set default: " + err.message)
               }
             }}
-
           >
             <CircleCheck className="w-4 h-4" />
-            {defaultTemplateName === selectedTemplate
-              ? "Default Template"
-              : "Set as Default Template"}
+            {defaultTemplateName === selectedTemplate ? "Default Template" : "Set as Default Template"}
           </Button>
-
 
           <Button
             variant="destructive"
             className="w-full rounded-xl h-[40px] hover:bg-red-600 flex items-center gap-2"
             onClick={async () => {
               try {
-                await deleteCopyTemplate(selectedAdAccount, selectedTemplate);
+                await deleteCopyTemplate(selectedAdAccount, selectedTemplate)
                 setCopyTemplates((prev) => {
-                  const updated = { ...prev };
-                  delete updated[selectedTemplate];
-                  return updated;
-                });
-                toast.success("Template deleted");
+                  const updated = { ...prev }
+                  delete updated[selectedTemplate]
+                  return updated
+                })
+                toast.success("Template deleted")
               } catch (err) {
-                toast.error("Failed to delete: " + err.message);
+                toast.error("Failed to delete: " + err.message)
               }
             }}
           >
@@ -404,8 +392,6 @@ export default function CopyTemplates({ selectedAdAccount, copyTemplates, setCop
           </Button>
         </div>
       </div>
-
-
     </div>
   )
 }
