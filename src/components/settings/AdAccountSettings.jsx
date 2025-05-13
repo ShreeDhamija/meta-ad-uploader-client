@@ -50,17 +50,38 @@ export default function AdAccountSettings() {
     cta: false,
     brightness: false,
   });
-
-
-
+  const [isDirty, setIsDirty] = useState(false);
+  const [initialSettings, setInitialSettings] = useState({});
 
 
 
   useEffect(() => {
-    setSelectedPage(adSettings.defaultPage || null);
-    setSelectedInstagram(adSettings.defaultInstagram || null);
-    setDefaultLink(adSettings.defaultLink || "");
-    setUtmPairs(
+    if (!selectedAdAccount) return;
+
+    const hasChanges =
+      selectedPage !== initialSettings.defaultPage ||
+      selectedInstagram !== initialSettings.defaultInstagram ||
+      defaultLink !== initialSettings.defaultLink ||
+      defaultCTA !== initialSettings.defaultCTA ||
+      JSON.stringify(utmPairs) !== JSON.stringify(initialSettings.defaultUTMs) ||
+      JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements);
+
+    setIsDirty(hasChanges);
+  }, [
+    selectedPage,
+    selectedInstagram,
+    defaultLink,
+    defaultCTA,
+    utmPairs,
+    enhancements,
+    initialSettings,
+    selectedAdAccount
+  ]);
+
+
+
+  useEffect(() => {
+    const utms =
       Array.isArray(adSettings.defaultUTMs) && adSettings.defaultUTMs.length > 0
         ? adSettings.defaultUTMs
         : [
@@ -69,20 +90,33 @@ export default function AdAccountSettings() {
           { key: "utm_campaign", value: "" },
           { key: "utm_content", value: "" },
           { key: "utm_term", value: "" }
-        ]
-    );
-    setDefaultCTA(adSettings.defaultCTA || "LEARN_MORE");
-    setCopyTemplates(adSettings.copyTemplates || {});
-    setEnhancements(adSettings.creativeEnhancements || {
-      overlay: false,
-      visual: false,
-      text: false,
-      cta: false,
-      brightness: false,
-    });
+        ];
 
+    const initial = {
+      defaultPage: adSettings.defaultPage || null,
+      defaultInstagram: adSettings.defaultInstagram || null,
+      defaultLink: adSettings.defaultLink || "",
+      defaultCTA: adSettings.defaultCTA || "LEARN_MORE",
+      defaultUTMs: utms,
+      creativeEnhancements: adSettings.creativeEnhancements || {
+        overlay: false,
+        visual: false,
+        text: false,
+        cta: false,
+        brightness: false,
+      }
+    };
 
+    setInitialSettings(initial);
+    setSelectedPage(initial.defaultPage);
+    setSelectedInstagram(initial.defaultInstagram);
+    setDefaultLink(initial.defaultLink);
+    setUtmPairs(initial.defaultUTMs);
+    setDefaultCTA(initial.defaultCTA);
+    setEnhancements(initial.creativeEnhancements);
+    setIsDirty(false);
   }, [adSettings]);
+
 
 
   return (
@@ -226,6 +260,40 @@ export default function AdAccountSettings() {
           </div>
         </div>
       </fieldset>
+      {isDirty && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+          <Button
+            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-6 py-3 shadow-lg"
+            onClick={async () => {
+              if (!selectedAdAccount) return;
+              const cleanedUTMs = utmPairs.filter(pair => pair.key && pair.value);
+              const adAccountSettings = {
+                defaultPage: selectedPage,
+                defaultInstagram: selectedInstagram,
+                defaultLink,
+                defaultCTA,
+                ...(cleanedUTMs.length > 0 && { defaultUTMs: cleanedUTMs }),
+                creativeEnhancements: enhancements
+              };
+
+              try {
+                await saveSettings({
+                  adAccountId: selectedAdAccount,
+                  adAccountSettings
+                });
+                toast.success("Ad account settings saved!");
+                setInitialSettings(adAccountSettings);
+                setIsDirty(false);
+              } catch (err) {
+                toast.error("Failed to save ad account settings: " + err.message);
+              }
+            }}
+          >
+            Save Settings
+          </Button>
+        </div>
+      )}
+
     </div>
   )
 }
