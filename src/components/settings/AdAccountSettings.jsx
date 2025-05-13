@@ -90,8 +90,8 @@ export default function AdAccountSettings() {
     if (!selectedAdAccount) return;
 
     const hasChanges =
-      selectedPage !== initialSettings.defaultPage ||
-      selectedInstagram !== initialSettings.defaultInstagram ||
+      selectedPage?.id !== initialSettings.defaultPage?.id ||
+      selectedInstagram?.id !== initialSettings.defaultInstagram?.id ||
       defaultLink !== initialSettings.defaultLink ||
       defaultCTA !== initialSettings.defaultCTA ||
       JSON.stringify(utmPairs) !== JSON.stringify(initialSettings.defaultUTMs) ||
@@ -295,7 +295,15 @@ export default function AdAccountSettings() {
       {showFloatingButton && (
         <div
           className={`fixed bottom-6 right-6 z-50 ${animateClass}`}
-          style={{ width: "250px", height: "40px" }}
+          style={{
+            width: "300px",
+            height: "50px",
+            display: shouldShowFloatingButton || animationClass === "floating-save-button-exit" ? "block" : "none",
+            backgroundColor: "white",        // 👈 White bg
+            borderRadius: "12px",            // 👈 Optional: match button radius
+            boxShadow: "0px 4px 14px rgba(0,0,0,0.15)", // 👈 subtle shadow for contrast
+            padding: "4px"                   // 👈 some padding around the actual button
+          }}
         >
           <Button
             className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg"

@@ -112,8 +112,14 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       setTemplateName(t.name || "")
       setPrimaryTexts(t.primaryTexts || [""])
       setHeadlines(t.headlines || [""])
+    } else {
+      // No valid template selected — clear fields
+      setTemplateName("")
+      setPrimaryTexts([""])
+      setHeadlines([""])
     }
   }, [selectedName, templates])
+
 
   const handleAdd = (setter, state) => {
     if (state.length < 5) setter([...state, ""])
