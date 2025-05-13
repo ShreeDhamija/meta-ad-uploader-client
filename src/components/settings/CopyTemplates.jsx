@@ -54,15 +54,25 @@ function reducer(state, action) {
     case "DELETE_TEMPLATE": {
       const updated = { ...state.templates }
       delete updated[action.payload]
+
       const keys = Object.keys(updated)
+
+      const fallback =
+        state.defaultName && updated[state.defaultName]
+          ? state.defaultName
+          : keys[0] || ""
+
       return {
         ...state,
         templates: updated,
-        selectedName: keys[0] || "",
+        selectedName: fallback,
         defaultName:
-          state.defaultName === action.payload ? keys[0] || "" : state.defaultName,
+          state.defaultName === action.payload
+            ? keys[0] || ""
+            : state.defaultName,
       }
     }
+
 
     case "SELECT_TEMPLATE":
       return {
