@@ -52,6 +52,24 @@ export default function AdAccountSettings() {
   });
   const [isDirty, setIsDirty] = useState(false);
   const [initialSettings, setInitialSettings] = useState({});
+  const [mainButtonVisible, setMainButtonVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setMainButtonVisible(entry.isIntersecting);
+      },
+      { threshold: 0.5 } // adjust if needed
+    );
+
+    const mainSaveButton = document.getElementById("main-save-button");
+    if (mainSaveButton) observer.observe(mainSaveButton);
+
+    return () => {
+      if (mainSaveButton) observer.unobserve(mainSaveButton);
+    };
+  }, []);
+
 
 
 
@@ -228,6 +246,7 @@ export default function AdAccountSettings() {
 
           <div className="pt-2">
             <Button
+              id="main-save-button"
               className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[45px]"
               onClick={async () => {
                 if (!selectedAdAccount) {
@@ -260,10 +279,15 @@ export default function AdAccountSettings() {
           </div>
         </div>
       </fieldset>
-      {isDirty && (
-        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+      {isDirty && !mainButtonVisible && (
+        <div className="fixed bottom-6 right-6 z-50">
           <Button
-            className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-6 py-3 shadow-lg"
+            className="bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
+            style={{
+              width: "250px",
+              height: "40px",
+              borderRadius: "12px"
+            }}
             onClick={async () => {
               if (!selectedAdAccount) return;
               const cleanedUTMs = utmPairs.filter(pair => pair.key && pair.value);
@@ -293,6 +317,7 @@ export default function AdAccountSettings() {
           </Button>
         </div>
       )}
+
 
     </div>
   )
