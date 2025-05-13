@@ -84,4 +84,40 @@
 
 }
 
+@keyframes slideInUpBounce {
+    0% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    80% {
+        transform: translateY(-6px);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOutDown {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+}
+
+.floating-save-button-enter {
+    animation: slideInUpBounce 400ms ease-out forwards;
+}
+
+.floating-save-button-exit {
+    animation: slideOutDown 300ms ease-in forwards;
+}
+
 /* Remove focus ring from all toggle switches in settings */

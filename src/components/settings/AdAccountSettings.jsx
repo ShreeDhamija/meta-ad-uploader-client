@@ -53,6 +53,19 @@ export default function AdAccountSettings() {
   const [isDirty, setIsDirty] = useState(false);
   const [initialSettings, setInitialSettings] = useState({});
   const [mainButtonVisible, setMainButtonVisible] = useState(false);
+  const [showFloatingButton, setShowFloatingButton] = useState(false);
+  const [animateClass, setAnimateClass] = useState("");
+
+  useEffect(() => {
+    if (isDirty && !mainButtonVisible) {
+      setShowFloatingButton(true);
+      setAnimateClass("floating-save-button-enter");
+    } else if (showFloatingButton) {
+      setAnimateClass("floating-save-button-exit");
+      setTimeout(() => setShowFloatingButton(false), 300); // match exit duration
+    }
+  }, [isDirty, mainButtonVisible]);
+
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -279,15 +292,14 @@ export default function AdAccountSettings() {
           </div>
         </div>
       </fieldset>
-      {isDirty && !mainButtonVisible && (
-        <div className="fixed bottom-6 right-6 z-50">
+      {showFloatingButton && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 ${animateClass}`}
+          style={{ width: "250px", height: "40px" }}
+        >
           <Button
-            className="bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
-            style={{
-              width: "250px",
-              height: "40px",
-              borderRadius: "12px"
-            }}
+            className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
+            style={{ borderRadius: "12px" }}
             onClick={async () => {
               if (!selectedAdAccount) return;
               const cleanedUTMs = utmPairs.filter(pair => pair.key && pair.value);
@@ -317,6 +329,7 @@ export default function AdAccountSettings() {
           </Button>
         </div>
       )}
+
 
 
     </div>
