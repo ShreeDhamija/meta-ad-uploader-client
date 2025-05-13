@@ -298,7 +298,7 @@ export default function AdAccountSettings() {
           style={{
             width: "300px",
             height: "50px",
-            display: shouldShowFloatingButton || animationClass === "floating-save-button-exit" ? "block" : "none",
+            display: showFloatingButton || animationClass === "floating-save-button-exit" ? "block" : "none",
             backgroundColor: "white",        // 👈 White bg
             borderRadius: "12px",            // 👈 Optional: match button radius
             boxShadow: "0px 4px 14px rgba(0,0,0,0.15)", // 👈 subtle shadow for contrast
