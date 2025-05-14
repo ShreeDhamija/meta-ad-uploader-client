@@ -18,17 +18,15 @@ import {
 
 
 export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, setUtmPairs }) {
-    // const [defaultLink, setDefaultLink] = useState("")
-    // const [utmPairs, setUtmPairs] = useState([
-    //     { key: "utm_source", value: "" },
-    //     { key: "utm_campaign", value: "" },
-    //     { key: "utm_content", value: "" },
-    //     { key: "utm_medium", value: "" },
-    //     { key: "utm_term", value: "" },
-    //     { key: "", value: "" }
-    //     ,
-    // ])
-    const valueSuggestions = ["{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"]
+    const defaultPrefillPairs = [
+        { key: "utm_source", value: "facebook" },
+        { key: "utm_medium", value: "paid" },
+        { key: "utm_campaign", value: "{{campaign.name}}" },
+        { key: "utm_content", value: "{{ad.name}}" },
+        { key: "utm_term", value: "{{adset.name}}" },
+    ];
+
+    const valueSuggestions = ["{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}", "facebook", "paid"]
     const [openIndex, setOpenIndex] = useState(null)
 
     const handlePairChange = (index, field, value) => {
@@ -71,7 +69,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
             <div className="space-y-1 pt-2">
                 <label className="text-sm font-semibold">UTM Parameters</label>
                 <p className="text-xs text-gray-500">
-                    All the UTM parameters are optional. Empty value fields will not be added to the link
+                    We have pre filled your link parameters with the most commonly used values. You can delete or change them.
                 </p>
             </div>
 
@@ -80,20 +78,17 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                 {utmPairs.map((pair, i) => (
                     <div key={i} className="flex gap-2 items-center col-span-2 sm:col-span-1">
                         <Input
-                            placeholder={`Key ${i + 1}`}
-                            value={pair.key}
+                            value={pair.key === "" && i < defaultPrefillPairs.length ? defaultPrefillPairs[i].key : pair.key}
                             onChange={(e) => handlePairChange(i, "key", e.target.value)}
                             className="rounded-xl w-full bg-white"
                         />
                         <div className="relative w-full">
                             <Input
-                                placeholder={`Value ${i + 1}`}
-                                value={pair.value}
+                                value={pair.value === "" && i < defaultPrefillPairs.length ? defaultPrefillPairs[i].value : pair.value}
                                 onChange={(e) => handlePairChange(i, "value", e.target.value)}
                                 onFocus={() => setOpenIndex(i)}
                                 onBlur={() => {
-                                    // Delay closing to allow item click
-                                    setTimeout(() => setOpenIndex(null), 150)
+                                    setTimeout(() => setOpenIndex(null), 150);
                                 }}
                                 className="rounded-xl w-full bg-white"
                             />
