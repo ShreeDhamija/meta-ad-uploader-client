@@ -114,7 +114,13 @@ export default function AdAccountSettings() {
     const utms =
       Array.isArray(adSettings.defaultUTMs) && adSettings.defaultUTMs.length > 0
         ? adSettings.defaultUTMs
-        : []
+        : [
+          { key: "utm_source", value: "" },
+          { key: "utm_medium", value: "" },
+          { key: "utm_campaign", value: "" },
+          { key: "utm_content", value: "" },
+          { key: "utm_term", value: "" },
+        ]
 
     const initial = {
       defaultPage: adSettings.defaultPage || null,
