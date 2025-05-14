@@ -30,10 +30,12 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
     const [openIndex, setOpenIndex] = useState(null)
 
     const handlePairChange = (index, field, value) => {
-        const updated = [...utmPairs]
-        updated[index][field] = value
+        const updated = utmPairs.map((pair, i) =>
+            i === index ? { ...pair, [field]: value } : pair
+        )
         setUtmPairs(updated)
     }
+
 
     const handleAddPair = () => {
         setUtmPairs([...utmPairs, { key: "", value: "" }])
