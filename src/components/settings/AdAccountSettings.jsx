@@ -74,21 +74,16 @@ export default function AdAccountSettings() {
     if (!selectedAdAccount) return
 
     // Helper function to compare arrays of objects
-    const areUtmPairsEqual = (pairs1, pairs2) => {
-      if (!Array.isArray(pairs1) || !Array.isArray(pairs2)) return false
-      if (pairs1.length !== pairs2.length) return false
+    const normalize = (pairs) =>
+      pairs
+        .map(p => ({ key: String(p.key || ""), value: String(p.value || "") }))
+        .sort((a, b) => a.key.localeCompare(b.key))
+        .map(p => `${p.key}:${p.value}`)
+        .join("|")
 
-      // Create a deep copy to avoid reference issues
-      const sortedPairs1 = [...pairs1].sort((a, b) => a.key.localeCompare(b.key))
-      const sortedPairs2 = [...pairs2].sort((a, b) => a.key.localeCompare(b.key))
+    const areUtmPairsEqual = (pairs1, pairs2) =>
+      normalize(pairs1) === normalize(pairs2)
 
-      for (let i = 0; i < sortedPairs1.length; i++) {
-        if (sortedPairs1[i].key !== sortedPairs2[i].key || sortedPairs1[i].value !== sortedPairs2[i].value) {
-          return false
-        }
-      }
-      return true
-    }
 
     const hasChanges =
       selectedPage?.id !== initialSettings.defaultPage?.id ||
