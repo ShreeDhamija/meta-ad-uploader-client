@@ -18,15 +18,8 @@ import {
 
 
 export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, setUtmPairs }) {
-    // const defaultPrefillPairs = [
-    //     { key: "utm_source", value: "facebook" },
-    //     { key: "utm_medium", value: "paid" },
-    //     { key: "utm_campaign", value: "{{campaign.name}}" },
-    //     { key: "utm_content", value: "{{ad.name}}" },
-    //     { key: "utm_term", value: "{{adset.name}}" },
-    // ];
-
-    const valueSuggestions = ["{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}", "facebook", "paid"]
+    const [inputValue, setInputValue] = useState("")
+    const valueSuggestions = ["facebook", "paid", "{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"]
     const [openIndex, setOpenIndex] = useState(null)
 
     const handlePairChange = (index, field, value) => {
@@ -102,7 +95,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                                 className="rounded-xl w-full bg-white"
                             />
                             <div className="relative w-full">
-                                <Input
+                                {/* <Input
                                     value={pair.value}
                                     onChange={(e) => handlePairChange(i, "value", e.target.value)}
                                     onFocus={() => setOpenIndex(i)}
@@ -111,24 +104,45 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                                         setTimeout(() => setOpenIndex(null), 150);
                                     }}
                                     className="rounded-xl w-full bg-white"
+                                /> */}
+                                <Input
+                                    value={pair.value}
+                                    onChange={(e) => {
+                                        setInputValue(e.target.value)
+                                        handlePairChange(i, "value", e.target.value)
+                                    }}
+                                    onFocus={() => {
+                                        setInputValue("") // <-- resets so everything shows on click
+                                        setOpenIndex(i)
+                                    }}
+                                    onBlur={() => {
+                                        setTimeout(() => setOpenIndex(null), 150)
+                                    }}
+                                    className="rounded-xl w-full bg-white"
                                 />
+
                                 {openIndex === i && (
                                     <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-md mt-1 p-2">
                                         <Command className="max-h-full">
                                             <CommandList>
-                                                {valueSuggestions.map((suggestion, index) => (
-                                                    <CommandItem
-                                                        className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg"
-                                                        key={index}
-                                                        value={suggestion}
-                                                        onMouseDown={() => {
-                                                            handlePairChange(i, "value", suggestion);
-                                                            setOpenIndex(null);
-                                                        }}
-                                                    >
-                                                        {suggestion}
-                                                    </CommandItem>
-                                                ))}
+                                                {valueSuggestions
+                                                    .filter((suggestion) =>
+                                                        inputValue === "" || suggestion.toLowerCase().includes(inputValue.toLowerCase())
+                                                    )
+                                                    .map((suggestion, index) => (
+                                                        <CommandItem
+                                                            key={index}
+                                                            value={suggestion}
+                                                            onMouseDown={() => {
+                                                                handlePairChange(i, "value", suggestion)
+                                                                setOpenIndex(null)
+                                                            }}
+                                                            className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg"
+                                                        >
+                                                            {suggestion}
+                                                        </CommandItem>
+                                                    ))}
+
                                             </CommandList>
                                         </Command>
                                     </div>
