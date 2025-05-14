@@ -43,6 +43,8 @@ export default function AdAccountSettings() {
   const [mainButtonVisible, setMainButtonVisible] = useState(false)
   const [showFloatingButton, setShowFloatingButton] = useState(false)
   const [animateClass, setAnimateClass] = useState("")
+  const [settingsInitialized, setSettingsInitialized] = useState(false)
+
 
   useEffect(() => {
     if (isDirty && !mainButtonVisible) {
@@ -71,7 +73,7 @@ export default function AdAccountSettings() {
   }, [])
 
   useEffect(() => {
-    if (!selectedAdAccount) return
+    if (!selectedAdAccount || !settingsInitialized) return
 
     // Helper function to compare arrays of objects
     const normalize = (pairs) =>
@@ -103,6 +105,7 @@ export default function AdAccountSettings() {
     enhancements,
     initialSettings,
     selectedAdAccount,
+    settingsInitialized,
   ])
 
   useEffect(() => {
@@ -140,6 +143,7 @@ export default function AdAccountSettings() {
     setDefaultCTA(initial.defaultCTA)
     setEnhancements(initial.creativeEnhancements)
     setIsDirty(false)
+    setSettingsInitialized(true) // ✅ mark as ready
   }, [adSettings])
 
   return (
