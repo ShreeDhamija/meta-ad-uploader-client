@@ -133,7 +133,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                                                         <CommandItem
                                                             key={index}
                                                             value={suggestion}
-                                                            onSelect={() => {
+                                                            onMouseDown={() => {
                                                                 handlePairChange(i, "value", suggestion)
                                                                 setOpenIndex(null)
                                                             }}
