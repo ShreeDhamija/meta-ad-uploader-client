@@ -31,10 +31,10 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
 
     // Apply prefill logic only once when component mounts or when utmPairs is empty
     useEffect(() => {
-        if (utmPairs.length === 0 || utmPairs.every((pair) => pair.key === "" && pair.value === "")) {
-            const prefilled = defaultPrefillPairs.slice(0, 5)
-            setUtmPairs(prefilled)
+        if (utmPairs.length === 0) {
+            setUtmPairs(defaultPrefillPairs)
         }
+
     }, [])
 
     const handlePairChange = (index, field, value) => {
