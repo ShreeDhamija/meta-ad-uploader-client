@@ -214,40 +214,49 @@
 // }
 
 
+
+"use client"
+
 import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
-import {
-    Command,
-    CommandItem,
-    CommandList,
-} from "@/components/ui/command"
+import { Command, CommandItem, CommandList } from "@/components/ui/command"
 
 export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, setUtmPairs }) {
-    const valueSuggestions = ["{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"]
-    const [openIndex, setOpenIndex] = useState(null)
-
     const defaultPrefillPairs = [
         { key: "utm_source", value: "facebook" },
         { key: "utm_medium", value: "paid" },
         { key: "utm_campaign", value: "{{campaign.name}}" },
         { key: "utm_content", value: "{{ad.name}}" },
-        { key: "utm_term", value: "{{adset.name}}" }
-    ];
+        { key: "utm_term", value: "{{adset.name}}" },
+    ]
 
+    const valueSuggestions = [
+        "{{campaign.id}}",
+        "{{adset.id}}",
+        "{{ad.id}}",
+        "{{campaign.name}}",
+        "{{adset.name}}",
+        "{{ad.name}}",
+        "{{placement}}",
+        "{{site_source_name}}",
+        "facebook",
+        "paid",
+    ]
+    const [openIndex, setOpenIndex] = useState(null)
+
+    // Apply prefill logic only once when component mounts or when utmPairs is empty
     useEffect(() => {
-        if (
-            utmPairs.length === 0 ||
-            utmPairs.every(pair => pair.key === "" && pair.value === "")
-        ) {
-            setUtmPairs(defaultPrefillPairs);
+        if (utmPairs.length === 0 || utmPairs.every((pair) => pair.key === "" && pair.value === "")) {
+            const prefilled = defaultPrefillPairs.slice(0, 5)
+            setUtmPairs(prefilled)
         }
-    }, [utmPairs, setUtmPairs]);
+    }, [])
 
     const handlePairChange = (index, field, value) => {
         const updated = [...utmPairs]
-        updated[index][field] = value
+        updated[index] = { ...updated[index], [field]: value }
         setUtmPairs(updated)
     }
 
@@ -257,6 +266,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
 
     return (
         <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-4 w-full max-w-3xl">
+            {/* Section Header */}
             <div className="flex items-center gap-2">
                 <img
                     src="https://meta-ad-uploader-server-production.up.railway.app/icons/link.svg"
@@ -266,11 +276,10 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                 <span className="text-sm font-medium">Link Parameters</span>
             </div>
 
+            {/* Default Link */}
             <div className="space-y-1">
                 <label className="text-sm font-semibold">Default Ad Landing Page Link</label>
-                <p className="text-xs text-gray-500">
-                    Your ads will lead to this link by default if not edited while posting
-                </p>
+                <p className="text-xs text-gray-500">Your ads will lead to this link by default if not edited while posting</p>
                 <Input
                     placeholder="Default link"
                     value={defaultLink}
@@ -279,13 +288,15 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                 />
             </div>
 
+            {/* UTM Parameters */}
             <div className="space-y-1 pt-2">
                 <label className="text-sm font-semibold">UTM Parameters</label>
                 <p className="text-xs text-gray-500">
-                    All the UTM parameters are optional. Empty value fields will not be added to the link
+                    We have pre filled your link parameters with the most commonly used values. You can delete or change them.
                 </p>
             </div>
 
+            {/* Key/Value Grid */}
             <div className="flex flex-col space-y-5">
                 {utmPairs.map((pair, i) => (
                     <div key={i} className="flex gap-2 items-center col-span-2 sm:col-span-1">
@@ -299,7 +310,10 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                                 value={pair.value}
                                 onChange={(e) => handlePairChange(i, "value", e.target.value)}
                                 onFocus={() => setOpenIndex(i)}
-                                onBlur={() => setTimeout(() => setOpenIndex(null), 150)}
+                                onBlur={() => {
+                                    // Delay closing to allow item click
+                                    setTimeout(() => setOpenIndex(null), 150)
+                                }}
                                 className="rounded-xl w-full bg-white"
                             />
                             {openIndex === i && (
@@ -324,14 +338,20 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                                 </div>
                             )}
                         </div>
+
                         <Trash2
-                            onClick={() => setUtmPairs(utmPairs.filter((_, idx) => idx !== i))}
+                            onClick={() => {
+                                const updated = [...utmPairs]
+                                updated.splice(i, 1)
+                                setUtmPairs(updated)
+                            }}
                             className="w-4 h-4 text-gray-400 hover:text-red-500 cursor-pointer shrink-0"
                         />
                     </div>
                 ))}
             </div>
 
+            {/* Add Button */}
             <div>
                 <Button
                     onClick={handleAddPair}
