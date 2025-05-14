@@ -18,13 +18,13 @@ import {
 
 
 export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, setUtmPairs }) {
-    const defaultPrefillPairs = [
-        { key: "utm_source", value: "facebook" },
-        { key: "utm_medium", value: "paid" },
-        { key: "utm_campaign", value: "{{campaign.name}}" },
-        { key: "utm_content", value: "{{ad.name}}" },
-        { key: "utm_term", value: "{{adset.name}}" },
-    ];
+    // const defaultPrefillPairs = [
+    //     { key: "utm_source", value: "facebook" },
+    //     { key: "utm_medium", value: "paid" },
+    //     { key: "utm_campaign", value: "{{campaign.name}}" },
+    //     { key: "utm_content", value: "{{ad.name}}" },
+    //     { key: "utm_term", value: "{{adset.name}}" },
+    // ];
 
     const valueSuggestions = ["{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}", "facebook", "paid"]
     const [openIndex, setOpenIndex] = useState(null)
@@ -75,6 +75,78 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
 
             {/* Key/Value Grid */}
             <div className="flex flex-col space-y-5">
+                {utmPairs.map((pair, i) => {
+                    const defaultPrefillPairs = [
+                        { key: "utm_source", value: "facebook" },
+                        { key: "utm_medium", value: "paid" },
+                        { key: "utm_campaign", value: "{{campaign.name}}" },
+                        { key: "utm_content", value: "{{ad.name}}" },
+                        { key: "utm_term", value: "{{adset.name}}" }
+                    ];
+
+                    // ✅ Prefill logic: apply values to state only if not already set
+                    if (pair.key === "" && i < defaultPrefillPairs.length && utmPairs[i].key !== defaultPrefillPairs[i].key) {
+                        handlePairChange(i, "key", defaultPrefillPairs[i].key);
+                    }
+                    if (pair.value === "" && i < defaultPrefillPairs.length && utmPairs[i].value !== defaultPrefillPairs[i].value) {
+                        handlePairChange(i, "value", defaultPrefillPairs[i].value);
+                    }
+
+                    return (
+                        <div key={i} className="flex gap-2 items-center col-span-2 sm:col-span-1">
+                            <Input
+                                value={pair.key}
+                                onChange={(e) => handlePairChange(i, "key", e.target.value)}
+                                className="rounded-xl w-full bg-white"
+                            />
+                            <div className="relative w-full">
+                                <Input
+                                    value={pair.value}
+                                    onChange={(e) => handlePairChange(i, "value", e.target.value)}
+                                    onFocus={() => setOpenIndex(i)}
+                                    onBlur={() => {
+                                        // Delay closing to allow item click
+                                        setTimeout(() => setOpenIndex(null), 150);
+                                    }}
+                                    className="rounded-xl w-full bg-white"
+                                />
+                                {openIndex === i && (
+                                    <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-md mt-1 p-2">
+                                        <Command className="max-h-full">
+                                            <CommandList>
+                                                {valueSuggestions.map((suggestion, index) => (
+                                                    <CommandItem
+                                                        className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg"
+                                                        key={index}
+                                                        value={suggestion}
+                                                        onMouseDown={() => {
+                                                            handlePairChange(i, "value", suggestion);
+                                                            setOpenIndex(null);
+                                                        }}
+                                                    >
+                                                        {suggestion}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandList>
+                                        </Command>
+                                    </div>
+                                )}
+                            </div>
+
+                            <Trash2
+                                onClick={() => {
+                                    const updated = [...utmPairs];
+                                    updated.splice(i, 1);
+                                    setUtmPairs(updated);
+                                }}
+                                className="w-4 h-4 text-gray-400 hover:text-red-500 cursor-pointer shrink-0"
+                            />
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* <div className="flex flex-col space-y-5">
                 {utmPairs.map((pair, i) => (
                     <div key={i} className="flex gap-2 items-center col-span-2 sm:col-span-1">
                         <Input
@@ -126,7 +198,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     </div>
 
                 ))}
-            </div>
+            </div> */}
 
             {/* Add Button */}
             <div>
