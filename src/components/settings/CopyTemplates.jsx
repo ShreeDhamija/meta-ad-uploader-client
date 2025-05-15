@@ -149,8 +149,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       return
     }
 
-    const isRenaming = selectedName && selectedName !== templateName
-
     const newTemplate = {
       name: templateName,
       primaryTexts,
@@ -158,57 +156,21 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     }
 
     setIsProcessing(true)
-
     try {
-      // Save under new name
       await saveCopyTemplate(selectedAdAccount, templateName, newTemplate)
 
-      // If renamed, delete the old template
-      if (isRenaming) {
-        await deleteCopyTemplate(selectedAdAccount, selectedName)
-        dispatch({ type: "DELETE_TEMPLATE", payload: selectedName })
-      }
-
-      // Update local reducer
       dispatch({
         type: "SAVE_TEMPLATE",
         payload: { name: templateName, data: newTemplate },
       })
 
-      // Ensure selection stays on the saved template
-      dispatch({ type: "SELECT_TEMPLATE", payload: templateName })
-
-      // Sync with parent state (adSettings)
-      setAdSettings((prev) => {
-        const updatedTemplates = { ...prev.copyTemplates }
-
-        if (isRenaming) {
-          delete updatedTemplates[selectedName]
-        }
-
-        updatedTemplates[templateName] = newTemplate
-
-        const updated = {
-          ...prev,
-          copyTemplates: updatedTemplates,
-        }
-
-        // Only update default if renaming the default
-        if (isRenaming && selectedName === prev.defaultTemplateName) {
-          updated.defaultTemplateName = templateName
-        }
-
-        return updated
-      })
-
-      toast.success(isRenaming ? "Template renamed and saved" : "Template saved")
+      toast.success("Template saved")
     } catch (err) {
       toast.error("Failed to save template")
     } finally {
       setIsProcessing(false)
     }
   }
-
 
   const handleSetAsDefault = async () => {
     if (!templateName.trim() || defaultName === templateName) return
