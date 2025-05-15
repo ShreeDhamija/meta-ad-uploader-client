@@ -117,6 +117,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templateName.trim() &&
     templateName !== editingTemplate &&
     Object.keys(templates).includes(templateName)
+  const currentTemplate = templates[editingTemplate] || {}
+  const templateChanged =
+    templateName !== currentTemplate.name ||
+    JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
+    JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
+
 
 
   useEffect(() => {
@@ -437,7 +443,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing || nameAlreadyExists}
+          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
+
         >
           {nameAlreadyExists
             ? "This template name already exists"
