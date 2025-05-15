@@ -28,7 +28,14 @@ export default function AdAccountSettings() {
   const defaultInstagram = pages.find((page) => page.instagramAccount)?.instagramAccount
   const { settings: adSettings, setSettings: setAdSettings } = useAdAccountSettings(selectedAdAccount)
   const [defaultLink, setDefaultLink] = useState("")
-  const [utmPairs, setUtmPairs] = useState([])
+  const [utmPairs, setUtmPairs] = useState([
+    { key: "utm_source", value: "Value 1" },
+    { key: "utm_medium", value: "Value 2" },
+    { key: "utm_campaign", value: "Value 3" },
+    { key: "utm_content", value: "Value 4" },
+    { key: "utm_term", value: "Value 5" },
+  ])
+
   const [defaultCTA, setDefaultCTA] = useState("Learn More")
   const [copyTemplates, setCopyTemplates] = useState({})
   const [enhancements, setEnhancements] = useState({
@@ -107,15 +114,17 @@ export default function AdAccountSettings() {
   ])
 
   useEffect(() => {
+    if (!selectedAdAccount) return
+
     const utms =
       Array.isArray(adSettings.defaultUTMs) && adSettings.defaultUTMs.length > 0
         ? adSettings.defaultUTMs
         : [
-          { key: "utm_source", value: "" },
-          { key: "utm_medium", value: "" },
-          { key: "utm_campaign", value: "" },
-          { key: "utm_content", value: "" },
-          { key: "utm_term", value: "" },
+          { key: "utm_source", value: "facebook" },
+          { key: "utm_medium", value: "paid" },
+          { key: "utm_campaign", value: "{{campaign.name}}" },
+          { key: "utm_content", value: "{{ad.name}}" },
+          { key: "utm_term", value: "{{adset.name}}" },
         ]
 
     const initial = {
@@ -133,15 +142,15 @@ export default function AdAccountSettings() {
       },
     }
 
-    setInitialSettings(initial)
     setSelectedPage(initial.defaultPage)
     setSelectedInstagram(initial.defaultInstagram)
     setDefaultLink(initial.defaultLink)
-    setUtmPairs(initial.defaultUTMs)
+    setUtmPairs(utms) // ⬅ override placeholder with real/default values
     setDefaultCTA(initial.defaultCTA)
     setEnhancements(initial.creativeEnhancements)
-    setIsDirty(false)
-  }, [adSettings])
+    setInitialSettings(initial)
+  }, [adSettings, selectedAdAccount])
+
 
   return (
     <div className="space-y-6 w-full max-w-3xl">
@@ -246,13 +255,13 @@ export default function AdAccountSettings() {
                   alert("Select an Ad Account first")
                   return
                 }
-                const cleanedUTMs = utmPairs.filter((pair) => pair.key && pair.value)
+                //const cleanedUTMs = utmPairs.filter((pair) => pair.key && pair.value)
                 const adAccountSettings = {
                   defaultPage: selectedPage,
                   defaultInstagram: selectedInstagram,
                   defaultLink,
                   defaultCTA,
-                  ...(cleanedUTMs.length > 0 && { defaultUTMs: cleanedUTMs }),
+                  defaultUTMs: utmPairs, // ✅ always include full list, even blank ones
                   creativeEnhancements: enhancements,
                 }
 
@@ -290,13 +299,13 @@ export default function AdAccountSettings() {
             style={{ borderRadius: "12px" }}
             onClick={async () => {
               if (!selectedAdAccount) return
-              const cleanedUTMs = utmPairs.filter((pair) => pair.key && pair.value)
+              //const cleanedUTMs = utmPairs.filter((pair) => pair.key && pair.value)
               const adAccountSettings = {
                 defaultPage: selectedPage,
                 defaultInstagram: selectedInstagram,
                 defaultLink,
                 defaultCTA,
-                ...(cleanedUTMs.length > 0 && { defaultUTMs: cleanedUTMs }),
+                defaultUTMs: utmPairs, // ✅ always include full list, even blank ones
                 creativeEnhancements: enhancements,
               }
 

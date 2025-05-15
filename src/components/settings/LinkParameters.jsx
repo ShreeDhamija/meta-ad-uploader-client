@@ -83,9 +83,9 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     if (pair.key === "" && i < defaultPrefillPairs.length && utmPairs[i].key !== defaultPrefillPairs[i].key) {
                         handlePairChange(i, "key", defaultPrefillPairs[i].key);
                     }
-                    if (pair.value === "" && i < defaultPrefillPairs.length && utmPairs[i].value !== defaultPrefillPairs[i].value) {
-                        handlePairChange(i, "value", defaultPrefillPairs[i].value);
-                    }
+                    // if (pair.value === "" && i < defaultPrefillPairs.length && utmPairs[i].value !== defaultPrefillPairs[i].value) {
+                    //     handlePairChange(i, "value", defaultPrefillPairs[i].value);
+                    // }
 
                     return (
                         <div key={i} className="flex gap-2 items-center col-span-2 sm:col-span-1">
@@ -95,17 +95,9 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                                 className="rounded-xl w-full bg-white"
                             />
                             <div className="relative w-full">
-                                {/* <Input
-                                    value={pair.value}
-                                    onChange={(e) => handlePairChange(i, "value", e.target.value)}
-                                    onFocus={() => setOpenIndex(i)}
-                                    onBlur={() => {
-                                        // Delay closing to allow item click
-                                        setTimeout(() => setOpenIndex(null), 150);
-                                    }}
-                                    className="rounded-xl w-full bg-white"
-                                /> */}
+
                                 <Input
+                                    placeholder={`Value ${i + 1}`}
                                     value={pair.value}
                                     onChange={(e) => {
                                         setInputValue(e.target.value)
