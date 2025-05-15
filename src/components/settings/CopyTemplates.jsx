@@ -14,18 +14,21 @@ const initialState = {
   templates: {},
   defaultName: "",
   selectedName: "",
+  editingTemplate: null, // Track if we're editing an existing template
 }
 
 function reducer(state, action) {
   switch (action.type) {
     case "SET_ALL":
       return {
+        ...state,
         templates: action.payload.templates || {},
         defaultName: action.payload.defaultName || "",
         selectedName:
           action.payload.defaultName && action.payload.templates?.[action.payload.defaultName]
             ? action.payload.defaultName
             : Object.keys(action.payload.templates || {})[0] || "",
+        editingTemplate: null,
       }
 
     case "SAVE_TEMPLATE":
@@ -42,7 +45,6 @@ function reducer(state, action) {
       return {
         ...state,
         defaultName: action.payload,
-        selectedName: action.payload,
       }
 
     case "DELETE_TEMPLATE": {
@@ -65,6 +67,14 @@ function reducer(state, action) {
       return {
         ...state,
         selectedName: action.payload,
+        editingTemplate: action.payload,
+      }
+
+    case "NEW_TEMPLATE":
+      return {
+        ...state,
+        selectedName: "",
+        editingTemplate: null,
       }
 
     default:
@@ -74,7 +84,7 @@ function reducer(state, action) {
 
 export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSettings }) {
   const [state, dispatch] = useReducer(reducer, initialState)
-  const { templates, defaultName, selectedName } = state
+  const { templates, defaultName, selectedName, editingTemplate } = state
 
   const [templateName, setTemplateName] = useState("")
   const [primaryTexts, setPrimaryTexts] = useState([""])
@@ -124,6 +134,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }
 
   const handleNewTemplate = () => {
+    dispatch({ type: "NEW_TEMPLATE" })
     setTemplateName("")
     setPrimaryTexts([""])
     setHeadlines([""])
@@ -144,33 +155,33 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     setIsProcessing(true)
     try {
       // Check if we're editing an existing template (selectedName exists and is different from new name)
-      const isRenaming = selectedName && selectedName !== templateName
+      const isRenaming = editingTemplate && editingTemplate !== templateName
 
       // Save the template with the new name
-      await saveCopyTemplate(selectedAdAccount, templateName, newTemplate)
+      await saveCopyTemplate(selectedAdAccount, templateName, newTemplate, defaultName === editingTemplate)
 
       // If we're renaming, delete the old template
       if (isRenaming) {
-        await deleteCopyTemplate(selectedAdAccount, selectedName)
+        await deleteCopyTemplate(selectedAdAccount, editingTemplate)
       }
 
       // Update local state
       if (isRenaming) {
         // If renaming, we need to remove the old template and add the new one
         const updatedTemplates = { ...templates }
-        delete updatedTemplates[selectedName]
+        delete updatedTemplates[editingTemplate]
         updatedTemplates[templateName] = newTemplate
 
         // If the renamed template was the default, update the default name
-        if (selectedName === defaultName) {
-          dispatch({ type: "SET_DEFAULT", payload: templateName })
-
+        if (editingTemplate === defaultName) {
           // Update the parent component's state
           setAdSettings((prev) => ({
             ...prev,
             defaultTemplateName: templateName,
             copyTemplates: updatedTemplates,
           }))
+
+          dispatch({ type: "SET_DEFAULT", payload: templateName })
         } else {
           // Just update templates without changing default
           setAdSettings((prev) => ({
@@ -178,13 +189,18 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             copyTemplates: updatedTemplates,
           }))
         }
-
-        dispatch({
-          type: "DELETE_TEMPLATE",
-          payload: selectedName,
-        })
+      } else {
+        // Just updating an existing template or creating a new one
+        setAdSettings((prev) => ({
+          ...prev,
+          copyTemplates: {
+            ...prev.copyTemplates,
+            [templateName]: newTemplate,
+          },
+        }))
       }
 
+      // Always update the templates in our local state
       dispatch({
         type: "SAVE_TEMPLATE",
         payload: { name: templateName, data: newTemplate },
