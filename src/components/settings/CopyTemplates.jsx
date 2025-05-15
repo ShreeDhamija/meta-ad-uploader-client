@@ -105,11 +105,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [primaryTexts, setPrimaryTexts] = useState([""])
   const [headlines, setHeadlines] = useState([""])
   const [isProcessing, setIsProcessing] = useState(false)
-  const isEditingDefault = defaultName === editingTemplate
-  const nameAlreadyExists =
-    templateName.trim() &&
+  const editingTemplateIsReady = editingTemplate !== null && editingTemplate !== ""
+  const isEditingDefault = editingTemplateIsReady && defaultName === editingTemplate
+  const nameAlreadyExists = templateName.trim() &&
+    editingTemplateIsReady &&
     templateName !== editingTemplate &&
     Object.keys(templates).includes(templateName)
+
 
 
   useEffect(() => {
