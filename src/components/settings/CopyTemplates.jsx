@@ -101,11 +101,16 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [state, dispatch] = useReducer(reducer, initialState)
   const justSavedRef = useRef(false)
   const { templates, defaultName, selectedName, editingTemplate } = state
-
   const [templateName, setTemplateName] = useState("")
   const [primaryTexts, setPrimaryTexts] = useState([""])
   const [headlines, setHeadlines] = useState([""])
   const [isProcessing, setIsProcessing] = useState(false)
+  const isEditingDefault = defaultName === editingTemplate
+  const nameAlreadyExists =
+    templateName.trim() &&
+    templateName !== editingTemplate &&
+    Object.keys(templates).includes(templateName)
+
 
   useEffect(() => {
     if (!selectedAdAccount || !adSettings) return
@@ -425,10 +430,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing}
+          disabled={!templateName.trim() || isProcessing || nameAlreadyExists}
         >
-          {isProcessing ? "Saving..." : "Save Template"}
+          {nameAlreadyExists
+            ? "This template name already exists"
+            : isProcessing
+              ? "Saving..."
+              : "Save Template"}
         </Button>
+
 
         <div className="flex gap-4">
           <Button
@@ -442,16 +452,17 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </Button>
 
           <Button
-            className={`w-full rounded-xl h-[40px] flex items-center gap-2 transition-colors ${defaultName === templateName
+            className={`w-full rounded-xl h-[40px] flex items-center gap-2 transition-colors ${isEditingDefault
               ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
               : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
               }`}
             onClick={handleSetAsDefault}
-            disabled={!templateName.trim() || defaultName === templateName || isProcessing}
+            disabled={!templateName.trim() || isEditingDefault || isProcessing}
           >
             <CircleCheck className="w-4 h-4" />
-            {defaultName === templateName ? "Default Template" : "Set as Default Template"}
+            {isEditingDefault ? "Default Template" : "Set as Default Template"}
           </Button>
+
 
           <Button
             variant="destructive"
