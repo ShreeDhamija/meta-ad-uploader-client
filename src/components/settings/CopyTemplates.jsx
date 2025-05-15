@@ -149,6 +149,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       return
     }
 
+    const isRenaming = selectedName && selectedName !== templateName
+
     const newTemplate = {
       name: templateName,
       primaryTexts,
@@ -156,21 +158,50 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     }
 
     setIsProcessing(true)
+
     try {
       await saveCopyTemplate(selectedAdAccount, templateName, newTemplate)
+
+      if (isRenaming) {
+        await deleteCopyTemplate(selectedAdAccount, selectedName)
+        dispatch({ type: "DELETE_TEMPLATE", payload: selectedName })
+      }
 
       dispatch({
         type: "SAVE_TEMPLATE",
         payload: { name: templateName, data: newTemplate },
       })
 
-      toast.success("Template saved")
+      // 🔄 Keep parent adSettings in sync
+      setAdSettings((prev) => {
+        const updatedTemplates = { ...prev.copyTemplates }
+
+        if (isRenaming) {
+          delete updatedTemplates[selectedName]
+        }
+
+        updatedTemplates[templateName] = newTemplate
+
+        const updated = {
+          ...prev,
+          copyTemplates: updatedTemplates,
+        }
+
+        if (selectedName === defaultName) {
+          updated.defaultTemplateName = templateName
+        }
+
+        return updated
+      })
+
+      toast.success(isRenaming ? "Template renamed and saved" : "Template saved")
     } catch (err) {
       toast.error("Failed to save template")
     } finally {
       setIsProcessing(false)
     }
   }
+
 
   const handleSetAsDefault = async () => {
     if (!templateName.trim() || defaultName === templateName) return
