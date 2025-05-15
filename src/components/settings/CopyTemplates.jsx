@@ -31,15 +31,29 @@ function reducer(state, action) {
         editingTemplate: null,
       }
 
-    case "SAVE_TEMPLATE":
+    case "SAVE_TEMPLATE": {
+      // Create a new templates object with the updated template
+      const updatedTemplates = {
+        ...state.templates,
+        [action.payload.name]: action.payload.data,
+      }
+
+      // If we're renaming, remove the old template
+      if (action.payload.oldName && action.payload.oldName !== action.payload.name) {
+        delete updatedTemplates[action.payload.oldName]
+      }
+
+      // Update the default name if needed
+      const newDefaultName = state.defaultName === action.payload.oldName ? action.payload.name : state.defaultName
+
       return {
         ...state,
-        templates: {
-          ...state.templates,
-          [action.payload.name]: action.payload.data,
-        },
+        templates: updatedTemplates,
         selectedName: action.payload.name,
+        defaultName: newDefaultName,
+        editingTemplate: action.payload.name, // Update the editing template to the new name
       }
+    }
 
     case "SET_DEFAULT":
       return {
@@ -60,6 +74,7 @@ function reducer(state, action) {
         templates: updated,
         selectedName: fallback,
         defaultName: state.defaultName === action.payload ? keys[0] || "" : state.defaultName,
+        editingTemplate: null,
       }
     }
 
@@ -104,18 +119,19 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }, [selectedAdAccount, adSettings])
 
   useEffect(() => {
-    const t = templates[selectedName]
-    if (t) {
+    // If we have a selected template, load its data
+    if (selectedName && templates[selectedName]) {
+      const t = templates[selectedName]
       setTemplateName(t.name || "")
       setPrimaryTexts(t.primaryTexts || [""])
       setHeadlines(t.headlines || [""])
-    } else {
-      // No valid template selected — clear fields
+    } else if (editingTemplate === null) {
+      // Only clear fields if we're not in the middle of editing
       setTemplateName("")
       setPrimaryTexts([""])
       setHeadlines([""])
     }
-  }, [selectedName, templates])
+  }, [selectedName, templates, editingTemplate])
 
   const handleAdd = (setter, state) => {
     if (state.length < 5) setter([...state, ""])
@@ -154,59 +170,54 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
     setIsProcessing(true)
     try {
-      // Check if we're editing an existing template (selectedName exists and is different from new name)
-      const isRenaming = editingTemplate && editingTemplate !== templateName
+      // Check if we're editing an existing template
+      const isEditing = editingTemplate !== null && editingTemplate !== ""
+      const isRenaming = isEditing && editingTemplate !== templateName
+
+      // Determine if this template should be the default
+      const shouldBeDefault = isRenaming && editingTemplate === defaultName
 
       // Save the template with the new name
-      await saveCopyTemplate(selectedAdAccount, templateName, newTemplate, defaultName === editingTemplate)
+      await saveCopyTemplate(selectedAdAccount, templateName, newTemplate, shouldBeDefault)
 
       // If we're renaming, delete the old template
       if (isRenaming) {
         await deleteCopyTemplate(selectedAdAccount, editingTemplate)
       }
 
-      // Update local state
-      if (isRenaming) {
-        // If renaming, we need to remove the old template and add the new one
-        const updatedTemplates = { ...templates }
-        delete updatedTemplates[editingTemplate]
-        updatedTemplates[templateName] = newTemplate
+      // Update parent component state
+      setAdSettings((prev) => {
+        const updatedCopyTemplates = { ...prev.copyTemplates }
 
-        // If the renamed template was the default, update the default name
-        if (editingTemplate === defaultName) {
-          // Update the parent component's state
-          setAdSettings((prev) => ({
-            ...prev,
-            defaultTemplateName: templateName,
-            copyTemplates: updatedTemplates,
-          }))
+        // Add the new template
+        updatedCopyTemplates[templateName] = newTemplate
 
-          dispatch({ type: "SET_DEFAULT", payload: templateName })
-        } else {
-          // Just update templates without changing default
-          setAdSettings((prev) => ({
-            ...prev,
-            copyTemplates: updatedTemplates,
-          }))
+        // Remove the old template if renaming
+        if (isRenaming) {
+          delete updatedCopyTemplates[editingTemplate]
         }
-      } else {
-        // Just updating an existing template or creating a new one
-        setAdSettings((prev) => ({
-          ...prev,
-          copyTemplates: {
-            ...prev.copyTemplates,
-            [templateName]: newTemplate,
-          },
-        }))
-      }
 
-      // Always update the templates in our local state
-      dispatch({
-        type: "SAVE_TEMPLATE",
-        payload: { name: templateName, data: newTemplate },
+        // Update default template name if needed
+        const updatedDefaultTemplateName = shouldBeDefault ? templateName : prev.defaultTemplateName
+
+        return {
+          ...prev,
+          copyTemplates: updatedCopyTemplates,
+          defaultTemplateName: updatedDefaultTemplateName,
+        }
       })
 
-      toast.success(isRenaming ? "Template updated and renamed" : "Template saved")
+      // Update local state
+      dispatch({
+        type: "SAVE_TEMPLATE",
+        payload: {
+          name: templateName,
+          data: newTemplate,
+          oldName: isEditing ? editingTemplate : null,
+        },
+      })
+
+      toast.success(isRenaming ? "Template updated and renamed" : isEditing ? "Template updated" : "Template saved")
     } catch (err) {
       toast.error("Failed to save template")
       console.error(err)
@@ -228,9 +239,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     try {
       await saveCopyTemplate(selectedAdAccount, templateName, updatedTemplate, true)
 
-      dispatch({ type: "SAVE_TEMPLATE", payload: { name: templateName, data: updatedTemplate } })
-      dispatch({ type: "SET_DEFAULT", payload: templateName })
-
+      // Update parent component state
       setAdSettings((prev) => ({
         ...prev,
         defaultTemplateName: templateName,
@@ -239,6 +248,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           [templateName]: updatedTemplate,
         },
       }))
+
+      // Update local state
+      dispatch({ type: "SET_DEFAULT", payload: templateName })
 
       toast.success("Set as default template")
     } catch (err) {
@@ -255,6 +267,25 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     try {
       await deleteCopyTemplate(selectedAdAccount, selectedName)
 
+      // Update parent component state
+      setAdSettings((prev) => {
+        const updatedCopyTemplates = { ...prev.copyTemplates }
+        delete updatedCopyTemplates[selectedName]
+
+        // If we're deleting the default template, find a new default
+        const updatedDefaultTemplateName =
+          prev.defaultTemplateName === selectedName
+            ? Object.keys(updatedCopyTemplates)[0] || ""
+            : prev.defaultTemplateName
+
+        return {
+          ...prev,
+          copyTemplates: updatedCopyTemplates,
+          defaultTemplateName: updatedDefaultTemplateName,
+        }
+      })
+
+      // Update local state
       dispatch({ type: "DELETE_TEMPLATE", payload: selectedName })
 
       toast.success("Template deleted")
