@@ -19,17 +19,24 @@ const initialState = {
 
 function reducer(state, action) {
   switch (action.type) {
-    case "SET_ALL":
+    case "SET_ALL": {
+      const templates = action.payload.templates || {}
+      const defaultName = action.payload.defaultName || ""
+
+      const firstTemplate =
+        defaultName && templates[defaultName]
+          ? defaultName
+          : Object.keys(templates)[0] || ""
+
       return {
         ...state,
-        templates: action.payload.templates || {},
-        defaultName: action.payload.defaultName || "",
-        selectedName:
-          action.payload.defaultName && action.payload.templates?.[action.payload.defaultName]
-            ? action.payload.defaultName
-            : Object.keys(action.payload.templates || {})[0] || "",
-        editingTemplate: null,
+        templates,
+        defaultName,
+        selectedName: firstTemplate,
+        editingTemplate: firstTemplate, // ✅ Corrected
       }
+    }
+
 
     case "SAVE_TEMPLATE": {
       // Create a new templates object with the updated template
@@ -105,13 +112,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [primaryTexts, setPrimaryTexts] = useState([""])
   const [headlines, setHeadlines] = useState([""])
   const [isProcessing, setIsProcessing] = useState(false)
-  const editingTemplateIsReady = editingTemplate !== null && editingTemplate !== ""
-  const isEditingDefault = editingTemplateIsReady && defaultName === editingTemplate
-  const nameAlreadyExists = templateName.trim() &&
-    editingTemplateIsReady &&
+  const isEditingDefault = defaultName === editingTemplate
+  const nameAlreadyExists =
+    templateName.trim() &&
     templateName !== editingTemplate &&
     Object.keys(templates).includes(templateName)
-
 
 
   useEffect(() => {
