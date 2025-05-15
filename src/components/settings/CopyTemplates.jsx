@@ -49,7 +49,7 @@ function reducer(state, action) {
       return {
         ...state,
         templates: updatedTemplates,
-        selectedName: action.payload.name,
+        //selectedName: action.payload.name,
         defaultName: newDefaultName,
         editingTemplate: action.payload.name, // Update the editing template to the new name
       }
@@ -223,6 +223,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         },
       })
       justSavedRef.current = true
+      setTimeout(() => {
+        dispatch({ type: "SELECT_TEMPLATE", payload: templateName })
+      }, 0)
 
       toast.success(isRenaming ? "Template updated and renamed" : isEditing ? "Template updated" : "Template saved")
     } catch (err) {
