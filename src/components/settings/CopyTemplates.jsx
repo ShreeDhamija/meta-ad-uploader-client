@@ -3,13 +3,7 @@
 import { useEffect, useReducer, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { toast } from "sonner"
 import { CirclePlus, CircleCheck, Trash2 } from "lucide-react"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
@@ -57,22 +51,15 @@ function reducer(state, action) {
 
       const keys = Object.keys(updated)
 
-      const fallback =
-        state.defaultName && updated[state.defaultName]
-          ? state.defaultName
-          : keys[0] || ""
+      const fallback = state.defaultName && updated[state.defaultName] ? state.defaultName : keys[0] || ""
 
       return {
         ...state,
         templates: updated,
         selectedName: fallback,
-        defaultName:
-          state.defaultName === action.payload
-            ? keys[0] || ""
-            : state.defaultName,
+        defaultName: state.defaultName === action.payload ? keys[0] || "" : state.defaultName,
       }
     }
-
 
     case "SELECT_TEMPLATE":
       return {
@@ -120,7 +107,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     }
   }, [selectedName, templates])
 
-
   const handleAdd = (setter, state) => {
     if (state.length < 5) setter([...state, ""])
   }
@@ -157,16 +143,57 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
     setIsProcessing(true)
     try {
+      // Check if we're editing an existing template (selectedName exists and is different from new name)
+      const isRenaming = selectedName && selectedName !== templateName
+
+      // Save the template with the new name
       await saveCopyTemplate(selectedAdAccount, templateName, newTemplate)
+
+      // If we're renaming, delete the old template
+      if (isRenaming) {
+        await deleteCopyTemplate(selectedAdAccount, selectedName)
+      }
+
+      // Update local state
+      if (isRenaming) {
+        // If renaming, we need to remove the old template and add the new one
+        const updatedTemplates = { ...templates }
+        delete updatedTemplates[selectedName]
+        updatedTemplates[templateName] = newTemplate
+
+        // If the renamed template was the default, update the default name
+        if (selectedName === defaultName) {
+          dispatch({ type: "SET_DEFAULT", payload: templateName })
+
+          // Update the parent component's state
+          setAdSettings((prev) => ({
+            ...prev,
+            defaultTemplateName: templateName,
+            copyTemplates: updatedTemplates,
+          }))
+        } else {
+          // Just update templates without changing default
+          setAdSettings((prev) => ({
+            ...prev,
+            copyTemplates: updatedTemplates,
+          }))
+        }
+
+        dispatch({
+          type: "DELETE_TEMPLATE",
+          payload: selectedName,
+        })
+      }
 
       dispatch({
         type: "SAVE_TEMPLATE",
         payload: { name: templateName, data: newTemplate },
       })
 
-      toast.success("Template saved")
+      toast.success(isRenaming ? "Template updated and renamed" : "Template saved")
     } catch (err) {
       toast.error("Failed to save template")
+      console.error(err)
     } finally {
       setIsProcessing(false)
     }
@@ -241,15 +268,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             <span className="text-sm font-medium text-zinc-950">Copy Templates</span>
           </div>
           <p className="text-xs text-gray-500 leading-tight">
-            Add up to 5 Primary Texts and Headlines below, <br />Then save as a template to easily add to your ads in
-            the future
+            Add up to 5 Primary Texts and Headlines below, <br />
+            Then save as a template to easily add to your ads in the future
           </p>
         </div>
 
-        <Select
-          value={selectedName}
-          onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
-        >
+        <Select value={selectedName} onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}>
           <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
             <SelectValue placeholder="Select a template" />
           </SelectTrigger>
