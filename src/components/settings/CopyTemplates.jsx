@@ -99,6 +99,7 @@ function reducer(state, action) {
 
 export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSettings }) {
   const [state, dispatch] = useReducer(reducer, initialState)
+  const justSavedRef = useRef(false)
   const { templates, defaultName, selectedName, editingTemplate } = state
 
   const [templateName, setTemplateName] = useState("")
@@ -119,19 +120,24 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }, [selectedAdAccount, adSettings])
 
   useEffect(() => {
-    // If we have a selected template, load its data
+    if (justSavedRef.current) {
+      // Skip this render cycle
+      justSavedRef.current = false
+      return
+    }
+
     if (selectedName && templates[selectedName]) {
       const t = templates[selectedName]
       setTemplateName(t.name || "")
       setPrimaryTexts(t.primaryTexts || [""])
       setHeadlines(t.headlines || [""])
     } else if (editingTemplate === null) {
-      // Only clear fields if we're not in the middle of editing
       setTemplateName("")
       setPrimaryTexts([""])
       setHeadlines([""])
     }
   }, [selectedName, templates, editingTemplate])
+
 
   const handleAdd = (setter, state) => {
     if (state.length < 5) setter([...state, ""])
@@ -216,6 +222,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           oldName: isEditing ? editingTemplate : null,
         },
       })
+      justSavedRef.current = true
 
       toast.success(isRenaming ? "Template updated and renamed" : isEditing ? "Template updated" : "Template saved")
     } catch (err) {
