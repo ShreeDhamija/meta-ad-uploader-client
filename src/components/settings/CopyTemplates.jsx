@@ -160,19 +160,25 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     setIsProcessing(true)
 
     try {
+      // Save under new name
       await saveCopyTemplate(selectedAdAccount, templateName, newTemplate)
 
+      // If renamed, delete the old template
       if (isRenaming) {
         await deleteCopyTemplate(selectedAdAccount, selectedName)
         dispatch({ type: "DELETE_TEMPLATE", payload: selectedName })
       }
 
+      // Update local reducer
       dispatch({
         type: "SAVE_TEMPLATE",
         payload: { name: templateName, data: newTemplate },
       })
 
-      // 🔄 Keep parent adSettings in sync
+      // Ensure selection stays on the saved template
+      dispatch({ type: "SELECT_TEMPLATE", payload: templateName })
+
+      // Sync with parent state (adSettings)
       setAdSettings((prev) => {
         const updatedTemplates = { ...prev.copyTemplates }
 
@@ -187,7 +193,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           copyTemplates: updatedTemplates,
         }
 
-        if (selectedName === defaultName) {
+        // Only update default if renaming the default
+        if (isRenaming && selectedName === prev.defaultTemplateName) {
           updated.defaultTemplateName = templateName
         }
 
