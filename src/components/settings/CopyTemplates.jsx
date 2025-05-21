@@ -122,7 +122,25 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templateName !== currentTemplate.name ||
     JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
     JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
+  const [showImportPopup, setShowImportPopup] = useState(false)
+  const [recentAds, setRecentAds] = useState([])
 
+  useEffect(() => {
+    if (!showImportPopup || !selectedAdAccount) return;
+
+    fetch(`/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
+      credentials: "include"
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.ads) setRecentAds(data.ads);
+        else throw new Error("No data");
+      })
+      .catch(err => {
+        console.error("Error fetching ad copy:", err);
+        toast.error("Failed to load recent ad copy");
+      });
+  }, [showImportPopup]);
 
 
   useEffect(() => {
@@ -245,7 +263,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         dispatch({ type: "SELECT_TEMPLATE", payload: templateName })
       }, 0)
 
-      toast.success(isRenaming ? "Template updated and renamed" : isEditing ? "Template updated" : "Template saved")
+      toast.success(isRenaming ? "Template renamed" : isEditing ? "Template updated" : "Template saved")
     } catch (err) {
       toast.error("Failed to save template")
       console.error(err)
@@ -378,7 +396,17 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       </div>
 
       <div className="space-y-2">
-        <label className="text-[14px] text-gray-600">Primary Text</label>
+        <div className="flex justify-between items-center">
+          <label className="text-[14px] text-gray-600">Primary Text</label>
+          <Button
+            variant="ghost"
+            className="text-xs rounded-lg px-3 py-1 bg-zinc-800 text-white hover:bg-black"
+            onClick={() => setShowImportPopup(true)}
+          >
+            Import Copy
+          </Button>
+        </div>
+
         {primaryTexts.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
             <Textarea
@@ -489,6 +517,49 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </Button>
         </div>
       </div>
+      {showImportPopup && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 max-h-[80vh] overflow-y-auto w-[450px] space-y-6 shadow-xl relative">
+            <h2 className="text-md font-semibold">Recently Created Ad Copy</h2>
+            <Button
+              className="absolute top-4 right-4 bg-red-600 text-white hover:bg-red-700 px-2 py-1 rounded"
+              onClick={() => setShowImportPopup(false)}
+            >
+              Close
+            </Button>
+
+            {recentAds.map((ad, index) => (
+              <div key={index} className="border-t pt-4 space-y-2">
+                <h3 className="text-sm font-medium text-gray-800">{ad.adName || `Ad ${index + 1}`}</h3>
+
+                {ad.primaryTexts.slice(0, 5).map((text, i) => (
+                  <div key={`pt-${i}`} className="text-sm text-gray-700">
+                    <strong>Primary text {i + 1}:</strong> {text}
+                  </div>
+                ))}
+                {ad.headlines.slice(0, 5).map((text, i) => (
+                  <div key={`hl-${i}`} className="text-sm text-gray-700">
+                    <strong>Headline {i + 1}:</strong> {text}
+                  </div>
+                ))}
+
+                <Button
+                  className="mt-2 text-sm bg-black text-white rounded-lg px-3 py-1 hover:bg-gray-900"
+                  onClick={() => {
+                    setPrimaryTexts(ad.primaryTexts.slice(0, 5));
+                    setHeadlines(ad.headlines.slice(0, 5));
+                    setShowImportPopup(false);
+                  }}
+                >
+                  Import
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
+
   )
 }
