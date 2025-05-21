@@ -9,6 +9,8 @@ import { CirclePlus, CircleCheck, Trash2 } from "lucide-react"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import { Textarea } from "../ui/textarea"
+import { Download } from "lucide-react"
+
 
 const initialState = {
   templates: {},
@@ -519,45 +521,68 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       </div>
       {showImportPopup && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
-          <div className="bg-white rounded-xl p-6 max-h-[80vh] overflow-y-auto w-[450px] space-y-6 shadow-xl relative">
-            <h2 className="text-md font-semibold">Recently Created Ad Copy</h2>
-            <Button
-              className="absolute top-4 right-4 bg-red-600 text-white hover:bg-red-700 px-2 py-1 rounded"
-              onClick={() => setShowImportPopup(false)}
-            >
-              Close
-            </Button>
+          <div className="bg-white rounded-2xl p-6 max-h-[80vh] overflow-y-auto w-[700px] space-y-6 shadow-xl relative border border-gray-200">
+
+            {/* Header row: title + close */}
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-xl font-semibold text-zinc-900">Recently Created Ad Copy</h2>
+              <Button
+                className="bg-red-600 text-white rounded-lg px-3 py-1 hover:bg-red-700 text-sm"
+                onClick={() => setShowImportPopup(false)}
+              >
+                Close
+              </Button>
+            </div>
 
             {recentAds.map((ad, index) => (
-              <div key={index} className="border-t pt-4 space-y-2">
-                <h3 className="text-sm font-medium text-gray-800">{ad.adName || `Ad ${index + 1}`}</h3>
+              <div key={index} className="border-t border-gray-200 pt-4 space-y-3">
+                {/* Ad title + import button */}
+                <div className="flex items-center justify-between">
+                  <h3 className="text-md font-bold text-zinc-800">
+                    {ad.adName || `Ad ${index + 1}`}
+                  </h3>
+                  <Button
+                    className="flex items-center gap-2 text-sm bg-black text-white rounded-xl px-4 py-1 hover:bg-gray-900"
+                    onClick={() => {
+                      setPrimaryTexts(ad.primaryTexts.slice(0, 5))
+                      setHeadlines(ad.headlines.slice(0, 5))
+                      setShowImportPopup(false)
+                    }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Import
+                  </Button>
+                </div>
 
+                {/* Primary Texts */}
                 {ad.primaryTexts.slice(0, 5).map((text, i) => (
-                  <div key={`pt-${i}`} className="text-sm text-gray-700">
-                    <strong>Primary text {i + 1}:</strong> {text}
-                  </div>
-                ))}
-                {ad.headlines.slice(0, 5).map((text, i) => (
-                  <div key={`hl-${i}`} className="text-sm text-gray-700">
-                    <strong>Headline {i + 1}:</strong> {text}
+                  <div key={`pt-${i}`}>
+                    <div className="text-xs font-medium text-gray-500 mb-1">
+                      Primary Text {i + 1}:
+                    </div>
+                    <div className="bg-gray-100 rounded-lg p-2 text-sm text-gray-800 whitespace-pre-line">
+                      {text}
+                    </div>
                   </div>
                 ))}
 
-                <Button
-                  className="mt-2 text-sm bg-black text-white rounded-lg px-3 py-1 hover:bg-gray-900"
-                  onClick={() => {
-                    setPrimaryTexts(ad.primaryTexts.slice(0, 5));
-                    setHeadlines(ad.headlines.slice(0, 5));
-                    setShowImportPopup(false);
-                  }}
-                >
-                  Import
-                </Button>
+                {/* Headlines */}
+                {ad.headlines.slice(0, 5).map((text, i) => (
+                  <div key={`hl-${i}`}>
+                    <div className="text-xs font-medium text-gray-500 mb-1">
+                      Headline {i + 1}:
+                    </div>
+                    <div className="bg-gray-100 rounded-lg p-2 text-sm text-gray-800 whitespace-pre-line">
+                      {text}
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
         </div>
       )}
+
 
     </div>
 
