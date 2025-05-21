@@ -128,7 +128,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
 
-    fetch(`/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
+    fetch(`https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
       credentials: "include"
     })
       .then(res => res.json())
