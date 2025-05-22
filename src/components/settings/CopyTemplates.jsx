@@ -377,7 +377,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
-            className="flex items-center text-xs rounded-lg px-3 py-2 bg-zinc-800 text-white hover:bg-black"
+            className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover: text-white hover:bg-black"
             onClick={() => setShowImportPopup(true)}
           >
             <Download className="w-4 h-4" />
@@ -560,7 +560,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       {ad.adName || `Ad ${index + 1}`}
                     </h3>
                     <Button
-                      className="flex items-center text-xs rounded-lg px-3 py-2 bg-zinc-800 text-white hover:bg-black"
+                      className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover: text-white hover:bg-black"
                       onClick={() => {
                         setPrimaryTexts(ad.primaryTexts.slice(0, 5))
                         setHeadlines(ad.headlines.slice(0, 5))
