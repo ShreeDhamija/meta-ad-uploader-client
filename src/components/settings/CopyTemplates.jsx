@@ -127,10 +127,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
   const [showImportPopup, setShowImportPopup] = useState(false)
   const [recentAds, setRecentAds] = useState([])
+  const [isFetchingCopy, setIsFetchingCopy] = useState(false)
+
 
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
 
+    setIsFetchingCopy(true)
     fetch(`https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
       credentials: "include"
     })
@@ -142,7 +145,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       .catch(err => {
         console.error("Error fetching ad copy:", err);
         toast.error("Failed to load recent ad copy");
-      });
+      })
+      .finally(() => setIsFetchingCopy(false))
   }, [showImportPopup]);
 
 
@@ -538,51 +542,73 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               </Button>
             </div>
 
-            {recentAds.map((ad, index) => (
-              <div key={index} className="border-t border-gray-200 pt-4 space-y-3">
-                {/* Ad title + import button */}
-                <div className="flex items-center justify-between">
-                  <h3 className="text-md font-bold text-zinc-800">
-                    {ad.adName || `Ad ${index + 1}`}
-                  </h3>
-                  <Button
-                    className="flex items-center gap-2 text-sm bg-black text-white rounded-xl px-4 py-1 hover:bg-gray-900"
-                    onClick={() => {
-                      setPrimaryTexts(ad.primaryTexts.slice(0, 5))
-                      setHeadlines(ad.headlines.slice(0, 5))
-                      setShowImportPopup(false)
-                    }}
-                  >
-                    <Download className="w-4 h-4" />
-                    Import
-                  </Button>
-                </div>
-
-                {/* Primary Texts */}
-                {ad.primaryTexts.slice(0, 5).map((text, i) => (
-                  <div key={`pt-${i}`}>
-                    <div className="text-xs font-medium text-gray-500 mb-1">
-                      Primary Text {i + 1}:
-                    </div>
-                    <div className="bg-gray-100 rounded-lg p-2 text-sm text-gray-800 whitespace-pre-line">
-                      {text}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Headlines */}
-                {ad.headlines.slice(0, 5).map((text, i) => (
-                  <div key={`hl-${i}`}>
-                    <div className="text-xs font-medium text-gray-500 mb-1">
-                      Headline {i + 1}:
-                    </div>
-                    <div className="bg-gray-100 rounded-lg p-2 text-sm text-gray-800 whitespace-pre-line">
-                      {text}
-                    </div>
-                  </div>
-                ))}
+            {isFetchingCopy ? (
+              <div className="flex items-center justify-center py-10 space-x-2">
+                <svg className="animate-spin h-5 w-5 text-gray-500" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+                <span className="text-sm text-gray-600">Loading text copy...</span>
               </div>
-            ))}
+            ) : (
+              recentAds.map((ad, index) => (
+                <div key={index} className="border-t border-gray-200 pt-4 space-y-3">
+                  {/* Ad title + import button */}
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-md font-bold text-zinc-800">
+                      {ad.adName || `Ad ${index + 1}`}
+                    </h3>
+                    <Button
+                      className="flex items-center gap-2 text-sm bg-black text-white rounded-xl px-4 py-1 hover:bg-gray-900"
+                      onClick={() => {
+                        setPrimaryTexts(ad.primaryTexts.slice(0, 5))
+                        setHeadlines(ad.headlines.slice(0, 5))
+                        setShowImportPopup(false)
+                      }}
+                    >
+                      <Download className="w-4 h-4" />
+                      Import
+                    </Button>
+                  </div>
+
+                  {/* Primary Texts */}
+                  {ad.primaryTexts.slice(0, 5).map((text, i) => (
+                    <div key={`pt-${i}`}>
+                      <div className="text-xs font-medium text-gray-500 mb-1">
+                        Primary Text {i + 1}:
+                      </div>
+                      <div className="bg-gray-100 rounded-lg p-2 text-sm text-gray-800 whitespace-pre-line">
+                        {text}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Headlines */}
+                  {ad.headlines.slice(0, 5).map((text, i) => (
+                    <div key={`hl-${i}`}>
+                      <div className="text-xs font-medium text-gray-500 mb-1">
+                        Headline {i + 1}:
+                      </div>
+                      <div className="bg-gray-100 rounded-lg p-2 text-sm text-gray-800 whitespace-pre-line">
+                        {text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )))
+            }
           </div>
         </div>
       )}
