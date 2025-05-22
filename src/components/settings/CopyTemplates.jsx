@@ -545,8 +545,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             </div>
 
             {isFetchingCopy ? (
-              <div className="flex flex-col items-center justify-center py-10 space-y-3">
-                <RotateLoader size={6} color="#adadad" />
+              <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                <RotateLoader size={6} margin={-16} color="#adadad" />
                 <span className="text-sm text-gray-600">Loading text copy...</span>
               </div>
             ) : (
