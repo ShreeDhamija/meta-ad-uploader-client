@@ -8,7 +8,8 @@ import { toast } from "sonner"
 import { CirclePlus, CircleCheck, Trash2 } from "lucide-react"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
-import { Textarea } from "../ui/textarea"
+// import { Textarea } from "../ui/textarea"
+import TextareaAutosize from 'react-textarea-autosize'
 import { Download } from "lucide-react"
 
 
@@ -411,13 +412,16 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
         {primaryTexts.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
-            <Textarea
+            <TextareaAutosize
               placeholder="Enter primary text..."
               value={text}
               onChange={(e) => handleChange(i, setPrimaryTexts, primaryTexts, e.target.value)}
-              className="rounded-xl bg-white"
+              className="rounded-xl bg-white px-3 py-2 w-full text-sm resize-none focus:outline-none"
+              minRows={2}
+              maxRows={10}
               disabled={isProcessing}
             />
+
             {primaryTexts.length > 1 && (
               <Trash2
                 className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
