@@ -374,23 +374,34 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             Then save as a template to easily add to your ads in the future
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            className="flex items-center text-xs rounded-lg px-3 py-2 bg-zinc-800 text-white hover:bg-black"
+            onClick={() => setShowImportPopup(true)}
+          >
+            <Download className="w-4 h-4" />
+            Import Copy
+          </Button>
 
-        <Select value={selectedName} onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}>
-          <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
-            <SelectValue placeholder="Select a template" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
-            {availableTemplates.map(([name]) => (
-              <SelectItem
-                key={name}
-                value={name}
-                className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg"
-              >
-                {name} {name === defaultName ? "(Default)" : ""}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select value={selectedName} onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}>
+            <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
+              <SelectValue placeholder="Select a template" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
+              {availableTemplates.map(([name]) => (
+                <SelectItem
+                  key={name}
+                  value={name}
+                  className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg"
+                >
+                  {name} {name === defaultName ? "(Default)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
       </div>
 
       <div className="space-y-1">
@@ -405,22 +416,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       </div>
 
       <div className="space-y-2">
-        <div className="flex justify-between items-center">
-          <label className="text-[14px] text-gray-600">Primary Text</label>
-          <Button
-            variant="ghost"
-            className="text-xs rounded-xl px-3 py-0.5 bg-zinc-800 text-white hover:text-white hover:bg-black"
-            onClick={() => setShowImportPopup(true)}
-          >
-            <Download className="w-3 h-3" />
-            Import Copy
-          </Button>
-        </div>
-
         {primaryTexts.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
             <TextareaAutosize
-              placeholder="Enter primary text..."
+              placeholder={`Enter Primary Text ${i + 1}`}
               value={text}
               onChange={(e) => handleChange(i, setPrimaryTexts, primaryTexts, e.target.value)}
               className="rounded-xl bg-white px-3 py-2 w-full text-sm resize-none focus:outline-none"
@@ -454,7 +453,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         {headlines.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
             <Input
-              placeholder="Enter headline text..."
+              placeholder={`Enter Headline ${i + 1}`}
               value={text}
               onChange={(e) => handleChange(i, setHeadlines, headlines, e.target.value)}
               className="rounded-xl bg-white"
@@ -561,7 +560,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       {ad.adName || `Ad ${index + 1}`}
                     </h3>
                     <Button
-                      className="flex items-center gap-2 text-sm bg-black text-white rounded-xl px-4 py-1 hover:bg-gray-900"
+                      className="flex items-center text-xs rounded-lg px-3 py-2 bg-zinc-800 text-white hover:bg-black"
                       onClick={() => {
                         setPrimaryTexts(ad.primaryTexts.slice(0, 5))
                         setHeadlines(ad.headlines.slice(0, 5))
@@ -569,7 +568,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       }}
                     >
                       <Download className="w-4 h-4" />
-                      Import
+                      Import Copy
                     </Button>
                   </div>
 
