@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+import TextareaAutosize from 'react-textarea-autosize'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -752,12 +752,14 @@ export default function AdCreationForm({
                 <div className="space-y-3">
                   {messages.map((value, index) => (
                     <div key={index} className="flex items-start gap-2">
-                      <Textarea
+                      <TextareaAutosize
                         value={value}
-                        className="border border-gray-400 rounded-xl bg-white shadow"
                         onChange={(e) => updateField(setMessages, messages, index, e.target.value)}
                         placeholder="Add text option"
                         disabled={!isLoggedIn}
+                        minRows={2}
+                        maxRows={10}
+                        className="border border-gray-400 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
                       />
                       {messages.length > 1 && (
                         <Button
