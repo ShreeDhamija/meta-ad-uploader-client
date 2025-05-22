@@ -10,8 +10,9 @@ import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 // import { Textarea } from "../ui/textarea"
 import TextareaAutosize from 'react-textarea-autosize'
-import { Download } from "lucide-react"
+import { Download, CirclePlus } from "lucide-react"
 import { RotateLoader } from "react-spinners"
+
 
 
 
@@ -409,9 +410,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           <label className="text-[14px] text-gray-600">Primary Text</label>
           <Button
             variant="ghost"
-            className="text-xs rounded-lg px-3 py-1 bg-zinc-800 text-white hover:bg-black"
+            className="text-xs rounded-xl px-3 py-0.5 bg-zinc-800 text-white hover:text-white hover:bg-black"
             onClick={() => setShowImportPopup(true)}
           >
+            <Download className="w-3 h-3" />
             Import Copy
           </Button>
         </div>
@@ -537,11 +539,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             <div className="flex justify-between items-center mb-2">
               <h2 className="text-xl font-semibold text-zinc-900">Recently Created Ad Copy</h2>
               <Button
-                className="bg-red-600 text-white rounded-lg px-3 py-1 hover:bg-red-700 text-sm"
+                className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
                 onClick={() => setShowImportPopup(false)}
               >
+                <CirclePlus className="w-4 h-4 transform rotate-45" />
                 Close
               </Button>
+
             </div>
 
             {isFetchingCopy ? (
