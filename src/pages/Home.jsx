@@ -82,18 +82,23 @@ export default function Home() {
         setDateFormat(values?.dateType || "");
         setIncludeFileName(values?.useFileName || false);
         setAdOrder(order || ["adType", "dateType", "fileName"]);
-        if (!hasSeenOnboarding) {
+        if (!hasSeenOnboarding && !localStorage.getItem("onboardingStep")) {
             setShowOnboardingPopup(true);
         }
-    }, [isLoggedIn, navigate, adNameFormula]);
+    }, [isLoggedIn, navigate, adNameFormula, hasSeenOnboarding, loading]);
 
     useEffect(() => {
-        const step = localStorage.getItem("onboardingStep");
-        if (step === "home") {
-            setShowSecondHomePopup(true);
-            localStorage.removeItem("onboardingStep");
+        if (loading) return;
+
+        if (!hasSeenOnboarding) {
+            const step = localStorage.getItem("onboardingStep");
+            if (step === "home") {
+                setShowSecondHomePopup(true);
+                localStorage.removeItem("onboardingStep");
+            }
         }
-    }, []);
+    }, [hasSeenOnboarding, loading]);
+
 
 
     useEffect(() => {
