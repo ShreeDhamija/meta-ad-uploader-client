@@ -12,6 +12,7 @@ import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings";
 import useAdAccountSettings from "@/lib/useAdAccountSettings";
 import OnboardingPopup from "../components/onboarding-popup" // create this component
+import SecondOnboardingPopup from "../components/SecondOnboardingPopup" // create this component
 
 
 
