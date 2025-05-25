@@ -100,7 +100,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings }) {
                                 <img
                                     src="https://meta-ad-uploader-server-production.up.railway.app/Home-Popup-Image.webp"
                                     alt="Preview UI"
-                                    className="w-full h-auto object-contain max-h-[360px] px-4"
+                                    className="w-full h-full object-cover "
                                 />
                             </div>
 
