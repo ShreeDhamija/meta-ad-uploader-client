@@ -59,7 +59,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings }) {
 
                     {/* HOME STEP */}
                     {step === "home" && (
-                        <div key="home" className="w-full animate-fadeSwap text-left flex flex-col md:flex-row gap-6">
+                        <div key="home" className="w-full animate-fadeSwap text-left flex flex-col md:flex-row gap-6 items-stretch">
                             {/* Left content */}
                             <div className="flex-1">
                                 <img
@@ -100,9 +100,10 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings }) {
                                 <img
                                     src="https://meta-ad-uploader-server-production.up.railway.app/Home-Popup-Image.webp"
                                     alt="Preview UI"
-                                    className="w-full h-full object-contain max-h-[320px] px-6"
+                                    className="w-full h-auto object-contain max-h-[360px] px-4"
                                 />
                             </div>
+
                         </div>
                     )}
                 </div>
