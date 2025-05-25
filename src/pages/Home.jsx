@@ -1,28 +1,30 @@
-"use client"
+// "use client"
 
 import { useState, useEffect } from "react"
 import { toast, Toaster } from "sonner"
+import { useNavigate } from "react-router-dom"
+
 import Header from "../components/header"
 import AdAccountSettings from "../components/ad-account-settings"
 import AdCreationForm from "../components/ad-creation-form"
 import MediaPreview from "../components/media-preview"
+import OnboardingPopup from "../components/onboarding-popup"
+
 import { useAuth } from "../lib/AuthContext"
-import { useNavigate } from "react-router-dom"
 import { useAppData } from "@/lib/AppContext"
-import useGlobalSettings from "@/lib/useGlobalSettings";
-import useAdAccountSettings from "@/lib/useAdAccountSettings";
-import OnboardingPopup from "../components/onboarding-popup" // create this component
-import SecondOnboardingPopup from "../components/SecondOnboardingPopup" // create this component
-
-
+import useGlobalSettings from "@/lib/useGlobalSettings"
+import useAdAccountSettings from "@/lib/useAdAccountSettings"
 
 export default function Home() {
-    // Shared state between components
     const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = useState(false)
 
-    // Ad Account Settings state
+    // Onboarding
+    const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
+    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, loading } = useGlobalSettings()
+
+    // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
     const [campaigns, setCampaigns] = useState([])
     const [selectedCampaign, setSelectedCampaign] = useState("")
@@ -32,7 +34,7 @@ export default function Home() {
     const [duplicateAdSet, setDuplicateAdSet] = useState("")
     const [campaignObjective, setCampaignObjective] = useState("")
 
-    // Ad Creation Form state
+    // Ad creation form
     const [adName, setAdName] = useState("Ad Name Formula will be displayed here")
     const [headlines, setHeadlines] = useState([""])
     const [descriptions, setDescriptions] = useState([""])
@@ -46,127 +48,73 @@ export default function Home() {
     const [includeFileName, setIncludeFileName] = useState(false)
     const [customAdName, setCustomAdName] = useState("")
     const [thumbnail, setThumbnail] = useState(null)
-    const [selectedTemplate, setSelectedTemplate] = useState("");
-    const [showOnboardingPopup, setShowOnboardingPopup] = useState(false);
-    const [showSecondHomePopup, setShowSecondHomePopup] = useState(false);
+    const [selectedTemplate, setSelectedTemplate] = useState("")
+    const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"])
 
-
-    // Media Preview state
     const [files, setFiles] = useState([])
     const [videoThumbs, setVideoThumbs] = useState({})
-    const {
-        adAccounts,
-        setAdAccounts,
-        pages,
-        setPages
-    } = useAppData()
 
-    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, loading } = useGlobalSettings();
-    const { settings: adAccountSettings } = useAdAccountSettings(selectedAdAccount);
-    const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"]);
+    const { adAccounts, setAdAccounts, pages, setPages } = useAppData()
+    const { settings: adAccountSettings } = useAdAccountSettings(selectedAdAccount)
 
+    if (authLoading) return null
 
-    if (authLoading) return null; // or a loading spinner if you want
-
+    // 🚀 Show onboarding popup once settings are loaded
     useEffect(() => {
-        if (!isLoggedIn) {
-            navigate("/login");
-            return;
-        }
-
-        if (loading) return;
-
-        const { values, order } = adNameFormula;
-
-        setAdType(values?.adType || "");
-        setDateFormat(values?.dateType || "");
-        setIncludeFileName(values?.useFileName || false);
-        setAdOrder(order || ["adType", "dateType", "fileName"]);
-        if (!hasSeenOnboarding && !localStorage.getItem("onboardingStep")) {
-            setShowOnboardingPopup(true);
-        }
-    }, [isLoggedIn, navigate, adNameFormula, hasSeenOnboarding, loading]);
-
-    useEffect(() => {
-        if (loading) return;
-
+        if (!isLoggedIn || loading) return
         if (!hasSeenOnboarding) {
-            const step = localStorage.getItem("onboardingStep");
-            if (step === "home") {
-                setShowSecondHomePopup(true);
-                localStorage.removeItem("onboardingStep");
-            }
+            setShowOnboardingPopup(true)
         }
-    }, [hasSeenOnboarding, loading]);
+    }, [isLoggedIn, loading, hasSeenOnboarding])
 
-
-
+    // 🎛️ Load global ad name formula settings
     useEffect(() => {
-        if (!selectedAdAccount) return;
+        if (!isLoggedIn || loading) return
+
+        const { values, order } = adNameFormula
+        setAdType(values?.adType || "")
+        setDateFormat(values?.dateType || "")
+        setIncludeFileName(values?.useFileName || false)
+        setAdOrder(order || ["adType", "dateType", "fileName"])
+    }, [isLoggedIn, loading, adNameFormula])
+
+    // 🧠 Load default ad account settings
+    useEffect(() => {
+        if (!selectedAdAccount) return
 
         if (adAccountSettings.defaultPage?.id) {
-            setPageId(adAccountSettings.defaultPage.id);
+            setPageId(adAccountSettings.defaultPage.id)
         }
 
         if (adAccountSettings.defaultInstagram?.id) {
-            setInstagramAccountId(adAccountSettings.defaultInstagram.id);
+            setInstagramAccountId(adAccountSettings.defaultInstagram.id)
         }
 
         if (adAccountSettings.defaultLink) {
-            setLink(adAccountSettings.defaultLink);
+            setLink(adAccountSettings.defaultLink)
         }
 
         if (adAccountSettings.defaultCTA) {
-            setCta(adAccountSettings.defaultCTA);
+            setCta(adAccountSettings.defaultCTA)
         }
 
-        // Template logic
-        const templates = adAccountSettings.copyTemplates || {};
-        const templateKeys = Object.keys(templates);
+        // Copy templates
+        const templates = adAccountSettings.copyTemplates || {}
+        const keys = Object.keys(templates)
+        if (keys.length === 0) return
 
-        if (templateKeys.length === 0) return; // ⬅️ No templates, do nothing
-
-        const initialTemplateName = templateKeys.includes(adAccountSettings.defaultTemplateName)
+        const initialTemplateName = keys.includes(adAccountSettings.defaultTemplateName)
             ? adAccountSettings.defaultTemplateName
-            : templateKeys[0];
+            : keys[0]
 
-        setSelectedTemplate(initialTemplateName);
+        setSelectedTemplate(initialTemplateName)
 
-        const selectedTemplateData = templates[initialTemplateName];
+        const selectedTemplateData = templates[initialTemplateName]
         if (selectedTemplateData) {
-            setMessages(selectedTemplateData.primaryTexts || [""]);
-            setHeadlines(selectedTemplateData.headlines || [""]);
+            setMessages(selectedTemplateData.primaryTexts || [""])
+            setHeadlines(selectedTemplateData.headlines || [""])
         }
-    }, [selectedAdAccount, adAccountSettings]);
-
-
-    const handleOnboardingComplete = async () => {
-        try {
-            await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    globalSettings: { hasSeenOnboarding: true }
-                }),
-            });
-            setHasSeenOnboarding(true);
-            setShowOnboardingPopup(false);      // ⬅️ Hide the popup
-        } catch (err) {
-            console.error("Failed to update onboarding flag:", err);
-        }
-    }
-
-    const handleGoToSettings = () => {
-        handleOnboardingComplete();
-        navigate("/settings");
-    }
-
-    const handleGoToHome = () => {
-        localStorage.setItem("onboardingStep", "home");
-        setShowOnboardingPopup(false);
-    };
-
+    }, [selectedAdAccount, adAccountSettings])
 
     return (
         <div className="w-full max-w-[1220px] mx-auto py-8 px-2 sm:px-4 md:px-6 mt-[20px]">
@@ -240,7 +188,6 @@ export default function Home() {
                         defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
                         selectedTemplate={selectedTemplate}
                         setSelectedTemplate={setSelectedTemplate}
-
                     />
                 </div>
 
@@ -248,32 +195,35 @@ export default function Home() {
                     <MediaPreview files={files} setFiles={setFiles} videoThumbs={videoThumbs} />
                 </div>
             </div>
-            <Toaster richColors position="bottom-right" closeButton />
+
             {showOnboardingPopup && (
                 <OnboardingPopup
                     userName={userName}
-                    onClose={handleGoToHome}
-                    onGoToSettings={handleGoToSettings}
-                />
-            )}
-            {showSecondHomePopup && (
-                <SecondOnboardingPopup
                     onClose={async () => {
-                        setShowSecondHomePopup(false);
-                        // ✅ Final step: mark onboarding as complete in Firestore
                         await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
                             method: "POST",
                             credentials: "include",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
-                        });
-                        setHasSeenOnboarding(true);
+                        })
+                        setHasSeenOnboarding(true)
+                        setShowOnboardingPopup(false)
+                    }}
+                    onGoToSettings={async () => {
+                        await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
+                        })
+                        setHasSeenOnboarding(true)
+                        setShowOnboardingPopup(false)
+                        navigate("/settings")
                     }}
                 />
             )}
 
+            <Toaster richColors position="bottom-right" closeButton />
         </div>
-
     )
 }
-
