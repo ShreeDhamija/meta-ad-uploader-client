@@ -47,6 +47,8 @@ export default function Home() {
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("");
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false);
+    const [showSecondHomePopup, setShowSecondHomePopup] = useState(false);
+
 
     // Media Preview state
     const [files, setFiles] = useState([])
@@ -83,6 +85,15 @@ export default function Home() {
             setShowOnboardingPopup(true);
         }
     }, [isLoggedIn, navigate, adNameFormula]);
+
+    useEffect(() => {
+        const step = localStorage.getItem("onboardingStep");
+        if (step === "home") {
+            setShowSecondHomePopup(true);
+            localStorage.removeItem("onboardingStep");
+        }
+    }, []);
+
 
     useEffect(() => {
         if (!selectedAdAccount) return;
@@ -146,9 +157,9 @@ export default function Home() {
     }
 
     const handleGoToHome = () => {
+        localStorage.setItem("onboardingStep", "home");
         setShowOnboardingPopup(false);
-        handleOnboardingComplete();
-    }
+    };
 
 
     return (
@@ -237,6 +248,21 @@ export default function Home() {
                     userName={userName}
                     onClose={handleGoToHome}
                     onGoToSettings={handleGoToSettings}
+                />
+            )}
+            {showSecondHomePopup && (
+                <SecondOnboardingPopup
+                    onClose={async () => {
+                        setShowSecondHomePopup(false);
+                        // ✅ Final step: mark onboarding as complete in Firestore
+                        await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+                            method: "POST",
+                            credentials: "include",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
+                        });
+                        setHasSeenOnboarding(true);
+                    }}
                 />
             )}
 
