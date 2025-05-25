@@ -132,6 +132,8 @@ export default function Home() {
                 }),
             });
             setHasSeenOnboarding(true);
+            setShowOnboardingPopup(false);      // ⬅️ Hide the popup
+
         } catch (err) {
             console.error("Failed to update onboarding flag:", err);
         }
