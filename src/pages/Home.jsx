@@ -61,7 +61,7 @@ export default function Home() {
         setPages
     } = useAppData()
 
-    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboardin, loading } = useGlobalSettings();
+    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, loading } = useGlobalSettings();
     const { settings: adAccountSettings } = useAdAccountSettings(selectedAdAccount);
     const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"]);
 
