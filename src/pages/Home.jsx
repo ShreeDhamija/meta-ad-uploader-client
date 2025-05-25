@@ -58,7 +58,7 @@ export default function Home() {
         setPages
     } = useAppData()
 
-    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding } = useGlobalSettings();
+    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboardin, loading } = useGlobalSettings();
     const { settings: adAccountSettings } = useAdAccountSettings(selectedAdAccount);
     const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"]);
 
@@ -70,6 +70,8 @@ export default function Home() {
             navigate("/login");
             return;
         }
+
+        if (loading) return;
 
         const { values, order } = adNameFormula;
 
@@ -133,7 +135,6 @@ export default function Home() {
             });
             setHasSeenOnboarding(true);
             setShowOnboardingPopup(false);      // ⬅️ Hide the popup
-
         } catch (err) {
             console.error("Failed to update onboarding flag:", err);
         }
