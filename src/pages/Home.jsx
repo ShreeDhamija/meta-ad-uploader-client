@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom"
 import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings";
 import useAdAccountSettings from "@/lib/useAdAccountSettings";
+import OnboardingPopup from "../components/onboarding-popup" // create this component
+
 
 
 export default function Home() {
