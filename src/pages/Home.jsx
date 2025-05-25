@@ -234,6 +234,7 @@ export default function Home() {
             <Toaster richColors position="bottom-right" closeButton />
             {showOnboardingPopup && (
                 <OnboardingPopup
+                    userName={userName}
                     onClose={handleGoToHome}
                     onGoToSettings={handleGoToSettings}
                 />
