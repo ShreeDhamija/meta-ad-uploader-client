@@ -116,6 +116,24 @@ export default function Home() {
         }
     }, [selectedAdAccount, adAccountSettings])
 
+    const handleCloseOnboarding = () => {
+        setShowOnboardingPopup(false) // closes instantly
+
+        fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                globalSettings: { hasSeenOnboarding: true },
+            }),
+        }).then(() => {
+            setHasSeenOnboarding(true)
+        }).catch((err) => {
+            console.error("Failed to save onboarding flag:", err)
+        })
+    }
+
+
     return (
         <div className="w-full max-w-[1220px] mx-auto py-8 px-2 sm:px-4 md:px-6 mt-[20px]">
             <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
@@ -199,16 +217,7 @@ export default function Home() {
             {showOnboardingPopup && (
                 <OnboardingPopup
                     userName={userName}
-                    onClose={async () => {
-                        await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
-                            method: "POST",
-                            credentials: "include",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
-                        })
-                        setHasSeenOnboarding(true)
-                        setShowOnboardingPopup(false)
-                    }}
+                    onClose={handleCloseOnboarding}
                     onGoToSettings={async () => {
                         await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
                             method: "POST",
