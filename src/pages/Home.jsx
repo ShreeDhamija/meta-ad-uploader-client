@@ -44,7 +44,7 @@ export default function Home() {
     const [customAdName, setCustomAdName] = useState("")
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("");
-
+    const [showOnboardingPopup, setShowOnboardingPopup] = useState(false);
 
     // Media Preview state
     const [files, setFiles] = useState([])
@@ -56,7 +56,7 @@ export default function Home() {
         setPages
     } = useAppData()
 
-    const { adNameFormula } = useGlobalSettings();
+    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding } = useGlobalSettings();
     const { settings: adAccountSettings } = useAdAccountSettings(selectedAdAccount);
     const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"]);
 
@@ -75,6 +75,9 @@ export default function Home() {
         setDateFormat(values?.dateType || "");
         setIncludeFileName(values?.useFileName || false);
         setAdOrder(order || ["adType", "dateType", "fileName"]);
+        if (!hasSeenOnboarding) {
+            setShowOnboardingPopup(true);
+        }
     }, [isLoggedIn, navigate, adNameFormula]);
 
     useEffect(() => {
@@ -116,6 +119,31 @@ export default function Home() {
     }, [selectedAdAccount, adAccountSettings]);
 
 
+    const handleOnboardingComplete = async () => {
+        try {
+            await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    globalSettings: { hasSeenOnboarding: true }
+                }),
+            });
+            setHasSeenOnboarding(true);
+        } catch (err) {
+            console.error("Failed to update onboarding flag:", err);
+        }
+    }
+
+    const handleGoToSettings = () => {
+        handleOnboardingComplete();
+        navigate("/settings");
+    }
+
+    const handleGoToHome = () => {
+        setShowOnboardingPopup(false);
+        handleOnboardingComplete();
+    }
 
 
     return (
@@ -199,7 +227,15 @@ export default function Home() {
                 </div>
             </div>
             <Toaster richColors position="bottom-right" closeButton />
+            {showOnboardingPopup && (
+                <OnboardingPopup
+                    onClose={handleGoToHome}
+                    onGoToSettings={handleGoToSettings}
+                />
+            )}
+
         </div>
+
     )
 }
 

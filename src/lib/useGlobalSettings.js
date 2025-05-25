@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 
 export default function useGlobalSettings() {
     const [loading, setLoading] = useState(true);
-    // const rawFormula = data.settings?.adNameFormula || {};
-    // const defaultOrder = ["adType", "dateType", "fileName"];
+    const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
     const [adNameFormula, setAdNameFormula] = useState({
         order: ["adType", "dateType", "fileName"], // default order
         values: {
@@ -31,7 +30,7 @@ export default function useGlobalSettings() {
                         useFileName: rawFormula.values?.useFileName || false
                     }
                 });
-
+                setHasSeenOnboarding(data.settings?.hasSeenOnboarding || false);
 
             } catch (err) {
                 console.error("Failed to fetch global settings:", err);
@@ -47,5 +46,7 @@ export default function useGlobalSettings() {
         loading,
         adNameFormula,
         setAdNameFormula,
+        hasSeenOnboarding,
+        setHasSeenOnboarding,
     };
 }
