@@ -17,7 +17,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings }) {
                             </h2>
                             <p className="text-gray-500 mb-10">There’s 2 ways to get started</p>
 
-                            <div className="flex flex-col sm:flex-row justify-between gap-x-10 gap-y-8 sm:items-start">
+                            <div className="flex flex-col sm:flex-row justify-center gap-10 sm:gap-8">
                                 {/* Home Option */}
                                 <button
                                     onClick={() => setStep("home")}
@@ -100,8 +100,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings }) {
                                 <img
                                     src="https://meta-ad-uploader-server-production.up.railway.app/Home-Popup-Image.webp"
                                     alt="Preview UI"
-                                    className="w-full h-auto max-w-[240px]"
-
+                                    className="w-full h-full object-contain max-h-[320px] px-6"
                                 />
                             </div>
                         </div>
