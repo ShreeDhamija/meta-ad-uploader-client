@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+
 import { useAuth } from "@/lib/AuthContext"
 import { Navigate, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { LogOutIcon } from "lucide-react"
 import { Home } from "lucide-react"
 import { Toaster } from "sonner"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import GlobalSettings from "@/components/settings/global-settings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
