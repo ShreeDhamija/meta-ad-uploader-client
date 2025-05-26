@@ -219,15 +219,15 @@ export default function Home() {
                     userName={userName}
                     onClose={handleCloseOnboarding}
                     onGoToSettings={async () => {
-                        await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+                        setHasSeenOnboarding(true)
+                        setShowOnboardingPopup(false)
+                        navigate("/settings")
+                        fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
                             method: "POST",
                             credentials: "include",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
                         })
-                        setHasSeenOnboarding(true)
-                        setShowOnboardingPopup(false)
-                        navigate("/settings")
                     }}
                 />
             )}
