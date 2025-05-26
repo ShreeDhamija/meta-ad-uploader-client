@@ -11,6 +11,7 @@ export default function useGlobalSettings() {
             useFileName: false,
         },
     });
+    const [hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding] = useState(false);
 
 
     useEffect(() => {
@@ -31,6 +32,8 @@ export default function useGlobalSettings() {
                     }
                 });
                 setHasSeenOnboarding(data.settings?.hasSeenOnboarding || false);
+                setHasSeenSettingsOnboarding(data.settings?.hasSeenSettingsOnboarding || false);
+
 
             } catch (err) {
                 console.error("Failed to fetch global settings:", err);
@@ -47,6 +50,8 @@ export default function useGlobalSettings() {
         adNameFormula,
         setAdNameFormula,
         hasSeenOnboarding,
-        setHasSeenOnboarding,
+        hasSeenSettingsOnboarding,
+        setHasSeenSettingsOnboarding
+
     };
 }

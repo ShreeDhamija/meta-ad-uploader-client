@@ -96,7 +96,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings }) {
                             </div>
 
                             {/* Right image */}
-                            <div className="flex-1 bg-[#FDCEDF] rounded-xl overflow-hidden flex items-center justify-center">
+                            <div className="flex-1 bg-[#FDCEDF] rounded-lg overflow-hidden flex items-center justify-center">
                                 <img
                                     src="https://meta-ad-uploader-server-production.up.railway.app/Home-Popup-Image.webp"
                                     alt="Preview UI"

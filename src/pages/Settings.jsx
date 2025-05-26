@@ -9,12 +9,16 @@ import { Toaster } from "sonner"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import GlobalSettings from "@/components/settings/global-settings"
+import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import ViewAds from "@/components/settings/view-ads"
+import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
+
 
 
 export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
+    const [showSettingsPopup, setShowSettingsPopup] = useState(false);
     const navigate = useNavigate()
     const [activeTab, setActiveTab] = useState("adaccount")
     const tabIconMap = {
@@ -25,6 +29,12 @@ export default function Settings() {
 
     }
 
+    const {
+        hasSeenSettingsOnboarding,
+        setHasSeenSettingsOnboarding,
+        loading
+    } = useGlobalSettings()
+
     // No JavaScript-based responsive state needed
 
     const tabDescriptionMap = {
@@ -34,8 +44,27 @@ export default function Settings() {
         viewads: "Preview all ads created in the last hour.",
     }
 
+    const handleCloseSettingsPopup = () => {
+        setShowSettingsPopup(false);
+        fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                globalSettings: { hasSeenSettingsOnboarding: true },
+            }),
+        }).then(() => setHasSeenSettingsOnboarding(true));
+    };
+
+
     if (authLoading) return null; // or a loading spinner if you want
     //if (!isLoggedIn) return <Navigate to="/login" />
+
+    useEffect(() => {
+        if (!loading && !hasSeenSettingsOnboarding) {
+            setShowSettingsPopup(true);
+        }
+    }, [loading, hasSeenSettingsOnboarding]);
 
     return (
         <div className="flex">
@@ -144,6 +173,13 @@ export default function Settings() {
             <div>
                 <Toaster richColors position="bottom-right" closeButton />
             </div>
+            {showSettingsPopup && (
+                <SettingsOnboardingPopup
+                    onClose={handleCloseSettingsPopup}
+                />
+            )}
+
         </div>
+
     )
 }
