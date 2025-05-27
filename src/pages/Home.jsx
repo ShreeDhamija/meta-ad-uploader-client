@@ -224,12 +224,14 @@ export default function Home() {
                         console.log("typeof navigate:", typeof navigate)
 
                         try {
-                            setHasSeenOnboarding(true)
-                            setShowOnboardingPopup(false)
-
+                            // Navigate FIRST, before unmounting the component
                             console.log("About to call navigate")
                             navigate("/settings")
                             console.log("Navigate called successfully")
+
+                            // Then update state and save settings
+                            setHasSeenOnboarding(true)
+                            setShowOnboardingPopup(false)
 
                             // Save settings after navigation
                             fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
