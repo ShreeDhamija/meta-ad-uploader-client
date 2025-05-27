@@ -38,7 +38,13 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings }) {
 
                                 {/* Settings Option */}
                                 <button
-                                    onClick={onGoToSettings}
+                                    onClick={async () => {
+                                        try {
+                                            await onGoToSettings()
+                                        } catch (error) {
+                                            console.error("Navigation error:", error)
+                                        }
+                                    }}
                                     className="group flex flex-col items-center space-y-3 focus:outline-none"
                                 >
                                     <img

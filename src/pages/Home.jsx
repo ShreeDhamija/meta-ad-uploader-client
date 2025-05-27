@@ -218,16 +218,18 @@ export default function Home() {
                 <OnboardingPopup
                     userName={userName}
                     onClose={handleCloseOnboarding}
-                    onGoToSettings={async () => {
+                    onGoToSettings={() => {
                         setHasSeenOnboarding(true)
                         setShowOnboardingPopup(false)
                         navigate("/settings")
+
+                        // Fire and forget the settings save
                         fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
                             method: "POST",
                             credentials: "include",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
-                        })
+                        }).catch(console.error)
                     }}
                 />
             )}
