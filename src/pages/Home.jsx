@@ -219,17 +219,29 @@ export default function Home() {
                     userName={userName}
                     onClose={handleCloseOnboarding}
                     onGoToSettings={() => {
-                        setHasSeenOnboarding(true)
-                        setShowOnboardingPopup(false)
-                        navigate("/settings")
+                        console.log("onGoToSettings called")
+                        console.log("navigate function:", navigate)
+                        console.log("typeof navigate:", typeof navigate)
 
-                        // Fire and forget the settings save
-                        fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
-                            method: "POST",
-                            credentials: "include",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
-                        }).catch(console.error)
+                        try {
+                            setHasSeenOnboarding(true)
+                            setShowOnboardingPopup(false)
+
+                            console.log("About to call navigate")
+                            navigate("/settings")
+                            console.log("Navigate called successfully")
+
+                            // Save settings after navigation
+                            fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+                                method: "POST",
+                                credentials: "include",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
+                            }).catch(error => console.error("Settings save error:", error))
+
+                        } catch (error) {
+                            console.error("Error in onGoToSettings:", error)
+                        }
                     }}
                 />
             )}
