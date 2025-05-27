@@ -1,6 +1,4 @@
-"use client"
-
-
+//"use client"
 import { useAuth } from "@/lib/AuthContext"
 import { Navigate, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -59,7 +57,7 @@ export default function Settings() {
 
 
     if (authLoading) return null; // or a loading spinner if you want
-    //if (!isLoggedIn) return <Navigate to="/login" />
+    if (!isLoggedIn) return <Navigate to="/login" />
 
     useEffect(() => {
         if (!loading && !hasSeenSettingsOnboarding) {
