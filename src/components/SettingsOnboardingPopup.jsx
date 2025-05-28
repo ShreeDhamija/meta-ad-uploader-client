@@ -19,7 +19,7 @@ export default function SettingsOnboardingPopup({ onClose }) {
                                 Configure Presets
                             </div>
                             <p className="text-gray-700 text-sm">
-                                Save all your creative enhancements,UTM's and pages once and forget about it.
+                                Save all your creative enhancements, UTM's and pages once and forget about it.
                             </p>
                         </div>
 
