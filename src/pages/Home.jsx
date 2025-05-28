@@ -22,7 +22,7 @@ export default function Home() {
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
-    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding } = useGlobalSettings()
+    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading } = useGlobalSettings()
 
     // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
