@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 
-export default function OnboardingPopup({ userName, onClose, onGoToSettings }) {
+export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding }) {
     const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
 
     return (
