@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>OAuth Test (GIS)</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+    <button id="auth-button">Sign in with Google</button>
+
+    <script>
+        const CLIENT_ID = "YOUR_CLIENT_ID_HERE";
+        const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+
+        let tokenClient;
+
+        window.onload = function () {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: (tokenResponse) => {
+                    if (tokenResponse.error) {
+                        alert("Error: " + tokenResponse.error);
+                    } else {
+                        alert("Success! Access token: " + tokenResponse.access_token);
+                        console.log("Access Token:", tokenResponse.access_token);
+                    }
+                },
+            });
+
+            document.getElementById("auth-button").onclick = () => {
+                tokenClient.requestAccessToken();
+            };
+        };
+    </script>
+</body>
+
+</html>
