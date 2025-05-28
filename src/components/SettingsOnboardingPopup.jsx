@@ -16,19 +16,19 @@ export default function SettingsOnboardingPopup({ onClose }) {
 
                         <div className="mb-6">
                             <div className="bg-[#FFA500] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
-                                Step 1
+                                Configure Presets
                             </div>
                             <p className="text-gray-700 text-sm">
-                                Link your Facebook and Instagram pages. These will be used for publishing your ads.
+                                Save all your creative enhancements,UTM's and pages once and forget about it.
                             </p>
                         </div>
 
                         <div className="mb-8">
                             <div className="bg-[#FBB03B] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
-                                Step 2
+                                Import Copy
                             </div>
                             <p className="text-gray-700 text-sm">
-                                Set default values for CTA, links, and upload templates to speed up your workflow.
+                                No need to copy paste text everytime. Import your most used best converting copy and save them as templates.
                             </p>
                         </div>
 
@@ -36,14 +36,14 @@ export default function SettingsOnboardingPopup({ onClose }) {
                             onClick={onClose}
                             className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full"
                         >
-                            Got it
+                            Configure Settings
                         </Button>
                     </div>
 
                     {/* Right image */}
-                    <div className="flex-1 bg-[#FDCEDF] rounded-lg overflow-hidden flex items-center justify-center">
+                    <div className="flex-1 bg-[#FDCEDF] rounded-[22px] overflow-hidden flex items-center justify-center">
                         <img
-                            src="https://meta-ad-uploader-server-production.up.railway.app/Home-Popup-Image.webp"
+                            src="https://meta-ad-uploader-server-production.up.railway.app/settings-popup-image.webp"
                             alt="Preview UI"
                             className="w-full h-full object-cover"
                         />

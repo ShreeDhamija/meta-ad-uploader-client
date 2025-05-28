@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 
 export default function OnboardingPopup({ userName, onClose, onGoToSettings }) {
-    const [step, setStep] = useState("initial")
+    const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">

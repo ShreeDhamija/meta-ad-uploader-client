@@ -22,7 +22,7 @@ export default function Home() {
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
-    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, loading } = useGlobalSettings()
+    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding } = useGlobalSettings()
 
     // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
@@ -217,6 +217,7 @@ export default function Home() {
             {showOnboardingPopup && (
                 <OnboardingPopup
                     userName={userName}
+                    hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
                     onClose={handleCloseOnboarding}
                     onGoToSettings={() => {
                         console.log("onGoToSettings called")
