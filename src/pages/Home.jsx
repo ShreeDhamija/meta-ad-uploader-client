@@ -50,6 +50,8 @@ export default function Home() {
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("")
     const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"])
+    const [driveFiles, setDriveFiles] = useState([])
+
 
     const [files, setFiles] = useState([])
     const [videoThumbs, setVideoThumbs] = useState({})
@@ -59,7 +61,7 @@ export default function Home() {
 
     if (authLoading) return null
 
-    // 🚀 Show onboarding popup once settings are loaded
+    //  Show onboarding popup once settings are loaded
     useEffect(() => {
         if (!isLoggedIn || loading) return
         if (!hasSeenOnboarding) {
@@ -67,7 +69,7 @@ export default function Home() {
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
-    // 🎛️ Load global ad name formula settings
+    // Load global ad name formula settings
     useEffect(() => {
         if (!isLoggedIn || loading) return
 
@@ -206,6 +208,8 @@ export default function Home() {
                         defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
                         selectedTemplate={selectedTemplate}
                         setSelectedTemplate={setSelectedTemplate}
+                        driveFiles={driveFiles}
+                        setDriveFiles={setDriveFiles}
                     />
                 </div>
 

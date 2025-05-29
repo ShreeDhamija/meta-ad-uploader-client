@@ -19,6 +19,12 @@ import { ChevronsUpDown } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
 
+const CLIENT_ID = "102886794705-nrf8t8uc78lll08qd9cvq9ckvafk38q9.apps.googleusercontent.com" // replace with your actual client ID
+const API_KEY = "AIzaSyDePb7a1CNxyaNMpLRJ3-R2T2GHtZKbv_g"
+const SCOPES = "https://www.googleapis.com/auth/drive.readonly"
+
+let pickerApiLoaded = false
+let tokenClient = null
 
 export default function AdCreationForm({
   //isLoggedIn,
@@ -66,6 +72,8 @@ export default function AdCreationForm({
   defaultTemplateName,
   selectedTemplate,
   setSelectedTemplate,
+  driveFiles,
+  setDriveFiles,
 }) {
   // Local state
   const [adTypeOpen, setAdTypeOpen] = useState(false)
@@ -79,12 +87,11 @@ export default function AdCreationForm({
     useFileName: includeFileName,
   });
 
-  useEffect(() => {
-    setAdType(adValues.adType);
-    setDateFormat(adValues.dateType);
-    setIncludeFileName(adValues.useFileName);
-  }, [adValues]);
 
+
+  //gogle drive pickers
+  const [accessToken, setAccessToken] = useState(null)
+  const [selectedFiles, setSelectedFiles] = useState([])
 
   const [pageSearchValue, setPageSearchValue] = useState("")
   const [isDuplicating, setIsDuplicating] = useState(false)
@@ -128,6 +135,12 @@ export default function AdCreationForm({
     )
 
   useEffect(() => {
+    setAdType(adValues.adType);
+    setDateFormat(adValues.dateType);
+    setIncludeFileName(adValues.useFileName);
+  }, [adValues]);
+
+  useEffect(() => {
     setAdValues({
       adType,
       dateType: dateFormat,
@@ -135,21 +148,6 @@ export default function AdCreationForm({
     });
   }, [adType, dateFormat, includeFileName]);
 
-
-
-
-
-  // Update ad name when formula parts change
-  // useEffect(() => {
-  //   const parts = []
-  //   if (adType) parts.push(adType)
-  //   if (dateFormat) parts.push(dateFormat)
-  //   if (includeFileName) parts.push("File")
-  //   const formula = parts.join("_")
-  //   const newAdName =
-  //     formula !== "" ? `${formula}_${customAdName}` : customAdName || "Ad Name Formula will be displayed here"
-  //   setAdName(newAdName)
-  // }, [customAdName, adType, dateFormat, includeFileName, setAdName])
 
   useEffect(() => {
     const parts = adOrder.map((key) => {
@@ -173,6 +171,64 @@ export default function AdCreationForm({
   }, [selectedTemplate, copyTemplates]);
 
 
+
+
+  // Drive Picker setup
+  useEffect(() => {
+    window.gapi.load("client:picker", async () => {
+      pickerApiLoaded = true
+      await window.gapi.client.init({ apiKey: API_KEY })
+    })
+
+    tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: (tokenResponse) => {
+        if (tokenResponse.access_token) {
+          setAccessToken(tokenResponse.access_token)
+          openPicker(tokenResponse.access_token)
+        } else {
+          alert("Failed to get access token")
+        }
+      },
+    })
+  }, [])
+
+  const handleDriveClick = () => {
+    if (!pickerApiLoaded) {
+      alert("Google Picker not ready yet")
+      return
+    }
+    tokenClient.requestAccessToken()
+  }
+
+  const openPicker = (token) => {
+    const view = new window.google.picker.DocsView()
+      .setIncludeFolders(false)
+      .setMimeTypes("image/*,video/*")
+      .setSelectFolderEnabled(false)
+
+    const picker = new window.google.picker.PickerBuilder()
+      .addView(view)
+      .setOAuthToken(token)
+      .setDeveloperKey(API_KEY)
+      .setCallback((data) => {
+        if (data.action !== "picked") return
+        const selected = data.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.name,
+          mimeType: doc.mimeType,
+          accessToken: token,
+        }))
+        setDriveFiles(selected)
+        setSelectedFiles(selected) // preview names only
+      })
+      .build()
+
+    picker.setVisible(true)
+  }
+
+
   // Dropzone logic
   const onDrop = useCallback(
     (acceptedFiles) => {
@@ -186,6 +242,11 @@ export default function AdCreationForm({
     onDrop,
     multiple: true,
   })
+
+
+
+
+
 
   // Generate thumbnail from video file
   const generateThumbnail = useCallback((file) => {
@@ -980,7 +1041,19 @@ export default function AdCreationForm({
               </div>
             </div>
           </div>
+          <div>
+            <Button onClick={handleDriveClick} className="w-full bg-blue-600 text-white rounded-xl">
+              Import from Google Drive
+            </Button>
 
+            {selectedFiles.length > 0 && (
+              <ul className="list-disc text-sm text-gray-700 mt-2 list-inside">
+                {selectedFiles.map((f) => (
+                  <li key={f.id}>{f.name}</li>
+                ))}
+              </ul>
+            )}
+          </div>
           <Button
             type="submit"
             className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
