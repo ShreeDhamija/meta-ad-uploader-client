@@ -43,9 +43,7 @@
             if (!accessToken) return alert('Access token missing');
 
             const view = new google.picker.DocsView()
-                .setIncludeFolders(true)
-                .setSelectFolderEnabled(false)
-                .setMimeTypes('image/*,video/*');
+
 
             const picker = new google.picker.PickerBuilder()
                 .addView(view)
