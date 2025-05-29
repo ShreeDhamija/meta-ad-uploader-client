@@ -1010,9 +1010,9 @@ export default function AdCreationForm({
           <Button
             type="submit"
             className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
-          // disabled={
-          //   !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || files.length === 0 || isLoading
-          // }
+            disabled={
+              !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || isLoading
+            }
           >
             {isLoading ? (
               <>
