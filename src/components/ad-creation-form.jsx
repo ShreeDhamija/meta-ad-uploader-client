@@ -217,6 +217,7 @@ export default function AdCreationForm({
       .addView(view)
       .setOAuthToken(token)
       .setDeveloperKey(API_KEY)
+      .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED) // ✅ this!
       .setCallback((data) => {
         if (data.action !== "picked") return
         const selected = data.docs.map((doc) => ({
@@ -225,8 +226,8 @@ export default function AdCreationForm({
           mimeType: doc.mimeType,
           accessToken: token,
         }))
-        setDriveFiles(selected)
-        setSelectedFiles(selected) // preview names only
+        setDriveFiles((prev) => [...prev, ...selected]);
+        setSelectedFiles((prev) => [...prev, ...selected]);
       })
       .build()
 
