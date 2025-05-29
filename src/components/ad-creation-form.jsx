@@ -1189,7 +1189,7 @@ export default function AdCreationForm({
               </div>
             </div>
           </div>
-          <div className="mt-[-20px] mb-4">
+          <div style={{ marginTop: "10px", marginBottom: "1.5rem" }}>
             <Button type="button" onClick={handleDriveClick} className="w-full bg-blue-600 text-white rounded-xl h-[48px]">
               <img
                 src="https://meta-ad-uploader-server-production.up.railway.app/googledrive.png"
