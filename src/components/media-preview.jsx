@@ -67,11 +67,15 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                       <img
                         src={
                           file.isDrive
-                            ? `https://drive.google.com/thumbnail?id=${file.id}`
+                            ? file.thumbnailUrl || `https://drive.google.com/thumbnail?id=${file.id}`
                             : URL.createObjectURL(file)
                         }
                         alt={file.name}
                         className="w-full h-auto object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "https://meta-ad-uploader-server-production.up.railway.app/thumbnail.jpg";
+                        }}
                       />
 
                     )}

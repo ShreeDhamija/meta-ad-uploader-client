@@ -225,6 +225,7 @@ export default function AdCreationForm({
           name: doc.name,
           mimeType: doc.mimeType,
           accessToken: token,
+          thumbnailUrl: doc.thumbnailUrl, // ✅ add this
         }))
         setDriveFiles((prev) => [...prev, ...selected]);
         setSelectedFiles((prev) => [...prev, ...selected]);
