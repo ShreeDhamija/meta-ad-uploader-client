@@ -222,7 +222,13 @@ export default function Home() {
                 </div>
 
                 <div className="flex-1 min-w-0 max-w-[calc(100%-500px-1.5rem)]">
-                    <MediaPreview files={files} setFiles={setFiles} videoThumbs={videoThumbs} />
+                    <MediaPreview
+                        files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
+                        setFiles={setFiles}
+                        setDriveFiles={setDriveFiles}
+                        videoThumbs={videoThumbs}
+                    />
+
                 </div>
             </div>
 

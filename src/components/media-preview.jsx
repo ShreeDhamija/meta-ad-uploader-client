@@ -6,10 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2 } from "lucide-react"
 import { Label } from "@radix-ui/react-label"
 
-export default function MediaPreview({ files, setFiles, videoThumbs }) {
-  const removeFile = (name) => {
-    setFiles((prevFiles) => prevFiles.filter((file) => file.name !== name))
+export default function MediaPreview({ files, setFiles, setDriveFiles, videoThumbs }) {
+  const removeFile = (file) => {
+    if (file.isDrive) {
+      setDriveFiles((prev) => prev.filter((f) => f.id !== file.id))
+    } else {
+      setFiles((prev) => prev.filter((f) => f.name !== file.name))
+    }
   }
+
 
   const preload = new Image();
   preload.src = "https://meta-ad-uploader-server-production.up.railway.app/bg.png";
@@ -60,10 +65,15 @@ export default function MediaPreview({ files, setFiles, videoThumbs }) {
                       )
                     ) : (
                       <img
-                        src={URL.createObjectURL(file) || "/placeholder.svg"}
+                        src={
+                          file.isDrive
+                            ? `https://drive.google.com/thumbnail?id=${file.id}`
+                            : URL.createObjectURL(file)
+                        }
                         alt={file.name}
                         className="w-full h-auto object-cover"
                       />
+
                     )}
                     <Button
                       type="button"
@@ -71,7 +81,7 @@ export default function MediaPreview({ files, setFiles, videoThumbs }) {
                       size="icon"
                       className="absolute top-2 right-2 border border-gray-400 rounded-xl bg-white shadow-sm"
                       style={{ opacity: 1, backgroundColor: "white" }}
-                      onClick={() => removeFile(file.name)}
+                      onClick={() => removeFile(file)}
                     >
                       <Trash className="h-4 w-4" />
                       <span className="sr-only">Remove</span>
