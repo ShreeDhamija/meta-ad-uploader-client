@@ -1004,7 +1004,7 @@ export default function AdCreationForm({
             </div>
           </div>
           <div>
-            <Button onClick={handleDriveClick} className="w-full bg-blue-600 text-white rounded-xl">
+            <Button type="button" onClick={handleDriveClick} className="w-full bg-blue-600 text-white rounded-xl">
               Import from Google Drive
             </Button>
 
