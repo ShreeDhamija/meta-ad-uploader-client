@@ -371,145 +371,101 @@ export default function AdCreationForm({
   }
 
   const handleCreateAd = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (selectedAdSets.length === 0 && !duplicateAdSet) {
-      toast.error("Please select at least one ad set")
-      return
+      toast.error("Please select at least one ad set");
+      return;
     }
-    // if (files.length === 0) {
-    //   toast.error("Please upload at least one file")
-    //   return
-    // }
 
-    setIsLoading(true)
+    if (files.length === 0 && driveFiles.length === 0) {
+      toast.error("Please upload at least one file or import from Drive");
+      return;
+    }
 
-    // Determine the ad set(s) to use: if "Create New AdSet" is chosen, duplicate it
-    let finalAdSetIds = [...selectedAdSets]
+    setIsLoading(true);
+
+    let finalAdSetIds = [...selectedAdSets];
     if (duplicateAdSet) {
       try {
-        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount)
-        finalAdSetIds = [newAdSetId]
+        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount);
+        finalAdSetIds = [newAdSetId];
       } catch (error) {
-        toast.error("Error duplicating ad set: " + (error.message || "Unknown error"))
-        setIsLoading(false)
-        return
+        toast.error("Error duplicating ad set: " + (error.message || "Unknown error"));
+        setIsLoading(false);
+        return;
       }
     }
 
-    // Separate the adsets into dynamic and non-dynamic arrays
-    const dynamicAdSetIds = []
-    const nonDynamicAdSetIds = []
+    const dynamicAdSetIds = [];
+    const nonDynamicAdSetIds = [];
     finalAdSetIds.forEach((adsetId) => {
-      const adset = adSets.find((a) => a.id === adsetId)
-      if (adset) {
-        if (adset.is_dynamic_creative) {
-          dynamicAdSetIds.push(adsetId)
-        } else {
-          nonDynamicAdSetIds.push(adsetId)
-        }
-      } else if (duplicateAdSet) {
-        // For a duplicated adset not found locally, use the original adset's dynamic flag.
-        const originalAdset = adSets.find((a) => a.id === duplicateAdSet)
-        if (originalAdset && originalAdset.is_dynamic_creative) {
-          dynamicAdSetIds.push(adsetId)
-        } else {
-          nonDynamicAdSetIds.push(adsetId)
-        }
+      const adset = adSets.find((a) => a.id === adsetId);
+      if (adset?.is_dynamic_creative) dynamicAdSetIds.push(adsetId);
+      else nonDynamicAdSetIds.push(adsetId);
+    });
+
+    const submitAd = (file, adSetId, isDynamic, isDrive = false) => {
+      const formData = new FormData();
+      const computedName = computeAdName(file);
+
+      formData.append("adName", computedName);
+      formData.append("headlines", JSON.stringify(headlines));
+      formData.append("descriptions", JSON.stringify(descriptions));
+      formData.append("messages", JSON.stringify(messages));
+      formData.append("adAccountId", selectedAdAccount);
+      formData.append("adSetId", adSetId);
+      formData.append("pageId", pageId);
+      formData.append("instagramAccountId", instagramAccountId);
+      formData.append("link", link);
+      formData.append("cta", cta);
+
+      if (isDrive) {
+        formData.append("driveFile", "true");
+        formData.append("driveId", file.id);
+        formData.append("driveMimeType", file.mimeType);
+        formData.append("driveAccessToken", file.accessToken);
+        formData.append("driveName", file.name);
+      } else {
+        const field = isDynamic ? "mediaFiles" : "imageFile";
+        formData.append(field, file);
+        if (thumbnail) formData.append("thumbnail", thumbnail);
       }
-    })
+
+      return axios.post(
+        "https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad",
+        formData,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "multipart/form-data" },
+        }
+      );
+    };
 
     try {
-      const promises = []
+      const promises = [];
 
-      // Process dynamic adsets
-      if (dynamicAdSetIds.length > 0) {
-        dynamicAdSetIds.forEach((adSetId) => {
-          const formData = new FormData()
-          formData.append("adName", computeAdName(files[0]))
-          formData.append("headlines", JSON.stringify(headlines))
-          formData.append("descriptions", JSON.stringify(descriptions))
-          formData.append("messages", JSON.stringify(messages))
-          formData.append("adAccountId", selectedAdAccount)
-          formData.append("adSetId", adSetId)
-          formData.append("pageId", pageId)
-          formData.append("instagramAccountId", instagramAccountId)
-          formData.append("link", link)
-          formData.append("cta", cta)
-          // Append all media files under "mediaFiles"
-          files.forEach((file) => {
-            formData.append("mediaFiles", file)
-          })
-          // For video dynamic creative, use the single thumbnail (if provided)
-          if (files[0].type.startsWith("video/") && thumbnail) {
-            formData.append("thumbnail", thumbnail)
-          }
+      files.forEach((file) => {
+        dynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, true)));
+        nonDynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, false)));
+      });
 
-          promises.push(
-            axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
-              withCredentials: true,
-              headers: { "Content-Type": "multipart/form-data" },
-            }),
-          )
-        })
-      }
+      driveFiles.forEach((file) => {
+        dynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, true, true)));
+        nonDynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, false, true)));
+      });
 
-      // Process non-dynamic adsets
-      if (nonDynamicAdSetIds.length > 0) {
-        nonDynamicAdSetIds.forEach((adSetId) => {
-          files.forEach((file) => {
-            const formData = new FormData()
-            const computedAdName = computeAdName(file)
-            formData.append("adName", computedAdName)
-            formData.append("headlines", JSON.stringify(headlines))
-            formData.append("descriptions", JSON.stringify(descriptions))
-            formData.append("messages", JSON.stringify(messages))
-            formData.append("imageFile", file)
-            formData.append("adAccountId", selectedAdAccount)
-            formData.append("adSetId", adSetId)
-            formData.append("pageId", pageId)
-            formData.append("instagramAccountId", instagramAccountId)
-            formData.append("link", link)
-            formData.append("cta", cta)
-            if (thumbnail) {
-              formData.append("thumbnail", thumbnail)
-            }
-            // console.log("📤 Submitting ad with IG ID:", instagramAccountId)
-            for (let [key, value] of formData.entries()) {
-              console.log(`${key}: ${value}`)
-            }
-            promises.push(
-              axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
-                withCredentials: true,
-                headers: { "Content-Type": "multipart/form-data" },
-              }),
-            )
-          })
-        })
-      }
-
-      await Promise.all(promises)
-      toast.success("Ads created successfully!")
+      await Promise.all(promises);
+      toast.success("Ads created successfully!");
     } catch (error) {
-      let errorMessage = "Unknown error occurred";
-
-      if (typeof error.response?.data === "string") {
-        errorMessage = error.response.data;
-      } else if (error.response?.data?.error?.code === 2 && error.response?.data?.error?.is_transient) {
-        // Facebook internal transient error
-        errorMessage = "Facebook's server had a temporary issue. Please try again in a few seconds.";
-      } else if (error.response?.data?.error?.message) {
-        // Fallback to Facebook-provided message
-        errorMessage = error.response.data.error.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      toast.error(`Error uploading ads: ${errorMessage}`)
-      console.error("Error uploading ads:", errorMessage)
+      const msg = error.response?.data?.error?.message || error.message || "Unknown error";
+      toast.error(`Error uploading ads: ${msg}`);
+      console.error("Upload error:", msg);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
 
   // Custom radio button component
   const CustomRadioButton = ({ value, checked, onChange, label, id }) => {
