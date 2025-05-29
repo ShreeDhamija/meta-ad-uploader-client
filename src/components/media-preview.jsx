@@ -51,7 +51,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
               {files.map((file) => (
                 <div key={file.name} className="relative group">
                   <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
-                    {file.type.startsWith("video/") ? (
+                    {(file.type || file.mimeType || "").startsWith("video/") ? (
                       videoThumbs[file.name] ? (
                         <img
                           src={videoThumbs[file.name] || "/placeholder.svg"}
