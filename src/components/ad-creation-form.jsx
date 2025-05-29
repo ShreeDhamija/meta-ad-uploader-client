@@ -377,10 +377,10 @@ export default function AdCreationForm({
       toast.error("Please select at least one ad set")
       return
     }
-    if (files.length === 0) {
-      toast.error("Please upload at least one file")
-      return
-    }
+    // if (files.length === 0) {
+    //   toast.error("Please upload at least one file")
+    //   return
+    // }
 
     setIsLoading(true)
 
