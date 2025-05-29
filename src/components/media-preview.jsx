@@ -1,10 +1,9 @@
 "use client"
 
-import { Trash } from "lucide-react"
+import { Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
-import { Label } from "@radix-ui/react-label"
+import { Loader2 } from 'lucide-react'
 
 export default function MediaPreview({ files, setFiles, setDriveFiles, videoThumbs }) {
   const removeFile = (file) => {
@@ -15,17 +14,13 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
     }
   }
 
-
   const preload = new Image();
   preload.src = "https://meta-ad-uploader-server-production.up.railway.app/bg.png";
-
 
   return (
     <>
       {files.length > 0 ? (
         <Card
-          //className="flex flex-col sticky top-4 w-full xl:w-[700px] border border-gray-300 max-w-[calc(100vw-1rem)] !bg-white"
-          //style={{ height: "calc(100vh - 50px)" }}
           className="flex flex-col sticky top-4 w-full xl:max-w-[700px] max-w-[calc(100vw-1rem)] border border-gray-300 !bg-white"
           style={{ height: "calc(100vh - 50px)" }}
         >
@@ -39,35 +34,54 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => setFiles([])}
+              onClick={() => {
+                setFiles([]);
+                setDriveFiles([]);
+              }}
               className="bg-red-500 hover:bg-red-600 text-white rounded-xl"
             >
-              Clear All Uploads
+              Clear All
             </Button>
           </CardHeader>
 
           <CardContent className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               {files.map((file) => (
-                <div key={file.name} className="relative group">
+                <div key={file.isDrive ? file.id : file.name} className="relative group">
                   <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
                     {(file.type || file.mimeType || "").startsWith("video/") ? (
-                      videoThumbs[file.name] ? (
+                      file.isDrive ? (
+                        // Google Drive video - use Drive's thumbnail API
                         <img
-                          src={videoThumbs[file.name] || "/placeholder.svg"}
+                          src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`}
                           alt={file.name}
                           className="w-full h-auto object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://meta-ad-uploader-server-production.up.railway.app/thumbnail.jpg";
+                          }}
                         />
                       ) : (
-                        <div className="w-full h-auto bg-muted flex items-center justify-center">
-                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </div>
+                        // Local video - use generated thumbnail
+                        videoThumbs[file.name] ? (
+                          <img
+                            src={videoThumbs[file.name] || "https://meta-ad-uploader-server-production.up.railway.app/thumbnail.jpg"}
+                            alt={file.name}
+                            className="w-full h-auto object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-32 bg-gray-200 flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                            <span className="ml-2 text-sm text-gray-500">Generating...</span>
+                          </div>
+                        )
                       )
                     ) : (
+                      // Image files
                       <img
                         src={
                           file.isDrive
-                            ? file.thumbnailUrl || `https://drive.google.com/thumbnail?id=${file.id}`
+                            ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`
                             : URL.createObjectURL(file)
                         }
                         alt={file.name}
@@ -77,7 +91,6 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                           e.target.src = "https://meta-ad-uploader-server-production.up.railway.app/thumbnail.jpg";
                         }}
                       />
-
                     )}
                     <Button
                       type="button"
@@ -98,7 +111,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
           </CardContent>
         </Card>
       ) : (
-        <div className=" sticky top-4 w-full xl:max-w-[700px] mx-auto max-w-[calc(100vw-1rem)] shadow-sm">
+        <div className="sticky top-4 w-full xl:max-w-[700px] mx-auto max-w-[calc(100vw-1rem)] shadow-sm">
           <img
             src="https://meta-ad-uploader-server-production.up.railway.app/bg.png"
             alt="No uploads"
@@ -109,4 +122,3 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
     </>
   )
 }
-

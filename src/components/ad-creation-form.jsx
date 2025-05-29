@@ -91,7 +91,7 @@ export default function AdCreationForm({
 
   //gogle drive pickers
   const [accessToken, setAccessToken] = useState(null)
-  const [selectedFiles, setSelectedFiles] = useState([])
+  //const [selectedFiles, setSelectedFiles] = useState([])
 
   const [pageSearchValue, setPageSearchValue] = useState("")
   const [isDuplicating, setIsDuplicating] = useState(false)
@@ -225,10 +225,10 @@ export default function AdCreationForm({
           name: doc.name,
           mimeType: doc.mimeType,
           accessToken: token,
-          thumbnailUrl: doc.thumbnailUrl, // ✅ add this
+
         }))
         setDriveFiles((prev) => [...prev, ...selected]);
-        setSelectedFiles((prev) => [...prev, ...selected]);
+        //setSelectedFiles((prev) => [...prev, ...selected]);
       })
       .build()
 
@@ -281,21 +281,41 @@ export default function AdCreationForm({
     })
   }, [])
 
-  // Generate thumbnails for video files
+  const getDriveVideoThumbnail = (driveFile) => {
+    if (!driveFile.mimeType.startsWith('video/')) return null;
+
+    // Google Drive provides thumbnails for videos via this URL
+    return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
+  };
+
+
+  // Update your useEffect to be much simpler:
   useEffect(() => {
+    // Generate thumbnails for local video files only
     files.forEach((file) => {
       if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
         generateThumbnail(file)
           .then((thumb) => {
-            setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }))
+            setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
           })
           .catch((err) => {
-            toast.error(`Thumbnail generation error: ${err}`)
-            console.error("Thumbnail generation error:", err)
-          })
+            toast.error(`Thumbnail generation error: ${err}`);
+            console.error("Thumbnail generation error:", err);
+          });
       }
-    })
-  }, [files, videoThumbs, generateThumbnail, setVideoThumbs])
+    });
+
+    // For Google Drive videos, just store the thumbnail URL
+    driveFiles.forEach((driveFile) => {
+      if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
+        const thumbnailUrl = getDriveVideoThumbnail(driveFile);
+        if (thumbnailUrl) {
+          setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
+        }
+      }
+    });
+  }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
+
 
   // Functions for managing dynamic input fields
   const addField = (setter, values) => {
@@ -566,132 +586,36 @@ export default function AdCreationForm({
     }
   }
 
-  // const handleCreateAd = async (e) => {
-  //   e.preventDefault();
-
-  //   if (selectedAdSets.length === 0 && !duplicateAdSet) {
-  //     toast.error("Please select at least one ad set");
-  //     return;
-  //   }
-
-  //   if (files.length === 0 && driveFiles.length === 0) {
-  //     toast.error("Please upload at least one file or import from Drive");
-  //     return;
-  //   }
-
-  //   setIsLoading(true);
-
-  //   let finalAdSetIds = [...selectedAdSets];
-  //   if (duplicateAdSet) {
-  //     try {
-  //       const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount);
-  //       finalAdSetIds = [newAdSetId];
-  //     } catch (error) {
-  //       toast.error("Error duplicating ad set: " + (error.message || "Unknown error"));
-  //       setIsLoading(false);
-  //       return;
-  //     }
-  //   }
-
-  //   const dynamicAdSetIds = [];
-  //   const nonDynamicAdSetIds = [];
-  //   finalAdSetIds.forEach((adsetId) => {
-  //     const adset = adSets.find((a) => a.id === adsetId);
-  //     if (adset?.is_dynamic_creative) dynamicAdSetIds.push(adsetId);
-  //     else nonDynamicAdSetIds.push(adsetId);
-  //   });
-
-  //   const submitAd = (file, adSetId, isDynamic, isDrive = false) => {
-  //     const formData = new FormData();
-  //     const computedName = computeAdName(file);
-
-  //     formData.append("adName", computedName);
-  //     formData.append("headlines", JSON.stringify(headlines));
-  //     formData.append("descriptions", JSON.stringify(descriptions));
-  //     formData.append("messages", JSON.stringify(messages));
-  //     formData.append("adAccountId", selectedAdAccount);
-  //     formData.append("adSetId", adSetId);
-  //     formData.append("pageId", pageId);
-  //     formData.append("instagramAccountId", instagramAccountId);
-  //     formData.append("link", link);
-  //     formData.append("cta", cta);
-
-  //     if (isDrive) {
-  //       formData.append("driveFile", "true");
-  //       formData.append("driveId", file.id);
-  //       formData.append("driveMimeType", file.mimeType);
-  //       formData.append("driveAccessToken", file.accessToken);
-  //       formData.append("driveName", file.name);
-  //     } else {
-  //       const field = isDynamic ? "mediaFiles" : "imageFile";
-  //       formData.append(field, file);
-  //       if (thumbnail) formData.append("thumbnail", thumbnail);
-  //     }
-
-  //     return axios.post(
-  //       "https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad",
-  //       formData,
-  //       {
-  //         withCredentials: true,
-  //         headers: { "Content-Type": "multipart/form-data" },
-  //       }
-  //     );
-  //   };
-
-  //   try {
-  //     const promises = [];
-
-  //     files.forEach((file) => {
-  //       dynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, true)));
-  //       nonDynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, false)));
-  //     });
-
-  //     driveFiles.forEach((file) => {
-  //       dynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, true, true)));
-  //       nonDynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, false, true)));
-  //     });
-
-  //     await Promise.all(promises);
-  //     toast.success("Ads created successfully!");
-  //   } catch (error) {
-  //     const msg = error.response?.data?.error?.message || error.message || "Unknown error";
-  //     toast.error(`Error uploading ads: ${msg}`);
-  //     console.error("Upload error:", msg);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
-
 
   // Custom radio button component
-  const CustomRadioButton = ({ value, checked, onChange, label, id }) => {
-    return (
-      <label
-        htmlFor={id}
-        className="flex items-center space-x-2 rounded-xl px-2 py-1 hover:bg-gray-100 cursor-pointer"
-        onClick={() => onChange(value)}
-      >
-        <div className="relative flex items-center justify-center">
-          <div className={`w-4 h-4 rounded-full border ${checked ? "border-black" : "border-gray-400"} bg-white`}>
-            {checked && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-black"></div>
-              </div>
-            )}
-          </div>
-          <input
-            type="radio"
-            id={id}
-            value={value}
-            checked={checked}
-            onChange={() => onChange(value)}
-            className="sr-only"
-          />
-        </div>
-        <span className="text-xs">{label}</span>
-      </label>
-    )
-  }
+  // const CustomRadioButton = ({ value, checked, onChange, label, id }) => {
+  //   return (
+  //     <label
+  //       htmlFor={id}
+  //       className="flex items-center space-x-2 rounded-xl px-2 py-1 hover:bg-gray-100 cursor-pointer"
+  //       onClick={() => onChange(value)}
+  //     >
+  //       <div className="relative flex items-center justify-center">
+  //         <div className={`w-4 h-4 rounded-full border ${checked ? "border-black" : "border-gray-400"} bg-white`}>
+  //           {checked && (
+  //             <div className="absolute inset-0 flex items-center justify-center">
+  //               <div className="w-2 h-2 rounded-full bg-black"></div>
+  //             </div>
+  //           )}
+  //         </div>
+  //         <input
+  //           type="radio"
+  //           id={id}
+  //           value={value}
+  //           checked={checked}
+  //           onChange={() => onChange(value)}
+  //           className="sr-only"
+  //         />
+  //       </div>
+  //       <span className="text-xs">{label}</span>
+  //     </label>
+  //   )
+  // }
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
@@ -1200,13 +1124,13 @@ export default function AdCreationForm({
               Import from Google Drive
             </Button>
 
-            {selectedFiles.length > 0 && (
+            {/* {selectedFiles.length > 0 && (
               <ul className="list-disc text-sm text-gray-700 mt-2 list-inside">
                 {selectedFiles.map((f) => (
                   <li key={f.id}>{f.name}</li>
                 ))}
               </ul>
-            )}
+            )} */}
           </div>
           <Button
             type="submit"
