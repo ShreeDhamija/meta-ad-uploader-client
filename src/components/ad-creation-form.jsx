@@ -196,11 +196,19 @@ export default function AdCreationForm({
 
   const handleDriveClick = () => {
     if (!pickerApiLoaded) {
-      alert("Google Picker not ready yet")
-      return
+      alert("Google Picker not ready yet");
+      return;
     }
-    tokenClient.requestAccessToken()
-  }
+
+    if (accessToken) {
+      // ✅ Reuse existing token
+      openPicker(accessToken);
+    } else {
+      // 🧠 Only request if no token exists
+      tokenClient.requestAccessToken();
+    }
+  };
+
 
   const openPicker = (token) => {
     const view = new google.picker.DocsView()
