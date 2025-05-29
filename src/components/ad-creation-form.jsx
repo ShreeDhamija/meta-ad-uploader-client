@@ -457,7 +457,6 @@ export default function AdCreationForm({
       // ✅ Add this block first — dynamic ad sets
       if (dynamicAdSetIds.length > 0) {
         const allMedia = [...files, ...driveFiles];
-
         if (allMedia.length === 0) {
           toast.error("No media selected for dynamic ad sets");
           return;
@@ -476,21 +475,25 @@ export default function AdCreationForm({
           formData.append("link", link);
           formData.append("cta", cta);
 
+          // ✅ Always add local files as mediaFiles
+          files.forEach((file) => {
+            formData.append("mediaFiles", file);
+          });
+
+          // ✅ Add fallback thumbnail if first file is a video
+          if (files[0]?.type?.startsWith("video/") && thumbnail) {
+            formData.append("thumbnail", thumbnail);
+          }
+
+          // ✅ Add Drive file metadata if present
           if (driveFiles.length > 0) {
             formData.append("driveFile", "true");
             driveFiles.forEach((file) => {
-              formData.append("driveIds[]", file.id);
-              formData.append("driveMimeTypes[]", file.mimeType);
-              formData.append("driveAccessTokens[]", file.accessToken);
-              formData.append("driveNames[]", file.name);
+              formData.append("driveIds", file.id);
+              formData.append("driveMimeTypes", file.mimeType);
+              formData.append("driveAccessTokens", file.accessToken);
+              formData.append("driveNames", file.name);
             });
-          } else {
-            files.forEach((file) => {
-              formData.append("mediaFiles", file);
-            });
-            if (files[0]?.type?.startsWith("video/") && thumbnail) {
-              formData.append("thumbnail", thumbnail);
-            }
           }
 
           promises.push(
@@ -501,6 +504,7 @@ export default function AdCreationForm({
           );
         });
       }
+
 
       // ✅ Then continue with your existing non-dynamic ad logic
       files.forEach((file) => {
