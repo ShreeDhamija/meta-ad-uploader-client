@@ -431,10 +431,10 @@ export default function AdCreationForm({
 
       if (isDrive) {
         formData.append("driveFile", "true");
-        formData.append("driveId", file.id);
-        formData.append("driveMimeType", file.mimeType);
-        formData.append("driveAccessToken", file.accessToken);
-        formData.append("driveName", file.name);
+        formData.append("driveIds", file.id);
+        formData.append("driveMimeTypes", file.mimeType);
+        formData.append("driveAccessTokens", file.accessToken);
+        formData.append("driveNames", file.name);
       } else {
         const field = isDynamic ? "mediaFiles" : "imageFile";
         formData.append(field, file);
