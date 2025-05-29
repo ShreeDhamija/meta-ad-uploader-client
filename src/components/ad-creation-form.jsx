@@ -474,11 +474,16 @@ export default function AdCreationForm({
           formData.append("instagramAccountId", instagramAccountId);
           formData.append("link", link);
           formData.append("cta", cta);
-
+          console.log("📦 LOCAL files in dynamic block:", files);
           // ✅ Always add local files as mediaFiles
           files.forEach((file) => {
-            formData.append("mediaFiles", file);
+            if (file && file.type) {
+              formData.append("mediaFiles", file);
+            } else {
+              console.warn("⚠️ Skipped bad file in dynamic:", file);
+            }
           });
+
 
           // ✅ Add fallback thumbnail if first file is a video
           if (files[0]?.type?.startsWith("video/") && thumbnail) {
@@ -488,12 +493,15 @@ export default function AdCreationForm({
           // ✅ Add Drive file metadata if present
           if (driveFiles.length > 0) {
             formData.append("driveFile", "true");
-            driveFiles.forEach((file) => {
-              formData.append("driveIds", file.id);
-              formData.append("driveMimeTypes", file.mimeType);
-              formData.append("driveAccessTokens", file.accessToken);
-              formData.append("driveNames", file.name);
-            });
+            formData.append("driveFile", "true");
+            formData.append("driveIds", JSON.stringify(driveFiles.map(f => f.id)));
+            formData.append("driveMimeTypes", JSON.stringify(driveFiles.map(f => f.mimeType)));
+            formData.append("driveAccessTokens", JSON.stringify(driveFiles.map(f => f.accessToken)));
+            formData.append("driveNames", JSON.stringify(driveFiles.map(f => f.name)));
+
+          }
+          for (let [key, value] of formData.entries()) {
+            console.log("🧾", key, value);
           }
 
           promises.push(
