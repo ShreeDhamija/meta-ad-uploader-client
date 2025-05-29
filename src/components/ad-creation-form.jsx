@@ -203,10 +203,7 @@ export default function AdCreationForm({
   }
 
   const openPicker = (token) => {
-    const view = new window.google.picker.DocsView()
-      .setIncludeFolders(false)
-      .setMimeTypes("image/*,video/*")
-      .setSelectFolderEnabled(false)
+    const view = new google.picker.DocsView()
 
     const picker = new window.google.picker.PickerBuilder()
       .addView(view)
