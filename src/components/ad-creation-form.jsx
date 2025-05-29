@@ -454,19 +454,67 @@ export default function AdCreationForm({
     try {
       const promises = [];
 
+      // ✅ Add this block first — dynamic ad sets
+      if (dynamicAdSetIds.length > 0) {
+        const allMedia = [...files, ...driveFiles];
+
+        if (allMedia.length === 0) {
+          toast.error("No media selected for dynamic ad sets");
+          return;
+        }
+
+        dynamicAdSetIds.forEach((adSetId) => {
+          const formData = new FormData();
+          formData.append("adName", computeAdName(allMedia[0]));
+          formData.append("headlines", JSON.stringify(headlines));
+          formData.append("descriptions", JSON.stringify(descriptions));
+          formData.append("messages", JSON.stringify(messages));
+          formData.append("adAccountId", selectedAdAccount);
+          formData.append("adSetId", adSetId);
+          formData.append("pageId", pageId);
+          formData.append("instagramAccountId", instagramAccountId);
+          formData.append("link", link);
+          formData.append("cta", cta);
+
+          if (driveFiles.length > 0) {
+            formData.append("driveFile", "true");
+            driveFiles.forEach((file) => {
+              formData.append("driveIds[]", file.id);
+              formData.append("driveMimeTypes[]", file.mimeType);
+              formData.append("driveAccessTokens[]", file.accessToken);
+              formData.append("driveNames[]", file.name);
+            });
+          } else {
+            files.forEach((file) => {
+              formData.append("mediaFiles", file);
+            });
+            if (files[0]?.type?.startsWith("video/") && thumbnail) {
+              formData.append("thumbnail", thumbnail);
+            }
+          }
+
+          promises.push(
+            axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
+              withCredentials: true,
+              headers: { "Content-Type": "multipart/form-data" },
+            })
+          );
+        });
+      }
+
+      // ✅ Then continue with your existing non-dynamic ad logic
       files.forEach((file) => {
-        dynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, true)));
         nonDynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, false)));
       });
 
       driveFiles.forEach((file) => {
-        dynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, true, true)));
         nonDynamicAdSetIds.forEach((adSetId) => promises.push(submitAd(file, adSetId, false, true)));
       });
 
       await Promise.all(promises);
       toast.success("Ads created successfully!");
-    } catch (error) {
+    }
+    catch (error) {
       const msg = error.response?.data?.error?.message || error.message || "Unknown error";
       toast.error(`Error uploading ads: ${msg}`);
       console.error("Upload error:", msg);
@@ -477,34 +525,34 @@ export default function AdCreationForm({
 
 
   // Custom radio button component
-  const CustomRadioButton = ({ value, checked, onChange, label, id }) => {
-    return (
-      <label
-        htmlFor={id}
-        className="flex items-center space-x-2 rounded-xl px-2 py-1 hover:bg-gray-100 cursor-pointer"
-        onClick={() => onChange(value)}
-      >
-        <div className="relative flex items-center justify-center">
-          <div className={`w-4 h-4 rounded-full border ${checked ? "border-black" : "border-gray-400"} bg-white`}>
-            {checked && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-2 h-2 rounded-full bg-black"></div>
-              </div>
-            )}
-          </div>
-          <input
-            type="radio"
-            id={id}
-            value={value}
-            checked={checked}
-            onChange={() => onChange(value)}
-            className="sr-only"
-          />
-        </div>
-        <span className="text-xs">{label}</span>
-      </label>
-    )
-  }
+  // const CustomRadioButton = ({ value, checked, onChange, label, id }) => {
+  //   return (
+  //     <label
+  //       htmlFor={id}
+  //       className="flex items-center space-x-2 rounded-xl px-2 py-1 hover:bg-gray-100 cursor-pointer"
+  //       onClick={() => onChange(value)}
+  //     >
+  //       <div className="relative flex items-center justify-center">
+  //         <div className={`w-4 h-4 rounded-full border ${checked ? "border-black" : "border-gray-400"} bg-white`}>
+  //           {checked && (
+  //             <div className="absolute inset-0 flex items-center justify-center">
+  //               <div className="w-2 h-2 rounded-full bg-black"></div>
+  //             </div>
+  //           )}
+  //         </div>
+  //         <input
+  //           type="radio"
+  //           id={id}
+  //           value={value}
+  //           checked={checked}
+  //           onChange={() => onChange(value)}
+  //           className="sr-only"
+  //         />
+  //       </div>
+  //       <span className="text-xs">{label}</span>
+  //     </label>
+  //   )
+  // }
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
