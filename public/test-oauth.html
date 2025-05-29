@@ -2,38 +2,72 @@
 <html>
 
 <head>
-    <title>OAuth Test (GIS)</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-</head>
+    <title>Google Drive Picker Test</title>
+    <script type="text/javascript" src="https://apis.google.com/js/api.js"></script>
+    <script type="text/javascript" src="https://accounts.google.com/gsi/client" async defer></script>
+    <script type="text/javascript">
+        const CLIENT_ID = "102886794705-nrf8t8uc78lll08qd9cvq9ckvafk38q9.apps.googleusercontent.com" // replace with your actual client ID
+        const API_KEY = "AIzaSyDePb7a1CNxyaNMpLRJ3-R2T2GHtZKbv_g"
+        const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
-<body>
-    <button id="auth-button">Sign in with Google</button>
+        let accessToken = null;
 
-    <script>
-        const CLIENT_ID = "102886794705-nrf8t8uc78lll08qd9cvq9ckvafk38q9.apps.googleusercontent.com";
-        const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+        function onApiLoad() {
+            gapi.load('client:picker', async () => {
+                await gapi.client.init({ apiKey: API_KEY });
+                initTokenClient();
+            });
+        }
 
         let tokenClient;
-
-        window.onload = function () {
+        function initTokenClient() {
             tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: CLIENT_ID,
                 scope: SCOPES,
                 callback: (tokenResponse) => {
-                    if (tokenResponse.error) {
-                        alert("Error: " + tokenResponse.error);
+                    if (tokenResponse.access_token) {
+                        accessToken = tokenResponse.access_token;
+                        createPicker();
                     } else {
-                        alert("Success! Access token: " + tokenResponse.access_token);
-                        console.log("Access Token:", tokenResponse.access_token);
+                        alert('Failed to get access token');
                     }
                 },
             });
 
-            document.getElementById("auth-button").onclick = () => {
+            document.getElementById('authorize_button').onclick = () => {
                 tokenClient.requestAccessToken();
             };
-        };
+        }
+
+        function createPicker() {
+            if (!accessToken) return alert('Access token missing');
+
+            const view = new google.picker.DocsView()
+                .setIncludeFolders(true)
+                .setSelectFolderEnabled(false)
+                .setMimeTypes('image/*,video/*');
+
+            const picker = new google.picker.PickerBuilder()
+                .addView(view)
+                .setOAuthToken(accessToken)
+                .setDeveloperKey(API_KEY)
+                .setCallback((data) => {
+                    console.log('Picker result:', data);
+                    if (data.action === google.picker.Action.PICKED) {
+                        const file = data.docs[0];
+                        alert(`Picked: ${file.name}`);
+                    }
+                })
+                .build();
+
+            picker.setVisible(true);
+        }
     </script>
+</head>
+
+<body onload="onApiLoad()">
+    <h2>Google Drive Picker Test</h2>
+    <button id="authorize_button">Open Picker</button>
 </body>
 
 </html>
