@@ -214,40 +214,7 @@ export default function AdCreationForm({
 
     checkGoogleAuth();
   }, []);
-  // useEffect(() => {
-  //   window.gapi.load("client:picker", async () => {
-  //     pickerApiLoaded = true
-  //     await window.gapi.client.init({ apiKey: API_KEY })
-  //   })
 
-  //   tokenClient = window.google.accounts.oauth2.initTokenClient({
-  //     client_id: CLIENT_ID,
-  //     scope: SCOPES,
-  //     callback: (tokenResponse) => {
-  //       if (tokenResponse.access_token) {
-  //         setAccessToken(tokenResponse.access_token)
-  //         openPicker(tokenResponse.access_token)
-  //       } else {
-  //         alert("Failed to get access token")
-  //       }
-  //     },
-  //   })
-  // }, [])
-
-  // const handleDriveClick = () => {
-  //   if (!pickerApiLoaded) {
-  //     alert("Google Picker not ready yet");
-  //     return;
-  //   }
-
-  //   if (accessToken) {
-  //     // ✅ Reuse existing token
-  //     openPicker(accessToken);
-  //   } else {
-  //     // 🧠 Only request if no token exists
-  //     tokenClient.requestAccessToken();
-  //   }
-  // };
 
   const handleDriveClick = async () => {
     if (googleAuthStatus.authenticated) {
@@ -259,31 +226,6 @@ export default function AdCreationForm({
     }
   };
 
-
-  // const openPicker = (token) => {
-  //   const view = new google.picker.DocsView()
-
-  //   const picker = new window.google.picker.PickerBuilder()
-  //     .addView(view)
-  //     .setOAuthToken(token)
-  //     .setDeveloperKey(API_KEY)
-  //     .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED) // ✅ this!
-  //     .setCallback((data) => {
-  //       if (data.action !== "picked") return
-  //       const selected = data.docs.map((doc) => ({
-  //         id: doc.id,
-  //         name: doc.name,
-  //         mimeType: doc.mimeType,
-  //         accessToken: token,
-
-  //       }))
-  //       setDriveFiles((prev) => [...prev, ...selected]);
-  //       //setSelectedFiles((prev) => [...prev, ...selected]);
-  //     })
-  //     .build()
-
-  //   picker.setVisible(true)
-  // }
 
   const openPicker = (token) => {
     // Load the picker API if not already loaded
@@ -303,7 +245,9 @@ export default function AdCreationForm({
   };
 
   const createPicker = (token) => {
-    const view = new google.picker.DocsView();
+    const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+      .setIncludeFolders(true)        // ✅ Show folders
+      .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
 
     const picker = new google.picker.PickerBuilder()
       .addView(view)
