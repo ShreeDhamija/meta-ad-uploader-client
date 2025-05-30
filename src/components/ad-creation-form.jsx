@@ -19,12 +19,12 @@ import { ChevronsUpDown } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
 
-const CLIENT_ID = "102886794705-nrf8t8uc78lll08qd9cvq9ckvafk38q9.apps.googleusercontent.com" // replace with your actual client ID
-const API_KEY = "AIzaSyDePb7a1CNxyaNMpLRJ3-R2T2GHtZKbv_g"
-const SCOPES = "https://www.googleapis.com/auth/drive.readonly"
+// const CLIENT_ID = "102886794705-nrf8t8uc78lll08qd9cvq9ckvafk38q9.apps.googleusercontent.com" // replace with your actual client ID
+// const API_KEY = "AIzaSyDePb7a1CNxyaNMpLRJ3-R2T2GHtZKbv_g"
+// const SCOPES = "https://www.googleapis.com/auth/drive.readonly"
 
-let pickerApiLoaded = false
-let tokenClient = null
+// let pickerApiLoaded = false
+// let tokenClient = null
 
 export default function AdCreationForm({
   //isLoggedIn,
@@ -87,7 +87,11 @@ export default function AdCreationForm({
     useFileName: includeFileName,
   });
 
-
+  const [googleAuthStatus, setGoogleAuthStatus] = useState({
+    checking: true,
+    authenticated: false,
+    accessToken: null
+  });
 
   //gogle drive pickers
   const [accessToken, setAccessToken] = useState(null)
@@ -175,65 +179,142 @@ export default function AdCreationForm({
 
   // Drive Picker setup
   useEffect(() => {
-    window.gapi.load("client:picker", async () => {
-      pickerApiLoaded = true
-      await window.gapi.client.init({ apiKey: API_KEY })
-    })
+    // Check Google auth status when component mounts
+    const checkGoogleAuth = async () => {
+      try {
+        const response = await axios.get(
+          "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+          { withCredentials: true }
+        );
 
-    tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES,
-      callback: (tokenResponse) => {
-        if (tokenResponse.access_token) {
-          setAccessToken(tokenResponse.access_token)
-          openPicker(tokenResponse.access_token)
-        } else {
-          alert("Failed to get access token")
-        }
-      },
-    })
-  }, [])
+        setGoogleAuthStatus({
+          checking: false,
+          authenticated: response.data.authenticated,
+          accessToken: response.data.accessToken
+        });
+      } catch (error) {
+        console.error("Failed to check Google auth status:", error);
+        setGoogleAuthStatus({
+          checking: false,
+          authenticated: false,
+          accessToken: null
+        });
+      }
+    };
 
-  const handleDriveClick = () => {
-    if (!pickerApiLoaded) {
-      alert("Google Picker not ready yet");
-      return;
-    }
+    checkGoogleAuth();
+  }, []);
+  // useEffect(() => {
+  //   window.gapi.load("client:picker", async () => {
+  //     pickerApiLoaded = true
+  //     await window.gapi.client.init({ apiKey: API_KEY })
+  //   })
 
-    if (accessToken) {
-      // ✅ Reuse existing token
-      openPicker(accessToken);
+  //   tokenClient = window.google.accounts.oauth2.initTokenClient({
+  //     client_id: CLIENT_ID,
+  //     scope: SCOPES,
+  //     callback: (tokenResponse) => {
+  //       if (tokenResponse.access_token) {
+  //         setAccessToken(tokenResponse.access_token)
+  //         openPicker(tokenResponse.access_token)
+  //       } else {
+  //         alert("Failed to get access token")
+  //       }
+  //     },
+  //   })
+  // }, [])
+
+  // const handleDriveClick = () => {
+  //   if (!pickerApiLoaded) {
+  //     alert("Google Picker not ready yet");
+  //     return;
+  //   }
+
+  //   if (accessToken) {
+  //     // ✅ Reuse existing token
+  //     openPicker(accessToken);
+  //   } else {
+  //     // 🧠 Only request if no token exists
+  //     tokenClient.requestAccessToken();
+  //   }
+  // };
+
+  const handleDriveClick = async () => {
+    if (googleAuthStatus.authenticated) {
+      // Already authenticated, open picker
+      openPicker(googleAuthStatus.accessToken);
     } else {
-      // 🧠 Only request if no token exists
-      tokenClient.requestAccessToken();
+      // Need to authenticate first
+      window.location.href = "https://meta-ad-uploader-server-production.up.railway.app/auth/google";
     }
   };
 
 
-  const openPicker = (token) => {
-    const view = new google.picker.DocsView()
+  // const openPicker = (token) => {
+  //   const view = new google.picker.DocsView()
 
-    const picker = new window.google.picker.PickerBuilder()
+  //   const picker = new window.google.picker.PickerBuilder()
+  //     .addView(view)
+  //     .setOAuthToken(token)
+  //     .setDeveloperKey(API_KEY)
+  //     .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED) // ✅ this!
+  //     .setCallback((data) => {
+  //       if (data.action !== "picked") return
+  //       const selected = data.docs.map((doc) => ({
+  //         id: doc.id,
+  //         name: doc.name,
+  //         mimeType: doc.mimeType,
+  //         accessToken: token,
+
+  //       }))
+  //       setDriveFiles((prev) => [...prev, ...selected]);
+  //       //setSelectedFiles((prev) => [...prev, ...selected]);
+  //     })
+  //     .build()
+
+  //   picker.setVisible(true)
+  // }
+
+  const openPicker = (token) => {
+    // Load the picker API if not already loaded
+    if (!window.google || !window.google.picker) {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
+      document.body.appendChild(script);
+
+      window.onApiLoad = () => {
+        window.gapi.load('picker', () => {
+          createPicker(token);
+        });
+      };
+    } else {
+      createPicker(token);
+    }
+  };
+
+  const createPicker = (token) => {
+    const view = new google.picker.DocsView();
+
+    const picker = new google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(token)
-      .setDeveloperKey(API_KEY)
-      .enableFeature(window.google.picker.Feature.MULTISELECT_ENABLED) // ✅ this!
+      .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .setCallback((data) => {
-        if (data.action !== "picked") return
+        if (data.action !== "picked") return;
+
         const selected = data.docs.map((doc) => ({
           id: doc.id,
           name: doc.name,
           mimeType: doc.mimeType,
-          accessToken: token,
+          accessToken: token
+        }));
 
-        }))
         setDriveFiles((prev) => [...prev, ...selected]);
-        //setSelectedFiles((prev) => [...prev, ...selected]);
       })
-      .build()
+      .build();
 
-    picker.setVisible(true)
-  }
+    picker.setVisible(true);
+  };
 
 
   // Dropzone logic
@@ -1114,7 +1195,7 @@ export default function AdCreationForm({
               </div>
             </div>
           </div>
-          <div style={{ marginTop: "10px", marginBottom: "1.25rem" }}>
+          <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
             <Button type="button" onClick={handleDriveClick} className="w-full bg-sky-700 text-white rounded-xl h-[48px]">
               <img
                 src="https://meta-ad-uploader-server-production.up.railway.app/googledrive.png"
@@ -1123,14 +1204,6 @@ export default function AdCreationForm({
               />
               Import from Google Drive
             </Button>
-
-            {/* {selectedFiles.length > 0 && (
-              <ul className="list-disc text-sm text-gray-700 mt-2 list-inside">
-                {selectedFiles.map((f) => (
-                  <li key={f.id}>{f.name}</li>
-                ))}
-              </ul>
-            )} */}
           </div>
           <Button
             type="submit"
