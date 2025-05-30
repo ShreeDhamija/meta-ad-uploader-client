@@ -192,6 +192,16 @@ export default function AdCreationForm({
           authenticated: response.data.authenticated,
           accessToken: response.data.accessToken
         });
+
+        // ✅ If just logged in, open picker automatically
+        if (response.data.authenticated && window.location.search.includes('googleAuth=success')) {
+          openPicker(response.data.accessToken);
+          // Clean up the URL so it doesn't stay ?googleAuth=success
+          const url = new URL(window.location);
+          url.searchParams.delete('googleAuth');
+          window.history.replaceState({}, document.title, url.pathname);
+        }
+
       } catch (error) {
         console.error("Failed to check Google auth status:", error);
         setGoogleAuthStatus({
