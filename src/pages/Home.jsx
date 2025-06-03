@@ -59,6 +59,17 @@ export default function Home() {
     const { adAccounts, setAdAccounts, pages, setPages } = useAppData()
     const { settings: adAccountSettings } = useAdAccountSettings(selectedAdAccount)
 
+    //shop data
+    // const [shopData, setShopData] = useState({
+    //     shops: [],
+    //     productSets: [],
+    //     products: [],
+    // });
+
+    // const [adSetDestinationType, setAdSetDestinationType] = useState(null); // New
+    // Shop ads state
+    const [selectedShopDestination, setSelectedShopDestination] = useState("")
+
     if (authLoading) return null
 
 
@@ -142,7 +153,26 @@ export default function Home() {
             console.error("Failed to save onboarding flag:", err)
         })
     }
-
+    // const fetchShopData = async (pageId) => {
+    //     if (!pageId) return;
+    //     try {
+    //         const res = await fetch(`/auth/fetch-shop-data?pageId=${pageId}`, {
+    //             credentials: "include",
+    //         });
+    //         const data = await res.json();
+    //         if (res.ok) {
+    //             setShopData({
+    //                 shops: data.shops || [],
+    //                 productSets: data.product_sets || [],
+    //                 products: data.products || [],
+    //             });
+    //         } else {
+    //             console.error("Failed to fetch shop data:", data.error);
+    //         }
+    //     } catch (err) {
+    //         console.error("Error fetching shop data:", err);
+    //     }
+    // };
 
     return (
         <div className="w-full max-w-[1220px] mx-auto py-8 px-2 sm:px-4 md:px-6 mt-[20px]">
@@ -156,6 +186,7 @@ export default function Home() {
                         setAdAccounts={setAdAccounts}
                         selectedAdAccount={selectedAdAccount}
                         setSelectedAdAccount={setSelectedAdAccount}
+                        //setAdSetDestinationType={setAdSetDestinationType}
                         campaigns={campaigns}
                         setCampaigns={setCampaigns}
                         selectedCampaign={selectedCampaign}
@@ -177,6 +208,9 @@ export default function Home() {
                         pages={pages}
                         pageId={pageId}
                         setPageId={setPageId}
+                        // adSetDestinationType={adSetDestinationType} // <--- New
+                        // shopData={shopData} // <--- New
+                        // fetchShopData={fetchShopData} // <-
                         instagramAccountId={instagramAccountId}
                         setInstagramAccountId={setInstagramAccountId}
                         adName={adName}
@@ -218,6 +252,8 @@ export default function Home() {
                         setSelectedTemplate={setSelectedTemplate}
                         driveFiles={driveFiles}
                         setDriveFiles={setDriveFiles}
+                        selectedShopDestination={selectedShopDestination}
+                        setSelectedShopDestination={setSelectedShopDestination}
                     />
                 </div>
 

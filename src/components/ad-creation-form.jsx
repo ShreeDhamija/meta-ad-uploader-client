@@ -18,6 +18,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ChevronsUpDown } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
+import ShopDestinationSelector from "@/components/shop-destination-selector"
 
 // const CLIENT_ID = "102886794705-nrf8t8uc78lll08qd9cvq9ckvafk38q9.apps.googleusercontent.com" // replace with your actual client ID
 // const API_KEY = "AIzaSyDePb7a1CNxyaNMpLRJ3-R2T2GHtZKbv_g"
@@ -74,13 +75,15 @@ export default function AdCreationForm({
   setSelectedTemplate,
   driveFiles,
   setDriveFiles,
+  selectedShopDestination,
+  setSelectedShopDestination,
 }) {
   // Local state
   const [adTypeOpen, setAdTypeOpen] = useState(false)
   const [dateFormatOpen, setDateFormatOpen] = useState(false)
   const [openPage, setOpenPage] = useState(false)
 
-  //  const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"]);
+
   const [adValues, setAdValues] = useState({
     adType,
     dateType: dateFormat,
@@ -95,17 +98,15 @@ export default function AdCreationForm({
 
   //gogle drive pickers
   const [accessToken, setAccessToken] = useState(null)
-  //const [selectedFiles, setSelectedFiles] = useState([])
+
 
   const [pageSearchValue, setPageSearchValue] = useState("")
   const [isDuplicating, setIsDuplicating] = useState(false)
   const { isLoggedIn } = useAuth()
-  //const [instagramAccountId, setInstagramAccountId] = useState("")
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
 
   // Formula parts
-  //const formulaParts = [adType, dateFormat, includeFileName ? "File" : ""].filter(Boolean)
   const formulaParts = adOrder
     .map((key) => {
       if (key === "adType") return adType;
@@ -435,6 +436,23 @@ export default function AdCreationForm({
     return response.data.copied_adset_id
   }
 
+
+
+  // Check if any selected ad sets have SHOP_AUTOMATIC destination type
+  const hasShopAutomaticAdSets = () => {
+    if (duplicateAdSet) {
+      const adset = adSets.find((a) => a.id === duplicateAdSet)
+      return adset?.destination_type === "SHOP_AUTOMATIC"
+    }
+
+    return selectedAdSets.some((adsetId) => {
+      const adset = adSets.find((a) => a.id === adsetId)
+      return adset?.destination_type === "SHOP_AUTOMATIC"
+    })
+  }
+
+  const showShopDestinationSelector = hasShopAutomaticAdSets() && pageId
+
   const handleCreateAd = async (e) => {
     e.preventDefault();
 
@@ -446,6 +464,11 @@ export default function AdCreationForm({
     if (files.length === 0 && driveFiles.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
+    }
+    // Validate shop destination for shop automatic ad sets
+    if (showShopDestinationSelector && !selectedShopDestination) {
+      toast.error("Please select a shop destination for shop ads")
+      return
     }
 
     setIsLoading(true);
@@ -523,7 +546,10 @@ export default function AdCreationForm({
           if (thumbnail) {
             formData.append("thumbnail", thumbnail);
           }
-
+          // Add shop destination if needed
+          if (selectedShopDestination) {
+            formData.append("shopDestination", selectedShopDestination)
+          }
           // Add debug logs
           console.log(`Submitting dynamic adset ${adSetId} with ${files.length} local files and ${driveFiles.length} drive files`);
 
@@ -622,35 +648,7 @@ export default function AdCreationForm({
   }
 
 
-  // Custom radio button component
-  // const CustomRadioButton = ({ value, checked, onChange, label, id }) => {
-  //   return (
-  //     <label
-  //       htmlFor={id}
-  //       className="flex items-center space-x-2 rounded-xl px-2 py-1 hover:bg-gray-100 cursor-pointer"
-  //       onClick={() => onChange(value)}
-  //     >
-  //       <div className="relative flex items-center justify-center">
-  //         <div className={`w-4 h-4 rounded-full border ${checked ? "border-black" : "border-gray-400"} bg-white`}>
-  //           {checked && (
-  //             <div className="absolute inset-0 flex items-center justify-center">
-  //               <div className="w-2 h-2 rounded-full bg-black"></div>
-  //             </div>
-  //           )}
-  //         </div>
-  //         <input
-  //           type="radio"
-  //           id={id}
-  //           value={value}
-  //           checked={checked}
-  //           onChange={() => onChange(value)}
-  //           className="sr-only"
-  //         />
-  //       </div>
-  //       <span className="text-xs">{label}</span>
-  //     </label>
-  //   )
-  // }
+
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
@@ -1089,6 +1087,14 @@ export default function AdCreationForm({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Shop Destination Selector - Only show when needed */}
+            <ShopDestinationSelector
+              pageId={pageId}
+              selectedShopDestination={selectedShopDestination}
+              setSelectedShopDestination={setSelectedShopDestination}
+              isVisible={showShopDestinationSelector}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="thumbnail">Thumbnail - Optional(Only for videos)</Label>

@@ -23,6 +23,7 @@ export default function AdAccountSettings({
   setAdAccounts,
   selectedAdAccount,
   setSelectedAdAccount,
+  //setAdSetDestinationType,
   campaigns,
   setCampaigns,
   selectedCampaign,
