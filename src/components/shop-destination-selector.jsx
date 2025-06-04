@@ -135,44 +135,11 @@ export default function ShopDestinationSelector({
                             onValueChange={setSearchValue}
                         />
                         <CommandEmpty>No shop destinations found.</CommandEmpty>
-                        {/* <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                            <CommandGroup>
-                                {filteredOptions.length > 0 ? (
-                                    filteredOptions.map((option) => (
-                                        <CommandItem
-                                            key={option.id}
-                                            value={option.id}
-                                            onSelect={() => {
-                                                setSelectedShopDestination(option.id)
-                                                setSelectedShopDestinationType(option.type)
-                                                setOpen(false)
-
-                                            }}
-                                            className={cn(
-                                                "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                                                "data-[selected=true]:bg-gray-100",
-                                                selectedShopDestination === option.id && "bg-gray-100 rounded-xl font-semibold",
-                                                "hover:bg-gray-100",
-                                                "flex items-center justify-between",
-                                            )}
-                                            data-selected={option.id === selectedShopDestination}
-                                        >
-                                            <span>{option.label}</span>
-                                            {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
-                                        </CommandItem>
-                                    ))
-                                ) : (
-                                    <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                                        No shop destinations found.
-                                    </CommandItem>
-                                )}
-                            </CommandGroup>
-                        </CommandList> */}
                         <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                             {/* Shops Section */}
                             {shopOptions.length > 0 && (
                                 <CommandGroup>
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 sticky top-0">
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
                                         Shops
                                     </div>
                                     {shopOptions
@@ -205,7 +172,7 @@ export default function ShopDestinationSelector({
                             {/* Product Sets Section */}
                             {productSetOptions.length > 0 && (
                                 <CommandGroup>
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 sticky top-0">
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
                                         Product Sets
                                     </div>
                                     {productSetOptions
@@ -238,7 +205,7 @@ export default function ShopDestinationSelector({
                             {/* Products Section */}
                             {productOptions.length > 0 && (
                                 <CommandGroup>
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 sticky top-0">
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
                                         Products
                                     </div>
                                     {productOptions
