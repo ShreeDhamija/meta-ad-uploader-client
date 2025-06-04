@@ -20,15 +20,8 @@ import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 
-// const CLIENT_ID = "102886794705-nrf8t8uc78lll08qd9cvq9ckvafk38q9.apps.googleusercontent.com" // replace with your actual client ID
-// const API_KEY = "AIzaSyDePb7a1CNxyaNMpLRJ3-R2T2GHtZKbv_g"
-// const SCOPES = "https://www.googleapis.com/auth/drive.readonly"
-
-// let pickerApiLoaded = false
-// let tokenClient = null
 
 export default function AdCreationForm({
-  //isLoggedIn,
   isLoading,
   setIsLoading,
   pages,
@@ -77,6 +70,8 @@ export default function AdCreationForm({
   setDriveFiles,
   selectedShopDestination,
   setSelectedShopDestination,
+  selectedShopDestinationType,
+  setSelectedShopDestinationType,
 }) {
   // Local state
   const [adTypeOpen, setAdTypeOpen] = useState(false)
@@ -549,7 +544,9 @@ export default function AdCreationForm({
           // Add shop destination if needed
           if (selectedShopDestination) {
             formData.append("shopDestination", selectedShopDestination)
+            formData.append("shopDestinationType", selectedShopDestinationType)
           }
+
           // Add debug logs
           console.log(`Submitting dynamic adset ${adSetId} with ${files.length} local files and ${driveFiles.length} drive files`);
 
@@ -1093,6 +1090,8 @@ export default function AdCreationForm({
               pageId={pageId}
               selectedShopDestination={selectedShopDestination}
               setSelectedShopDestination={setSelectedShopDestination}
+              selectedShopDestinationType={selectedShopDestinationType}
+              setSelectedShopDestinationType={setSelectedShopDestinationType}
               isVisible={showShopDestinationSelector}
             />
 

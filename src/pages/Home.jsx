@@ -59,16 +59,8 @@ export default function Home() {
     const { adAccounts, setAdAccounts, pages, setPages } = useAppData()
     const { settings: adAccountSettings } = useAdAccountSettings(selectedAdAccount)
 
-    //shop data
-    // const [shopData, setShopData] = useState({
-    //     shops: [],
-    //     productSets: [],
-    //     products: [],
-    // });
-
-    // const [adSetDestinationType, setAdSetDestinationType] = useState(null); // New
-    // Shop ads state
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
+    const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
 
     if (authLoading) return null
 
@@ -208,9 +200,6 @@ export default function Home() {
                         pages={pages}
                         pageId={pageId}
                         setPageId={setPageId}
-                        // adSetDestinationType={adSetDestinationType} // <--- New
-                        // shopData={shopData} // <--- New
-                        // fetchShopData={fetchShopData} // <-
                         instagramAccountId={instagramAccountId}
                         setInstagramAccountId={setInstagramAccountId}
                         adName={adName}
@@ -254,6 +243,8 @@ export default function Home() {
                         setDriveFiles={setDriveFiles}
                         selectedShopDestination={selectedShopDestination}
                         setSelectedShopDestination={setSelectedShopDestination}
+                        selectedShopDestinationType={selectedShopDestinationType}
+                        setSelectedShopDestinationType={setSelectedShopDestinationType}
                     />
                 </div>
 

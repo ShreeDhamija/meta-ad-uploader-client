@@ -12,6 +12,7 @@ export default function ShopDestinationSelector({
     pageId,
     selectedShopDestination,
     setSelectedShopDestination,
+    setSelectedShopDestinationType,
     isVisible = false,
 }) {
     const [open, setOpen] = useState(false)
@@ -62,7 +63,8 @@ export default function ShopDestinationSelector({
 
     // Create options for the dropdown
     const shopOptions = shopData.shops
-        .filter((shop) => shop.shop_status === "PUBLISHED" && shop.fb_sales_channel_status === "ACTIVE")
+        //.filter((shop) => shop.shop_status === "PUBLISHED" && shop.fb_sales_channel_status === "ACTIVE")
+        .filter((shop) => shop.shop_status === "PUBLISHED")
         .map((shop) => ({
             id: shop.storefront_shop_id,
             label: shop.fb_page_name || `Shop ${shop.storefront_shop_id}`,
@@ -75,7 +77,14 @@ export default function ShopDestinationSelector({
         type: "product_set",
     }))
 
-    const allOptions = [...shopOptions, ...productSetOptions]
+    const productOptions = shopData.products.map((product) => ({
+        id: product.id,
+        label: `Product: ${product.name}`,
+        type: "product",
+    }))
+
+
+    const allOptions = [...shopOptions, ...productSetOptions, ...productOptions]
     const filteredOptions = allOptions.filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
     const selectedOption = allOptions.find((option) => option.id === selectedShopDestination)
 
@@ -86,7 +95,7 @@ export default function ShopDestinationSelector({
     return (
         <div className="space-y-2">
             <Label>Shop Destination</Label>
-            <Label className="text-gray-500 text-[12px] font-regular">Select a shop or product set for your shop ads</Label>
+            <Label className="text-gray-500 text-[12px] font-regular block">Select a shop or product set for your shop ads</Label>
 
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
@@ -136,7 +145,9 @@ export default function ShopDestinationSelector({
                                             value={option.id}
                                             onSelect={() => {
                                                 setSelectedShopDestination(option.id)
+                                                setSelectedShopDestinationType(option.type)
                                                 setOpen(false)
+
                                             }}
                                             className={cn(
                                                 "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
