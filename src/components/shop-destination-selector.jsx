@@ -64,22 +64,21 @@ export default function ShopDestinationSelector({
     // Create options for the dropdown
     const shopOptions = shopData.shops
         //.filter((shop) => shop.shop_status === "PUBLISHED" && shop.fb_sales_channel_status === "ACTIVE")
-        .filter((shop) => shop.shop_status === "PUBLISHED")
         .map((shop) => ({
             id: shop.storefront_shop_id,
-            label: shop.fb_page_name || `Shop ${shop.storefront_shop_id}`,
+            label: shop.fb_page_name,
             type: "shop",
         }))
 
     const productSetOptions = shopData.productSets.map((set) => ({
         id: set.id,
-        label: `Product Set: ${set.name}`,
+        label: set.name,
         type: "product_set",
     }))
 
     const productOptions = shopData.products.map((product) => ({
         id: product.id,
-        label: `Product: ${product.name}`,
+        label: product.name,
         type: "product",
     }))
 
@@ -136,7 +135,7 @@ export default function ShopDestinationSelector({
                             onValueChange={setSearchValue}
                         />
                         <CommandEmpty>No shop destinations found.</CommandEmpty>
-                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                        {/* <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                             <CommandGroup>
                                 {filteredOptions.length > 0 ? (
                                     filteredOptions.map((option) => (
@@ -168,6 +167,113 @@ export default function ShopDestinationSelector({
                                     </CommandItem>
                                 )}
                             </CommandGroup>
+                        </CommandList> */}
+                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                            {/* Shops Section */}
+                            {shopOptions.length > 0 && (
+                                <CommandGroup>
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 sticky top-0">
+                                        Shops
+                                    </div>
+                                    {shopOptions
+                                        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
+                                        .map((option) => (
+                                            <CommandItem
+                                                key={option.id}
+                                                value={option.id}
+                                                onSelect={() => {
+                                                    setSelectedShopDestination(option.id)
+                                                    setSelectedShopDestinationType(option.type)
+                                                    setOpen(false)
+                                                }}
+                                                className={cn(
+                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                                    "data-[selected=true]:bg-gray-100",
+                                                    selectedShopDestination === option.id && "bg-gray-100 rounded-xl font-semibold",
+                                                    "hover:bg-gray-100",
+                                                    "flex items-center justify-between",
+                                                )}
+                                                data-selected={option.id === selectedShopDestination}
+                                            >
+                                                <span>{option.label.replace('Shop: ', '')}</span> {/* Remove prefix */}
+                                                {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
+                                            </CommandItem>
+                                        ))}
+                                </CommandGroup>
+                            )}
+
+                            {/* Product Sets Section */}
+                            {productSetOptions.length > 0 && (
+                                <CommandGroup>
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 sticky top-0">
+                                        Product Sets
+                                    </div>
+                                    {productSetOptions
+                                        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
+                                        .map((option) => (
+                                            <CommandItem
+                                                key={option.id}
+                                                value={option.id}
+                                                onSelect={() => {
+                                                    setSelectedShopDestination(option.id)
+                                                    setSelectedShopDestinationType(option.type)
+                                                    setOpen(false)
+                                                }}
+                                                className={cn(
+                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                                    "data-[selected=true]:bg-gray-100",
+                                                    selectedShopDestination === option.id && "bg-gray-100 rounded-xl font-semibold",
+                                                    "hover:bg-gray-100",
+                                                    "flex items-center justify-between",
+                                                )}
+                                                data-selected={option.id === selectedShopDestination}
+                                            >
+                                                <span>{option.label.replace('Product Set: ', '')}</span> {/* Remove prefix */}
+                                                {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
+                                            </CommandItem>
+                                        ))}
+                                </CommandGroup>
+                            )}
+
+                            {/* Products Section */}
+                            {productOptions.length > 0 && (
+                                <CommandGroup>
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-100 sticky top-0">
+                                        Products
+                                    </div>
+                                    {productOptions
+                                        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
+                                        .map((option) => (
+                                            <CommandItem
+                                                key={option.id}
+                                                value={option.id}
+                                                onSelect={() => {
+                                                    setSelectedShopDestination(option.id)
+                                                    setSelectedShopDestinationType(option.type)
+                                                    setOpen(false)
+                                                }}
+                                                className={cn(
+                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                                    "data-[selected=true]:bg-gray-100",
+                                                    selectedShopDestination === option.id && "bg-gray-100 rounded-xl font-semibold",
+                                                    "hover:bg-gray-100",
+                                                    "flex items-center justify-between",
+                                                )}
+                                                data-selected={option.id === selectedShopDestination}
+                                            >
+                                                <span>{option.label.replace('Product: ', '')}</span> {/* Remove prefix */}
+                                                {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
+                                            </CommandItem>
+                                        ))}
+                                </CommandGroup>
+                            )}
+
+                            {/* No results */}
+                            {shopOptions.length === 0 && productSetOptions.length === 0 && productOptions.length === 0 && (
+                                <CommandItem disabled className="opacity-50 cursor-not-allowed">
+                                    No shop destinations found.
+                                </CommandItem>
+                            )}
                         </CommandList>
                     </Command>
                 </PopoverContent>
