@@ -1211,6 +1211,8 @@ export default function AdCreationForm({
               onCheckedChange={setLaunchPaused}
               disabled={!isLoggedIn}
               className={cn(
+                "rounded-md", // Or "rounded-lg", "rounded-full"
+                "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0", // Remove focus ring
                 launchPaused ? "data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500" : ""
               )} // Optional: style checkbox itself when checked & paused
             />
