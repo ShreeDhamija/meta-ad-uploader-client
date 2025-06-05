@@ -1197,20 +1197,34 @@ export default function AdCreationForm({
               "Publish Ads"
             )}
           </Button>
-          <div className="flex items-center space-x-2 pt-2">
+          <div
+            className={cn(
+              "flex items-center space-x-2 p-2 rounded-md transition-colors duration-150", // Base styling: padding, rounded corners, transition
+              launchPaused
+                ? "bg-red-100 border border-red-300" // Conditional: light red background and border if PAUSED
+                : "border border-transparent" // Default: transparent border (or can be themed)
+            )}
+          >
             <Checkbox
               id="launchPaused"
               checked={launchPaused}
               onCheckedChange={setLaunchPaused}
               disabled={!isLoggedIn}
+              className={cn(
+                launchPaused ? "data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500" : ""
+              )} // Optional: style checkbox itself when checked & paused
             />
             <Label
               htmlFor="launchPaused"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              className={cn(
+                "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+                launchPaused ? "text-red-700" : "" // Conditional: red text if PAUSED
+              )}
             >
               Launch ads as PAUSED
             </Label>
           </div>
+
 
         </form>
       </CardContent>
