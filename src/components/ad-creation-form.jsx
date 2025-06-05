@@ -1199,7 +1199,7 @@ export default function AdCreationForm({
           </Button>
           <div
             className={cn(
-              "flex items-center space-x-2 p-2 rounded-lg transition-colors duration-150", // Base styling: padding, rounded corners, transition
+              "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
               launchPaused
                 ? "bg-red-50 border border-red-300" // Conditional: light red background and border if PAUSED
                 : "border border-transparent" // Default: transparent border (or can be themed)
@@ -1221,7 +1221,7 @@ export default function AdCreationForm({
                 launchPaused ? "text-red-600" : "" // Conditional: red text if PAUSED
               )}
             >
-              Launch ads as paused
+              Launch ads as paused.
             </Label>
           </div>
 
