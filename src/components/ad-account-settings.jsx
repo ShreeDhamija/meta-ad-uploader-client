@@ -284,7 +284,7 @@ export default function AdAccountSettings({
     if (duplicateAdSet) {
       const selectedAdSet = adSets.find((adset) => adset.id === duplicateAdSet)
       if (selectedAdSet) {
-        setNewAdSetName(selectedAdSet.name + "_Copy")
+        setNewAdSetName(selectedAdSet.name + "_02")
       }
     } else {
       setNewAdSetName("")

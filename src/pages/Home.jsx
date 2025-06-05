@@ -52,6 +52,7 @@ export default function Home() {
     const [selectedTemplate, setSelectedTemplate] = useState("")
     const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"])
     const [driveFiles, setDriveFiles] = useState([])
+    const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
 
 
     const [files, setFiles] = useState([])
@@ -230,6 +231,8 @@ export default function Home() {
                         selectedShopDestinationType={selectedShopDestinationType}
                         setSelectedShopDestinationType={setSelectedShopDestinationType}
                         newAdSetName={newAdSetName}
+                        launchPaused={launchPaused}
+                        setLaunchPaused={setLaunchPaused}
                     />
                 </div>
 

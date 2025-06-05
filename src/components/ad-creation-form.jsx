@@ -73,6 +73,8 @@ export default function AdCreationForm({
   selectedShopDestinationType,
   setSelectedShopDestinationType,
   newAdSetName,
+  launchPaused,
+  setLaunchPaused
 }) {
   // Local state
   const [adTypeOpen, setAdTypeOpen] = useState(false)
@@ -527,6 +529,7 @@ export default function AdCreationForm({
           formData.append("link", link);
           formData.append("cta", cta);
 
+
           // Add all local files
           files.forEach((file) => {
             formData.append("mediaFiles", file);
@@ -552,8 +555,10 @@ export default function AdCreationForm({
             formData.append("shopDestinationType", selectedShopDestinationType)
           }
 
-          // Add debug logs
-          console.log(`Submitting dynamic adset ${adSetId} with ${files.length} local files and ${driveFiles.length} drive files`);
+          formData.append("launchPaused", launchPaused);
+
+
+
 
           promises.push(
             axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
@@ -588,7 +593,8 @@ export default function AdCreationForm({
               formData.append("shopDestination", selectedShopDestination)
               formData.append("shopDestinationType", selectedShopDestinationType)
             }
-            console.log(`Submitting non-dynamic adset ${adSetId} with local file: ${file.name}`);
+            formData.append("launchPaused", launchPaused);
+
 
             promises.push(
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
@@ -620,8 +626,7 @@ export default function AdCreationForm({
               formData.append("shopDestination", selectedShopDestination)
               formData.append("shopDestinationType", selectedShopDestinationType)
             }
-
-            console.log(`Submitting non-dynamic adset ${adSetId} with drive file: ${driveFile.name}`);
+            formData.append("launchPaused", launchPaused);
 
             promises.push(
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
@@ -1192,6 +1197,21 @@ export default function AdCreationForm({
               "Publish Ads"
             )}
           </Button>
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox
+              id="launchPaused"
+              checked={launchPaused}
+              onCheckedChange={setLaunchPaused}
+              disabled={!isLoggedIn}
+            />
+            <Label
+              htmlFor="launchPaused"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Launch ads as PAUSED
+            </Label>
+          </div>
+
         </form>
       </CardContent>
     </Card >
