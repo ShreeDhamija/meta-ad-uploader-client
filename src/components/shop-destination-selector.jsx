@@ -63,7 +63,7 @@ export default function ShopDestinationSelector({
 
     // Create options for the dropdown
     const shopOptions = shopData.shops
-        //.filter((shop) => shop.shop_status === "PUBLISHED" && shop.fb_sales_channel_status === "ACTIVE")
+        //.filter((shop) => shop.shop_status === "ACTIVE" && shop.fb_sales_channel_status === "ENABLED")
         .map((shop) => ({
             id: shop.storefront_shop_id,
             label: shop.fb_page_name,
@@ -128,7 +128,7 @@ export default function ShopDestinationSelector({
                         maxWidth: "none",
                     }}
                 >
-                    <Command filter={() => 1} loop={false}>
+                    <Command filter={() => 1} loop={false} shouldFilter={false}>
                         <CommandInput
                             placeholder="Search shop destinations..."
                             value={searchValue}

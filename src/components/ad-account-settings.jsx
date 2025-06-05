@@ -37,6 +37,8 @@ export default function AdAccountSettings({
   duplicateAdSet,
   setDuplicateAdSet,
   setCampaignObjective,
+  newAdSetName,
+  setNewAdSetName,
 }) {
   // Local state for comboboxes
   const { isLoggedIn } = useAuth()
@@ -142,6 +144,7 @@ export default function AdAccountSettings({
     setSelectedAdSets([])
     setShowDuplicateBlock(false)
     setDuplicateAdSet("")
+    setNewAdSetName("") // Add this line
     if (!campaignId) {
       setCampaignObjective("")
       return
@@ -179,6 +182,7 @@ export default function AdAccountSettings({
       if (showDuplicateBlock) {
         setShowDuplicateBlock(false)
         setDuplicateAdSet("")
+        setNewAdSetName("") // Add this line
       }
     } else {
       setSelectedAdSets((prev) => prev.filter((id) => id !== adsetId))
@@ -266,13 +270,24 @@ export default function AdAccountSettings({
     (adset.name || adset.id).toLowerCase().includes(adSetSearchValue.toLowerCase()),
   )
 
-  useEffect(() => {
-    const svg = document.querySelector(".cmdk-input-wrapper svg")
-    if (svg) {
-      svg.style.stroke = "#e5e7eb" // light gray
-    }
-  }, [])
+  // useEffect(() => {
+  //   const svg = document.querySelector(".cmdk-input-wrapper svg")
+  //   if (svg) {
+  //     svg.style.stroke = "#e5e7eb" // light gray
+  //   }
+  // }, [])
 
+  // Auto-populate new ad set name when duplicate ad set is selected
+  useEffect(() => {
+    if (duplicateAdSet) {
+      const selectedAdSet = adSets.find((adset) => adset.id === duplicateAdSet)
+      if (selectedAdSet) {
+        setNewAdSetName(selectedAdSet.name + "_Copy")
+      }
+    } else {
+      setNewAdSetName("")
+    }
+  }, [duplicateAdSet, adSets, setNewAdSetName])
 
   return (
     <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
@@ -569,6 +584,7 @@ export default function AdAccountSettings({
                   onClick={() => {
                     setShowDuplicateBlock(false)
                     setDuplicateAdSet("")
+                    setNewAdSetName("") // Add this line
                   }}
                   className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50"
                   aria-label="Close duplicate ad set selection"
@@ -651,6 +667,25 @@ export default function AdAccountSettings({
                       </Command>
                     </PopoverContent>
                   </Popover>
+                  {/* New Ad Set Name Input */}
+                  {duplicateAdSet && (
+                    <div className="space-y-2 mt-3">
+                      <Label htmlFor="newAdSetName" className="block">
+                        New Ad Set Name
+                      </Label>
+                      <Label className="text-gray-500 text-[12px] font-regular">
+                        Enter a custom name for the duplicated ad set
+                      </Label>
+                      <Input
+                        id="newAdSetName"
+                        value={newAdSetName}
+                        onChange={(e) => setNewAdSetName(e.target.value)}
+                        placeholder="Enter new ad set name..."
+                        className="border border-gray-400 rounded-xl bg-white shadow"
+                        disabled={!isLoggedIn}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}

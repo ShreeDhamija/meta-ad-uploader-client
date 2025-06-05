@@ -72,6 +72,7 @@ export default function AdCreationForm({
   setSelectedShopDestination,
   selectedShopDestinationType,
   setSelectedShopDestinationType,
+  newAdSetName,
 }) {
   // Local state
   const [adTypeOpen, setAdTypeOpen] = useState(false)
@@ -425,7 +426,7 @@ export default function AdCreationForm({
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
     const response = await axios.post(
       "https://meta-ad-uploader-server-production.up.railway.app/auth/duplicate-adset",
-      { adSetId, campaignId, adAccountId },
+      { adSetId, campaignId, adAccountId, newAdSetName },
       { withCredentials: true },
     )
     return response.data.copied_adset_id
@@ -465,6 +466,10 @@ export default function AdCreationForm({
       toast.error("Please select a shop destination for shop ads")
       return
     }
+    if (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) {
+      toast.error("Please enter a name for the new ad set")
+      return
+    }
 
     setIsLoading(true);
 
@@ -472,7 +477,7 @@ export default function AdCreationForm({
     let finalAdSetIds = [...selectedAdSets];
     if (duplicateAdSet) {
       try {
-        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount);
+        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetName.trim());
         finalAdSetIds = [newAdSetId];
       } catch (error) {
         toast.error("Error duplicating ad set: " + (error.message || "Unknown error"));
@@ -579,7 +584,10 @@ export default function AdCreationForm({
             if (thumbnail) {
               formData.append("thumbnail", thumbnail);
             }
-
+            if (selectedShopDestination) {
+              formData.append("shopDestination", selectedShopDestination)
+              formData.append("shopDestinationType", selectedShopDestinationType)
+            }
             console.log(`Submitting non-dynamic adset ${adSetId} with local file: ${file.name}`);
 
             promises.push(
@@ -608,6 +616,10 @@ export default function AdCreationForm({
             formData.append("driveMimeType", driveFile.mimeType);
             formData.append("driveAccessToken", driveFile.accessToken);
             formData.append("driveName", driveFile.name);
+            if (selectedShopDestination) {
+              formData.append("shopDestination", selectedShopDestination)
+              formData.append("shopDestinationType", selectedShopDestinationType)
+            }
 
             console.log(`Submitting non-dynamic adset ${adSetId} with drive file: ${driveFile.name}`);
 
@@ -1168,7 +1180,7 @@ export default function AdCreationForm({
             type="submit"
             className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
             disabled={
-              !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || isLoading
+              !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || isLoading || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === ""))
             }
           >
             {isLoading ? (

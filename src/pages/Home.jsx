@@ -32,6 +32,7 @@ export default function Home() {
     const [selectedAdSets, setSelectedAdSets] = useState([])
     const [showDuplicateBlock, setShowDuplicateBlock] = useState(false)
     const [duplicateAdSet, setDuplicateAdSet] = useState("")
+    const [newAdSetName, setNewAdSetName] = useState("")
     const [campaignObjective, setCampaignObjective] = useState("")
 
     // Ad creation form
@@ -145,26 +146,7 @@ export default function Home() {
             console.error("Failed to save onboarding flag:", err)
         })
     }
-    // const fetchShopData = async (pageId) => {
-    //     if (!pageId) return;
-    //     try {
-    //         const res = await fetch(`/auth/fetch-shop-data?pageId=${pageId}`, {
-    //             credentials: "include",
-    //         });
-    //         const data = await res.json();
-    //         if (res.ok) {
-    //             setShopData({
-    //                 shops: data.shops || [],
-    //                 productSets: data.product_sets || [],
-    //                 products: data.products || [],
-    //             });
-    //         } else {
-    //             console.error("Failed to fetch shop data:", data.error);
-    //         }
-    //     } catch (err) {
-    //         console.error("Error fetching shop data:", err);
-    //     }
-    // };
+
 
     return (
         <div className="w-full max-w-[1220px] mx-auto py-8 px-2 sm:px-4 md:px-6 mt-[20px]">
@@ -192,6 +174,8 @@ export default function Home() {
                         duplicateAdSet={duplicateAdSet}
                         setDuplicateAdSet={setDuplicateAdSet}
                         setCampaignObjective={setCampaignObjective}
+                        newAdSetName={newAdSetName}
+                        setNewAdSetName={setNewAdSetName}
                     />
 
                     <AdCreationForm
@@ -245,6 +229,7 @@ export default function Home() {
                         setSelectedShopDestination={setSelectedShopDestination}
                         selectedShopDestinationType={selectedShopDestinationType}
                         setSelectedShopDestinationType={setSelectedShopDestinationType}
+                        newAdSetName={newAdSetName}
                     />
                 </div>
 
