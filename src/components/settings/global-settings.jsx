@@ -21,20 +21,37 @@ export default function GlobalSettings() {
   const [useFileName, setUseFileName] = useState(false)
   const { adNameFormula } = useGlobalSettings();
   const { globalSettings } = useGlobalSettings();
-  const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"]);
+  const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
+
+  const [adOrder, setAdOrder] = useState(defaultOrder);
   const [adValues, setAdValues] = useState({
     adType: "",
-    dateType: "",
-    useFileName: false
+    dateType: "MonthYYYY", // default selected
+    useFileName: false,
+    iteration: "", // placeholder for future logic
   });
 
 
+
   useEffect(() => {
-    setAdOrder(adNameFormula.order || ["adType", "dateType", "fileName"]);
-    setAdValues(adNameFormula.values || {});
+    if (adNameFormula && adNameFormula.order) {
+      setAdOrder(adNameFormula.order);
+    } else {
+      setAdOrder(defaultOrder);
+    }
+
+    if (adNameFormula && adNameFormula.values) {
+      setAdValues({
+        adType: adNameFormula.values.adType || "",
+        dateType: adNameFormula.values.dateType || "MonthYYYY",
+        useFileName: adNameFormula.values.useFileName || false,
+        iteration: adNameFormula.values.iteration || "",
+      });
+    }
   }, [adNameFormula]);
 
-  const [selectedAdNameItems, setSelectedAdNameItems] = useState(["adType", "dateType"])
+
+  const [selectedAdNameItems, setSelectedAdNameItems] = useState([])
   const [customAdNameText, setCustomAdNameText] = useState("")
 
   const CustomRadioButton = ({ value, checked, onChange, label, id }) => {

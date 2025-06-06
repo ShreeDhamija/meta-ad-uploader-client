@@ -403,9 +403,9 @@ export default function ReorderAdNameParts({
   return (
     <div className="space-y-3">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={availableItems} strategy={horizontalListSortingStrategy}>
+        <SortableContext items={order} strategy={horizontalListSortingStrategy}>
           <div className="flex flex-wrap gap-3">
-            {availableItems.map((id) => (
+            {order.map((id) => (
               <SortableItem
                 key={id}
                 id={id}
