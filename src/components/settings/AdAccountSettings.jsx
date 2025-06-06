@@ -295,8 +295,8 @@ export default function AdAccountSettings() {
           }}
         >
           <Button
-            className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
-            style={{ borderRadius: "12px" }}
+            className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg rounded-xl"
+            //style={{ borderRadius: "12px" }}
             onClick={async () => {
               if (!selectedAdAccount) return
               //const cleanedUTMs = utmPairs.filter((pair) => pair.key && pair.value)
