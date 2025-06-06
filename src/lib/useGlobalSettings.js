@@ -4,11 +4,12 @@ export default function useGlobalSettings() {
     const [loading, setLoading] = useState(true);
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
     const [adNameFormula, setAdNameFormula] = useState({
-        order: ["adType", "dateType", "fileName"], // default order
+        order: ["adType", "dateType", "fileName", "iteration"], // default order
         values: {
             adType: "",
             dateType: "",
             useFileName: false,
+            iteration: "",
         },
     });
     const [hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding] = useState(false);
@@ -22,13 +23,15 @@ export default function useGlobalSettings() {
                 });
                 const data = await res.json();
                 const rawFormula = data.settings?.adNameFormula || {};
-                const defaultOrder = ["adType", "dateType", "fileName"];
+                const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
                 setAdNameFormula({
                     order: rawFormula.order || defaultOrder,
                     values: {
                         adType: rawFormula.values?.adType || "",
                         dateType: rawFormula.values?.dateType || "",
-                        useFileName: rawFormula.values?.useFileName || false
+                        useFileName: rawFormula.values?.useFileName || false,
+                        iteration: rawFormula.values?.iteration || ""
+
                     }
                 });
                 setHasSeenOnboarding(data.settings?.hasSeenOnboarding || false);
