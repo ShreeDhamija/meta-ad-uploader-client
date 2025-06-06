@@ -353,7 +353,7 @@ function SortableItem({ id, isSelected, onToggle, variant, customTextValue, onCu
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center px-3 py-2 rounded-full border bg-white shadow-sm gap-2 min-h-[40px]",
+        "flex items-center px-2 py-1 rounded-lg border bg-white shadow-sm gap-2 min-h-[36px]",
         isDragging ? "opacity-50 border-gray-400" : "hover:bg-gray-50 border-gray-300",
         id === "customText" && "flex-1 min-w-[200px]",
       )}
@@ -399,15 +399,27 @@ export default function ReorderAdNameParts({
 
   return (
     <div className="space-y-3">
-      <div>
-        <h3 className="text-lg font-semibold">Ad Name</h3>
-        <p className="text-sm text-gray-500">Pick what fields you want to add to your ad name.</p>
-      </div>
-
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      {/* <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={availableItems} strategy={horizontalListSortingStrategy}>
           <div className="flex flex-wrap gap-3">
             {availableItems.map((id) => (
+              <SortableItem
+                key={id}
+                id={id}
+                isSelected={selectedItems.includes(id)}
+                onToggle={() => onItemToggle(id)}
+                variant={variant}
+                customTextValue={customTextValue}
+                onCustomTextChange={onCustomTextChange}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext> */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={order} strategy={horizontalListSortingStrategy}>
+          <div className="flex flex-wrap gap-3">
+            {order.map((id) => (
               <SortableItem
                 key={id}
                 id={id}
