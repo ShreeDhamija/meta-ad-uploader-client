@@ -35,7 +35,8 @@ export default function GlobalSettings() {
 
   useEffect(() => {
     if (adNameFormula && adNameFormula.order) {
-      setAdOrder(adNameFormula.order);
+      const mergedOrder = Array.from(new Set([...(adNameFormula.order || []), "iteration"]));
+      setAdOrder(mergedOrder);
     } else {
       setAdOrder(defaultOrder);
     }
@@ -47,8 +48,19 @@ export default function GlobalSettings() {
         useFileName: adNameFormula.values.useFileName || false,
         iteration: adNameFormula.values.iteration || "",
       });
+
+      // 🟢 NEW: Set selected items based on adValues
+      const initialSelectedItems = [];
+      if (adNameFormula.values.adType) initialSelectedItems.push("adType");
+      if (adNameFormula.values.dateType) initialSelectedItems.push("dateType");
+      if (adNameFormula.values.useFileName) initialSelectedItems.push("fileName");
+      if (adNameFormula.values.iteration) initialSelectedItems.push("iteration");
+      // NOTE: don't include "customText" here — it's home page only (unless you want to)
+
+      setSelectedAdNameItems(initialSelectedItems);
     }
   }, [adNameFormula]);
+
 
 
   const [selectedAdNameItems, setSelectedAdNameItems] = useState([])
