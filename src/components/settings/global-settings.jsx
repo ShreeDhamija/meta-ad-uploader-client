@@ -25,11 +25,9 @@ export default function GlobalSettings() {
 
   const [adOrder, setAdOrder] = useState(defaultOrder);
   const [adValues, setAdValues] = useState({
-    adType: "",
-    dateType: "MonthYYYY", // default selected
-    useFileName: false,
-    iteration: "", // placeholder for future logic
+    dateType: "MonthYYYY", // default format
   });
+
 
 
 
@@ -43,23 +41,15 @@ export default function GlobalSettings() {
 
     if (adNameFormula && adNameFormula.values) {
       setAdValues({
-        adType: adNameFormula.values.adType || "",
-        dateType: adNameFormula.values.dateType || "MonthYYYY",
-        useFileName: adNameFormula.values.useFileName || false,
-        iteration: adNameFormula.values.iteration || "",
+        dateType: adNameFormula.values.dateType || "MonthYYYY", // ✅ Only dateType
       });
+    }
 
-      // 🟢 NEW: Set selected items based on adValues
-      const initialSelectedItems = [];
-      if (adNameFormula.values.adType) initialSelectedItems.push("adType");
-      if (adNameFormula.values.dateType) initialSelectedItems.push("dateType");
-      if (adNameFormula.values.useFileName) initialSelectedItems.push("fileName");
-      if (adNameFormula.values.iteration) initialSelectedItems.push("iteration");
-      // NOTE: don't include "customText" here — it's home page only (unless you want to)
-
-      setSelectedAdNameItems(initialSelectedItems);
+    if (adNameFormula && adNameFormula.selected) {
+      setSelectedAdNameItems(adNameFormula.selected);
     }
   }, [adNameFormula]);
+
 
 
 
@@ -178,15 +168,14 @@ export default function GlobalSettings() {
       <div className="pt-2">
 
         <Button
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[40px]"
           onClick={async () => {
             const globalSettings = {
               adNameFormula: {
                 order: adOrder,
+                selected: selectedAdNameItems, // ✅ which fields are selected
                 values: {
-                  ...adValues,
-                  iteration: adValues.iteration || "", // explicitly include iteration
-                },
+                  dateType: adValues.dateType // ✅ only dateType needs a value
+                }
               }
             };
 
@@ -200,6 +189,7 @@ export default function GlobalSettings() {
         >
           Save Settings
         </Button>
+
 
       </div>
     </div>

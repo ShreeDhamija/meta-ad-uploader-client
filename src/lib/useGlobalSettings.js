@@ -25,15 +25,13 @@ export default function useGlobalSettings() {
                 const rawFormula = data.settings?.adNameFormula || {};
                 const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
                 setAdNameFormula({
-                    order: Array.from(new Set([...(rawFormula.order || []), "iteration"])), // ensures iteration always present
+                    order: Array.from(new Set([...(rawFormula.order || []), "iteration"])),
+                    selected: rawFormula.selected || [], // ✅ selected fields
                     values: {
-                        adType: rawFormula.values?.adType || "",
-                        dateType: rawFormula.values?.dateType || "",
-                        useFileName: rawFormula.values?.useFileName || false,
-                        iteration: rawFormula.values?.iteration || ""
-
+                        dateType: rawFormula.values?.dateType || "MonthYYYY" // ✅ only dateType
                     }
                 });
+
                 setHasSeenOnboarding(data.settings?.hasSeenOnboarding || false);
                 setHasSeenSettingsOnboarding(data.settings?.hasSeenSettingsOnboarding || false);
 
