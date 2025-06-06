@@ -168,6 +168,7 @@ export default function GlobalSettings() {
       <div className="pt-2">
 
         <Button
+          className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg"
           onClick={async () => {
             const globalSettings = {
               adNameFormula: {
