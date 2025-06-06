@@ -353,7 +353,7 @@ function SortableItem({ id, isSelected, onToggle, variant, customTextValue, onCu
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center px-2 py-1 rounded-cl border bg-white shadow-sm gap-2 min-h-[36px]",
+        "flex items-center px-2 py-1 rounded-xl border bg-white shadow-sm gap-2 min-h-[36px]",
         isDragging ? "opacity-50 border-gray-400" : "hover:bg-gray-50 border-gray-300",
         id === "customText" && "flex-1 min-w-[200px]",
       )}
@@ -383,13 +383,16 @@ export default function ReorderAdNameParts({
   const sensors = useSensors(useSensor(PointerSensor))
 
   const handleDragEnd = (event) => {
-    const { active, over } = event
+    const { active, over } = event;
     if (active.id !== over?.id) {
-      const oldIndex = order.indexOf(active.id)
-      const newIndex = order.indexOf(over.id)
-      setOrder(arrayMove(order, oldIndex, newIndex))
+      setOrder((prevOrder) => {
+        const oldIndex = prevOrder.indexOf(active.id);
+        const newIndex = prevOrder.indexOf(over.id);
+        return arrayMove(prevOrder, oldIndex, newIndex);
+      });
     }
-  }
+  };
+
 
   // Determine which items to show based on variant
   const availableItems =
@@ -399,7 +402,7 @@ export default function ReorderAdNameParts({
 
   return (
     <div className="space-y-3">
-      {/* <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={availableItems} strategy={horizontalListSortingStrategy}>
           <div className="flex flex-wrap gap-3">
             {availableItems.map((id) => (
@@ -415,28 +418,7 @@ export default function ReorderAdNameParts({
             ))}
           </div>
         </SortableContext>
-      </DndContext> */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext
-          items={order.length ? order : availableItems}
-          strategy={horizontalListSortingStrategy}
-        >
-          <div className="flex flex-wrap gap-3">
-            {(order.length ? order : availableItems).map((id) => (
-              <SortableItem
-                key={id}
-                id={id}
-                isSelected={selectedItems.includes(id)}
-                onToggle={() => onItemToggle(id)}
-                variant={variant}
-                customTextValue={customTextValue}
-                onCustomTextChange={onCustomTextChange}
-              />
-            ))}
-          </div>
-        </SortableContext>
       </DndContext>
-
     </div>
   )
 }
