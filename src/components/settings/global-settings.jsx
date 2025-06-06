@@ -171,7 +171,10 @@ export default function GlobalSettings() {
             const globalSettings = {
               adNameFormula: {
                 order: adOrder,
-                values: adValues
+                values: {
+                  ...adValues,
+                  iteration: adValues.iteration || "", // explicitly include iteration
+                },
               }
             };
 

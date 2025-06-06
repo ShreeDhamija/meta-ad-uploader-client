@@ -25,7 +25,7 @@ export default function useGlobalSettings() {
                 const rawFormula = data.settings?.adNameFormula || {};
                 const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
                 setAdNameFormula({
-                    order: rawFormula.order || defaultOrder,
+                    order: Array.from(new Set([...(rawFormula.order || []), "iteration"])), // ensures iteration always present
                     values: {
                         adType: rawFormula.values?.adType || "",
                         dateType: rawFormula.values?.dateType || "",
