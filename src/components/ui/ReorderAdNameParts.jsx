@@ -1,206 +1,426 @@
-import { useState } from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  horizontalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { Button } from "@/components/ui/button";
-import { ChevronsUpDown, GripVertical } from "lucide-react";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+// import { useState } from "react";
+// import {
+//   DndContext,
+//   closestCenter,
+//   PointerSensor,
+//   useSensor,
+//   useSensors,
+// } from "@dnd-kit/core";
+// import {
+//   arrayMove,
+//   SortableContext,
+//   useSortable,
+//   horizontalListSortingStrategy,
+// } from "@dnd-kit/sortable";
+// import { CSS } from "@dnd-kit/utilities";
+// import { Button } from "@/components/ui/button";
+// import { ChevronsUpDown, GripVertical } from "lucide-react";
+// import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+// import { cn } from "@/lib/utils";
+
+// const labelMap = {
+//   adType: "Ad Type",
+//   dateType: "Date",
+//   fileName: "File Name",
+// };
+
+// const valueOptions = {
+//   adType: ["Image", "Video", "Dynamic"],
+//   dateType: ["MonthYYYY", "MonthDDYYYY"],
+//   fileName: [true],
+// };
+
+// const handleClick = (e) => {
+//   e.preventDefault(); // 🛑 prevent default input behavior
+//   if (checked) {
+//     onChange("");
+//   } else {
+//     onChange(value);
+//   }
+// };
+
+
+// function CustomRadioButton({ value, checked, onClick, label, id, variant }) {
+//   return (
+//     <label
+//       htmlFor={id}
+//       className={cn(
+//         "flex items-center space-x-2 rounded-lg px-1 py-1.5 cursor-pointer transition-all hover:py-1.5",
+//         checked ? "bg-gray-100" : "hover:bg-gray-100"
+//       )}
+//       onMouseDown={(e) => {
+//         e.preventDefault();
+//         onClick();
+//       }}
+//     >
+//       <div className="relative flex items-center justify-center">
+//         <div className={`w-4 h-4 rounded-full border ${checked ? "border-black" : "border-gray-400"} bg-white`}>
+//           {checked && (
+//             <div className="absolute inset-0 flex items-center justify-center">
+//               <div className="w-2 h-2 rounded-full bg-black"></div>
+//             </div>
+//           )}
+//         </div>
+//         <input
+//           type="radio"
+//           id={id}
+//           value={value}
+//           checked={checked}
+//           onChange={() => { }}
+//           className="sr-only"
+//         />
+//       </div>
+//       <span className={cn("text-sm", variant === "home" && "text-xs")}>{label}</span>
+
+//     </label>
+//   );
+// }
+
+
+// function SortableItem({ id, value, onChange, variant }) {
+//   const {
+//     attributes,
+//     listeners,
+//     setActivatorNodeRef,
+//     setNodeRef,
+//     transform,
+//     transition,
+//     isDragging,
+//   } = useSortable({ id });
+
+//   const style = {
+//     transform: transform
+//       ? `translate3d(${transform.x}px, ${transform.y}px, 0)` // ← position only
+//       : undefined,
+//     transition,
+//   };
+
+
+//   const options = valueOptions[id];
+
+//   return (
+//     <div
+//       ref={setNodeRef}
+//       style={style}
+//       className={cn(
+//         "flex items-center px-2 py-1 rounded-xl border bg-white shadow-sm gap-2",
+//         isDragging ? "opacity-50 border-gray-400" : "hover:bg-gray-50 border-gray-300", id === "fileName" && "pr-4"
+//       )}
+//     >
+
+//       <GripVertical ref={setActivatorNodeRef} className="w-3 h-3 text-gray-400 cursor-move" {...listeners} {...attributes} />
+//       {id === "fileName" ? (
+//         <label className="flex items-center space-x-2 text-sm">
+//           <input
+//             type="checkbox"
+//             checked={value}
+//             onChange={(e) => onChange(e.target.checked)}
+//           />
+//           <span>{labelMap[id]}</span>
+//         </label>
+//       ) : (
+//         <Popover>
+//           <PopoverTrigger asChild>
+//             <Button
+//               variant="ghost"
+//               size="sm"
+//               className="text-sm px-1 py-0 h-auto"
+//             >
+//               {value || labelMap[id]}
+//               <ChevronsUpDown className="ml-1 w-3 h-3 opacity-50" />
+//             </Button>
+//           </PopoverTrigger>
+//           <PopoverContent className="p-2 rounded-xl bg-white border z-50 w-[160px]"
+//             align="start"
+//             sideOffset={8}
+//             alignOffset={-4}
+//             avoidCollisions={false}
+//           >
+//             <div className="flex flex-col space-y-1">
+//               {options.map((option) => (
+//                 <CustomRadioButton
+//                   key={option}
+//                   id={`${id}-${option}`}
+//                   value={option}
+//                   label={option === true ? "File Name" : option}
+//                   checked={value === option}
+//                   onClick={() => {
+//                     if (value === option) {
+//                       onChange(""); // deselect
+//                     } else {
+//                       onChange(option);
+//                     }
+//                   }}
+//                   variant={variant} // ✅ pass it here
+//                 />
+
+//               ))}
+//             </div>
+//           </PopoverContent>
+//         </Popover>
+//       )}
+//     </div>
+//   );
+// }
+
+// export default function ReorderAdNameParts({ order, setOrder, values, setValues, variant = "default" }) {
+//   const sensors = useSensors(useSensor(PointerSensor));
+
+//   const handleDragEnd = (event) => {
+//     const { active, over } = event;
+//     if (active.id !== over?.id) {
+//       const oldIndex = order.indexOf(active.id);
+//       const newIndex = order.indexOf(over.id);
+//       setOrder(arrayMove(order, oldIndex, newIndex));
+//     }
+//   };
+
+//   return (
+//     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+//       <SortableContext items={order} strategy={horizontalListSortingStrategy}>
+//         <div
+//           className={cn(
+//             "flex flex-wrap border border-gray-300 rounded-2xl px-1 py-1",
+//             variant === "home" ? "bg-gray-100 gap-1" : "bg-stone-200 gap-2"
+//           )}
+//         >
+//           {order.map((id) => (
+//             <SortableItem
+//               key={id}
+//               id={id}
+//               value={id === "fileName" ? values.useFileName : values[id]}
+//               onChange={(val) => {
+//                 if (id === "fileName") {
+//                   setValues((prev) => ({ ...prev, useFileName: val }));
+//                 } else {
+//                   setValues((prev) => ({ ...prev, [id]: val }));
+//                 }
+//               }}
+//               variant={variant} // ✅ pass from top-level
+//             />
+//           ))}
+//         </div>
+//       </SortableContext>
+//     </DndContext>
+//   );
+// }
+
+"use client"
+
+import { useState } from "react"
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
+import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy } from "@dnd-kit/sortable"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ChevronsUpDown, GripVertical } from "lucide-react"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 
 const labelMap = {
-  adType: "Ad Type",
+  adType: "File Type",
   dateType: "Date",
   fileName: "File Name",
-};
-
-const valueOptions = {
-  adType: ["Image", "Video", "Dynamic"],
-  dateType: ["MonthYYYY", "MonthDDYYYY"],
-  fileName: [true],
-};
-
-const handleClick = (e) => {
-  e.preventDefault(); // 🛑 prevent default input behavior
-  if (checked) {
-    onChange("");
-  } else {
-    onChange(value);
-  }
-};
-
-
-function CustomRadioButton({ value, checked, onClick, label, id, variant }) {
-  return (
-    <label
-      htmlFor={id}
-      className={cn(
-        "flex items-center space-x-2 rounded-lg px-1 py-1.5 cursor-pointer transition-all hover:py-1.5",
-        checked ? "bg-gray-100" : "hover:bg-gray-100"
-      )}
-      onMouseDown={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-    >
-      <div className="relative flex items-center justify-center">
-        <div className={`w-4 h-4 rounded-full border ${checked ? "border-black" : "border-gray-400"} bg-white`}>
-          {checked && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-2 h-2 rounded-full bg-black"></div>
-            </div>
-          )}
-        </div>
-        <input
-          type="radio"
-          id={id}
-          value={value}
-          checked={checked}
-          onChange={() => { }}
-          className="sr-only"
-        />
-      </div>
-      <span className={cn("text-sm", variant === "home" && "text-xs")}>{label}</span>
-
-    </label>
-  );
+  iteration: "Iteration",
+  customText: "Custom Text",
 }
 
+const valueOptions = {
+  dateType: ["MonthYYYY", "MonthDDYYYY"],
+}
 
-function SortableItem({ id, value, onChange, variant }) {
-  const {
-    attributes,
-    listeners,
-    setActivatorNodeRef,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id });
+function CustomRadioButton({ checked, onClick, disabled = false }) {
+  return (
+    <div
+      className={cn(
+        "relative flex items-center justify-center cursor-pointer",
+        disabled && "cursor-not-allowed opacity-50",
+      )}
+      onClick={disabled ? undefined : onClick}
+    >
+      <div
+        className={cn(
+          "w-4 h-4 rounded-full border-2 bg-white transition-colors",
+          checked ? "border-black" : "border-gray-400",
+        )}
+      >
+        {checked && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-2 h-2 rounded-full bg-black"></div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SortableItem({ id, isSelected, onToggle, variant, customTextValue, onCustomTextChange }) {
+  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  })
 
   const style = {
-    transform: transform
-      ? `translate3d(${transform.x}px, ${transform.y}px, 0)` // ← position only
-      : undefined,
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
-  };
+  }
 
+  const [dateDropdownOpen, setDateDropdownOpen] = useState(false)
+  const [selectedDateOption, setSelectedDateOption] = useState("MonthYYYY")
 
-  const options = valueOptions[id];
+  // Auto-open date dropdown when date is selected
+  const handleDateToggle = () => {
+    if (!isSelected) {
+      onToggle()
+      setDateDropdownOpen(true)
+    } else {
+      onToggle()
+      setDateDropdownOpen(false)
+    }
+  }
+
+  const handleDateOptionSelect = (option) => {
+    setSelectedDateOption(option)
+    setDateDropdownOpen(false)
+  }
+
+  const renderContent = () => {
+    if (id === "customText") {
+      return (
+        <div className="flex items-center gap-2 flex-1">
+          <CustomRadioButton checked={isSelected} onClick={onToggle} />
+          <Input
+            value={customTextValue || ""}
+            onChange={(e) => onCustomTextChange(e.target.value)}
+            placeholder="Enter Custom Text"
+            className="flex-1 h-6 text-xs border-0 bg-transparent focus:ring-0 focus:outline-none"
+            disabled={!isSelected}
+          />
+        </div>
+      )
+    }
+
+    if (id === "dateType") {
+      return (
+        <div className="flex items-center gap-2">
+          <CustomRadioButton checked={isSelected} onClick={handleDateToggle} />
+          <span className="text-sm">{labelMap[id]}</span>
+          {isSelected && (
+            <Popover open={dateDropdownOpen} onOpenChange={setDateDropdownOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="text-xs px-1 py-0 h-auto ml-1">
+                  {selectedDateOption}
+                  <ChevronsUpDown className="ml-1 w-3 h-3 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="p-2 rounded-xl bg-white border z-50 w-[160px]"
+                align="start"
+                sideOffset={8}
+                alignOffset={-4}
+                avoidCollisions={false}
+              >
+                <div className="flex flex-col space-y-1">
+                  {valueOptions.dateType.map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => handleDateOptionSelect(option)}
+                      className={cn(
+                        "text-left px-2 py-1 rounded text-sm hover:bg-gray-100",
+                        selectedDateOption === option && "bg-gray-100",
+                      )}
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+      )
+    }
+
+    // Default case for adType, fileName, iteration
+    return (
+      <div className="flex items-center gap-2">
+        <CustomRadioButton checked={isSelected} onClick={onToggle} />
+        <span className="text-sm">{labelMap[id]}</span>
+      </div>
+    )
+  }
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex items-center px-2 py-1 rounded-xl border bg-white shadow-sm gap-2",
-        isDragging ? "opacity-50 border-gray-400" : "hover:bg-gray-50 border-gray-300", id === "fileName" && "pr-4"
+        "flex items-center px-3 py-2 rounded-full border bg-white shadow-sm gap-2 min-h-[40px]",
+        isDragging ? "opacity-50 border-gray-400" : "hover:bg-gray-50 border-gray-300",
+        id === "customText" && "flex-1 min-w-[200px]",
       )}
     >
-
-      <GripVertical ref={setActivatorNodeRef} className="w-3 h-3 text-gray-400 cursor-move" {...listeners} {...attributes} />
-      {id === "fileName" ? (
-        <label className="flex items-center space-x-2 text-sm">
-          <input
-            type="checkbox"
-            checked={value}
-            onChange={(e) => onChange(e.target.checked)}
-          />
-          <span>{labelMap[id]}</span>
-        </label>
-      ) : (
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-sm px-1 py-0 h-auto"
-            >
-              {value || labelMap[id]}
-              <ChevronsUpDown className="ml-1 w-3 h-3 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="p-2 rounded-xl bg-white border z-50 w-[160px]"
-            align="start"
-            sideOffset={8}
-            alignOffset={-4}
-            avoidCollisions={false}
-          >
-            <div className="flex flex-col space-y-1">
-              {options.map((option) => (
-                <CustomRadioButton
-                  key={option}
-                  id={`${id}-${option}`}
-                  value={option}
-                  label={option === true ? "File Name" : option}
-                  checked={value === option}
-                  onClick={() => {
-                    if (value === option) {
-                      onChange(""); // deselect
-                    } else {
-                      onChange(option);
-                    }
-                  }}
-                  variant={variant} // ✅ pass it here
-                />
-
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
+      <GripVertical
+        ref={setActivatorNodeRef}
+        className="w-3 h-3 text-gray-400 cursor-move flex-shrink-0"
+        {...listeners}
+        {...attributes}
+      />
+      {renderContent()}
     </div>
-  );
+  )
 }
 
-export default function ReorderAdNameParts({ order, setOrder, values, setValues, variant = "default" }) {
-  const sensors = useSensors(useSensor(PointerSensor));
+export default function ReorderAdNameParts({
+  order,
+  setOrder,
+  values,
+  setValues,
+  variant = "default",
+  selectedItems = [],
+  onItemToggle,
+  customTextValue,
+  onCustomTextChange,
+}) {
+  const sensors = useSensors(useSensor(PointerSensor))
 
   const handleDragEnd = (event) => {
-    const { active, over } = event;
+    const { active, over } = event
     if (active.id !== over?.id) {
-      const oldIndex = order.indexOf(active.id);
-      const newIndex = order.indexOf(over.id);
-      setOrder(arrayMove(order, oldIndex, newIndex));
+      const oldIndex = order.indexOf(active.id)
+      const newIndex = order.indexOf(over.id)
+      setOrder(arrayMove(order, oldIndex, newIndex))
     }
-  };
+  }
+
+  // Determine which items to show based on variant
+  const availableItems =
+    variant === "home"
+      ? ["adType", "dateType", "fileName", "iteration", "customText"]
+      : ["adType", "dateType", "fileName", "iteration"]
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <SortableContext items={order} strategy={horizontalListSortingStrategy}>
-        <div
-          className={cn(
-            "flex flex-wrap border border-gray-300 rounded-2xl px-1 py-1",
-            variant === "home" ? "bg-gray-100 gap-1" : "bg-stone-200 gap-2"
-          )}
-        >
-          {order.map((id) => (
-            <SortableItem
-              key={id}
-              id={id}
-              value={id === "fileName" ? values.useFileName : values[id]}
-              onChange={(val) => {
-                if (id === "fileName") {
-                  setValues((prev) => ({ ...prev, useFileName: val }));
-                } else {
-                  setValues((prev) => ({ ...prev, [id]: val }));
-                }
-              }}
-              variant={variant} // ✅ pass from top-level
-            />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
-  );
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-lg font-semibold">Ad Name</h3>
+        <p className="text-sm text-gray-500">Pick what fields you want to add to your ad name.</p>
+      </div>
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={availableItems} strategy={horizontalListSortingStrategy}>
+          <div className="flex flex-wrap gap-3">
+            {availableItems.map((id) => (
+              <SortableItem
+                key={id}
+                id={id}
+                isSelected={selectedItems.includes(id)}
+                onToggle={() => onItemToggle(id)}
+                variant={variant}
+                customTextValue={customTextValue}
+                onCustomTextChange={onCustomTextChange}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  )
 }

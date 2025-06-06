@@ -27,74 +27,15 @@ export default function GlobalSettings() {
     dateType: "",
     useFileName: false
   });
-  // const fileInputRef = useRef();
-  // const [thumbnailFile, setThumbnailFile] = useState(null);
-  // const [uploadedFileName, setUploadedFileName] = useState("");
-  // const finalFileName = uploadedFileName || globalSettings?.customThumbnailFileName;
 
-
-  // const handleFileSelection = (e) => {
-  //   const file = e.target.files?.[0];
-  //   if (!file) return;
-
-  //   setThumbnailFile(file);
-  //   setUploadedFileName(file.name); // for immediate feedback
-  // };
-
-  // const handleSave = async () => {
-  //   let customThumbnailHash = globalSettings?.customThumbnailHash;
-  //   let customThumbnailFileName = globalSettings?.customThumbnailFileName;
-
-  //   // If a new file is selected
-  //   if (thumbnailFile) {
-  //     const formData = new FormData();
-  //     formData.append("thumbnail", thumbnailFile);
-  //     formData.append("adAccountId", selectedAdAccount || "");
-
-  //     try {
-  //       const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/upload-thumbnail", {
-  //         method: "POST",
-  //         credentials: "include",
-  //         body: formData,
-  //       });
-
-  //       const data = await res.json();
-  //       if (data?.hash) {
-  //         customThumbnailHash = data.hash;
-  //         customThumbnailFileName = thumbnailFile.name;
-  //       } else {
-  //         toast.error("Thumbnail upload failed.");
-  //         return;
-  //       }
-  //     } catch (err) {
-  //       console.error("Thumbnail upload error:", err);
-  //       toast.error("Thumbnail upload error.");
-  //       return;
-  //     }
-  //   }
-
-  //   // Now save everything in one go
-  //   await saveSettings({
-  //     adNameFormula: {
-  //       order: adOrder,
-  //       values: adValues,
-  //     },
-  //     ...(customThumbnailHash && { customThumbnailHash }),
-  //     ...(customThumbnailFileName && { customThumbnailFileName }),
-  //   });
-
-  //   toast.success("Settings saved");
-  // };
-
-
-  // const computeAdName = () => {
 
   useEffect(() => {
     setAdOrder(adNameFormula.order || ["adType", "dateType", "fileName"]);
     setAdValues(adNameFormula.values || {});
   }, [adNameFormula]);
 
-
+  const [selectedAdNameItems, setSelectedAdNameItems] = useState(["adType", "dateType"])
+  const [customAdNameText, setCustomAdNameText] = useState("")
 
   const CustomRadioButton = ({ value, checked, onChange, label, id }) => {
     const handleClick = (e) => {
@@ -158,11 +99,25 @@ export default function GlobalSettings() {
         <p className="text-xs text-black text-gray-500">
           You can generate an ad name formula by selecting and re-ordering the properties below. <br></br>You can add custom text on the home page when making an ad
         </p>
+        {/* <ReorderAdNameParts
+          order={adOrder}
+          setOrder={setAdOrder}
+          values={adValues}
+          setValues={setAdValues}
+        /> */}
         <ReorderAdNameParts
           order={adOrder}
           setOrder={setAdOrder}
           values={adValues}
           setValues={setAdValues}
+          selectedItems={selectedAdNameItems}
+          onItemToggle={(item) => {
+            setSelectedAdNameItems((prev) =>
+              prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item],
+            )
+          }}
+          customTextValue={customAdNameText}
+          onCustomTextChange={setCustomAdNameText}
         />
       </div>
 
