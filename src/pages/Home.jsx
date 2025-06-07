@@ -173,6 +173,11 @@ export default function Home() {
             console.error("Failed to save onboarding flag:", err)
         })
     }
+    const onItemToggle = (item) => {
+        setSelectedItems((prev) =>
+            prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+        );
+    };
 
 
     return (
@@ -225,6 +230,7 @@ export default function Home() {
                         setAdOrder={setAdOrder}
                         selectedItems={selectedItems}
                         setSelectedItems={setSelectedItems}
+                        onItemToggle={onItemToggle}
                         adValues={adValues}
                         setAdValues={setAdValues}
                         customTextValue={customTextValue}

@@ -41,6 +41,7 @@ export default function AdCreationForm({
   setAdOrder,
   selectedItems,
   setSelectedItems,
+  onItemToggle,
   adValues,
   setAdValues,
   customTextValue,
@@ -912,6 +913,7 @@ export default function AdCreationForm({
                 setValues={setAdValues}
                 customTextValue={customTextValue}
                 onCustomTextChange={setCustomTextValue}
+                onItemToggle={onItemToggle}
                 variant="home"
               />
 
