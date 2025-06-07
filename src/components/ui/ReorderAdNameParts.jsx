@@ -86,7 +86,7 @@ function SortableItem({ id, isSelected, onToggle, variant, customTextValue, onCu
             onChange={(e) => onCustomTextChange(e.target.value)}
             placeholder="Enter Custom Text"
             className="flex-1 h-6 text-xs border-0 bg-transparent focus:ring-0 focus:outline-none"
-            disabled={!isSelected}
+          //disabled={!isSelected}
           />
         </div>
       )
