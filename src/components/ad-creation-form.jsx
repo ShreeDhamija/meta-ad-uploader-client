@@ -88,11 +88,11 @@ export default function AdCreationForm({
   const [openPage, setOpenPage] = useState(false)
 
 
-  const [adValues, setAdValues] = useState({
-    adType,
-    dateType: dateFormat,
-    useFileName: includeFileName,
-  });
+  // const [adValues, setAdValues] = useState({
+  //   adType,
+  //   dateType: dateFormat,
+  //   useFileName: includeFileName,
+  // });
 
   const [googleAuthStatus, setGoogleAuthStatus] = useState({
     checking: true,
@@ -166,18 +166,37 @@ export default function AdCreationForm({
   // }, [adType, dateFormat, includeFileName]);
 
 
+  // useEffect(() => {
+  //   const parts = adOrder.map((key) => {
+  //     if (key === "adType") return adValues.adType;
+  //     if (key === "dateType") return adValues.dateType;
+  //     if (key === "fileName") return adValues.useFileName ? "File" : null;
+  //   }).filter(Boolean);
+
+  //   const baseName = parts.join("_");
+  //   const newAdName = customAdName ? `${baseName}_${customAdName}` : baseName || "Ad Name Formula will be displayed here";
+
+  //   setAdName(newAdName);
+  // }, [customAdName, adValues, adOrder]);
+
   useEffect(() => {
     const parts = adOrder.map((key) => {
-      if (key === "adType") return adValues.adType;
+      if (!selectedItems.includes(key)) return null;
+
+      if (key === "adType") return "[Image/Video]";
       if (key === "dateType") return adValues.dateType;
-      if (key === "fileName") return adValues.useFileName ? "File" : null;
+      if (key === "fileName") return "File Name";
+      if (key === "iteration") return "01";
+      if (key === "customText") return customTextValue || "Custom Text";
+      return null;
     }).filter(Boolean);
 
     const baseName = parts.join("_");
-    const newAdName = customAdName ? `${baseName}_${customAdName}` : baseName || "Ad Name Formula will be displayed here";
+    const newAdName = baseName || "Ad Name Formula will be displayed here";
 
     setAdName(newAdName);
-  }, [customAdName, adValues, adOrder]);
+  }, [customTextValue, adValues, adOrder, selectedItems]);
+
 
 
   useEffect(() => {
