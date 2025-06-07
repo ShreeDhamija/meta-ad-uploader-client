@@ -125,7 +125,7 @@ export default function AdCreationForm({
     if (key === "adType") return "[Image/Video]";
     if (key === "dateType") return adValues.dateType;
     if (key === "fileName") return "File Name";
-    if (key === "iteration") return "01";
+    if (key === "iteration") return "itr";
     if (key === "customText") return customTextValue || "Custom Text";
     return null;
   }).filter(Boolean);
@@ -404,60 +404,88 @@ export default function AdCreationForm({
     setter(newValues)
   }
 
-  const handleAdTypeClick = (val) => {
-    if (val === adType) {
-      // If clicking the same value, deselect it
-      setAdType("")
-    } else {
-      // Otherwise select the new value
-      setAdType(val)
-    }
-    setAdTypeOpen(false);
-  }
+  // const handleAdTypeClick = (val) => {
+  //   if (val === adType) {
+  //     // If clicking the same value, deselect it
+  //     setAdType("")
+  //   } else {
+  //     // Otherwise select the new value
+  //     setAdType(val)
+  //   }
+  //   setAdTypeOpen(false);
+  // }
 
-  const handleDateFormatClick = (val) => {
-    if (val === dateFormat) {
-      // If clicking the same value, deselect it
-      setDateFormat("")
-    } else {
-      // Otherwise select the new value
-      setDateFormat(val)
-    }
-    setDateFormatOpen(false);
-  }
+  // const handleDateFormatClick = (val) => {
+  //   if (val === dateFormat) {
+  //     // If clicking the same value, deselect it
+  //     setDateFormat("")
+  //   } else {
+  //     // Otherwise select the new value
+  //     setDateFormat(val)
+  //   }
+  //   setDateFormatOpen(false);
+  // }
 
   // Helper function to compute a unique ad name for each file
-  const computeAdName = (file) => {
-    const now = new Date()
-    let dateStr = ""
-    // Example: using month names
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-    const monthName = monthNames[now.getMonth()]
+  // const computeAdName = (file) => {
+  //   const now = new Date()
+  //   let dateStr = ""
+  //   // Example: using month names
+  //   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  //   const monthName = monthNames[now.getMonth()]
 
-    if (dateFormat === "MonthDDYYYY") {
-      const day = now.getDate().toString().padStart(2, "0")
-      dateStr = `${monthName}${day}${now.getFullYear()}`
-    } else if (dateFormat === "MonthYYYY") {
-      dateStr = `${monthName}${now.getFullYear()}`
-    }
+  //   if (dateFormat === "MonthDDYYYY") {
+  //     const day = now.getDate().toString().padStart(2, "0")
+  //     dateStr = `${monthName}${day}${now.getFullYear()}`
+  //   } else if (dateFormat === "MonthYYYY") {
+  //     dateStr = `${monthName}${now.getFullYear()}`
+  //   }
 
-    let fileNamePart = ""
-    if (includeFileName) {
-      fileNamePart = file.name.split(".").slice(0, -1).join(".") || file.name
-    }
+  //   let fileNamePart = ""
+  //   if (includeFileName) {
+  //     fileNamePart = file.name.split(".").slice(0, -1).join(".") || file.name
+  //   }
+
+  //   const parts = adOrder.map((key) => {
+  //     if (key === "adType") return adValues.adType;
+  //     if (key === "dateType") return dateStr;
+  //     if (key === "fileName") return fileNamePart;
+  //   }).filter(Boolean);
+
+
+  //   const computed = parts.join("_")
+  //   const finalAdName = [computed, customAdName].filter(Boolean).join("_")
+
+  //   return finalAdName
+  // }
+
+  const computeAdName = () => {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const date = String(now.getDate()).padStart(2, "0");
+    const year = now.getFullYear();
+    const monthYear = `${month}${year}`;
+    const monthDayYear = `${month}${date}${year}`;
 
     const parts = adOrder.map((key) => {
-      if (key === "adType") return adValues.adType;
-      if (key === "dateType") return dateStr;
-      if (key === "fileName") return fileNamePart;
+      if (!selectedItems.includes(key)) return null;
+
+      if (key === "adType") return "file type"; // hardcoded for now
+      if (key === "dateType") {
+        return adValues.dateType === "MonthDDYYYY" ? monthDayYear : monthYear;
+      }
+      if (key === "fileName") return "file_name"; // placeholder
+      if (key === "iteration") return "01"; // hardcoded
+      if (key === "customText") return customTextValue || "custom_text";
+      return null;
     }).filter(Boolean);
 
+    const adName = parts.join("_");
 
-    const computed = parts.join("_")
-    const finalAdName = [computed, customAdName].filter(Boolean).join("_")
+    return adName || "Ad Name Formula will be displayed here";
+  };
 
-    return finalAdName
-  }
+
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
     const response = await axios.post(
