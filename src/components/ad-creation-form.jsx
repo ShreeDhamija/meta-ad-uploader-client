@@ -31,16 +31,22 @@ export default function AdCreationForm({
   setInstagramAccountId,
   adName,
   setAdName,
-  adType,
-  setAdType,
-  dateFormat,
-  setDateFormat,
-  includeFileName,
-  setIncludeFileName,
+  //adType,
+  //setAdType,
+  //dateFormat,
+  //setDateFormat,
+  //includeFileName,
+  //setIncludeFileName,
   adOrder,
   setAdOrder,
-  customAdName,
-  setCustomAdName,
+  selectedItems,
+  setSelectedItems,
+  adValues,
+  setAdValues,
+  customTextValue,
+  setCustomTextValue,
+  //customAdName,
+  //setCustomAdName,
   messages,
   setMessages,
   headlines,
@@ -77,8 +83,8 @@ export default function AdCreationForm({
   setLaunchPaused
 }) {
   // Local state
-  const [adTypeOpen, setAdTypeOpen] = useState(false)
-  const [dateFormatOpen, setDateFormatOpen] = useState(false)
+  // const [adTypeOpen, setAdTypeOpen] = useState(false)
+  // const [dateFormatOpen, setDateFormatOpen] = useState(false)
   const [openPage, setOpenPage] = useState(false)
 
 
@@ -105,15 +111,23 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
 
   // Formula parts
-  const formulaParts = adOrder
-    .map((key) => {
-      if (key === "adType") return adType;
-      if (key === "dateType") return dateFormat;
-      if (key === "fileName") return includeFileName ? "File Name" : null;
-    })
-    .filter(Boolean);
+  // const formulaParts = adOrder
+  //   .map((key) => {
+  //     if (key === "adType") return adType;
+  //     if (key === "dateType") return dateFormat;
+  //     if (key === "fileName") return includeFileName ? "File Name" : null;
+  //   })
+  //   .filter(Boolean);
 
-
+  const formulaParts = adOrder.map((key) => {
+    if (!selectedItems.includes(key)) return null;
+    if (key === "adType") return "[Image/Video]";
+    if (key === "dateType") return adValues.dateType;
+    if (key === "fileName") return "File Name";
+    if (key === "iteration") return "01";
+    if (key === "customText") return customTextValue || "Custom Text";
+    return null;
+  }).filter(Boolean);
 
   // CTA options
   const ctaOptions = [
@@ -137,19 +151,19 @@ export default function AdCreationForm({
       page.instagramAccount.username.toLowerCase().includes(instagramSearchValue.toLowerCase())
     )
 
-  useEffect(() => {
-    setAdType(adValues.adType);
-    setDateFormat(adValues.dateType);
-    setIncludeFileName(adValues.useFileName);
-  }, [adValues]);
+  // useEffect(() => {
+  //   setAdType(adValues.adType);
+  //   setDateFormat(adValues.dateType);
+  //   setIncludeFileName(adValues.useFileName);
+  // }, [adValues]);
 
-  useEffect(() => {
-    setAdValues({
-      adType,
-      dateType: dateFormat,
-      useFileName: includeFileName,
-    });
-  }, [adType, dateFormat, includeFileName]);
+  // useEffect(() => {
+  //   setAdValues({
+  //     adType,
+  //     dateType: dateFormat,
+  //     useFileName: includeFileName,
+  //   });
+  // }, [adType, dateFormat, includeFileName]);
 
 
   useEffect(() => {
@@ -863,13 +877,25 @@ export default function AdCreationForm({
 
               <div className="flex flex-wrap items-center gap-2">
               </div>
-              <ReorderAdNameParts
+              {/* <ReorderAdNameParts
                 order={adOrder}
                 setOrder={setAdOrder}
                 values={adValues}
                 setValues={setAdValues}
                 variant="home"
+              /> */}
+              <ReorderAdNameParts
+                order={adOrder}
+                setOrder={setAdOrder}
+                selectedItems={selectedItems}
+                setSelectedItems={setSelectedItems}
+                values={adValues}
+                setValues={setAdValues}
+                customTextValue={customTextValue}
+                onCustomTextChange={setCustomTextValue}
+                variant="home"
               />
+
 
               <div className="flex items-center w-full border border-gray-400 rounded-xl bg-white px-1 py-2 shadow h-[35px]">
                 {formulaParts.length > 0 ? (
@@ -886,13 +912,13 @@ export default function AdCreationForm({
                   <span className="text-gray-400 text-sm"> </span>
                 )}
 
-                <input
+                {/* <input
                   type="text"
                   value={customAdName}
                   onChange={(e) => setCustomAdName(e.target.value)}
                   placeholder="Enter custom text..."
                   className={`flex-1 border-0 outline-none bg-transparent text-sm ${formulaParts.length > 0 ? "ml-1" : "ml-1"}`}
-                />
+                /> */}
               </div>
 
 

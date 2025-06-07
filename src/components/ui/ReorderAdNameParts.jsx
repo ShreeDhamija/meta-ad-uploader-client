@@ -96,7 +96,9 @@ function SortableItem({ id, isSelected, onToggle, variant, customTextValue, onCu
       return (
         <div className="flex items-center gap-2">
           <CustomRadioButton checked={isSelected} onClick={handleDateToggle} />
-          <span className="text-sm">{labelMap[id]}</span>
+          <span className={cn(variant === "home" ? "text-xs" : "text-sm")}>
+            {labelMap[id]}
+          </span>
           {isSelected && (
             <Popover open={dateDropdownOpen} onOpenChange={setDateDropdownOpen}>
               <PopoverTrigger asChild>
@@ -137,7 +139,9 @@ function SortableItem({ id, isSelected, onToggle, variant, customTextValue, onCu
     return (
       <div className="flex items-center gap-2">
         <CustomRadioButton checked={isSelected} onClick={onToggle} />
-        <span className="text-sm">{labelMap[id]}</span>
+        <span className={cn(variant === "home" ? "text-xs" : "text-sm")}>
+          {labelMap[id]}
+        </span>
       </div>
     )
   }

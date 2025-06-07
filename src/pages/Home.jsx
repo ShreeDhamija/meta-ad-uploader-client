@@ -44,13 +44,19 @@ export default function Home() {
     const [instagramAccountId, setInstagramAccountId] = useState("")
     const [link, setLink] = useState("")
     const [cta, setCta] = useState("LEARN_MORE")
-    const [adType, setAdType] = useState("")
-    const [dateFormat, setDateFormat] = useState("")
-    const [includeFileName, setIncludeFileName] = useState(false)
-    const [customAdName, setCustomAdName] = useState("")
+    //const [adType, setAdType] = useState("")
+    //const [dateFormat, setDateFormat] = useState("")
+    // const [includeFileName, setIncludeFileName] = useState(false)
+    // const [customAdName, setCustomAdName] = useState("")
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("")
-    const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName"])
+    const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName", "iteration", "customText"]);
+    const [selectedItems, setSelectedItems] = useState(["adType", "dateType", "fileName"]);
+    const [adValues, setAdValues] = useState({
+        dateType: "MonthYYYY",
+    });
+    const [customTextValue, setCustomTextValue] = useState("");
+
     const [driveFiles, setDriveFiles] = useState([])
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
 
@@ -83,15 +89,26 @@ export default function Home() {
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     // Load global ad name formula settings
-    useEffect(() => {
-        if (!isLoggedIn || loading) return
+    // useEffect(() => {
+    //     if (!isLoggedIn || loading) return
 
-        const { values, order } = adNameFormula
-        setAdType(values?.adType || "")
-        setDateFormat(values?.dateType || "")
-        setIncludeFileName(values?.useFileName || false)
-        setAdOrder(order || ["adType", "dateType", "fileName"])
-    }, [isLoggedIn, loading, adNameFormula])
+    //     const { values, order } = adNameFormula
+    //     setAdType(values?.adType || "")
+    //     setDateFormat(values?.dateType || "")
+    //     setIncludeFileName(values?.useFileName || false)
+    //     setAdOrder(order || ["adType", "dateType", "fileName"])
+    // }, [isLoggedIn, loading, adNameFormula])
+
+    useEffect(() => {
+        if (!isLoggedIn || loading) return;
+        const { values, order, selected } = adNameFormula;
+        setAdValues({
+            dateType: values?.dateType || "MonthYYYY",
+        });
+        setAdOrder(order || ["adType", "dateType", "fileName", "iteration", "customText"]);
+        setSelectedItems(selected || ["adType", "dateType", "fileName"]);
+    }, [isLoggedIn, loading, adNameFormula]);
+
 
     // 🧠 Load default ad account settings
     useEffect(() => {
@@ -189,16 +206,22 @@ export default function Home() {
                         setInstagramAccountId={setInstagramAccountId}
                         adName={adName}
                         setAdName={setAdName}
-                        adType={adType}
-                        setAdType={setAdType}
-                        dateFormat={dateFormat}
-                        setDateFormat={setDateFormat}
-                        includeFileName={includeFileName}
-                        setIncludeFileName={setIncludeFileName}
+                        //adType={adType}
+                        //setAdType={setAdType}
+                        //dateFormat={dateFormat}
+                        //setDateFormat={setDateFormat}
+                        //includeFileName={includeFileName}
+                        //setIncludeFileName={setIncludeFileName}
                         adOrder={adOrder}
                         setAdOrder={setAdOrder}
-                        customAdName={customAdName}
-                        setCustomAdName={setCustomAdName}
+                        selectedItems={selectedItems}
+                        setSelectedItems={setSelectedItems}
+                        adValues={adValues}
+                        setAdValues={setAdValues}
+                        customTextValue={customTextValue}
+                        setCustomTextValue={setCustomTextValue}
+                        //customAdName={customAdName}
+                        //setCustomAdName={setCustomAdName}
                         messages={messages}
                         setMessages={setMessages}
                         headlines={headlines}
