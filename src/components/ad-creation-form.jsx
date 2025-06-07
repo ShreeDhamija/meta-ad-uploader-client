@@ -186,7 +186,7 @@ export default function AdCreationForm({
       if (key === "adType") return "[Image/Video]";
       if (key === "dateType") return adValues.dateType;
       if (key === "fileName") return "File Name";
-      if (key === "iteration") return "01";
+      if (key === "iteration") return "itr";
       if (key === "customText") return customTextValue || "Custom Text";
       return null;
     }).filter(Boolean);

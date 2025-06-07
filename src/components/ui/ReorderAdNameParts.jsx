@@ -203,7 +203,7 @@ export default function ReorderAdNameParts({
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={order} strategy={horizontalListSortingStrategy}>
           <div className="bg-gray-200 p-1 rounded-xl">
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-x-2 gap-y-1">
               {order.map((id) => (
                 <SortableItem
                   key={id}

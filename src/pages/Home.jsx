@@ -101,13 +101,22 @@ export default function Home() {
 
     useEffect(() => {
         if (!isLoggedIn || loading) return;
+
         const { values, order, selected } = adNameFormula;
+
         setAdValues({
             dateType: values?.dateType || "MonthYYYY",
         });
-        setAdOrder(order || ["adType", "dateType", "fileName", "iteration", "customText"]);
+
+        const defaultOrder = ["adType", "dateType", "fileName", "iteration", "customText"];
+
+        const mergedOrder = Array.from(new Set([...(order || ["adType", "dateType", "fileName", "iteration"]), "customText"]));
+
+        setAdOrder(mergedOrder);
+
         setSelectedItems(selected || ["adType", "dateType", "fileName"]);
     }, [isLoggedIn, loading, adNameFormula]);
+
 
 
     // 🧠 Load default ad account settings
