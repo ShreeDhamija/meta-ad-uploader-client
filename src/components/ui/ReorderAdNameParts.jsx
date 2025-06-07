@@ -198,18 +198,20 @@ export default function ReorderAdNameParts({
     <div className="space-y-3">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={order} strategy={horizontalListSortingStrategy}>
-          <div className="flex flex-wrap gap-3">
-            {order.map((id) => (
-              <SortableItem
-                key={id}
-                id={id}
-                isSelected={selectedItems.includes(id)}
-                onToggle={() => onItemToggle(id)}
-                variant={variant}
-                customTextValue={customTextValue}
-                onCustomTextChange={onCustomTextChange}
-              />
-            ))}
+          <div className="bg-gray-200 p-1 rounded-xl">
+            <div className="flex flex-wrap gap-3">
+              {order.map((id) => (
+                <SortableItem
+                  key={id}
+                  id={id}
+                  isSelected={selectedItems.includes(id)}
+                  onToggle={() => onItemToggle(id)}
+                  variant={variant}
+                  customTextValue={customTextValue}
+                  onCustomTextChange={onCustomTextChange}
+                />
+              ))}
+            </div>
           </div>
         </SortableContext>
       </DndContext>

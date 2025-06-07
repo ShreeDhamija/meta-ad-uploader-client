@@ -16,11 +16,11 @@ export default function GlobalSettings() {
 
 
   const [customThumbnail, setCustomThumbnail] = useState(false)
-  const [adTypeOption, setAdTypeOption] = useState("")
-  const [dateOption, setDateOption] = useState("")
-  const [useFileName, setUseFileName] = useState(false)
+  // const [adTypeOption, setAdTypeOption] = useState("")
+  // const [dateOption, setDateOption] = useState("")
+  // const [useFileName, setUseFileName] = useState(false)
   const { adNameFormula } = useGlobalSettings();
-  const { globalSettings } = useGlobalSettings();
+  //const { globalSettings } = useGlobalSettings();
   const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
 
   const [adOrder, setAdOrder] = useState(() => adNameFormula.order || defaultOrder);
@@ -65,18 +65,12 @@ export default function GlobalSettings() {
       <div className="bg-[#f7f7f7] rounded-xl p-3 space-y-3">
         <div className="flex items-center gap-2">
           <img src="https://meta-ad-uploader-server-production.up.railway.app/icons/name.svg" alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
-          <h3 className="font-medium text-[14px] text-zinc-950">Ad Name (Internal Name)</h3>
+          <h3 className="font-medium text-[14px] text-zinc-950">Ad Name Formula</h3>
         </div>
 
         <p className="text-xs text-black text-gray-500">
           You can generate an ad name formula by selecting and re-ordering the properties below. <br></br>You can add custom text on the home page when making an ad
         </p>
-        {/* <ReorderAdNameParts
-          order={adOrder}
-          setOrder={setAdOrder}
-          values={adValues}
-          setValues={setAdValues}
-        /> */}
         <ReorderAdNameParts
           order={adOrder}
           setOrder={setAdOrder}
