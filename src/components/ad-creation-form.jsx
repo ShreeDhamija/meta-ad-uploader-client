@@ -360,16 +360,24 @@ export default function AdCreationForm({
     const parts = adOrder.map((key) => {
       if (!selectedItems.includes(key)) return null;
 
-      if (key === "adType") return "file type";
+      if (key === "adType") {
+        if (!file) {
+          return "file_type"; // Preview mode
+        }
+        const fileType = file.type || file.mimeType || "";
+        if (fileType.startsWith("image/")) return "static";
+        if (fileType.startsWith("video/")) return "video";
+        return "file_type"; // fallback
+      }
       if (key === "dateType") {
         return dateTypeInput === "MonthDDYYYY" ? monthDayYear : monthYear;
       }
       if (key === "fileName") return fileName;
       if (key === "iteration") {
         if (iterationIndex != null) {
-          return String(iterationIndex + 1).padStart(2, "0");  // 0-indexed to 1-indexed
+          return String(iterationIndex + 1).padStart(2, "0");
         }
-        return "01"; // fallback if no index
+        return "01"; // fallback
       }
       if (key === "customText") return customTextValue || "custom_text";
       return null;
@@ -380,15 +388,6 @@ export default function AdCreationForm({
     return adName || "Ad Name Formula will be displayed here";
   };
 
-
-  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
-    const response = await axios.post(
-      "https://meta-ad-uploader-server-production.up.railway.app/auth/duplicate-adset",
-      { adSetId, campaignId, adAccountId, newAdSetName },
-      { withCredentials: true },
-    )
-    return response.data.copied_adset_id
-  }
 
 
 
