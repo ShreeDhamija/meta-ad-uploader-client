@@ -342,7 +342,7 @@ export default function AdCreationForm({
 
 
 
-  const computeAdName = (file, dateTypeInput) => {
+  const computeAdName = (file, dateTypeInput, iterationIndex) => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
@@ -352,7 +352,7 @@ export default function AdCreationForm({
     const monthYear = `${monthAbbrev}${year}`;
     const monthDayYear = `${monthAbbrev}${date}${year}`;
 
-    let fileName = "file_name"; // default in case no file passed
+    let fileName = "file_name"; // default if no file
     if (file && file.name) {
       fileName = file.name.replace(/\.[^/.]+$/, ""); // remove extension
     }
@@ -360,12 +360,17 @@ export default function AdCreationForm({
     const parts = adOrder.map((key) => {
       if (!selectedItems.includes(key)) return null;
 
-      if (key === "adType") return "file type"; // hardcoded for now
+      if (key === "adType") return "file type";
       if (key === "dateType") {
-        return adValues.dateType === "MonthDDYYYY" ? monthDayYear : monthYear;
+        return dateTypeInput === "MonthDDYYYY" ? monthDayYear : monthYear;
       }
-      if (key === "fileName") return fileName; // <-- real file name if passed
-      if (key === "iteration") return "01"; // hardcoded for now
+      if (key === "fileName") return fileName;
+      if (key === "iteration") {
+        if (iterationIndex != null) {
+          return String(iterationIndex + 1).padStart(2, "0");  // 0-indexed to 1-indexed
+        }
+        return "01"; // fallback if no index
+      }
       if (key === "customText") return customTextValue || "custom_text";
       return null;
     }).filter(Boolean);
@@ -374,9 +379,6 @@ export default function AdCreationForm({
 
     return adName || "Ad Name Formula will be displayed here";
   };
-
-
-
 
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
@@ -472,7 +474,7 @@ export default function AdCreationForm({
         // For each dynamic adset, create ONE request with ALL media files
         dynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
-          formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
+          formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType, index));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -529,7 +531,7 @@ export default function AdCreationForm({
           // Handle local files
           files.forEach((file) => {
             const formData = new FormData();
-            formData.append("adName", computeAdName(file, adValues.dateType));
+            formData.append("adName", computeAdName(file, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
             formData.append("descriptions", JSON.stringify(descriptions));
             formData.append("messages", JSON.stringify(messages));
@@ -561,7 +563,7 @@ export default function AdCreationForm({
           // Handle drive files
           driveFiles.forEach((driveFile) => {
             const formData = new FormData();
-            formData.append("adName", computeAdName(driveFile, adValues.dateType));
+            formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
             formData.append("descriptions", JSON.stringify(descriptions));
             formData.append("messages", JSON.stringify(messages));
