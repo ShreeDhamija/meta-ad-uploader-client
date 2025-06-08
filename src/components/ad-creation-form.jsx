@@ -474,7 +474,7 @@ export default function AdCreationForm({
         // For each dynamic adset, create ONE request with ALL media files
         dynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
-          formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType, index));
+          formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -529,7 +529,7 @@ export default function AdCreationForm({
       if (nonDynamicAdSetIds.length > 0) {
         nonDynamicAdSetIds.forEach((adSetId) => {
           // Handle local files
-          files.forEach((file) => {
+          files.forEach((file, index) => {
             const formData = new FormData();
             formData.append("adName", computeAdName(file, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
@@ -561,7 +561,7 @@ export default function AdCreationForm({
           });
 
           // Handle drive files
-          driveFiles.forEach((driveFile) => {
+          driveFiles.forEach((driveFile, index) => {
             const formData = new FormData();
             formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
