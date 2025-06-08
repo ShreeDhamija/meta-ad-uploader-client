@@ -216,6 +216,8 @@ export default function ReorderAdNameParts({
                   id={id}
                   isSelected={selectedItems.includes(id)}
                   onToggle={() => onItemToggle(id)}
+                  setValues={setValues}
+                  values={values}
                   variant={variant}
                   customTextValue={customTextValue}
                   onCustomTextChange={onCustomTextChange}
