@@ -58,7 +58,8 @@ function SortableItem({ id, isSelected, onToggle, variant, customTextValue, onCu
   }
 
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false)
-  const [selectedDateOption, setSelectedDateOption] = useState("MonthYYYY")
+  const [selectedDateOption, setSelectedDateOption] = useState(values.dateType || "MonthYYYY");
+
 
   // Auto-open date dropdown when date is selected
   const handleDateToggle = () => {
@@ -72,9 +73,14 @@ function SortableItem({ id, isSelected, onToggle, variant, customTextValue, onCu
   }
 
   const handleDateOptionSelect = (option) => {
-    setSelectedDateOption(option)
-    setDateDropdownOpen(false)
-  }
+    setSelectedDateOption(option);
+    setValues((prev) => ({
+      ...prev,
+      dateType: option,   // <-- set in the global adValues!
+    }));
+    setDateDropdownOpen(false);
+  };
+
 
   const renderContent = () => {
     if (id === "customText") {
