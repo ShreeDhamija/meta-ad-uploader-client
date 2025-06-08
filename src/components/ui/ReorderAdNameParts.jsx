@@ -47,7 +47,7 @@ function CustomRadioButton({ checked, onClick, disabled = false }) {
   )
 }
 
-function SortableItem({ id, isSelected, onToggle, variant, customTextValue, onCustomTextChange }) {
+function SortableItem({ id, isSelected, onToggle, setValues, values, variant, customTextValue, onCustomTextChange }) {
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   })
