@@ -60,6 +60,11 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, cu
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false)
   const [selectedDateOption, setSelectedDateOption] = useState(values.dateType || "MonthYYYY");
 
+  useEffect(() => {
+    if (values?.dateType) {
+      setSelectedDateOption(values.dateType);
+    }
+  }, [values.dateType]);
 
   // Auto-open date dropdown when date is selected
   const handleDateToggle = () => {
@@ -76,7 +81,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, cu
     setSelectedDateOption(option);
     setValues((prev) => ({
       ...prev,
-      dateType: option,   // <-- set in the global adValues!
+      dateType: option,
     }));
     setDateDropdownOpen(false);
   };
