@@ -127,30 +127,11 @@ export default function AdCreationForm({
       page.instagramAccount.username.toLowerCase().includes(instagramSearchValue.toLowerCase())
     )
 
-
-
-  // useEffect(() => {
-  //   const parts = adOrder.map((key) => {
-  //     if (!selectedItems.includes(key)) return null;
-
-  //     if (key === "adType") return "[Image/Video]";
-  //     if (key === "dateType") return adValues.dateType;
-  //     if (key === "fileName") return "File Name";
-  //     if (key === "iteration") return "itr";
-  //     if (key === "customText") return customTextValue || "Custom Text";
-  //     return null;
-  //   }).filter(Boolean);
-
-  //   const baseName = parts.join("_");
-  //   const newAdName = baseName || "Ad Name Formula will be displayed here";
-
-  //   setAdName(newAdName);
-  // }, [customTextValue, adValues, adOrder, selectedItems]);
-
   useEffect(() => {
-    const adName = computeAdName();
+    const adName = computeAdName(null, adValues.dateType);  // <-- Pass dateType explicitly
     setAdName(adName);
   }, [customTextValue, adValues.dateType, adOrder, selectedItems]);
+
 
 
 
@@ -361,7 +342,7 @@ export default function AdCreationForm({
 
 
 
-  const computeAdName = (file) => {
+  const computeAdName = (file, dateTypeInput) => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
@@ -491,7 +472,7 @@ export default function AdCreationForm({
         // For each dynamic adset, create ONE request with ALL media files
         dynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
-          formData.append("adName", computeAdName(files[0] || driveFiles[0]));
+          formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -548,7 +529,7 @@ export default function AdCreationForm({
           // Handle local files
           files.forEach((file) => {
             const formData = new FormData();
-            formData.append("adName", computeAdName(file));
+            formData.append("adName", computeAdName(file, adValues.dateType));
             formData.append("headlines", JSON.stringify(headlines));
             formData.append("descriptions", JSON.stringify(descriptions));
             formData.append("messages", JSON.stringify(messages));
@@ -580,7 +561,7 @@ export default function AdCreationForm({
           // Handle drive files
           driveFiles.forEach((driveFile) => {
             const formData = new FormData();
-            formData.append("adName", computeAdName(driveFile));
+            formData.append("adName", computeAdName(driveFile, adValues.dateType));
             formData.append("headlines", JSON.stringify(headlines));
             formData.append("descriptions", JSON.stringify(descriptions));
             formData.append("messages", JSON.stringify(messages));
@@ -836,13 +817,6 @@ export default function AdCreationForm({
 
               <div className="flex flex-wrap items-center gap-2">
               </div>
-              {/* <ReorderAdNameParts
-                order={adOrder}
-                setOrder={setAdOrder}
-                values={adValues}
-                setValues={setAdValues}
-                variant="home"
-              /> */}
               <ReorderAdNameParts
                 order={adOrder}
                 setOrder={setAdOrder}
