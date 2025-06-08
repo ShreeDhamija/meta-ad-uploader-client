@@ -88,30 +88,14 @@ export default function Home() {
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
-    // Load global ad name formula settings
-    // useEffect(() => {
-    //     if (!isLoggedIn || loading) return
-
-    //     const { values, order } = adNameFormula
-    //     setAdType(values?.adType || "")
-    //     setDateFormat(values?.dateType || "")
-    //     setIncludeFileName(values?.useFileName || false)
-    //     setAdOrder(order || ["adType", "dateType", "fileName"])
-    // }, [isLoggedIn, loading, adNameFormula])
-
     useEffect(() => {
         if (!isLoggedIn || loading) return;
-
         const { values, order, selected } = adNameFormula;
-
         setAdValues({
             dateType: values?.dateType || "MonthYYYY",
         });
-
         const defaultOrder = ["adType", "dateType", "fileName", "iteration", "customText"];
-
         const mergedOrder = Array.from(new Set([...(order || ["adType", "dateType", "fileName", "iteration"]), "customText"]));
-
         setAdOrder(mergedOrder);
 
         setSelectedItems(selected || ["adType", "dateType", "fileName"]);
@@ -192,7 +176,6 @@ export default function Home() {
                         setAdAccounts={setAdAccounts}
                         selectedAdAccount={selectedAdAccount}
                         setSelectedAdAccount={setSelectedAdAccount}
-                        //setAdSetDestinationType={setAdSetDestinationType}
                         campaigns={campaigns}
                         setCampaigns={setCampaigns}
                         selectedCampaign={selectedCampaign}
@@ -220,12 +203,6 @@ export default function Home() {
                         setInstagramAccountId={setInstagramAccountId}
                         adName={adName}
                         setAdName={setAdName}
-                        //adType={adType}
-                        //setAdType={setAdType}
-                        //dateFormat={dateFormat}
-                        //setDateFormat={setDateFormat}
-                        //includeFileName={includeFileName}
-                        //setIncludeFileName={setIncludeFileName}
                         adOrder={adOrder}
                         setAdOrder={setAdOrder}
                         selectedItems={selectedItems}
@@ -235,8 +212,6 @@ export default function Home() {
                         setAdValues={setAdValues}
                         customTextValue={customTextValue}
                         setCustomTextValue={setCustomTextValue}
-                        //customAdName={customAdName}
-                        //setCustomAdName={setCustomAdName}
                         messages={messages}
                         setMessages={setMessages}
                         headlines={headlines}

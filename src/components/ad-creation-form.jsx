@@ -31,12 +31,6 @@ export default function AdCreationForm({
   setInstagramAccountId,
   adName,
   setAdName,
-  //adType,
-  //setAdType,
-  //dateFormat,
-  //setDateFormat,
-  //includeFileName,
-  //setIncludeFileName,
   adOrder,
   setAdOrder,
   selectedItems,
@@ -46,8 +40,6 @@ export default function AdCreationForm({
   setAdValues,
   customTextValue,
   setCustomTextValue,
-  //customAdName,
-  //setCustomAdName,
   messages,
   setMessages,
   headlines,
@@ -84,17 +76,8 @@ export default function AdCreationForm({
   setLaunchPaused
 }) {
   // Local state
-  // const [adTypeOpen, setAdTypeOpen] = useState(false)
-  // const [dateFormatOpen, setDateFormatOpen] = useState(false)
+
   const [openPage, setOpenPage] = useState(false)
-
-
-  // const [adValues, setAdValues] = useState({
-  //   adType,
-  //   dateType: dateFormat,
-  //   useFileName: includeFileName,
-  // });
-
   const [googleAuthStatus, setGoogleAuthStatus] = useState({
     checking: true,
     authenticated: false,
@@ -111,14 +94,6 @@ export default function AdCreationForm({
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
 
-  // Formula parts
-  // const formulaParts = adOrder
-  //   .map((key) => {
-  //     if (key === "adType") return adType;
-  //     if (key === "dateType") return dateFormat;
-  //     if (key === "fileName") return includeFileName ? "File Name" : null;
-  //   })
-  //   .filter(Boolean);
 
   const formulaParts = adOrder.map((key) => {
     if (!selectedItems.includes(key)) return null;
@@ -152,51 +127,31 @@ export default function AdCreationForm({
       page.instagramAccount.username.toLowerCase().includes(instagramSearchValue.toLowerCase())
     )
 
-  // useEffect(() => {
-  //   setAdType(adValues.adType);
-  //   setDateFormat(adValues.dateType);
-  //   setIncludeFileName(adValues.useFileName);
-  // }, [adValues]);
-
-  // useEffect(() => {
-  //   setAdValues({
-  //     adType,
-  //     dateType: dateFormat,
-  //     useFileName: includeFileName,
-  //   });
-  // }, [adType, dateFormat, includeFileName]);
 
 
   // useEffect(() => {
   //   const parts = adOrder.map((key) => {
-  //     if (key === "adType") return adValues.adType;
+  //     if (!selectedItems.includes(key)) return null;
+
+  //     if (key === "adType") return "[Image/Video]";
   //     if (key === "dateType") return adValues.dateType;
-  //     if (key === "fileName") return adValues.useFileName ? "File" : null;
+  //     if (key === "fileName") return "File Name";
+  //     if (key === "iteration") return "itr";
+  //     if (key === "customText") return customTextValue || "Custom Text";
+  //     return null;
   //   }).filter(Boolean);
 
   //   const baseName = parts.join("_");
-  //   const newAdName = customAdName ? `${baseName}_${customAdName}` : baseName || "Ad Name Formula will be displayed here";
+  //   const newAdName = baseName || "Ad Name Formula will be displayed here";
 
   //   setAdName(newAdName);
-  // }, [customAdName, adValues, adOrder]);
+  // }, [customTextValue, adValues, adOrder, selectedItems]);
 
   useEffect(() => {
-    const parts = adOrder.map((key) => {
-      if (!selectedItems.includes(key)) return null;
+    const adName = computeAdName();
+    setAdName(adName);
+  }, [customTextValue, adValues.dateType, adOrder, selectedItems]);
 
-      if (key === "adType") return "[Image/Video]";
-      if (key === "dateType") return adValues.dateType;
-      if (key === "fileName") return "File Name";
-      if (key === "iteration") return "itr";
-      if (key === "customText") return customTextValue || "Custom Text";
-      return null;
-    }).filter(Boolean);
-
-    const baseName = parts.join("_");
-    const newAdName = baseName || "Ad Name Formula will be displayed here";
-
-    setAdName(newAdName);
-  }, [customTextValue, adValues, adOrder, selectedItems]);
 
 
 
@@ -404,68 +359,22 @@ export default function AdCreationForm({
     setter(newValues)
   }
 
-  // const handleAdTypeClick = (val) => {
-  //   if (val === adType) {
-  //     // If clicking the same value, deselect it
-  //     setAdType("")
-  //   } else {
-  //     // Otherwise select the new value
-  //     setAdType(val)
-  //   }
-  //   setAdTypeOpen(false);
-  // }
-
-  // const handleDateFormatClick = (val) => {
-  //   if (val === dateFormat) {
-  //     // If clicking the same value, deselect it
-  //     setDateFormat("")
-  //   } else {
-  //     // Otherwise select the new value
-  //     setDateFormat(val)
-  //   }
-  //   setDateFormatOpen(false);
-  // }
-
-  // Helper function to compute a unique ad name for each file
-  // const computeAdName = (file) => {
-  //   const now = new Date()
-  //   let dateStr = ""
-  //   // Example: using month names
-  //   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-  //   const monthName = monthNames[now.getMonth()]
-
-  //   if (dateFormat === "MonthDDYYYY") {
-  //     const day = now.getDate().toString().padStart(2, "0")
-  //     dateStr = `${monthName}${day}${now.getFullYear()}`
-  //   } else if (dateFormat === "MonthYYYY") {
-  //     dateStr = `${monthName}${now.getFullYear()}`
-  //   }
-
-  //   let fileNamePart = ""
-  //   if (includeFileName) {
-  //     fileNamePart = file.name.split(".").slice(0, -1).join(".") || file.name
-  //   }
-
-  //   const parts = adOrder.map((key) => {
-  //     if (key === "adType") return adValues.adType;
-  //     if (key === "dateType") return dateStr;
-  //     if (key === "fileName") return fileNamePart;
-  //   }).filter(Boolean);
 
 
-  //   const computed = parts.join("_")
-  //   const finalAdName = [computed, customAdName].filter(Boolean).join("_")
-
-  //   return finalAdName
-  // }
-
-  const computeAdName = () => {
+  const computeAdName = (file) => {
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const monthAbbrev = monthNames[now.getMonth()];
     const date = String(now.getDate()).padStart(2, "0");
     const year = now.getFullYear();
-    const monthYear = `${month}${year}`;
-    const monthDayYear = `${month}${date}${year}`;
+    const monthYear = `${monthAbbrev}${year}`;
+    const monthDayYear = `${monthAbbrev}${date}${year}`;
+
+    let fileName = "file_name"; // default in case no file passed
+    if (file && file.name) {
+      fileName = file.name.replace(/\.[^/.]+$/, ""); // remove extension
+    }
 
     const parts = adOrder.map((key) => {
       if (!selectedItems.includes(key)) return null;
@@ -474,8 +383,8 @@ export default function AdCreationForm({
       if (key === "dateType") {
         return adValues.dateType === "MonthDDYYYY" ? monthDayYear : monthYear;
       }
-      if (key === "fileName") return "file_name"; // placeholder
-      if (key === "iteration") return "01"; // hardcoded
+      if (key === "fileName") return fileName; // <-- real file name if passed
+      if (key === "iteration") return "01"; // hardcoded for now
       if (key === "customText") return customTextValue || "custom_text";
       return null;
     }).filter(Boolean);
@@ -484,6 +393,8 @@ export default function AdCreationForm({
 
     return adName || "Ad Name Formula will be displayed here";
   };
+
+
 
 
 
