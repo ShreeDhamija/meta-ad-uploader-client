@@ -671,7 +671,7 @@ export default function AdAccountSettings({
                   </Popover>
                   {/* New Ad Set Name Input */}
                   {duplicateAdSet && (
-                    <div className="space-y-2 mt-3">
+                    <div className="space-y-2 mt-6">
                       <Label htmlFor="newAdSetName" className="block">
                         New Ad Set Name
                       </Label>
