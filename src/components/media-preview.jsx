@@ -21,7 +21,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
     <>
       {files.length > 0 ? (
         <Card
-          className="flex flex-col sticky top-4 w-full xl:max-w-[700px] max-w-[calc(100vw-1rem)] border border-gray-300 !bg-white"
+          className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white"
           style={{ height: "calc(100vh - 50px)" }}
         >
           <CardHeader className="flex flex-row justify-between items-center flex-nowrap w-full">
@@ -111,7 +111,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
           </CardContent>
         </Card>
       ) : (
-        <div className="sticky top-4 w-full xl:max-w-[700px] mx-auto max-w-[calc(100vw-1rem)] shadow-sm">
+        <div className="sticky top-4 w-full mx-auto  shadow-sm">
           <img
             src="https://meta-ad-uploader-server-production.up.railway.app/bg.png"
             alt="No uploads"
