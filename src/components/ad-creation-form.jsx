@@ -163,13 +163,13 @@ export default function AdCreationForm({
         });
 
         // ✅ If just logged in, open picker automatically
-        if (response.data.authenticated && window.location.search.includes('googleAuth=success')) {
-          openPicker(response.data.accessToken);
-          // Clean up the URL so it doesn't stay ?googleAuth=success
-          const url = new URL(window.location);
-          url.searchParams.delete('googleAuth');
-          window.history.replaceState({}, document.title, url.pathname);
-        }
+        // if (response.data.authenticated && window.location.search.includes('googleAuth=success')) {
+        //   openPicker(response.data.accessToken);
+        //   // Clean up the URL so it doesn't stay ?googleAuth=success
+        //   const url = new URL(window.location);
+        //   url.searchParams.delete('googleAuth');
+        //   window.history.replaceState({}, document.title, url.pathname);
+        // }
 
       } catch (error) {
         console.error("Failed to check Google auth status:", error);
@@ -190,8 +190,43 @@ export default function AdCreationForm({
       // Already authenticated, open picker
       openPicker(googleAuthStatus.accessToken);
     } else {
-      // Need to authenticate first
-      window.location.href = "https://meta-ad-uploader-server-production.up.railway.app/auth/google";
+      // Open Google auth in a popup window
+      const popup = window.open(
+        "https://meta-ad-uploader-server-production.up.railway.app/auth/google",
+        "googleAuth",
+        "width=500,height=600,scrollbars=yes,resizable=yes"
+      );
+
+      // Listen for the popup to close or send a message
+      const checkClosed = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosed);
+          // Check auth status after popup closes
+          checkGoogleAuthAndOpenPicker();
+        }
+      }, 1000);
+    }
+  };
+
+  const checkGoogleAuthAndOpenPicker = async () => {
+    try {
+      const response = await axios.get(
+        "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+        { withCredentials: true }
+      );
+
+      if (response.data.authenticated) {
+        setGoogleAuthStatus({
+          checking: false,
+          authenticated: true,
+          accessToken: response.data.accessToken
+        });
+        // Automatically open picker after successful auth
+        openPicker(response.data.accessToken);
+      }
+    } catch (error) {
+      console.error("Failed to check Google auth status:", error);
+      toast.error("Authentication failed. Please try again.");
     }
   };
 
