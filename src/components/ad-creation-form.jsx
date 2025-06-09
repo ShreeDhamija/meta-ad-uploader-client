@@ -147,8 +147,55 @@ export default function AdCreationForm({
 
 
   // Drive Picker setup
+  // useEffect(() => {
+  //   // Check Google auth status when component mounts
+  //   const checkGoogleAuth = async () => {
+  //     try {
+  //       const response = await axios.get(
+  //         "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+  //         { withCredentials: true }
+  //       );
+
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: response.data.authenticated,
+  //         accessToken: response.data.accessToken
+  //       });
+
+  //       // ✅ If just logged in, open picker automatically
+  //       if (response.data.authenticated && window.location.search.includes('googleAuth=success')) {
+  //         openPicker(response.data.accessToken);
+  //         // Clean up the URL so it doesn't stay ?googleAuth=success
+  //         const url = new URL(window.location);
+  //         url.searchParams.delete('googleAuth');
+  //         window.history.replaceState({}, document.title, url.pathname);
+  //       }
+
+  //     } catch (error) {
+  //       console.error("Failed to check Google auth status:", error);
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: false,
+  //         accessToken: null
+  //       });
+  //     }
+  //   };
+
+  //   checkGoogleAuth();
+  // }, []);
+
   useEffect(() => {
-    // Check Google auth status when component mounts
+    // Handle popup authentication callback - ADD THIS AT THE TOP
+    if (window.location.search.includes('googleAuth=success') && window.location.search.includes('popup=true')) {
+      // This is running in the popup window, send message to parent
+      if (window.opener) {
+        window.opener.postMessage({ type: 'GOOGLE_AUTH_SUCCESS' }, window.location.origin);
+        window.close();
+        return; // Exit early, don't run the rest of the useEffect
+      }
+    }
+
+    // Check Google auth status when component mounts (YOUR EXISTING LOGIC)
     const checkGoogleAuth = async () => {
       try {
         const response = await axios.get(
@@ -162,6 +209,7 @@ export default function AdCreationForm({
           accessToken: response.data.accessToken
         });
 
+        // REMOVE THIS SECTION since we're handling it in the popup flow now:
         // ✅ If just logged in, open picker automatically
         // if (response.data.authenticated && window.location.search.includes('googleAuth=success')) {
         //   openPicker(response.data.accessToken);
@@ -185,23 +233,36 @@ export default function AdCreationForm({
   }, []);
 
 
+
   const handleDriveClick = async () => {
     if (googleAuthStatus.authenticated) {
-      // Already authenticated, open picker
       openPicker(googleAuthStatus.accessToken);
     } else {
-      // Open Google auth in a popup window
+      // Open Google auth in a popup window with a popup parameter
       const popup = window.open(
-        "https://meta-ad-uploader-server-production.up.railway.app/auth/google",
+        "https://meta-ad-uploader-server-production.up.railway.app/auth/google?popup=true",
         "googleAuth",
         "width=500,height=600,scrollbars=yes,resizable=yes"
       );
 
-      // Listen for the popup to close or send a message
+      // Listen for messages from the popup
+      const messageListener = (event) => {
+        if (event.origin !== window.location.origin) return;
+
+        if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+          popup.close();
+          window.removeEventListener('message', messageListener);
+          checkGoogleAuthAndOpenPicker();
+        }
+      };
+
+      window.addEventListener('message', messageListener);
+
+      // Fallback: check if popup closed manually
       const checkClosed = setInterval(() => {
         if (popup.closed) {
           clearInterval(checkClosed);
-          // Check auth status after popup closes
+          window.removeEventListener('message', messageListener);
           checkGoogleAuthAndOpenPicker();
         }
       }, 1000);
@@ -229,6 +290,15 @@ export default function AdCreationForm({
       toast.error("Authentication failed. Please try again.");
     }
   };
+  // const handleDriveClick = async () => {
+  //   if (googleAuthStatus.authenticated) {
+  //     // Already authenticated, open picker
+  //     openPicker(googleAuthStatus.accessToken);
+  //   } else {
+  //     // Need to authenticate first
+  //     window.location.href = "https://meta-ad-uploader-server-production.up.railway.app/auth/google";
+  //   }
+  // };
 
 
   const openPicker = (token) => {
