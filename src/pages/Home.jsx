@@ -169,7 +169,7 @@ export default function Home() {
             <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
             <div className="flex flex-col xl:flex-row gap-6">
                 {/* <div className="w-full xl:w-auto xl:min-w-[500px] xl:max-w-[770px] xl:flex-shrink-0 space-y-6"> */}
-                <div className="w-full xl:w-1/2 xl:flex-shrink-0 space-y-6">
+                <div className="w-full xl:w-[60%] xl:flex-shrink-0 space-y-6">
                     <AdAccountSettings
                         isLoading={isLoading}
                         setIsLoading={setIsLoading}
@@ -251,7 +251,7 @@ export default function Home() {
                 </div>
 
                 {/* <div className="flex-1 min-w-0"> */}
-                <div className="w-full xl:w-1/2 xl:flex-shrink-0">
+                <div className="w-full xl:w-[40%] xl:flex-shrink-0">
                     <MediaPreview
                         files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
                         setFiles={setFiles}
