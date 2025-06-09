@@ -249,7 +249,7 @@ export default function Home() {
                     />
                 </div>
 
-                <div className="flex-1 min-w-0 xl:max-w-[calc(1600px-700px-1.5rem)] xl:flex-shrink-0">
+                <div className="flex-1 min-w-0 xl:max-w-[calc(1600px-500px-1.5rem)] xl:flex-shrink-0">
                     <MediaPreview
                         files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
                         setFiles={setFiles}
