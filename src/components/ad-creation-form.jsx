@@ -918,7 +918,7 @@ export default function AdCreationForm({
                           className="border border-gray-400 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
                           style={{
                             scrollbarWidth: 'thin',
-                            scrollbarColor: '#cbd5e2 transparent'
+                            scrollbarColor: '#c7c7c7 transparent'
                           }}
                         />
                         {messages.length > 1 && (
