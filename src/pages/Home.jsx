@@ -165,7 +165,7 @@ export default function Home() {
 
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6 mt-[20px]">
+        <div className="w-full max-w-[1400px] mx-auto py-8 px-2 sm:px-4 md:px-6 mt-[20px]">
             <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
             <div className="flex flex-col xl:flex-row gap-6 min-w-0">
                 {/* <div className="w-full xl:w-auto xl:min-w-[500px] xl:max-w-[770px] xl:flex-shrink-0 space-y-6"> */}
