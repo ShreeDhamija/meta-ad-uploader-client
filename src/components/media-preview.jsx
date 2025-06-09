@@ -45,7 +45,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
           </CardHeader>
 
           <CardContent className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 max-w-[calc(100vw-1rem)]">
               {files.map((file) => (
                 <div key={file.isDrive ? file.id : file.name} className="relative group">
                   <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
@@ -111,7 +111,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
           </CardContent>
         </Card>
       ) : (
-        <div className="sticky top-4 w-full mx-auto  shadow-sm">
+        <div className="sticky top-4 w-full mx-auto max-w-[calc(100vw-1rem)] shadow-sm">
           <img
             src="https://meta-ad-uploader-server-production.up.railway.app/bg.png"
             alt="No uploads"
