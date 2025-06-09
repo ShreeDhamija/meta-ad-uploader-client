@@ -390,6 +390,14 @@ export default function AdCreationForm({
   };
 
 
+  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
+    const response = await axios.post(
+      "https://meta-ad-uploader-server-production.up.railway.app/auth/duplicate-adset",
+      { adSetId, campaignId, adAccountId, newAdSetName },
+      { withCredentials: true },
+    )
+    return response.data.copied_adset_id
+  }
 
 
   // Check if any selected ad sets have SHOP_AUTOMATIC destination type
@@ -1203,8 +1211,8 @@ export default function AdCreationForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleCreateAd} className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-4">
+          <div className="space-y-8">
+            <div className="space-y-2">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Select a Page</Label>
