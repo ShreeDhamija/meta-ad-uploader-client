@@ -75,21 +75,21 @@ export default function Home() {
 
     useEffect(() => {
         if (!authLoading && !isLoggedIn) {
-            //navigate("/login");
+            navigate("/login");
         }
     }, [authLoading, isLoggedIn]);
 
 
     //  Show onboarding popup once settings are loaded
     useEffect(() => {
-        //if (!isLoggedIn || loading) return
+        if (!isLoggedIn || loading) return
         if (!hasSeenOnboarding) {
             setShowOnboardingPopup(true)
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
-        //if (!isLoggedIn || loading) return;
+        if (!isLoggedIn || loading) return;
         const { values, order, selected } = adNameFormula;
         setAdValues({
             dateType: values?.dateType || "MonthYYYY",
