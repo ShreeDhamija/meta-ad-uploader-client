@@ -93,7 +93,10 @@ export default function ShopDestinationSelector({
 
     return (
         <div className="space-y-2">
-            <Label>Shop Destination</Label>
+            <Label className="flex items-center gap-2">
+                <img src="https://unpkg.com/@mynaui/icons/icons/shopping-bag.svg" alt="" className="w-4 h-4" />
+                Shop Destination
+            </Label>
             <Label className="text-gray-500 text-[12px] font-regular block">Select a shop or product set for your shop ads</Label>
 
             <Popover open={open} onOpenChange={setOpen}>
