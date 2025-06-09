@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
-import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy } from "@dnd-kit/sortable"
+import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ChevronsUpDown, GripVertical } from "lucide-react"
@@ -212,9 +212,12 @@ export default function ReorderAdNameParts({
   return (
     <div className="space-y-3">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={order} strategy={horizontalListSortingStrategy}>
+        <SortableContext items={order} strategy={variant === "home" ? verticalListSortingStrategy : horizontalListSortingStrategy}>
           <div className="bg-gray-200 p-1 rounded-xl">
-            <div className="flex flex-wrap gap-x-2 gap-y-1">
+            <div className={cn(
+              "flex gap-2",
+              variant === "home" ? "flex-col" : "flex-wrap gap-x-2 gap-y-1"
+            )}>
               {order.map((id) => (
                 <SortableItem
                   key={id}
