@@ -907,7 +907,7 @@ export default function AdCreationForm({
                   <Label>Primary Text</Label>
                   <div className="space-y-3">
                     {messages.map((value, index) => (
-                      <div key={index} className="flex items-start gap-2 border border-gray-400 rounded-xl bg-white shadow overflow-hidden">
+                      <div key={index} className="flex items-start gap-2">
                         <TextareaAutosize
                           value={value}
                           onChange={(e) => updateField(setMessages, messages, index, e.target.value)}
