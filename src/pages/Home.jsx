@@ -165,139 +165,137 @@ export default function Home() {
 
 
     return (
-        <div className="py-8 mt-[20px] px-4 sm:px-6 lg:px-8">
-            <div className="max-w-[1520px] mx-auto flex flex-col">
-                <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
-                <div className="flex flex-col lg:flex-row gap-6 mt-6">
-                    <div className="w-full max-w-[700px] flex-shrink-0">
-                        <AdAccountSettings
-                            isLoading={isLoading}
-                            setIsLoading={setIsLoading}
-                            adAccounts={adAccounts}
-                            setAdAccounts={setAdAccounts}
-                            selectedAdAccount={selectedAdAccount}
-                            setSelectedAdAccount={setSelectedAdAccount}
-                            campaigns={campaigns}
-                            setCampaigns={setCampaigns}
-                            selectedCampaign={selectedCampaign}
-                            setSelectedCampaign={setSelectedCampaign}
-                            adSets={adSets}
-                            setAdSets={setAdSets}
-                            selectedAdSets={selectedAdSets}
-                            setSelectedAdSets={setSelectedAdSets}
-                            showDuplicateBlock={showDuplicateBlock}
-                            setShowDuplicateBlock={setShowDuplicateBlock}
-                            duplicateAdSet={duplicateAdSet}
-                            setDuplicateAdSet={setDuplicateAdSet}
-                            setCampaignObjective={setCampaignObjective}
-                            newAdSetName={newAdSetName}
-                            setNewAdSetName={setNewAdSetName}
-                        />
+        <div className="w-full max-w-[1220px] mx-auto py-8 px-2 sm:px-4 md:px-6 mt-[20px]">
+            <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
+            <div className="flex flex-col xl:flex-row gap-6">
+                <div className="w-full xl:w-[500px] flex-shrink-0 space-y-6">
+                    <AdAccountSettings
+                        isLoading={isLoading}
+                        setIsLoading={setIsLoading}
+                        adAccounts={adAccounts}
+                        setAdAccounts={setAdAccounts}
+                        selectedAdAccount={selectedAdAccount}
+                        setSelectedAdAccount={setSelectedAdAccount}
+                        campaigns={campaigns}
+                        setCampaigns={setCampaigns}
+                        selectedCampaign={selectedCampaign}
+                        setSelectedCampaign={setSelectedCampaign}
+                        adSets={adSets}
+                        setAdSets={setAdSets}
+                        selectedAdSets={selectedAdSets}
+                        setSelectedAdSets={setSelectedAdSets}
+                        showDuplicateBlock={showDuplicateBlock}
+                        setShowDuplicateBlock={setShowDuplicateBlock}
+                        duplicateAdSet={duplicateAdSet}
+                        setDuplicateAdSet={setDuplicateAdSet}
+                        setCampaignObjective={setCampaignObjective}
+                        newAdSetName={newAdSetName}
+                        setNewAdSetName={setNewAdSetName}
+                    />
 
-                        <AdCreationForm
-                            isLoading={isLoading}
-                            setIsLoading={setIsLoading}
-                            pages={pages}
-                            pageId={pageId}
-                            setPageId={setPageId}
-                            instagramAccountId={instagramAccountId}
-                            setInstagramAccountId={setInstagramAccountId}
-                            adName={adName}
-                            setAdName={setAdName}
-                            adOrder={adOrder}
-                            setAdOrder={setAdOrder}
-                            selectedItems={selectedItems}
-                            setSelectedItems={setSelectedItems}
-                            onItemToggle={onItemToggle}
-                            adValues={adValues}
-                            setAdValues={setAdValues}
-                            customTextValue={customTextValue}
-                            setCustomTextValue={setCustomTextValue}
-                            messages={messages}
-                            setMessages={setMessages}
-                            headlines={headlines}
-                            setHeadlines={setHeadlines}
-                            descriptions={descriptions}
-                            setDescriptions={setDescriptions}
-                            link={link}
-                            setLink={setLink}
-                            cta={cta}
-                            setCta={setCta}
-                            thumbnail={thumbnail}
-                            setThumbnail={setThumbnail}
-                            files={files}
-                            setFiles={setFiles}
-                            videoThumbs={videoThumbs}
-                            setVideoThumbs={setVideoThumbs}
-                            selectedAdSets={selectedAdSets}
-                            duplicateAdSet={duplicateAdSet}
-                            selectedCampaign={selectedCampaign}
-                            selectedAdAccount={selectedAdAccount}
-                            adSets={adSets}
-                            copyTemplates={adAccountSettings.copyTemplates || {}}
-                            defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
-                            selectedTemplate={selectedTemplate}
-                            setSelectedTemplate={setSelectedTemplate}
-                            driveFiles={driveFiles}
-                            setDriveFiles={setDriveFiles}
-                            selectedShopDestination={selectedShopDestination}
-                            setSelectedShopDestination={setSelectedShopDestination}
-                            selectedShopDestinationType={selectedShopDestinationType}
-                            setSelectedShopDestinationType={setSelectedShopDestinationType}
-                            newAdSetName={newAdSetName}
-                            launchPaused={launchPaused}
-                            setLaunchPaused={setLaunchPaused}
-                        />
-                    </div>
-
-                    <div className="flex-1 min-w-0 max-w-[calc(100%-500px-1.5rem)]">
-                        <MediaPreview
-                            files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
-                            setFiles={setFiles}
-                            setDriveFiles={setDriveFiles}
-                            videoThumbs={videoThumbs}
-                        />
-
-                    </div>
+                    <AdCreationForm
+                        isLoading={isLoading}
+                        setIsLoading={setIsLoading}
+                        pages={pages}
+                        pageId={pageId}
+                        setPageId={setPageId}
+                        instagramAccountId={instagramAccountId}
+                        setInstagramAccountId={setInstagramAccountId}
+                        adName={adName}
+                        setAdName={setAdName}
+                        adOrder={adOrder}
+                        setAdOrder={setAdOrder}
+                        selectedItems={selectedItems}
+                        setSelectedItems={setSelectedItems}
+                        onItemToggle={onItemToggle}
+                        adValues={adValues}
+                        setAdValues={setAdValues}
+                        customTextValue={customTextValue}
+                        setCustomTextValue={setCustomTextValue}
+                        messages={messages}
+                        setMessages={setMessages}
+                        headlines={headlines}
+                        setHeadlines={setHeadlines}
+                        descriptions={descriptions}
+                        setDescriptions={setDescriptions}
+                        link={link}
+                        setLink={setLink}
+                        cta={cta}
+                        setCta={setCta}
+                        thumbnail={thumbnail}
+                        setThumbnail={setThumbnail}
+                        files={files}
+                        setFiles={setFiles}
+                        videoThumbs={videoThumbs}
+                        setVideoThumbs={setVideoThumbs}
+                        selectedAdSets={selectedAdSets}
+                        duplicateAdSet={duplicateAdSet}
+                        selectedCampaign={selectedCampaign}
+                        selectedAdAccount={selectedAdAccount}
+                        adSets={adSets}
+                        copyTemplates={adAccountSettings.copyTemplates || {}}
+                        defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
+                        selectedTemplate={selectedTemplate}
+                        setSelectedTemplate={setSelectedTemplate}
+                        driveFiles={driveFiles}
+                        setDriveFiles={setDriveFiles}
+                        selectedShopDestination={selectedShopDestination}
+                        setSelectedShopDestination={setSelectedShopDestination}
+                        selectedShopDestinationType={selectedShopDestinationType}
+                        setSelectedShopDestinationType={setSelectedShopDestinationType}
+                        newAdSetName={newAdSetName}
+                        launchPaused={launchPaused}
+                        setLaunchPaused={setLaunchPaused}
+                    />
                 </div>
 
-                {showOnboardingPopup && (
-                    <OnboardingPopup
-                        userName={userName}
-                        hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
-                        onClose={handleCloseOnboarding}
-                        onGoToSettings={() => {
-                            console.log("onGoToSettings called")
-                            console.log("navigate function:", navigate)
-                            console.log("typeof navigate:", typeof navigate)
-
-                            try {
-                                // Navigate FIRST, before unmounting the component
-                                console.log("About to call navigate")
-                                navigate("/settings")
-                                console.log("Navigate called successfully")
-
-                                // Then update state and save settings
-                                setHasSeenOnboarding(true)
-                                setShowOnboardingPopup(false)
-
-                                // Save settings after navigation
-                                fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
-                                    method: "POST",
-                                    credentials: "include",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
-                                }).catch(error => console.error("Settings save error:", error))
-
-                            } catch (error) {
-                                console.error("Error in onGoToSettings:", error)
-                            }
-                        }}
+                <div className="flex-1 min-w-0 max-w-[calc(100%-500px-1.5rem)]">
+                    <MediaPreview
+                        files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
+                        setFiles={setFiles}
+                        setDriveFiles={setDriveFiles}
+                        videoThumbs={videoThumbs}
                     />
-                )}
 
-                <Toaster richColors position="bottom-right" closeButton />
+                </div>
             </div>
+
+            {showOnboardingPopup && (
+                <OnboardingPopup
+                    userName={userName}
+                    hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
+                    onClose={handleCloseOnboarding}
+                    onGoToSettings={() => {
+                        console.log("onGoToSettings called")
+                        console.log("navigate function:", navigate)
+                        console.log("typeof navigate:", typeof navigate)
+
+                        try {
+                            // Navigate FIRST, before unmounting the component
+                            console.log("About to call navigate")
+                            navigate("/settings")
+                            console.log("Navigate called successfully")
+
+                            // Then update state and save settings
+                            setHasSeenOnboarding(true)
+                            setShowOnboardingPopup(false)
+
+                            // Save settings after navigation
+                            fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+                                method: "POST",
+                                credentials: "include",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
+                            }).catch(error => console.error("Settings save error:", error))
+
+                        } catch (error) {
+                            console.error("Error in onGoToSettings:", error)
+                        }
+                    }}
+                />
+            )}
+
+            <Toaster richColors position="bottom-right" closeButton />
         </div>
     )
 }
