@@ -186,13 +186,57 @@ export default function AdCreationForm({
 
 
 
+  // const handleDriveClick = async () => {
+  //   if (googleAuthStatus.authenticated) {
+  //     // Already authenticated, open picker
+  //     openPicker(googleAuthStatus.accessToken);
+  //   } else {
+  //     // Need to authenticate first
+  //     window.location.href = "https://meta-ad-uploader-server-production.up.railway.app/auth/google";
+  //   }
+  // };
+
   const handleDriveClick = async () => {
     if (googleAuthStatus.authenticated) {
       // Already authenticated, open picker
       openPicker(googleAuthStatus.accessToken);
     } else {
-      // Need to authenticate first
-      window.location.href = "https://meta-ad-uploader-server-production.up.railway.app/auth/google";
+      // Need to authenticate first - open in new window with popup parameter
+      const authWindow = window.open(
+        "https://meta-ad-uploader-server-production.up.railway.app/auth/google?popup=true",
+        "_blank",
+        "width=500,height=600"
+      );
+
+      const authInterval = setInterval(async () => {
+        if (authWindow.closed) {
+          clearInterval(authInterval);
+          try {
+            const res = await axios.get(
+              "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+              { withCredentials: true }
+            );
+            if (res.data.authenticated) {
+              setGoogleAuthStatus({
+                checking: false,
+                authenticated: true,
+                accessToken: res.data.accessToken,
+              });
+              openPicker(res.data.accessToken);
+            }
+          } catch (error) {
+            console.error("Failed to check auth status:", error);
+          }
+        }
+      }, 1000);
+
+      // Cleanup interval after 5 minutes to prevent memory leaks
+      setTimeout(() => {
+        clearInterval(authInterval);
+        if (!authWindow.closed) {
+          authWindow.close();
+        }
+      }, 300000);
     }
   };
 
@@ -320,6 +364,41 @@ export default function AdCreationForm({
       }
     });
   }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
+
+  // Add this useEffect after your existing useEffects
+  useEffect(() => {
+    const handler = async (event) => {
+      // Security: check origin to prevent malicious messages
+      if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
+        return;
+      }
+
+      if (event.data === "google_auth_success") {
+        try {
+          const res = await axios.get(
+            "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+            { withCredentials: true }
+          );
+          if (res.data.authenticated) {
+            setGoogleAuthStatus({
+              checking: false,
+              authenticated: true,
+              accessToken: res.data.accessToken,
+            });
+            openPicker(res.data.accessToken);
+          }
+        } catch (error) {
+          console.error("Failed to verify auth status:", error);
+          toast.error("Failed to verify Google authentication");
+        }
+      } else if (event.data === "google_auth_error") {
+        toast.error("Google authentication failed");
+      }
+    };
+
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
 
 
   // Functions for managing dynamic input fields
