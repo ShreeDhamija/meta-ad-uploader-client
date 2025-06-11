@@ -186,22 +186,30 @@ export default function AdCreationForm({
 
 
 
-  // const handleDriveClick = async () => {
-  //   if (googleAuthStatus.authenticated) {
-  //     // Already authenticated, open picker
-  //     openPicker(googleAuthStatus.accessToken);
-  //   } else {
-  //     // Need to authenticate first
-  //     window.location.href = "https://meta-ad-uploader-server-production.up.railway.app/auth/google";
-  //   }
-  // };
 
-  const handleDriveClick = () => {
-    if (googleAuthStatus.authenticated) {
-      openPicker(googleAuthStatus.accessToken);
-      return;
+
+  const handleDriveClick = async () => {
+    try {
+      // 🔁 Check if already authenticated
+      const res = await axios.get(
+        "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+        { withCredentials: true }
+      );
+
+      if (res.data.authenticated && res.data.accessToken) {
+        setGoogleAuthStatus({
+          authenticated: true,
+          checking: false,
+          accessToken: res.data.accessToken
+        });
+        openPicker(res.data.accessToken);
+        return;
+      }
+    } catch (err) {
+      console.warn("No valid Google session, proceeding to popup login.");
     }
 
+    // ⬇️ If not authenticated, fallback to popup login
     const authWindow = window.open(
       "https://meta-ad-uploader-server-production.up.railway.app/auth/google?popup=true",
       "_blank",
@@ -222,7 +230,8 @@ export default function AdCreationForm({
     const listener = (event) => {
       if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") return;
 
-      if (event.data.type === "google-auth-success") {
+      const { type, accessToken } = event.data || {};
+      if (type === "google-auth-success") {
         clearTimeout(timeoutId);
         window.removeEventListener("message", listener);
         authWindow.close();
@@ -230,15 +239,21 @@ export default function AdCreationForm({
         setGoogleAuthStatus({
           authenticated: true,
           checking: false,
-          accessToken: event.data.accessToken
+          accessToken
         });
 
-        openPicker(event.data.accessToken);
+        openPicker(accessToken);
+      } else if (type === "google-auth-error") {
+        clearTimeout(timeoutId);
+        window.removeEventListener("message", listener);
+        authWindow.close();
+        toast.error("Google authentication failed");
       }
     };
 
     window.addEventListener("message", listener);
   };
+
 
 
 
