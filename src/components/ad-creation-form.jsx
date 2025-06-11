@@ -294,6 +294,9 @@ export default function AdCreationForm({
         }));
 
         setDriveFiles((prev) => [...prev, ...selected]);
+        if (data.action === "picked" || data.action === "cancel") {
+          picker.setVisible(false);
+        }
       })
       .build();
 
