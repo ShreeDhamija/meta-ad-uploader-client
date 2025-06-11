@@ -196,49 +196,50 @@ export default function AdCreationForm({
   //   }
   // };
 
-  const handleDriveClick = async () => {
+  const handleDriveClick = () => {
     if (googleAuthStatus.authenticated) {
-      // Already authenticated, open picker
       openPicker(googleAuthStatus.accessToken);
-    } else {
-      // Need to authenticate first - open in new window with popup parameter
-      const authWindow = window.open(
-        "https://meta-ad-uploader-server-production.up.railway.app/auth/google?popup=true",
-        "_blank",
-        "width=500,height=600"
-      );
-
-      const authInterval = setInterval(async () => {
-        if (authWindow.closed) {
-          clearInterval(authInterval);
-          try {
-            const res = await axios.get(
-              "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
-              { withCredentials: true }
-            );
-            if (res.data.authenticated) {
-              setGoogleAuthStatus({
-                checking: false,
-                authenticated: true,
-                accessToken: res.data.accessToken,
-              });
-              openPicker(res.data.accessToken);
-            }
-          } catch (error) {
-            console.error("Failed to check auth status:", error);
-          }
-        }
-      }, 1000);
-
-      // Cleanup interval after 5 minutes to prevent memory leaks
-      setTimeout(() => {
-        clearInterval(authInterval);
-        if (!authWindow.closed) {
-          authWindow.close();
-        }
-      }, 300000);
+      return;
     }
+
+    const authWindow = window.open(
+      "https://meta-ad-uploader-server-production.up.railway.app/auth/google?popup=true",
+      "_blank",
+      "width=500,height=600"
+    );
+
+    if (!authWindow) {
+      toast.error("Popup blocked. Please allow popups and try again.");
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      window.removeEventListener("message", listener);
+      if (!authWindow.closed) authWindow.close();
+      toast.error("Google login timed out.");
+    }, 15000);
+
+    const listener = (event) => {
+      if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") return;
+
+      if (event.data.type === "google-auth-success") {
+        clearTimeout(timeoutId);
+        window.removeEventListener("message", listener);
+        authWindow.close();
+
+        setGoogleAuthStatus({
+          authenticated: true,
+          checking: false,
+          accessToken: event.data.accessToken
+        });
+
+        openPicker(event.data.accessToken);
+      }
+    };
+
+    window.addEventListener("message", listener);
   };
+
 
 
   const openPicker = (token) => {
@@ -367,31 +368,22 @@ export default function AdCreationForm({
 
   // Add this useEffect after your existing useEffects
   useEffect(() => {
-    const handler = async (event) => {
-      // Security: check origin to prevent malicious messages
+    const handler = (event) => {
       if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
         return;
       }
 
-      if (event.data === "google_auth_success") {
-        try {
-          const res = await axios.get(
-            "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
-            { withCredentials: true }
-          );
-          if (res.data.authenticated) {
-            setGoogleAuthStatus({
-              checking: false,
-              authenticated: true,
-              accessToken: res.data.accessToken,
-            });
-            openPicker(res.data.accessToken);
-          }
-        } catch (error) {
-          console.error("Failed to verify auth status:", error);
-          toast.error("Failed to verify Google authentication");
-        }
-      } else if (event.data === "google_auth_error") {
+      const { type, accessToken } = event.data || {};
+
+      if (type === "google-auth-success") {
+        if (!accessToken) return;
+        setGoogleAuthStatus({
+          checking: false,
+          authenticated: true,
+          accessToken
+        });
+        openPicker(accessToken);
+      } else if (type === "google-auth-error") {
         toast.error("Google authentication failed");
       }
     };
