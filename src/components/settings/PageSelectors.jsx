@@ -71,7 +71,7 @@ export default function PageSelectors({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0 rounded-xl bg-white" align="start">
+            <PopoverContent className="min-w-[--radix-popover-trigger-width] p-0 rounded-xl bg-white" align="start">
               <Command filter={() => 1} loop={false}>
                 <CommandInput
                   placeholder="Search pages..."
@@ -141,7 +141,7 @@ export default function PageSelectors({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0 rounded-xl bg-white" align="start">
+            <PopoverContent className="min-w-[--radix-popover-trigger-width] p-0 rounded-xl bg-white" align="start">
               <Command filter={() => 1} loop={false}>
                 <CommandInput
                   placeholder="Search IG accounts..."

@@ -29,8 +29,7 @@ export default function DefaultCTA({ defaultCTA, setDefaultCTA }) {
             {/* Section Header */}
             <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                    <img
-                        src="https://meta-ad-uploader-server-production.up.railway.app/icons/cta.svg"
+                    <img src="https://unpkg.com/@mynaui/icons/icons/click.svg"
                         alt="CTA icon"
                         className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
                     />
