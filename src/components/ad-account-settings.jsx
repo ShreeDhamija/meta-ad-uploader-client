@@ -558,7 +558,7 @@ export default function AdAccountSettings({
                                   </Checkbox.Indicator>
                                 </Checkbox>
                                 <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
-                                  <span className="truncate">{adset.name || adset.id}</span>
+                                  <span className="truncate leading-[1.5]">{adset.name || adset.id}</span>
                                   {adset.status === "ACTIVE" && (
                                     <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
                                   )}
