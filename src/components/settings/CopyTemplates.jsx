@@ -161,7 +161,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         templates: adSettings.copyTemplates || {},
         defaultName: adSettings.defaultTemplateName || "",
       },
-    })
+    });
+
+    if (!firstTemplate) {
+      setTemplateName("");
+      setPrimaryTexts([""]);
+      setHeadlines([""]);
+    }
   }, [selectedAdAccount, adSettings])
 
   useEffect(() => {
