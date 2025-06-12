@@ -294,14 +294,18 @@ export default function AdAccountSettings({
   return (
     <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
       <CardHeader>
-        <CardTitle>Ad Account Settings</CardTitle>
+        <CardTitle>
+          <img src="https://unpkg.com/@mynaui/icons/icons/cog-one.svg" className="w-5 h-5" />
+          Ad Account Configuration</CardTitle>
         <CardDescription>Select your ad account and campaign</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="adAccount">Ad Account</Label>
+              <Label htmlFor="adAccount">
+                <img src="https://unpkg.com/@mynaui/icons/icons/user-circle.svg" className="w-4 h-4" />
+                Ad Account</Label>
               <RefreshCcw
                 className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
                 onClick={refreshAdAccounts}
@@ -384,7 +388,10 @@ export default function AdAccountSettings({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="campaign">Select a Campaign to launch Ads in</Label>
+              <Label htmlFor="campaign">
+                <img src="https://unpkg.com/@mynaui/icons/icons/folder.svg" className="w-4 h-4" />
+                Select a Campaign to launch Ads in
+              </Label>
               <RefreshCcw
                 className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
                 onClick={refreshCampaigns}
@@ -467,7 +474,10 @@ export default function AdAccountSettings({
 
           <div className="space-y-2 ">
             <div className="flex items-center justify-between">
-              <Label>Launch in a new or existing ad set</Label>
+              <Label>
+                <img src="https://unpkg.com/@mynaui/icons/icons/grid.svg" className="w-4 h-4" />
+                Launch in a new or existing ad set
+              </Label>
               <RefreshCcw
                 className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
                 onClick={refreshAdSets}
@@ -594,7 +604,10 @@ export default function AdAccountSettings({
                   <X className="h-3 w-3 text-gray-700" />
                 </button>
                 <div className="flex-1 space-y-2">
-                  <Label htmlFor="duplicateAdSet" className="block" >Select an ad set shell to duplicate</Label>
+                  <Label htmlFor="duplicateAdSet" className="block" >
+                    <img src="https://unpkg.com/@mynaui/icons/icons/copy.svg" className="w-3 h-3" />
+                    Select an ad set shell to duplicate
+                  </Label>
                   <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
 
                   <Popover open={openDuplicateAdSet} onOpenChange={setOpenDuplicateAdSet}>

@@ -721,7 +721,9 @@ export default function AdCreationForm({
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
       <CardHeader>
-        <CardTitle>Create a New Ad</CardTitle>
+        <CardTitle>
+          <img src="https://unpkg.com/@mynaui/icons/icons/plus-hexagon.svg" className="w-5 h-5" />
+          Create a New Ad</CardTitle>
         <CardDescription>Fill in the details to create your ad</CardDescription>
       </CardHeader>
       <CardContent>
@@ -731,7 +733,7 @@ export default function AdCreationForm({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="flex items-center gap-2">
-                    <img src="https://unpkg.com/@mynaui/icons/icons/brand-facebook.svg" alt="" className="w-4 h-4" />
+                    <img src="https://unpkg.com/@mynaui/icons/icons/brand-facebook.svg" className="w-4 h-4" />
                     Select a Page
                   </Label>
                 </div>
@@ -832,7 +834,7 @@ export default function AdCreationForm({
 
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  <img src="https://unpkg.com/@mynaui/icons/icons/brand-instagram.svg" alt="" className="w-4 h-4" />
+                  <img src="https://unpkg.com/@mynaui/icons/icons/brand-instagram.svg" className="w-4 h-4" />
                   Select Instagram Account
                 </Label>
                 <Popover open={openInstagram} onOpenChange={setOpenInstagram}>
@@ -918,7 +920,7 @@ export default function AdCreationForm({
 
             <div className="space-y-1">
               <Label htmlFor="adName" className="flex items-center gap-2">
-                <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" alt="" className="w-4 h-4" />
+                <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" className="w-4 h-4" />
                 Ad Name (Internal Name)
               </Label>
               <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
@@ -963,7 +965,7 @@ export default function AdCreationForm({
             <div className="space-y-2">
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  <img src="https://unpkg.com/@mynaui/icons/icons/copy.svg" alt="" className="w-4 h-4" />
+                  <img src="https://unpkg.com/@mynaui/icons/icons/file-text.svg" className="w-4 h-4" />
                   Select Copy Template
                 </Label>
                 <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
@@ -1128,7 +1130,7 @@ export default function AdCreationForm({
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="Link (URL)" className="flex items-center gap-2">
-                  <img src="https://unpkg.com/@mynaui/icons/icons/link-one.svg" alt="" className="w-4 h-4" />
+                  <img src="https://unpkg.com/@mynaui/icons/icons/link-one.svg" className="w-4 h-4" />
                   Link (URL)
                 </Label>
                 <p className="text-gray-500 text-[12px] font-regular">
@@ -1148,7 +1150,7 @@ export default function AdCreationForm({
 
               <div className="space-y-2">
                 <Label htmlFor="cta" className="flex items-center gap-2">
-                  <img src="https://unpkg.com/@mynaui/icons/icons/click.svg" alt="" className="w-4 h-4" />
+                  <img src="https://unpkg.com/@mynaui/icons/icons/click.svg" className="w-4 h-4" />
                   Call-to-Action (CTA)
                 </Label>
                 <Select disabled={!isLoggedIn} value={cta} onValueChange={setCta}>
