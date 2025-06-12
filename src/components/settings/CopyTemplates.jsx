@@ -155,6 +155,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   useEffect(() => {
     if (!selectedAdAccount || !adSettings) return
 
+
+
+    const templates = adSettings.copyTemplates || {};
+    const defaultName = adSettings.defaultTemplateName || "";
+    const firstTemplate =
+      defaultName && templates[defaultName]
+        ? defaultName
+        : Object.keys(templates)[0] || "";
+
     dispatch({
       type: "SET_ALL",
       payload: {
