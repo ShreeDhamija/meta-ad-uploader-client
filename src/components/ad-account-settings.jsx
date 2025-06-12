@@ -604,8 +604,8 @@ export default function AdAccountSettings({
                   <X className="h-3 w-3 text-gray-700" />
                 </button>
                 <div className="flex-1 space-y-2">
-                  <Label htmlFor="duplicateAdSet" className="block" >
-                    <img src="https://unpkg.com/@mynaui/icons/icons/copy.svg" className="w-3 h-3" />
+                  <Label htmlFor="duplicateAdSet" className="flex items-center gap-2" >
+                    <img src="https://unpkg.com/@mynaui/icons/icons/copy.svg" className="w-4 h-4" />
                     Select an ad set shell to duplicate
                   </Label>
                   <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
