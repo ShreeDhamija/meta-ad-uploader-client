@@ -294,7 +294,7 @@ export default function AdAccountSettings({
   return (
     <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
       <CardHeader>
-        <CardTitle>
+        <CardTitle className="flex items-center gap-2">
           <img src="https://unpkg.com/@mynaui/icons/icons/cog-one.svg" className="w-5 h-5" />
           Ad Account Configuration</CardTitle>
         <CardDescription>Select your ad account and campaign</CardDescription>
@@ -303,7 +303,7 @@ export default function AdAccountSettings({
         <div className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="adAccount">
+              <Label htmlFor="adAccount" className="flex items-center gap-2">
                 <img src="https://unpkg.com/@mynaui/icons/icons/user-circle.svg" className="w-4 h-4" />
                 Ad Account</Label>
               <RefreshCcw
@@ -388,7 +388,7 @@ export default function AdAccountSettings({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="campaign">
+              <Label htmlFor="campaign" className="flex items-center gap-2">
                 <img src="https://unpkg.com/@mynaui/icons/icons/folder.svg" className="w-4 h-4" />
                 Select a Campaign to launch Ads in
               </Label>
@@ -474,7 +474,7 @@ export default function AdAccountSettings({
 
           <div className="space-y-2 ">
             <div className="flex items-center justify-between">
-              <Label>
+              <Label className="flex items-center gap-2">
                 <img src="https://unpkg.com/@mynaui/icons/icons/grid.svg" className="w-4 h-4" />
                 Launch in a new or existing ad set
               </Label>

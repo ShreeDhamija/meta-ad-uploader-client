@@ -721,7 +721,7 @@ export default function AdCreationForm({
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
       <CardHeader>
-        <CardTitle>
+        <CardTitle className="flex items-center gap-2">
           <img src="https://unpkg.com/@mynaui/icons/icons/plus-hexagon.svg" className="w-5 h-5" />
           Create a New Ad</CardTitle>
         <CardDescription>Fill in the details to create your ad</CardDescription>
