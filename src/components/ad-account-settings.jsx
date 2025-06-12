@@ -297,7 +297,7 @@ export default function AdAccountSettings({
         <CardTitle className="flex items-center gap-2">
           <img src="https://unpkg.com/@mynaui/icons/icons/cog-four.svg" className="w-5 h-5" />
           Ad Account Configuration</CardTitle>
-        <CardDescription>Select your ad account and campaign</CardDescription>
+        <CardDescription>Select your ad account, campaign and ad set</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-4">
