@@ -685,7 +685,7 @@ export default function AdAccountSettings({
                   {duplicateAdSet && (
                     <div className="space-y-2" style={{ marginTop: '20px' }}>
                       <Label htmlFor="newAdSetName" className="block">
-                        New Ad Set Name
+                        New ad set name
                       </Label>
                       <Label className="text-gray-500 text-[12px] font-regular">
                         Enter a custom name for the duplicated ad set

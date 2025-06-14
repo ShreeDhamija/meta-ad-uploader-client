@@ -38,7 +38,7 @@ export default function Settings() {
 
     const tabDescriptionMap = {
         global: "These preferences will apply to ALL ad accounts in your account.",
-        adaccount: "Cofnigure default settings and values to pre-fill into ads for all your ad accounts.",
+        adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
         billing: "Manage your billing methods and invoices here.",
         viewads: "Preview all ads created in the last hour.",
     }

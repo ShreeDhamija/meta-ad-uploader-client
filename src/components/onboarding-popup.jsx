@@ -15,11 +15,12 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             <h2 className="text-xl font-semibold text-[#415363] mb-1">
                                 Welcome to Blip, {userName}!
                             </h2>
-                            <p className="text-gray-500 mb-10">There’s 2 ways to get started</p>
+                            <p className="text-gray-500 mb-10">Start launching ads in 2 minutes</p>
+                            <p className="text-gray-400 mb-10 text-xs">Lets configure your ad accounts with some your preffered values and settings to pre-fill into ads.</p>
 
                             <div className="flex justify-center">
                                 {/* Home Option */}
-                                <button
+                                {/* <button
                                     onClick={() => setStep("home")}
                                     className="group flex flex-col items-center space-y-3 focus:outline-none"
                                 >
@@ -34,7 +35,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                     <p className="text-sm text-gray-800 font-medium text-center">
                                         Start Creating Ads
                                     </p>
-                                </button>
+                                </button> */}
 
                                 {/* Settings Option */}
                                 <button
@@ -55,7 +56,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                         Settings
                                     </div>
                                     <p className="text-sm text-gray-800 font-medium text-center">
-                                        Configure Settings
+                                        Get Started
                                     </p>
                                 </button>
                             </div>
@@ -66,39 +67,44 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                     {step === "home" && (
                         <div key="home" className="w-full animate-fadeSwap text-left flex flex-col md:flex-row gap-6 items-stretch">
                             {/* Left content */}
-                            <div className="flex-1">
-                                <img
-                                    src="https://meta-ad-uploader-server-production.up.railway.app/home.webp"
-                                    alt="Home Icon"
-                                    className="w-14 mb-4"
-                                />
-                                <h2 className="text-[24px] font-semibold text-[#415363] mb-6">Home Page</h2>
+                            <div className="flex-1 flex flex-col justify-between">
+                                {/* Top content block */}
+                                <div>
+                                    <img
+                                        src="https://meta-ad-uploader-server-production.up.railway.app/home.webp"
+                                        alt="Home Icon"
+                                        className="w-14 mb-4"
+                                    />
+                                    <h2 className="text-[24px] font-semibold text-[#415363] mb-6">Home Page</h2>
 
-                                <div className="mb-6">
-                                    <div className="bg-[#FFA500] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
-                                        Step 1
+                                    <div className="mb-6">
+                                        <div className="bg-[#FFA500] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
+                                            Step 1
+                                        </div>
+                                        <p className="text-gray-700 text-sm">
+                                            Pick an ad account, campaign, then choose to launch ads in a new or existing adset.
+                                        </p>
                                     </div>
-                                    <p className="text-gray-700 text-sm">
-                                        Pick an ad account, campaign, then choose to launch ads in a new or existing adset.
-                                    </p>
+
+                                    <div className="mb-8">
+                                        <div className="bg-[#FBB03B] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
+                                            Step 2
+                                        </div>
+                                        <p className="text-gray-700 text-sm">
+                                            Enter your ad info and click Publish Ads!
+                                        </p>
+                                    </div>
                                 </div>
 
-                                <div className="mb-8">
-                                    <div className="bg-[#FBB03B] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
-                                        Step 2
-                                    </div>
-                                    <p className="text-gray-700 text-sm">
-                                        Enter your ad info and click Publish Ads!
-                                    </p>
-                                </div>
-
+                                {/* Bottom aligned button */}
                                 <Button
                                     onClick={onClose}
-                                    className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full"
+                                    className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full mt-4"
                                 >
                                     Start Posting
                                 </Button>
                             </div>
+
 
                             {/* Right image */}
                             <div className="flex-1 bg-[#FDCEDF] rounded-lg overflow-hidden flex items-center justify-center">
