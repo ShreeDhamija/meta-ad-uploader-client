@@ -723,8 +723,7 @@ export default function AdCreationForm({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <img src="https://unpkg.com/@mynaui/icons/icons/plus-hexagon.svg" className="w-5 h-5" />
-          Create a New Ad</CardTitle>
-        <CardDescription>Fill in the details to create your ad</CardDescription>
+          Select ad preferences</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleCreateAd} className="space-y-6">
@@ -1302,7 +1301,7 @@ export default function AdCreationForm({
                 launchPaused ? "text-red-600" : "" // Conditional: red text if PAUSED
               )}
             >
-              Launch ads as paused.
+              Publish ads TURNED OFF
             </Label>
           </div>
 
