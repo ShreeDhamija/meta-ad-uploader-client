@@ -44,6 +44,7 @@ export default function Home() {
     const [instagramAccountId, setInstagramAccountId] = useState("")
     const [link, setLink] = useState("")
     const [cta, setCta] = useState("LEARN_MORE")
+
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("")
     const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName", "iteration", "customText"]);
@@ -69,23 +70,23 @@ export default function Home() {
     if (authLoading) return null
 
 
-    // useEffect(() => {
-    //     // if (!authLoading && !isLoggedIn) {
-    //     //     navigate("/login");
-    // }
-    // }, [authLoading, isLoggedIn]);
+    useEffect(() => {
+        if (!authLoading && !isLoggedIn) {
+            navigate("/login");
+        }
+    }, [authLoading, isLoggedIn]);
 
 
     //  Show onboarding popup once settings are loaded
     useEffect(() => {
-        // if (!isLoggedIn || loading) return
+        if (!isLoggedIn || loading) return
         if (!hasSeenOnboarding) {
             setShowOnboardingPopup(true)
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
-        // if (!isLoggedIn || loading) return;
+        if (!isLoggedIn || loading) return;
         const { values, order, selected } = adNameFormula;
         setAdValues({
             dateType: values?.dateType || "MonthYYYY",
