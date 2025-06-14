@@ -128,6 +128,31 @@ export default function AdCreationForm({
       page.instagramAccount.username.toLowerCase().includes(instagramSearchValue.toLowerCase())
     )
 
+  // const refreshPages = async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-pages", {
+  //       credentials: "include"
+  //     });
+
+  //     const data = await res.json();
+
+  //     if (data.pages) {
+  //       toast.success("Pages refreshed successfully!");
+  //       // You should expose a `setPages` prop and update state here:
+  //       setPageId(""); // Optional: clear selected page
+  //       setInstagramAccountId(""); // Optional: clear selected IG
+  //       setPages(data.pages); // ← You'll need to pass `setPages` as a prop from parent
+  //     } else {
+  //       toast.error("No pages returned.");
+  //     }
+  //   } catch (err) {
+  //     toast.error(`Failed to fetch pages: ${err.message || "Unknown error"}`);
+  //     console.error("Failed to fetch pages:", err);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
   const refreshPages = async () => {
     setIsLoading(true);
     try {
@@ -139,10 +164,16 @@ export default function AdCreationForm({
 
       if (data.pages) {
         toast.success("Pages refreshed successfully!");
-        // You should expose a `setPages` prop and update state here:
-        setPageId(""); // Optional: clear selected page
-        setInstagramAccountId(""); // Optional: clear selected IG
-        setPages(data.pages); // ← You'll need to pass `setPages` as a prop from parent
+        setPages(data.pages);
+
+        // ✅ Retain selected page and IG account if still valid
+        const updatedPage = data.pages.find((p) => p.id === pageId);
+        const updatedInstagram = data.pages
+          .find((p) => p.instagramAccount?.id === instagramAccountId)
+          ?.instagramAccount;
+
+        if (!updatedPage) setPageId("");
+        if (!updatedInstagram) setInstagramAccountId("");
       } else {
         toast.error("No pages returned.");
       }
@@ -153,6 +184,7 @@ export default function AdCreationForm({
       setIsLoading(false);
     }
   };
+
 
 
   useEffect(() => {

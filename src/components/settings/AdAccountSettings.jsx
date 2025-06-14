@@ -223,6 +223,7 @@ export default function AdAccountSettings() {
             setSelectedPage={setSelectedPage}
             selectedInstagram={selectedInstagram}
             setSelectedInstagram={setSelectedInstagram}
+
           />
 
           <CopyTemplates selectedAdAccount={selectedAdAccount} adSettings={adSettings} setAdSettings={setAdSettings} />

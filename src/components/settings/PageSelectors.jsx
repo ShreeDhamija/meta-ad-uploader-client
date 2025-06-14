@@ -13,16 +13,17 @@ import {
   CommandItem,
 } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
-import { ChevronsUpDown } from "lucide-react"
+import { ChevronsUpDown, RefreshCcw } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
 
 export default function PageSelectors({
   selectedPage,
   setSelectedPage,
   selectedInstagram,
-  setSelectedInstagram
+  setSelectedInstagram,
+
 }) {
-  const { pages } = useAppData()
+  const { pages, setPages } = useAppData()
 
   //  const [selectedPage, setSelectedPage] = useState(null)
   const [openPageDropdown, setOpenPageDropdown] = useState(false)
@@ -31,19 +32,55 @@ export default function PageSelectors({
   const [openInstagramDropdown, setOpenInstagramDropdown] = useState(false)
   const [pageSearch, setPageSearch] = useState("")
   const [instagramSearch, setInstagramSearch] = useState("")
+  const refreshPages = async () => {
+    try {
+      const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-pages", {
+        credentials: "include"
+      });
+
+      const data = await res.json();
+
+      if (data.pages) {
+        setPages(data.pages);
+
+        // 🔒 Re-find selected page in updated list to ensure it still exists
+        const updatedPage = data.pages.find(p => p.id === selectedPage?.id);
+        const updatedInstagram = data.pages
+          .find(p => p.instagramAccount?.id === selectedInstagram?.id)
+          ?.instagramAccount;
+
+        if (updatedPage) setSelectedPage(updatedPage);
+        else setSelectedPage(null); // Clear if not found
+
+        if (updatedInstagram) setSelectedInstagram(updatedInstagram);
+        else setSelectedInstagram(null);
+      } else {
+        console.warn("No pages returned.");
+      }
+    } catch (err) {
+      console.error("Failed to fetch pages:", err.message || err);
+    }
+  };
 
   return (
     <div className="bg-[#f5f5f5] rounded-xl p-4 space-y-4">
-      <div className="flex items-center gap-2 mb-1">
-        <img
-          src="https://meta-ad-uploader-server-production.up.railway.app/icons/meta.svg"
-          alt="Default FB Page Icon"
-          className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60"
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <img
+            src="https://meta-ad-uploader-server-production.up.railway.app/icons/meta.svg"
+            alt="Default FB Page Icon"
+            className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60"
+          />
+          <label className="text-sm text-zinc-950 block font-medium">
+            Default Linked Facebook and Instagram page
+          </label>
+        </div>
+        <RefreshCcw
+          className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
+          onClick={refreshPages}
         />
-        <label className="text-sm text-zinc-950 block font-medium">
-          Default Linked Facebook and Instagram page
-        </label>
       </div>
+
 
       <div className="space-y-4">
         {/* Facebook Page Dropdown */}
