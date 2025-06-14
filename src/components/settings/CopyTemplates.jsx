@@ -550,7 +550,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
 
             {/* Header row: title + close - make this sticky */}
-            <div className="sticky top-0 bg-white z-10 pb-3 border-b border-gray-200 -mx-6 px-6">
+            <div className="sticky top-0 bg-white z-10 pb-3 -mx-6 px-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-zinc-900">Recently Created Ad Copy</h2>
                 <Button
@@ -589,12 +589,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     </Button>
                   </div> */}
                   {/* Ad title + import button */}
-                  <div className="flex items-start justify-between gap-4">
-                    <h3 className="text-md font-bold text-zinc-800 flex-1 pr-2 break-words">
+                  <div className="flex items-start justify-between gap-4 w-full">
+                    <h3 className="text-md font-bold text-zinc-800 flex-1 min-w-0 break-words">
                       {ad.adName || `Ad ${index + 1}`}
                     </h3>
                     <Button
-                      className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black flex-shrink-0"
+                      className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black shrink-0"
                       onClick={() => {
                         setPrimaryTexts(ad.primaryTexts.slice(0, 5))
                         setHeadlines(ad.headlines.slice(0, 5))
