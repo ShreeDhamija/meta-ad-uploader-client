@@ -130,6 +130,22 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [showImportPopup, setShowImportPopup] = useState(false)
   const [recentAds, setRecentAds] = useState([])
   const [isFetchingCopy, setIsFetchingCopy] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  // Add this useEffect after your existing useEffects
+  useEffect(() => {
+    if (!showImportPopup) return
+
+    const handleScroll = (e) => {
+      setIsScrolled(e.target.scrollTop > 0)
+    }
+
+    const scrollContainer = document.querySelector('.import-popup-scroll')
+    if (scrollContainer) {
+      scrollContainer.addEventListener('scroll', handleScroll)
+      return () => scrollContainer.removeEventListener('scroll', handleScroll)
+    }
+  }, [showImportPopup])
 
 
   useEffect(() => {
@@ -545,10 +561,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         </div>
       </div>
       {showImportPopup && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
-          <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[700px] shadow-xl relative border border-gray-200">
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center" style={{ top: 0, left: 0, right: 0, bottom: 0 }}>
+          <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[700px] shadow-xl relative border border-gray-200 import-popup-scroll">
             {/* Header row: title + close - make this sticky */}
-            <div className="sticky top-0 bg-white z-10 p-6 pb-3">
+            <div className={`sticky top-0 bg-white z-10 px-6 py-3 ${isScrolled ? 'border-b border-gray-200' : ''}`}>
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-zinc-900">Recently Created Ad Copy</h2>
                 <Button
