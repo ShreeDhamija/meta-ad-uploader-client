@@ -42,6 +42,14 @@ export default function Settings() {
         billing: "Manage your billing methods and invoices here.",
         viewads: "Preview all ads created in the last hour.",
     }
+    // below tabDescriptionMap
+    const tabLabelMap = {
+        global: "Global",
+        adaccount: "Ad Account",
+        billing: "Billing",
+        viewads: "View Ads",
+    };
+
 
     const handleCloseSettingsPopup = () => {
         setShowSettingsPopup(false);
@@ -144,7 +152,9 @@ export default function Settings() {
             <main className="flex-1 flex flex-col items-center justify-start p-10 bg-white">
                 <div className="w-full max-w-3xl">
                     <p className="text-sm text-gray-400 mb-1">
-                        Settings / {activeTab.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, str => str.toUpperCase())}
+                        {/* Settings / {activeTab.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, str => str.toUpperCase())} */}
+                        Settings / {tabLabelMap[activeTab]}
+
                     </p>
                     <h1 className="text-xl font-semibold mb-1 text-left">
                         {activeTab === "global"

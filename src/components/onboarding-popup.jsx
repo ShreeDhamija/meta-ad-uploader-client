@@ -6,18 +6,18 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-8 py-10 w-[620px] relative overflow-hidden text-center">
+            <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-8 py-10 max-w-[620px] relative overflow-hidden text-center">
                 <div className="relative w-full transition-all duration-300">
                     {/* INITIAL STEP */}
                     {step === "initial" && (
                         <div key="initial" className="w-full animate-fadeSwap">
                             <div className="text-4xl mb-4">👋</div>
-                            <h2 className="text-2xl font-semibold text-[#415363] mb-1">
+                            <h2 className="text-xl font-semibold text-[#415363] mb-1">
                                 Welcome to Blip, {userName}!
                             </h2>
                             <p className="text-gray-500 mb-10">There’s 2 ways to get started</p>
 
-                            <div className="flex flex-col sm:flex-row justify-center gap-10 sm:gap-8">
+                            <div className="flex justify-center">
                                 {/* Home Option */}
                                 <button
                                     onClick={() => setStep("home")}
