@@ -195,6 +195,7 @@ export default function Home() {
                         isLoading={isLoading}
                         setIsLoading={setIsLoading}
                         pages={pages}
+                        setPages={setPages}
                         pageId={pageId}
                         setPageId={setPageId}
                         instagramAccountId={instagramAccountId}

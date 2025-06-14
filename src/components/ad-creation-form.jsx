@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { ChevronDown, Loader2, Plus, Trash2, Upload } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { ChevronsUpDown } from "lucide-react"
+import { ChevronsUpDown, RefreshCcw } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
 import ShopDestinationSelector from "@/components/shop-destination-selector"
@@ -25,6 +25,7 @@ export default function AdCreationForm({
   isLoading,
   setIsLoading,
   pages,
+  setPages,
   pageId,
   setPageId,
   instagramAccountId,
@@ -126,6 +127,33 @@ export default function AdCreationForm({
     .filter((page) =>
       page.instagramAccount.username.toLowerCase().includes(instagramSearchValue.toLowerCase())
     )
+
+  const refreshPages = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-pages", {
+        credentials: "include"
+      });
+
+      const data = await res.json();
+
+      if (data.pages) {
+        toast.success("Pages refreshed successfully!");
+        // You should expose a `setPages` prop and update state here:
+        setPageId(""); // Optional: clear selected page
+        setInstagramAccountId(""); // Optional: clear selected IG
+        setPages(data.pages); // ← You'll need to pass `setPages` as a prop from parent
+      } else {
+        toast.error("No pages returned.");
+      }
+    } catch (err) {
+      toast.error(`Failed to fetch pages: ${err.message || "Unknown error"}`);
+      console.error("Failed to fetch pages:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   useEffect(() => {
     const adName = computeAdName(null, adValues.dateType);  // <-- Pass dateType explicitly
@@ -735,6 +763,11 @@ export default function AdCreationForm({
                     <img src="https://unpkg.com/@mynaui/icons/icons/brand-facebook.svg" className="w-4 h-4" />
                     Select a Page
                   </Label>
+                  <RefreshCcw
+                    className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
+                    onClick={refreshPages}
+                  />
+
                 </div>
                 <Popover open={openPage} onOpenChange={setOpenPage}>
                   <PopoverTrigger asChild>
