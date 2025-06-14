@@ -16,11 +16,7 @@ export default function GlobalSettings() {
 
 
   const [customThumbnail, setCustomThumbnail] = useState(false)
-  // const [adTypeOption, setAdTypeOption] = useState("")
-  // const [dateOption, setDateOption] = useState("")
-  // const [useFileName, setUseFileName] = useState(false)
   const { adNameFormula } = useGlobalSettings();
-  //const { globalSettings } = useGlobalSettings();
   const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
 
   const [adOrder, setAdOrder] = useState(() => adNameFormula.order || defaultOrder);
@@ -51,12 +47,6 @@ export default function GlobalSettings() {
     }
   }, [adNameFormula]);
 
-
-  // const previewParts = adOrder.map((key) => {
-  //   if (key === "adType") return adValues.adType;
-  //   if (key === "dateType") return adValues.dateType;
-  //   if (key === "fileName") return adValues.useFileName ? "File" : null;
-  // }).filter(Boolean);
 
 
   return (

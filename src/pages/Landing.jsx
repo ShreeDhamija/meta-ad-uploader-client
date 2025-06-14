@@ -115,14 +115,14 @@ const Landing = () => {
 
             <section className={styles.hero}>
                 <h1>
-                    Save 10 hours of work a week by <br />
-                    Batch uploading 100s of ads in a click
+                    The simplest, quickest<br>
+                    </br> bulk ad uploader for Meta.
                 </h1>
 
                 <div className={styles.featuresList}>
                     <div className={styles.featureItem}>
                         <img src={checkIcon || "/placeholder.svg"} alt="" />
-                        <span>Launch 100s of ads together</span>
+                        <span>Launch 100s of ads in seconds</span>
                     </div>
                     <div className={styles.featureItem}>
                         <img src={checkIcon || "/placeholder.svg"} alt="" />
@@ -130,12 +130,13 @@ const Landing = () => {
                     </div>
                     <div className={styles.featureItem}>
                         <img src={checkIcon || "/placeholder.svg"} alt="" />
-                        <span>Save your settings and launch an ad in seconds</span>
+                        <span>Auto-imports all settings for instant use
+                        </span>
                     </div>
                 </div>
                 <div className={styles.cta}>
                     <button>Start Posting Ads</button>
-                    {/* <button className={styles.demo}>Get A Demo</button> */}
+
                 </div>
 
                 <p className={styles.subText}>No CC required. 14 day free trial.</p>
@@ -153,11 +154,10 @@ const Landing = () => {
                 </div>
             </section>
             <section id="about" className={styles.featuresIntro}>
-                <span>No more context switching</span>
+                <span>Escape button clicking hell</span>
                 <h2>The fastest way to manage multiple ad accounts</h2>
                 <p>
-                    No bulk creative upload flow. Copy-pasting text over and over. Settings that don't persist between sessions.
-                    Time wasted navigating a sluggish UI.
+                    End context-switching whiplash. No more selecting the same settings over and over, copy-pasting text dozens of times, or sluggish UI.
                 </p>
             </section>
             <section id="features" className={styles.featureBlocks}>
@@ -167,7 +167,7 @@ const Landing = () => {
                     </div>
                     <h3>Upload multiple creatives at once</h3>
                     <p>
-                        Stop wasting time in Meta Ads Manager's clunky interface. Automate your ad creation flow with lightning-fast
+                        Automate your ad creation flow with lightning-fast
                         bulk uploads, saved settings, and ad previews — all in one clean dashboard.
                     </p>
                 </div>
@@ -177,22 +177,20 @@ const Landing = () => {
                     </div>
                     <h3>Apply saved templates for copy, CTA, and links</h3>
                     <p>
-                        Stop wasting time in Meta Ads Manager's clunky interface. Automate your ad creation flow with lightning-fast
-                        bulk uploads, saved settings, and ad previews — all in one clean dashboard.
+                        Stop wasting time in Meta Ads Manager's clunky interface. Simply select your ideal settings once. We take care of the rest.
                     </p>
                 </div>
             </section>
-            <section id="pricing" className={styles.publishRow}>
+            <section className={styles.publishRow}>
                 <div className={styles.publishCard}>
                     <div className={styles.icon}>
                         <img src={chromeIcon || "/placeholder.svg"} alt="Chrome icon" />
                     </div>
-                    <h3>Publish Straight from your Google Drive</h3>
+                    <h3>Import files straight from your Google Drive</h3>
                     <p>
-                        Stop wasting time in Meta Ads Manager's clunky interface. Automate your ad creation flow with lightning-fast
-                        bulk uploads, saved settings, and ad previews — all in one clean dashboard.
+                        No need to spend hours downloading hundreds of ad assets. With Blip, you can one-click deploy media from your Drive to Meta Ads Manager.
                     </p>
-                    <button className={styles.viewExt}>View Extension</button>
+                    {/* <button className={styles.viewExt}>View Extension</button> */}
                 </div>
 
                 <div className={styles.placeholderCard} />

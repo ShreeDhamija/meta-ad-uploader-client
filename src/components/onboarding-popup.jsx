@@ -79,7 +79,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                         Step 1
                                     </div>
                                     <p className="text-gray-700 text-sm">
-                                        Pick an ad account, campaign and ad set to post. The settings of these might change what fields are available in the ad creation form.
+                                        Pick an ad account, campaign, then choose to launch ads in a new or existing adset.
                                     </p>
                                 </div>
 
@@ -88,7 +88,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                         Step 2
                                     </div>
                                     <p className="text-gray-700 text-sm">
-                                        Fill out all the ad details and hit create ad. Dynamic video creatives might take longer to process than other ads.
+                                        Enter your ad info and click Publish Ads!
                                     </p>
                                 </div>
 

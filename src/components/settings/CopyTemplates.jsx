@@ -429,7 +429,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           disabled={isProcessing}
         />
       </div>
-
+      <label className="text-[14px] text-gray-700">Primary Text</label>
       <div className="space-y-2">
         {primaryTexts.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -464,7 +464,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       </div>
 
       <div className="space-y-2">
-        <label className="text-[14px] text-gray-600">Headline</label>
+        <label className="text-[14px] text-gray-700">Headline</label>
         {headlines.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
             <Input

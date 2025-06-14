@@ -225,16 +225,6 @@ export default function AdAccountSettings() {
             setSelectedInstagram={setSelectedInstagram}
           />
 
-          {/* <CopyTemplates
-            selectedAdAccount={selectedAdAccount}
-            copyTemplates={copyTemplates}
-            setCopyTemplates={setCopyTemplates}
-            defaultTemplateName={adSettings.defaultTemplateName}
-            setDefaultTemplateName={(name) =>
-              setAdSettings((prev) => ({ ...prev, defaultTemplateName: name }))
-            }
-          /> */}
-
           <CopyTemplates selectedAdAccount={selectedAdAccount} adSettings={adSettings} setAdSettings={setAdSettings} />
 
           <LinkParameters

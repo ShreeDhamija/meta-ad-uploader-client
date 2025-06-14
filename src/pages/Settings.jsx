@@ -37,8 +37,8 @@ export default function Settings() {
     // No JavaScript-based responsive state needed
 
     const tabDescriptionMap = {
-        global: "Configure your global preferences here.",
-        adaccount: "Choose your default ad accounts and campaign settings.",
+        global: "These preferences will apply to ALL ad accounts in your account.",
+        adaccount: "Cofnigure default settings and values to pre-fill into ads for all your ad accounts.",
         billing: "Manage your billing methods and invoices here.",
         viewads: "Preview all ads created in the last hour.",
     }
@@ -144,7 +144,7 @@ export default function Settings() {
             <main className="flex-1 flex flex-col items-center justify-start p-10 bg-white">
                 <div className="w-full max-w-3xl">
                     <p className="text-sm text-gray-400 mb-1">
-                        Settings / {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                        Settings / {activeTab.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, str => str.toUpperCase())}
                     </p>
                     <h1 className="text-xl font-semibold mb-1 text-left">
                         {activeTab === "global"

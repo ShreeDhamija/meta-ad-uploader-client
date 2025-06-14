@@ -493,7 +493,7 @@ export default function AdAccountSettings({
                   className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
                   {showDuplicateBlock
-                    ? "Posting to a New Ad Set"
+                    ? "New Ad Set"
                     : selectedAdSets.length > 0
                       ? `${selectedAdSets.length} AdSet${selectedAdSets.length > 1 ? "s" : ""} selected`
                       : "Select Ad Sets"}
@@ -543,7 +543,7 @@ export default function AdAccountSettings({
                         </CommandItem>
                       )}
                     </CommandGroup>
-                    <CommandGroup heading="AdSets">
+                    <CommandGroup heading="Launch in an existing ad set">
                       {filteredAdSets.length > 0 ? (
                         filteredAdSets.map((adset) => {
                           const isSelected = selectedAdSets.includes(adset.id)
@@ -623,7 +623,7 @@ export default function AdAccountSettings({
                           <span className="block truncate flex-1 text-left">
                             {duplicateAdSet
                               ? adSets.find((adset) => adset.id === duplicateAdSet)?.name || duplicateAdSet
-                              : "Existing Ad Sets"}
+                              : "Select existing ad set"}
                           </span>
                         </div>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
