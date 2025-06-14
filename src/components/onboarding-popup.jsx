@@ -12,11 +12,11 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                     {step === "initial" && (
                         <div key="initial" className="w-full animate-fadeSwap">
                             <div className="text-4xl mb-4">👋</div>
-                            <h2 className="text-xl font-semibold text-[#415363] mb-1">
+                            <h2 className="text-2xl font-semibold text-[#415363] mb-1">
                                 Welcome to Blip, {userName}!
                             </h2>
                             <p className="text-gray-500 mb-2">Start launching ads in 2 minutes</p>
-                            <p className="text-gray-400 mb-10 text-xs">Lets configure your ad accounts with some of your <br></br>preferred values and settings to pre-fill into ads.</p>
+                            <p className="text-gray-400 mb-10 text-sm">Lets configure your ad accounts with some of your <br></br>preferred values and settings to pre-fill into ads.</p>
                             <div className="flex justify-center">
                                 {/* Home Option */}
                                 {/* <button
