@@ -15,7 +15,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             <h2 className="text-xl font-semibold text-[#415363] mb-1">
                                 Welcome to Blip, {userName}!
                             </h2>
-                            <p className="text-gray-500 mb-12">Start launching ads in 2 minutes</p>
+                            <p className="text-gray-500 mb-2">Start launching ads in 2 minutes</p>
                             <p className="text-gray-400 mb-10 text-xs">Lets configure your ad accounts with some of your<br></br> preferred values and settings to pre-fill into ads.</p>
 
                             <div className="flex justify-center">
