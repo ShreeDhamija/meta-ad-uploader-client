@@ -548,17 +548,19 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center">
           <div className="bg-white rounded-2xl p-6 max-h-[80vh] overflow-y-auto w-[700px] space-y-6 shadow-xl relative border border-gray-200">
 
-            {/* Header row: title + close */}
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-xl font-semibold text-zinc-900">Recently Created Ad Copy</h2>
-              <Button
-                className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
-                onClick={() => setShowImportPopup(false)}
-              >
-                <CirclePlus className="w-4 h-4 transform rotate-45" />
-                Close
-              </Button>
 
+            {/* Header row: title + close - make this sticky */}
+            <div className="sticky top-0 bg-white z-10 pb-3 border-b border-gray-200 -mx-6 px-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-medium text-zinc-900">Recently Created Ad Copy</h2>
+                <Button
+                  className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
+                  onClick={() => setShowImportPopup(false)}
+                >
+                  <CirclePlus className="w-4 h-4 transform rotate-45" />
+                  Close
+                </Button>
+              </div>
             </div>
 
             {isFetchingCopy ? (
@@ -568,14 +570,31 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               </div>
             ) : (
               recentAds.map((ad, index) => (
-                <div key={index} className="border-t border-gray-200 pt-4 space-y-3">
+                <div key={index} className="border-t border-gray-200 pt-4 space-y-3 -mx-6 px-6">
                   {/* Ad title + import button */}
-                  <div className="flex items-center justify-between">
+                  {/* <div className="flex items-center justify-between">
                     <h3 className="text-md font-bold text-zinc-800">
                       {ad.adName || `Ad ${index + 1}`}
                     </h3>
                     <Button
                       className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
+                      onClick={() => {
+                        setPrimaryTexts(ad.primaryTexts.slice(0, 5))
+                        setHeadlines(ad.headlines.slice(0, 5))
+                        setShowImportPopup(false)
+                      }}
+                    >
+                      <Download className="w-4 h-4" />
+                      Import Copy
+                    </Button>
+                  </div> */}
+                  {/* Ad title + import button */}
+                  <div className="flex items-start justify-between gap-4">
+                    <h3 className="text-md font-bold text-zinc-800 flex-1 pr-2 break-words">
+                      {ad.adName || `Ad ${index + 1}`}
+                    </h3>
+                    <Button
+                      className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black flex-shrink-0"
                       onClick={() => {
                         setPrimaryTexts(ad.primaryTexts.slice(0, 5))
                         setHeadlines(ad.headlines.slice(0, 5))
