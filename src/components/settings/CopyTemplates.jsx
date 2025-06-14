@@ -561,8 +561,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         </div>
       </div>
       {showImportPopup && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex items-center justify-center" style={{ zIndex: 9999 }}>
-          <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[700px] shadow-xl relative border border-gray-200 import-popup-scroll">
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex justify-center overflow-y-auto py-6">
+          <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[750px] shadow-xl relative border border-gray-200 import-popup-scroll">
             {/* Header row: title + close - make this sticky */}
             <div className={`sticky top-0 bg-white z-10 px-6 py-3 ${isScrolled ? 'border-b border-gray-200' : ''}`}>
               <div className="flex justify-between items-center">
@@ -585,7 +585,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 </div>
               ) : (
                 recentAds.map((ad, index) => (
-                  <div key={index} className="border-t border-gray-200 pt-4 space-y-3 -mx-6 px-6 first:border-t-0">
+                  // <div key={index} className="border-t border-gray-200 pt-4 space-y-3 -mx-6 px-6 first:border-t-0">
+                  <div key={index} className="border-t border-gray-200 pt-4 space-y-3 -mx-6 px-6">
                     {/* Ad title + import button */}
                     <div className="flex items-start justify-between gap-4 w-full">
                       <h3 className="text-md font-bold text-zinc-800 flex-1 min-w-0 break-words">
