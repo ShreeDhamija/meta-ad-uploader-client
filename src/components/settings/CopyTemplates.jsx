@@ -561,7 +561,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         </div>
       </div>
       {showImportPopup && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-30 flex justify-center overflow-y-auto py-6">
+        <div
+          className="fixed inset-0 z-50 bg-black bg-opacity-30 flex justify-center items-center"
+          style={{ top: 0, left: 0, right: 0, bottom: 0 }}
+        >
           <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[750px] shadow-xl relative border border-gray-200 import-popup-scroll">
             {/* Header row: title + close - make this sticky */}
             <div className={`sticky top-0 bg-white z-10 px-6 py-3 ${isScrolled ? 'border-b border-gray-200' : ''}`}>
