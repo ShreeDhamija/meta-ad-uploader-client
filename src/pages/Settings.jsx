@@ -21,7 +21,7 @@ export default function Settings() {
     const navigate = useNavigate()
     const [activeTab, setActiveTab] = useState("adaccount")
     const tabIconMap = {
-        global: "https://meta-ad-uploader-server-production.up.railway.app/icons/settings.svg",
+        global: "https://unpkg.com/@mynaui/icons/icons/cog-four.svg",
         adaccount: "https://meta-ad-uploader-server-production.up.railway.app/icons/folder.svg",
         billing: "https://meta-ad-uploader-server-production.up.railway.app/icons/card.svg",
         viewads: "https://meta-ad-uploader-server-production.up.railway.app/icons/viewads.svg", // use your own icon or placeholder
