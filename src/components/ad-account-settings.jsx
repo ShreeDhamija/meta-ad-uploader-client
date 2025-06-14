@@ -272,12 +272,7 @@ export default function AdAccountSettings({
     (adset.name || adset.id).toLowerCase().includes(adSetSearchValue.toLowerCase()),
   )
 
-  // useEffect(() => {
-  //   const svg = document.querySelector(".cmdk-input-wrapper svg")
-  //   if (svg) {
-  //     svg.style.stroke = "#e5e7eb" // light gray
-  //   }
-  // }, [])
+
 
   // Auto-populate new ad set name when duplicate ad set is selected
   useEffect(() => {

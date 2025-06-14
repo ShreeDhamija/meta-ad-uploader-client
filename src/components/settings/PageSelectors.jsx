@@ -15,6 +15,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { ChevronsUpDown, RefreshCcw } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
+import { toast } from "sonner";
+
 
 export default function PageSelectors({
   selectedPage,
@@ -32,6 +34,8 @@ export default function PageSelectors({
   const [openInstagramDropdown, setOpenInstagramDropdown] = useState(false)
   const [pageSearch, setPageSearch] = useState("")
   const [instagramSearch, setInstagramSearch] = useState("")
+
+
   const refreshPages = async () => {
     try {
       const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-pages", {
@@ -43,24 +47,27 @@ export default function PageSelectors({
       if (data.pages) {
         setPages(data.pages);
 
-        // 🔒 Re-find selected page in updated list to ensure it still exists
         const updatedPage = data.pages.find(p => p.id === selectedPage?.id);
         const updatedInstagram = data.pages
           .find(p => p.instagramAccount?.id === selectedInstagram?.id)
           ?.instagramAccount;
 
         if (updatedPage) setSelectedPage(updatedPage);
-        else setSelectedPage(null); // Clear if not found
+        else setSelectedPage(null);
 
         if (updatedInstagram) setSelectedInstagram(updatedInstagram);
         else setSelectedInstagram(null);
+
+        toast.success("Pages refreshed successfully!");
       } else {
-        console.warn("No pages returned.");
+        toast.error("No pages returned.");
       }
     } catch (err) {
-      console.error("Failed to fetch pages:", err.message || err);
+      toast.error(`Failed to fetch pages: ${err.message || "Unknown error"}`);
+      console.error("Failed to fetch pages:", err);
     }
   };
+
 
   return (
     <div className="bg-[#f5f5f5] rounded-xl p-4 space-y-4">
