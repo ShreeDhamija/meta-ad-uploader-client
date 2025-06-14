@@ -6,7 +6,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-8 py-10 max-w-[620px] relative overflow-hidden text-center">
+            <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-8 py-10 w-[520px] relative overflow-hidden text-center">
                 <div className="relative w-full transition-all duration-300">
                     {/* INITIAL STEP */}
                     {step === "initial" && (
@@ -16,7 +16,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                 Welcome to Blip, {userName}!
                             </h2>
                             <p className="text-gray-500 mb-2">Start launching ads in 2 minutes</p>
-                            <p className="text-gray-400 mb-10 text-xs">Configure your ad accounts with preferred values and settings to prefill into ads.</p>
+                            {/* <p className="text-gray-400 mb-10 text-xs">Configure your ad accounts with <br></br>preferred values and settings to prefill into ads.</p> */}
 
                             <div className="flex justify-center">
                                 {/* Home Option */}

@@ -44,10 +44,6 @@ export default function Home() {
     const [instagramAccountId, setInstagramAccountId] = useState("")
     const [link, setLink] = useState("")
     const [cta, setCta] = useState("LEARN_MORE")
-    //const [adType, setAdType] = useState("")
-    //const [dateFormat, setDateFormat] = useState("")
-    // const [includeFileName, setIncludeFileName] = useState(false)
-    // const [customAdName, setCustomAdName] = useState("")
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("")
     const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName", "iteration", "customText"]);
@@ -73,23 +69,23 @@ export default function Home() {
     if (authLoading) return null
 
 
-    useEffect(() => {
-        if (!authLoading && !isLoggedIn) {
-            navigate("/login");
-        }
-    }, [authLoading, isLoggedIn]);
+    // useEffect(() => {
+    //     // if (!authLoading && !isLoggedIn) {
+    //     //     navigate("/login");
+    // }
+    // }, [authLoading, isLoggedIn]);
 
 
     //  Show onboarding popup once settings are loaded
     useEffect(() => {
-        if (!isLoggedIn || loading) return
+        // if (!isLoggedIn || loading) return
         if (!hasSeenOnboarding) {
             setShowOnboardingPopup(true)
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
-        if (!isLoggedIn || loading) return;
+        // if (!isLoggedIn || loading) return;
         const { values, order, selected } = adNameFormula;
         setAdValues({
             dateType: values?.dateType || "MonthYYYY",
@@ -165,7 +161,7 @@ export default function Home() {
 
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6 mt-[20px]">
+        <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
             <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
             <div className="flex flex-col xl:flex-row gap-6 min-w-0">
                 {/* <div className="w-full xl:w-auto xl:min-w-[500px] xl:max-w-[770px] xl:flex-shrink-0 space-y-6"> */}
