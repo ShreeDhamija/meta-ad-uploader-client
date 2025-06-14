@@ -318,10 +318,7 @@ export default function AdAccountSettings({
                   role="combobox"
                   aria-expanded={open}
                   disabled={!isLoggedIn || isLoading}
-                  className={cn(
-                    "w-full justify-between border border-gray-400 rounded-xl bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
-                    !selectedAdAccount && "text-gray-400"
-                  )}
+                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
                   {selectedAdAccount
                     ? adAccounts.find((acct) => acct.id === selectedAdAccount)?.name || selectedAdAccount
@@ -408,10 +405,7 @@ export default function AdAccountSettings({
                   aria-expanded={openCampaign}
                   disabled={!isLoggedIn || !selectedAdAccount || isLoading}
                   id="campaign"
-                  className={cn(
-                    "w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white",
-                    !selectedCampaign && "text-gray-400"
-                  )}
+                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white "
                 >
                   {selectedCampaign
                     ? campaigns.find((camp) => camp.id === selectedCampaign)?.name || selectedCampaign
@@ -623,10 +617,7 @@ export default function AdAccountSettings({
                         role="combobox"
                         aria-expanded={openDuplicateAdSet}
                         disabled={!isLoggedIn || adSets.length === 0}
-                        className={cn(
-                          "w-full justify-between border border-gray-400 rounded-xl bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
-                          !showDuplicateBlock && selectedAdSets.length === 0 && "text-gray-400"
-                        )}
+                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                       >
                         <div className="w-full overflow-hidden">
                           <span className="block truncate flex-1 text-left">
