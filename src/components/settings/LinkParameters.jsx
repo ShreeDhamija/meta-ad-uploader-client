@@ -235,47 +235,6 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     Add New Pairing
                 </Button>
             </div>
-            {/* {showImportPopup && (
-                <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40">
-                    <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg space-y-4">
-                        <div className="text-base font-semibold">Import UTM Parameters</div>
-                        <p className="text-sm text-gray-500">
-                            These values were pulled from your most recent ad. Click "Import" to replace your current parameters.
-                        </p>
-
-                        <div className="space-y-2 max-h-[200px] overflow-y-auto border border-gray-200 rounded-md p-2">
-                            {importPreview?.map(({ key, value }, idx) => (
-                                <div key={idx} className="flex gap-2 text-sm">
-                                    <div className="w-1/2 truncate font-medium text-gray-800">{key}</div>
-                                    <div className="w-1/2 truncate text-gray-600">{value}</div>
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="flex justify-end gap-2">
-                            <Button
-                                variant="ghost"
-                                onClick={() => {
-                                    setImportPreview(null);
-                                    setShowImportPopup(false);
-                                }}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={() => {
-                                    setUtmPairs(importPreview);
-                                    toast.success("Imported UTM parameters");
-                                    setShowImportPopup(false);
-                                }}
-                                className="bg-black text-white hover:bg-zinc-800 rounded-lg"
-                            >
-                                Import
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            )} */}
 
             {showImportPopup && (
                 <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center">
@@ -308,14 +267,19 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                                         The following parameters were found in your most recent ad. Click “Import” to apply them.
                                     </p>
 
-                                    <div className="space-y-2 max-h-[300px] overflow-y-auto rounded-md">
+                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
                                         {importPreview?.map(({ key, value }, idx) => (
-                                            <div key={idx} className="flex gap-2 text-sm bg-gray-100 rounded-lg px-3 py-2 items-center">
-                                                <div className="w-1/2 font-medium text-gray-800 truncate">{key}</div>
-                                                <div className="w-1/2 text-gray-600 truncate">{value}</div>
+                                            <div key={idx} className="flex gap-3 items-center">
+                                                <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
+                                                    {key}
+                                                </div>
+                                                <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
+                                                    {value}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
+
 
                                     <div className="flex justify-end mt-6">
                                         <Button
