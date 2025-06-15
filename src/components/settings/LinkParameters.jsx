@@ -2,22 +2,25 @@ import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
-import {
-    Popover,
-    PopoverTrigger,
-    PopoverContent,
-} from "@/components/ui/popover"
+// import {
+//     Popover,
+//     PopoverTrigger,
+//     PopoverContent,
+// } from "@/components/ui/popover"
 import {
     Command,
     CommandInput,
     CommandItem,
     CommandList,
-    CommandEmpty,
+
 } from "@/components/ui/command"
+import { toast } from "sonner";
+import { Download } from "lucide-react";
 
 
 
-export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, setUtmPairs }) {
+
+export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, setUtmPairs, selectedAdAccount }) {
     const [inputValue, setInputValue] = useState("")
     const valueSuggestions = ["facebook", "paid", "{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"]
     const [openIndex, setOpenIndex] = useState(null)
@@ -29,22 +32,61 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
         setUtmPairs(updated)
     }
 
-
     const handleAddPair = () => {
         setUtmPairs([...utmPairs, { key: "", value: "" }])
     }
+    const [importPreview, setImportPreview] = useState(null); // null or array of { key, value }
+    const [showImportPopup, setShowImportPopup] = useState(false);
+
+    const handleImportUTMs = async () => {
+        if (!selectedAdAccount) {
+            toast.error("No ad account selected");
+            return;
+        }
+
+        try {
+            const res = await fetch(
+                `https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
+                { credentials: "include" }
+            );
+            const data = await res.json();
+
+            if (data.pairs) {
+                setImportPreview(data.pairs);
+                setShowImportPopup(true);
+            } else {
+                toast.error("No UTM tags found in recent ad.");
+            }
+        } catch (err) {
+            toast.error("Failed to fetch UTM tags");
+            console.error("Import UTM error:", err);
+        }
+    };
+
 
     return (
         <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-4 w-full max-w-3xl">
             {/* Section Header */}
-            <div className="flex items-center gap-2">
-                <img
-                    src="https://meta-ad-uploader-server-production.up.railway.app/icons/link.svg"
-                    alt="link icon"
-                    className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
-                />
-                <span className="text-sm font-medium">Link Parameters</span>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <img
+                        src="https://meta-ad-uploader-server-production.up.railway.app/icons/link.svg"
+                        alt="link icon"
+                        className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
+                    />
+                    <span className="text-sm font-medium">Link Parameters</span>
+                </div>
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleImportUTMs}
+                    className="text-xs h-[30px] flex items-center gap-1 px-3 hover:bg-zinc-100"
+                >
+                    <Download className="w-4 h-4" />
+                    Import from Recent Ad
+                </Button>
             </div>
+
 
             {/* Default Link */}
             <div className="space-y-1">
@@ -83,9 +125,6 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     if (pair.key === "" && i < defaultPrefillPairs.length && utmPairs[i].key !== defaultPrefillPairs[i].key) {
                         handlePairChange(i, "key", defaultPrefillPairs[i].key);
                     }
-                    // if (pair.value === "" && i < defaultPrefillPairs.length && utmPairs[i].value !== defaultPrefillPairs[i].value) {
-                    //     handlePairChange(i, "value", defaultPrefillPairs[i].value);
-                    // }
 
                     return (
                         <div key={i} className="flex gap-2 items-center col-span-2 sm:col-span-1">
@@ -153,61 +192,6 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     );
                 })}
             </div>
-
-            {/* <div className="flex flex-col space-y-5">
-                {utmPairs.map((pair, i) => (
-                    <div key={i} className="flex gap-2 items-center col-span-2 sm:col-span-1">
-                        <Input
-                            value={pair.key === "" && i < defaultPrefillPairs.length ? defaultPrefillPairs[i].key : pair.key}
-                            onChange={(e) => handlePairChange(i, "key", e.target.value)}
-                            className="rounded-xl w-full bg-white"
-                        />
-                        <div className="relative w-full">
-                            <Input
-                                value={pair.value === "" && i < defaultPrefillPairs.length ? defaultPrefillPairs[i].value : pair.value}
-                                onChange={(e) => handlePairChange(i, "value", e.target.value)}
-                                onFocus={() => setOpenIndex(i)}
-                                onBlur={() => {
-                                    setTimeout(() => setOpenIndex(null), 150);
-                                }}
-                                className="rounded-xl w-full bg-white"
-                            />
-                            {openIndex === i && (
-                                <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-md mt-1 p-2">
-                                    <Command className="max-h-full">
-                                        <CommandList>
-                                            {valueSuggestions.map((suggestion, index) => (
-                                                <CommandItem
-                                                    className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg"
-                                                    key={index}
-                                                    value={suggestion}
-                                                    onMouseDown={() => {
-                                                        handlePairChange(i, "value", suggestion)
-                                                        setOpenIndex(null)
-                                                    }}
-                                                >
-                                                    {suggestion}
-                                                </CommandItem>
-                                            ))}
-                                        </CommandList>
-                                    </Command>
-                                </div>
-                            )}
-                        </div>
-
-                        <Trash2
-                            onClick={() => {
-                                const updated = [...utmPairs]
-                                updated.splice(i, 1)
-                                setUtmPairs(updated)
-                            }}
-                            className="w-4 h-4 text-gray-400 hover:text-red-500 cursor-pointer shrink-0"
-                        />
-                    </div>
-
-                ))}
-            </div> */}
-
             {/* Add Button */}
             <div>
                 <Button
@@ -217,6 +201,48 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     Add New Pairing
                 </Button>
             </div>
+            {showImportPopup && (
+                <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40">
+                    <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg space-y-4">
+                        <div className="text-base font-semibold">Import UTM Parameters</div>
+                        <p className="text-sm text-gray-500">
+                            These values were pulled from your most recent ad. Click "Import" to replace your current parameters.
+                        </p>
+
+                        <div className="space-y-2 max-h-[200px] overflow-y-auto border border-gray-200 rounded-md p-2">
+                            {importPreview?.map(({ key, value }, idx) => (
+                                <div key={idx} className="flex gap-2 text-sm">
+                                    <div className="w-1/2 truncate font-medium text-gray-800">{key}</div>
+                                    <div className="w-1/2 truncate text-gray-600">{value}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setImportPreview(null);
+                                    setShowImportPopup(false);
+                                }}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    setUtmPairs(importPreview);
+                                    toast.success("Imported UTM parameters");
+                                    setShowImportPopup(false);
+                                }}
+                                className="bg-black text-white hover:bg-zinc-800 rounded-lg"
+                            >
+                                Import
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
         </div>
     )
 }

@@ -233,6 +233,7 @@ export default function AdAccountSettings() {
             setDefaultLink={setDefaultLink}
             utmPairs={utmPairs}
             setUtmPairs={setUtmPairs}
+            selectedAdAccount={selectedAdAccount}
           />
           <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
           <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
