@@ -180,7 +180,7 @@ export default function Settings() {
                 </div>
             </main>
             <div>
-                <Toaster richColors position="bottom-right" duration="2000" closeButton />
+                <Toaster richColors position="bottom-right" duration="1000" closeButton />
             </div>
             {showSettingsPopup && (
                 <SettingsOnboardingPopup
