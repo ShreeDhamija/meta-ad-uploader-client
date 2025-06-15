@@ -15,7 +15,9 @@ import {
 
 } from "@/components/ui/command"
 import { toast } from "sonner";
-import { Download } from "lucide-react";
+import { Download, CirclePlus } from "lucide-react";
+import { RotateLoader } from "react-spinners";
+
 
 
 
@@ -37,12 +39,41 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
     }
     const [importPreview, setImportPreview] = useState(null); // null or array of { key, value }
     const [showImportPopup, setShowImportPopup] = useState(false);
+    const [isFetchingTags, setIsFetchingTags] = useState(false);
 
+
+    // const handleImportUTMs = async () => {
+    //     if (!selectedAdAccount) {
+    //         toast.error("No ad account selected");
+    //         return;
+    //     }
+
+    //     try {
+    //         const res = await fetch(
+    //             `https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
+    //             { credentials: "include" }
+    //         );
+    //         const data = await res.json();
+
+    //         if (data.pairs) {
+    //             setImportPreview(data.pairs);
+    //             setShowImportPopup(true);
+    //         } else {
+    //             toast.error("No UTM tags found in recent ad.");
+    //         }
+    //     } catch (err) {
+    //         toast.error("Failed to fetch UTM tags");
+    //         console.error("Import UTM error:", err);
+    //     }
+    // };
     const handleImportUTMs = async () => {
         if (!selectedAdAccount) {
             toast.error("No ad account selected");
             return;
         }
+
+        setIsFetchingTags(true);
+        setShowImportPopup(true);
 
         try {
             const res = await fetch(
@@ -53,13 +84,16 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
 
             if (data.pairs) {
                 setImportPreview(data.pairs);
-                setShowImportPopup(true);
             } else {
                 toast.error("No UTM tags found in recent ad.");
+                setShowImportPopup(false);
             }
         } catch (err) {
             toast.error("Failed to fetch UTM tags");
             console.error("Import UTM error:", err);
+            setShowImportPopup(false);
+        } finally {
+            setIsFetchingTags(false);
         }
     };
 
@@ -77,14 +111,14 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     <span className="text-sm font-medium">Link Parameters</span>
                 </div>
                 <Button
-                    size="sm"
                     variant="ghost"
+                    className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
                     onClick={handleImportUTMs}
-                    className="text-xs h-[30px] flex items-center gap-1 px-3 hover:bg-zinc-100"
                 >
                     <Download className="w-4 h-4" />
                     Import from Recent Ad
                 </Button>
+
             </div>
 
 
@@ -201,7 +235,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     Add New Pairing
                 </Button>
             </div>
-            {showImportPopup && (
+            {/* {showImportPopup && (
                 <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/40">
                     <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg space-y-4">
                         <div className="text-base font-semibold">Import UTM Parameters</div>
@@ -241,7 +275,67 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                         </div>
                     </div>
                 </div>
+            )} */}
+
+            {showImportPopup && (
+                <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center">
+                    <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200">
+                        <div className="sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-lg font-medium text-zinc-900">Import UTM Parameters</h2>
+                                <Button
+                                    className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
+                                    onClick={() => {
+                                        setShowImportPopup(false);
+                                        setImportPreview(null);
+                                    }}
+                                >
+                                    <CirclePlus className="w-4 h-4 rotate-45" />
+                                    Close
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="px-6 py-6">
+                            {isFetchingTags ? (
+                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                    <RotateLoader size={6} margin={-16} color="#adadad" />
+                                    <span className="text-sm text-gray-600">Fetching parameters…</span>
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-gray-500 mb-4">
+                                        The following parameters were found in your most recent ad. Click “Import” to apply them.
+                                    </p>
+
+                                    <div className="space-y-2 max-h-[300px] overflow-y-auto rounded-md">
+                                        {importPreview?.map(({ key, value }, idx) => (
+                                            <div key={idx} className="flex gap-2 text-sm bg-gray-100 rounded-lg px-3 py-2 items-center">
+                                                <div className="w-1/2 font-medium text-gray-800 truncate">{key}</div>
+                                                <div className="w-1/2 text-gray-600 truncate">{value}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="flex justify-end mt-6">
+                                        <Button
+                                            className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
+                                            onClick={() => {
+                                                setUtmPairs(importPreview);
+                                                toast.success("Imported UTM parameters");
+                                                setShowImportPopup(false);
+                                            }}
+                                        >
+                                            Import
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
+
 
         </div>
     )
