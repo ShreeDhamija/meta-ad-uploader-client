@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { toast } from "sonner"
-import { CirclePlus, CircleCheck, Trash2, Download } from "lucide-react"
+import { CirclePlus, CircleCheck, Trash2, Download } from 'lucide-react'
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 // import { Textarea } from "../ui/textarea"
@@ -394,7 +394,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <div className="flex flex-col gap-[12px]">
           <div className="flex items-center gap-2">
             <img
-              src="https://meta-ad-uploader-server-production.up.railway.app/icons/template.svg"
+              src="https://unpkg.com/@mynaui/icons/icons/file-text.svg"
               alt=""
               className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60"
             />
@@ -405,7 +405,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             Then save as a template to easily add to your ads in the future
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center">
           <Button
             variant="ghost"
             className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
@@ -414,25 +414,39 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             <Download className="w-4 h-4" />
             Import Copy
           </Button>
-
-          <Select value={selectedName} onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}>
-            <SelectTrigger className="w-[200px] rounded-xl px-3 py-2 text-sm justify-between bg-white">
-              <SelectValue placeholder="Select a template" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
-              {availableTemplates.map(([name]) => (
-                <SelectItem
-                  key={name}
-                  value={name}
-                  className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg"
-                >
-                  {name} {name === defaultName ? "(Default)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
+      </div>
 
+      {/* New row with template dropdown and set as default button */}
+      <div className="flex items-center gap-3 mb-4">
+        <Select value={selectedName} onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}>
+          <SelectTrigger className="flex-1 rounded-xl px-3 py-2 text-sm justify-between bg-white">
+            <SelectValue placeholder="Select a template" />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
+            {availableTemplates.map(([name]) => (
+              <SelectItem
+                key={name}
+                value={name}
+                className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg"
+              >
+                {name} {name === defaultName ? "(Default)" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Button
+          className={`w-[250px] rounded-xl h-[35px] flex items-center gap-2 transition-colors ${isEditingDefault
+            ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
+            : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
+            }`}
+          onClick={handleSetAsDefault}
+          disabled={!templateName.trim() || isEditingDefault || isProcessing}
+        >
+          <CircleCheck className="w-4 h-4" />
+          {isEditingDefault ? "Default Template" : "Set as Default Template"}
+        </Button>
       </div>
 
       <div className="space-y-1">
@@ -445,8 +459,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           disabled={isProcessing}
         />
       </div>
-      <label className="text-[14px] text-gray-700">Primary Text</label>
+
       <div className="space-y-2">
+        <label className="text-[14px] text-gray-700">Primary Text</label>
         {primaryTexts.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
             <TextareaAutosize
@@ -524,7 +539,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               : "Save Template"}
         </Button>
 
-
+        {/* Bottom row with remaining two buttons split 50/50 */}
         <div className="flex gap-4">
           <Button
             variant="outline"
@@ -535,19 +550,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             <CirclePlus className="w-4 h-4 text-white" />
             Add New Template
           </Button>
-
-          <Button
-            className={`w-full rounded-xl h-[40px] flex items-center gap-2 transition-colors ${isEditingDefault
-              ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
-              : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
-              }`}
-            onClick={handleSetAsDefault}
-            disabled={!templateName.trim() || isEditingDefault || isProcessing}
-          >
-            <CircleCheck className="w-4 h-4" />
-            {isEditingDefault ? "Default Template" : "Set as Default Template"}
-          </Button>
-
 
           <Button
             variant="destructive"
@@ -638,9 +640,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </div>
         </div>
       )}
-
-
     </div>
-
   )
 }
