@@ -8,7 +8,6 @@ import { toast } from "sonner"
 import { CirclePlus, CircleCheck, Trash2, Download } from 'lucide-react'
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
-// import { Textarea } from "../ui/textarea"
 import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 
