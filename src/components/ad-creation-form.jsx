@@ -88,12 +88,60 @@ export default function AdCreationForm({
   //gogle drive pickers
   const [accessToken, setAccessToken] = useState(null)
 
+  //S3 States
+  const [uploadingToS3, setUploadingToS3] = useState(false)
+  const [s3Uploads, setS3Uploads] = useState([]) // Track S3 uploaded files
+
 
   const [pageSearchValue, setPageSearchValue] = useState("")
   const [isDuplicating, setIsDuplicating] = useState(false)
   const { isLoggedIn } = useAuth()
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
+
+
+
+  // Check if file is large (>100MB)
+  const isLargeFile = (file) => {
+    const size = file.size || 0
+    return size > 100 * 1024 * 1024 // 100MB
+  }
+
+  // Upload large file to S3
+  const uploadToS3 = async (file) => {
+    try {
+      // Get presigned URL
+      const response = await axios.post(
+        "https://meta-ad-uploader-server-production.up.railway.app/auth/get-upload-url",
+        {
+          fileName: file.name,
+          fileType: file.type,
+          fileSize: file.size
+        },
+        { withCredentials: true }
+      )
+
+      const { uploadUrl, publicUrl } = response.data
+
+      // Upload directly to S3
+      await axios.put(uploadUrl, file, {
+        headers: {
+          'Content-Type': file.type
+        }
+      })
+
+      return {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        s3Url: publicUrl,
+        isS3Upload: true
+      }
+    } catch (error) {
+      console.error('S3 upload failed:', error)
+      throw new Error(`Failed to upload ${file.name} to S3`)
+    }
+  }
 
 
   const formulaParts = adOrder.map((key) => {
@@ -342,9 +390,50 @@ export default function AdCreationForm({
 
   // Dropzone logic
   const onDrop = useCallback(
-    (acceptedFiles) => {
+    async (acceptedFiles) => {
       console.log("Dropped Files:", acceptedFiles)
-      setFiles((prevFiles) => [...prevFiles, ...acceptedFiles])
+
+      setUploadingToS3(true)
+
+      try {
+        // Separate large and small files
+        const largeFiles = acceptedFiles.filter(isLargeFile)
+        const smallFiles = acceptedFiles.filter(file => !isLargeFile(file))
+
+        // Show initial toast for large files
+        if (largeFiles.length > 0) {
+          toast.info(`Uploading ${largeFiles.length} large file(s) to cloud storage...`)
+        }
+
+        // Upload all large files in parallel
+        const s3UploadPromises = largeFiles.map(async (file) => {
+          try {
+            const s3File = await uploadToS3(file)
+            toast.success(`${file.name} uploaded to cloud storage`)
+            return s3File
+          } catch (error) {
+            toast.error(`Failed to upload ${file.name}: ${error.message}`)
+            throw error
+          }
+        })
+
+        // Wait for all S3 uploads to complete
+        const newS3Uploads = await Promise.all(s3UploadPromises)
+
+        // Add files to state
+        setFiles((prevFiles) => [...prevFiles, ...smallFiles])
+        setS3Uploads((prevS3) => [...prevS3, ...newS3Uploads])
+
+        if (largeFiles.length > 0) {
+          toast.success(`All ${largeFiles.length} large file(s) uploaded successfully!`)
+        }
+
+      } catch (error) {
+        toast.error("Some uploads failed. Please try again.")
+        console.error("Upload error:", error)
+      } finally {
+        setUploadingToS3(false)
+      }
     },
     [setFiles],
   )
@@ -548,7 +637,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && s3Uploads.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -632,6 +721,11 @@ export default function AdCreationForm({
               mimeType: driveFile.mimeType,
               accessToken: driveFile.accessToken
             }));
+          });
+
+          // Add all S3 uploaded files
+          s3Uploads.forEach((s3File) => {
+            formData.append("s3VideoUrls", s3File.s3Url);
           });
 
           // For video dynamic creative, use the single thumbnail (if provided)
@@ -724,6 +818,36 @@ export default function AdCreationForm({
               })
             );
           });
+
+
+          // Handle S3 uploaded files
+          s3Uploads.forEach((s3File, index) => {
+            const formData = new FormData();
+            formData.append("adName", computeAdName(s3File, adValues.dateType, index));
+            formData.append("headlines", JSON.stringify(headlines));
+            formData.append("descriptions", JSON.stringify(descriptions));
+            formData.append("messages", JSON.stringify(messages));
+            formData.append("s3VideoUrl", s3File.s3Url); // Add S3 URL
+            formData.append("adAccountId", selectedAdAccount);
+            formData.append("adSetId", adSetId);
+            formData.append("pageId", pageId);
+            formData.append("instagramAccountId", instagramAccountId);
+            formData.append("link", link);
+            formData.append("cta", cta);
+            if (selectedShopDestination) {
+              formData.append("shopDestination", selectedShopDestination)
+              formData.append("shopDestinationType", selectedShopDestinationType)
+            }
+            formData.append("launchPaused", launchPaused);
+
+            promises.push(
+              axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
+                withCredentials: true,
+                headers: { "Content-Type": "multipart/form-data" },
+              })
+            );
+          });
+
         });
       }
 
@@ -1304,13 +1428,13 @@ export default function AdCreationForm({
             type="submit"
             className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
             disabled={
-              !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || isLoading || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === ""))
+              !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0 && s3Uploads.length === 0) || isLoading || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === ""))
             }
           >
-            {isLoading ? (
+            {isLoading || uploadingToS3 ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Publishing Ads...
+                {uploadingToS3 ? "Uploading to cloud..." : "Publishing Ads..."}
               </>
             ) : (
               "Publish Ads"
