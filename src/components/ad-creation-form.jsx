@@ -98,6 +98,7 @@ export default function AdCreationForm({
   const { isLoggedIn } = useAuth()
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
+  const [publishPending, setPublishPending] = useState(false);
 
 
 
@@ -482,6 +483,7 @@ export default function AdCreationForm({
   };
 
 
+
   // Update your useEffect to be much simpler:
   useEffect(() => {
     // Generate thumbnails for local video files only
@@ -535,6 +537,12 @@ export default function AdCreationForm({
     return () => window.removeEventListener("message", handler);
   }, []);
 
+  useEffect(() => {
+    if (!uploadingToS3 && publishPending) {
+      setPublishPending(false);
+      handleCreateAd(new Event('submit')); // fake event to reuse logic
+    }
+  }, [uploadingToS3, publishPending]);
 
   // Functions for managing dynamic input fields
   const addField = (setter, values) => {
@@ -631,6 +639,11 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (e) => {
     e.preventDefault();
+    if (uploadingToS3) {
+      setPublishPending(true);
+      toast.info("Waiting for video upload to finish...");
+      return;
+    }
 
     if (selectedAdSets.length === 0 && !duplicateAdSet) {
       toast.error("Please select at least one ad set");
