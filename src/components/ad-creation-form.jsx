@@ -748,7 +748,9 @@ export default function AdCreationForm({
 
           // Add all local files
           files.forEach((file) => {
-            formData.append("mediaFiles", file);
+            if (file.size <= 100 * 1024 * 1024) {
+              formData.append("mediaFiles", file);
+            }
           });
 
           // Add all drive files
@@ -795,6 +797,7 @@ export default function AdCreationForm({
         nonDynamicAdSetIds.forEach((adSetId) => {
           // Handle local files
           files.forEach((file, index) => {
+            if (file.size > 100 * 1024 * 1024) return; // Skip large files (already handled via S3)
             const formData = new FormData();
             formData.append("adName", computeAdName(file, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
