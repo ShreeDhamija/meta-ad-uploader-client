@@ -90,7 +90,7 @@ export default function AdCreationForm({
 
   //S3 States
   const [uploadingToS3, setUploadingToS3] = useState(false)
-  const [s3Uploads, setS3Uploads] = useState([]) // Track S3 uploaded files
+  //const [s3Uploads, setS3Uploads] = useState([]) // Track S3 uploaded files
 
 
   const [pageSearchValue, setPageSearchValue] = useState("")
@@ -390,54 +390,58 @@ export default function AdCreationForm({
 
 
   // Dropzone logic
-  const onDrop = useCallback(
-    async (acceptedFiles) => {
-      console.log("Dropped Files:", acceptedFiles)
+  const onDrop = useCallback((acceptedFiles) => {
+    setFiles((prev) => [...prev, ...acceptedFiles]);
+  }, []);
 
-      setUploadingToS3(true)
+  // const onDrop = useCallback(
+  //   async (acceptedFiles) => {
+  //     console.log("Dropped Files:", acceptedFiles)
 
-      try {
-        // Separate large and small files
-        const largeFiles = acceptedFiles.filter(isLargeFile)
-        const smallFiles = acceptedFiles.filter(file => !isLargeFile(file))
+  //     setUploadingToS3(true)
 
-        // Show initial toast for large files
-        if (largeFiles.length > 0) {
-          toast.info(`Uploading ${largeFiles.length} large file(s) to cloud storage...`)
-        }
+  //     try {
+  //       // Separate large and small files
+  //       const largeFiles = acceptedFiles.filter(isLargeFile)
+  //       const smallFiles = acceptedFiles.filter(file => !isLargeFile(file))
 
-        // Upload all large files in parallel
-        const s3UploadPromises = largeFiles.map(async (file) => {
-          try {
-            const s3File = await uploadToS3(file)
-            toast.success(`${file.name} uploaded to cloud storage`)
-            return s3File
-          } catch (error) {
-            toast.error(`Failed to upload ${file.name}: ${error.message}`)
-            throw error
-          }
-        })
+  //       // Show initial toast for large files
+  //       if (largeFiles.length > 0) {
+  //         toast.info(`Uploading ${largeFiles.length} large file(s) to cloud storage...`)
+  //       }
 
-        // Wait for all S3 uploads to complete
-        const newS3Uploads = await Promise.all(s3UploadPromises)
+  //       // Upload all large files in parallel
+  //       const s3UploadPromises = largeFiles.map(async (file) => {
+  //         try {
+  //           const s3File = await uploadToS3(file)
+  //           toast.success(`${file.name} uploaded to cloud storage`)
+  //           return s3File
+  //         } catch (error) {
+  //           toast.error(`Failed to upload ${file.name}: ${error.message}`)
+  //           throw error
+  //         }
+  //       })
 
-        // Add files to state
-        setFiles((prevFiles) => [...prevFiles, ...smallFiles])
-        setS3Uploads((prevS3) => [...prevS3, ...newS3Uploads])
+  //       // Wait for all S3 uploads to complete
+  //       const newS3Uploads = await Promise.all(s3UploadPromises)
 
-        if (largeFiles.length > 0) {
-          toast.success(`All ${largeFiles.length} large file(s) uploaded successfully!`)
-        }
+  //       // Add files to state
+  //       setFiles((prevFiles) => [...prevFiles, ...smallFiles])
+  //       setS3Uploads((prevS3) => [...prevS3, ...newS3Uploads])
 
-      } catch (error) {
-        toast.error("Some uploads failed. Please try again.")
-        console.error("Upload error:", error)
-      } finally {
-        setUploadingToS3(false)
-      }
-    },
-    [setFiles],
-  )
+  //       if (largeFiles.length > 0) {
+  //         toast.success(`All ${largeFiles.length} large file(s) uploaded successfully!`)
+  //       }
+
+  //     } catch (error) {
+  //       toast.error("Some uploads failed. Please try again.")
+  //       console.error("Upload error:", error)
+  //     } finally {
+  //       setUploadingToS3(false)
+  //     }
+  //   },
+  //   [setFiles],
+  // )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -650,7 +654,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && s3Uploads.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -665,6 +669,27 @@ export default function AdCreationForm({
     }
 
     setIsLoading(true);
+    // ✅ Step: Upload large local video files to S3 before creating ads
+    const largeFiles = files.filter((file) => file.size > 100 * 1024 * 1024);
+    let s3Results = [];
+
+    if (largeFiles.length > 0) {
+      setUploadingToS3(true);
+      toast.info(`Uploading ${largeFiles.length} large file(s) to S3...`);
+
+      try {
+        const s3UploadPromises = largeFiles.map(uploadToS3);
+        s3Results = await Promise.all(s3UploadPromises);
+        toast.success("All large video files uploaded to S3!");
+      } catch (err) {
+        toast.error("Error uploading large files to S3");
+        setIsLoading(false);
+        return;
+      } finally {
+        setUploadingToS3(false);
+      }
+    }
+
 
     // Determine the ad set(s) to use: if "Create New AdSet" is chosen, duplicate it
     let finalAdSetIds = [...selectedAdSets];
@@ -737,7 +762,7 @@ export default function AdCreationForm({
           });
 
           // Add all S3 uploaded files
-          s3Uploads.forEach((s3File) => {
+          s3Results.forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
           });
 
@@ -834,7 +859,7 @@ export default function AdCreationForm({
 
 
           // Handle S3 uploaded files
-          s3Uploads.forEach((s3File, index) => {
+          s3Results.forEach((s3File, index) => {
             const formData = new FormData();
             formData.append("adName", computeAdName(s3File, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
@@ -1441,7 +1466,7 @@ export default function AdCreationForm({
             type="submit"
             className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
             disabled={
-              !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0 && s3Uploads.length === 0) || isLoading || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === ""))
+              !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || isLoading || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === ""))
             }
           >
             {isLoading || uploadingToS3 ? (
