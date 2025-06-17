@@ -126,9 +126,9 @@ export default function AdCreationForm({
       // Upload directly to S3
       await axios.put(uploadUrl, file, {
         headers: {
-          'Content-Type': file.type
+          'Content-Type': file.type,
         }
-      })
+      });
 
       return {
         name: file.name,
