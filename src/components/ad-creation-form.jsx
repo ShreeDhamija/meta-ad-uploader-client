@@ -481,6 +481,9 @@ export default function AdCreationForm({
 
           // ✅ STEP 1: Initialize the Google API client for the Drive API.
           // This is the missing piece that caused the error.
+          console.log("🔧 Starting init with API key:", import.meta.env.VITE_GOOGLE_API_KEY);
+          console.log("📦 gapi.client available?", !!gapi.client);
+
           try {
             await gapi.client.init({
               apiKey: import.meta.env.VITE_GOOGLE_API_KEY, // Get key from .env
