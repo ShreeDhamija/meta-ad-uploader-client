@@ -508,7 +508,7 @@ export default function AdCreationForm({
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .setCallback(async (data) => {
-        if (data.action === "picked") {
+        if (data.action === google.picker.Action.PICKED) {
 
           // ✅ STEP 1: Initialize the Google API client for the Drive API.
           // This is the missing piece that caused the error.
