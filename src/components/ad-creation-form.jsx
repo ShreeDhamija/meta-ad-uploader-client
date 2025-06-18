@@ -151,6 +151,7 @@ export default function AdCreationForm({
         driveFileUrl: driveDownloadUrl,
         fileName: file.name,
         mimeType: file.mimeType,
+        accessToken: file.accessToken, // ✅ Pass the access token from the file object
       })
     });
 
