@@ -375,27 +375,72 @@ export default function AdCreationForm({
     }
   };
 
+  // const createPicker = (token) => {
+  //   const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+  //     .setIncludeFolders(true)        // ✅ Show folders
+  //     .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
+
+  //   const picker = new google.picker.PickerBuilder()
+  //     .addView(view)
+  //     .setOAuthToken(token)
+  //     .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+  //     .setCallback((data) => {
+  //       if (data.action !== "picked") return;
+
+  //       const selected = data.docs.map((doc) => ({
+  //         id: doc.id,
+  //         name: doc.name,
+  //         mimeType: doc.mimeType,
+  //         size: doc.sizeBytes,
+  //         accessToken: token
+  //       }));
+
+  //       setDriveFiles((prev) => [...prev, ...selected]);
+  //       if (data.action === "picked" || data.action === "cancel") {
+  //         picker.setVisible(false);
+  //       }
+  //     })
+  //     .build();
+
+  //   picker.setVisible(true);
+  // };
+
+
   const createPicker = (token) => {
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setIncludeFolders(true)        // ✅ Show folders
-      .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(false);
 
     const picker = new google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .setCallback((data) => {
+      .setCallback(async (data) => { // ✅ async callback
         if (data.action !== "picked") return;
 
-        const selected = data.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.name,
-          mimeType: doc.mimeType,
-          size: doc.sizeBytes,
-          accessToken: token
+        const selected = await Promise.all(data.docs.map(async (doc) => {
+          try {
+            const response = await gapi.client.drive.files.get({
+              fileId: doc.id,
+              fields: "id, name, mimeType, size",
+            });
+
+            return {
+              id: doc.id,
+              name: doc.name,
+              mimeType: doc.mimeType,
+              accessToken: token,
+              size: Number(response.result.size),
+            };
+          } catch (err) {
+            toast.error(`❌ Failed to fetch size for ${doc.name}`);
+            console.error("Drive size fetch error:", err.message);
+            return null;
+          }
         }));
 
-        setDriveFiles((prev) => [...prev, ...selected]);
+        setDriveFiles((prev) => [...prev, ...selected.filter(Boolean)]);
+
         if (data.action === "picked" || data.action === "cancel") {
           picker.setVisible(false);
         }
