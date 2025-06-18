@@ -468,6 +468,7 @@ export default function AdCreationForm({
 
 
   const createPicker = (token) => {
+    console.log("create picker");
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
       .setIncludeFolders(true)
       .setSelectFolderEnabled(false);
