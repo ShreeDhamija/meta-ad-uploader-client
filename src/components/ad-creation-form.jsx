@@ -465,9 +465,7 @@ export default function AdCreationForm({
   //   picker.setVisible(true);
   // };
 
-  // in ad-creation-form.jsx
 
-  // in ad-creation-form.jsx
 
   const createPicker = (token) => {
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
@@ -493,12 +491,14 @@ export default function AdCreationForm({
             console.error("GAPI client init error:", initError);
             return; // Stop if initialization fails
           }
+          await gapi.client.load("drive", "v3");
+          gapi.client.setToken({ access_token: token });
 
           // ✅ STEP 2: Now that it's initialized, proceed with fetching file details.
           const selectedFilesPromises = data.docs.map(async (doc) => {
             try {
               // The picker already authenticated, but setToken ensures the client knows the user.
-              gapi.client.setToken({ access_token: token });
+
 
               // This call will now succeed because gapi.client.drive exists.
               const response = await gapi.client.drive.files.get({
