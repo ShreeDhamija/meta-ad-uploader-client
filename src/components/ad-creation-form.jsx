@@ -142,6 +142,13 @@ export default function AdCreationForm({
 
   async function uploadDriveFileToS3(file) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+
+    console.log("🚀 Uploading Drive file to S3:", {
+      name: file.name,
+      size: file.size,
+      hasAccessToken: !!file.accessToken
+    });
+
     const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/api/upload-from-drive", {
       method: "POST",
       headers: {
@@ -151,7 +158,8 @@ export default function AdCreationForm({
         driveFileUrl: driveDownloadUrl,
         fileName: file.name,
         mimeType: file.mimeType,
-        accessToken: file.accessToken, // ✅ Pass the access token from the file object
+        accessToken: file.accessToken,
+        size: file.size// ✅ Pass the access token from the file object
       })
     });
 
