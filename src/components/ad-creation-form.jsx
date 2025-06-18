@@ -356,230 +356,46 @@ export default function AdCreationForm({
   };
 
 
-  // In ad-creation-form.jsx
 
-  // const handleDriveClick = async () => {
-  //   try {
-  //     // 1. Check the backend for an existing valid token.
-  //     const res = await axios.get(
-  //       "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
-  //       { withCredentials: true }
-  //     );
-
-  //     // 2. If we are already authenticated, open the picker directly.
-  //     if (res.data.authenticated && res.data.accessToken) {
-  //       setGoogleAuthStatus({
-  //         authenticated: true,
-  //         checking: false,
-  //         accessToken: res.data.accessToken
-  //       });
-  //       openPicker(res.data.accessToken);
-  //       return; // IMPORTANT: Stop execution here.
-  //     }
-  //   } catch (err) {
-  //     // If the status check itself fails, log it and proceed to login.
-  //     console.warn("Could not retrieve Google auth status from server. Proceeding to login.", err);
-  //   }
-
-  //   // 3. If not authenticated (or if status check failed), open the auth popup.
-  //   // The global useEffect listener will handle the response from this popup.
-  //   // We no longer need a local listener inside this function.
-  //   const authWindow = window.open(
-  //     "https://meta-ad-uploader-server-production.up.railway.app/auth/google?popup=true",
-  //     "_blank",
-  //     "width=500,height=600"
-  //   );
-
-  //   if (!authWindow) {
-  //     toast.error("Popup blocked. Please allow popups and try again.");
-  //   }
-  // };
-
-  // const openPicker = (token) => {
-  //   // Load the picker API if not already loaded
-  //   if (!window.google || !window.google.picker) {
-  //     const script = document.createElement('script');
-  //     script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
-  //     document.body.appendChild(script);
-
-  //     window.onApiLoad = () => {
-  //       window.gapi.load('picker', () => {
-  //         createPicker(token);
-  //       });
-  //     };
-  //   } else {
-  //     createPicker(token);
-  //   }
-  // };
-
-  // This code inside your ad-creation-form.jsx
-  // const openPicker = (token) => {
-  //   // 1. Check if the API is ready
-  //   if (!window.gapi || !window.gapi.load) {
-  //     // 2. If not, create the script tag programmatically
-  //     const script = document.createElement('script');
-  //     script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
-  //     document.body.appendChild(script);
-
-  //     // 3. Use the 'onload' callback which guarantees the API is ready
-  //     window.onApiLoad = () => {
-  //       window.gapi.load('picker:client', () => {
-  //         createPicker(token); // Only call this when you know gapi.load exists
-  //       });
-  //     };
-  //   } else {
-  //     // If it's already loaded, just use it
-  //     window.gapi.load('picker:client', () => {
-  //       createPicker(token);
-  //     });
-  //   }
-  // };
-
-  // In ad-creation-form.jsx
 
   const openPicker = (token) => {
-    const scriptId = 'google-api-script';
-
-    // This function will be called once the 'client' and 'picker' modules are ready.
-    const showPicker = () => {
-      createPicker(token);
-    };
-
-    // Check if the main gapi script is already on the page
-    if (document.getElementById(scriptId)) {
-      // If the script is there, we still need to ensure the modules are loaded
-      window.gapi.load('client:picker', showPicker);
-    } else {
-      // If not, create and append it
+    // Load the picker API if not already loaded
+    if (!window.google || !window.google.picker) {
       const script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://apis.google.com/js/api.js';
-
-      // Use onload to know when the main script is ready
-      script.onload = () => {
-        // Now that gapi exists, load the necessary modules
-        window.gapi.load('client:picker', showPicker);
-      };
-
+      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
       document.body.appendChild(script);
+
+      window.onApiLoad = () => {
+        window.gapi.load('picker', () => {
+          createPicker(token);
+        });
+      };
+    } else {
+      createPicker(token);
     }
   };
 
-  // const createPicker = (token) => {
-  //   const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-  //     .setIncludeFolders(true)        // ✅ Show folders
-  //     .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
-
-  //   const picker = new google.picker.PickerBuilder()
-  //     .addView(view)
-  //     .setOAuthToken(token)
-  //     .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-  //     .setCallback((data) => {
-  //       if (data.action !== "picked") return;
-
-  //       const selected = data.docs.map((doc) => ({
-  //         id: doc.id,
-  //         name: doc.name,
-  //         mimeType: doc.mimeType,
-  //         size: doc.sizeBytes,
-  //         accessToken: token
-  //       }));
-
-  //       setDriveFiles((prev) => [...prev, ...selected]);
-  //       if (data.action === "picked" || data.action === "cancel") {
-  //         picker.setVisible(false);
-  //       }
-  //     })
-  //     .build();
-
-  //   picker.setVisible(true);
-  // };
-
-
-
   const createPicker = (token) => {
-    console.log("create picker");
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setIncludeFolders(true)
-      .setSelectFolderEnabled(false);
+      .setIncludeFolders(true)        // ✅ Show folders
+      .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
 
     const picker = new google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .setCallback(async (data) => {
-        if (data.action === "PICKED") {
+      .setCallback((data) => {
+        if (data.action !== "picked") return;
 
-          // ✅ STEP 1: Initialize the Google API client for the Drive API.
-          // This is the missing piece that caused the error.
-          console.log("🔧 Starting init with API key:", import.meta.env.VITE_GOOGLE_API_KEY);
-          console.log("📦 gapi.client available?", !!gapi.client);
+        const selected = data.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.name,
+          mimeType: doc.mimeType,
+          size: doc.sizeBytes,
+          accessToken: token
+        }));
 
-          try {
-            await gapi.client.init({
-              apiKey: import.meta.env.VITE_GOOGLE_API_KEY, // Get key from .env
-              discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-            });
-          } catch (initError) {
-            toast.error("Failed to initialize Google Drive API.");
-            console.error("GAPI client init error:", initError);
-            return; // Stop if initialization fails
-          }
-          await gapi.client.load("drive", "v3");
-          console.log("🔐 Access token:", token);
-          console.log("🔑 API key:", import.meta.env.VITE_GOOGLE_API_KEY);
-          console.log("🧾 GAPI loaded:", !!gapi.client);
-          console.log("📁 Drive module:", !!gapi.client.drive);
-
-          gapi.client.setToken({ access_token: token });
-          const grantedScopes = gapi.auth.getToken()?.scope || gapi.client.getToken()?.scope;
-          console.log("🔎 Granted scopes:", grantedScopes);
-
-          try {
-            const testResp = await gapi.client.drive.files.list({
-              pageSize: 1,
-              fields: 'files(id, name)',
-            });
-            console.log("✅ Test Drive API call succeeded:", testResp);
-          } catch (testErr) {
-            console.error("❌ Test Drive API call failed:", testErr);
-          }
-
-
-          // ✅ STEP 2: Now that it's initialized, proceed with fetching file details.
-          const selectedFilesPromises = data.docs.map(async (doc) => {
-            try {
-              // The picker already authenticated, but setToken ensures the client knows the user.
-
-
-              // This call will now succeed because gapi.client.drive exists.
-              const response = await gapi.client.drive.files.get({
-                fileId: doc.id,
-                fields: 'id, name, mimeType, size',
-              });
-              console.error("❌ Full error object:", err);
-              console.error("❌ err.result:", err?.result);
-              console.error("❌ err.message:", err?.message);
-
-
-              return {
-                id: response.result.id,
-                name: response.result.name,
-                mimeType: response.result.mimeType,
-                size: Number(response.result.size),
-                accessToken: token,
-              };
-            } catch (err) {
-              toast.error(`❌ Failed to fetch details for ${doc.name}`);
-              console.error("Drive file details fetch error:", err);
-              return null;
-            }
-          });
-
-          const selectedFilesWithDetails = await Promise.all(selectedFilesPromises);
-          setDriveFiles((prev) => [...prev, ...selectedFilesWithDetails.filter(Boolean)]);
-        }
-
+        setDriveFiles((prev) => [...prev, ...selected]);
         if (data.action === "picked" || data.action === "cancel") {
           picker.setVisible(false);
         }
@@ -588,6 +404,8 @@ export default function AdCreationForm({
 
     picker.setVisible(true);
   };
+
+
   // Dropzone logic
   const onDrop = useCallback((acceptedFiles) => {
     setFiles((prev) => [...prev, ...acceptedFiles]);
@@ -668,36 +486,8 @@ export default function AdCreationForm({
   }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
 
   // Add this useEffect after your existing useEffects
-  // useEffect(() => {
-  //   const handler = (event) => {
-  //     if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
-  //       return;
-  //     }
-
-  //     const { type, accessToken } = event.data || {};
-
-  //     if (type === "google-auth-success") {
-  //       if (!accessToken) return;
-  //       setGoogleAuthStatus({
-  //         checking: false,
-  //         authenticated: true,
-  //         accessToken
-  //       });
-  //       openPicker(accessToken);
-  //     } else if (type === "google-auth-error") {
-  //       toast.error("Google authentication failed");
-  //     }
-  //   };
-
-  //   window.addEventListener("message", handler);
-  //   return () => window.removeEventListener("message", handler);
-  // }, []);
-  // In ad-creation-form.jsx
-
   useEffect(() => {
-    // This handler will now be async to await the token saving call
-    const handler = async (event) => {
-      // IMPORTANT: Ensure this origin matches your server URL exactly
+    const handler = (event) => {
       if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
         return;
       }
@@ -705,48 +495,21 @@ export default function AdCreationForm({
       const { type, accessToken } = event.data || {};
 
       if (type === "google-auth-success") {
-        if (!accessToken) {
-          toast.error("Authentication succeeded but no token was received.");
-          return;
-        }
-
-        try {
-          // Call the new backend endpoint to save the token to the server session
-          await axios.post(
-            "https://meta-ad-uploader-server-production.up.railway.app/auth/google/save-token",
-            { accessToken },
-            { withCredentials: true } // This is crucial for sending the session cookie
-          );
-
-          // Once the token is saved on the backend, update the frontend state
-          setGoogleAuthStatus({
-            checking: false,
-            authenticated: true,
-            accessToken
-          });
-
-          // And open the picker for the user
-          openPicker(accessToken);
-
-        } catch (error) {
-          console.error("Failed to save Google token to backend:", error);
-          toast.error("Could not sync your Google session. Please try authenticating again.");
-        }
-
+        if (!accessToken) return;
+        setGoogleAuthStatus({
+          checking: false,
+          authenticated: true,
+          accessToken
+        });
+        openPicker(accessToken);
       } else if (type === "google-auth-error") {
-        toast.error("Google authentication failed. Please try again.");
+        toast.error("Google authentication failed");
       }
     };
 
     window.addEventListener("message", handler);
-
-    // Cleanup function to remove the listener when the component unmounts
-    return () => {
-      window.removeEventListener("message", handler);
-    };
-  }, []); // The empty dependency array is correct here, so the listener is set up only once.
-
-
+    return () => window.removeEventListener("message", handler);
+  }, []);
 
   useEffect(() => {
     if (!uploadingToS3 && publishPending) {
@@ -914,13 +677,6 @@ export default function AdCreationForm({
       }
     }
 
-    const smallDriveFiles = driveFiles.filter(file =>
-      !(file.mimeType.startsWith("video/") && file.size > 100 * 1024 * 1024)
-    );
-    console.log("🧪 All Drive Files:", driveFiles);
-    console.log("🧪 Large Drive Files:", largeDriveFiles);
-    console.log("🧪 Small Drive Files:", smallDriveFiles);
-
 
     // Determine the ad set(s) to use: if "Create New AdSet" is chosen, duplicate it
     let finalAdSetIds = [...selectedAdSets];
@@ -985,15 +741,7 @@ export default function AdCreationForm({
           });
 
           // Add all drive files
-          // driveFiles.forEach((driveFile) => {
-          //   formData.append("driveFiles", JSON.stringify({
-          //     id: driveFile.id,
-          //     name: driveFile.name,
-          //     mimeType: driveFile.mimeType,
-          //     accessToken: driveFile.accessToken
-          //   }));
-          // });
-          smallDriveFiles.forEach((driveFile) => {
+          driveFiles.forEach((driveFile) => {
             formData.append("driveFiles", JSON.stringify({
               id: driveFile.id,
               name: driveFile.name,
@@ -1002,15 +750,10 @@ export default function AdCreationForm({
             }));
           });
 
-
-          // Add all S3 uploaded files with drive files
-          // s3Results.forEach((s3File) => {
-          //   formData.append("s3VideoUrls", s3File.s3Url);
-          // });
-          [...s3Results, ...s3DriveResults].forEach((s3File) => {
+          // Add all S3 uploaded files
+          s3Results.forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
           });
-
 
           // For video dynamic creative, use the single thumbnail (if provided)
           if (thumbnail) {
@@ -1075,37 +818,7 @@ export default function AdCreationForm({
           });
 
           // Handle drive files
-          // driveFiles.forEach((driveFile, index) => {
-          //   const formData = new FormData();
-          //   formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
-          //   formData.append("headlines", JSON.stringify(headlines));
-          //   formData.append("descriptions", JSON.stringify(descriptions));
-          //   formData.append("messages", JSON.stringify(messages));
-          //   formData.append("adAccountId", selectedAdAccount);
-          //   formData.append("adSetId", adSetId);
-          //   formData.append("pageId", pageId);
-          //   formData.append("instagramAccountId", instagramAccountId);
-          //   formData.append("link", link);
-          //   formData.append("cta", cta);
-          //   formData.append("driveFile", "true");
-          //   formData.append("driveId", driveFile.id);
-          //   formData.append("driveMimeType", driveFile.mimeType);
-          //   formData.append("driveAccessToken", driveFile.accessToken);
-          //   formData.append("driveName", driveFile.name);
-          //   if (selectedShopDestination) {
-          //     formData.append("shopDestination", selectedShopDestination)
-          //     formData.append("shopDestinationType", selectedShopDestinationType)
-          //   }
-          //   formData.append("launchPaused", launchPaused);
-
-          //   promises.push(
-          //     axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
-          //       withCredentials: true,
-          //       headers: { "Content-Type": "multipart/form-data" },
-          //     })
-          //   );
-          // });
-          smallDriveFiles.forEach((driveFile, index) => {
+          driveFiles.forEach((driveFile, index) => {
             const formData = new FormData();
             formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
@@ -1123,8 +836,8 @@ export default function AdCreationForm({
             formData.append("driveAccessToken", driveFile.accessToken);
             formData.append("driveName", driveFile.name);
             if (selectedShopDestination) {
-              formData.append("shopDestination", selectedShopDestination);
-              formData.append("shopDestinationType", selectedShopDestinationType);
+              formData.append("shopDestination", selectedShopDestination)
+              formData.append("shopDestinationType", selectedShopDestinationType)
             }
             formData.append("launchPaused", launchPaused);
 
@@ -1137,9 +850,8 @@ export default function AdCreationForm({
           });
 
 
-
           // Handle S3 uploaded files
-          [...s3Results, ...s3DriveResults].forEach((s3File, index) => {
+          s3Results.forEach((s3File, index) => {
             const formData = new FormData();
             formData.append("adName", computeAdName(s3File, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
