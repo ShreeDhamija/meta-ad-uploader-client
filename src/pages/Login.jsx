@@ -121,8 +121,8 @@ export default function Login() {
                     <p className="text-xs text-center text-muted-foreground mt-2">
                         By clicking continue, you agree to our{" "}
                         <br></br>
-                        <a href="#" className="underline text-zinc-600">Terms of Service</a> and{" "}
-                        <a href="#" className="underline text-zinc-600">Privacy Policy</a>.
+                        <a href="https://www.withblip.com/terms-of-service" className="underline text-zinc-600">Terms of Service</a> and{" "}
+                        <a href="https://www.withblip.com/privacy-policy" className="underline text-zinc-600">Privacy Policy</a>.
                     </p>
                 </div>
             </div >

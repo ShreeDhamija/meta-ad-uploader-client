@@ -753,15 +753,7 @@ export default function AdCreationForm({
             }
           });
 
-          // Add all drive files
-          // driveFiles.forEach((driveFile) => {
-          //   formData.append("driveFiles", JSON.stringify({
-          //     id: driveFile.id,
-          //     name: driveFile.name,
-          //     mimeType: driveFile.mimeType,
-          //     accessToken: driveFile.accessToken
-          //   }));
-          // });
+
           smallDriveFiles.forEach((driveFile) => {
             formData.append("driveFiles", JSON.stringify({
               id: driveFile.id,
@@ -772,10 +764,7 @@ export default function AdCreationForm({
           });
 
 
-          // Add all S3 uploaded files with drive files
-          // s3Results.forEach((s3File) => {
-          //   formData.append("s3VideoUrls", s3File.s3Url);
-          // });
+
           [...s3Results, ...s3DriveResults].forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
           });
@@ -843,37 +832,7 @@ export default function AdCreationForm({
             );
           });
 
-          // Handle drive files
-          // driveFiles.forEach((driveFile, index) => {
-          //   const formData = new FormData();
-          //   formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
-          //   formData.append("headlines", JSON.stringify(headlines));
-          //   formData.append("descriptions", JSON.stringify(descriptions));
-          //   formData.append("messages", JSON.stringify(messages));
-          //   formData.append("adAccountId", selectedAdAccount);
-          //   formData.append("adSetId", adSetId);
-          //   formData.append("pageId", pageId);
-          //   formData.append("instagramAccountId", instagramAccountId);
-          //   formData.append("link", link);
-          //   formData.append("cta", cta);
-          //   formData.append("driveFile", "true");
-          //   formData.append("driveId", driveFile.id);
-          //   formData.append("driveMimeType", driveFile.mimeType);
-          //   formData.append("driveAccessToken", driveFile.accessToken);
-          //   formData.append("driveName", driveFile.name);
-          //   if (selectedShopDestination) {
-          //     formData.append("shopDestination", selectedShopDestination)
-          //     formData.append("shopDestinationType", selectedShopDestinationType)
-          //   }
-          //   formData.append("launchPaused", launchPaused);
 
-          //   promises.push(
-          //     axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
-          //       withCredentials: true,
-          //       headers: { "Content-Type": "multipart/form-data" },
-          //     })
-          //   );
-          // });
           smallDriveFiles.forEach((driveFile, index) => {
             const formData = new FormData();
             formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
