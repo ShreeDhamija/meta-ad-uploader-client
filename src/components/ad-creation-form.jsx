@@ -358,20 +358,43 @@ export default function AdCreationForm({
 
 
 
+  // const openPicker = (token) => {
+  //   // Load the picker API if not already loaded
+  //   if (!window.google || !window.google.picker) {
+  //     const script = document.createElement('script');
+  //     script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
+  //     document.body.appendChild(script);
+
+  //     window.onApiLoad = () => {
+  //       window.gapi.load('picker', () => {
+  //         createPicker(token);
+  //       });
+  //     };
+  //   } else {
+  //     createPicker(token);
+  //   }
+  // };
+
+  // This code inside your ad-creation-form.jsx
   const openPicker = (token) => {
-    // Load the picker API if not already loaded
-    if (!window.google || !window.google.picker) {
+    // 1. Check if the API is ready
+    if (!window.gapi || !window.gapi.load) {
+      // 2. If not, create the script tag programmatically
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
       document.body.appendChild(script);
 
+      // 3. Use the 'onload' callback which guarantees the API is ready
       window.onApiLoad = () => {
-        window.gapi.load('picker', () => {
-          createPicker(token);
+        window.gapi.load('picker:client', () => {
+          createPicker(token); // Only call this when you know gapi.load exists
         });
       };
     } else {
-      createPicker(token);
+      // If it's already loaded, just use it
+      window.gapi.load('picker:client', () => {
+        createPicker(token);
+      });
     }
   };
 
@@ -405,6 +428,7 @@ export default function AdCreationForm({
   //   picker.setVisible(true);
   // };
 
+  // in ad-creation-form.jsx
 
   const createPicker = (token) => {
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
@@ -415,33 +439,44 @@ export default function AdCreationForm({
       .addView(view)
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .setCallback(async (data) => { // ✅ async callback
-        if (data.action !== "picked") return;
+      // ✅ Make the callback async to handle API calls
+      .setCallback(async (data) => {
+        if (data.action === "picked") {
+          // Use Promise.all to fetch metadata for all selected files concurrently
+          const selectedFilesPromises = data.docs.map(async (doc) => {
+            try {
+              // Set the access token for the gapi client
+              gapi.client.setToken({ access_token: token });
 
-        const selected = await Promise.all(data.docs.map(async (doc) => {
-          try {
-            const response = await gapi.client.drive.files.get({
-              fileId: doc.id,
-              fields: "id, name, mimeType, size",
-            });
+              // ✅ Explicitly call the Drive API to get file details, including size
+              const response = await gapi.client.drive.files.get({
+                fileId: doc.id,
+                fields: 'id, name, mimeType, size', // Request the 'size' field
+              });
 
-            return {
-              id: doc.id,
-              name: doc.name,
-              mimeType: doc.mimeType,
-              accessToken: token,
-              size: Number(response.result.size),
-            };
-          } catch (err) {
-            toast.error(`❌ Failed to fetch size for ${doc.name}`);
-            console.error("Drive size fetch error:", err.message);
-            return null;
-          }
-        }));
-        console.log("📦 Selected Drive Files with size:", selected);
+              // ✅ Return a structured object with the accurate size
+              return {
+                id: response.result.id,
+                name: response.result.name,
+                mimeType: response.result.mimeType,
+                // The size from the API is a string, convert it to a number
+                size: Number(response.result.size),
+                accessToken: token, // Keep the token for backend processing
+              };
+            } catch (err) {
+              toast.error(`❌ Failed to fetch details for ${doc.name}`);
+              console.error("Drive file details fetch error:", err);
+              return null; // Return null on error to filter it out later
+            }
+          });
 
-        setDriveFiles((prev) => [...prev, ...selected.filter(Boolean)]);
+          const selectedFilesWithDetails = await Promise.all(selectedFilesPromises);
 
+          // Filter out any files that failed to fetch and update the state
+          setDriveFiles((prev) => [...prev, ...selectedFilesWithDetails.filter(Boolean)]);
+        }
+
+        // Hide the picker after picking or cancelling
         if (data.action === "picked" || data.action === "cancel") {
           picker.setVisible(false);
         }
