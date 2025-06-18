@@ -492,7 +492,25 @@ export default function AdCreationForm({
             return; // Stop if initialization fails
           }
           await gapi.client.load("drive", "v3");
+          console.log("🔐 Access token:", token);
+          console.log("🔑 API key:", import.meta.env.VITE_GOOGLE_API_KEY);
+          console.log("🧾 GAPI loaded:", !!gapi.client);
+          console.log("📁 Drive module:", !!gapi.client.drive);
+
           gapi.client.setToken({ access_token: token });
+          const grantedScopes = gapi.auth.getToken()?.scope || gapi.client.getToken()?.scope;
+          console.log("🔎 Granted scopes:", grantedScopes);
+
+          try {
+            const testResp = await gapi.client.drive.files.list({
+              pageSize: 1,
+              fields: 'files(id, name)',
+            });
+            console.log("✅ Test Drive API call succeeded:", testResp);
+          } catch (testErr) {
+            console.error("❌ Test Drive API call failed:", testErr);
+          }
+
 
           // ✅ STEP 2: Now that it's initialized, proceed with fetching file details.
           const selectedFilesPromises = data.docs.map(async (doc) => {
@@ -505,6 +523,10 @@ export default function AdCreationForm({
                 fileId: doc.id,
                 fields: 'id, name, mimeType, size',
               });
+              console.error("❌ Full error object:", err);
+              console.error("❌ err.result:", err?.result);
+              console.error("❌ err.message:", err?.message);
+
 
               return {
                 id: response.result.id,
