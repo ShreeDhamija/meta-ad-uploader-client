@@ -413,25 +413,55 @@ export default function AdCreationForm({
   // };
 
   // This code inside your ad-creation-form.jsx
-  const openPicker = (token) => {
-    // 1. Check if the API is ready
-    if (!window.gapi || !window.gapi.load) {
-      // 2. If not, create the script tag programmatically
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
-      document.body.appendChild(script);
+  // const openPicker = (token) => {
+  //   // 1. Check if the API is ready
+  //   if (!window.gapi || !window.gapi.load) {
+  //     // 2. If not, create the script tag programmatically
+  //     const script = document.createElement('script');
+  //     script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
+  //     document.body.appendChild(script);
 
-      // 3. Use the 'onload' callback which guarantees the API is ready
-      window.onApiLoad = () => {
-        window.gapi.load('picker:client', () => {
-          createPicker(token); // Only call this when you know gapi.load exists
-        });
-      };
+  //     // 3. Use the 'onload' callback which guarantees the API is ready
+  //     window.onApiLoad = () => {
+  //       window.gapi.load('picker:client', () => {
+  //         createPicker(token); // Only call this when you know gapi.load exists
+  //       });
+  //     };
+  //   } else {
+  //     // If it's already loaded, just use it
+  //     window.gapi.load('picker:client', () => {
+  //       createPicker(token);
+  //     });
+  //   }
+  // };
+
+  // In ad-creation-form.jsx
+
+  const openPicker = (token) => {
+    const scriptId = 'google-api-script';
+
+    // This function will be called once the 'client' and 'picker' modules are ready.
+    const showPicker = () => {
+      createPicker(token);
+    };
+
+    // Check if the main gapi script is already on the page
+    if (document.getElementById(scriptId)) {
+      // If the script is there, we still need to ensure the modules are loaded
+      window.gapi.load('client:picker', showPicker);
     } else {
-      // If it's already loaded, just use it
-      window.gapi.load('picker:client', () => {
-        createPicker(token);
-      });
+      // If not, create and append it
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.src = 'https://apis.google.com/js/api.js';
+
+      // Use onload to know when the main script is ready
+      script.onload = () => {
+        // Now that gapi exists, load the necessary modules
+        window.gapi.load('client:picker', showPicker);
+      };
+
+      document.body.appendChild(script);
     }
   };
 
