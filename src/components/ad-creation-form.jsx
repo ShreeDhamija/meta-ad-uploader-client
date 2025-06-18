@@ -90,7 +90,7 @@ export default function AdCreationForm({
 
   //S3 States
   const [uploadingToS3, setUploadingToS3] = useState(false)
-  //const [s3Uploads, setS3Uploads] = useState([]) // Track S3 uploaded files
+
 
 
   const [pageSearchValue, setPageSearchValue] = useState("")
@@ -102,11 +102,7 @@ export default function AdCreationForm({
 
 
 
-  // Check if file is large (>100MB)
-  const isLargeFile = (file) => {
-    const size = file.size || 0
-    return size > 100 * 1024 * 1024 // 100MB
-  }
+
 
   // Upload large file to S3
   const uploadToS3 = async (file) => {
@@ -143,6 +139,26 @@ export default function AdCreationForm({
       throw new Error(`Failed to upload ${file.name} to S3`)
     }
   }
+
+  async function uploadDriveFileToS3(file) {
+    const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+    const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/api/upload-from-drive", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        driveFileUrl: driveDownloadUrl,
+        fileName: file.name,
+        mimeType: file.mimeType,
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "S3 upload failed");
+    return data.s3Url;
+  }
+
 
 
   const formulaParts = adOrder.map((key) => {
@@ -375,6 +391,7 @@ export default function AdCreationForm({
           id: doc.id,
           name: doc.name,
           mimeType: doc.mimeType,
+          size: doc.sizeBytes,
           accessToken: token
         }));
 
@@ -394,54 +411,7 @@ export default function AdCreationForm({
     setFiles((prev) => [...prev, ...acceptedFiles]);
   }, []);
 
-  // const onDrop = useCallback(
-  //   async (acceptedFiles) => {
-  //     console.log("Dropped Files:", acceptedFiles)
 
-  //     setUploadingToS3(true)
-
-  //     try {
-  //       // Separate large and small files
-  //       const largeFiles = acceptedFiles.filter(isLargeFile)
-  //       const smallFiles = acceptedFiles.filter(file => !isLargeFile(file))
-
-  //       // Show initial toast for large files
-  //       if (largeFiles.length > 0) {
-  //         toast.info(`Uploading ${largeFiles.length} large file(s) to cloud storage...`)
-  //       }
-
-  //       // Upload all large files in parallel
-  //       const s3UploadPromises = largeFiles.map(async (file) => {
-  //         try {
-  //           const s3File = await uploadToS3(file)
-  //           toast.success(`${file.name} uploaded to cloud storage`)
-  //           return s3File
-  //         } catch (error) {
-  //           toast.error(`Failed to upload ${file.name}: ${error.message}`)
-  //           throw error
-  //         }
-  //       })
-
-  //       // Wait for all S3 uploads to complete
-  //       const newS3Uploads = await Promise.all(s3UploadPromises)
-
-  //       // Add files to state
-  //       setFiles((prevFiles) => [...prevFiles, ...smallFiles])
-  //       setS3Uploads((prevS3) => [...prevS3, ...newS3Uploads])
-
-  //       if (largeFiles.length > 0) {
-  //         toast.success(`All ${largeFiles.length} large file(s) uploaded successfully!`)
-  //       }
-
-  //     } catch (error) {
-  //       toast.error("Some uploads failed. Please try again.")
-  //       console.error("Upload error:", error)
-  //     } finally {
-  //       setUploadingToS3(false)
-  //     }
-  //   },
-  //   [setFiles],
-  // )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -690,6 +660,27 @@ export default function AdCreationForm({
       }
     }
 
+    // Step: Upload large Drive videos to S3
+    const largeDriveFiles = driveFiles.filter(file =>
+      file.mimeType.startsWith("video/") && file.size > 100 * 1024 * 1024
+    );
+
+    const s3DriveResults = [];
+    for (const file of largeDriveFiles) {
+      try {
+        const s3Url = await uploadDriveFileToS3(file); // 👇 see below
+        s3DriveResults.push({ ...file, s3Url });
+      } catch (err) {
+        toast.error(`Failed to upload Drive video: ${file.name}`);
+        console.error("❌ Drive to S3 upload failed", err);
+        return; // exit early if a file failed
+      }
+    }
+
+    const smallDriveFiles = driveFiles.filter(file =>
+      !(file.mimeType.startsWith("video/") && file.size > 100 * 1024 * 1024)
+    );
+
 
     // Determine the ad set(s) to use: if "Create New AdSet" is chosen, duplicate it
     let finalAdSetIds = [...selectedAdSets];
@@ -754,7 +745,15 @@ export default function AdCreationForm({
           });
 
           // Add all drive files
-          driveFiles.forEach((driveFile) => {
+          // driveFiles.forEach((driveFile) => {
+          //   formData.append("driveFiles", JSON.stringify({
+          //     id: driveFile.id,
+          //     name: driveFile.name,
+          //     mimeType: driveFile.mimeType,
+          //     accessToken: driveFile.accessToken
+          //   }));
+          // });
+          smallDriveFiles.forEach((driveFile) => {
             formData.append("driveFiles", JSON.stringify({
               id: driveFile.id,
               name: driveFile.name,
@@ -763,10 +762,15 @@ export default function AdCreationForm({
             }));
           });
 
-          // Add all S3 uploaded files
-          s3Results.forEach((s3File) => {
+
+          // Add all S3 uploaded files with drive files
+          // s3Results.forEach((s3File) => {
+          //   formData.append("s3VideoUrls", s3File.s3Url);
+          // });
+          [...s3Results, ...s3DriveResults].forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
           });
+
 
           // For video dynamic creative, use the single thumbnail (if provided)
           if (thumbnail) {
@@ -791,6 +795,8 @@ export default function AdCreationForm({
           );
         });
       }
+
+
 
       // Process non-dynamic adsets (one ad per file)
       if (nonDynamicAdSetIds.length > 0) {
@@ -829,7 +835,37 @@ export default function AdCreationForm({
           });
 
           // Handle drive files
-          driveFiles.forEach((driveFile, index) => {
+          // driveFiles.forEach((driveFile, index) => {
+          //   const formData = new FormData();
+          //   formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
+          //   formData.append("headlines", JSON.stringify(headlines));
+          //   formData.append("descriptions", JSON.stringify(descriptions));
+          //   formData.append("messages", JSON.stringify(messages));
+          //   formData.append("adAccountId", selectedAdAccount);
+          //   formData.append("adSetId", adSetId);
+          //   formData.append("pageId", pageId);
+          //   formData.append("instagramAccountId", instagramAccountId);
+          //   formData.append("link", link);
+          //   formData.append("cta", cta);
+          //   formData.append("driveFile", "true");
+          //   formData.append("driveId", driveFile.id);
+          //   formData.append("driveMimeType", driveFile.mimeType);
+          //   formData.append("driveAccessToken", driveFile.accessToken);
+          //   formData.append("driveName", driveFile.name);
+          //   if (selectedShopDestination) {
+          //     formData.append("shopDestination", selectedShopDestination)
+          //     formData.append("shopDestinationType", selectedShopDestinationType)
+          //   }
+          //   formData.append("launchPaused", launchPaused);
+
+          //   promises.push(
+          //     axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
+          //       withCredentials: true,
+          //       headers: { "Content-Type": "multipart/form-data" },
+          //     })
+          //   );
+          // });
+          smallDriveFiles.forEach((driveFile, index) => {
             const formData = new FormData();
             formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
@@ -847,8 +883,8 @@ export default function AdCreationForm({
             formData.append("driveAccessToken", driveFile.accessToken);
             formData.append("driveName", driveFile.name);
             if (selectedShopDestination) {
-              formData.append("shopDestination", selectedShopDestination)
-              formData.append("shopDestinationType", selectedShopDestinationType)
+              formData.append("shopDestination", selectedShopDestination);
+              formData.append("shopDestinationType", selectedShopDestinationType);
             }
             formData.append("launchPaused", launchPaused);
 
@@ -861,8 +897,9 @@ export default function AdCreationForm({
           });
 
 
+
           // Handle S3 uploaded files
-          s3Results.forEach((s3File, index) => {
+          [...s3Results, ...s3DriveResults].forEach((s3File, index) => {
             const formData = new FormData();
             formData.append("adName", computeAdName(s3File, adValues.dateType, index));
             formData.append("headlines", JSON.stringify(headlines));
