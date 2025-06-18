@@ -575,8 +575,36 @@ export default function AdCreationForm({
   }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
 
   // Add this useEffect after your existing useEffects
+  // useEffect(() => {
+  //   const handler = (event) => {
+  //     if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
+  //       return;
+  //     }
+
+  //     const { type, accessToken } = event.data || {};
+
+  //     if (type === "google-auth-success") {
+  //       if (!accessToken) return;
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: true,
+  //         accessToken
+  //       });
+  //       openPicker(accessToken);
+  //     } else if (type === "google-auth-error") {
+  //       toast.error("Google authentication failed");
+  //     }
+  //   };
+
+  //   window.addEventListener("message", handler);
+  //   return () => window.removeEventListener("message", handler);
+  // }, []);
+  // In ad-creation-form.jsx
+
   useEffect(() => {
-    const handler = (event) => {
+    // This handler will now be async to await the token saving call
+    const handler = async (event) => {
+      // IMPORTANT: Ensure this origin matches your server URL exactly
       if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
         return;
       }
@@ -584,21 +612,48 @@ export default function AdCreationForm({
       const { type, accessToken } = event.data || {};
 
       if (type === "google-auth-success") {
-        if (!accessToken) return;
-        setGoogleAuthStatus({
-          checking: false,
-          authenticated: true,
-          accessToken
-        });
-        openPicker(accessToken);
+        if (!accessToken) {
+          toast.error("Authentication succeeded but no token was received.");
+          return;
+        }
+
+        try {
+          // Call the new backend endpoint to save the token to the server session
+          await axios.post(
+            "https://meta-ad-uploader-server-production.up.railway.app/auth/google/save-token",
+            { accessToken },
+            { withCredentials: true } // This is crucial for sending the session cookie
+          );
+
+          // Once the token is saved on the backend, update the frontend state
+          setGoogleAuthStatus({
+            checking: false,
+            authenticated: true,
+            accessToken
+          });
+
+          // And open the picker for the user
+          openPicker(accessToken);
+
+        } catch (error) {
+          console.error("Failed to save Google token to backend:", error);
+          toast.error("Could not sync your Google session. Please try authenticating again.");
+        }
+
       } else if (type === "google-auth-error") {
-        toast.error("Google authentication failed");
+        toast.error("Google authentication failed. Please try again.");
       }
     };
 
     window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, []);
+
+    // Cleanup function to remove the listener when the component unmounts
+    return () => {
+      window.removeEventListener("message", handler);
+    };
+  }, []); // The empty dependency array is correct here, so the listener is set up only once.
+
+
 
   useEffect(() => {
     if (!uploadingToS3 && publishPending) {
