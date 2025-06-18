@@ -143,7 +143,7 @@ export default function AdCreationForm({
   async function uploadDriveFileToS3(file) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
-    console.log("🚀 Uploading Drive file to S3:", {
+    console.log("🚀 Uploading Drive files to S3:", {
       name: file.name,
       size: file.size,
       hasAccessToken: !!file.accessToken
