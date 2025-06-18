@@ -438,6 +438,7 @@ export default function AdCreationForm({
             return null;
           }
         }));
+        console.log("📦 Selected Drive Files with size:", selected);
 
         setDriveFiles((prev) => [...prev, ...selected.filter(Boolean)]);
 
@@ -725,6 +726,9 @@ export default function AdCreationForm({
     const smallDriveFiles = driveFiles.filter(file =>
       !(file.mimeType.startsWith("video/") && file.size > 100 * 1024 * 1024)
     );
+    console.log("🧪 All Drive Files:", driveFiles);
+    console.log("🧪 Large Drive Files:", largeDriveFiles);
+    console.log("🧪 Small Drive Files:", smallDriveFiles);
 
 
     // Determine the ad set(s) to use: if "Create New AdSet" is chosen, duplicate it
