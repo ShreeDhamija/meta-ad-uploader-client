@@ -430,6 +430,8 @@ export default function AdCreationForm({
 
   // in ad-creation-form.jsx
 
+  // in ad-creation-form.jsx
+
   const createPicker = (token) => {
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
       .setIncludeFolders(true)
@@ -439,44 +441,52 @@ export default function AdCreationForm({
       .addView(view)
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      // ✅ Make the callback async to handle API calls
       .setCallback(async (data) => {
         if (data.action === "picked") {
-          // Use Promise.all to fetch metadata for all selected files concurrently
+
+          // ✅ STEP 1: Initialize the Google API client for the Drive API.
+          // This is the missing piece that caused the error.
+          try {
+            await gapi.client.init({
+              apiKey: import.meta.env.VITE_GOOGLE_API_KEY, // Get key from .env
+              discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
+            });
+          } catch (initError) {
+            toast.error("Failed to initialize Google Drive API.");
+            console.error("GAPI client init error:", initError);
+            return; // Stop if initialization fails
+          }
+
+          // ✅ STEP 2: Now that it's initialized, proceed with fetching file details.
           const selectedFilesPromises = data.docs.map(async (doc) => {
             try {
-              // Set the access token for the gapi client
+              // The picker already authenticated, but setToken ensures the client knows the user.
               gapi.client.setToken({ access_token: token });
 
-              // ✅ Explicitly call the Drive API to get file details, including size
+              // This call will now succeed because gapi.client.drive exists.
               const response = await gapi.client.drive.files.get({
                 fileId: doc.id,
-                fields: 'id, name, mimeType, size', // Request the 'size' field
+                fields: 'id, name, mimeType, size',
               });
 
-              // ✅ Return a structured object with the accurate size
               return {
                 id: response.result.id,
                 name: response.result.name,
                 mimeType: response.result.mimeType,
-                // The size from the API is a string, convert it to a number
                 size: Number(response.result.size),
-                accessToken: token, // Keep the token for backend processing
+                accessToken: token,
               };
             } catch (err) {
               toast.error(`❌ Failed to fetch details for ${doc.name}`);
               console.error("Drive file details fetch error:", err);
-              return null; // Return null on error to filter it out later
+              return null;
             }
           });
 
           const selectedFilesWithDetails = await Promise.all(selectedFilesPromises);
-
-          // Filter out any files that failed to fetch and update the state
           setDriveFiles((prev) => [...prev, ...selectedFilesWithDetails.filter(Boolean)]);
         }
 
-        // Hide the picker after picking or cancelling
         if (data.action === "picked" || data.action === "cancel") {
           picker.setVisible(false);
         }
@@ -485,8 +495,6 @@ export default function AdCreationForm({
 
     picker.setVisible(true);
   };
-
-
   // Dropzone logic
   const onDrop = useCallback((acceptedFiles) => {
     setFiles((prev) => [...prev, ...acceptedFiles]);
