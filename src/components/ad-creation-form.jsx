@@ -158,7 +158,7 @@ export default function AdCreationForm({
         driveFileUrl: driveDownloadUrl,
         fileName: file.name,
         mimeType: file.mimeType,
-        accessToken: file.accessToken,
+        // accessToken: file.accessToken,
         size: file.size// ✅ Pass the access token from the file object
       })
     });
@@ -255,44 +255,69 @@ export default function AdCreationForm({
 
 
 
+  const checkGoogleAuth = async (openPickerAfterAuth = false) => {
+    try {
+      setGoogleAuthStatus(prev => ({ ...prev, checking: true }));
+      const response = await axios.get(
+        "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+        { withCredentials: true }
+      );
+      const { authenticated, accessToken } = response.data;
+      setGoogleAuthStatus({
+        checking: false,
+        authenticated: authenticated,
+        accessToken: accessToken
+      });
+      if (authenticated && openPickerAfterAuth) {
+        openPicker(accessToken);
+      }
+    } catch (error) {
+      console.error("Failed to check Google auth status:", error);
+      setGoogleAuthStatus({ checking: false, authenticated: false, accessToken: null });
+    }
+  };
 
   // Drive Picker setup
+  // useEffect(() => {
+  //   // Check Google auth status when component mounts
+  //   const checkGoogleAuth = async () => {
+  //     try {
+  //       const response = await axios.get(
+  //         "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+  //         { withCredentials: true }
+  //       );
+
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: response.data.authenticated,
+  //         accessToken: response.data.accessToken
+  //       });
+
+  //       // ✅ If just logged in, open picker automatically
+  //       if (response.data.authenticated && window.location.search.includes('googleAuth=success')) {
+  //         openPicker(response.data.accessToken);
+  //         // Clean up the URL so it doesn't stay ?googleAuth=success
+  //         const url = new URL(window.location);
+  //         url.searchParams.delete('googleAuth');
+  //         window.history.replaceState({}, document.title, url.pathname);
+  //       }
+
+  //     } catch (error) {
+  //       console.error("Failed to check Google auth status:", error);
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: false,
+  //         accessToken: null
+  //       });
+  //     }
+  //   };
+
+  //   checkGoogleAuth();
+  // }, []);
+
   useEffect(() => {
-    // Check Google auth status when component mounts
-    const checkGoogleAuth = async () => {
-      try {
-        const response = await axios.get(
-          "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
-          { withCredentials: true }
-        );
-
-        setGoogleAuthStatus({
-          checking: false,
-          authenticated: response.data.authenticated,
-          accessToken: response.data.accessToken
-        });
-
-        // ✅ If just logged in, open picker automatically
-        if (response.data.authenticated && window.location.search.includes('googleAuth=success')) {
-          openPicker(response.data.accessToken);
-          // Clean up the URL so it doesn't stay ?googleAuth=success
-          const url = new URL(window.location);
-          url.searchParams.delete('googleAuth');
-          window.history.replaceState({}, document.title, url.pathname);
-        }
-
-      } catch (error) {
-        console.error("Failed to check Google auth status:", error);
-        setGoogleAuthStatus({
-          checking: false,
-          authenticated: false,
-          accessToken: null
-        });
-      }
-    };
-
     checkGoogleAuth();
-  }, []);
+  }, [])
 
 
 
@@ -307,11 +332,6 @@ export default function AdCreationForm({
       );
 
       if (res.data.authenticated && res.data.accessToken) {
-        setGoogleAuthStatus({
-          authenticated: true,
-          checking: false,
-          accessToken: res.data.accessToken
-        });
         openPicker(res.data.accessToken);
         return;
       }
@@ -401,7 +421,7 @@ export default function AdCreationForm({
           name: doc.name,
           mimeType: doc.mimeType,
           size: doc.sizeBytes,
-          accessToken: token
+          //accessToken: token
         }));
 
         setDriveFiles((prev) => [...prev, ...selected]);
@@ -495,30 +515,47 @@ export default function AdCreationForm({
   }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
 
   // Add this useEffect after your existing useEffects
+  // useEffect(() => {
+  //   const handler = (event) => {
+  //     if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
+  //       return;
+  //     }
+
+  //     const { type, accessToken } = event.data || {};
+
+  //     if (type === "google-auth-success") {
+  //       if (!accessToken) return;
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: true,
+  //         accessToken
+  //       });
+  //       openPicker(accessToken);
+  //     } else if (type === "google-auth-error") {
+  //       toast.error("Google authentication failed");
+  //     }
+  //   };
+
+  //   window.addEventListener("message", handler);
+  //   return () => window.removeEventListener("message", handler);
+  // }, []);
+
   useEffect(() => {
     const handler = (event) => {
-      if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
-        return;
-      }
-
-      const { type, accessToken } = event.data || {};
+      if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") return;
+      const { type } = event.data || {};
 
       if (type === "google-auth-success") {
-        if (!accessToken) return;
-        setGoogleAuthStatus({
-          checking: false,
-          authenticated: true,
-          accessToken
-        });
-        openPicker(accessToken);
+        // Auth was successful. We don't get a token. We now ask our backend for one.
+        checkGoogleAuth(true); // Pass true to open the picker immediately.
       } else if (type === "google-auth-error") {
         toast.error("Google authentication failed");
       }
     };
-
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, []); // This can have an empty dependency array.
+
 
   useEffect(() => {
     if (!uploadingToS3 && publishPending) {
@@ -759,7 +796,7 @@ export default function AdCreationForm({
               id: driveFile.id,
               name: driveFile.name,
               mimeType: driveFile.mimeType,
-              accessToken: driveFile.accessToken
+              //accessToken: driveFile.accessToken
             }));
           });
 
@@ -848,7 +885,7 @@ export default function AdCreationForm({
             formData.append("driveFile", "true");
             formData.append("driveId", driveFile.id);
             formData.append("driveMimeType", driveFile.mimeType);
-            formData.append("driveAccessToken", driveFile.accessToken);
+            //formData.append("driveAccessToken", driveFile.accessToken);
             formData.append("driveName", driveFile.name);
             if (selectedShopDestination) {
               formData.append("shopDestination", selectedShopDestination);
