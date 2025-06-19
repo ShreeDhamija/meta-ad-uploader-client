@@ -74,11 +74,7 @@ export default function AdCreationForm({
   setSelectedShopDestinationType,
   newAdSetName,
   launchPaused,
-  setLaunchPaused,
-  progress,
-  setProgress,
-  progressMessage,
-  setProgressMessage,
+  setLaunchPaused
 }) {
   // Local state
 
@@ -104,15 +100,6 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
 
-  let totalSteps = 0;
-  let completedSteps = 0;
-
-  const updateProgress = (msg) => {
-    completedSteps += 1;
-    const percent = Math.round((completedSteps / totalSteps) * 100);
-    setProgress(percent);
-    setProgressMessage(msg);
-  };
 
 
 
@@ -171,7 +158,7 @@ export default function AdCreationForm({
         driveFileUrl: driveDownloadUrl,
         fileName: file.name,
         mimeType: file.mimeType,
-        accessToken: file.accessToken,
+        // accessToken: file.accessToken,
         size: file.size// ✅ Pass the access token from the file object
       })
     });
@@ -268,44 +255,69 @@ export default function AdCreationForm({
 
 
 
+  const checkGoogleAuth = async (openPickerAfterAuth = false) => {
+    try {
+      setGoogleAuthStatus(prev => ({ ...prev, checking: true }));
+      const response = await axios.get(
+        "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+        { withCredentials: true }
+      );
+      const { authenticated, accessToken } = response.data;
+      setGoogleAuthStatus({
+        checking: false,
+        authenticated: authenticated,
+        accessToken: accessToken
+      });
+      if (authenticated && openPickerAfterAuth) {
+        openPicker(accessToken);
+      }
+    } catch (error) {
+      console.error("Failed to check Google auth status:", error);
+      setGoogleAuthStatus({ checking: false, authenticated: false, accessToken: null });
+    }
+  };
 
   // Drive Picker setup
+  // useEffect(() => {
+  //   // Check Google auth status when component mounts
+  //   const checkGoogleAuth = async () => {
+  //     try {
+  //       const response = await axios.get(
+  //         "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+  //         { withCredentials: true }
+  //       );
+
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: response.data.authenticated,
+  //         accessToken: response.data.accessToken
+  //       });
+
+  //       // ✅ If just logged in, open picker automatically
+  //       if (response.data.authenticated && window.location.search.includes('googleAuth=success')) {
+  //         openPicker(response.data.accessToken);
+  //         // Clean up the URL so it doesn't stay ?googleAuth=success
+  //         const url = new URL(window.location);
+  //         url.searchParams.delete('googleAuth');
+  //         window.history.replaceState({}, document.title, url.pathname);
+  //       }
+
+  //     } catch (error) {
+  //       console.error("Failed to check Google auth status:", error);
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: false,
+  //         accessToken: null
+  //       });
+  //     }
+  //   };
+
+  //   checkGoogleAuth();
+  // }, []);
+
   useEffect(() => {
-    // Check Google auth status when component mounts
-    const checkGoogleAuth = async () => {
-      try {
-        const response = await axios.get(
-          "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
-          { withCredentials: true }
-        );
-
-        setGoogleAuthStatus({
-          checking: false,
-          authenticated: response.data.authenticated,
-          accessToken: response.data.accessToken
-        });
-
-        // ✅ If just logged in, open picker automatically
-        if (response.data.authenticated && window.location.search.includes('googleAuth=success')) {
-          openPicker(response.data.accessToken);
-          // Clean up the URL so it doesn't stay ?googleAuth=success
-          const url = new URL(window.location);
-          url.searchParams.delete('googleAuth');
-          window.history.replaceState({}, document.title, url.pathname);
-        }
-
-      } catch (error) {
-        console.error("Failed to check Google auth status:", error);
-        setGoogleAuthStatus({
-          checking: false,
-          authenticated: false,
-          accessToken: null
-        });
-      }
-    };
-
     checkGoogleAuth();
-  }, []);
+  }, [])
 
 
 
@@ -320,11 +332,6 @@ export default function AdCreationForm({
       );
 
       if (res.data.authenticated && res.data.accessToken) {
-        setGoogleAuthStatus({
-          authenticated: true,
-          checking: false,
-          accessToken: res.data.accessToken
-        });
         openPicker(res.data.accessToken);
         return;
       }
@@ -399,14 +406,20 @@ export default function AdCreationForm({
 
   const createPicker = (token) => {
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setIncludeFolders(true)        // ✅ Show folders
-      .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(false);
 
     const picker = new google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .setCallback((data) => {
+        // Close picker immediately on any action
+        if (data.action === "picked" || data.action === "cancel") {
+          picker.setVisible(false);
+        }
+
+        // Only process files if picked
         if (data.action !== "picked") return;
 
         const selected = data.docs.map((doc) => ({
@@ -414,13 +427,9 @@ export default function AdCreationForm({
           name: doc.name,
           mimeType: doc.mimeType,
           size: doc.sizeBytes,
-          accessToken: token
         }));
 
         setDriveFiles((prev) => [...prev, ...selected]);
-        if (data.action === "picked" || data.action === "cancel") {
-          picker.setVisible(false);
-        }
       })
       .build();
 
@@ -488,8 +497,6 @@ export default function AdCreationForm({
         generateThumbnail(file)
           .then((thumb) => {
             setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
-            updateProgress(`Generated thumbnail for ${file.name}`); // ✅ INSERT HERE
-
           })
           .catch((err) => {
             toast.error(`Thumbnail generation error: ${err}`);
@@ -504,38 +511,53 @@ export default function AdCreationForm({
         const thumbnailUrl = getDriveVideoThumbnail(driveFile);
         if (thumbnailUrl) {
           setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
-          updateProgress(`Linked Drive thumbnail for ${driveFile.name}`); // ✅ INSERT HERE
-
         }
       }
     });
   }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
 
   // Add this useEffect after your existing useEffects
+  // useEffect(() => {
+  //   const handler = (event) => {
+  //     if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
+  //       return;
+  //     }
+
+  //     const { type, accessToken } = event.data || {};
+
+  //     if (type === "google-auth-success") {
+  //       if (!accessToken) return;
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: true,
+  //         accessToken
+  //       });
+  //       openPicker(accessToken);
+  //     } else if (type === "google-auth-error") {
+  //       toast.error("Google authentication failed");
+  //     }
+  //   };
+
+  //   window.addEventListener("message", handler);
+  //   return () => window.removeEventListener("message", handler);
+  // }, []);
+
   useEffect(() => {
     const handler = (event) => {
-      if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
-        return;
-      }
-
-      const { type, accessToken } = event.data || {};
+      if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") return;
+      const { type } = event.data || {};
 
       if (type === "google-auth-success") {
-        if (!accessToken) return;
-        setGoogleAuthStatus({
-          checking: false,
-          authenticated: true,
-          accessToken
-        });
-        openPicker(accessToken);
+        // Auth was successful. We don't get a token. We now ask our backend for one.
+        checkGoogleAuth(true); // Pass true to open the picker immediately.
       } else if (type === "google-auth-error") {
         toast.error("Google authentication failed");
       }
     };
-
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []);
+  }, []); // This can have an empty dependency array.
+
 
   useEffect(() => {
     if (!uploadingToS3 && publishPending) {
@@ -639,32 +661,6 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (e) => {
     e.preventDefault();
-    const totalLocalFiles = files.length;
-    const totalDriveFiles = driveFiles.length;
-    const largeLocal = files.filter((f) => f.size > 100 * 1024 * 1024);
-    const largeDrive = driveFiles.filter((f) => f.size > 100 * 1024 * 1024);
-
-    let totalAdSets = selectedAdSets.length;
-    if (duplicateAdSet) totalAdSets = 1;
-    const hasLocalVideos = files.some((file) => file.type?.startsWith("video/"));
-    const hasDriveVideos = driveFiles.some((file) => file.mimeType?.startsWith("video/"));
-    const hasVideoFiles = hasLocalVideos || hasDriveVideos;
-    const totalDynamicAdSets = dynamicAdSetIds.length;
-    const totalNonDynamicAdSets = nonDynamicAdSetIds.length;
-
-
-    // Estimate tasks:
-    totalSteps =
-      largeLocal.length +                         // S3 uploads (local)
-      largeDrive.length +                         // S3 uploads (drive)
-      (hasVideoFiles ? 1 : 0) +                   // Thumbnail
-      totalDynamicAdSets +                        // 1 batch ad per dynamic ad set
-      totalNonDynamicAdSets * (
-        totalLocalFiles + totalDriveFiles +       // One ad per file
-        largeLocal.length + largeDrive.length     // One ad per S3 file
-      );
-
-
     if (uploadingToS3) {
       setPublishPending(true);
       toast.info("Waiting for video upload to finish...");
@@ -702,7 +698,6 @@ export default function AdCreationForm({
       try {
         const s3UploadPromises = largeFiles.map(uploadToS3);
         s3Results = await Promise.all(s3UploadPromises);
-        updateProgress(`Uploaded ${file.name} to S3`);
         toast.success("All large video files uploaded to S3!");
       } catch (err) {
         toast.error("Error uploading large files to S3");
@@ -723,8 +718,6 @@ export default function AdCreationForm({
       try {
         const s3Url = await uploadDriveFileToS3(file); // 👇 see below
         s3DriveResults.push({ ...file, s3Url });
-        updateProgress(`Uploaded ${file.name} to S3`);
-
       } catch (err) {
         toast.error(`Failed to upload Drive video: ${file.name}`);
         console.error("❌ Drive to S3 upload failed", err);
@@ -742,7 +735,6 @@ export default function AdCreationForm({
     if (duplicateAdSet) {
       try {
         const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetName.trim());
-        updateProgress("Ad set duplicated");
         finalAdSetIds = [newAdSetId];
       } catch (error) {
         toast.error("Error duplicating ad set: " + (error.message || "Unknown error"));
@@ -806,7 +798,7 @@ export default function AdCreationForm({
               id: driveFile.id,
               name: driveFile.name,
               mimeType: driveFile.mimeType,
-              accessToken: driveFile.accessToken
+              //accessToken: driveFile.accessToken
             }));
           });
 
@@ -836,13 +828,9 @@ export default function AdCreationForm({
             axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
               withCredentials: true,
               headers: { "Content-Type": "multipart/form-data" },
-            }).then(() => {
-              updateProgress(`Created dynamic ad in ${adSetId}`); // ✅ INSERT HERE
             })
           );
         });
-
-
       }
 
 
@@ -879,11 +867,8 @@ export default function AdCreationForm({
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
-              }).then(() => {
-                updateProgress(`Created ad for ${file.name} in ${adSetId}`); // ✅ INSERT HERE
               })
             );
-
           });
 
 
@@ -902,7 +887,7 @@ export default function AdCreationForm({
             formData.append("driveFile", "true");
             formData.append("driveId", driveFile.id);
             formData.append("driveMimeType", driveFile.mimeType);
-            formData.append("driveAccessToken", driveFile.accessToken);
+            //formData.append("driveAccessToken", driveFile.accessToken);
             formData.append("driveName", driveFile.name);
             if (selectedShopDestination) {
               formData.append("shopDestination", selectedShopDestination);
@@ -914,11 +899,8 @@ export default function AdCreationForm({
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
-              }).then(() => {
-                updateProgress(`Created ad for Drive/S3 file in ${adSetId}`); // ✅ INSERT HERE
               })
             );
-
           });
 
 
@@ -947,11 +929,8 @@ export default function AdCreationForm({
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
-              }).then(() => {
-                updateProgress(`Created ad for Drive/S3 file in ${adSetId}`); // ✅ INSERT HERE
               })
             );
-
           });
 
         });
