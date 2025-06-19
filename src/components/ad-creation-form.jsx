@@ -414,15 +414,26 @@ export default function AdCreationForm({
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .setCallback((data) => {
+        picker.setVisible(false);
         if (data.action !== "picked") return;
 
-        const selected = data.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.name,
-          mimeType: doc.mimeType,
-          size: doc.sizeBytes,
-          //accessToken: token
-        }));
+        // const selected = data.docs.map((doc) => ({
+        //   id: doc.id,
+        //   name: doc.name,
+        //   mimeType: doc.mimeType,
+        //   size: doc.sizeBytes,
+        //   //accessToken: token
+        // }));
+        setTimeout(() => {
+          const selected = data.docs.map((doc) => ({
+            id: doc.id,
+            name: doc.name,
+            mimeType: doc.mimeType,
+            size: doc.sizeBytes,
+          }));
+
+          setDriveFiles((prev) => [...prev, ...selected]);
+        }, 0);
 
         setDriveFiles((prev) => [...prev, ...selected]);
         if (data.action === "picked" || data.action === "cancel") {
