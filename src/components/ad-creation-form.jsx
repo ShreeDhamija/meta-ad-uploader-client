@@ -406,28 +406,30 @@ export default function AdCreationForm({
 
   const createPicker = (token) => {
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setIncludeFolders(true)        // ✅ Show folders
-      .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(false);
 
     const picker = new google.picker.PickerBuilder()
       .addView(view)
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .setCallback((data) => {
-        if (data.action === "picked") {
-          const selected = data.docs.map((doc) => ({
-            id: doc.id,
-            name: doc.name,
-            mimeType: doc.mimeType,
-            size: doc.sizeBytes,
-          }));
-
-          setDriveFiles((prev) => [...prev, ...selected]);
-        }
-
+        // Close picker immediately on any action
         if (data.action === "picked" || data.action === "cancel") {
           picker.setVisible(false);
         }
+
+        // Only process files if picked
+        if (data.action !== "picked") return;
+
+        const selected = data.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.name,
+          mimeType: doc.mimeType,
+          size: doc.sizeBytes,
+        }));
+
+        setDriveFiles((prev) => [...prev, ...selected]);
       })
       .build();
 
