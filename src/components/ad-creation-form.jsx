@@ -646,6 +646,9 @@ export default function AdCreationForm({
 
     let totalAdSets = selectedAdSets.length;
     if (duplicateAdSet) totalAdSets = 1;
+    const hasLocalVideos = files.some((file) => file.type?.startsWith("video/"));
+    const hasDriveVideos = driveFiles.some((file) => file.mimeType?.startsWith("video/"));
+    const hasVideoFiles = hasLocalVideos || hasDriveVideos;
 
     // Estimate tasks:
     totalSteps =
