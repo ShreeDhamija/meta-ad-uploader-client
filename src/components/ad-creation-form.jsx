@@ -649,14 +649,19 @@ export default function AdCreationForm({
     const hasLocalVideos = files.some((file) => file.type?.startsWith("video/"));
     const hasDriveVideos = driveFiles.some((file) => file.mimeType?.startsWith("video/"));
     const hasVideoFiles = hasLocalVideos || hasDriveVideos;
+    const totalDynamicAdSets = dynamicAdSetIds.length;
+    const totalNonDynamicAdSets = nonDynamicAdSetIds.length;
+
 
     // Estimate tasks:
     totalSteps =
-      largeLocal.length +               // S3 uploads
-      largeDrive.length +              // Drive → S3
-      (hasVideoFiles ? 1 : 0) +        // thumbnail
-      totalAdSets * (
-        isDynamic ? 1 : totalLocalFiles + totalDriveFiles + largeLocal.length + largeDrive.length
+      largeLocal.length +                         // S3 uploads (local)
+      largeDrive.length +                         // S3 uploads (drive)
+      (hasVideoFiles ? 1 : 0) +                   // Thumbnail
+      totalDynamicAdSets +                        // 1 batch ad per dynamic ad set
+      totalNonDynamicAdSets * (
+        totalLocalFiles + totalDriveFiles +       // One ad per file
+        largeLocal.length + largeDrive.length     // One ad per S3 file
       );
 
 
