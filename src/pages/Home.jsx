@@ -14,6 +14,8 @@ import { useAuth } from "../lib/AuthContext"
 import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
+import { Progress } from "@/components/ui/progress";
+
 
 export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
@@ -66,6 +68,10 @@ export default function Home() {
 
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
+
+    const [progress, setProgress] = useState(0);
+    const [progressMessage, setProgressMessage] = useState("");
+
 
     if (authLoading) return null
 
@@ -163,6 +169,13 @@ export default function Home() {
 
     return (
         <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
+            {progress > 0 && progress < 100 && (
+                <div className="w-full flex flex-col items-center justify-center mb-4">
+                    <Progress value={progress} className="w-[90%] max-w-md h-2" />
+                    <p className="text-sm text-muted-foreground mt-2">{progressMessage}</p>
+                </div>
+            )}
+
             <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
             <div className="flex flex-col xl:flex-row gap-6 min-w-0">
                 {/* <div className="w-full xl:w-auto xl:min-w-[500px] xl:max-w-[770px] xl:flex-shrink-0 space-y-6"> */}
@@ -245,6 +258,10 @@ export default function Home() {
                         newAdSetName={newAdSetName}
                         launchPaused={launchPaused}
                         setLaunchPaused={setLaunchPaused}
+                        progress={progress}
+                        setProgress={setProgress}
+                        progressMessage={progressMessage}
+                        setProgressMessage={setProgressMessage}
                     />
                 </div>
 

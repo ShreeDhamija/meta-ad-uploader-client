@@ -74,7 +74,11 @@ export default function AdCreationForm({
   setSelectedShopDestinationType,
   newAdSetName,
   launchPaused,
-  setLaunchPaused
+  setLaunchPaused,
+  progress,
+  setProgress,
+  progressMessage,
+  setProgressMessage,
 }) {
   // Local state
 
@@ -100,6 +104,15 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
 
+  let totalSteps = 0;
+  let completedSteps = 0;
+
+  const updateProgress = (msg) => {
+    completedSteps += 1;
+    const percent = Math.round((completedSteps / totalSteps) * 100);
+    setProgress(percent);
+    setProgressMessage(msg);
+  };
 
 
 
@@ -475,6 +488,8 @@ export default function AdCreationForm({
         generateThumbnail(file)
           .then((thumb) => {
             setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
+            updateProgress(`Generated thumbnail for ${file.name}`); // ✅ INSERT HERE
+
           })
           .catch((err) => {
             toast.error(`Thumbnail generation error: ${err}`);
@@ -489,6 +504,8 @@ export default function AdCreationForm({
         const thumbnailUrl = getDriveVideoThumbnail(driveFile);
         if (thumbnailUrl) {
           setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
+          updateProgress(`Linked Drive thumbnail for ${driveFile.name}`); // ✅ INSERT HERE
+
         }
       }
     });
@@ -622,6 +639,24 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (e) => {
     e.preventDefault();
+    const totalLocalFiles = files.length;
+    const totalDriveFiles = driveFiles.length;
+    const largeLocal = files.filter((f) => f.size > 100 * 1024 * 1024);
+    const largeDrive = driveFiles.filter((f) => f.size > 100 * 1024 * 1024);
+
+    let totalAdSets = selectedAdSets.length;
+    if (duplicateAdSet) totalAdSets = 1;
+
+    // Estimate tasks:
+    totalSteps =
+      largeLocal.length +               // S3 uploads
+      largeDrive.length +              // Drive → S3
+      (hasVideoFiles ? 1 : 0) +        // thumbnail
+      totalAdSets * (
+        isDynamic ? 1 : totalLocalFiles + totalDriveFiles + largeLocal.length + largeDrive.length
+      );
+
+
     if (uploadingToS3) {
       setPublishPending(true);
       toast.info("Waiting for video upload to finish...");
@@ -659,6 +694,7 @@ export default function AdCreationForm({
       try {
         const s3UploadPromises = largeFiles.map(uploadToS3);
         s3Results = await Promise.all(s3UploadPromises);
+        updateProgress(`Uploaded ${file.name} to S3`);
         toast.success("All large video files uploaded to S3!");
       } catch (err) {
         toast.error("Error uploading large files to S3");
@@ -679,6 +715,8 @@ export default function AdCreationForm({
       try {
         const s3Url = await uploadDriveFileToS3(file); // 👇 see below
         s3DriveResults.push({ ...file, s3Url });
+        updateProgress(`Uploaded ${file.name} to S3`);
+
       } catch (err) {
         toast.error(`Failed to upload Drive video: ${file.name}`);
         console.error("❌ Drive to S3 upload failed", err);
@@ -696,6 +734,7 @@ export default function AdCreationForm({
     if (duplicateAdSet) {
       try {
         const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetName.trim());
+        updateProgress("Ad set duplicated");
         finalAdSetIds = [newAdSetId];
       } catch (error) {
         toast.error("Error duplicating ad set: " + (error.message || "Unknown error"));
@@ -789,9 +828,13 @@ export default function AdCreationForm({
             axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
               withCredentials: true,
               headers: { "Content-Type": "multipart/form-data" },
+            }).then(() => {
+              updateProgress(`Created dynamic ad in ${adSetId}`); // ✅ INSERT HERE
             })
           );
         });
+
+
       }
 
 
@@ -828,8 +871,11 @@ export default function AdCreationForm({
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
+              }).then(() => {
+                updateProgress(`Created ad for ${file.name} in ${adSetId}`); // ✅ INSERT HERE
               })
             );
+
           });
 
 
@@ -860,8 +906,11 @@ export default function AdCreationForm({
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
+              }).then(() => {
+                updateProgress(`Created ad for Drive/S3 file in ${adSetId}`); // ✅ INSERT HERE
               })
             );
+
           });
 
 
@@ -890,8 +939,11 @@ export default function AdCreationForm({
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
+              }).then(() => {
+                updateProgress(`Created ad for Drive/S3 file in ${adSetId}`); // ✅ INSERT HERE
               })
             );
+
           });
 
         });
