@@ -2,7 +2,6 @@ html {
   scroll-behavior: smooth;
 }
 
-
 @import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
 
@@ -48,7 +47,7 @@ html {
   .brand {
     display: flex;
     align-items: center;
-    z-index: 1000; // Ensure logo stays above the fixed nav
+    z-index: 1000;
   }
 
   .logo {
@@ -82,10 +81,10 @@ html {
     padding: 0 20px;
     gap: 28px;
     transition: box-shadow 0.3s ease;
-    box-shadow: 0 0 0 rgba(0, 0, 0, 0); // Initial shadow state
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
 
     &.scrolled {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5); // Enhanced shadow when scrolled
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     }
 
     a {
@@ -121,7 +120,7 @@ html {
     letter-spacing: -0.04em;
     display: none;
     cursor: pointer;
-    z-index: 1000; // Ensure button stays above the fixed nav
+    z-index: 1000;
   }
 
   .mobileMenu {
@@ -145,7 +144,7 @@ html {
     opacity: 0;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     pointer-events: none;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); // Add shadow to mobile menu
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 
     &.open {
       transform: scale(1) translateY(0);
@@ -212,7 +211,7 @@ html {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    margin-top: 80px; // Adjusted for new header structure
+    margin-top: 80px;
     margin-bottom: 4rem;
 
     h1 {
@@ -349,7 +348,7 @@ html {
     }
 
     @media (max-width: 768px) {
-      margin-top: 30px; // Adjusted for mobile
+      margin-top: 30px;
       align-items: flex-start;
       text-align: left;
       padding: 2rem 1rem;
@@ -405,7 +404,7 @@ html {
   .featuresIntro,
   .featureBlocks,
   .publishRow {
-    scroll-margin-top: 120px; // Adjust for new navbar position
+    scroll-margin-top: 120px;
   }
 
   .featuresIntro {
@@ -517,8 +516,8 @@ html {
   }
 
   .blue {
-    background: #00A5E4;
-    color: #FFFFFF;
+    background: #D4EBFF;
+    color: #075AA1;
   }
 
   @media (max-width: 768px) {
@@ -560,6 +559,92 @@ html {
     }
   }
 
+  // Persistent Settings Section
+  .persistentSettings {
+    width: 100%;
+    max-width: 916px;
+    margin: rem auto;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    background: #D5FFD4;
+    border-radius: 39px;
+    padding: 48px;
+    box-sizing: border-box;
+
+    .persistentContent {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+
+      .persistentIcon {
+        margin-bottom: 20px;
+        background: #4CAF50;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 12px;
+
+        img {
+          width: 24px;
+          height: 24px;
+          filter: brightness(0) invert(1);
+        }
+      }
+
+      h3 {
+        margin: 0 0 16px;
+        font-size: 32px;
+        line-height: 1.3;
+        font-family: 'Nunito', sans-serif;
+        letter-spacing: -0.05rem;
+        font-weight: 700;
+        color: #0D5E00;
+      }
+
+      p {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.5;
+        color: #0D5E00;
+      }
+    }
+
+    .persistentPlaceholder {
+      width: 350px;
+      height: 250px;
+      background: #fff;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      margin: 2rem 16px;
+      padding: 24px 16px;
+
+      .persistentContent {
+        h3 {
+          font-size: 24px;
+        }
+
+        p {
+          font-size: 14px;
+        }
+      }
+
+      .persistentPlaceholder {
+        width: 100%;
+        height: 200px;
+        margin-top: 16px;
+      }
+    }
+  }
+
   .publishRow {
     width: 100%;
     max-width: 916px;
@@ -568,9 +653,7 @@ html {
     justify-content: space-between;
     gap: 16px;
     box-sizing: border-box;
-    margin-bottom: 6rem;
-
-
+    //margin-bottom: 6rem;
   }
 
   .publishRow h3 {
@@ -653,6 +736,240 @@ html {
       width: 100%;
       max-width: 350px;
       margin-bottom: 16px;
+    }
+  }
+
+  // Pricing Section
+  .pricingSection {
+    width: 100%;
+    max-width: 916px;
+    //    margin: 1rem auto;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    background: #768FC0;
+    border-radius: 39px;
+    padding: 32px;
+    box-sizing: border-box;
+    position: relative;
+
+    .pricingContent {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+
+      .pricingBadge {
+        //background: rgba(255, 255, 255, 0.2);
+        border: 2px solid #fff;
+        padding: 8px 16px;
+        border-radius: 999px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #fff;
+        margin-bottom: 20px;
+      }
+
+      h2 {
+        margin: 0 0 16px;
+        font-size: 32px;
+        line-height: 1.3;
+        font-family: 'Nunito', sans-serif;
+        letter-spacing: -0.05rem;
+        font-weight: 700;
+        color: #fff;
+      }
+
+      p {
+        margin: 0 0 24px;
+        font-size: 16px;
+        line-height: 1.5;
+        color: #fff;
+      }
+
+      .pricingBtn {
+        padding: 12px 24px;
+        background: #fff;
+        color: #8E9AAF;
+        border: none;
+        border-radius: 999px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 700;
+        font-family: 'Nunito', sans-serif;
+      }
+    }
+
+    .pricingRight {
+      display: flex;
+      flex-direction: column;
+      align-items: start;
+      text-align: right;
+
+      .pricingPrice {
+        font-size: 48px;
+        font-weight: 900;
+        color: #fff;
+        margin-bottom: 24px;
+        font-family: 'Nunito', sans-serif;
+      }
+
+      .pricingFeatures {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        .pricingFeature {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: #fff;
+
+          img {
+            width: 20px;
+            height: 20px;
+            filter: brightness(0) invert(1);
+          }
+
+          span {
+            font-size: 16px;
+            font-weight: 500;
+          }
+        }
+      }
+    }
+
+    .pricingPlaceholder {
+      position: absolute;
+      bottom: 32px;
+      right: 32px;
+      left: 32px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      margin: 2rem 16px;
+      padding: 24px 16px;
+
+      .pricingContent {
+        h2 {
+          font-size: 24px;
+        }
+
+        p {
+          font-size: 14px;
+        }
+      }
+
+      .pricingRight {
+        align-items: flex-start;
+        text-align: left;
+        margin-top: 16px;
+
+        .pricingPrice {
+          font-size: 36px;
+          margin-bottom: 16px;
+        }
+      }
+
+      .pricingPlaceholder {
+        position: static;
+        width: 100%;
+        height: 120px;
+        margin-top: 16px;
+      }
+    }
+  }
+
+  // Team Seats Section
+  .teamSeats {
+    width: 100%;
+    max-width: 916px;
+    margin: 2rem auto;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    //background: #FFE082;
+    border-radius: 39px;
+    padding: 32px;
+    box-sizing: border-box;
+    margin-bottom: 6rem;
+
+    .teamContent {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+
+      .teamIcon {
+        margin-bottom: 20px;
+        background: #F9DB86;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-radius: 12px;
+        color: #333;
+
+        svg {
+          width: 24px;
+          height: 24px;
+        }
+      }
+
+      h3 {
+        margin: 0 0 16px;
+        font-size: 32px;
+        line-height: 1.3;
+        font-family: 'Nunito', sans-serif;
+        letter-spacing: -0.05rem;
+        font-weight: 700;
+        color: #333;
+      }
+
+      p {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.5;
+        color: #666;
+      }
+    }
+
+    .teamPlaceholder {
+      width: 350px;
+      height: 200px;
+      background: #FFF3C4;
+      border-radius: 20px;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      margin: 2rem 16px;
+      padding: 24px 16px;
+
+
+      .teamContent {
+        h3 {
+          font-size: 24px;
+        }
+
+        p {
+          font-size: 14px;
+        }
+      }
+
+      .teamPlaceholder {
+        width: 100%;
+        height: 200px;
+        margin-top: 16px;
+      }
     }
   }
 
@@ -765,6 +1082,113 @@ html {
     .cardHeader {
       h4 {
         font-size: 15px;
+      }
+    }
+
+
+  }
+
+  @media (max-width: 768px) {
+
+    .persistentSettings,
+    .pricingSection,
+    .teamSeats {
+      max-width: calc(100% - 32px);
+      margin-left: 16px;
+      margin-right: 16px;
+    }
+  }
+
+  // Footer
+  .footer {
+    width: 100%;
+    max-width: 916px;
+    background: #2a2a2a;
+    margin: 4rem auto 0;
+    margin-bottom: 20px;
+    padding: 2rem 0;
+    border-radius: 39px;
+    box-sizing: border-box;
+    padding: 40px 20px;
+
+    .footerContent {
+      max-width: 916px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+
+      .footerLeft {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        .footerBrand {
+          display: flex;
+          align-items: center;
+
+          .footerLogo {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+          }
+
+          .footerBrandText {
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            font-size: 32px;
+            line-height: 1;
+            letter-spacing: -0.04em;
+            color: #fff;
+            margin-left: 8px;
+          }
+        }
+
+        .footerEmail {
+          color: #fff;
+          font-size: 16px;
+          font-weight: 500;
+        }
+      }
+
+      .footerRight {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+
+        .footerLink {
+          color: #fff;
+          text-decoration: none;
+          font-size: 16px;
+          font-weight: 500;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .footer {
+      max-width: calc(100% - 32px);
+      margin: 4rem 16px 0;
+      margin-bottom: 20px;
+    }
+
+    .footer .footerContent {
+      flex-direction: column;
+      gap: 24px;
+      align-items: flex-start;
+      text-align: left;
+      padding: 0;
+      justify-content: flex-start;
+
+      .footerRight {
+        align-items: flex-start;
       }
     }
   }

@@ -90,7 +90,7 @@ const Landing = () => {
                     <a href="#features" onClick={(e) => scrollToSection(e, "features")}>
                         features
                     </a>
-                    <button className={styles.startBtn}>Start Now</button>
+                    <button className={styles.startBtn}>Coming Soon</button>
                 </nav>
 
                 <button ref={menuBtnRef} className={styles.menuBtn} onClick={() => setMenuOpen((open) => !open)}>
@@ -115,8 +115,9 @@ const Landing = () => {
 
             <section className={styles.hero}>
                 <h1>
-                    The simplest, quickest<br>
-                    </br> bulk ad uploader for Meta.
+                    The simplest, quickest
+                    <br />
+                    bulk ad uploader for Meta.
                 </h1>
 
                 <div className={styles.featuresList}>
@@ -130,36 +131,30 @@ const Landing = () => {
                     </div>
                     <div className={styles.featureItem}>
                         <img src={checkIcon || "/placeholder.svg"} alt="" />
-                        <span>Auto-imports all settings for instant use
-                        </span>
+                        <span>Auto-imports all settings for instant use</span>
                     </div>
                 </div>
                 <div className={styles.cta}>
-                    <button>Start Posting Ads</button>
-
+                    <button>Coming Soon</button>
                 </div>
 
                 <p className={styles.subText}>No CC required. 14 day free trial.</p>
-
-                <div className={styles.avatars}>
-                    {avatars.map((src, i) => (
-                        <img key={i} src={src || "/placeholder.svg"} alt={`Avatar ${i + 1}`} className={styles.avatar} />
-                    ))}
-                    <p>100+ marketers are using bau everyday to improve their workflow</p>
-                </div>
 
                 <div className={styles.heroForm}>
                     <img src={heroFormImg || "/placeholder.svg"} alt="Hero form UI" className={styles.heroBg} />
                     <img src={form || "/placeholder.svg"} alt="Inner overlay" className={styles.heroInner} />
                 </div>
             </section>
+
             <section id="about" className={styles.featuresIntro}>
                 <span>Escape button clicking hell</span>
                 <h2>The fastest way to manage multiple ad accounts</h2>
                 <p>
-                    End context-switching whiplash. No more selecting the same settings over and over, copy-pasting text dozens of times, or sluggish UI.
+                    End context-switching whiplash. No more selecting the same settings over and over, copy-pasting text dozens of
+                    times, or sluggish UI.
                 </p>
             </section>
+
             <section id="features" className={styles.featureBlocks}>
                 <div className={`${styles.block} ${styles.yellow}`}>
                     <div className={styles.icon}>
@@ -167,8 +162,8 @@ const Landing = () => {
                     </div>
                     <h3>Upload multiple creatives at once</h3>
                     <p>
-                        Automate your ad creation flow with lightning-fast
-                        bulk uploads, saved settings, and ad previews — all in one clean dashboard.
+                        Automate your ad creation flow with lightning-fast bulk uploads, saved settings, and ad previews — all in
+                        one clean dashboard.
                     </p>
                 </div>
                 <div className={`${styles.block} ${styles.blue}`}>
@@ -177,10 +172,24 @@ const Landing = () => {
                     </div>
                     <h3>Apply saved templates for copy, CTA, and links</h3>
                     <p>
-                        Stop wasting time in Meta Ads Manager's clunky interface. Simply select your ideal settings once. We take care of the rest.
+                        Stop wasting time in Meta Ads Manager's clunky interface. Simply select your ideal settings once. We take
+                        care of the rest.
                     </p>
                 </div>
             </section>
+
+            {/* Persistent Settings Section */}
+            <section className={styles.persistentSettings}>
+                <div className={styles.persistentContent}>
+                    <div className={styles.persistentIcon}>
+                        <img src={settingsIcon || "/placeholder.svg"} alt="Settings icon" />
+                    </div>
+                    <h3>Persistent Settings<br></br> Per Account</h3>
+                    <p>UTMs, page selections, ad name formulas,<br></br>all saved, per ad account, so nothing resets<br></br> on reload.</p>
+                </div>
+                <div className={styles.persistentPlaceholder} />
+            </section>
+
             <section className={styles.publishRow}>
                 <div className={styles.publishCard}>
                     <div className={styles.icon}>
@@ -188,13 +197,71 @@ const Landing = () => {
                     </div>
                     <h3>Import files straight from your Google Drive</h3>
                     <p>
-                        No need to spend hours downloading hundreds of ad assets. With Blip, you can one-click deploy media from your Drive to Meta Ads Manager.
+                        No need to spend hours downloading hundreds of ad assets. With Blip, you can one-click deploy media from
+                        your Drive to Meta Ads Manager.
                     </p>
-                    {/* <button className={styles.viewExt}>View Extension</button> */}
                 </div>
-
                 <div className={styles.placeholderCard} />
             </section>
+
+            {/* Pricing Section */}
+            <section id="pricing" className={styles.pricingSection}>
+                <div className={styles.pricingContent}>
+                    <div className={styles.pricingBadge}>1 Flat Price. Unlimited Ad Accounts</div>
+                    <h2>Pricing</h2>
+                    <p>UTMs, page selections, ad name formulas <br></br>all saved, per ad account, so nothing resets on reload.</p>
+                    <button className={styles.pricingBtn}>Coming Soon</button>
+                </div>
+                <div className={styles.pricingRight}>
+                    <div className={styles.pricingPrice}>$500/month</div>
+                    <div className={styles.pricingFeatures}>
+                        <div className={styles.pricingFeature}>
+                            <img src={checkIcon || "/placeholder.svg"} alt="Check" />
+                            <span>Launch 100s of ads together</span>
+                        </div>
+                        <div className={styles.pricingFeature}>
+                            <img src={checkIcon || "/placeholder.svg"} alt="Check" />
+                            <span>Unlimited Ad Accounts</span>
+                        </div>
+                        <div className={styles.pricingFeature}>
+                            <img src={checkIcon || "/placeholder.svg"} alt="Check" />
+                            <span>Persistent Settings</span>
+                        </div>
+                    </div>
+                </div>
+                {/* <div className={styles.pricingPlaceholder} /> */}
+            </section>
+
+            {/* Team Seats Section */}
+            <section className={styles.teamSeats}>
+                <div className={styles.teamContent}>
+                    <div className={styles.teamIcon}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                            <path
+                                d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </div>
+                    <h3>Team seats<br></br> Coming Soon</h3>
+                    <p>
+                        Stop wasting time in Meta Ads Manager's <br></br>clunky interface. Automate your ad creation flow<br></br> with lightning-fast
+                        bulk uploads, saved settings,<br></br> and ad previews — all in one clean dashboard.
+                    </p>
+                </div>
+                <div className={styles.teamPlaceholder} />
+            </section>
+
             <section className={styles.smallCardsRow}>
                 <div className={`${styles.smallCard} ${styles.pink}`}>
                     <div className={`${styles.cardHeader} ${styles.redBackground}`}>
@@ -225,6 +292,27 @@ const Landing = () => {
                     <div className={styles.placeholder} />
                 </div>
             </section>
+
+            {/* Footer */}
+            <footer className={styles.footer}>
+                <div className={styles.footerContent}>
+                    <div className={styles.footerLeft}>
+                        <div className={styles.footerBrand}>
+                            <img src={logoImg || "/placeholder.svg"} alt="Blip logo" className={styles.footerLogo} />
+                            <span className={styles.footerBrandText}>Blip</span>
+                        </div>
+                        <div className={styles.footerEmail}>hello@storeos.co</div>
+                    </div>
+                    <div className={styles.footerRight}>
+                        <a href="withblip.com/privacy-policy" className={styles.footerLink}>
+                            Privacy Policy
+                        </a>
+                        <a href="withblip.com/terms-of-service" className={styles.footerLink}>
+                            Terms of Service
+                        </a>
+                    </div>
+                </div>
+            </footer>
         </div>
     )
 }
