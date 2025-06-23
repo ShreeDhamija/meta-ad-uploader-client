@@ -18,8 +18,8 @@ import avatar3 from "../assets/avatar3.png"
 import avatar4 from "../assets/avatar4.png"
 import form from "../assets/form.webp"
 import driveIntegration from "../assets/driveIntegration.webp"
-import settingsLanding from "../assets/settingsLanding.webp"
-import teamSettingsLanding from "../assets/teamseatsLanding.webp"
+import settingsLanding from "../assets/settingslanding.webp"
+import teamSettingsLanding from "../assets/teamseatslanding.webp"
 
 
 const Landing = () => {
