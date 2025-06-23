@@ -33,6 +33,7 @@ html {
     padding: 0 15px;
   }
 
+
   .header {
     position: relative;
     width: 100%;
@@ -56,6 +57,7 @@ html {
     width: 48px;
     height: 48px;
     object-fit: contain;
+    border-radius: 10px;
   }
 
   .brandText {
@@ -179,6 +181,8 @@ html {
       cursor: pointer;
     }
   }
+
+
 
   @media (min-width: 841px) {
     .mobileMenu {
@@ -1162,6 +1166,7 @@ html {
             width: 32px;
             height: 32px;
             object-fit: contain;
+            border-radius: 8px;
           }
 
           .footerBrandText {
