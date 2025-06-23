@@ -16,6 +16,8 @@ import avatar2 from "../assets/avatar2.png"
 import avatar3 from "../assets/avatar3.png"
 import avatar4 from "../assets/avatar4.png"
 import form from "../assets/form.png"
+import { motion } from 'framer-motion';
+
 
 const Landing = () => {
     const avatars = [avatar1, avatar2, avatar3, avatar4]
@@ -52,6 +54,7 @@ const Landing = () => {
             document.removeEventListener("mousedown", handleClickOutside)
         }
     }, [menuOpen])
+
 
     const scrollToSection = (e, sectionId) => {
         e.preventDefault()
@@ -113,7 +116,14 @@ const Landing = () => {
                 </div>
             </header>
 
-            <section className={styles.hero}>
+            <motion.section
+                className={styles.hero}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+            >
+
                 <h1>
                     The simplest, quickest
                     <br />
@@ -144,18 +154,34 @@ const Landing = () => {
                     <img src={heroFormImg || "/placeholder.svg"} alt="Hero form UI" className={styles.heroBg} />
                     <img src={form || "/placeholder.svg"} alt="Inner overlay" className={styles.heroInner} />
                 </div>
-            </section>
+            </motion.section>
 
-            <section id="about" className={styles.featuresIntro}>
+
+            <motion.section
+                id="about"
+                className={styles.featuresIntro}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+            >
                 <span>Escape button clicking hell</span>
                 <h2>The fastest way to manage multiple ad accounts</h2>
                 <p>
                     End context-switching whiplash. No more selecting the same settings over and over, copy-pasting text dozens of
                     times, or sluggish UI.
                 </p>
-            </section>
+            </motion.section>
 
-            <section id="features" className={styles.featureBlocks}>
+            <motion.section
+                id="features"
+                className={styles.featureBlocks}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+            >
+
                 <div className={`${styles.block} ${styles.yellow}`}>
                     <div className={styles.icon}>
                         <img src={fileIcon || "/placeholder.svg"} alt="Upload icon" />
@@ -176,10 +202,19 @@ const Landing = () => {
                         care of the rest.
                     </p>
                 </div>
-            </section>
+            </motion.section>
 
             {/* Persistent Settings Section */}
-            <section className={styles.persistentSettings}>
+
+            <motion.section
+                id="settings"
+                className={styles.persistentSettings}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+            >
+
                 <div className={styles.persistentContent}>
                     <div className={styles.persistentIcon}>
                         <img src={settingsIcon || "/placeholder.svg"} alt="Settings icon" />
@@ -188,9 +223,18 @@ const Landing = () => {
                     <p>UTMs, page selections, ad name formulas,<br></br>all saved, per ad account, so nothing resets<br></br> on reload.</p>
                 </div>
                 <div className={styles.persistentPlaceholder} />
-            </section>
+            </motion.section>
 
-            <section className={styles.publishRow}>
+
+            <motion.section
+                id="about"
+                className={styles.publishRow}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+            >
+
                 <div className={styles.publishCard}>
                     <div className={styles.icon}>
                         <img src={chromeIcon || "/placeholder.svg"} alt="Chrome icon" />
@@ -202,10 +246,18 @@ const Landing = () => {
                     </p>
                 </div>
                 <div className={styles.placeholderCard} />
-            </section>
+            </motion.section>
 
             {/* Pricing Section */}
-            <section id="pricing" className={styles.pricingSection}>
+            <motion.section
+                id="about"
+                className={styles.pricingSection}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+            >
+
                 <div className={styles.pricingContent}>
                     <div className={styles.pricingBadge}>1 Flat Price. Unlimited Ad Accounts</div>
                     <h2>Pricing</h2>
@@ -230,10 +282,18 @@ const Landing = () => {
                     </div>
                 </div>
                 {/* <div className={styles.pricingPlaceholder} /> */}
-            </section>
+            </motion.section>
 
             {/* Team Seats Section */}
-            <section className={styles.teamSeats}>
+            <motion.section
+                id="about"
+                className={styles.teamSeats}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+            >
+
                 <div className={styles.teamContent}>
                     <div className={styles.teamIcon}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -260,9 +320,17 @@ const Landing = () => {
                     </p>
                 </div>
                 <div className={styles.teamPlaceholder} />
-            </section>
+            </motion.section>
 
-            <section className={styles.smallCardsRow}>
+            <motion.section
+                id="about"
+                className={styles.smallCardsRow}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: 'easeOut' }}
+            >
+
                 <div className={`${styles.smallCard} ${styles.pink}`}>
                     <div className={`${styles.cardHeader} ${styles.redBackground}`}>
                         <img src={rocketIcon || "/placeholder.svg"} alt="" className={styles.cardIcon} />
@@ -291,7 +359,7 @@ const Landing = () => {
                     </p>
                     <div className={styles.placeholder} />
                 </div>
-            </section>
+            </motion.section>
 
             {/* Footer */}
             <footer className={styles.footer}>

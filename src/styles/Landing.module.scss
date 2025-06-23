@@ -18,6 +18,8 @@ html {
   box-sizing: border-box;
   overflow-x: hidden;
 
+
+
   html,
   body {
     margin: 0 !important;
@@ -625,7 +627,7 @@ html {
     @media (max-width: 768px) {
       flex-direction: column;
       margin: 2rem 16px;
-      padding: 24px 16px;
+      padding: 32px 32px;
 
       .persistentContent {
         h3 {
@@ -729,6 +731,8 @@ html {
       flex-direction: column;
       align-items: center;
       padding: 0 16px;
+      gap: 20px;
+
     }
 
     .publishCard,
@@ -852,8 +856,8 @@ html {
 
     @media (max-width: 768px) {
       flex-direction: column;
-      margin: 2rem 16px;
-      padding: 24px 16px;
+      margin: 1rem 16px;
+      padding: 32px 32px;
 
       .pricingContent {
         h2 {
@@ -1175,8 +1179,9 @@ html {
   @media (max-width: 768px) {
     .footer {
       max-width: calc(100% - 32px);
-      margin: 4rem 16px 0;
+      margin: 2rem 16px 0;
       margin-bottom: 20px;
+      padding: 32px 32px;
     }
 
     .footer .footerContent {
