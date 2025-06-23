@@ -93,8 +93,8 @@ const Landing = () => {
                     <a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")}>
                         pricing
                     </a>
-                    <a href="#features" onClick={(e) => scrollToSection(e, "features")}>
-                        features
+                    <a href="#contact" onClick={(e) => scrollToSection(e, "footer")}>
+                        Contact Us
                     </a>
                     <button className={styles.startBtn}>Coming Soon</button>
                 </nav>
@@ -255,7 +255,7 @@ const Landing = () => {
 
             {/* Pricing Section */}
             <motion.section
-                id="about"
+                id="pricing"
                 className={styles.pricingSection}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -367,7 +367,7 @@ const Landing = () => {
             </motion.section> */}
 
             {/* Footer */}
-            <footer className={styles.footer}>
+            <footer id="footer" className={styles.footer}>
                 <div className={styles.footerContent}>
                     <div className={styles.footerLeft}>
                         <div className={styles.footerBrand}>
