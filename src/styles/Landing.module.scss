@@ -337,7 +337,7 @@ html {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        max-width: 800px;
+        max-width: 900px;
         pointer-events: none;
       }
 
@@ -521,6 +521,28 @@ html {
     background: #D4EBFF;
     color: #075AA1;
   }
+
+  .settingsLanding {
+    width: 296px;
+    height: 273px;
+    object-fit: cover; // Ensures aspect ratio is maintained without distortion
+    // border-radius: 12px;
+    // box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .driveIntegration {
+    width: 296px;
+    height: 273px;
+    object-fit: cover; // Ensures aspect ratio is maintained without distortion
+  }
+
+  .teamSettingsLanding {
+    width: 296px;
+    height: 273px;
+    object-fit: cover;
+  }
+
+
 
   @media (max-width: 768px) {
     .featureBlocks {
@@ -735,6 +757,10 @@ html {
 
     }
 
+    .publishRow p {
+      font-size: 14px !important;
+    }
+
     .publishCard,
     .placeholderCard {
       width: 100%;
@@ -861,7 +887,7 @@ html {
 
       .pricingContent {
         h2 {
-          font-size: 24px;
+          font-size: 32px;
         }
 
         p {
@@ -961,7 +987,7 @@ html {
 
       .teamContent {
         h3 {
-          font-size: 24px;
+          font-size: 32px;
         }
 
         p {

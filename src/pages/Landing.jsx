@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { motion } from 'framer-motion';
 import styles from "../styles/Landing.module.scss"
-import heroFormImg from "../assets/hero-form.png"
+import heroFormImg from "../assets/hero-form.webp"
 import logoImg from "../assets/logo.png"
 import fileIcon from "../assets/file.svg"
 import tIcon from "../assets/t.svg"
@@ -15,8 +16,10 @@ import avatar1 from "../assets/avatar1.png"
 import avatar2 from "../assets/avatar2.png"
 import avatar3 from "../assets/avatar3.png"
 import avatar4 from "../assets/avatar4.png"
-import form from "../assets/form.png"
-import { motion } from 'framer-motion';
+import form from "../assets/form.webp"
+import driveIntegration from "../assets/driveIntegration.webp"
+import settingsLanding from "../assets/settingsLanding.webp"
+import teamSettingsLanding from "../assets/teamseatsLanding.webp"
 
 
 const Landing = () => {
@@ -222,7 +225,8 @@ const Landing = () => {
                     <h3>Persistent Settings<br></br> Per Account</h3>
                     <p>UTMs, page selections, ad name formulas,<br></br>all saved, per ad account, so nothing resets<br></br> on reload.</p>
                 </div>
-                <div className={styles.persistentPlaceholder} />
+                <img src={settingsLanding} alt="Persistent Settings Screenshot" className={styles.settingsLanding} />
+
             </motion.section>
 
 
@@ -245,7 +249,8 @@ const Landing = () => {
                         your Drive to Meta Ads Manager.
                     </p>
                 </div>
-                <div className={styles.placeholderCard} />
+                <img src={driveIntegration} alt="Google Drive Integration Screenshot" className={styles.driveIntegration} />
+
             </motion.section>
 
             {/* Pricing Section */}
@@ -319,10 +324,10 @@ const Landing = () => {
                         bulk uploads, saved settings,<br></br> and ad previews — all in one clean dashboard.
                     </p>
                 </div>
-                <div className={styles.teamPlaceholder} />
+                <img src={teamSettingsLanding} alt="Team Seats Screenshot" className={styles.teamSettingsLanding} />
             </motion.section>
 
-            <motion.section
+            {/* <motion.section
                 id="about"
                 className={styles.smallCardsRow}
                 initial={{ opacity: 0, y: 30 }}
@@ -359,7 +364,7 @@ const Landing = () => {
                     </p>
                     <div className={styles.placeholder} />
                 </div>
-            </motion.section>
+            </motion.section> */}
 
             {/* Footer */}
             <footer className={styles.footer}>
