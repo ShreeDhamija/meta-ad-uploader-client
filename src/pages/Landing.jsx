@@ -377,10 +377,10 @@ const Landing = () => {
                         <div className={styles.footerEmail}>hello@storeos.co</div>
                     </div>
                     <div className={styles.footerRight}>
-                        <a href="withblip.com/privacy-policy" className={styles.footerLink}>
+                        <a href="/privacy-policy" className={styles.footerLink}>
                             Privacy Policy
                         </a>
-                        <a href="withblip.com/terms-of-service" className={styles.footerLink}>
+                        <a href="/terms-of-service" className={styles.footerLink}>
                             Terms of Service
                         </a>
                     </div>
