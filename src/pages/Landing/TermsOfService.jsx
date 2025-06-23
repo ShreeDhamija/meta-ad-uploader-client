@@ -64,7 +64,7 @@ export default function TermsOfService() {
 
                 <section>
                     <h2 className="text-xl font-medium mb-2">10. Contact</h2>
-                    <p>Questions? Email us at <a href="mailto:shree@withblip.com" className="text-blue-600 underline">shree@withblip.com</a>.</p>
+                    <p>Questions? Email us at <a href="mailto:hello@storeos.co" className="text-blue-600 underline">hello@storeos.co</a>.</p>
                 </section>
             </div>
         </div>

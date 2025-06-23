@@ -63,7 +63,7 @@ export default function PrivacyPolicy() {
 
                 <section>
                     <h2 className="text-xl font-medium mb-2">10. Contact</h2>
-                    <p>Email us at <a href="mailto:shree@withblip.com" className="text-blue-600 underline">shree@withblip.com</a> with any privacy-related questions.</p>
+                    <p>Email us at <a href="mailto:hello@storeos.co" className="text-blue-600 underline">hello@storeos.co</a> with any privacy-related questions.</p>
                 </section>
             </div>
         </div>

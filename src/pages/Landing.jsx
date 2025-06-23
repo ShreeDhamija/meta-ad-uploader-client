@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { motion } from 'framer-motion';
 import styles from "../styles/Landing.module.scss"
 import heroFormImg from "../assets/hero-form.webp"
-import logoImg from "../assets/logo.png"
+import logoImg from "../assets/logo.webp"
 import fileIcon from "../assets/file.svg"
 import tIcon from "../assets/t.svg"
 import tBlueIcon from "../assets/tBlue.svg"
@@ -377,10 +377,10 @@ const Landing = () => {
                         <div className={styles.footerEmail}>hello@storeos.co</div>
                     </div>
                     <div className={styles.footerRight}>
-                        <a href="/privacy-policy" className={styles.footerLink}>
+                        <a href="/privacy-policy" target="_blank" className={styles.footerLink}>
                             Privacy Policy
                         </a>
-                        <a href="/terms-of-service" className={styles.footerLink}>
+                        <a href="/terms-of-service" target="_blank" className={styles.footerLink}>
                             Terms of Service
                         </a>
                     </div>
