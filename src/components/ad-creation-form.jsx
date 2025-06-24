@@ -19,7 +19,7 @@ import { ChevronsUpDown, RefreshCcw } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
-import { infotooltip } from "./ui/infotooltip"
+import { Infotooltip } from "./ui/infotooltip"
 
 export default function AdCreationForm({
   isLoading,
@@ -1131,7 +1131,7 @@ export default function AdCreationForm({
               <Label htmlFor="adName" className="flex items-center gap-2">
                 <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" className="w-4 h-4" />
                 Ad Name (Internal Name)
-                <infotooltip
+                <Infotooltip
                   side="bottom"
                 />
               </Label>
