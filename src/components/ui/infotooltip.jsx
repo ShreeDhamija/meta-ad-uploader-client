@@ -2,7 +2,7 @@ import { Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-export function InfoTooltip({ side = "top", className = "" }) {
+export function infotooltip({ side = "top", className = "" }) {
     return (
         <TooltipProvider delayDuration={200}>
             <Tooltip>
