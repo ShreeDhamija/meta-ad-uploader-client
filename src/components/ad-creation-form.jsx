@@ -101,15 +101,7 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
 
-  //ProgressTrackers
-  const {
-    progressRef,
-    initializeProgress,
-    updateProgress,
-    completeProgress,
-    errorProgress,
-    resetProgress
-  } = useAdCreationProgress();
+
 
 
   // Upload large file to S3
