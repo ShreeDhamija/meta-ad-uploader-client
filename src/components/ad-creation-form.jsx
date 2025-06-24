@@ -19,7 +19,7 @@ import { ChevronsUpDown, RefreshCcw } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
 import ShopDestinationSelector from "@/components/shop-destination-selector"
-
+import ReorderAdNameParts from "@/components/ui/infotooltip";
 
 
 export default function AdCreationForm({
@@ -591,7 +591,7 @@ export default function AdCreationForm({
 
     const adName = parts.join("_");
 
-    return adName || "Ad Name Formula will be displayed here";
+    return adName || "Ad Generated Through Blip";
   };
 
 
@@ -1132,9 +1132,12 @@ export default function AdCreationForm({
               <Label htmlFor="adName" className="flex items-center gap-2">
                 <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" className="w-4 h-4" />
                 Ad Name (Internal Name)
+                <InfoTooltip
+                  side="bottom"
+                />
               </Label>
               <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
-                You can generate an ad name from the properties below or enter custom text
+                You can generate an ad name by selecting and re-ordering the properties below
               </Label>
 
               <div className="flex flex-wrap items-center gap-2">

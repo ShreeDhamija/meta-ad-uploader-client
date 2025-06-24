@@ -54,7 +54,7 @@ export default function GlobalSettings() {
       {/* Ad Naming Convention */}
       <div className="bg-[#f7f7f7] rounded-xl p-3 space-y-3">
         <div className="flex items-center gap-2">
-          <img src="https://meta-ad-uploader-server-production.up.railway.app/icons/name.svg" alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+          <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
           <h3 className="font-medium text-[14px] text-zinc-950">Ad Name Formula</h3>
         </div>
 
@@ -79,7 +79,7 @@ export default function GlobalSettings() {
 
 
       {/* Thumbnail Settings */}
-      <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-3 opacity-60 pointer-events-none select-none cursor-not-allowed">
+      {/* <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-3 opacity-60 pointer-events-none select-none cursor-not-allowed">
         <div className="flex items-center gap-2">
           <img src="https://meta-ad-uploader-server-production.up.railway.app/icons/preview.svg" alt="Thumbnail Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
           <h3 className="font-medium text-[14px] text-zinc-950">Custom Thumbnail (Coming Soon)</h3>
@@ -99,7 +99,7 @@ export default function GlobalSettings() {
         >
           Upload Custom Thumbnail
         </Button>
-      </div>
+      </div> */}
 
       {/* Save Button */}
       <div className="pt-2">
