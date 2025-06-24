@@ -17,9 +17,9 @@ import { ChevronDown, Loader2, Plus, Trash2, Upload } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { ChevronsUpDown, RefreshCcw } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
-import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
+import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
-import InfoTooltip from "@/components/ui/infotooltip";
+import InfoTooltip from "@/components/ui/InfoToolTip"
 
 
 export default function AdCreationForm({
