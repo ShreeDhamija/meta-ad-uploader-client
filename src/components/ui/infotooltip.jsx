@@ -12,10 +12,10 @@ export function Infotooltip({ side = "top", className = "" }) {
                         <span className="sr-only">Ad naming rules information</span>
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent side={side} className="max-w-xs bg-white text-black border border-gray-200 shadow-lg">
-                    <div className="text-sm space-y-2">
-                        <p className="font-semibold">Ad Naming Rules</p>
-                        <div className="space-y-1">
+                <TooltipContent side={side} className="max-w-xs bg-white text-black border border-gray-200 shadow-xl rounded-xl p-4">
+                    <div className="text-sm space-y-4">
+                        <p className="font-normal text-gray-700">Ad Naming Rules</p>
+                        <div className="space-y-2">
                             <p>
                                 1. <strong>File Type:</strong> Displays Static/Video depending on file type uploaded
                             </p>
