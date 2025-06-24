@@ -92,14 +92,6 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, cu
       return (
         <div className="flex items-center gap-2 flex-1">
           <CustomRadioButton checked={isSelected} onClick={onToggle} />
-          {/* <Input
-            value={customTextValue || ""}
-            onChange={(e) => onCustomTextChange(e.target.value)}
-            placeholder="Enter Custom Text"
-            className="flex-1 h-6 text-xs border-0 bg-transparent focus:ring-0 focus:outline-none"
-          //disabled={!isSelected}
-          />
-           */}
           <Input
             value={customTextValue || ""}
             onChange={(e) => {
