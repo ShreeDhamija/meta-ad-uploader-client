@@ -100,6 +100,12 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
 
+  //progress states
+  const [progress, setProgress] = useState(0); // 0 to 100
+  const [progressMessage, setProgressMessage] = useState("");
+
+
+
 
 
 
@@ -658,6 +664,7 @@ export default function AdCreationForm({
 
       try {
         const s3UploadPromises = largeFiles.map(uploadToS3);
+        increment(`Uploading ${file.name} to S3...`);
         s3Results = await Promise.all(s3UploadPromises);
         toast.success("All large video files uploaded to S3!");
       } catch (err) {
@@ -677,6 +684,7 @@ export default function AdCreationForm({
     const s3DriveResults = [];
     for (const file of largeDriveFiles) {
       try {
+        increment(`Uploading ${file.name} from Drive to S3...`);
         const s3Url = await uploadDriveFileToS3(file); // 👇 see below
         s3DriveResults.push({ ...file, s3Url });
       } catch (err) {
@@ -695,6 +703,7 @@ export default function AdCreationForm({
     let finalAdSetIds = [...selectedAdSets];
     if (duplicateAdSet) {
       try {
+        increment("Duplicating Ad Set...");
         const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetName.trim());
         finalAdSetIds = [newAdSetId];
       } catch (error) {
@@ -725,6 +734,46 @@ export default function AdCreationForm({
         }
       }
     });
+
+    // inside handleCreateAd, right before try {
+    let totalSteps = 0;
+    let completedSteps = 0;
+
+    const increment = (msg) => {
+      completedSteps++;
+      setProgressMessage(msg);
+      setProgress(Math.round((completedSteps / totalSteps) * 100));
+    };
+
+    // your existing logic already computed:
+    const isDynamic = dynamicAdSetIds.length > 0;
+    const totalAdSets = dynamicAdSetIds.length + nonDynamicAdSetIds.length;
+    const hasVideo = files.some(f => f.type.startsWith("video/")) || driveFiles.some(f => f.mimeType.startsWith("video/"));
+    const needsThumbnail = hasVideo && !thumbnail;
+
+    // do NOT recompute filters — reuse:
+    totalSteps += duplicateAdSet ? 1 : 0;
+    totalSteps += showShopDestinationSelector ? 1 : 0;
+    totalSteps += largeFiles.length + largeDriveFiles.length; // ✅ S3 uploads already precomputed by you
+
+    if (isDynamic) {
+      totalSteps += totalAdSets; // ✅ one Meta API call per dynamic adset
+      if (needsThumbnail) totalSteps += 1;
+    } else {
+      const totalFilesToPost =
+        files.filter(f => f.size <= 100 * 1024 * 1024).length +
+        smallDriveFiles.length +
+        largeFiles.length +
+        largeDriveFiles.length;
+
+      totalSteps += totalAdSets * totalFilesToPost;
+
+      if (hasVideo) {
+        // 1 for thumbnail + 1 for video polling per adset
+        totalSteps += totalAdSets * 2;
+      }
+    }
+
 
     try {
       const promises = [];
@@ -784,7 +833,7 @@ export default function AdCreationForm({
 
 
 
-
+          increment("Sending ad to Meta...");
           promises.push(
             axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
               withCredentials: true,
@@ -823,7 +872,7 @@ export default function AdCreationForm({
             }
             formData.append("launchPaused", launchPaused);
 
-
+            increment(`Uploading ${file.name} to Meta...`);
             promises.push(
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
                 withCredentials: true,
@@ -855,6 +904,7 @@ export default function AdCreationForm({
               formData.append("shopDestinationType", selectedShopDestinationType);
             }
             formData.append("launchPaused", launchPaused);
+            increment(`Uploading ${driveFile.name} from Drive...`);
 
             promises.push(
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
@@ -885,6 +935,7 @@ export default function AdCreationForm({
               formData.append("shopDestinationType", selectedShopDestinationType)
             }
             formData.append("launchPaused", launchPaused);
+            increment(`Using S3 video: ${s3File.name || "video"}...`);
 
             promises.push(
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
@@ -898,6 +949,8 @@ export default function AdCreationForm({
       }
 
       await Promise.all(promises);
+      increment("Ad(s) successfully created!");
+      setProgress(100);
       toast.success("Ads created successfully!");
     } catch (error) {
       let errorMessage = "Unknown error occurred";
@@ -917,6 +970,11 @@ export default function AdCreationForm({
       console.error("Error uploading ads:", error.response?.data || error);
     } finally {
       setIsLoading(false);
+      setTimeout(() => {
+        setProgress(0);
+        setProgressMessage("");
+      }, 1200);
+
     }
   }
 
@@ -925,6 +983,7 @@ export default function AdCreationForm({
 
 
   return (
+
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -1519,6 +1578,22 @@ export default function AdCreationForm({
 
         </form>
       </CardContent>
+      {progress > 0 && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white w-[90%] max-w-sm rounded-xl shadow-lg px-6 py-5">
+            <div className="text-sm text-gray-800 mb-2">{progressMessage || "Processing..."}</div>
+            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div
+                className="bg-blue-600 h-3 rounded-full transition-all duration-300 ease-in-out"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="mt-2 text-xs text-gray-500 text-right">{progress}%</div>
+          </div>
+        </div>
+      )}
+
     </Card >
+
   )
 }
