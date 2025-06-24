@@ -775,7 +775,7 @@ export default function AdCreationForm({
             formData.append("thumbnail", thumbnail);
           }
           // Add shop destination if needed
-          if (selectedShopDestination) {
+          if (selectedShopDestination && showShopDestinationSelector) {
             formData.append("shopDestination", selectedShopDestination)
             formData.append("shopDestinationType", selectedShopDestinationType)
           }
@@ -817,7 +817,7 @@ export default function AdCreationForm({
             if (thumbnail) {
               formData.append("thumbnail", thumbnail);
             }
-            if (selectedShopDestination) {
+            if (selectedShopDestination && showShopDestinationSelector) {
               formData.append("shopDestination", selectedShopDestination)
               formData.append("shopDestinationType", selectedShopDestinationType)
             }
@@ -850,7 +850,7 @@ export default function AdCreationForm({
             formData.append("driveMimeType", driveFile.mimeType);
             formData.append("driveAccessToken", driveFile.accessToken);
             formData.append("driveName", driveFile.name);
-            if (selectedShopDestination) {
+            if (selectedShopDestination && showShopDestinationSelector) {
               formData.append("shopDestination", selectedShopDestination);
               formData.append("shopDestinationType", selectedShopDestinationType);
             }
@@ -880,7 +880,7 @@ export default function AdCreationForm({
             formData.append("instagramAccountId", instagramAccountId);
             formData.append("link", link);
             formData.append("cta", cta);
-            if (selectedShopDestination) {
+            if (selectedShopDestination && showShopDestinationSelector) {
               formData.append("shopDestination", selectedShopDestination)
               formData.append("shopDestinationType", selectedShopDestinationType)
             }
