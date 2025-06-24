@@ -58,7 +58,7 @@ export default function useGlobalSettings() {
 
                 setAdNameFormula({
                     order: Array.from(new Set([...(rawFormula.order || defaultOrder)])),
-                    selected: rawFormula.selected || defaultOrder,
+                    selected: Array.isArray(rawFormula.selected) ? rawFormula.selected : [],
                     values: {
                         adType: rawFormula.values?.adType || "",
                         dateType: rawFormula.values?.dateType || "MonthYYYY",
