@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { saveSettings } from "@/lib/saveSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings";
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
+import { Infotooltip } from "@/components/ui/infotooltip"
 
 
 
@@ -55,7 +56,11 @@ export default function GlobalSettings() {
       <div className="bg-[#f7f7f7] rounded-xl p-3 space-y-3">
         <div className="flex items-center gap-2">
           <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
-          <h3 className="font-medium text-[14px] text-zinc-950">Ad Name Formula</h3>
+          <h3 className="font-medium text-[14px] text-zinc-950">Ad Name Formula
+            <Infotooltip
+              side="bottom"
+            />
+          </h3>
         </div>
 
         <p className="text-xs text-black text-gray-500">

@@ -12,7 +12,7 @@ export function Infotooltip({ side = "top", className = "" }) {
                         <span className="sr-only">Ad naming rules information</span>
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent side={side} className="max-w-xs">
+                <TooltipContent side={side} className="max-w-xs bg-white text-black border border-gray-200 shadow-lg">
                     <div className="text-sm space-y-2">
                         <p className="font-semibold">Ad Naming Rules</p>
                         <div className="space-y-1">
