@@ -15,6 +15,37 @@ export default function useGlobalSettings() {
     const [hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding] = useState(false);
 
 
+    // useEffect(() => {
+    //     const fetchSettings = async () => {
+    //         try {
+    //             const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/global", {
+    //                 credentials: "include",
+    //             });
+    //             const data = await res.json();
+    //             const rawFormula = data.settings?.adNameFormula || {};
+    //             const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
+    //             setAdNameFormula({
+    //                 order: Array.from(new Set([...(rawFormula.order || []), "iteration"])),
+    //                 selected: rawFormula.selected || [], // ✅ selected fields
+    //                 values: {
+    //                     dateType: rawFormula.values?.dateType || "MonthYYYY" // ✅ only dateType
+    //                 }
+    //             });
+
+    //             setHasSeenOnboarding(data.settings?.hasSeenOnboarding || false);
+    //             setHasSeenSettingsOnboarding(data.settings?.hasSeenSettingsOnboarding || false);
+
+
+    //         } catch (err) {
+    //             console.error("Failed to fetch global settings:", err);
+    //         } finally {
+    //             setLoading(false);
+    //         }
+    //     };
+
+    //     fetchSettings();
+    // }, []);
+
     useEffect(() => {
         const fetchSettings = async () => {
             try {
@@ -24,17 +55,20 @@ export default function useGlobalSettings() {
                 const data = await res.json();
                 const rawFormula = data.settings?.adNameFormula || {};
                 const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
+
                 setAdNameFormula({
-                    order: Array.from(new Set([...(rawFormula.order || []), "iteration"])),
-                    selected: rawFormula.selected || [], // ✅ selected fields
+                    order: Array.from(new Set([...(rawFormula.order || defaultOrder)])),
+                    selected: rawFormula.selected || defaultOrder,
                     values: {
-                        dateType: rawFormula.values?.dateType || "MonthYYYY" // ✅ only dateType
+                        adType: rawFormula.values?.adType || "",
+                        dateType: rawFormula.values?.dateType || "MonthYYYY",
+                        fileName: rawFormula.values?.fileName || "",
+                        iteration: rawFormula.values?.iteration || "",
                     }
                 });
 
                 setHasSeenOnboarding(data.settings?.hasSeenOnboarding || false);
                 setHasSeenSettingsOnboarding(data.settings?.hasSeenSettingsOnboarding || false);
-
 
             } catch (err) {
                 console.error("Failed to fetch global settings:", err);
@@ -45,6 +79,7 @@ export default function useGlobalSettings() {
 
         fetchSettings();
     }, []);
+
 
     return {
         loading,
