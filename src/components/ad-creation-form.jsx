@@ -84,47 +84,16 @@ const useAdCreationProgress = (jobId) => {
 
     connectSSE();
   }, [jobId]);
-  // useEffect(() => {
-  //   if (!jobId) return;
 
+  useEffect(() => {
+    if (!isCreatingAds) {
+      console.log('🧹 Job completely finished, resetting hook state');
+      setProgress(0);
+      setMessage('');
+      setStatus('idle');
+    }
+  }, [isCreatingAds]);
 
-  //   console.log('🔄 New jobId detected, USEFFECT:', jobId);
-  //   setProgress(0);
-  //   setMessage('');
-  //   setStatus('idle');
-
-  //   let retryCount = 0;
-  //   const maxRetries = 10;
-  //   const retryDelay = 500; // 500ms between retries
-
-  //   const connectSSE = () => {
-  //     console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
-  //     const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
-
-  //     eventSource.onmessage = (event) => {
-  //       const data = JSON.parse(event.data);
-  //       console.log('📨 Raw SSE data received:', data);
-
-  //       // 🎯 KEY PART: Check if job was found
-  //       if (data.message === 'Job not found' && retryCount < maxRetries) {
-  //         console.log(`❌ Job not found, closing connection...`);
-  //         eventSource.close(); // Close this failed connection
-  //         retryCount++;
-  //         console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
-  //         setTimeout(connectSSE, retryDelay); // Try again after delay
-  //         return; // Exit this handler
-  //       }
-
-  //       // ✅ Job found! Process normal progress updates
-  //       console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
-  //       setProgress(data.progress);
-  //       setMessage(data.message);
-  //       setStatus(data.status);
-  //     };
-  //   };
-
-  //   connectSSE(); // Start first attempt immediately
-  // }, [jobId]);
 
   return { progress, message, status };
 };
@@ -364,14 +333,10 @@ export default function AdCreationForm({
 
       if (status === 'complete') {
         setIsCreatingAds(false);
-        setProgress(0);
-        setProgressMessage('');
         setJobId(null);
         // toast.success("Ads created successfully!");
       } else if (status === 'error') {
         setIsCreatingAds(false);
-        setProgress(0);
-        setProgressMessage('');
         setJobId(null);
       }
     }
@@ -1071,8 +1036,6 @@ export default function AdCreationForm({
       // }
       toast.success("Ads created successfully!");
       setIsCreatingAds(false);
-      setProgress(0);
-      setProgressMessage('');
     } catch (error) {
       let errorMessage = "Unknown error occurred";
 
@@ -1091,8 +1054,6 @@ export default function AdCreationForm({
       console.error("Error uploading ads:", error.response?.data || error);
       console.error("Error uploading ads:", error.response?.data || error);
       setIsCreatingAds(false);
-      setProgress(0);
-      setProgressMessage('');
       setJobId(null);
     } finally {
       setIsLoading(false);
