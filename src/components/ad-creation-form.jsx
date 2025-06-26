@@ -119,6 +119,7 @@ export default function AdCreationForm({
 
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log('📨 Received progress data:', data); // ADD THIS LINE
         setProgress(data.progress);
         setMessage(data.message);
         setStatus(data.status);
@@ -280,6 +281,7 @@ export default function AdCreationForm({
 
   // Update local state when progress changes
   useEffect(() => {
+    console.log('🔄 Progress state update:', { trackedProgress, trackedMessage, status }); // ADD THIS
     if (jobId) {
       setProgress(trackedProgress);
       setProgressMessage(trackedMessage);
