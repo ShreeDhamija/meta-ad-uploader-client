@@ -100,6 +100,64 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
 
+  //Porgress Trackers
+  const [isCreatingAds, setIsCreatingAds] = useState(false);
+  const [jobId, setJobId] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [progressMessage, setProgressMessage] = useState('');
+
+  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId);
+
+  // Update local state when progress changes
+  useEffect(() => {
+    if (jobId) {
+      setProgress(trackedProgress);
+      setProgressMessage(trackedMessage);
+
+      if (status === 'complete') {
+        setIsCreatingAds(false);
+        setJobId(null);
+        toast.success("Ads created successfully!");
+      } else if (status === 'error') {
+        setIsCreatingAds(false);
+        setJobId(null);
+      }
+    }
+  }, [trackedProgress, trackedMessage, status, jobId]);
+
+  //Progress Tracker Hook
+  const useAdCreationProgress = (jobId) => {
+    const [progress, setProgress] = useState(0);
+    const [message, setMessage] = useState('');
+    const [status, setStatus] = useState('idle');
+
+    useEffect(() => {
+      if (!jobId) return;
+
+      const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        setProgress(data.progress);
+        setMessage(data.message);
+        setStatus(data.status);
+
+        if (data.status === 'complete' || data.status === 'error') {
+          eventSource.close();
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('Progress tracking error:', error);
+        eventSource.close();
+        setStatus('error');
+      };
+
+      return () => eventSource.close();
+    }, [jobId]);
+
+    return { progress, message, status };
+  };
 
 
 
@@ -138,6 +196,8 @@ export default function AdCreationForm({
       throw new Error(`Failed to upload ${file.name} to S3`)
     }
   }
+
+
 
   async function uploadDriveFileToS3(file) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
@@ -621,6 +681,11 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (e) => {
     e.preventDefault();
+
+    setIsCreatingAds(true);
+    setProgress(0);
+    setProgressMessage('Starting ad creation...');
+
     if (uploadingToS3) {
       setPublishPending(true);
       toast.info("Waiting for video upload to finish...");
@@ -896,7 +961,13 @@ export default function AdCreationForm({
         });
       }
 
-      await Promise.all(promises);
+      const responses = await Promise.all(promises);
+
+      // Extract jobId from the first successful response:
+      const successfulResponse = responses.find(r => r.data?.jobId);
+      if (successfulResponse?.data?.jobId) {
+        setJobId(successfulResponse.data.jobId);
+      }
       toast.success("Ads created successfully!");
     } catch (error) {
       let errorMessage = "Unknown error occurred";
@@ -914,6 +985,9 @@ export default function AdCreationForm({
       }
       toast.error(`Error uploading ads: ${errorMessage}`);
       console.error("Error uploading ads:", error.response?.data || error);
+      console.error("Error uploading ads:", error.response?.data || error);
+      setIsCreatingAds(false);
+      setJobId(null);
     } finally {
       setIsLoading(false);
     }
@@ -925,6 +999,29 @@ export default function AdCreationForm({
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
+      {isCreatingAds && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full mx-4">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Creating Ads</h3>
+            </div>
+
+            <div className="progress-container">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700">Progress</span>
+                <span className="text-sm text-gray-500">{trackedProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${trackedProgress}%` }}
+                />
+              </div>
+              <p className="text-sm text-gray-600 mt-3 text-center">{trackedMessage}</p>
+            </div>
+          </div>
+        </div>
+      )}
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <img src="https://unpkg.com/@mynaui/icons/icons/plus-hexagon.svg" className="w-5 h-5" />
