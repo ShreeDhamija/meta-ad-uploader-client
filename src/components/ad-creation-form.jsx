@@ -114,8 +114,10 @@ export default function AdCreationForm({
     const [status, setStatus] = useState('idle');
 
     useEffect(() => {
+      console.log('🎯 useEffect triggered with jobId:', jobId);
       if (!jobId) return;
 
+      console.log('🔌 Starting SSE connection for:', jobId);
       const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
 
       eventSource.onmessage = (event) => {
@@ -690,6 +692,9 @@ export default function AdCreationForm({
     console.log(frontendJobId);
     setJobId(frontendJobId);
     console.log(jobId);
+    setTimeout(() => {
+      console.log('State after timeout:', jobId);
+    }, 10);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
 
@@ -976,13 +981,16 @@ export default function AdCreationForm({
         });
       }
 
+      setTimeout(() => {
+        console.log('3️⃣ State after timeout:', jobId);
+      }, 0);
       const responses = await Promise.all(promises);
 
       // Extract jobId from the first successful response:
-      const successfulResponse = responses.find(r => r.data?.jobId);
-      if (successfulResponse?.data?.jobId) {
-        setJobId(successfulResponse.data.jobId);
-      }
+      // const successfulResponse = responses.find(r => r.data?.jobId);
+      // if (successfulResponse?.data?.jobId) {
+      //   setJobId(successfulResponse.data.jobId);
+      // }
       toast.success("Ads created successfully!");
     } catch (error) {
       let errorMessage = "Unknown error occurred";
