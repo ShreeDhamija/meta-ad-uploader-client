@@ -34,15 +34,18 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     if (!jobId) return;
 
     console.log('🔄 New jobId detected, resetting state:', jobId);
-    setProgress(0);
+    setProgress(hasS3Uploads ? 50 : 0);
     setMessage('');
     setStatus('idle');
 
     let retryCount = 0;
-    const maxRetries = 20;
-    const retryDelay = 500;
+    const baseRetryDelay = 500;
+    const maxRetryDelay = 5000; // Cap at 5 seconds
+    let isConnecting = true;
 
     const connectSSE = () => {
+      if (!isConnecting) return; // Stop if component unmounted
+
       console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
       const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
 
@@ -50,40 +53,127 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
         const data = JSON.parse(event.data);
         console.log('📨 Raw SSE data received:', data);
 
-        if (data.message === 'Job not found' && retryCount < maxRetries) {
+        if (data.message === 'Job not found') {
           console.log(`❌ Job not found, closing connection...`);
           eventSource.close();
           retryCount++;
-          console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
-          setTimeout(connectSSE, retryDelay);
+
+          // Exponential backoff: 500ms, 1s, 2s, 4s, 5s, 5s, 5s...
+          const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
+
+          console.log(`⏳ Retrying in ${delay}ms... (attempt ${retryCount})`);
+          setTimeout(() => {
+            if (isConnecting) { // Check if still needed
+              connectSSE();
+            }
+          }, delay);
           return;
         }
 
-        console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
-        setProgress(data.progress);
+        // Job found! Reset retry counter and process normally
+        retryCount = 0;
+
+        // Conditionally adjust progress based on whether S3 uploads happened
+        const adjustedProgress = hasS3Uploads
+          ? 50 + Math.round(data.progress * 0.5)
+          : data.progress;
+
+        console.log('✅ Setting state - Progress:', adjustedProgress, 'Status:', data.status);
+        setProgress(adjustedProgress);
         setMessage(data.message);
         setStatus(data.status);
 
         if (data.status === 'complete' || data.status === 'error') {
           console.log('🏁 Job finished, closing SSE connection');
           eventSource.close();
+          isConnecting = false; // Stop retrying
+          setTimeout(() => {
+            setProgress(0);
+            setMessage('');
+            setStatus('idle');
+          }, 1500);
         }
       };
 
       eventSource.onerror = (error) => {
         console.error('❌ SSE Error:', error);
         eventSource.close();
-        if (retryCount < maxRetries) {
+
+        if (isConnecting) {
           retryCount++;
-          setTimeout(connectSSE, retryDelay);
-        } else {
-          setStatus('error');
+          const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
+          console.log(`🔄 SSE error, retrying in ${delay}ms...`);
+          setTimeout(() => {
+            if (isConnecting) {
+              connectSSE();
+            }
+          }, delay);
         }
       };
     };
 
     connectSSE();
-  }, [jobId]);
+
+    // Cleanup function to stop retries when component unmounts or jobId changes
+    return () => {
+      isConnecting = false;
+    };
+  }, [jobId, hasS3Uploads]);
+
+  // useEffect(() => {
+  //   if (!jobId) return;
+
+  //   console.log('🔄 New jobId detected, resetting state:', jobId);
+  //   setProgress(0);
+  //   setMessage('');
+  //   setStatus('idle');
+
+  //   let retryCount = 0;
+  //   const maxRetries = 10;
+  //   const retryDelay = 500;
+
+  //   const connectSSE = () => {
+  //     console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
+  //     const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
+
+  //     eventSource.onmessage = (event) => {
+  //       const data = JSON.parse(event.data);
+  //       console.log('📨 Raw SSE data received:', data);
+
+  //       if (data.message === 'Job not found' && retryCount < maxRetries) {
+  //         console.log(`❌ Job not found, closing connection...`);
+  //         eventSource.close();
+  //         retryCount++;
+  //         console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
+  //         setTimeout(connectSSE, retryDelay);
+  //         return;
+  //       }
+
+  //       console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
+  //       setProgress(data.progress);
+  //       setMessage(data.message);
+  //       setStatus(data.status);
+
+  //       if (data.status === 'complete' || data.status === 'error') {
+  //         console.log('🏁 Job finished, closing SSE connection');
+  //         eventSource.close();
+  //       }
+  //     };
+
+  //     eventSource.onerror = (error) => {
+  //       console.error('❌ SSE Error:', error);
+  //       eventSource.close();
+  //       if (retryCount < maxRetries) {
+  //         retryCount++;
+  //         setTimeout(connectSSE, retryDelay);
+  //       } else {
+  //         setStatus('error');
+  //       }
+  //     };
+  //   };
+
+  //   connectSSE();
+  // }, [jobId]);
 
   useEffect(() => {
     if (!isCreatingAds) {
@@ -1140,10 +1230,10 @@ export default function AdCreationForm({
                   />
                   {/* Sparkle effects */}
                   <div className="absolute -top-1 -right-1 w-2 h-2">
-                    <div className="w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
+                    <div className="w-1 h-1 bg-yellow-400 rounded-full animate-ping"></div>
                   </div>
                   <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5">
-                    <div className="w-3 h-3 bg-yellow-300 rounded-full animate-ping delay-300"></div>
+                    <div className="w-1 h-1 bg-yellow-300 rounded-full animate-ping delay-300"></div>
                   </div>
                 </div>
                 <h3 className="text-base font-bold text-gray-900">Creating Ads</h3>
