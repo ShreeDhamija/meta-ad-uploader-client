@@ -31,31 +31,38 @@ const useAdCreationProgress = (jobId) => {
   const [status, setStatus] = useState('idle');
 
   useEffect(() => {
-    console.log('🎯 useEffect triggered with jobId:', jobId);
     if (!jobId) return;
 
-    console.log('🔌 Starting SSE connection for:', jobId);
-    const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
+    let retryCount = 0;
+    const maxRetries = 10;
+    const retryDelay = 500; // 500ms between retries
 
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log('📨 Received progress data:', data); // ADD THIS LINE
-      setProgress(data.progress);
-      setMessage(data.message);
-      setStatus(data.status);
+    const connectSSE = () => {
+      console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
+      const eventSource = new EventSource(`/api/progress/${jobId}`);
 
-      if (data.status === 'complete' || data.status === 'error') {
-        eventSource.close();
-      }
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        // 🎯 KEY PART: Check if job was found
+        if (data.message === 'Job not found' && retryCount < maxRetries) {
+          console.log(`❌ Job not found, closing connection...`);
+          eventSource.close(); // Close this failed connection
+          retryCount++;
+          console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
+          setTimeout(connectSSE, retryDelay); // Try again after delay
+          return; // Exit this handler
+        }
+
+        // ✅ Job found! Process normal progress updates
+        console.log('📨 Received progress data:', data);
+        setProgress(data.progress);
+        setMessage(data.message);
+        setStatus(data.status);
+      };
     };
 
-    eventSource.onerror = (error) => {
-      console.error('Progress tracking error:', error);
-      eventSource.close();
-      setStatus('error');
-    };
-
-    return () => eventSource.close();
+    connectSSE(); // Start first attempt immediately
   }, [jobId]);
 
   return { progress, message, status };
