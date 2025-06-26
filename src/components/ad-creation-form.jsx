@@ -25,7 +25,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 
 //Progress Tracker Hook
-const useAdCreationProgress = (jobId) => {
+const useAdCreationProgress = (jobId, isCreatingAds) => {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('idle');
@@ -184,7 +184,7 @@ export default function AdCreationForm({
   const [progressMessage, setProgressMessage] = useState('');
 
 
-  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId);
+  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
   console.log('🎭 Popup state - Status:', status, 'Progress:', trackedProgress, 'JobId:', jobId, 'Message:', trackedMessage);
 
 
