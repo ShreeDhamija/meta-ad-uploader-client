@@ -1130,8 +1130,8 @@ export default function AdCreationForm({
                   <img
                     src="https://meta-ad-uploader-server-production.up.railway.app/uploadrocket.webp" // Replace with your image path
                     alt="Rocket"
-                    width={24}
-                    height={24}
+                    width={30}
+                    height={30}
                     className="animate-bounce"
                     style={{
                       animationDuration: "2s",
