@@ -1127,7 +1127,7 @@ export default function AdCreationForm({
               {/* Header with rocket and title */}
               <div className="flex items-center gap-3 mb-6">
                 <div className="relative">
-                  <Image
+                  <img
                     src="https://meta-ad-uploader-server-production.up.railway.app/uploadrocket.webp" // Replace with your image path
                     alt="Rocket"
                     width={24}
