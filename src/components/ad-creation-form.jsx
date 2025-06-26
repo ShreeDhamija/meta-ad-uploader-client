@@ -33,6 +33,10 @@ const useAdCreationProgress = (jobId) => {
   useEffect(() => {
     if (!jobId) return;
 
+    setProgress(0);
+    setMessage('');
+    setStatus('idle');
+
     let retryCount = 0;
     const maxRetries = 10;
     const retryDelay = 500; // 500ms between retries
