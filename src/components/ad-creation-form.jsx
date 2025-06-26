@@ -815,6 +815,7 @@ export default function AdCreationForm({
           formData.append("cta", cta);
 
 
+
           // Add all local files
           files.forEach((file) => {
             if (file.size <= 100 * 1024 * 1024) {
@@ -850,6 +851,7 @@ export default function AdCreationForm({
           }
 
           formData.append("launchPaused", launchPaused);
+          formData.append("jobId", jobId);
 
 
 
@@ -891,6 +893,7 @@ export default function AdCreationForm({
               formData.append("shopDestinationType", selectedShopDestinationType)
             }
             formData.append("launchPaused", launchPaused);
+            formData.append("jobId", jobId);
 
 
             promises.push(
@@ -924,6 +927,7 @@ export default function AdCreationForm({
               formData.append("shopDestinationType", selectedShopDestinationType);
             }
             formData.append("launchPaused", launchPaused);
+            formData.append("jobId", jobId);
 
             promises.push(
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
@@ -954,7 +958,7 @@ export default function AdCreationForm({
               formData.append("shopDestinationType", selectedShopDestinationType)
             }
             formData.append("launchPaused", launchPaused);
-
+            formData.append("jobId", jobId);
             promises.push(
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
                 withCredentials: true,
