@@ -948,7 +948,7 @@ export default function AdCreationForm({
               formData.append("shopDestinationType", selectedShopDestinationType);
             }
             formData.append("launchPaused", launchPaused);
-            formData.append("jobId", jobId);
+            formData.append("jobId", frontendJobId);
 
             promises.push(
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
@@ -979,7 +979,9 @@ export default function AdCreationForm({
               formData.append("shopDestinationType", selectedShopDestinationType)
             }
             formData.append("launchPaused", launchPaused);
-            formData.append("jobId", jobId);
+            formData.append("jobId", frontendJobId);
+            console.log("jobId in attached form for large File", frontendJobId);
+
             promises.push(
               axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
                 withCredentials: true,
