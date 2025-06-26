@@ -732,13 +732,11 @@ export default function AdCreationForm({
     setIsCreatingAds(true);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
-    const frontendJobId = uuidv4(); // Generate UUID
-    console.log(frontendJobId);
-    setJobId(frontendJobId);
-    console.log(jobId);
-    setTimeout(() => {
-      console.log('State after timeout:', jobId);
-    }, 10);
+    // const frontendJobId = uuidv4(); // Generate UUID
+    // console.log(frontendJobId);
+    // setJobId(frontendJobId);
+    // console.log(jobId);
+
 
 
     if (uploadingToS3) {
@@ -769,41 +767,96 @@ export default function AdCreationForm({
     setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
     const largeFiles = files.filter((file) => file.size > 100 * 1024 * 1024);
-    let s3Results = [];
-
-    if (largeFiles.length > 0) {
-      setUploadingToS3(true);
-      toast.info(`Uploading ${largeFiles.length} large file(s) to S3...`);
-
-      try {
-        const s3UploadPromises = largeFiles.map(uploadToS3);
-        s3Results = await Promise.all(s3UploadPromises);
-        toast.success("All large video files uploaded to S3!");
-      } catch (err) {
-        toast.error("Error uploading large files to S3");
-        setIsLoading(false);
-        return;
-      } finally {
-        setUploadingToS3(false);
-      }
-    }
 
     // Step: Upload large Drive videos to S3
     const largeDriveFiles = driveFiles.filter(file =>
       file.mimeType.startsWith("video/") && file.size > 100 * 1024 * 1024
     );
 
+    let s3Results = [];
     const s3DriveResults = [];
-    for (const file of largeDriveFiles) {
-      try {
-        const s3Url = await uploadDriveFileToS3(file); // 👇 see below
-        s3DriveResults.push({ ...file, s3Url });
-      } catch (err) {
-        toast.error(`Failed to upload Drive video: ${file.name}`);
-        console.error("❌ Drive to S3 upload failed", err);
-        return; // exit early if a file failed
+
+    const totalLargeFiles = largeFiles.length + largeDriveFiles.length;
+
+
+    // if (largeFiles.length > 0) {
+    //   setUploadingToS3(true);
+    //   toast.info(`Uploading ${largeFiles.length} large file(s) to S3...`);
+
+    //   try {
+    //     const s3UploadPromises = largeFiles.map(uploadToS3);
+    //     s3Results = await Promise.all(s3UploadPromises);
+    //     toast.success("All large video files uploaded to S3!");
+    //   } catch (err) {
+    //     toast.error("Error uploading large files to S3");
+    //     setIsLoading(false);
+    //     return;
+    //   } finally {
+    //     setUploadingToS3(false);
+    //   }
+    // }
+
+
+
+    // for (const file of largeDriveFiles) {
+    //   try {
+    //     const s3Url = await uploadDriveFileToS3(file); // 👇 see below
+    //     s3DriveResults.push({ ...file, s3Url });
+    //   } catch (err) {
+    //     toast.error(`Failed to upload Drive video: ${file.name}`);
+    //     console.error("❌ Drive to S3 upload failed", err);
+    //     return; // exit early if a file failed
+    //   }
+    // }
+
+    if (totalLargeFiles > 0) {
+      setProgressMessage(`Uploading ${totalLargeFiles} large files to S3...`);
+
+      // Upload regular large files
+      for (let i = 0; i < largeFiles.length; i++) {
+        const progressPercent = Math.round((i / totalLargeFiles) * 50);
+        setProgress(progressPercent);
+        setProgressMessage(`Uploading file ${i + 1}/${totalLargeFiles} to S3...`);
+
+        try {
+          const result = await uploadToS3(largeFiles[i]);
+          s3Results.push(result);
+        } catch (err) {
+          toast.error(`Failed to upload ${largeFiles[i].name} to S3`);
+          setIsCreatingAds(false);
+          setIsLoading(false);
+          return;
+        }
       }
+
+      // Upload Drive large files
+      for (let i = 0; i < largeDriveFiles.length; i++) {
+        const progressPercent = Math.round(((largeFiles.length + i) / totalLargeFiles) * 50);
+        setProgress(progressPercent);
+        setProgressMessage(`Uploading Drive file ${largeFiles.length + i + 1}/${totalLargeFiles} to S3...`);
+
+        try {
+          const s3Url = await uploadDriveFileToS3(largeDriveFiles[i]);
+          s3DriveResults.push({ ...largeDriveFiles[i], s3Url });
+        } catch (err) {
+          toast.error(`Failed to upload Drive video: ${largeDriveFiles[i].name}`);
+          console.error("❌ Drive to S3 upload failed", err);
+          setIsCreatingAds(false);
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      setProgress(50);
+      setProgressMessage('S3 uploads complete! Creating ads...');
+      toast.success("All large video files uploaded to S3!");
     }
+
+    // 🔧 NOW start the actual job (50-100% progress)
+    const frontendJobId = uuidv4();
+    console.log(frontendJobId);
+    setJobId(frontendJobId); // This triggers SSE
+
 
     const smallDriveFiles = driveFiles.filter(file =>
       !(file.mimeType.startsWith("video/") && file.size > 100 * 1024 * 1024)
@@ -1066,7 +1119,7 @@ export default function AdCreationForm({
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
-      {isCreatingAds && (
+      {/* {isCreatingAds && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full mx-4">
             <div className="text-center mb-4">
@@ -1089,6 +1142,29 @@ export default function AdCreationForm({
           </div>
         </div>
       )}
+       */}
+
+      {isCreatingAds && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full mx-4">
+            <div className="text-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Creating Ads</h3>
+              {/* Use component state until SSE takes over */}
+              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                  style={{ width: `${jobId ? trackedProgress : progress}%` }}
+                ></div>
+              </div>
+              <p>{jobId ? `${trackedProgress}%` : `${progress}%`}</p>
+              <p className="text-sm text-gray-600">
+                {jobId ? trackedMessage : progressMessage}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <img src="https://unpkg.com/@mynaui/icons/icons/plus-hexagon.svg" className="w-5 h-5" />
