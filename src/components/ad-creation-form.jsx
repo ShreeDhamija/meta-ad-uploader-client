@@ -106,25 +106,6 @@ export default function AdCreationForm({
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
 
-
-
-  // Update local state when progress changes
-  useEffect(() => {
-    if (jobId) {
-      setProgress(trackedProgress);
-      setProgressMessage(trackedMessage);
-
-      if (status === 'complete') {
-        setIsCreatingAds(false);
-        setJobId(null);
-        toast.success("Ads created successfully!");
-      } else if (status === 'error') {
-        setIsCreatingAds(false);
-        setJobId(null);
-      }
-    }
-  }, [trackedProgress, trackedMessage, status, jobId]);
-
   //Progress Tracker Hook
   const useAdCreationProgress = (jobId) => {
     const [progress, setProgress] = useState(0);
@@ -296,6 +277,23 @@ export default function AdCreationForm({
     }
   };
 
+
+  // Update local state when progress changes
+  useEffect(() => {
+    if (jobId) {
+      setProgress(trackedProgress);
+      setProgressMessage(trackedMessage);
+
+      if (status === 'complete') {
+        setIsCreatingAds(false);
+        setJobId(null);
+        toast.success("Ads created successfully!");
+      } else if (status === 'error') {
+        setIsCreatingAds(false);
+        setJobId(null);
+      }
+    }
+  }, [trackedProgress, trackedMessage, status, jobId]);
 
 
   useEffect(() => {
