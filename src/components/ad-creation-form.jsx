@@ -33,13 +33,14 @@ const useAdCreationProgress = (jobId) => {
   useEffect(() => {
     if (!jobId) return;
 
+    console.log('🔄 New jobId detected, resetting state:', jobId);
     setProgress(0);
     setMessage('');
     setStatus('idle');
 
     let retryCount = 0;
     const maxRetries = 10;
-    const retryDelay = 500; // 500ms between retries
+    const retryDelay = 500;
 
     const connectSSE = () => {
       console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
@@ -47,27 +48,83 @@ const useAdCreationProgress = (jobId) => {
 
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log('📨 Raw SSE data received:', data);
 
-        // 🎯 KEY PART: Check if job was found
         if (data.message === 'Job not found' && retryCount < maxRetries) {
           console.log(`❌ Job not found, closing connection...`);
-          eventSource.close(); // Close this failed connection
+          eventSource.close();
           retryCount++;
           console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
-          setTimeout(connectSSE, retryDelay); // Try again after delay
-          return; // Exit this handler
+          setTimeout(connectSSE, retryDelay);
+          return;
         }
 
-        // ✅ Job found! Process normal progress updates
-        console.log('📨 Received progress data:', data);
+        console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
         setProgress(data.progress);
         setMessage(data.message);
         setStatus(data.status);
+
+        if (data.status === 'complete' || data.status === 'error') {
+          console.log('🏁 Job finished, closing SSE connection');
+          eventSource.close();
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('❌ SSE Error:', error);
+        eventSource.close();
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(connectSSE, retryDelay);
+        } else {
+          setStatus('error');
+        }
       };
     };
 
-    connectSSE(); // Start first attempt immediately
+    connectSSE();
   }, [jobId]);
+  // useEffect(() => {
+  //   if (!jobId) return;
+
+
+  //   console.log('🔄 New jobId detected, USEFFECT:', jobId);
+  //   setProgress(0);
+  //   setMessage('');
+  //   setStatus('idle');
+
+  //   let retryCount = 0;
+  //   const maxRetries = 10;
+  //   const retryDelay = 500; // 500ms between retries
+
+  //   const connectSSE = () => {
+  //     console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
+  //     const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
+
+  //     eventSource.onmessage = (event) => {
+  //       const data = JSON.parse(event.data);
+  //       console.log('📨 Raw SSE data received:', data);
+
+  //       // 🎯 KEY PART: Check if job was found
+  //       if (data.message === 'Job not found' && retryCount < maxRetries) {
+  //         console.log(`❌ Job not found, closing connection...`);
+  //         eventSource.close(); // Close this failed connection
+  //         retryCount++;
+  //         console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
+  //         setTimeout(connectSSE, retryDelay); // Try again after delay
+  //         return; // Exit this handler
+  //       }
+
+  //       // ✅ Job found! Process normal progress updates
+  //       console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
+  //       setProgress(data.progress);
+  //       setMessage(data.message);
+  //       setStatus(data.status);
+  //     };
+  //   };
+
+  //   connectSSE(); // Start first attempt immediately
+  // }, [jobId]);
 
   return { progress, message, status };
 };
@@ -159,6 +216,8 @@ export default function AdCreationForm({
 
 
   const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId);
+  console.log('🎭 Popup state - Status:', status, 'Progress:', trackedProgress, 'JobId:', jobId, 'Message:', trackedMessage);
+
 
 
 
