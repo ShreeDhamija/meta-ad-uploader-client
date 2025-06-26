@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import { Infotooltip } from "./ui/infotooltip"
+import { v4 as uuidv4 } from 'uuid';
 
 export default function AdCreationForm({
   isLoading,
@@ -289,7 +290,7 @@ export default function AdCreationForm({
       if (status === 'complete') {
         setIsCreatingAds(false);
         setJobId(null);
-        toast.success("Ads created successfully!");
+        // toast.success("Ads created successfully!");
       } else if (status === 'error') {
         setIsCreatingAds(false);
         setJobId(null);
@@ -685,7 +686,8 @@ export default function AdCreationForm({
     e.preventDefault();
 
     setIsCreatingAds(true);
-    setJobId(null);           // Reset jobId first
+    const frontendJobId = uuidv4(); // Generate UUID
+    setJobId(frontendJobId);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
 
