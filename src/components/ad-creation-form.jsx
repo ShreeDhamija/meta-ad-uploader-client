@@ -683,6 +683,7 @@ export default function AdCreationForm({
     e.preventDefault();
 
     setIsCreatingAds(true);
+    setJobId(null);           // Reset jobId first
     setProgress(0);
     setProgressMessage('Starting ad creation...');
 
