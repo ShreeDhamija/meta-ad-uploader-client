@@ -1070,6 +1070,9 @@ export default function AdCreationForm({
       //   setJobId(successfulResponse.data.jobId);
       // }
       toast.success("Ads created successfully!");
+      setIsCreatingAds(false);
+      setProgress(0);
+      setProgressMessage('');
     } catch (error) {
       let errorMessage = "Unknown error occurred";
 
