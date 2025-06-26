@@ -39,7 +39,7 @@ const useAdCreationProgress = (jobId) => {
 
     const connectSSE = () => {
       console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
-      const eventSource = new EventSource(`/api/progress/${jobId}`);
+      const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
 
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
