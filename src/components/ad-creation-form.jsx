@@ -853,7 +853,8 @@ export default function AdCreationForm({
           }
 
           formData.append("launchPaused", launchPaused);
-          formData.append("jobId", jobId);
+          formData.append("jobId", frontendJobId);
+
 
 
 
@@ -897,8 +898,8 @@ export default function AdCreationForm({
               formData.append("shopDestinationType", selectedShopDestinationType)
             }
             formData.append("launchPaused", launchPaused);
-            formData.append("jobId", jobId);
-            formData.append("jobId in attached form", jobId);
+            formData.append("jobId", frontendJobId);
+            console.log("jobId in attached form", frontendJobId);
 
 
             promises.push(
