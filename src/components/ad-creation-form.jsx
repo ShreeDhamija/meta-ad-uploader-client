@@ -22,6 +22,45 @@ import ShopDestinationSelector from "@/components/shop-destination-selector"
 import { Infotooltip } from "./ui/infotooltip"
 import { v4 as uuidv4 } from 'uuid';
 
+
+
+//Progress Tracker Hook
+const useAdCreationProgress = (jobId) => {
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState('idle');
+
+  useEffect(() => {
+    console.log('🎯 useEffect triggered with jobId:', jobId);
+    if (!jobId) return;
+
+    console.log('🔌 Starting SSE connection for:', jobId);
+    const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
+
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log('📨 Received progress data:', data); // ADD THIS LINE
+      setProgress(data.progress);
+      setMessage(data.message);
+      setStatus(data.status);
+
+      if (data.status === 'complete' || data.status === 'error') {
+        eventSource.close();
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('Progress tracking error:', error);
+      eventSource.close();
+      setStatus('error');
+    };
+
+    return () => eventSource.close();
+  }, [jobId]);
+
+  return { progress, message, status };
+};
+
 export default function AdCreationForm({
   isLoading,
   setIsLoading,
@@ -107,42 +146,6 @@ export default function AdCreationForm({
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
 
-  //Progress Tracker Hook
-  const useAdCreationProgress = (jobId) => {
-    const [progress, setProgress] = useState(0);
-    const [message, setMessage] = useState('');
-    const [status, setStatus] = useState('idle');
-
-    useEffect(() => {
-      console.log('🎯 useEffect triggered with jobId:', jobId);
-      if (!jobId) return;
-
-      console.log('🔌 Starting SSE connection for:', jobId);
-      const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
-
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log('📨 Received progress data:', data); // ADD THIS LINE
-        setProgress(data.progress);
-        setMessage(data.message);
-        setStatus(data.status);
-
-        if (data.status === 'complete' || data.status === 'error') {
-          eventSource.close();
-        }
-      };
-
-      eventSource.onerror = (error) => {
-        console.error('Progress tracking error:', error);
-        eventSource.close();
-        setStatus('error');
-      };
-
-      return () => eventSource.close();
-    }, [jobId]);
-
-    return { progress, message, status };
-  };
 
   const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId);
 
