@@ -1119,46 +1119,62 @@ export default function AdCreationForm({
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
-      {/* {isCreatingAds && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full mx-4">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Creating Ads</h3>
-            </div>
-
-            <div className="progress-container">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">Progress</span>
-                <span className="text-sm text-gray-500">{trackedProgress}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-blue-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${trackedProgress}%` }}
-                />
-              </div>
-              <p className="text-sm text-gray-600 mt-3 text-center">{trackedMessage}</p>
-            </div>
-          </div>
-        </div>
-      )}
-       */}
 
       {isCreatingAds && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 shadow-xl max-w-md w-full mx-4">
-            <div className="text-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Creating Ads</h3>
-              {/* Use component state until SSE takes over */}
-              <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-                <div
-                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                  style={{ width: `${jobId ? trackedProgress : progress}%` }}
-                ></div>
+          <div className="bg-white rounded-[20px] py-4 px-6 shadow-xl max-w-md w-full mx-4">
+            <div className="text-left">
+              {/* Header with rocket and title */}
+              <div className="flex items-center gap-3 mb-6">
+                <div className="relative">
+                  <Image
+                    src="https://meta-ad-uploader-server-production.up.railway.app/uploadrocket.webp" // Replace with your image path
+                    alt="Rocket"
+                    width={24}
+                    height={24}
+                    className="animate-bounce"
+                    style={{
+                      animationDuration: "2s",
+                      animationTimingFunction: "ease-in-out",
+                    }}
+                  />
+                  {/* Sparkle effects */}
+                  <div className="absolute -top-1 -right-1 w-2 h-2">
+                    <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse"></div>
+                  </div>
+                  <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5">
+                    <div className="w-1 h-1 bg-yellow-300 rounded-full animate-pulse delay-300"></div>
+                  </div>
+                </div>
+                <h3 className="text-base font-bold text-gray-900">Creating Ads</h3>
               </div>
-              <p>{jobId ? `${trackedProgress}%` : `${progress}%`}</p>
-              <p className="text-sm text-gray-600">
+
+              {/* Progress section */}
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-semibold text-gray-900">Progress</span>
+                  <span className="text-xs font-semibold text-gray-900">
+                    {Math.round(jobId ? trackedProgress : progress)}%
+                  </span>
+                </div>
+
+                {/* Thick progress bar */}
+                <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
+                  <div
+                    className="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${jobId ? trackedProgress : progress}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Status message */}
+              <p className="text-xs font-semibold text-gray-900 mb-4">
                 {jobId ? trackedMessage : progressMessage}
+              </p>
+
+              {/* Disclaimer */}
+              <p className="text-xs font-medium text-gray-500">
+                *Video Processing Estimates might not be accurate.
               </p>
             </div>
           </div>
