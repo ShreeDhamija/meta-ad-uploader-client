@@ -687,7 +687,9 @@ export default function AdCreationForm({
 
     setIsCreatingAds(true);
     const frontendJobId = uuidv4(); // Generate UUID
+    console.log(frontendJobId);
     setJobId(frontendJobId);
+    console.log(jobId);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
 
@@ -856,6 +858,8 @@ export default function AdCreationForm({
 
 
 
+
+
           promises.push(
             axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
               withCredentials: true,
@@ -894,6 +898,7 @@ export default function AdCreationForm({
             }
             formData.append("launchPaused", launchPaused);
             formData.append("jobId", jobId);
+            formData.append("jobId in attached form", jobId);
 
 
             promises.push(
