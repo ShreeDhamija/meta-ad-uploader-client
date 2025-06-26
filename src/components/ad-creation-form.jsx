@@ -39,7 +39,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     setStatus('idle');
 
     let retryCount = 0;
-    const maxRetries = 10;
+    const maxRetries = 20;
     const retryDelay = 500;
 
     const connectSSE = () => {
@@ -1125,7 +1125,7 @@ export default function AdCreationForm({
           <div className="bg-white rounded-[20px] py-4 px-6 shadow-xl max-w-md w-full mx-4">
             <div className="text-left">
               {/* Header with rocket and title */}
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-2 mb-6">
                 <div className="relative">
                   <img
                     src="https://meta-ad-uploader-server-production.up.railway.app/uploadrocket.webp" // Replace with your image path
@@ -1140,10 +1140,10 @@ export default function AdCreationForm({
                   />
                   {/* Sparkle effects */}
                   <div className="absolute -top-1 -right-1 w-2 h-2">
-                    <div className="w-1 h-1 bg-yellow-400 rounded-full animate-pulse"></div>
+                    <div className="w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
                   </div>
                   <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5">
-                    <div className="w-1 h-1 bg-yellow-300 rounded-full animate-pulse delay-300"></div>
+                    <div className="w-3 h-3 bg-yellow-300 rounded-full animate-ping delay-300"></div>
                   </div>
                 </div>
                 <h3 className="text-base font-bold text-gray-900">Creating Ads</h3>
