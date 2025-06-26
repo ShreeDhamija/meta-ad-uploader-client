@@ -364,10 +364,14 @@ export default function AdCreationForm({
 
       if (status === 'complete') {
         setIsCreatingAds(false);
+        setProgress(0);
+        setProgressMessage('');
         setJobId(null);
         // toast.success("Ads created successfully!");
       } else if (status === 'error') {
         setIsCreatingAds(false);
+        setProgress(0);
+        setProgressMessage('');
         setJobId(null);
       }
     }
@@ -761,6 +765,8 @@ export default function AdCreationForm({
     e.preventDefault();
 
     setIsCreatingAds(true);
+    setProgress(0);
+    setProgressMessage('Starting ad creation...');
     const frontendJobId = uuidv4(); // Generate UUID
     console.log(frontendJobId);
     setJobId(frontendJobId);
@@ -768,8 +774,7 @@ export default function AdCreationForm({
     setTimeout(() => {
       console.log('State after timeout:', jobId);
     }, 10);
-    setProgress(0);
-    setProgressMessage('Starting ad creation...');
+
 
     if (uploadingToS3) {
       setPublishPending(true);
@@ -1083,6 +1088,8 @@ export default function AdCreationForm({
       console.error("Error uploading ads:", error.response?.data || error);
       console.error("Error uploading ads:", error.response?.data || error);
       setIsCreatingAds(false);
+      setProgress(0);
+      setProgressMessage('');
       setJobId(null);
     } finally {
       setIsLoading(false);
