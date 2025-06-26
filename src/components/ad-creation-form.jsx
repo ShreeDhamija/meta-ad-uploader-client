@@ -106,7 +106,7 @@ export default function AdCreationForm({
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
 
-  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId);
+
 
   // Update local state when progress changes
   useEffect(() => {
@@ -158,6 +158,8 @@ export default function AdCreationForm({
 
     return { progress, message, status };
   };
+
+  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId);
 
 
 
