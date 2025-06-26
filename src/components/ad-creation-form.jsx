@@ -981,9 +981,7 @@ export default function AdCreationForm({
         });
       }
 
-      setTimeout(() => {
-        console.log('3️⃣ State after timeout:', jobId);
-      }, 0);
+      console.log('🚀 Starting API calls (Promise.all) now');
       const responses = await Promise.all(promises);
 
       // Extract jobId from the first successful response:
