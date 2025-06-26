@@ -34,17 +34,17 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     if (!jobId) return;
 
     console.log('🔄 New jobId detected, resetting state:', jobId);
-    setProgress(hasS3Uploads ? 50 : 0);
+    setProgress(0);
     setMessage('');
     setStatus('idle');
 
     let retryCount = 0;
     const baseRetryDelay = 500;
-    const maxRetryDelay = 5000; // Cap at 5 seconds
+    const maxRetryDelay = 5000;
     let isConnecting = true;
 
     const connectSSE = () => {
-      if (!isConnecting) return; // Stop if component unmounted
+      if (!isConnecting) return;
 
       console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
       const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
@@ -58,40 +58,27 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
           eventSource.close();
           retryCount++;
 
-          // Exponential backoff: 500ms, 1s, 2s, 4s, 5s, 5s, 5s...
           const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
 
           console.log(`⏳ Retrying in ${delay}ms... (attempt ${retryCount})`);
           setTimeout(() => {
-            if (isConnecting) { // Check if still needed
+            if (isConnecting) {
               connectSSE();
             }
           }, delay);
           return;
         }
 
-        // Job found! Reset retry counter and process normally
-        retryCount = 0;
-
-        // Conditionally adjust progress based on whether S3 uploads happened
-        const adjustedProgress = hasS3Uploads
-          ? 50 + Math.round(data.progress * 0.5)
-          : data.progress;
-
-        console.log('✅ Setting state - Progress:', adjustedProgress, 'Status:', data.status);
-        setProgress(adjustedProgress);
+        retryCount = 0; // Reset retry counter on success
+        console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
+        setProgress(data.progress);
         setMessage(data.message);
         setStatus(data.status);
 
         if (data.status === 'complete' || data.status === 'error') {
           console.log('🏁 Job finished, closing SSE connection');
           eventSource.close();
-          isConnecting = false; // Stop retrying
-          setTimeout(() => {
-            setProgress(0);
-            setMessage('');
-            setStatus('idle');
-          }, 1500);
+          isConnecting = false;
         }
       };
 
@@ -102,7 +89,6 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
         if (isConnecting) {
           retryCount++;
           const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
-          console.log(`🔄 SSE error, retrying in ${delay}ms...`);
           setTimeout(() => {
             if (isConnecting) {
               connectSSE();
@@ -114,11 +100,10 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
     connectSSE();
 
-    // Cleanup function to stop retries when component unmounts or jobId changes
     return () => {
       isConnecting = false;
     };
-  }, [jobId, hasS3Uploads]);
+  }, [jobId]);
 
   // useEffect(() => {
   //   if (!jobId) return;
