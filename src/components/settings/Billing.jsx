@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreditCard, Calendar, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
-import useSubscription from "@/lib/useSubscription";
+import useSubscription from "@/lib/useSubscriptionSettings";
 
 export default function BillingSettings() {
     const [isLoading, setIsLoading] = useState(false);

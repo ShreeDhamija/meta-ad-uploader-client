@@ -14,7 +14,7 @@ import { useAuth } from "../lib/AuthContext"
 import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
-import useSubscription from "@/lib/useSubscription"
+import useSubscription from "@/lib/useSubscriptionSettings"
 
 
 export default function Home() {

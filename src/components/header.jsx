@@ -67,7 +67,7 @@ import { Button } from "@/components/ui/button"
 import { LogOutIcon, Settings, Clock, CreditCard } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import { useNavigate } from "react-router-dom"
-import useSubscription from "@/lib/useSubscription"
+import useSubscription from "@/lib/useSubscriptionSettings"
 
 export default function Header() {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
