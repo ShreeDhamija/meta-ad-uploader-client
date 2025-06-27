@@ -214,7 +214,10 @@ export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const navigate = useNavigate()
-    const [activeTab, setActiveTab] = useState("adaccount")
+    // const [activeTab, setActiveTab] = useState("adaccount")
+    const urlParams = new URLSearchParams(window.location.search)
+    const initialTab = urlParams.get('tab') || 'adaccount'
+    const [activeTab, setActiveTab] = useState(initialTab)
     const tabIconMap = {
         global: "https://unpkg.com/@mynaui/icons/icons/cog-four.svg",
         adaccount: "https://meta-ad-uploader-server-production.up.railway.app/icons/folder.svg",
@@ -250,6 +253,15 @@ export default function Settings() {
         }).then(() => setHasSeenSettingsOnboarding(true))
     }
 
+    const handleTabChange = (tab) => {
+        setActiveTab(tab)
+        // Update URL without page reload
+        const newUrl = new URL(window.location)
+        newUrl.searchParams.set('tab', tab)
+        window.history.pushState({}, '', newUrl)
+        document.activeElement.blur()
+    }
+
     useEffect(() => {
         if (!loading && !hasSeenSettingsOnboarding) {
             setShowSettingsPopup(true)
@@ -280,10 +292,7 @@ export default function Settings() {
                         {["adaccount", "global", "billing", "viewads"].map((tab) => (
                             <button
                                 key={tab}
-                                onClick={() => {
-                                    setActiveTab(tab)
-                                    document.activeElement.blur()
-                                }}
+                                onClick={() => handleTabChange(tab)}
                                 className={cn(
                                     "w-full flex items-center gap-2 px-4 py-2 rounded-xl transition",
                                     activeTab === tab
