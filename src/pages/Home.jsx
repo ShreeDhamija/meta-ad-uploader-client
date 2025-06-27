@@ -14,6 +14,7 @@ import { useAuth } from "../lib/AuthContext"
 import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
+import useSubscription from "@/lib/useSubscription"
 
 
 export default function Home() {
@@ -24,6 +25,7 @@ export default function Home() {
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
     const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading } = useGlobalSettings()
+    const { subscriptionData, hasActiveAccess, isTrialExpired, loading: subscriptionLoading } = useSubscription();
 
     // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")

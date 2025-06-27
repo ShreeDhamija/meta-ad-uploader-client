@@ -206,6 +206,7 @@ import { cn } from "@/lib/utils"
 import GlobalSettings from "@/components/settings/global-settings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
+import BillingSettings from "@/components/settings/Billing"
 import ViewAds from "@/components/settings/view-ads"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 
@@ -226,7 +227,7 @@ export default function Settings() {
     const tabDescriptionMap = {
         global: "These preferences will apply to ALL ad accounts in your account.",
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
-        billing: "Manage your billing methods and invoices here.",
+        billing: "Manage your subscription, billing methods, and view invoices.",
         viewads: "Preview all ads created in the last hour.",
     }
 
@@ -295,7 +296,7 @@ export default function Settings() {
                                     src={tabIconMap[tab] || "/placeholder.svg"}
                                     alt={`${tab} icon`}
                                     className={cn(
-                                        "w-5 h-5 max-lg:w-6 max-lg:h-6 transition",
+                                        "w-5 h-5 max-lg:w-6 max-lg:h-6 transition object-contain flex-shrink-0",
                                         activeTab === tab
                                             ? "" // let original color show
                                             : "grayscale brightness-75 contrast-75 opacity-60",
@@ -361,6 +362,8 @@ export default function Settings() {
                             {activeTab === "global" && <GlobalSettings />}
                             {activeTab === "adaccount" && <AdAccountSettings />}
                             {activeTab === "viewads" && <ViewAds />}
+                            {activeTab === "billing" && <BillingSettings />}
+
                         </div>
                     </div>
                 </div>
