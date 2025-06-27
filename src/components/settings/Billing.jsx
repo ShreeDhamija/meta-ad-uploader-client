@@ -52,15 +52,15 @@ export default function BillingSettings() {
         return <Badge variant="outline">Inactive</Badge>;
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    };
+    // const formatDate = (dateString) => {
+    //     if (!dateString) return 'N/A';
+    //     const date = new Date(dateString);
+    //     return date.toLocaleDateString('en-US', {
+    //         year: 'numeric',
+    //         month: 'long',
+    //         day: 'numeric'
+    //     });
+    // };
 
     return (
         <div className="space-y-6">
@@ -98,7 +98,7 @@ export default function BillingSettings() {
                             </div>
                         )}
 
-                        {subscriptionData.trialEndDate && (
+                        {/* {subscriptionData.trialEndDate && (
                             <div>
                                 <p className="text-sm font-medium text-gray-600">
                                     {isOnTrial() ? 'Trial Ends' : 'Trial Ended'}
@@ -109,7 +109,7 @@ export default function BillingSettings() {
                                         subscriptionData.trialEndDate)}
                                 </p>
                             </div>
-                        )}
+                        )} */}
 
                         {/* Remove next billing date section since we don't have paid plans yet */}
                     </div>
