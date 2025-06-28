@@ -262,14 +262,14 @@ export default function Settings() {
         document.activeElement.blur()
     }
 
-    useEffect(() => {
-        if (!loading && !hasSeenSettingsOnboarding) {
-            setShowSettingsPopup(true)
-        }
-    }, [loading, hasSeenSettingsOnboarding])
+    // useEffect(() => {
+    //     if (!loading && !hasSeenSettingsOnboarding) {
+    //         setShowSettingsPopup(true)
+    //     }
+    // }, [loading, hasSeenSettingsOnboarding])
 
-    if (authLoading) return null // or a loading spinner if you want
-    if (!isLoggedIn) return <Navigate to="/login" />
+    // if (authLoading) return null // or a loading spinner if you want
+    // if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <div className="flex bg-gray-100 min-h-screen">
@@ -354,32 +354,32 @@ export default function Settings() {
 
             {/* Main Area */}
             <main className="flex-1 py-6 pr-6">
-                <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-full p-16">
-                    <div className="w-full max-w-3xl mx-auto">
-                        <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
-                        <h1 className="text-xl font-semibold mb-1 text-left">
-                            {activeTab === "global"
-                                ? "Global Preferences"
-                                : activeTab === "adaccount"
-                                    ? "Ad Account Settings"
-                                    : activeTab === "viewads"
-                                        ? "Recently Created Ads"
-                                        : "Billing and Subscription"}
-                        </h1>
-                        <p className="text-gray-400 text-sm mb-6 text-left">{tabDescriptionMap[activeTab]}</p>
+                <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
+                    <div className="flex-1 overflow-auto">
+                        <div className="w-full max-w-3xl mx-auto p-16">
+                            <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
+                            <h1 className="text-xl font-semibold mb-1 text-left">
+                                {activeTab === "global"
+                                    ? "Global Preferences"
+                                    : activeTab === "adaccount"
+                                        ? "Ad Account Settings"
+                                        : activeTab === "viewads"
+                                            ? "Recently Created Ads"
+                                            : "Billing and Subscription"}
+                            </h1>
+                            <p className="text-gray-400 text-sm mb-6 text-left">{tabDescriptionMap[activeTab]}</p>
 
-                        {/* Settings Area */}
-                        <div className="w-full">
-                            {/* Render component by tab */}
-                            {activeTab === "global" && <GlobalSettings />}
-                            {activeTab === "adaccount" && <AdAccountSettings />}
-                            {activeTab === "viewads" && <ViewAds />}
-                            {activeTab === "billing" && <BillingSettings />}
-
+                            <div className="w-full">
+                                {activeTab === "global" && <GlobalSettings />}
+                                {activeTab === "adaccount" && <AdAccountSettings />}
+                                {activeTab === "viewads" && <ViewAds />}
+                                {activeTab === "billing" && <BillingSettings />}
+                            </div>
                         </div>
                     </div>
                 </div>
             </main>
+
             <div>
                 <Toaster richColors position="bottom-left" closeButton />
             </div>
