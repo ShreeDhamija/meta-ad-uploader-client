@@ -309,7 +309,7 @@ export default function Settings() {
                                         className={cn(
                                             "w-5 h-5 max-lg:w-6 max-lg:h-6 transition object-contain flex-shrink-0",
                                             activeTab === tab
-                                                ? "" // let original color show
+                                                ? "brightness-0 invert" // let original color show
                                                 : "grayscale brightness-75 contrast-75 opacity-60",
                                         )}
                                     />
