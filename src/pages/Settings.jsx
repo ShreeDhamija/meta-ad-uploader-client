@@ -219,7 +219,7 @@ export default function Settings() {
     const initialTab = urlParams.get('tab') || 'adaccount'
     const [activeTab, setActiveTab] = useState(initialTab)
     const tabIconMap = {
-        global: "https://unpkg.com/@mynaui/icons/icons/cog-four.svg",
+        global: "https://api.withblip.com/icons/settings.svg",
         adaccount: "https://api.withblip.com/icons/folder.svg",
         billing: "https://api.withblip.com/icons/card.svg",
         viewads: "https://api.withblip.com/icons/viewads.svg", // use your own icon or placeholder
