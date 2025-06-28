@@ -262,26 +262,26 @@ export default function Settings() {
         document.activeElement.blur()
     }
 
-    useEffect(() => {
-        if (!loading && !hasSeenSettingsOnboarding) {
-            setShowSettingsPopup(true)
-        }
-    }, [loading, hasSeenSettingsOnboarding])
+    // useEffect(() => {
+    //     if (!loading && !hasSeenSettingsOnboarding) {
+    //         setShowSettingsPopup(true)
+    //     }
+    // }, [loading, hasSeenSettingsOnboarding])
 
-    if (authLoading) return null // or a loading spinner if you want
-    if (!isLoggedIn) return <Navigate to="/login" />
+    // if (authLoading) return null // or a loading spinner if you want
+    // if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
-        <div className="flex bg-gray-100 min-h-screen">
+        <div className="flex bg-gray-50 min-h-screen">
             {/* Sidebar */}
             <div className="w-[290px] flex flex-col h-screen sticky top-0 px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
-                <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-4 shadow-lg border-2 flex flex-col h-full">
+                <div className=" rounded-3xl p-4 flex flex-col h-full">
                     {/* Main Content (will take all available vertical space except the footer) */}
                     <div className="flex-1 flex flex-col">
                         {/* Back to Home Button */}
                         <Button
                             onClick={() => navigate("/")}
-                            className="flex items-center justify-start gap-2 bg-[#f8f8f8] border border-gray-200 shadow-sm rounded-[20px] py-6 text- font-medium w-full mb-4"
+                            className="flex items-center justify-start gap-2 bg-white border border-gray-200 shadow-sm rounded-[20px] py-6 text- font-medium w-full mb-4"
                             variant="ghost"
                         >
                             <img src="https://unpkg.com/@mynaui/icons/icons/home.svg" />
@@ -298,7 +298,7 @@ export default function Settings() {
                                     className={cn(
                                         "w-full flex items-center gap-2 px-4 py-2 rounded-xl transition",
                                         activeTab === tab
-                                            ? "bg-gray-100 border font-semibold shadow-sm"
+                                            ? "bg-gray-200  font-semibold shadow-sm"
                                             : "hover:bg-gray-200",
                                         "justify-start max-lg:justify-center max-lg:px-2",
                                     )}
@@ -330,7 +330,7 @@ export default function Settings() {
 
                     {/* Footer Profile + Logout pinned to bottom */}
                     <div className="pt-4 mt-auto">
-                        <div className="w-full flex items-center bg-[#f8f8f8] border border-gray-200 shadow-sm rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
+                        <div className="w-full flex items-center bg-white border border-gray-200 shadow-sm rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
                             {/* Profile image + name - hidden on small screens */}
                             <div className="flex items-center gap-2 flex-grow max-lg:hidden">
                                 <img
