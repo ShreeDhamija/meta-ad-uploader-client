@@ -296,7 +296,7 @@ export default function Settings() {
                                     key={tab}
                                     onClick={() => handleTabChange(tab)}
                                     className={cn(
-                                        "w-full flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 ease-in-out",
+                                        "w-full flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-500 ease-in-out",
                                         activeTab === tab
                                             ? "bg-zinc-800 font-semibold text-white shadow-sm"
                                             : "hover:bg-gray-300",
@@ -307,13 +307,13 @@ export default function Settings() {
                                         src={tabIconMap[tab] || "/placeholder.svg"}
                                         alt={`${tab} icon`}
                                         className={cn(
-                                            "w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-300 ease-in-out object-contain flex-shrink-0",
+                                            "w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-500 ease-in-out object-contain flex-shrink-0",
                                             activeTab === tab
                                                 ? "brightness-0 invert" // let original color show
                                                 : "grayscale brightness-75 contrast-75 opacity-60",
                                         )}
                                     />
-                                    <span className="text-sm max-lg:hidden">
+                                    <span className="text-sm max-lg:hidden transition-colors duration-500 ease-in-out">
                                         {tab === "global"
                                             ? "Global Settings"
                                             : tab === "adaccount"
