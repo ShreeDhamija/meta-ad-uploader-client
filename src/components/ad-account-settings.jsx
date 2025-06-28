@@ -114,7 +114,7 @@ export default function AdAccountSettings({
     setIsLoading(true)
     try {
       const res = await fetch(
-        `https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-campaigns?adAccountId=${adAccountId}`,
+        `https://api.withblip.com/auth/fetch-campaigns?adAccountId=${adAccountId}`,
         { credentials: "include" },
       )
       const data = await res.json()
@@ -162,7 +162,7 @@ export default function AdAccountSettings({
     setIsLoading(true)
     try {
       const res = await fetch(
-        `https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-adsets?campaignId=${campaignId}`,
+        `https://api.withblip.com/auth/fetch-adsets?campaignId=${campaignId}`,
         { credentials: "include" },
       )
       const data = await res.json()
@@ -195,7 +195,7 @@ export default function AdAccountSettings({
   const refreshAdAccounts = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-ad-accounts", {
+      const res = await fetch("https://api.withblip.com/auth/fetch-ad-accounts", {
         credentials: "include",
       })
       const data = await res.json()
@@ -217,7 +217,7 @@ export default function AdAccountSettings({
 
     try {
       const res = await fetch(
-        `https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-campaigns?adAccountId=${selectedAdAccount}`,
+        `https://api.withblip.com/auth/fetch-campaigns?adAccountId=${selectedAdAccount}`,
         { credentials: "include" }
       );
 
@@ -243,7 +243,7 @@ export default function AdAccountSettings({
     setIsLoading(true)
     try {
       const res = await fetch(
-        `https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-adsets?campaignId=${selectedCampaign}`,
+        `https://api.withblip.com/auth/fetch-adsets?campaignId=${selectedCampaign}`,
         { credentials: "include" },
       )
       const data = await res.json()
