@@ -9,7 +9,7 @@ export async function saveCopyTemplate(adAccountId, templateName, templateData, 
         payload.defaultTemplateName = templateName;
     }
 
-    const response = await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+    const response = await fetch("https://api.withblip.com/settings/save", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

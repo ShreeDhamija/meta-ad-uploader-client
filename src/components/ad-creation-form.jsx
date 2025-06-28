@@ -47,7 +47,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
       if (!isConnecting) return;
 
       console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
-      const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
+      const eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
 
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -119,7 +119,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
   //   const connectSSE = () => {
   //     console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
-  //     const eventSource = new EventSource(`https://meta-ad-uploader-server-production.up.railway.app/api/progress/${jobId}`);
+  //     const eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
 
   //     eventSource.onmessage = (event) => {
   //       const data = JSON.parse(event.data);
@@ -270,7 +270,7 @@ export default function AdCreationForm({
     try {
       // Get presigned URL
       const response = await axios.post(
-        "https://meta-ad-uploader-server-production.up.railway.app/auth/get-upload-url",
+        "https://api.withblip.com/auth/get-upload-url",
         {
           fileName: file.name,
           fileType: file.type,
@@ -312,7 +312,7 @@ export default function AdCreationForm({
       hasAccessToken: !!file.accessToken
     });
 
-    const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/api/upload-from-drive", {
+    const res = await fetch("https://api.withblip.com/api/upload-from-drive", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -369,7 +369,7 @@ export default function AdCreationForm({
   const refreshPages = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-pages", {
+      const res = await fetch("https://api.withblip.com/auth/fetch-pages", {
         credentials: "include"
       });
 
@@ -443,7 +443,7 @@ export default function AdCreationForm({
     const checkGoogleAuth = async () => {
       try {
         const response = await axios.get(
-          "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+          "https://api.withblip.com/auth/google/status",
           { withCredentials: true }
         );
 
@@ -483,7 +483,7 @@ export default function AdCreationForm({
     try {
       // 🔁 Check if already authenticated
       const res = await axios.get(
-        "https://meta-ad-uploader-server-production.up.railway.app/auth/google/status",
+        "https://api.withblip.com/auth/google/status",
         { withCredentials: true }
       );
 
@@ -502,7 +502,7 @@ export default function AdCreationForm({
 
     // ⬇️ If not authenticated, fallback to popup login
     const authWindow = window.open(
-      "https://meta-ad-uploader-server-production.up.railway.app/auth/google?popup=true",
+      "https://api.withblip.com/auth/google?popup=true",
       "_blank",
       "width=500,height=600"
     );
@@ -519,7 +519,7 @@ export default function AdCreationForm({
     }, 15000);
 
     const listener = (event) => {
-      if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") return;
+      if (event.origin !== "https://api.withblip.com") return;
 
       const { type, accessToken } = event.data || {};
       if (type === "google-auth-success") {
@@ -678,7 +678,7 @@ export default function AdCreationForm({
   // Add this useEffect after your existing useEffects
   useEffect(() => {
     const handler = (event) => {
-      if (event.origin !== "https://meta-ad-uploader-server-production.up.railway.app") {
+      if (event.origin !== "https://api.withblip.com") {
         return;
       }
 
@@ -778,7 +778,7 @@ export default function AdCreationForm({
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
     const response = await axios.post(
-      "https://meta-ad-uploader-server-production.up.railway.app/auth/duplicate-adset",
+      "https://api.withblip.com/auth/duplicate-adset",
       { adSetId, campaignId, adAccountId, newAdSetName },
       { withCredentials: true },
     )
@@ -1038,7 +1038,7 @@ export default function AdCreationForm({
 
 
           promises.push(
-            axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
+            axios.post("https://api.withblip.com/auth/create-ad", formData, {
               withCredentials: true,
               headers: { "Content-Type": "multipart/form-data" },
             })
@@ -1079,7 +1079,7 @@ export default function AdCreationForm({
 
 
             promises.push(
-              axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
+              axios.post("https://api.withblip.com/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
               })
@@ -1112,7 +1112,7 @@ export default function AdCreationForm({
             formData.append("jobId", frontendJobId);
 
             promises.push(
-              axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
+              axios.post("https://api.withblip.com/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
               })
@@ -1144,7 +1144,7 @@ export default function AdCreationForm({
             console.log("jobId in attached form for large File", frontendJobId);
 
             promises.push(
-              axios.post("https://meta-ad-uploader-server-production.up.railway.app/auth/create-ad", formData, {
+              axios.post("https://api.withblip.com/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
               })
@@ -1203,7 +1203,7 @@ export default function AdCreationForm({
               <div className="flex items-center gap-2 mb-6">
                 <div className="relative">
                   <img
-                    src="https://meta-ad-uploader-server-production.up.railway.app/uploadrocket.webp" // Replace with your image path
+                    src="https://api.withblip.com/uploadrocket.webp" // Replace with your image path
                     alt="Rocket"
                     width={30}
                     height={30}
@@ -1292,7 +1292,7 @@ export default function AdCreationForm({
                           <img
                             src={
                               pages.find((page) => page.id === pageId)?.profilePicture ||
-                              "https://meta-ad-uploader-server-production.up.railway.app/backup_page_image.png"
+                              "https://api.withblip.com/backup_page_image.png"
                               || "/placeholder.svg"}
                             alt="Page"
                             className="w-5 h-5 rounded-full object-cover"
@@ -1391,7 +1391,7 @@ export default function AdCreationForm({
                           <img
                             src={
                               pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount?.profilePictureUrl ||
-                              "https://meta-ad-uploader-server-production.up.railway.app/backup_page_image.png"
+                              "https://api.withblip.com/backup_page_image.png"
                               || "/placeholder.svg"}
                             alt="Instagram"
                             className="w-5 h-5 rounded-full object-cover"
@@ -1443,7 +1443,7 @@ export default function AdCreationForm({
                               )}
                             >
                               <img
-                                src={page.instagramAccount.profilePictureUrl || "https://meta-ad-uploader-server-production.up.railway.app/backup_page_image.png"}
+                                src={page.instagramAccount.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
                                 alt={`${page.instagramAccount.username} profile`}
                                 className="w-6 h-6 rounded-full object-cover border border-gray-300"
                               />
@@ -1796,7 +1796,7 @@ export default function AdCreationForm({
           <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
             <Button type="button" onClick={handleDriveClick} className="w-full bg-sky-700 text-white rounded-xl h-[48px]">
               <img
-                src="https://meta-ad-uploader-server-production.up.railway.app/googledrive.png"
+                src="https://api.withblip.com/googledrive.png"
                 alt="Drive Icon"
                 className="h-4 w-4"
               />

@@ -35,7 +35,7 @@ export default function ShopDestinationSelector({
             setIsLoading(true)
             try {
                 const res = await fetch(
-                    `https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-shop-data?pageId=${pageId}`,
+                    `https://api.withblip.com/auth/fetch-shop-data?pageId=${pageId}`,
                     { credentials: "include" },
                 )
                 const data = await res.json()

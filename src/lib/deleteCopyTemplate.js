@@ -1,5 +1,5 @@
 export async function deleteCopyTemplate(adAccountId, templateName) {
-    const response = await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/delete-template", {
+    const response = await fetch("https://api.withblip.com/settings/delete-template", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

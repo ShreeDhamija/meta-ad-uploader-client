@@ -28,7 +28,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                     className="group flex flex-col items-center space-y-3 focus:outline-none"
                                 >
                                     <img
-                                        src="https://meta-ad-uploader-server-production.up.railway.app/settings.webp"
+                                        src="https://api.withblip.com/settings.webp"
                                         alt="Settings Icon"
                                         className="w-[120px] h-[120px] object-contain transition-transform duration-200 group-hover:scale-105"
                                     />
@@ -48,7 +48,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                 {/* Top content block */}
                                 <div>
                                     <img
-                                        src="https://meta-ad-uploader-server-production.up.railway.app/home.webp"
+                                        src="https://api.withblip.com/home.webp"
                                         alt="Home Icon"
                                         className="w-14 mb-4"
                                     />
@@ -86,7 +86,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             {/* Right image */}
                             <div className="flex-1 bg-[#FDCEDF] rounded-lg overflow-hidden flex items-center justify-center">
                                 <img
-                                    src="https://meta-ad-uploader-server-production.up.railway.app/Home-Popup-Image.webp"
+                                    src="https://api.withblip.com/Home-Popup-Image.webp"
                                     alt="Preview UI"
                                     className="w-full h-full object-cover "
                                 />

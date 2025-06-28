@@ -9,7 +9,7 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     const fetchAdAccounts = async () => {
       try {
-        const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-ad-accounts", {
+        const res = await fetch("https://api.withblip.com/auth/fetch-ad-accounts", {
           credentials: "include",
         })
         const data = await res.json()
@@ -23,7 +23,7 @@ export const AppProvider = ({ children }) => {
 
     const fetchPages = async () => {
       try {
-        const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-pages", {
+        const res = await fetch("https://api.withblip.com/auth/fetch-pages", {
           credentials: "include",
         })
         const data = await res.json()

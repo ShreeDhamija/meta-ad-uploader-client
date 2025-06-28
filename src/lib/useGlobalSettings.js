@@ -18,7 +18,7 @@ export default function useGlobalSettings() {
     // useEffect(() => {
     //     const fetchSettings = async () => {
     //         try {
-    //             const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/global", {
+    //             const res = await fetch("https://api.withblip.com/settings/global", {
     //                 credentials: "include",
     //             });
     //             const data = await res.json();
@@ -49,7 +49,7 @@ export default function useGlobalSettings() {
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/global", {
+                const res = await fetch("https://api.withblip.com/settings/global", {
                     credentials: "include",
                 });
                 const data = await res.json();

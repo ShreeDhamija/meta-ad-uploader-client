@@ -87,7 +87,7 @@ export default function GlobalSettings() {
       {/* Thumbnail Settings */}
       {/* <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-3 opacity-60 pointer-events-none select-none cursor-not-allowed">
         <div className="flex items-center gap-2">
-          <img src="https://meta-ad-uploader-server-production.up.railway.app/icons/preview.svg" alt="Thumbnail Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+          <img src="https://api.withblip.com/icons/preview.svg" alt="Thumbnail Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
           <h3 className="font-medium text-[14px] text-zinc-950">Custom Thumbnail (Coming Soon)</h3>
         </div>
         <div className="flex items-center justify-between">
@@ -95,7 +95,7 @@ export default function GlobalSettings() {
             Provide custom thumbnail for video uploads?
             <span className="block text-gray-400 font-normal text-[12px]">
               If off, we will upload our own thumbnail for your videos{" "}
-              <a href="https://meta-ad-uploader-server-production.up.railway.app/thumbnail.jpg" className="underline text-black font-medium">View Thumbnail</a>
+              <a href="https://api.withblip.com/thumbnail.jpg" className="underline text-black font-medium">View Thumbnail</a>
             </span>
           </p>
           <Switch checked={customThumbnail} onCheckedChange={setCustomThumbnail} />

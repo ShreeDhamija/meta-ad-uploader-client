@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/me", {
+        const res = await fetch("https://api.withblip.com/auth/me", {
           credentials: "include",
         })
         if (res.ok) {
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/logout", {
+      const res = await fetch("https://api.withblip.com/auth/logout", {
         credentials: "include",
       })
       if (res.ok) {

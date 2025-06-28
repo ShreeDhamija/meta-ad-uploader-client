@@ -15,7 +15,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
   }
 
   const preload = new Image();
-  preload.src = "https://meta-ad-uploader-server-production.up.railway.app/bg.png";
+  preload.src = "https://api.withblip.com/bg.png";
 
   return (
     <>
@@ -58,14 +58,14 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                           className="w-full h-auto object-cover"
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = "https://meta-ad-uploader-server-production.up.railway.app/thumbnail.jpg";
+                            e.target.src = "https://api.withblip.com/thumbnail.jpg";
                           }}
                         />
                       ) : (
                         // Local video - use generated thumbnail
                         videoThumbs[file.name] ? (
                           <img
-                            src={videoThumbs[file.name] || "https://meta-ad-uploader-server-production.up.railway.app/thumbnail.jpg"}
+                            src={videoThumbs[file.name] || "https://api.withblip.com/thumbnail.jpg"}
                             alt={file.name}
                             className="w-full h-auto object-cover"
                           />
@@ -88,7 +88,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                         className="w-full h-auto object-cover"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = "https://meta-ad-uploader-server-production.up.railway.app/thumbnail.jpg";
+                          e.target.src = "https://api.withblip.com/thumbnail.jpg";
                         }}
                       />
                     )}
@@ -113,7 +113,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
       ) : (
         <div className="sticky top-4 w-full mx-auto shadow-sm">
           <img
-            src="https://meta-ad-uploader-server-production.up.railway.app/bg.png"
+            src="https://api.withblip.com/bg.png"
             alt="No uploads"
             className="w-full object-contain"
           />

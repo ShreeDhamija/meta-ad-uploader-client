@@ -8,7 +8,7 @@ export default function SettingsOnboardingPopup({ onClose }) {
                     {/* Left content */}
                     <div className="flex-1">
                         <img
-                            src="https://meta-ad-uploader-server-production.up.railway.app/settings.png"
+                            src="https://api.withblip.com/settings.png"
                             alt="Settings Icon"
                             className="w-14 mb-4"
                         />
@@ -43,7 +43,7 @@ export default function SettingsOnboardingPopup({ onClose }) {
                     {/* Right image */}
                     <div className="flex-1 bg-[#FDCEDF] rounded-[22px] overflow-hidden flex items-center justify-center">
                         <img
-                            src="https://meta-ad-uploader-server-production.up.railway.app/settings-popup-image.webp"
+                            src="https://api.withblip.com/settings-popup-image.webp"
                             alt="Preview UI"
                             className="w-full h-full object-cover"
                         />

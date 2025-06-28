@@ -13,7 +13,7 @@ export default function useAdAccountSettings(adAccountId) {
 
         const fetchAdAccountSettings = async () => {
             try {
-                const res = await fetch(`https://meta-ad-uploader-server-production.up.railway.app/settings/ad-account?adAccountId=${adAccountId}`, {
+                const res = await fetch(`https://api.withblip.com/settings/ad-account?adAccountId=${adAccountId}`, {
                     credentials: "include",
                 });
                 const data = await res.json();

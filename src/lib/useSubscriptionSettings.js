@@ -14,7 +14,7 @@ export default function useSubscription() {
     const fetchSubscriptionData = async () => {
         try {
             setLoading(true);
-            const res = await fetch('https://meta-ad-uploader-server-production.up.railway.app/api/subscription/status', {
+            const res = await fetch('https://api.withblip.com/api/subscription/status', {
                 credentials: "include",
             });
 

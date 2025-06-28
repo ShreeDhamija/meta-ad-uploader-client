@@ -38,7 +38,7 @@ export default function PageSelectors({
 
   const refreshPages = async () => {
     try {
-      const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-pages", {
+      const res = await fetch("https://api.withblip.com/auth/fetch-pages", {
         credentials: "include"
       });
 
@@ -74,7 +74,7 @@ export default function PageSelectors({
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <img
-            src="https://meta-ad-uploader-server-production.up.railway.app/icons/meta.svg"
+            src="https://api.withblip.com/icons/meta.svg"
             alt="Default FB Page Icon"
             className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60"
           />
@@ -104,7 +104,7 @@ export default function PageSelectors({
                     <img
                       src={
                         selectedPage.profilePicture ||
-                        "https://meta-ad-uploader-server-production.up.railway.app/backup_page_image.png"
+                        "https://api.withblip.com/backup_page_image.png"
                       }
                       alt="Page"
                       className="w-5 h-5 rounded-full object-cover border border-gray-300"
@@ -174,7 +174,7 @@ export default function PageSelectors({
                     <img
                       src={
                         selectedInstagram.profilePictureUrl ||
-                        "https://meta-ad-uploader-server-production.up.railway.app/backup_page_image.png"
+                        "https://api.withblip.com/backup_page_image.png"
                       }
                       alt={`${selectedInstagram?.username || "Instagram"} profile`}
                       className="w-6 h-6 rounded-full object-cover border border-gray-300"
@@ -214,7 +214,7 @@ export default function PageSelectors({
                           <img
                             src={
                               page.instagramAccount.profilePictureUrl ||
-                              "https://meta-ad-uploader-server-production.up.railway.app/backup_page_image.png"
+                              "https://api.withblip.com/backup_page_image.png"
                             }
                             alt={page.instagramAccount.username}
                             className="w-5 h-5 rounded-full object-cover"

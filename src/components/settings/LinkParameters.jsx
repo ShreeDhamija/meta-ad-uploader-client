@@ -50,7 +50,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
 
     //     try {
     //         const res = await fetch(
-    //             `https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
+    //             `https://api.withblip.com/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
     //             { credentials: "include" }
     //         );
     //         const data = await res.json();
@@ -77,7 +77,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
 
         try {
             const res = await fetch(
-                `https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
+                `https://api.withblip.com/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
                 { credentials: "include" }
             );
             const data = await res.json();
@@ -104,7 +104,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <img
-                        src="https://meta-ad-uploader-server-production.up.railway.app/icons/link.svg"
+                        src="https://api.withblip.com/icons/link.svg"
                         alt="link icon"
                         className="w-4 h-4 grayscale brightness-75 contrast-75 opacity-60"
                     />

@@ -151,7 +151,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     if (!showImportPopup || !selectedAdAccount) return;
 
     setIsFetchingCopy(true)
-    fetch(`https://meta-ad-uploader-server-production.up.railway.app/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
+    fetch(`https://api.withblip.com/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
       credentials: "include"
     })
       .then(res => res.json())
