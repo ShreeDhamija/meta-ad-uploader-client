@@ -146,7 +146,7 @@ export default function Home() {
     const handleCloseOnboarding = () => {
         setShowOnboardingPopup(false) // closes instantly
 
-        fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+        fetch("https://api.withblip.com/settings/save", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
@@ -286,7 +286,7 @@ export default function Home() {
                             setShowOnboardingPopup(false)
 
                             // Save settings after navigation
-                            fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+                            fetch("https://api.withblip.com/settings/save", {
                                 method: "POST",
                                 credentials: "include",
                                 headers: { "Content-Type": "application/json" },

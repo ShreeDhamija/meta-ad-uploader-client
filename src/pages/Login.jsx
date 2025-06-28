@@ -17,7 +17,7 @@ export default function Login() {
     }, [isLoggedIn, navigate])
 
     const handleFacebookLogin = () => {
-        window.location.href = "https://meta-ad-uploader-server-production.up.railway.app/auth/facebook"
+        window.location.href = "https://api.withblip.com/auth/facebook"
     }
 
     return (
@@ -26,7 +26,7 @@ export default function Login() {
                 <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-xl shadow-md min-w-[420px] min-h-[670px] flex flex-col justify-center">
                     <div className="text-center space-y-1">
                         <img
-                            src="https://meta-ad-uploader-server-production.up.railway.app/logo.webp"
+                            src="https://api.withblip.com/logo.webp"
                             alt="Hero"
                             className=" shadom-sm w-[48px] h-[48px] mx-auto rounded-md mb-2"
                         />
@@ -39,7 +39,7 @@ export default function Login() {
                         className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
                     >
                         <img
-                            src="https://meta-ad-uploader-server-production.up.railway.app/facebooklogo.png"
+                            src="https://api.withblip.com/facebooklogo.png"
                             alt="Facebook"
                             className="w-5 h-5"
                         />
@@ -63,7 +63,7 @@ export default function Login() {
                             const username = e.target.username.value;
                             const password = e.target.password.value;
 
-                            const res = await fetch("https://meta-ad-uploader-server-production.up.railway.app/auth/manual-login", {
+                            const res = await fetch("https://api.withblip.com/auth/manual-login", {
                                 method: "POST",
                                 credentials: "include",
                                 headers: {
@@ -128,7 +128,7 @@ export default function Login() {
             </div >
             <div className="w-[470px] h-[670px] overflow-visible">
                 <img
-                    src="https://meta-ad-uploader-server-production.up.railway.app/SignUp.png"
+                    src="https://api.withblip.com/SignUp.png"
                     alt="Login Visual"
                     className="w-full h-full object-cover rounded-[25px] shadow-xl"
                 />

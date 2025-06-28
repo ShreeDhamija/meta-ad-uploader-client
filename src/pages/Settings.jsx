@@ -22,9 +22,9 @@
 //     const [activeTab, setActiveTab] = useState("adaccount")
 //     const tabIconMap = {
 //         global: "https://unpkg.com/@mynaui/icons/icons/cog-four.svg",
-//         adaccount: "https://meta-ad-uploader-server-production.up.railway.app/icons/folder.svg",
-//         billing: "https://meta-ad-uploader-server-production.up.railway.app/icons/card.svg",
-//         viewads: "https://meta-ad-uploader-server-production.up.railway.app/icons/viewads.svg", // use your own icon or placeholder
+//         adaccount: "https://api.withblip.com/icons/folder.svg",
+//         billing: "https://api.withblip.com/icons/card.svg",
+//         viewads: "https://api.withblip.com/icons/viewads.svg", // use your own icon or placeholder
 
 //     }
 
@@ -53,7 +53,7 @@
 
 //     const handleCloseSettingsPopup = () => {
 //         setShowSettingsPopup(false);
-//         fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+//         fetch("https://api.withblip.com/settings/save", {
 //             method: "POST",
 //             credentials: "include",
 //             headers: { "Content-Type": "application/json" },
@@ -220,9 +220,9 @@ export default function Settings() {
     const [activeTab, setActiveTab] = useState(initialTab)
     const tabIconMap = {
         global: "https://unpkg.com/@mynaui/icons/icons/cog-four.svg",
-        adaccount: "https://meta-ad-uploader-server-production.up.railway.app/icons/folder.svg",
-        billing: "https://meta-ad-uploader-server-production.up.railway.app/icons/card.svg",
-        viewads: "https://meta-ad-uploader-server-production.up.railway.app/icons/viewads.svg", // use your own icon or placeholder
+        adaccount: "https://api.withblip.com/icons/folder.svg",
+        billing: "https://api.withblip.com/icons/card.svg",
+        viewads: "https://api.withblip.com/icons/viewads.svg", // use your own icon or placeholder
     }
 
     const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading } = useGlobalSettings()
@@ -243,7 +243,7 @@ export default function Settings() {
 
     const handleCloseSettingsPopup = () => {
         setShowSettingsPopup(false)
-        fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
+        fetch("https://api.withblip.com/settings/save", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
