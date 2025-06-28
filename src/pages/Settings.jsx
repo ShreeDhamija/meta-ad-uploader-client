@@ -243,7 +243,7 @@ export default function Settings() {
 
     const handleCloseSettingsPopup = () => {
         setShowSettingsPopup(false)
-        fetch("https://api.withblip.com/settings/save", {
+        fetch("https://meta-ad-uploader-server-production.up.railway.app/settings/save", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
