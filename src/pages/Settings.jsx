@@ -313,7 +313,7 @@ export default function Settings() {
                                                 : "grayscale brightness-75 contrast-75 opacity-60",
                                         )}
                                     />
-                                    <span className="text-sm max-lg:hidden transition-colors duration-500 ease-in-out">
+                                    <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
                                         {tab === "global"
                                             ? "Global Settings"
                                             : tab === "adaccount"
