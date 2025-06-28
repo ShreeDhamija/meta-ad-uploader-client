@@ -272,7 +272,7 @@ export default function Settings() {
     if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
-        <div className="flex bg-gray-50 min-h-screen">
+        <div className="flex bg-gray-100 min-h-screen">
             {/* Sidebar */}
             <div className="w-[290px] flex flex-col h-screen sticky top-0 px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
                 <div className=" rounded-3xl p-4 flex flex-col h-full">
