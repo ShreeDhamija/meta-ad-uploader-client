@@ -298,8 +298,8 @@ export default function Settings() {
                                     className={cn(
                                         "w-full flex items-center gap-2 px-4 py-2 rounded-xl transition",
                                         activeTab === tab
-                                            ? "bg-zinc-800  font-semibold text-white shadow-sm"
-                                            : "hover:bg-gray-200",
+                                            ? "bg-zinc-800 font-semibold text-white shadow-sm"
+                                            : "hover:bg-gray-300",
                                         "justify-start max-lg:justify-center max-lg:px-2",
                                     )}
                                 >
