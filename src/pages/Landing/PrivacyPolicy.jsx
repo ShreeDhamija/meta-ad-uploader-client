@@ -128,7 +128,7 @@ export default function PrivacyPolicy() {
                 <section>
                     <h2 className="text-xl font-medium mb-2">6. Your Rights</h2>
                     <p>
-                        Depending on your region, you may have the right to access, correct, export, or delete your personal data at any time. To make a request, contact <a href="mailto:privacy@blipapp.com" className="text-blue-600 underline">privacy@blipapp.com</a>.
+                        Depending on your region, you may have the right to access, correct, export, or delete your personal data at any time. To make a request, contact <a href="mailto:shree@withblip.com" className="text-blue-600 underline">shree@withblip.com</a>.
                         <br /><br />
                         If you have logged in with Google or Facebook and wish to revoke Blip’s access, you may also do so via your respective account provider’s security settings.
                     </p>
@@ -189,7 +189,7 @@ export default function PrivacyPolicy() {
                 <section>
                     <h2 className="text-xl font-medium mb-2">13. Contact</h2>
                     <p>
-                        For privacy-related questions, contact us at <a href="mailto:hello@storeos.co" className="text-blue-600 underline">hello@storeos.co</a>.
+                        For privacy-related questions, contact us at <a href="mailto:shree@withblip.com" className="text-blue-600 underline">shree@withblip.com</a>.
                     </p>
                 </section>
             </div>
