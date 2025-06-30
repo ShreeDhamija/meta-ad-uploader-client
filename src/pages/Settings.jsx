@@ -381,7 +381,7 @@ export default function Settings() {
             </main>
 
             <div>
-                <Toaster richColors position="bottom-left" closeButton />
+                <Toaster richColors position="bottom-right" closeButton />
             </div>
             {showSettingsPopup && <SettingsOnboardingPopup onClose={handleCloseSettingsPopup} />}
         </div>

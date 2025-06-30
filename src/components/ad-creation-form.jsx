@@ -397,7 +397,7 @@ export default function AdCreationForm({
 
   // Update local state when progress changes
   useEffect(() => {
-    console.log('🔄 Progress state update:', { trackedProgress, trackedMessage, status }); // ADD THIS
+    // console.log('🔄 Progress state update:', { trackedProgress, trackedMessage, status }); // ADD THIS
     if (jobId) {
       setProgress(trackedProgress);
       setProgressMessage(trackedMessage);
@@ -501,7 +501,7 @@ export default function AdCreationForm({
     const authWindow = window.open(
       "https://api.withblip.com/auth/google?popup=true",
       "_blank",
-      "width=900,height=800"
+      "width=600,height=500"
     );
 
     if (!authWindow) {
