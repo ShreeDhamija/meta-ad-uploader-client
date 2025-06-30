@@ -257,11 +257,7 @@ export default function AdCreationForm({
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
-
-
   const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
-  console.log('🎭 Popup state - Status:', status, 'Progress:', trackedProgress, 'JobId:', jobId, 'Message:', trackedMessage);
-
 
 
 
@@ -480,6 +476,7 @@ export default function AdCreationForm({
 
 
   const handleDriveClick = async () => {
+    console.log("handle Drive Click");
     try {
       // 🔁 Check if already authenticated
       const res = await axios.get(
@@ -504,7 +501,7 @@ export default function AdCreationForm({
     const authWindow = window.open(
       "https://api.withblip.com/auth/google?popup=true",
       "_blank",
-      "width=500,height=600"
+      "width=900,height=800"
     );
 
     if (!authWindow) {
@@ -550,6 +547,7 @@ export default function AdCreationForm({
 
   const openPicker = (token) => {
     // Load the picker API if not already loaded
+    console.log("open picker");
     if (!window.google || !window.google.picker) {
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
@@ -566,6 +564,7 @@ export default function AdCreationForm({
   };
 
   const createPicker = (token) => {
+    console.log("create picker");
     const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
       .setIncludeFolders(true)        // ✅ Show folders
       .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
@@ -1794,13 +1793,13 @@ export default function AdCreationForm({
             </div>
           </div>
           <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
-            <Button type="button" onClick={handleDriveClick} className="w-full bg-sky-700 text-white rounded-xl h-[48px]">
+            <Button type="button" onClick={handleDriveClick} className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px]">
               <img
                 src="https://api.withblip.com/googledrive.png"
                 alt="Drive Icon"
                 className="h-4 w-4"
               />
-              Import from Google Drive
+              Import Files from Google Drive
             </Button>
           </div>
           <Button
