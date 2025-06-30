@@ -675,30 +675,30 @@ export default function AdCreationForm({
   }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
 
   // Add this useEffect after your existing useEffects
-  useEffect(() => {
-    const handler = (event) => {
-      if (event.origin !== "https://api.withblip.com") {
-        return;
-      }
+  // useEffect(() => {
+  //   const handler = (event) => {
+  //     if (event.origin !== "https://api.withblip.com") {
+  //       return;
+  //     }
 
-      const { type, accessToken } = event.data || {};
+  //     const { type, accessToken } = event.data || {};
 
-      if (type === "google-auth-success") {
-        if (!accessToken) return;
-        setGoogleAuthStatus({
-          checking: false,
-          authenticated: true,
-          accessToken
-        });
-        openPicker(accessToken);
-      } else if (type === "google-auth-error") {
-        toast.error("Google authentication failed");
-      }
-    };
+  //     if (type === "google-auth-success") {
+  //       if (!accessToken) return;
+  //       setGoogleAuthStatus({
+  //         checking: false,
+  //         authenticated: true,
+  //         accessToken
+  //       });
+  //       openPicker(accessToken);
+  //     } else if (type === "google-auth-error") {
+  //       toast.error("Google authentication failed");
+  //     }
+  //   };
 
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, []);
+  //   window.addEventListener("message", handler);
+  //   return () => window.removeEventListener("message", handler);
+  // }, []);
 
   useEffect(() => {
     if (!uploadingToS3 && publishPending) {
