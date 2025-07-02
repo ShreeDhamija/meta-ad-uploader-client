@@ -1207,6 +1207,26 @@ html {
     }
   }
 
+  .footerRight p {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 500;
+    text-align: right;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .footerRight p a {
+    color: #fff;
+    text-decoration: underline;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .footerRight p a:hover {
+    text-decoration: underline;
+  }
+
   @media (max-width: 768px) {
     .footer {
       max-width: calc(100% - 32px);

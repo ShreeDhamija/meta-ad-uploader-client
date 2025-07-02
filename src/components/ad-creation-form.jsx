@@ -514,7 +514,7 @@ export default function AdCreationForm({
       window.removeEventListener("message", listener);
       if (!authWindow.closed) authWindow.close();
       toast.error("Google login timed out.");
-    }, 25000);
+    }, 65000);
 
     const listener = (event) => {
       if (event.origin !== "https://api.withblip.com") return;
