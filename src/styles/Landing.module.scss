@@ -1192,6 +1192,7 @@ html {
         flex-direction: column;
         gap: 8px;
         align-items: flex-end;
+        max-width: 470px;
 
         .footerLink {
           color: #fff;
@@ -1208,7 +1209,7 @@ html {
   }
 
   .footerRight p {
-    color: #fff;
+    color: #b0b0b0;
     font-size: 16px;
     font-weight: 500;
     text-align: right;
@@ -1217,10 +1218,10 @@ html {
   }
 
   .footerRight p a {
-    color: #fff;
+    color: #ffffff;
     text-decoration: underline;
     font-size: 16px;
-    font-weight: 500;
+    font-weight: 400;
   }
 
   .footerRight p a:hover {
@@ -1245,6 +1246,7 @@ html {
 
       .footerRight {
         align-items: flex-start;
+        max-width: 450px;
       }
     }
   }
