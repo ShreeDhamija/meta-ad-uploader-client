@@ -261,6 +261,7 @@ export default function AdCreationForm({
 
 
 
+
   // Upload large file to S3
   const uploadToS3 = async (file) => {
     try {
@@ -513,7 +514,7 @@ export default function AdCreationForm({
       window.removeEventListener("message", listener);
       if (!authWindow.closed) authWindow.close();
       toast.error("Google login timed out.");
-    }, 15000);
+    }, 25000);
 
     const listener = (event) => {
       if (event.origin !== "https://api.withblip.com") return;
@@ -1800,7 +1801,8 @@ export default function AdCreationForm({
                 alt="Drive Icon"
                 className="h-4 w-4"
               />
-              Import Files from Google Drive
+              {googleAuthStatus.authenticated ? "Import Files from Google Drive" : "Login with Google to Import Files from Drive"}
+
             </Button>
           </div>
           <Button
