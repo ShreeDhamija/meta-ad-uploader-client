@@ -21,6 +21,12 @@ export default function PrivacyPolicy() {
                         <li>Google Login: If you choose to log in with Google, we may access your Google basic profile information (name, email, profile photo) solely for account authentication and personalization.</li>
                         <li>Usage data such as IP address and interactions.</li>
                         <li>Uploaded content such as media files you give access to within scope.</li>
+                        <li>If you choose to import files from your Google Drive, we only access the specific files you select.
+                            <strong>We do not permanently store or save any files from your Google Drive on our servers.</strong>
+                            Files are processed solely as needed to perform the requested action (such as uploading to Meta or generating ad creatives) and are deleted immediately after processing is complete.
+                            <br /><br />
+                            <strong>We never use your files or any Google Drive data for advertising, analytics, or artificial intelligence (AI) training.</strong>
+                            We do not sell, share, or otherwise use your files for any purpose other than providing the requested service.</li>
                     </ul>
                 </section>
 
@@ -33,6 +39,14 @@ export default function PrivacyPolicy() {
                         <li>To communicate with users.</li>
                         <li>To fulfill legal obligations.</li>
                         <li>Google Login: Your Google information is used only to import files from drive that you give access to.</li>
+                        <li>
+                            We process files from your Google Drive only as needed for your requested service.
+                            <strong>We do not permanently store, retain, or use these files for any other purpose.</strong>
+                        </li>
+                        <li>
+                            We never use your files or data for analytics, advertising, or AI training.
+                        </li>
+
                     </ul>
                 </section>
 
@@ -102,7 +116,9 @@ export default function PrivacyPolicy() {
                             Google API Services User Data Policy
                         </a>
                         , including the Limited Use requirements.<br /><br />
-                        <strong>Summary:</strong> We only request the minimum Google data needed for authentication and will not use this data for any purpose other than providing and improving core Blip features. We do not use Google data for advertising, marketing, or analytics. We never sell or transfer your Google data except to deliver the requested Blip service.
+                        <strong>We only access and process Google Drive files as needed to provide the specific service you request (such as ad uploads).
+                            We never store your Google Drive files on our servers after processing, and we do not use them for analytics, advertising, or AI training.
+                            We do not sell or share your files with any third parties.</strong>
                     </p>
                 </section>
 
