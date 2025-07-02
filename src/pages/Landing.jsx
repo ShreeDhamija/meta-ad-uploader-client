@@ -383,6 +383,7 @@ const Landing = () => {
                         <a href="/terms-of-service" target="_blank" className={styles.footerLink}>
                             Terms of Service
                         </a>
+                        <p>Blip use and transfer of information received from Google APIs to any other app will adhere to <a href="https://developers.google.com/workspace/workspace-api-user-data-developer-policy">Workspace API User Data and Developer Policy</a>, including the <a href="https://developers.google.com/workspace/workspace-api-user-data-developer-policy#limited-use"> Limited use of user data. </a></p>
                     </div>
                 </div>
             </footer>
