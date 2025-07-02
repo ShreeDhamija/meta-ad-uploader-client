@@ -374,7 +374,7 @@ const Landing = () => {
                             <img src={logoImg || "/placeholder.svg"} alt="Blip logo" className={styles.footerLogo} />
                             <span className={styles.footerBrandText}>Blip</span>
                         </div>
-                        <div className={styles.footerEmail}><a href="mailto:hello@storeos.co"> hello@storeos.co</a></div>
+                        <div className={styles.footerEmail}><a href="mailto:shree@withblip.com"> shree@withblip.com</a></div>
                     </div>
                     <div className={styles.footerRight}>
                         <a href="/privacy-policy" target="_blank" className={styles.footerLink}>
