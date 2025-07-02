@@ -1801,7 +1801,7 @@ export default function AdCreationForm({
                 alt="Drive Icon"
                 className="h-4 w-4"
               />
-              {googleAuthStatus.authenticated ? "Import Files from Google Drive" : "Login with Google to Import Files from Drive"}
+              Choose Files from Google Drive
 
             </Button>
           </div>
