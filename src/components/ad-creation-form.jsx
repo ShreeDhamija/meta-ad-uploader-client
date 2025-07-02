@@ -573,6 +573,7 @@ export default function AdCreationForm({
       .addView(view)
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+      .setAppId(102886794705)
       .setCallback((data) => {
         if (data.action !== "picked") return;
 
