@@ -21,6 +21,14 @@ import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import { Infotooltip } from "./ui/infotooltip"
 import { v4 as uuidv4 } from 'uuid';
+import ConfigIcon from '@/assets/icons/plus.svg?react';
+import FacebookIcon from '@/assets/icons/fb.svg?react';
+import InstagramIcon from '@/assets/icons/plus.svg?react';
+import LabelIcon from '@/assets/icons/label.svg?react';
+import TemplateIcon from '@/assets/icons/file.svg?react';
+import LinkIcon from '@/assets/icons/link.svg?react';
+import CTAIcon from '@/assets/icons/cta.svg?react';
+
 
 
 
@@ -105,60 +113,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     };
   }, [jobId]);
 
-  // useEffect(() => {
-  //   if (!jobId) return;
 
-  //   console.log('🔄 New jobId detected, resetting state:', jobId);
-  //   setProgress(0);
-  //   setMessage('');
-  //   setStatus('idle');
-
-  //   let retryCount = 0;
-  //   const maxRetries = 10;
-  //   const retryDelay = 500;
-
-  //   const connectSSE = () => {
-  //     console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
-  //     const eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
-
-  //     eventSource.onmessage = (event) => {
-  //       const data = JSON.parse(event.data);
-  //       console.log('📨 Raw SSE data received:', data);
-
-  //       if (data.message === 'Job not found' && retryCount < maxRetries) {
-  //         console.log(`❌ Job not found, closing connection...`);
-  //         eventSource.close();
-  //         retryCount++;
-  //         console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
-  //         setTimeout(connectSSE, retryDelay);
-  //         return;
-  //       }
-
-  //       console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
-  //       setProgress(data.progress);
-  //       setMessage(data.message);
-  //       setStatus(data.status);
-
-  //       if (data.status === 'complete' || data.status === 'error') {
-  //         console.log('🏁 Job finished, closing SSE connection');
-  //         eventSource.close();
-  //       }
-  //     };
-
-  //     eventSource.onerror = (error) => {
-  //       console.error('❌ SSE Error:', error);
-  //       eventSource.close();
-  //       if (retryCount < maxRetries) {
-  //         retryCount++;
-  //         setTimeout(connectSSE, retryDelay);
-  //       } else {
-  //         setStatus('error');
-  //       }
-  //     };
-  //   };
-
-  //   connectSSE();
-  // }, [jobId]);
 
   useEffect(() => {
     if (!isCreatingAds) {
@@ -713,31 +668,6 @@ export default function AdCreationForm({
     });
   }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
 
-  // Add this useEffect after your existing useEffects
-  // useEffect(() => {
-  //   const handler = (event) => {
-  //     if (event.origin !== "https://api.withblip.com") {
-  //       return;
-  //     }
-
-  //     const { type, accessToken } = event.data || {};
-
-  //     if (type === "google-auth-success") {
-  //       if (!accessToken) return;
-  //       setGoogleAuthStatus({
-  //         checking: false,
-  //         authenticated: true,
-  //         accessToken
-  //       });
-  //       openPicker(accessToken);
-  //     } else if (type === "google-auth-error") {
-  //       toast.error("Google authentication failed");
-  //     }
-  //   };
-
-  //   window.addEventListener("message", handler);
-  //   return () => window.removeEventListener("message", handler);
-  // }, []);
 
   useEffect(() => {
     if (!uploadingToS3 && publishPending) {
@@ -890,37 +820,6 @@ export default function AdCreationForm({
     const s3DriveResults = [];
 
     const totalLargeFiles = largeFiles.length + largeDriveFiles.length;
-
-
-    // if (largeFiles.length > 0) {
-    //   setUploadingToS3(true);
-    //   toast.info(`Uploading ${largeFiles.length} large file(s) to S3...`);
-
-    //   try {
-    //     const s3UploadPromises = largeFiles.map(uploadToS3);
-    //     s3Results = await Promise.all(s3UploadPromises);
-    //     toast.success("All large video files uploaded to S3!");
-    //   } catch (err) {
-    //     toast.error("Error uploading large files to S3");
-    //     setIsLoading(false);
-    //     return;
-    //   } finally {
-    //     setUploadingToS3(false);
-    //   }
-    // }
-
-
-
-    // for (const file of largeDriveFiles) {
-    //   try {
-    //     const s3Url = await uploadDriveFileToS3(file); // 👇 see below
-    //     s3DriveResults.push({ ...file, s3Url });
-    //   } catch (err) {
-    //     toast.error(`Failed to upload Drive video: ${file.name}`);
-    //     console.error("❌ Drive to S3 upload failed", err);
-    //     return; // exit early if a file failed
-    //   }
-    // }
 
     if (totalLargeFiles > 0) {
       setProgressMessage(`Uploading ${totalLargeFiles} large files to S3...`);
@@ -1194,12 +1093,6 @@ export default function AdCreationForm({
 
       console.log('🚀 Starting API calls (Promise.all) now');
       const responses = await Promise.all(promises);
-
-      // Extract jobId from the first successful response:
-      // const successfulResponse = responses.find(r => r.data?.jobId);
-      // if (successfulResponse?.data?.jobId) {
-      //   setJobId(successfulResponse.data.jobId);
-      // }
       toast.success("Ads created successfully!");
       setIsCreatingAds(false);
     } catch (error) {
@@ -1296,7 +1189,7 @@ export default function AdCreationForm({
 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <img src="https://unpkg.com/@mynaui/icons/icons/plus-hexagon.svg" className="w-5 h-5" />
+          <ConfigIcon className="w-5 h-5" />
           Select ad preferences</CardTitle>
       </CardHeader>
       <CardContent>
@@ -1306,7 +1199,7 @@ export default function AdCreationForm({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="flex items-center gap-2">
-                    <img src="https://unpkg.com/@mynaui/icons/icons/brand-facebook.svg" className="w-4 h-4" />
+                    <FacebookIcon className="w-4 h-4" />
                     Select a Page
                   </Label>
                   <RefreshCcw
@@ -1412,7 +1305,7 @@ export default function AdCreationForm({
 
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  <img src="https://unpkg.com/@mynaui/icons/icons/brand-instagram.svg" className="w-4 h-4" />
+                  <InstagramIcon className="w-4 h-4" />
                   Select Instagram Account
                 </Label>
                 <Popover open={openInstagram} onOpenChange={setOpenInstagram}>
@@ -1498,7 +1391,7 @@ export default function AdCreationForm({
 
             <div className="space-y-1">
               <Label htmlFor="adName" className="flex items-center gap-2">
-                <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" className="w-4 h-4" />
+                <LabelIcon className="w-4 h-4" />
                 Ad Name (Internal Name)
                 <Infotooltip
                   side="bottom"
@@ -1546,7 +1439,7 @@ export default function AdCreationForm({
             <div className="space-y-2">
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  <img src="https://unpkg.com/@mynaui/icons/icons/file-text.svg" className="w-4 h-4" />
+                  <TemplateIcon className="w-4 h-4" />
                   Select Copy Template
                 </Label>
                 <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
@@ -1711,7 +1604,7 @@ export default function AdCreationForm({
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="Link (URL)" className="flex items-center gap-2">
-                  <img src="https://unpkg.com/@mynaui/icons/icons/link-one.svg" className="w-4 h-4" />
+                  <LinkIcon className="w-4 h-4" />
                   Link (URL)
                 </Label>
                 <p className="text-gray-500 text-[12px] font-regular">
@@ -1731,7 +1624,7 @@ export default function AdCreationForm({
 
               <div className="space-y-2">
                 <Label htmlFor="cta" className="flex items-center gap-2">
-                  <img src="https://unpkg.com/@mynaui/icons/icons/click.svg" className="w-4 h-4" />
+                  <CTAIcon className="w-4 h-4" />
                   Call-to-Action (CTA)
                 </Label>
                 <Select disabled={!isLoggedIn} value={cta} onValueChange={setCta}>

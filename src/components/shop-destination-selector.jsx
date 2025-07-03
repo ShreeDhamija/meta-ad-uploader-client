@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { ChevronsUpDown, Check } from 'lucide-react'
 import { cn } from "@/lib/utils"
+import ShopIcon from '@/assets/icons/bag.svg?react';
 
 export default function ShopDestinationSelector({
     pageId,
@@ -94,7 +95,7 @@ export default function ShopDestinationSelector({
     return (
         <div className="space-y-2">
             <Label className="flex items-center gap-2">
-                <img src="https://unpkg.com/@mynaui/icons/icons/shopping-bag.svg" alt="" className="w-4 h-4" />
+                <ShopIcon alt="" className="w-4 h-4" />
                 Shop Destination
             </Label>
             <Label className="text-gray-500 text-[12px] font-regular block">Select a shop or product set for your shop ads</Label>

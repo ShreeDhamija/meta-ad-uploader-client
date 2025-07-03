@@ -13,6 +13,12 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useAuth } from "@/lib/AuthContext"
 import { useEffect } from "react"
 import { Input } from "@/components/ui/input"
+import CogIcon from '@/assets/icons/cog.svg?react';
+import AdAccountIcon from '@/assets/icons/adaccount.svg?react';
+import CampaignIcon from '@/assets/icons/folder.svg?react';
+import AdSetIcon from '@/assets/icons/grid.svg?react';
+import CopyIcon from '@/assets/icons/copy.svg?react';
+
 
 
 
@@ -379,7 +385,7 @@ export default function AdAccountSettings({
     <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <img src="https://unpkg.com/@mynaui/icons/icons/cog-four.svg" className="w-5 h-5" />
+          <CogIcon className="w-5 h-5" />
           Ad Account Configuration</CardTitle>
         <CardDescription>Select your ad account, campaign and ad set</CardDescription>
       </CardHeader>
@@ -388,7 +394,7 @@ export default function AdAccountSettings({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="adAccount" className="flex items-center gap-2">
-                <img src="https://unpkg.com/@mynaui/icons/icons/user-circle.svg" className="w-4 h-4" />
+                <AdAccountIcon className="w-4 h-4" />
                 Ad Account</Label>
               <RefreshCcw
                 className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
@@ -473,7 +479,7 @@ export default function AdAccountSettings({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="campaign" className="flex items-center gap-2">
-                <img src="https://unpkg.com/@mynaui/icons/icons/folder.svg" className="w-4 h-4" />
+                <CampaignIcon className="w-4 h-4" />
                 Select a Campaign to launch Ads in
               </Label>
               <RefreshCcw
@@ -592,7 +598,7 @@ export default function AdAccountSettings({
                 </button>
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="duplicateCampaign" className="flex items-center gap-2">
-                    <img src="https://unpkg.com/@mynaui/icons/icons/copy.svg" className="w-4 h-4" />
+                    <CopyIcon className="w-4 h-4" />
                     Select a campaign to duplicate
                   </Label>
                   <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad sets</Label>
@@ -704,7 +710,7 @@ export default function AdAccountSettings({
           <div className="space-y-2 ">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
-                <img src="https://unpkg.com/@mynaui/icons/icons/grid.svg" className="w-4 h-4" />
+                <AdSetIcon className="w-4 h-4" />
                 Launch in a new or existing ad set
               </Label>
               <RefreshCcw
