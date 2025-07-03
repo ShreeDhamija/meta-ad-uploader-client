@@ -518,7 +518,7 @@ export default function AdAccountSettings({
                   <CommandEmpty>No campaign found.</CommandEmpty>
                   <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar pb-1" selectOnFocus={false}>
                     <CommandGroup>
-                      {/* <CommandItem
+                      <CommandItem
                         key="duplicate-campaign"
                         value="duplicate-campaign"
                         onSelect={() => {
@@ -539,7 +539,7 @@ export default function AdAccountSettings({
                         📋 Duplicate an Existing Campaign
                       </CommandItem>
                     </CommandGroup>
-                    <CommandGroup heading="Select existing campaign"> */}
+                    <CommandGroup heading="Select existing campaign">
                       {filteredCampaigns.length > 0 ? (
                         filteredCampaigns.map((camp) => (
                           <CommandItem
