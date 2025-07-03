@@ -309,12 +309,37 @@ export default function AdAccountSettings({
 
       if (response.ok) {
         toast.success("Campaign duplicated successfully!");
+
         // Reset the duplicate campaign block
         setShowDuplicateCampaignBlock(false);
         setDuplicateCampaign("");
         setNewCampaignName("");
+
         // Refresh campaigns to show the new one
-        refreshCampaigns();
+        await refreshCampaigns();
+
+        // Select the newly created campaign
+        setSelectedCampaign(data.copied_campaign_id);
+
+        // Clear ad sets since we're switching to a new campaign
+        setAdSets([]);
+        setSelectedAdSets([]);
+
+        // Fetch ad sets for the new campaign
+        try {
+          const res = await fetch(
+            `https://api.withblip.com/auth/fetch-adsets?campaignId=${data.copied_campaign_id}`,
+            { credentials: "include" },
+          );
+          const adsetData = await res.json();
+          if (adsetData.adSets) {
+            setAdSets(sortAdSets(adsetData.adSets));
+          }
+        } catch (adsetErr) {
+          console.error("Failed to fetch ad sets for new campaign:", adsetErr);
+          // Don't show error toast here as the main operation succeeded
+        }
+
       } else {
         toast.error(data.error || "Failed to duplicate campaign");
       }
