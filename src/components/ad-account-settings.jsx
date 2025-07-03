@@ -533,11 +533,13 @@ export default function AdAccountSettings({
         !bg-zinc-700 !text-white shadow-md 
         flex items-center justify-center 
         text-sm font-semibold cursor-pointer 
-        transition-all duration-150 hover:!bg-black
+        transition-all duration-150 hover:!bg-black mb-4
       `}
                       >
                         📋 Duplicate an Existing Campaign
                       </CommandItem>
+                    </CommandGroup>
+                    <CommandGroup heading="Select existing campaign">
                       {filteredCampaigns.length > 0 ? (
                         filteredCampaigns.map((camp) => (
                           <CommandItem
@@ -593,7 +595,7 @@ export default function AdAccountSettings({
                     <img src="https://unpkg.com/@mynaui/icons/icons/copy.svg" className="w-4 h-4" />
                     Select a campaign to duplicate
                   </Label>
-                  <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad sets (but not the ads)</Label>
+                  <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad sets</Label>
 
                   <Popover open={openDuplicateCampaign} onOpenChange={setOpenDuplicateCampaign}>
                     <PopoverTrigger asChild>
