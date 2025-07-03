@@ -577,7 +577,7 @@ export default function AdCreationForm({
       "video/quicktime"
     ].join(",");
 
-    // const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+
     const allFolders = new google.picker.DocsView()
       .setIncludeFolders(true)
       .setMimeTypes(mimeTypes)// ✅ Show folders
@@ -603,8 +603,8 @@ export default function AdCreationForm({
       .setSelectFolderEnabled(false);
 
     const picker = new google.picker.PickerBuilder()
-      .addView(allFolders)
       .addView(myFolders)
+      .addView(allFolders)
       .addView(sharedDriveFolders)
       .addView(onlySharedFolders)
       .setOAuthToken(token)

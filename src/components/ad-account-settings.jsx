@@ -41,6 +41,13 @@ export default function AdAccountSettings({
   setCampaignObjective,
   newAdSetName,
   setNewAdSetName,
+  showDuplicateCampaignBlock,
+  setShowDuplicateCampaignBlock,
+  duplicateCampaign,
+  setDuplicateCampaign,
+  newCampaignName,
+  setNewCampaignName,
+
 }) {
   // Local state for comboboxes
   const { isLoggedIn } = useAuth()
@@ -52,6 +59,8 @@ export default function AdAccountSettings({
   const [openAdSet, setOpenAdSet] = useState(false)
   const [openDuplicateAdSet, setOpenDuplicateAdSet] = useState(false)
   const [duplicateAdSetSearchValue, setDuplicateAdSetSearchValue] = useState("")
+  const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
+  const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("")
   const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
   //console.log("🔍 selectedCampaignData", selectedCampaignData);
 
@@ -147,6 +156,9 @@ export default function AdAccountSettings({
     setShowDuplicateBlock(false)
     setDuplicateAdSet("")
     setNewAdSetName("") // Add this line
+    setShowDuplicateCampaignBlock(false)
+    setDuplicateCampaign("")
+    setNewCampaignName("")
     if (!campaignId) {
       setCampaignObjective("")
       return
@@ -272,7 +284,47 @@ export default function AdAccountSettings({
     (adset.name || adset.id).toLowerCase().includes(adSetSearchValue.toLowerCase()),
   )
 
+  const duplicateCampaignFunction = async () => {
+    if (!duplicateCampaign || !selectedAdAccount) {
+      toast.error("Please select a campaign to duplicate");
+      return;
+    }
 
+    setIsLoading(true);
+    try {
+      const response = await fetch("https://api.withblip.com/auth/duplicate-campaign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          campaignId: duplicateCampaign,
+          adAccountId: selectedAdAccount,
+          newCampaignName: newCampaignName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Campaign duplicated successfully!");
+        // Reset the duplicate campaign block
+        setShowDuplicateCampaignBlock(false);
+        setDuplicateCampaign("");
+        setNewCampaignName("");
+        // Refresh campaigns to show the new one
+        refreshCampaigns();
+      } else {
+        toast.error(data.error || "Failed to duplicate campaign");
+      }
+    } catch (error) {
+      console.error("Error duplicating campaign:", error);
+      toast.error("Failed to duplicate campaign");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Auto-populate new ad set name when duplicate ad set is selected
   useEffect(() => {
@@ -285,6 +337,18 @@ export default function AdAccountSettings({
       setNewAdSetName("")
     }
   }, [duplicateAdSet, adSets, setNewAdSetName])
+
+  // Auto-populate new campaign name when duplicate campaign is selected
+  useEffect(() => {
+    if (duplicateCampaign) {
+      const selectedCampaign = campaigns.find((campaign) => campaign.id === duplicateCampaign);
+      if (selectedCampaign) {
+        setNewCampaignName(selectedCampaign.name + "_02");
+      }
+    } else {
+      setNewCampaignName("");
+    }
+  }, [duplicateCampaign, campaigns]);
 
   return (
     <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
@@ -429,6 +493,26 @@ export default function AdAccountSettings({
                   <CommandEmpty>No campaign found.</CommandEmpty>
                   <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar pb-1" selectOnFocus={false}>
                     <CommandGroup>
+                      <CommandItem
+                        key="duplicate-campaign"
+                        value="duplicate-campaign"
+                        onSelect={() => {
+                          setShowDuplicateCampaignBlock(true)
+                          setSelectedCampaign("") // Clear any selected campaign
+                          setAdSets([]) // Clear adsets when duplicating campaign
+                          setSelectedAdSets([]) // Clear selected adsets
+                          setOpenCampaign(false)
+                        }}
+                        className={`
+        h-10 w-full px-4 py-3 m-1 rounded-xl 
+        !bg-zinc-700 !text-white shadow-md 
+        flex items-center justify-center 
+        text-sm font-semibold cursor-pointer 
+        transition-all duration-150 hover:!bg-black
+      `}
+                      >
+                        📋 Duplicate an Existing Campaign
+                      </CommandItem>
                       {filteredCampaigns.length > 0 ? (
                         filteredCampaigns.map((camp) => (
                           <CommandItem
@@ -465,6 +549,129 @@ export default function AdAccountSettings({
                 </Command>
               </PopoverContent>
             </Popover>
+            {showDuplicateCampaignBlock && (
+              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 relative mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDuplicateCampaignBlock(false)
+                    setDuplicateCampaign("")
+                    setNewCampaignName("")
+                  }}
+                  className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50"
+                  aria-label="Close duplicate campaign selection"
+                >
+                  <X className="h-3 w-3 text-gray-700" />
+                </button>
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="duplicateCampaign" className="flex items-center gap-2">
+                    <img src="https://unpkg.com/@mynaui/icons/icons/copy.svg" className="w-4 h-4" />
+                    Select a campaign to duplicate
+                  </Label>
+                  <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad sets (but not the ads)</Label>
+
+                  <Popover open={openDuplicateCampaign} onOpenChange={setOpenDuplicateCampaign}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openDuplicateCampaign}
+                        disabled={!isLoggedIn || campaigns.length === 0}
+                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
+                      >
+                        <div className="w-full overflow-hidden">
+                          <span className="block truncate flex-1 text-left">
+                            {duplicateCampaign
+                              ? campaigns.find((campaign) => campaign.id === duplicateCampaign)?.name || duplicateCampaign
+                              : "Select campaign to duplicate"}
+                          </span>
+                        </div>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                      align="start"
+                      sideOffset={4}
+                      side="bottom"
+                      avoidCollisions={false}
+                      style={{
+                        minWidth: "var(--radix-popover-trigger-width)",
+                        width: "auto",
+                        maxWidth: "none",
+                      }}
+                    >
+                      <Command loop={false}>
+                        <CommandInput
+                          placeholder="Search campaign..."
+                          value={duplicateCampaignSearchValue}
+                          onValueChange={setDuplicateCampaignSearchValue}
+                        />
+                        <CommandEmpty>No campaigns found.</CommandEmpty>
+                        <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                          <CommandGroup>
+                            {campaigns
+                              .filter((campaign) =>
+                                (campaign.name || campaign.id).toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
+                              )
+                              .map((campaign) => (
+                                <CommandItem
+                                  key={campaign.id}
+                                  value={campaign.name || campaign.id}
+                                  onSelect={() => {
+                                    setDuplicateCampaign(campaign.id);
+                                    setOpenDuplicateCampaign(false);
+                                  }}
+                                  className={cn(
+                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                    campaign.status !== "ACTIVE" && "text-gray-400"
+                                  )}
+                                >
+                                  <div className="flex justify-between items-center w-full truncate">
+                                    <span className="truncate">{campaign.name || campaign.id}</span>
+                                    {campaign.status === "ACTIVE" && (
+                                      <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* New Campaign Name Input */}
+                  {duplicateCampaign && (
+                    <div className="space-y-2" style={{ marginTop: '20px' }}>
+                      <Label htmlFor="newCampaignName" className="block">
+                        New campaign name
+                      </Label>
+                      <Label className="text-gray-500 text-[12px] font-regular">
+                        Enter a custom name for the duplicated campaign
+                      </Label>
+                      <Input
+                        id="newCampaignName"
+                        value={newCampaignName}
+                        onChange={(e) => setNewCampaignName(e.target.value)}
+                        placeholder="Enter new campaign name..."
+                        className="border border-gray-400 rounded-xl bg-white shadow"
+                        disabled={!isLoggedIn}
+                      />
+
+                      {/* Duplicate Button */}
+                      <Button
+                        onClick={duplicateCampaignFunction}
+                        disabled={!isLoggedIn || !duplicateCampaign || isLoading}
+                        className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+                      >
+                        {isLoading ? "Duplicating..." : "Duplicate Campaign"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2 ">

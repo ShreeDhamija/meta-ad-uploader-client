@@ -37,6 +37,10 @@ export default function Home() {
     const [duplicateAdSet, setDuplicateAdSet] = useState("")
     const [newAdSetName, setNewAdSetName] = useState("")
     const [campaignObjective, setCampaignObjective] = useState("")
+    const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
+    const [duplicateCampaign, setDuplicateCampaign] = useState("")
+    const [newCampaignName, setNewCampaignName] = useState("")
+
 
     // Ad creation form
     const [adName, setAdName] = useState("Ad Name Formula will be displayed here")
@@ -194,6 +198,12 @@ export default function Home() {
                         setCampaignObjective={setCampaignObjective}
                         newAdSetName={newAdSetName}
                         setNewAdSetName={setNewAdSetName}
+                        showDuplicateCampaignBlock={showDuplicateCampaignBlock}
+                        setShowDuplicateCampaignBlock={setShowDuplicateCampaignBlock}
+                        duplicateCampaign={duplicateCampaign}
+                        setDuplicateCampaign={setDuplicateCampaign}
+                        newCampaignName={newCampaignName}
+                        setNewCampaignName={setNewCampaignName}
                     />
 
                     <AdCreationForm
