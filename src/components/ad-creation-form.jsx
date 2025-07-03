@@ -502,7 +502,7 @@ export default function AdCreationForm({
     const authWindow = window.open(
       "https://api.withblip.com/auth/google?popup=true",
       "_blank",
-      "width=600,height=500"
+      "width=1100,height=750"
     );
 
     if (!authWindow) {
@@ -548,7 +548,7 @@ export default function AdCreationForm({
 
   const openPicker = (token) => {
     // Load the picker API if not already loaded
-    console.log("open picker");
+
     if (!window.google || !window.google.picker) {
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
@@ -565,15 +565,52 @@ export default function AdCreationForm({
   };
 
   const createPicker = (token) => {
-    console.log("create picker");
-    const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-      .setIncludeFolders(true)        // ✅ Show folders
+
+    const mimeTypes = [
+      "application/vnd.google-apps.folder",
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "video/mp4",
+      "video/webm",
+      "video/quicktime"
+    ].join(",");
+
+    // const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+    const allFolders = new google.picker.DocsView()
+      .setIncludeFolders(true)
+      .setMimeTypes(mimeTypes)// ✅ Show folders
       .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
 
+    const myFolders = new google.picker.DocsView()
+      .setOwnedByMe(true)
+      .setIncludeFolders(true)
+      .setMimeTypes(mimeTypes)
+      .setSelectFolderEnabled(false);
+
+    const sharedDriveFolders = new google.picker.DocsView()
+      .setOwnedByMe(true)
+      .setIncludeFolders(true)
+      .setMimeTypes(mimeTypes)
+      .setSelectFolderEnabled(false)
+      .setEnableDrives(true);
+
+    const onlySharedFolders = new google.picker.DocsView()
+      .setOwnedByMe(false)
+      .setIncludeFolders(true)
+      .setMimeTypes(mimeTypes)
+      .setSelectFolderEnabled(false);
+
     const picker = new google.picker.PickerBuilder()
-      .addView(view)
+      .addView(allFolders)
+      .addView(myFolders)
+      .addView(sharedDriveFolders)
+      .addView(onlySharedFolders)
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+      .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+      .hideTitleBar()
       .setAppId(102886794705)
       .setCallback((data) => {
         if (data.action !== "picked") return;
