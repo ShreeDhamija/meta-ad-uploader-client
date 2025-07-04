@@ -26,7 +26,7 @@ export default function AdAccountSettings() {
   //const [openInstagramDropdown, setOpenInstagramDropdown] = useState(false)
   const defaultPage = pages.find((page) => page.id && page.name)
   const defaultInstagram = pages.find((page) => page.instagramAccount)?.instagramAccount
-  const { settings: adSettings, setSettings: setAdSettings } = useAdAccountSettings(selectedAdAccount)
+  const { settings: adSettings, setSettings: setAdSettings, loading } = useAdAccountSettings(selectedAdAccount)
   const [defaultLink, setDefaultLink] = useState("")
   const [utmPairs, setUtmPairs] = useState([
     { key: "utm_source", value: "Value 1" },
@@ -225,9 +225,15 @@ export default function AdAccountSettings() {
             </Command>
           </PopoverContent>
         </Popover>
+        {selectedAdAccount && loading && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+            Loading settings...
+          </div>
+        )}
       </div>
-      <fieldset disabled={!selectedAdAccount}>
-        <div className={!selectedAdAccount ? "opacity-70 cursor-not-allowed space-y-6" : "space-y-6"}>
+      <fieldset disabled={!selectedAdAccount || loading}>
+        <div className={!selectedAdAccount || loading ? "opacity-70 cursor-not-allowed space-y-6" : "space-y-6"}>
           <PageSelectors
             selectedPage={selectedPage}
             setSelectedPage={setSelectedPage}

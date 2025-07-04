@@ -101,7 +101,7 @@ export default function CreativeEnhancements({ enhancements, setEnhancements }) 
         {
             key: "backgroundGen",
             label: "Generate Backgrounds",
-            description: "Automatically generate backgrounds for your images",
+            description: "AI created different backgrounds for eligible product images",
         },
         {
             key: "expandImage",
@@ -111,12 +111,12 @@ export default function CreativeEnhancements({ enhancements, setEnhancements }) 
         {
             key: "catalogItems",
             label: "Add Catalog Items",
-            description: "Automatically add relevant catalog items to your ads",
+            description: "Items from your catalog might be shown next to your selected media",
         },
         {
             key: "textGeneration",
             label: "Text Generation",
-            description: "Generate additional text variations for your ads",
+            description: "Text variations are generated with AI inspired by your original primary text or previous ads,",
         },
     ];
 
