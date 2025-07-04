@@ -99,11 +99,6 @@ export default function CreativeEnhancements({ enhancements, setEnhancements }) 
             description: "Add relevant comments to your ads to increase engagement",
         },
         {
-            key: "backgroundGen",
-            label: "Generate Backgrounds",
-            description: "AI created different backgrounds for eligible product images",
-        },
-        {
             key: "expandImage",
             label: "Expand Image",
             description: "Expand your images to fit different placements and aspect ratios",

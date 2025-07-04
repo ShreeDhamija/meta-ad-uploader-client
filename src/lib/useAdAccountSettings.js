@@ -10,7 +10,7 @@ export default function useAdAccountSettings(adAccountId) {
 
     useEffect(() => {
         if (!adAccountId) return;
-
+        setLoading(true); // ← This is essential for account switches
         const fetchAdAccountSettings = async () => {
             try {
                 const res = await fetch(`https://api.withblip.com/settings/ad-account?adAccountId=${adAccountId}`, {
