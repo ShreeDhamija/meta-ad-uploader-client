@@ -539,10 +539,10 @@ export default function AdAccountSettings({
         !bg-zinc-700 !text-white shadow-md 
         flex items-center justify-center 
         text-sm font-semibold cursor-pointer 
-        transition-all duration-150 hover:!bg-black mb-4
+        transition-all duration-150 hover:!bg-black
       `}
                       >
-                        📋 Duplicate an Existing Campaign
+                        📋 Launch in a new Campaign
                       </CommandItem>
                     </CommandGroup>
                     <CommandGroup heading="Select existing campaign">
@@ -681,7 +681,7 @@ export default function AdAccountSettings({
                         New campaign name
                       </Label>
                       <Label className="text-gray-500 text-[12px] font-regular">
-                        Enter a custom name for the duplicated campaign
+                        Enter a custom name for the new campaign
                       </Label>
                       <Input
                         id="newCampaignName"
@@ -705,7 +705,7 @@ export default function AdAccountSettings({
                             Duplicating...
                           </div>
                         ) : (
-                          "Duplicate Campaign"
+                          "Create Campaign"
                         )}
                       </Button>
                     </div>
