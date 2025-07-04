@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
-import { ChevronsUpDown } from "lucide-react"
+import { ChevronsUpDown, Loader } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
 import PageSelectors from "./PageSelectors"
@@ -227,7 +227,7 @@ export default function AdAccountSettings() {
         </Popover>
         {selectedAdAccount && loading && (
           <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+            <Loader className="h-4 w-4 animate-spin" />
             Loading settings...
           </div>
         )}

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronsUpDown, RefreshCcw, X } from "lucide-react"
+import { Check, ChevronsUpDown, RefreshCcw, X, Loader } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { useEffect } from "react"
@@ -693,12 +693,20 @@ export default function AdAccountSettings({
                       />
 
                       {/* Duplicate Button */}
+                      {/* Duplicate Button with spinner */}
                       <Button
                         onClick={duplicateCampaignFunction}
                         disabled={!isLoggedIn || !duplicateCampaign || isLoading}
                         className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
                       >
-                        {isLoading ? "Duplicating..." : "Duplicate Campaign"}
+                        {isLoading ? (
+                          <div className="flex items-center gap-2">
+                            <Loader className="h-4 w-4 animate-spin" />
+                            Duplicating...
+                          </div>
+                        ) : (
+                          "Duplicate Campaign"
+                        )}
                       </Button>
                     </div>
                   )}

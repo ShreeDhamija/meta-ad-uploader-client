@@ -111,7 +111,7 @@ export default function CreativeEnhancements({ enhancements, setEnhancements }) 
         {
             key: "textGeneration",
             label: "Text Generation",
-            description: "Text variations are generated with AI inspired by your original primary text or previous ads,",
+            description: "Text variations, generated with AI based on your original text or previous ads",
         },
     ];
 
