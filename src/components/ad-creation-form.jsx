@@ -775,11 +775,6 @@ export default function AdCreationForm({
     setIsCreatingAds(true);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
-    // const frontendJobId = uuidv4(); // Generate UUID
-    // console.log(frontendJobId);
-    // setJobId(frontendJobId);
-    // console.log(jobId);
-
 
 
     if (uploadingToS3) {

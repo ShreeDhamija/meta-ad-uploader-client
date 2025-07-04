@@ -44,6 +44,11 @@ export default function AdAccountSettings() {
     text: false,
     cta: false,
     brightness: false,
+    comments: false,
+    backgroundGen: false,
+    expandImage: false,
+    catalogItems: false,
+    textGeneration: false,
   })
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
@@ -139,6 +144,11 @@ export default function AdAccountSettings() {
         text: false,
         cta: false,
         brightness: false,
+        comments: false,
+        backgroundGen: false,
+        expandImage: false,
+        catalogItems: false,
+        textGeneration: false,
       },
     }
 
