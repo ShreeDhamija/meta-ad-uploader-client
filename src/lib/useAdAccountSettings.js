@@ -27,10 +27,7 @@ export default function useAdAccountSettings(adAccountId) {
                     defaultUTMs: Array.isArray(s.defaultUTMs) ? s.defaultUTMs : [], // ← store as array
                     copyTemplates: s.copyTemplates,
                     defaultTemplateName: s.defaultTemplateName || "" || {},
-                    creativeEnhancements: {
-                        ...defaultEnhancements,
-                        ...(s.creativeEnhancements || {})
-                    }
+                    creativeEnhancements: s.creativeEnhancements || {}
 
 
                 });
