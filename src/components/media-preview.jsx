@@ -24,13 +24,15 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove })
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
+    // Add z-index to ensure dragged item appears above others
+    zIndex: isDragging ? 1000 : 'auto',
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group ${isDragging ? 'opacity-50 border-gray-400' : ''}`}
+      className={`relative group ${isDragging ? 'opacity-50' : ''}`}
     >
       {isCarouselAd && (
         <Button
@@ -91,7 +93,6 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove })
         <Button
           type="button"
           variant="ghost"
-          size="icon"
           className="absolute top-1 right-1 border border-gray-400 rounded-xl bg-white shadow-sm"
           style={{ opacity: 1, backgroundColor: "white" }}
           onClick={(e) => {
