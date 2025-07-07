@@ -1203,7 +1203,7 @@ export default function AdCreationForm({
 
 
   return (
-    <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-lg">
+    <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
 
       {isCreatingAds && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
