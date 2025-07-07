@@ -382,7 +382,7 @@ export default function AdAccountSettings({
   }, [duplicateCampaign, campaigns]);
 
   return (
-    <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md">
+    <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CogIcon className="w-5 h-5" />
