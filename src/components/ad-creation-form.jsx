@@ -201,7 +201,7 @@ export default function AdCreationForm({
 
 
   const [pageSearchValue, setPageSearchValue] = useState("")
-  const [isDuplicating, setIsDuplicating] = useState(false)
+  // const [isDuplicating, setIsDuplicating] = useState(false)
   const { isLoggedIn } = useAuth()
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
@@ -214,7 +214,7 @@ export default function AdCreationForm({
   const [progressMessage, setProgressMessage] = useState('');
   const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
 
-
+  const [isCarouselAd, setIsCarouselAd] = useState(false);
 
 
   // Upload large file to S3
@@ -802,6 +802,21 @@ export default function AdCreationForm({
       return
     }
 
+    // Add carousel validation
+    if (isCarouselAd) {
+      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
+      if (totalFiles < 2) {
+        toast.error("Carousel ads require at least 2 files");
+        setIsLoading(false);
+        return;
+      }
+      if (totalFiles > 10) {
+        toast.error("Carousel ads can have maximum 10 cards");
+        setIsLoading(false);
+        return;
+      }
+    }
+
     setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
     const largeFiles = files.filter((file) => file.size > 100 * 1024 * 1024);
@@ -1384,6 +1399,20 @@ export default function AdCreationForm({
               </div>
             </div>
 
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="carousel-ad"
+                checked={isCarouselAd}
+                onChange={(e) => setIsCarouselAd(e.target.checked)}
+                disabled={!isLoggedIn}
+                className="rounded border-gray-300"
+              />
+              <label htmlFor="carousel-ad" className="text-sm font-medium">
+                Create Carousel Ad
+              </label>
+            </div>
+
             <div className="space-y-1">
               <Label htmlFor="adName" className="flex items-center gap-2">
                 <LabelIcon className="w-4 h-4" />
@@ -1463,7 +1492,7 @@ export default function AdCreationForm({
 
               <div className="space-y-2">
                 {/* Primary text Section */}
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label>Primary Text</Label>
                   <div className="space-y-3">
                     {messages.map((value, index) => (
@@ -1508,10 +1537,59 @@ export default function AdCreationForm({
                       </Button>
                     )}
                   </div>
+                </div> */}
+                <div className="space-y-2">
+                  <Label>
+                    Primary Text
+                    {isCarouselAd && <span className="text-sm text-gray-500 ml-2">(One per carousel card)</span>}
+                  </Label>
+                  <div className="space-y-3">
+                    {messages.map((value, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <TextareaAutosize
+                          value={value}
+                          onChange={(e) => updateField(setMessages, messages, index, e.target.value)}
+                          placeholder={isCarouselAd ? `Text for card ${index + 1}` : "Add text option"}
+                          disabled={!isLoggedIn}
+                          minRows={2}
+                          maxRows={10}
+                          className="border border-gray-400 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                          style={{
+                            scrollbarWidth: 'thin',
+                            scrollbarColor: '#c7c7c7 transparent'
+                          }}
+                        />
+                        {messages.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                            size="icon"
+                            onClick={() => removeField(setMessages, messages, index)}
+                          >
+                            <Trash2
+                              className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                            <span className="sr-only">Remove</span>
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    {messages.length < (isCarouselAd ? 10 : 5) && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                        onClick={() => addField(setMessages, messages)}
+                      >
+                        <Plus className="mr-2 h-4 w-4 text-white" />
+                        {isCarouselAd ? 'Add card text' : 'Add text option'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Headlines Section */}
-                <div className="space-y-2">
+                {/* <div className="space-y-2">
                   <Label>Headlines</Label>
                   <div className="space-y-3">
                     {headlines.map((value, index) => (
@@ -1547,6 +1625,49 @@ export default function AdCreationForm({
                       >
                         <Plus className="mr-2 h-4 w-4 text-white" />
                         Add headline option
+                      </Button>
+                    )}
+                  </div>
+                </div> */}
+                <div className="space-y-2">
+                  <Label>
+                    Headlines
+                    {isCarouselAd && <span className="text-sm text-gray-500 ml-2">(One per carousel card)</span>}
+                  </Label>
+                  <div className="space-y-3">
+                    {headlines.map((value, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input
+                          value={value}
+                          onChange={(e) => updateField(setHeadlines, headlines, index, e.target.value)}
+                          className="border border-gray-400 rounded-xl bg-white shadow"
+                          placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Enter headline"}
+                          disabled={!isLoggedIn}
+                        />
+                        {headlines.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                            size="icon"
+                            onClick={() => removeField(setHeadlines, headlines, index)}
+                          >
+                            <Trash2
+                              className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
+                            <span className="sr-only">Remove</span>
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    {headlines.length < (isCarouselAd ? 10 : 5) && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                        onClick={() => addField(setHeadlines, headlines)}
+                      >
+                        <Plus className="mr-2 h-4 w-4 text-white" />
+                        {isCarouselAd ? 'Add card headline' : 'Add headline option'}
                       </Button>
                     )}
                   </div>
