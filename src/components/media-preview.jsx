@@ -356,6 +356,20 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
         <Card
           className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white"
           style={{ height: "calc(100vh - 50px)" }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const droppedFiles = Array.from(e.dataTransfer.files);
+            setFiles(prev => [...prev, ...droppedFiles]);
+          }}
         >
           <CardHeader className="flex flex-row justify-between items-start flex-nowrap w-full">
             <div className="flex flex-col items-start">
@@ -383,6 +397,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
           </CardHeader>
 
           <CardContent className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+            {/* Rest of your CardContent remains the same */}
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={isCarouselAd ? handleDragEnd : () => { }}>
               <SortableContext items={files.map(file => file.isDrive ? file.id : file.name)} strategy={verticalListSortingStrategy}>
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -407,15 +422,15 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
           style={{ height: "calc(100vh - 50px)" }}
         >
           <div
-            className="w-full h-full flex items-center justify-center relative overflow-hidden rounded-lg"
+            className="w-full h-full flex items-center justify-center relative overflow-hidden rounded-2xl border border-gray-200 shadow-md"
             style={{
-              backgroundColor: '#fafafa',
+              backgroundColor: '#ffffff',
               backgroundImage: `repeating-linear-gradient(
-                45deg,
+                135deg,
                 transparent,
-                transparent 10px,
-                rgba(125, 125, 125, 0.2) 10px,
-                rgba(125, 125, 125, 0.2) 11px
+                transparent 5px,
+                rgba(125, 125, 125, 0.2) 5px,
+                rgba(125, 125, 125, 0.2) 6px
               )`
             }}
             onDragOver={(e) => {
@@ -434,13 +449,13 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
               setFiles(prev => [...prev, ...droppedFiles]);
             }}
           >
-            <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full mx-4 text-center">
+            <div className="bg-white rounded-2xl shadow-md p-8 max-w-sm w-full mx-4 text-center min-h-[500px] border border-gray-100 flex flex-col justify-center">
               {/* UPLOAD Text */}
               <div className="mb-8">
                 <img
                   src={Uploadimg}
                   alt="Upload illustration"
-                  className="w-full h-auto max-w-xs mx-auto"
+                  className="w-24 h-5 mx-auto"
                 />
               </div>
 
@@ -449,16 +464,16 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                 <img
                   src={RocketImg}
                   alt="Upload illustration"
-                  className="w-full h-auto max-w-xs mx-auto"
+                  className="w-[220px] h-[280px] max-w-xs mx-auto"
                 />
               </div>
 
               {/* Text */}
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-gray-800">
+              <div className="space-y-1">
+                <h3 className="text-md font-semibold text-gray-800">
                   Media Previews Will Appear Here
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-xs text-gray-400">
                   You can drag and drop to upload files
                 </p>
               </div>

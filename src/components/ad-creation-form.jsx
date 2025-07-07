@@ -1283,7 +1283,7 @@ export default function AdCreationForm({
                 }
               }}
               disabled={!isLoggedIn}
-              className="border-gray-300 rounded-md"
+              className="border-gray-400 rounded-md"
             />
             <label
               htmlFor="carousel-ad"
