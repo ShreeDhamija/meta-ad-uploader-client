@@ -1720,7 +1720,7 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-3">
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="Link (URL)" className="flex items-center gap-2">
                   <LinkIcon className="w-4 h-4" />
                   Link (URL)
@@ -1738,6 +1738,70 @@ export default function AdCreationForm({
                   disabled={!isLoggedIn}
                   required
                 />
+              </div> */}
+
+              <div className="space-y-2">
+                <Label htmlFor="Link (URL)" className="flex items-center gap-2">
+                  <LinkIcon className="w-4 h-4" />
+                  Link (URL)
+                </Label>
+                <p className="text-gray-500 text-[12px] font-regular">
+                  Your UTMs will be auto applied from your Configuration Settings
+                </p>
+
+                {/* Single link input */}
+                <Input
+                  id="link"
+                  type="url"
+                  value={link[0] || ""}
+                  className="border border-gray-400 rounded-xl bg-white shadow"
+                  onChange={(e) => setLink([e.target.value, ...link.slice(1)])}
+                  placeholder="https://example.com"
+                  disabled={!isLoggedIn}
+                  required
+                />
+
+                {/* Carousel checkbox - only show if carousel is selected */}
+                {isCarouselAd && (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="sameLink"
+                      checked={link.length === 1}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setLink([link[0] || ""])
+                        } else {
+                          setLink([link[0] || "", "", ""])
+                        }
+                      }}
+                    />
+                    <Label htmlFor="sameLink" className="text-sm">
+                      Apply the same link to all cards
+                    </Label>
+                  </div>
+                )}
+
+                {/* Multiple link inputs for carousel */}
+                {isCarouselAd && link.length > 1 && (
+                  <div className="space-y-2">
+                    {link.slice(1).map((cardLink, index) => (
+                      <Input
+                        key={index}
+                        type="url"
+                        value={cardLink}
+                        className="border border-gray-400 rounded-xl bg-white shadow"
+                        onChange={(e) => {
+                          const newLinks = [...link]
+                          newLinks[index + 1] = e.target.value
+                          setLink(newLinks)
+                        }}
+                        placeholder={`Card ${index + 2} link`}
+                        disabled={!isLoggedIn}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

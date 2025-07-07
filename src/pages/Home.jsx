@@ -49,7 +49,7 @@ export default function Home() {
     const [messages, setMessages] = useState([""])
     const [pageId, setPageId] = useState("")
     const [instagramAccountId, setInstagramAccountId] = useState("")
-    const [link, setLink] = useState("")
+    const [link, setLink] = useState([""])
     const [cta, setCta] = useState("LEARN_MORE")
 
     const [thumbnail, setThumbnail] = useState(null)
@@ -122,8 +122,9 @@ export default function Home() {
         }
 
         if (adAccountSettings.defaultLink) {
-            setLink(adAccountSettings.defaultLink)
+            setLink([adAccountSettings.defaultLink])
         }
+
 
         if (adAccountSettings.defaultCTA) {
             setCta(adAccountSettings.defaultCTA)
