@@ -1583,9 +1583,9 @@ export default function AdCreationForm({
                               setMessages(new Array(messages.length).fill(firstMessage));
                             }
                           }}
-                          className="border-gray-300 w-4 h-4"
+                          className="border-gray-300 w-4 h-4 rounded-lg"
                         />
-                        <label htmlFor="apply-text-all" className="text-xs font-normal">
+                        <label htmlFor="apply-text-all" className="text-xs font-medium">
                           Apply To All Cards
                         </label>
                       </div>
@@ -1664,9 +1664,9 @@ export default function AdCreationForm({
                             setHeadlines(new Array(headlines.length).fill(firstHeadline));
                           }
                         }}
-                        className="border-gray-300 w-4 h-4"
+                        className="border-gray-300 w-4 h-4 rounded-lg"
                       />
-                      <label htmlFor="apply-headlines-all" className="text-xs font-normal">
+                      <label htmlFor="apply-headlines-all" className="text-xs font-medium">
                         Apply To All Cards
                       </label>
                     </div>
