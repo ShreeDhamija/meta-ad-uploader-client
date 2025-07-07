@@ -922,7 +922,8 @@ export default function AdCreationForm({
 
     try {
       const promises = [];
-
+      console.log("is carousel ad", isCarouselAd);
+      console.log("dynamic adset length", dynamicAdSetIds.length);
       // FIRST: Handle carousel ads (completely separate from dynamic/non-dynamic)
       if (isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
