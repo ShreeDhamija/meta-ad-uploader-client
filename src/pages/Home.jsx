@@ -63,6 +63,7 @@ export default function Home() {
 
     const [driveFiles, setDriveFiles] = useState([])
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
+    const [isCarouselAd, setIsCarouselAd] = useState(false);
 
 
     const [files, setFiles] = useState([])
@@ -261,6 +262,8 @@ export default function Home() {
                         newAdSetName={newAdSetName}
                         launchPaused={launchPaused}
                         setLaunchPaused={setLaunchPaused}
+                        isCarouselAd={isCarouselAd}
+                        setIsCarouselAd={setIsCarouselAd}
                     />
                 </div>
 
@@ -271,6 +274,8 @@ export default function Home() {
                         setFiles={setFiles}
                         setDriveFiles={setDriveFiles}
                         videoThumbs={videoThumbs}
+                        isCarouselAd={isCarouselAd}
+
                     />
 
                 </div>

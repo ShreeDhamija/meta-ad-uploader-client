@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from 'lucide-react'
 
-export default function MediaPreview({ files, setFiles, setDriveFiles, videoThumbs }) {
+export default function MediaPreview({ files, setFiles, setDriveFiles, videoThumbs, isCarouselAd }) {
   const removeFile = (file) => {
     if (file.isDrive) {
       setDriveFiles((prev) => prev.filter((f) => f.id !== file.id))
@@ -104,7 +104,14 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                       <span className="sr-only">Remove</span>
                     </Button>
                   </div>
-                  <p className="mt-1 text-sm truncate">{file.name}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <p className="text-sm truncate">{file.name}</p>
+                    {isCarouselAd && (
+                      <span className="text-xs px-2 py-1 border border-gray-300 rounded bg-gray-50 ml-2 flex-shrink-0">
+                        Card {index + 1}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

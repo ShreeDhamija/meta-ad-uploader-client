@@ -181,7 +181,9 @@ export default function AdCreationForm({
   setSelectedShopDestinationType,
   newAdSetName,
   launchPaused,
-  setLaunchPaused
+  setLaunchPaused,
+  isCarouselAd,
+  setIsCarouselAd
 }) {
   // Local state
 
@@ -214,7 +216,7 @@ export default function AdCreationForm({
   const [progressMessage, setProgressMessage] = useState('');
   const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
 
-  const [isCarouselAd, setIsCarouselAd] = useState(false);
+  // const [isCarouselAd, setIsCarouselAd] = useState(false);
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
