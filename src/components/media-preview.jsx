@@ -166,7 +166,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                 setFiles([]);
                 setDriveFiles([]);
               }}
-              className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0 self-start"
             >
               Clear All
             </Button>
