@@ -1276,6 +1276,7 @@ export default function AdCreationForm({
               checked={isCarouselAd}
               onCheckedChange={setIsCarouselAd}
               disabled={!isLoggedIn}
+              className="border-gray-500"
             />
             <label
               htmlFor="carousel-ad"
@@ -1585,8 +1586,9 @@ export default function AdCreationForm({
                               setMessages(new Array(Math.max(2, messages.length)).fill(firstMessage));
                             }
                           }}
+                          className="border-gray-500"
                         />
-                        <label htmlFor="apply-text-all" className="text-sm font-medium">
+                        <label htmlFor="apply-text-all" className="text-xs font-normal">
                           Apply To All Cards
                         </label>
                       </div>
@@ -1665,8 +1667,9 @@ export default function AdCreationForm({
                             setHeadlines(new Array(Math.max(2, headlines.length)).fill(firstHeadline));
                           }
                         }}
+                        className="border-gray-500"
                       />
-                      <label htmlFor="apply-headlines-all" className="text-sm font-medium">
+                      <label htmlFor="apply-headlines-all" className="text-xs font-normal">
                         Apply To All Cards
                       </label>
                     </div>
