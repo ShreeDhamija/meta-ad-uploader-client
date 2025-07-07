@@ -951,7 +951,7 @@ export default function AdCreationForm({
           formData.append("adSetId", adSetId);
           formData.append("pageId", pageId);
           formData.append("instagramAccountId", instagramAccountId);
-          formData.append("link", link);
+          formData.append("link", JSON.stringify(link));
           formData.append("cta", cta);
           formData.append("isCarouselAd", isCarouselAd);
           formData.append("launchPaused", launchPaused);
@@ -1008,7 +1008,7 @@ export default function AdCreationForm({
           formData.append("adSetId", adSetId);
           formData.append("pageId", pageId);
           formData.append("instagramAccountId", instagramAccountId);
-          formData.append("link", link);
+          formData.append("link", JSON.stringify(link));
           formData.append("cta", cta);
           formData.append("isCarouselAd", isCarouselAd);
 
@@ -1078,7 +1078,7 @@ export default function AdCreationForm({
             formData.append("adSetId", adSetId);
             formData.append("pageId", pageId);
             formData.append("instagramAccountId", instagramAccountId);
-            formData.append("link", link);
+            formData.append("link", JSON.stringify(link));
             formData.append("cta", cta);
             if (thumbnail) {
               formData.append("thumbnail", thumbnail);
@@ -1111,7 +1111,7 @@ export default function AdCreationForm({
             formData.append("adSetId", adSetId);
             formData.append("pageId", pageId);
             formData.append("instagramAccountId", instagramAccountId);
-            formData.append("link", link);
+            formData.append("link", JSON.stringify(link));
             formData.append("cta", cta);
             formData.append("driveFile", "true");
             formData.append("driveId", driveFile.id);
@@ -1147,7 +1147,7 @@ export default function AdCreationForm({
             formData.append("adSetId", adSetId);
             formData.append("pageId", pageId);
             formData.append("instagramAccountId", instagramAccountId);
-            formData.append("link", link);
+            formData.append("link", JSON.stringify(link));
             formData.append("cta", cta);
             if (selectedShopDestination && showShopDestinationSelector) {
               formData.append("shopDestination", selectedShopDestination)
@@ -1583,7 +1583,7 @@ export default function AdCreationForm({
                               setMessages(new Array(messages.length).fill(firstMessage));
                             }
                           }}
-                          className="border-gray-300 w-4 h-4 rounded-lg"
+                          className="border-gray-300 w-4 h-4 rounded-md"
                         />
                         <label htmlFor="apply-text-all" className="text-xs font-medium">
                           Apply To All Cards
@@ -1664,7 +1664,7 @@ export default function AdCreationForm({
                             setHeadlines(new Array(headlines.length).fill(firstHeadline));
                           }
                         }}
-                        className="border-gray-300 w-4 h-4 rounded-lg"
+                        className="border-gray-300 w-4 h-4 rounded-md"
                       />
                       <label htmlFor="apply-headlines-all" className="text-xs font-medium">
                         Apply To All Cards
@@ -1741,67 +1741,84 @@ export default function AdCreationForm({
               </div> */}
 
               <div className="space-y-2">
-                <Label htmlFor="Link (URL)" className="flex items-center gap-2">
-                  <LinkIcon className="w-4 h-4" />
-                  Link (URL)
+                <Label className="flex items-center justify-between">
+                  <span className="flex items-center gap-2">
+                    <LinkIcon className="w-4 h-4" />
+                    Link (URL)
+                  </span>
+                  {isCarouselAd && (
+                    <div className="flex items-center space-x-1">
+                      <Checkbox
+                        id="apply-link-all"
+                        checked={link.length === 1}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setLink([link[0] || ""]);
+                          } else {
+                            setLink([link[0] || "", ""]);
+                          }
+                        }}
+                        className="border-gray-300 w-4 h-4 rounded-md"
+                      />
+                      <label htmlFor="apply-link-all" className="text-xs font-medium">
+                        Apply To All Cards
+                      </label>
+                    </div>
+                  )}
                 </Label>
                 <p className="text-gray-500 text-[12px] font-regular">
                   Your UTMs will be auto applied from your Configuration Settings
                 </p>
 
-                {/* Single link input */}
-                <Input
-                  id="link"
-                  type="url"
-                  value={link[0] || ""}
-                  className="border border-gray-400 rounded-xl bg-white shadow"
-                  onChange={(e) => setLink([e.target.value, ...link.slice(1)])}
-                  placeholder="https://example.com"
-                  disabled={!isLoggedIn}
-                  required
-                />
-
-                {/* Carousel checkbox - only show if carousel is selected */}
-                {isCarouselAd && (
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="sameLink"
-                      checked={link.length === 1}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setLink([link[0] || ""])
-                        } else {
-                          setLink([link[0] || "", "", ""])
-                        }
-                      }}
-                    />
-                    <Label htmlFor="sameLink" className="text-sm">
-                      Apply the same link to all cards
-                    </Label>
-                  </div>
-                )}
-
-                {/* Multiple link inputs for carousel */}
-                {isCarouselAd && link.length > 1 && (
-                  <div className="space-y-2">
-                    {link.slice(1).map((cardLink, index) => (
+                <div className="space-y-3">
+                  {link.map((value, index) => (
+                    <div key={index} className={`flex items-start gap-2 ${isCarouselAd && link.length === 1 && index > 0 ? 'hidden' : ''}`}>
                       <Input
-                        key={index}
                         type="url"
-                        value={cardLink}
+                        value={value}
                         className="border border-gray-400 rounded-xl bg-white shadow"
                         onChange={(e) => {
-                          const newLinks = [...link]
-                          newLinks[index + 1] = e.target.value
-                          setLink(newLinks)
+                          if (isCarouselAd && link.length === 1) {
+                            setLink([e.target.value]);
+                          } else {
+                            const newLinks = [...link];
+                            newLinks[index] = e.target.value;
+                            setLink(newLinks);
+                          }
                         }}
-                        placeholder={`Card ${index + 2} link`}
+                        placeholder={isCarouselAd && link.length > 1 ? `Link for card ${index + 1}` : "https://example.com"}
                         disabled={!isLoggedIn}
+                        required
                       />
-                    ))}
-                  </div>
-                )}
+                      {link.length > 1 && !(isCarouselAd && link.length === 1) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                          size="icon"
+                          onClick={() => {
+                            const newLinks = link.filter((_, i) => i !== index);
+                            setLink(newLinks);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                          <span className="sr-only">Remove</span>
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {isCarouselAd && link.length < 10 && link.length > 1 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                      onClick={() => setLink([...link, ""])}
+                    >
+                      <Plus className="mr-2 h-4 w-4 text-white" />
+                      Add link field
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
