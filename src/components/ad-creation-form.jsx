@@ -1274,9 +1274,14 @@ export default function AdCreationForm({
             <Checkbox
               id="carousel-ad"
               checked={isCarouselAd}
-              onCheckedChange={setIsCarouselAd}
+              onCheckedChange={(checked) => {
+                setIsCarouselAd(checked);
+                if (!checked && link.length > 1) {
+                  setLink([link[0] || ""]);
+                }
+              }}
               disabled={!isLoggedIn}
-              className="border-gray-300"
+              className="border-gray-300 rounded-md"
             />
             <label
               htmlFor="carousel-ad"
@@ -1720,26 +1725,6 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-3">
-              {/* <div className="space-y-2">
-                <Label htmlFor="Link (URL)" className="flex items-center gap-2">
-                  <LinkIcon className="w-4 h-4" />
-                  Link (URL)
-                </Label>
-                <p className="text-gray-500 text-[12px] font-regular">
-                  Your UTMs will be auto applied from your Configuration Settings
-                </p>
-                <Input
-                  id="link"
-                  type="url"
-                  value={link}
-                  className="border border-gray-400 rounded-xl bg-white shadow"
-                  onChange={(e) => setLink(e.target.value)}
-                  placeholder="https://example.com"
-                  disabled={!isLoggedIn}
-                  required
-                />
-              </div> */}
-
               <div className="space-y-2">
                 <Label className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
