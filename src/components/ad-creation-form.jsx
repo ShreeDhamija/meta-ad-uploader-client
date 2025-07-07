@@ -929,9 +929,10 @@ export default function AdCreationForm({
           toast.error("Please select at least one ad set for carousel");
           return;
         }
-
+        console.log("reached carousel handling block for nonDynamicAdsets,", nonDynamicAdSetIds);
         // For carousel, process each selected ad set separately (one call per ad set)
-        finalAdSetIds.forEach((adSetId) => {
+        nonDynamicAdSetIds.forEach((adSetId) => {
+          console.log("🎠 Creating carousel for adSetId:", adSetId);
           const formData = new FormData();
           formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
           formData.append("headlines", JSON.stringify(headlines));
@@ -946,6 +947,7 @@ export default function AdCreationForm({
           formData.append("isCarouselAd", isCarouselAd);
           formData.append("launchPaused", launchPaused);
           formData.append("jobId", frontendJobId);
+          console.log("jobId in attached form", frontendJobId);
 
           // Add all local files (small ones)
           files.forEach((file) => {
@@ -973,6 +975,7 @@ export default function AdCreationForm({
             formData.append("shopDestination", selectedShopDestination);
             formData.append("shopDestinationType", selectedShopDestinationType);
           }
+          console.log("reached backend endpoint");
 
           promises.push(
             axios.post("https://api.withblip.com/auth/create-ad", formData, {
@@ -1037,12 +1040,6 @@ export default function AdCreationForm({
 
           formData.append("launchPaused", launchPaused);
           formData.append("jobId", frontendJobId);
-
-
-
-
-
-
 
           promises.push(
             axios.post("https://api.withblip.com/auth/create-ad", formData, {
