@@ -1276,7 +1276,7 @@ export default function AdCreationForm({
               checked={isCarouselAd}
               onCheckedChange={setIsCarouselAd}
               disabled={!isLoggedIn}
-              className="border-gray-500"
+              className="border-gray-300"
             />
             <label
               htmlFor="carousel-ad"
@@ -1574,7 +1574,7 @@ export default function AdCreationForm({
                       {isCarouselAd && <span className="text-sm text-gray-500 ml-2">(One per carousel card)</span>}
                     </span>
                     {isCarouselAd && (
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1 ">
                         <Checkbox
                           id="apply-text-all"
                           checked={applyTextToAllCards}
@@ -1583,10 +1583,10 @@ export default function AdCreationForm({
                             if (checked && messages.length > 0) {
                               // Fill all positions with the first message
                               const firstMessage = messages[0];
-                              setMessages(new Array(Math.max(2, messages.length)).fill(firstMessage));
+                              setMessages(new Array(messages.length).fill(firstMessage));
                             }
                           }}
-                          className="border-gray-500"
+                          className="border-gray300 w-4 h-4"
                         />
                         <label htmlFor="apply-text-all" className="text-xs font-normal">
                           Apply To All Cards
@@ -1655,7 +1655,7 @@ export default function AdCreationForm({
                     {isCarouselAd && <span className="text-sm text-gray-500 ml-2">(One per carousel card)</span>}
                   </span>
                   {isCarouselAd && (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
                       <Checkbox
                         id="apply-headlines-all"
                         checked={applyHeadlinesToAllCards}
@@ -1664,10 +1664,10 @@ export default function AdCreationForm({
                           if (checked && headlines.length > 0) {
                             // Fill all positions with the first headline
                             const firstHeadline = headlines[0];
-                            setHeadlines(new Array(Math.max(2, headlines.length)).fill(firstHeadline));
+                            setHeadlines(new Array(headlines.length).fill(firstHeadline));
                           }
                         }}
-                        className="border-gray-500"
+                        className="border-gray-300 w-4 h-4"
                       />
                       <label htmlFor="apply-headlines-all" className="text-xs font-normal">
                         Apply To All Cards
