@@ -92,14 +92,14 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove })
           type="button"
           variant="ghost"
           size="icon"
-          className="absolute top-2 right-2 border border-gray-400 rounded-xl bg-white shadow-sm"
+          className="absolute top-1 right-1 border border-gray-400 rounded-xl bg-white shadow-sm"
           style={{ opacity: 1, backgroundColor: "white" }}
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
           }}
         >
-          <Trash className="h-4 w-4" />
+          <Trash className="h-2 w-2" />
           <span className="sr-only">Remove</span>
         </Button>
       </div>
@@ -146,7 +146,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
           className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white"
           style={{ height: "calc(100vh - 50px)" }}
         >
-          <CardHeader className="flex flex-row justify-between items-center flex-nowrap w-full">
+          <CardHeader className="flex flex-row justify-between items-start flex-nowrap w-full">
             <div className="flex flex-col items-start">
               <CardTitle className="text-left">Uploads Preview</CardTitle>
               <CardDescription className="text-left">
