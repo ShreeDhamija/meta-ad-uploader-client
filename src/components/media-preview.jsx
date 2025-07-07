@@ -216,8 +216,8 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { GripVertical } from 'lucide-react';
-import RocketImg from '@/assets/icons/rocketpreview.webp';
-import Uploadimg from '@/assets/icons/upload.webp';
+import RocketImg from '@/assets/rocketpreview.webp';
+import Uploadimg from '@/assets/upload.webp';
 
 // Sortable item component
 function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove }) {
