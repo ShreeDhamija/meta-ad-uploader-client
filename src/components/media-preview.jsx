@@ -216,7 +216,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { GripVertical } from 'lucide-react';
-import Rocket from '@/assets/icons/rocketpreview.webp';
+import RocketImg from '@/assets/icons/rocketpreview.webp';
 import Uploadimg from '@/assets/icons/upload.webp';
 
 // Sortable item component
@@ -447,7 +447,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
               {/* Your server image */}
               <div className="mb-8">
                 <img
-                  src={Rocket}
+                  src={RocketImg}
                   alt="Upload illustration"
                   className="w-full h-auto max-w-xs mx-auto"
                 />
