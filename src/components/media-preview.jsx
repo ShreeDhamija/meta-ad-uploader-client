@@ -30,8 +30,7 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove })
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes}
-      className={`relative group ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative group ${isDragging ? 'opacity-50 border-gray-400' : ''}`}
     >
       {isCarouselAd && (
         <Button
@@ -100,13 +99,13 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove })
             onRemove();
           }}
         >
-          <Trash className="h-3 w-3" />
+          <Trash className="h-4 w-4" />
           <span className="sr-only">Remove</span>
         </Button>
       </div>
       <p className="mt-1 text-sm truncate">{file.name}</p>
       {isCarouselAd && (
-        <span className="text-xs px-2 py-1 border border-gray-300 rounded bg-gray-100 text-gray-700 rounded-lg mt-1 block w-fit">
+        <span className="text-xs px-2 py-1 border border-gray-300 rounded bg-gray-50 mt-1 block w-fit">
           Card {index + 1}
         </span>
       )}
