@@ -46,7 +46,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
 
           <CardContent className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              {files.map((file) => (
+              {files.map((file, index) => (
                 <div key={file.isDrive ? file.id : file.name} className="relative group">
                   <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
                     {(file.type || file.mimeType || "").startsWith("video/") ? (
