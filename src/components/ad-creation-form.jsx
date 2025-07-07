@@ -1008,6 +1008,7 @@ export default function AdCreationForm({
           formData.append("instagramAccountId", instagramAccountId);
           formData.append("link", link);
           formData.append("cta", cta);
+          formData.append("isCarouselAd", isCarouselAd);
 
 
 
@@ -1848,26 +1849,26 @@ export default function AdCreationForm({
                 isVisible={showShopDestinationSelector}
               />
 
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label htmlFor="thumbnail">Thumbnail - Optional(Only for videos)</Label>
-                <div className="flex items-center space-x-2">
-                  {/* Custom button for file input */}
-                  <label
+                <div className="flex items-center space-x-2"> */}
+              {/* Custom button for file input */}
+              {/* <label
                     htmlFor="thumbnail"
                     className="cursor-pointer inline-flex items-center px-3 py-1 border border-gray-400 rounded-xl bg-white shadow hover:bg-gray-100 text-xs"
                   >
                     Choose File
-                  </label>
-                  {/* Hidden file input */}
-                  <input
+                  </label> */}
+              {/* Hidden file input */}
+              {/* <input
                     id="thumbnail"
                     type="file"
                     className="hidden"
                     onChange={(e) => setThumbnail(e.target.files[0])}
                     disabled={!isLoggedIn}
-                  />
-                  {/* Display uploaded file name and trash button if a file is selected */}
-                  {thumbnail && (
+                  /> */}
+              {/* Display uploaded file name and trash button if a file is selected */}
+              {/* {thumbnail && (
                     <div className="flex items-center space-x-1">
                       <span className="text-sm">{thumbnail.name}</span>
                       <Button
@@ -1883,7 +1884,7 @@ export default function AdCreationForm({
                     </div>
                   )}
                 </div>
-              </div>
+              </div> */}
             </div>
 
             <div className="space-y-2">
