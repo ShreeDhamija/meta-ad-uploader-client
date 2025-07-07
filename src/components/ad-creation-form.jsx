@@ -1562,10 +1562,7 @@ export default function AdCreationForm({
                 </Select>
               </div>
 
-
-
-
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {/* Primary text Section */}
                 <div className="space-y-2">
                   <Label className="flex items-center justify-between">
