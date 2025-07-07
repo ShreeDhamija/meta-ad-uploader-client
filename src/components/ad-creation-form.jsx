@@ -923,67 +923,6 @@ export default function AdCreationForm({
     try {
       const promises = [];
 
-
-      if (isCarouselAd) {
-        if (selectedAdSets.length === 0 && !duplicateAdSet) {
-          toast.error("Please select at least one ad set for carousel");
-          return;
-        }
-
-        // For carousel, we process each selected ad set separately
-        finalAdSetIds.forEach((adSetId) => {
-          const formData = new FormData();
-          formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
-          formData.append("headlines", JSON.stringify(headlines));
-          formData.append("descriptions", JSON.stringify(descriptions));
-          formData.append("messages", JSON.stringify(messages));
-          formData.append("adAccountId", selectedAdAccount);
-          formData.append("adSetId", adSetId);
-          formData.append("pageId", pageId);
-          formData.append("instagramAccountId", instagramAccountId);
-          formData.append("link", link);
-          formData.append("cta", cta);
-          formData.append("isCarouselAd", true);
-          formData.append("launchPaused", launchPaused);
-          formData.append("jobId", frontendJobId);
-
-          // Add all local files (small ones)
-          files.forEach((file) => {
-            if (file.size <= 100 * 1024 * 1024) {
-              formData.append("mediaFiles", file);
-            }
-          });
-
-          // Add small drive files
-          smallDriveFiles.forEach((driveFile) => {
-            formData.append("driveFiles", JSON.stringify({
-              id: driveFile.id,
-              name: driveFile.name,
-              mimeType: driveFile.mimeType,
-              accessToken: driveFile.accessToken
-            }));
-          });
-
-          // Add S3 URLs for large files
-          [...s3Results, ...s3DriveResults].forEach((s3File) => {
-            formData.append("s3VideoUrls", s3File.s3Url);
-          });
-
-          if (selectedShopDestination && showShopDestinationSelector) {
-            formData.append("shopDestination", selectedShopDestination);
-            formData.append("shopDestinationType", selectedShopDestinationType);
-          }
-
-          promises.push(
-            axios.post("https://api.withblip.com/auth/create-ad", formData, {
-              withCredentials: true,
-              headers: { "Content-Type": "multipart/form-data" },
-            })
-          );
-        });
-
-      }
-
       // Process dynamic adsets
       if (dynamicAdSetIds.length > 0) {
         // For each dynamic adset, create ONE request with ALL media files
@@ -1001,7 +940,6 @@ export default function AdCreationForm({
           formData.append("cta", cta);
           // Add this to all your formData.append sections
           formData.append("isCarouselAd", isCarouselAd);
-
 
 
           // Add all local files
@@ -1077,7 +1015,7 @@ export default function AdCreationForm({
               formData.append("instagramAccountId", instagramAccountId);
               formData.append("link", link);
               formData.append("cta", cta);
-              formData.append("isCarouselAd", true);
+              formData.append("isCarouselAd", isCarouselAd);
               formData.append("launchPaused", launchPaused);
               formData.append("jobId", frontendJobId);
 
@@ -1142,6 +1080,7 @@ export default function AdCreationForm({
               formData.append("launchPaused", launchPaused);
               formData.append("jobId", frontendJobId);
               console.log("jobId in attached form", frontendJobId);
+              formData.append("isCarouselAd", isCarouselAd);
 
 
               promises.push(
@@ -1176,6 +1115,7 @@ export default function AdCreationForm({
               }
               formData.append("launchPaused", launchPaused);
               formData.append("jobId", frontendJobId);
+              formData.append("isCarouselAd", isCarouselAd);
 
               promises.push(
                 axios.post("https://api.withblip.com/auth/create-ad", formData, {
@@ -1208,6 +1148,7 @@ export default function AdCreationForm({
               formData.append("launchPaused", launchPaused);
               formData.append("jobId", frontendJobId);
               console.log("jobId in attached form for large File", frontendJobId);
+              formData.append("isCarouselAd", isCarouselAd);
 
               promises.push(
                 axios.post("https://api.withblip.com/auth/create-ad", formData, {
