@@ -94,7 +94,7 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove })
         <Button
           type="button"
           variant="ghost"
-          className="absolute top-1 right-1 border border-gray-400 rounded-xl bg-white shadow-sm h-8 w-8 p-4 blur-[2px]"
+          className="absolute top-1 right-1 border border-gray-400 rounded-xl bg-white shadow-sm h-8 w-8 p-4 blur-[0.5px]"
           style={{ opacity: 0.8, backgroundColor: "white" }}
           onClick={(e) => {
             e.stopPropagation();
@@ -162,7 +162,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
             setFiles(prev => [...prev, ...droppedFiles]);
           }}
         >
-          <CardHeader className="flex flex-row justify-between items-start flex-nowrap w-full">
+          {/* <CardHeader className="flex flex-row justify-between items-start flex-nowrap w-full">
             <div className="flex flex-col items-start">
               <CardTitle className="text-left">Uploads Preview</CardTitle>
               <CardDescription className="text-left">
@@ -182,6 +182,30 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                 setDriveFiles([]);
               }}
               className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
+            >
+              Clear All
+            </Button>
+          </CardHeader> */}
+          <CardHeader className="flex flex-row justify-between items-start flex-nowrap w-full">
+            <div className="flex flex-col items-start flex-1">
+              <CardTitle className="text-left">Uploads Preview</CardTitle>
+              <CardDescription className="text-left">
+                {`${files.length} file${files.length > 1 ? "s" : ""} selected`}
+                {isCarouselAd && (
+                  <span className="block text-xs text-gray-500 mt-1">
+                    Drag to change order of carousel cards
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                setFiles([]);
+                setDriveFiles([]);
+              }}
+              className="bg-red-500 hover:bg-red-600 text-white rounded-xl flex-shrink-0"
             >
               Clear All
             </Button>
