@@ -677,7 +677,7 @@ export default function AdCreationForm({
   }, [uploadingToS3, publishPending]);
 
   // Functions for managing dynamic input fields
-  const addField = (setter, values) => {
+  const addField = (setter, values, ma) => {
     if (values.length < 5) {
       setter([...values, ""])
     }
@@ -1198,10 +1198,28 @@ export default function AdCreationForm({
       )}
 
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ConfigIcon className="w-5 h-5" />
-          Select ad preferences</CardTitle>
+        <CardTitle className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <ConfigIcon className="w-5 h-5" />
+            Select ad preferences
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="carousel-ad"
+              checked={isCarouselAd}
+              onCheckedChange={setIsCarouselAd}
+              disabled={!isLoggedIn}
+            />
+            <label
+              htmlFor="carousel-ad"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Create Carousel Ad
+            </label>
+          </div>
+        </CardTitle>
       </CardHeader>
+
       <CardContent>
         <form onSubmit={handleCreateAd} className="space-y-6">
           <div className="space-y-10">
@@ -1399,20 +1417,6 @@ export default function AdCreationForm({
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="carousel-ad"
-                checked={isCarouselAd}
-                onChange={(e) => setIsCarouselAd(e.target.checked)}
-                disabled={!isLoggedIn}
-                className="rounded border-gray-300"
-              />
-              <label htmlFor="carousel-ad" className="text-sm font-medium">
-                Create Carousel Ad
-              </label>
-            </div>
-
             <div className="space-y-1">
               <Label htmlFor="adName" className="flex items-center gap-2">
                 <LabelIcon className="w-4 h-4" />
@@ -1579,7 +1583,7 @@ export default function AdCreationForm({
                         type="button"
                         size="sm"
                         className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                        onClick={() => addField(setMessages, messages)}
+                        onClick={() => addField(setMessages, messages, isCarouselAd ? 10 : 5)}
                       >
                         <Plus className="mr-2 h-4 w-4 text-white" />
                         {isCarouselAd ? 'Add card text' : 'Add text option'}
@@ -1664,7 +1668,7 @@ export default function AdCreationForm({
                         type="button"
                         size="sm"
                         className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                        onClick={() => addField(setHeadlines, headlines)}
+                        onClick={() => addField(setHeadlines, headlines, isCarouselAd ? 10 : 5)}
                       >
                         <Plus className="mr-2 h-4 w-4 text-white" />
                         {isCarouselAd ? 'Add card headline' : 'Add headline option'}
