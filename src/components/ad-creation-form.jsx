@@ -802,23 +802,7 @@ export default function AdCreationForm({
       return
     }
 
-    // Add carousel validation
-    if (isCarouselAd) {
-      console.log("reached validation check");
-      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
-      console.log("totalFiles", totalFiles);
-      if (totalFiles < 2) {
-        toast.error("Carousel ads require at least 2 files");
-        setIsLoading(false);
-        return;
-      }
-      if (totalFiles > 10) {
-        toast.error("Carousel ads can have maximum 10 cards");
-        setIsLoading(false);
-        return;
-      }
-      console.log("passed validation check");
-    }
+
 
     setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
@@ -923,6 +907,24 @@ export default function AdCreationForm({
       }
     });
     console.log("✅ About to reach try block");
+
+    // Add carousel validation
+    if (isCarouselAd) {
+      console.log("reached validation check");
+      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
+      console.log("totalFiles", totalFiles);
+      if (totalFiles < 2) {
+        toast.error("Carousel ads require at least 2 files");
+        setIsLoading(false);
+        return;
+      }
+      if (totalFiles > 10) {
+        toast.error("Carousel ads can have maximum 10 cards");
+        setIsLoading(false);
+        return;
+      }
+      console.log("passed validation check");
+    }
 
     try {
       const promises = [];
