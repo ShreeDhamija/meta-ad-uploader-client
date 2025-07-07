@@ -1193,6 +1193,7 @@ export default function AdCreationForm({
       console.error("Error uploading ads:", error.response?.data || error);
       setIsCreatingAds(false);
       setJobId(null);
+      selectedAdSets
     } finally {
       setIsLoading(false);
     }

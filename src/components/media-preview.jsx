@@ -94,21 +94,20 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove })
         <Button
           type="button"
           variant="ghost"
-          size="icon"
-          className="absolute top-1 right-1 border border-gray-400 rounded-xl bg-white shadow-sm"
+          className="absolute top-1 right-1 border border-gray-400 rounded-xl bg-white shadow-sm h-5 w-5 p-2"
           style={{ opacity: 1, backgroundColor: "white" }}
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
           }}
         >
-          <Trash className="h-2 w-2" />
+          <Trash className="h-3 w-3" />
           <span className="sr-only">Remove</span>
         </Button>
       </div>
       <p className="mt-1 text-sm truncate">{file.name}</p>
       {isCarouselAd && (
-        <span className="text-xs px-2 py-1 border border-gray-300 rounded bg-gray-50 mt-1 block w-fit">
+        <span className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
           Card {index + 1}
         </span>
       )}
