@@ -94,7 +94,7 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove })
         <Button
           type="button"
           variant="ghost"
-          className="absolute top-1 right-1 border border-gray-400 rounded-xl bg-white shadow-sm h-5 w-5 p-2"
+          className="absolute top-1 right-1 border border-gray-400 rounded-xl bg-white shadow-sm h-8 w-8 p-4"
           style={{ opacity: 1, backgroundColor: "white" }}
           onClick={(e) => {
             e.stopPropagation();
@@ -145,7 +145,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
     <>
       {files.length > 0 ? (
         <Card
-          className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white"
+          className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-2xl"
           style={{ height: "calc(100vh - 140px)" }}
           onDragOver={(e) => {
             e.preventDefault();
@@ -255,7 +255,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                 <img
                   src={RocketImg}
                   alt="Upload illustration"
-                  className="w-[220px] h-[280px] max-w-xs mx-auto"
+                  className="w-[204px] h-[260px] max-w-xs mx-auto"
                 />
               </div>
 
