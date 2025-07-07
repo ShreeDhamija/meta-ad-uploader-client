@@ -107,7 +107,7 @@ export default function MediaPreview({ files, setFiles, setDriveFiles, videoThum
                   <div className="flex items-center justify-between mt-1">
                     <p className="text-sm truncate">{file.name}</p>
                     {isCarouselAd && (
-                      <span className="text-xs px-2 py-1 border border-gray-300 rounded bg-gray-50 ml-2 flex-shrink-0">
+                      <span className="text-xs px-2 py-1 border border-gray-300 rounded bg-gray-100 ml-2 flex-shrink-0 rounded-lg text-gray-700 inline-block">
                         Card {index + 1}
                       </span>
                     )}
