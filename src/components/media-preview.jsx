@@ -94,8 +94,8 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove })
         <Button
           type="button"
           variant="ghost"
-          className="absolute top-1.5 right-1.5 border border-gray-400 rounded-xl bg-white shadow-sm h-7 w-7 p-3"
-          style={{ opacity: 0.8, backgroundColor: "white" }}
+          className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-sm h-7 w-7 p-3"
+          style={{ opacity: 0.9, backgroundColor: "white" }}
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
