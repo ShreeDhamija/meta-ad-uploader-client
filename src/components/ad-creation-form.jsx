@@ -215,6 +215,8 @@ export default function AdCreationForm({
   const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
 
   const [isCarouselAd, setIsCarouselAd] = useState(false);
+  const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
+  const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
 
   // Upload large file to S3
@@ -1559,17 +1561,51 @@ export default function AdCreationForm({
                 </Select>
               </div>
 
+
+
+
               <div className="space-y-2">
                 {/* Primary text Section */}
-                {/* <div className="space-y-2">
-                  <Label>Primary Text</Label>
+                <div className="space-y-2">
+                  <Label className="flex items-center justify-between">
+                    <span>
+                      Primary Text
+                      {isCarouselAd && <span className="text-sm text-gray-500 ml-2">(One per carousel card)</span>}
+                    </span>
+                    {isCarouselAd && (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="apply-text-all"
+                          checked={applyTextToAllCards}
+                          onCheckedChange={(checked) => {
+                            setApplyTextToAllCards(checked);
+                            if (checked && messages.length > 0) {
+                              // Fill all positions with the first message
+                              const firstMessage = messages[0];
+                              setMessages(new Array(Math.max(2, messages.length)).fill(firstMessage));
+                            }
+                          }}
+                        />
+                        <label htmlFor="apply-text-all" className="text-sm font-medium">
+                          Apply To All Cards
+                        </label>
+                      </div>
+                    )}
+                  </Label>
                   <div className="space-y-3">
                     {messages.map((value, index) => (
-                      <div key={index} className="flex items-start gap-2">
+                      <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? 'hidden' : ''}`}>
                         <TextareaAutosize
                           value={value}
-                          onChange={(e) => updateField(setMessages, messages, index, e.target.value)}
-                          placeholder="Add text option"
+                          onChange={(e) => {
+                            if (isCarouselAd && applyTextToAllCards) {
+                              // Update all positions with the same value
+                              setMessages(new Array(messages.length).fill(e.target.value));
+                            } else {
+                              updateField(setMessages, messages, index, e.target.value);
+                            }
+                          }}
+                          placeholder={isCarouselAd ? `Text for card ${index + 1}` : "Add text option"}
                           disabled={!isLoggedIn}
                           minRows={2}
                           maxRows={10}
@@ -1579,7 +1615,7 @@ export default function AdCreationForm({
                             scrollbarColor: '#c7c7c7 transparent'
                           }}
                         />
-                        {messages.length > 1 && (
+                        {messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
                           <Button
                             type="button"
                             variant="ghost"
@@ -1594,7 +1630,7 @@ export default function AdCreationForm({
                         )}
                       </div>
                     ))}
-                    {messages.length < 5 && (
+                    {messages.length < (isCarouselAd ? 10 : 5) && (
                       <Button
                         type="button"
                         size="sm"
@@ -1602,11 +1638,88 @@ export default function AdCreationForm({
                         onClick={() => addField(setMessages, messages)}
                       >
                         <Plus className="mr-2 h-4 w-4 text-white" />
-                        Add text option
+                        {isCarouselAd ? 'Add card text' : 'Add text option'}
                       </Button>
                     )}
                   </div>
-                </div> */}
+                </div>
+              </div>
+
+              {/* Headlines Section */}
+              <div className="space-y-2">
+                <Label className="flex items-center justify-between">
+                  <span>
+                    Headlines
+                    {isCarouselAd && <span className="text-sm text-gray-500 ml-2">(One per carousel card)</span>}
+                  </span>
+                  {isCarouselAd && (
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="apply-headlines-all"
+                        checked={applyHeadlinesToAllCards}
+                        onCheckedChange={(checked) => {
+                          setApplyHeadlinesToAllCards(checked);
+                          if (checked && headlines.length > 0) {
+                            // Fill all positions with the first headline
+                            const firstHeadline = headlines[0];
+                            setHeadlines(new Array(Math.max(2, headlines.length)).fill(firstHeadline));
+                          }
+                        }}
+                      />
+                      <label htmlFor="apply-headlines-all" className="text-sm font-medium">
+                        Apply To All Cards
+                      </label>
+                    </div>
+                  )}
+                </Label>
+                <div className="space-y-3">
+                  {headlines.map((value, index) => (
+                    <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
+                      <Input
+                        value={value}
+                        onChange={(e) => {
+                          if (isCarouselAd && applyHeadlinesToAllCards) {
+                            // Update all positions with the same value
+                            setHeadlines(new Array(headlines.length).fill(e.target.value));
+                          } else {
+                            updateField(setHeadlines, headlines, index, e.target.value);
+                          }
+                        }}
+                        className="border border-gray-400 rounded-xl bg-white shadow"
+                        placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Enter headline"}
+                        disabled={!isLoggedIn}
+                      />
+                      {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                          size="icon"
+                          onClick={() => removeField(setHeadlines, headlines, index)}
+                        >
+                          <Trash2
+                            className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
+                          <span className="sr-only">Remove</span>
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {headlines.length < (isCarouselAd ? 10 : 5) && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                      onClick={() => addField(setHeadlines, headlines)}
+                    >
+                      <Plus className="mr-2 h-4 w-4 text-white" />
+                      {isCarouselAd ? 'Add card headline' : 'Add headline option'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* <div className="space-y-2">
                 <div className="space-y-2">
                   <Label>
                     Primary Text
@@ -1656,48 +1769,6 @@ export default function AdCreationForm({
                     )}
                   </div>
                 </div>
-
-                {/* Headlines Section */}
-                {/* <div className="space-y-2">
-                  <Label>Headlines</Label>
-                  <div className="space-y-3">
-                    {headlines.map((value, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Input
-                          value={value}
-                          onChange={(e) => updateField(setHeadlines, headlines, index, e.target.value)}
-                          className="border border-gray-400 rounded-xl bg-white shadow"
-                          placeholder="Enter headline"
-                          disabled={!isLoggedIn}
-                        />
-                        {headlines.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                            size="icon"
-                            onClick={() => removeField(setHeadlines, headlines, index)}
-                          >
-                            <Trash2
-                              className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
-                            <span className="sr-only">Remove</span>
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    {headlines.length < 5 && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                        onClick={() => addField(setHeadlines, headlines)}
-                      >
-                        <Plus className="mr-2 h-4 w-4 text-white" />
-                        Add headline option
-                      </Button>
-                    )}
-                  </div>
-                </div> */}
                 <div className="space-y-2">
                   <Label>
                     Headlines
@@ -1741,50 +1812,8 @@ export default function AdCreationForm({
                     )}
                   </div>
                 </div>
-
-                {/* Descriptions Section */}
-                {/* <div className="space-y-2">
-                <Label>Descriptions</Label>
-                <div className="space-y-3">
-                  {descriptions.map((value, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <Textarea
-                        value={value}
-                        className="border border-gray-400 rounded-xl bg-white shadow"
-                        onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
-                        placeholder="Enter description"
-                        disabled={!isLoggedIn}
-                      />
-                      {descriptions.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                          size="icon"
-                          onClick={() => removeField(setDescriptions, descriptions, index)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Remove</span>
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  {descriptions.length < 5 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className=" w-full border border-gray-200 rounded-xl shadow"
-                      onClick={() => addField(setDescriptions, descriptions)}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Description
-                    </Button>
-                  )}
-                </div>
-              </div> */}
               </div>
-            </div>
+            </div> */}
 
             <div className="space-y-3">
               <div className="space-y-2">
