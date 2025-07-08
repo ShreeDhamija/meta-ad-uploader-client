@@ -117,7 +117,7 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove, i
           // Image files
           <img
             src={
-              file.isDrive
+              (file.isDrive || file.id) // Check both isDrive flag and presence of id (Google Drive files have id)
                 ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`
                 : URL.createObjectURL(file)
             }
@@ -225,7 +225,7 @@ export default function MediaPreview({
       );
       const selectedDriveFiles = driveFiles.filter(file =>
         selectedFiles.has(file.id)
-      );
+      ).map(file => ({ ...file, isDrive: true })); // Ensure isDrive flag is set
 
       // Combine all selected files
       const selectedFileObjects = [...selectedLocalFiles, ...selectedDriveFiles];
@@ -236,7 +236,7 @@ export default function MediaPreview({
       );
       const unselectedDriveFiles = driveFiles.filter(file =>
         !selectedFiles.has(file.id)
-      );
+      ).map(file => ({ ...file, isDrive: true })); // Ensure isDrive flag is set
 
       // Combine all unselected files
       const unselectedFileObjects = [...unselectedLocalFiles, ...unselectedDriveFiles];
@@ -244,9 +244,9 @@ export default function MediaPreview({
       // Update both arrays - move selected files to the end, grouped together
       const allFiles = [...unselectedFileObjects, ...selectedFileObjects];
 
-      // Separate back into local and drive files
-      const newLocalFiles = allFiles.filter(file => !file.isDrive);
-      const newDriveFiles = allFiles.filter(file => file.isDrive);
+      // Separate back into local and drive files - use more reliable detection
+      const newLocalFiles = allFiles.filter(file => !file.isDrive && !file.id);
+      const newDriveFiles = allFiles.filter(file => file.isDrive || file.id);
 
       setFiles(newLocalFiles);
       setDriveFiles(newDriveFiles);
