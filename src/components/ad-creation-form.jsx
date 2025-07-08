@@ -183,7 +183,9 @@ export default function AdCreationForm({
   launchPaused,
   setLaunchPaused,
   isCarouselAd,
-  setIsCarouselAd
+  setIsCarouselAd,
+  enablePlacementCustomization,
+  setEnablePlacementCustomization
 }) {
   // Local state
 
@@ -934,6 +936,7 @@ export default function AdCreationForm({
       const promises = [];
       console.log("is carousel ad", isCarouselAd);
       console.log("dynamic adset length", dynamicAdSetIds.length);
+
       // FIRST: Handle carousel ads (completely separate from dynamic/non-dynamic)
       if (isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
@@ -957,6 +960,7 @@ export default function AdCreationForm({
           formData.append("cta", cta);
           formData.append("isCarouselAd", isCarouselAd);
           formData.append("launchPaused", launchPaused);
+          formData.append("enablePlacementCustomization", enablePlacementCustomization);
           formData.append("jobId", frontendJobId);
           console.log("jobId in attached form", frontendJobId);
 
@@ -1013,8 +1017,9 @@ export default function AdCreationForm({
           formData.append("link", JSON.stringify(link));
           formData.append("cta", cta);
           formData.append("isCarouselAd", isCarouselAd);
-
-
+          formData.append("enablePlacementCustomization", enablePlacementCustomization);
+          formData.append("launchPaused", launchPaused);
+          formData.append("jobId", frontendJobId);
 
           // Add all local files
           files.forEach((file) => {
@@ -1023,7 +1028,7 @@ export default function AdCreationForm({
             }
           });
 
-
+          //Add Drive Files
           smallDriveFiles.forEach((driveFile) => {
             formData.append("driveFiles", JSON.stringify({
               id: driveFile.id,
@@ -1033,8 +1038,7 @@ export default function AdCreationForm({
             }));
           });
 
-
-
+          //add large file URLs
           [...s3Results, ...s3DriveResults].forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
           });
@@ -1050,8 +1054,7 @@ export default function AdCreationForm({
             formData.append("shopDestinationType", selectedShopDestinationType)
           }
 
-          formData.append("launchPaused", launchPaused);
-          formData.append("jobId", frontendJobId);
+
 
           promises.push(
             axios.post("https://api.withblip.com/auth/create-ad", formData, {
@@ -1065,110 +1068,278 @@ export default function AdCreationForm({
 
 
       // Process non-dynamic adsets (one ad per file)
+      // if (nonDynamicAdSetIds.length > 0 && !isCarouselAd) {
+      //   nonDynamicAdSetIds.forEach((adSetId) => {
+
+
+      //     // Handle local files
+      //     files.forEach((file, index) => {
+      //       if (file.size > 100 * 1024 * 1024) return; // Skip large files (already handled via S3)
+      //       const formData = new FormData();
+      //       formData.append("adName", computeAdName(file, adValues.dateType, index));
+      //       formData.append("headlines", JSON.stringify(headlines));
+      //       formData.append("descriptions", JSON.stringify(descriptions));
+      //       formData.append("messages", JSON.stringify(messages));
+      //       formData.append("imageFile", file);
+      //       formData.append("adAccountId", selectedAdAccount);
+      //       formData.append("adSetId", adSetId);
+      //       formData.append("pageId", pageId);
+      //       formData.append("instagramAccountId", instagramAccountId);
+      //       formData.append("link", JSON.stringify(link));
+      //       formData.append("cta", cta);
+      //       if (thumbnail) {
+      //         formData.append("thumbnail", thumbnail);
+      //       }
+      //       if (selectedShopDestination && showShopDestinationSelector) {
+      //         formData.append("shopDestination", selectedShopDestination)
+      //         formData.append("shopDestinationType", selectedShopDestinationType)
+      //       }
+      //       formData.append("launchPaused", launchPaused);
+      //       formData.append("jobId", frontendJobId);
+      //       console.log("jobId in attached form", frontendJobId);
+      //       formData.append("enablePlacementCustomization", enablePlacementCustomization);
+
+
+      //       promises.push(
+      //         axios.post("https://api.withblip.com/auth/create-ad", formData, {
+      //           withCredentials: true,
+      //           headers: { "Content-Type": "multipart/form-data" },
+      //         })
+      //       );
+      //     });
+
+
+      //     smallDriveFiles.forEach((driveFile, index) => {
+      //       const formData = new FormData();
+      //       formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
+      //       formData.append("headlines", JSON.stringify(headlines));
+      //       formData.append("descriptions", JSON.stringify(descriptions));
+      //       formData.append("messages", JSON.stringify(messages));
+      //       formData.append("adAccountId", selectedAdAccount);
+      //       formData.append("adSetId", adSetId);
+      //       formData.append("pageId", pageId);
+      //       formData.append("instagramAccountId", instagramAccountId);
+      //       formData.append("link", JSON.stringify(link));
+      //       formData.append("cta", cta);
+      //       formData.append("driveFile", "true");
+      //       formData.append("driveId", driveFile.id);
+      //       formData.append("driveMimeType", driveFile.mimeType);
+      //       formData.append("driveAccessToken", driveFile.accessToken);
+      //       formData.append("driveName", driveFile.name);
+      //       if (selectedShopDestination && showShopDestinationSelector) {
+      //         formData.append("shopDestination", selectedShopDestination);
+      //         formData.append("shopDestinationType", selectedShopDestinationType);
+      //       }
+      //       formData.append("launchPaused", launchPaused);
+      //       formData.append("jobId", frontendJobId);
+      //       formData.append("enablePlacementCustomization", enablePlacementCustomization);
+
+      //       promises.push(
+      //         axios.post("https://api.withblip.com/auth/create-ad", formData, {
+      //           withCredentials: true,
+      //           headers: { "Content-Type": "multipart/form-data" },
+      //         })
+      //       );
+      //     });
+
+
+
+      //     // Handle S3 uploaded files
+      //     [...s3Results, ...s3DriveResults].forEach((s3File, index) => {
+      //       const formData = new FormData();
+      //       formData.append("adName", computeAdName(s3File, adValues.dateType, index));
+      //       formData.append("headlines", JSON.stringify(headlines));
+      //       formData.append("descriptions", JSON.stringify(descriptions));
+      //       formData.append("messages", JSON.stringify(messages));
+      //       formData.append("s3VideoUrl", s3File.s3Url); // Add S3 URL
+      //       formData.append("adAccountId", selectedAdAccount);
+      //       formData.append("adSetId", adSetId);
+      //       formData.append("pageId", pageId);
+      //       formData.append("instagramAccountId", instagramAccountId);
+      //       formData.append("link", JSON.stringify(link));
+      //       formData.append("cta", cta);
+      //       if (selectedShopDestination && showShopDestinationSelector) {
+      //         formData.append("shopDestination", selectedShopDestination)
+      //         formData.append("shopDestinationType", selectedShopDestinationType)
+      //       }
+      //       formData.append("launchPaused", launchPaused);
+      //       formData.append("jobId", frontendJobId);
+      //       console.log("jobId in attached form for large File", frontendJobId);
+      //       formData.append("enablePlacementCustomization", enablePlacementCustomization);
+
+      //       promises.push(
+      //         axios.post("https://api.withblip.com/auth/create-ad", formData, {
+      //           withCredentials: true,
+      //           headers: { "Content-Type": "multipart/form-data" },
+      //         })
+      //       );
+      //     });
+
+      //   });
+
+      // }
+
+
       if (nonDynamicAdSetIds.length > 0 && !isCarouselAd) {
         nonDynamicAdSetIds.forEach((adSetId) => {
-          // Handle local files
-          files.forEach((file, index) => {
-            if (file.size > 100 * 1024 * 1024) return; // Skip large files (already handled via S3)
+
+          // NEW: Check if placement customization is enabled
+          if (enablePlacementCustomization) {
+            // For placement customization, send all files in ONE request per ad set
             const formData = new FormData();
-            formData.append("adName", computeAdName(file, adValues.dateType, index));
+            formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
             formData.append("headlines", JSON.stringify(headlines));
             formData.append("descriptions", JSON.stringify(descriptions));
             formData.append("messages", JSON.stringify(messages));
-            formData.append("imageFile", file);
             formData.append("adAccountId", selectedAdAccount);
             formData.append("adSetId", adSetId);
             formData.append("pageId", pageId);
             formData.append("instagramAccountId", instagramAccountId);
             formData.append("link", JSON.stringify(link));
             formData.append("cta", cta);
-            if (thumbnail) {
-              formData.append("thumbnail", thumbnail);
-            }
-            if (selectedShopDestination && showShopDestinationSelector) {
-              formData.append("shopDestination", selectedShopDestination)
-              formData.append("shopDestinationType", selectedShopDestinationType)
-            }
+            formData.append("enablePlacementCustomization", enablePlacementCustomization);
             formData.append("launchPaused", launchPaused);
             formData.append("jobId", frontendJobId);
-            console.log("jobId in attached form", frontendJobId);
 
+            // Add ALL local files (small ones) to mediaFiles
+            files.forEach((file) => {
+              if (file.size <= 100 * 1024 * 1024) {
+                formData.append("mediaFiles", file);
+              }
+            });
 
-            promises.push(
-              axios.post("https://api.withblip.com/auth/create-ad", formData, {
-                withCredentials: true,
-                headers: { "Content-Type": "multipart/form-data" },
-              })
-            );
-          });
+            // Add ALL small drive files
+            smallDriveFiles.forEach((driveFile) => {
+              formData.append("driveFiles", JSON.stringify({
+                id: driveFile.id,
+                name: driveFile.name,
+                mimeType: driveFile.mimeType,
+                accessToken: driveFile.accessToken
+              }));
+            });
 
+            // Add ALL S3 URLs for large files
+            [...s3Results, ...s3DriveResults].forEach((s3File) => {
+              formData.append("s3VideoUrls", s3File.s3Url);
+            });
 
-          smallDriveFiles.forEach((driveFile, index) => {
-            const formData = new FormData();
-            formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
-            formData.append("headlines", JSON.stringify(headlines));
-            formData.append("descriptions", JSON.stringify(descriptions));
-            formData.append("messages", JSON.stringify(messages));
-            formData.append("adAccountId", selectedAdAccount);
-            formData.append("adSetId", adSetId);
-            formData.append("pageId", pageId);
-            formData.append("instagramAccountId", instagramAccountId);
-            formData.append("link", JSON.stringify(link));
-            formData.append("cta", cta);
-            formData.append("driveFile", "true");
-            formData.append("driveId", driveFile.id);
-            formData.append("driveMimeType", driveFile.mimeType);
-            formData.append("driveAccessToken", driveFile.accessToken);
-            formData.append("driveName", driveFile.name);
             if (selectedShopDestination && showShopDestinationSelector) {
               formData.append("shopDestination", selectedShopDestination);
               formData.append("shopDestinationType", selectedShopDestinationType);
             }
-            formData.append("launchPaused", launchPaused);
-            formData.append("jobId", frontendJobId);
 
+            // One request per ad set, but with all files
             promises.push(
               axios.post("https://api.withblip.com/auth/create-ad", formData, {
                 withCredentials: true,
                 headers: { "Content-Type": "multipart/form-data" },
               })
             );
-          });
 
+          } else {
+            // Regular processing - one ad per file
 
+            // Handle local files
+            files.forEach((file, index) => {
+              if (file.size > 100 * 1024 * 1024) return; // Skip large files (already handled via S3)
+              const formData = new FormData();
+              formData.append("adName", computeAdName(file, adValues.dateType, index));
+              formData.append("headlines", JSON.stringify(headlines));
+              formData.append("descriptions", JSON.stringify(descriptions));
+              formData.append("messages", JSON.stringify(messages));
+              formData.append("imageFile", file);
+              formData.append("adAccountId", selectedAdAccount);
+              formData.append("adSetId", adSetId);
+              formData.append("pageId", pageId);
+              formData.append("instagramAccountId", instagramAccountId);
+              formData.append("link", JSON.stringify(link));
+              formData.append("cta", cta);
+              formData.append("enablePlacementCustomization", enablePlacementCustomization);
+              if (thumbnail) {
+                formData.append("thumbnail", thumbnail);
+              }
+              if (selectedShopDestination && showShopDestinationSelector) {
+                formData.append("shopDestination", selectedShopDestination);
+                formData.append("shopDestinationType", selectedShopDestinationType);
+              }
+              formData.append("launchPaused", launchPaused);
+              formData.append("jobId", frontendJobId);
 
-          // Handle S3 uploaded files
-          [...s3Results, ...s3DriveResults].forEach((s3File, index) => {
-            const formData = new FormData();
-            formData.append("adName", computeAdName(s3File, adValues.dateType, index));
-            formData.append("headlines", JSON.stringify(headlines));
-            formData.append("descriptions", JSON.stringify(descriptions));
-            formData.append("messages", JSON.stringify(messages));
-            formData.append("s3VideoUrl", s3File.s3Url); // Add S3 URL
-            formData.append("adAccountId", selectedAdAccount);
-            formData.append("adSetId", adSetId);
-            formData.append("pageId", pageId);
-            formData.append("instagramAccountId", instagramAccountId);
-            formData.append("link", JSON.stringify(link));
-            formData.append("cta", cta);
-            if (selectedShopDestination && showShopDestinationSelector) {
-              formData.append("shopDestination", selectedShopDestination)
-              formData.append("shopDestinationType", selectedShopDestinationType)
-            }
-            formData.append("launchPaused", launchPaused);
-            formData.append("jobId", frontendJobId);
-            console.log("jobId in attached form for large File", frontendJobId);
+              promises.push(
+                axios.post("https://api.withblip.com/auth/create-ad", formData, {
+                  withCredentials: true,
+                  headers: { "Content-Type": "multipart/form-data" },
+                })
+              );
+            });
 
-            promises.push(
-              axios.post("https://api.withblip.com/auth/create-ad", formData, {
-                withCredentials: true,
-                headers: { "Content-Type": "multipart/form-data" },
-              })
-            );
-          });
+            // Handle small drive files
+            smallDriveFiles.forEach((driveFile, index) => {
+              const formData = new FormData();
+              formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
+              formData.append("headlines", JSON.stringify(headlines));
+              formData.append("descriptions", JSON.stringify(descriptions));
+              formData.append("messages", JSON.stringify(messages));
+              formData.append("adAccountId", selectedAdAccount);
+              formData.append("adSetId", adSetId);
+              formData.append("pageId", pageId);
+              formData.append("instagramAccountId", instagramAccountId);
+              formData.append("link", JSON.stringify(link));
+              formData.append("cta", cta);
+              formData.append("enablePlacementCustomization", enablePlacementCustomization);
+              formData.append("driveFile", "true");
+              formData.append("driveId", driveFile.id);
+              formData.append("driveMimeType", driveFile.mimeType);
+              formData.append("driveAccessToken", driveFile.accessToken);
+              formData.append("driveName", driveFile.name);
+              if (selectedShopDestination && showShopDestinationSelector) {
+                formData.append("shopDestination", selectedShopDestination);
+                formData.append("shopDestinationType", selectedShopDestinationType);
+              }
+              formData.append("launchPaused", launchPaused);
+              formData.append("jobId", frontendJobId);
 
-        });
-      }
+              promises.push(
+                axios.post("https://api.withblip.com/auth/create-ad", formData, {
+                  withCredentials: true,
+                  headers: { "Content-Type": "multipart/form-data" },
+                })
+              );
+            });
+
+            // Handle S3 uploaded files
+            [...s3Results, ...s3DriveResults].forEach((s3File, index) => {
+              const formData = new FormData();
+              formData.append("adName", computeAdName(s3File, adValues.dateType, index));
+              formData.append("headlines", JSON.stringify(headlines));
+              formData.append("descriptions", JSON.stringify(descriptions));
+              formData.append("messages", JSON.stringify(messages));
+              formData.append("s3VideoUrl", s3File.s3Url);
+              formData.append("adAccountId", selectedAdAccount);
+              formData.append("adSetId", adSetId);
+              formData.append("pageId", pageId);
+              formData.append("instagramAccountId", instagramAccountId);
+              formData.append("link", JSON.stringify(link));
+              formData.append("cta", cta);
+              formData.append("enablePlacementCustomization", enablePlacementCustomization);
+              if (selectedShopDestination && showShopDestinationSelector) {
+                formData.append("shopDestination", selectedShopDestination);
+                formData.append("shopDestinationType", selectedShopDestinationType);
+              }
+              formData.append("launchPaused", launchPaused);
+              formData.append("jobId", frontendJobId);
+
+              promises.push(
+                axios.post("https://api.withblip.com/auth/create-ad", formData, {
+                  withCredentials: true,
+                  headers: { "Content-Type": "multipart/form-data" },
+                })
+              );
+            });
+
+          } // Close else block
+        }); // Close forEach
+      } // Close if condition
 
       console.log('🚀 Starting API calls (Promise.all) now');
       const responses = await Promise.all(promises);
@@ -1938,6 +2109,20 @@ export default function AdCreationForm({
               "Publish Ads"
             )}
           </Button>
+
+          <div className="form-check">
+            <input
+              type="checkbox"
+              id="placementCustomization"
+              checked={enablePlacementCustomization}
+              onChange={(e) => setEnablePlacementCustomization(e.target.checked)}
+              className="form-check-input"
+            />
+            <label htmlFor="placementCustomization" className="form-check-label">
+              Use different images for different placements (requires 2-3 images with different aspect ratios)
+            </label>
+          </div>
+
           <div
             className={cn(
               "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition

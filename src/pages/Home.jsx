@@ -64,6 +64,7 @@ export default function Home() {
     const [driveFiles, setDriveFiles] = useState([])
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [isCarouselAd, setIsCarouselAd] = useState(false);
+    const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
 
 
     const [files, setFiles] = useState([])
@@ -264,6 +265,8 @@ export default function Home() {
                         setLaunchPaused={setLaunchPaused}
                         isCarouselAd={isCarouselAd}
                         setIsCarouselAd={setIsCarouselAd}
+                        enablePlacementCustomization={enablePlacementCustomization}
+                        setEnablePlacementCustomization={setEnablePlacementCustomization}
                     />
                 </div>
 
