@@ -439,10 +439,12 @@ export default function MediaPreview({
   videoThumbs,
   isCarouselAd,
   enablePlacementCustomization,
-  setEnablePlacementCustomization
+  setEnablePlacementCustomization,
+  fileGroups,
+  setFileGroups
 }) {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
-  const [fileGroups, setFileGroups] = useState([]);
+
   const sensors = useSensors(useSensor(PointerSensor));
 
   const removeFile = (file) => {

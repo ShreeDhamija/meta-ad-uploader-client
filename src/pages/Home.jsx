@@ -65,6 +65,7 @@ export default function Home() {
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
+    const [fileGroups, setFileGroups] = useState([]);
 
 
     const [files, setFiles] = useState([])
@@ -267,6 +268,8 @@ export default function Home() {
                         setIsCarouselAd={setIsCarouselAd}
                         enablePlacementCustomization={enablePlacementCustomization}
                         setEnablePlacementCustomization={setEnablePlacementCustomization}
+                        fileGroups={fileGroups}
+                        setFileGroups={setFileGroups}
                     />
                 </div>
 
@@ -280,6 +283,8 @@ export default function Home() {
                         isCarouselAd={isCarouselAd}
                         enablePlacementCustomization={enablePlacementCustomization}
                         setEnablePlacementCustomization={setEnablePlacementCustomization}
+                        fileGroups={fileGroups}
+                        setFileGroups={setFileGroups}
 
                     />
 
