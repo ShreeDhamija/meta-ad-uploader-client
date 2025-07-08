@@ -12,6 +12,7 @@ import RocketImg from '@/assets/rocketpreview.webp';
 import Uploadimg from '@/assets/upload.webp';
 import { useState } from 'react';
 import { Checkbox } from "@/components/ui/checkbox"
+import Groupads from '@/assets/icons/groupads.svg?react';
 
 // Sortable item component
 function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove, isSelected, onSelect, groupNumber, enablePlacementCustomization }) {
@@ -46,19 +47,21 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove, i
       {/* Selection overlay for placement customization - only show when NOT grouped */}
       {enablePlacementCustomization && !groupNumber && (
         <div
-          className={`absolute inset-0 rounded-xl cursor-pointer transition-all ${isSelected ? 'bg-blue-200 bg-opacity-50 border-2 border-blue-500' : 'hover:bg-gray-100 hover:bg-opacity-30'
+          className={`absolute rounded-2xl cursor-pointer transition-all ${isSelected ? 'bg-blue-200 bg-opacity-20 border-2 border-blue-300' : ' '
             }`}
           onClick={() => onSelect(fileId)}
-          style={{ zIndex: 5 }}
+          style={{
+            zIndex: 5,
+            top: '-6px',
+            left: '-6px',
+            right: '-6px',
+            bottom: '-10px'
+          }}
         />
+
       )}
 
-      {/* Group number badge */}
-      {groupNumber && (
-        <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-1 rounded-md font-semibold z-20">
-          Group {groupNumber}
-        </div>
-      )}
+
 
 
       {/* Selection checkbox for placement customization - only show when NOT grouped */}
@@ -67,7 +70,7 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove, i
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onSelect(fileId)}
-            className="bg-white border-gray-300"
+            className="bg-white border-gray-300 rounded-md"
           />
         </div>
       )}
@@ -143,7 +146,7 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove, i
           <span className="sr-only">Remove</span>
         </Button>
       </div>
-      <p className="mt-1 text-sm truncate">{file.name}</p>
+      <p className="mt-1 ml-1 text-sm truncate">{file.name}</p>
       {isCarouselAd && !enablePlacementCustomization && (
         <span className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
           Card {index + 1}
@@ -214,46 +217,7 @@ export default function MediaPreview({
     });
   };
 
-  // const handleGroupAds = () => {
-  //   if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
-  //     const newGroup = Array.from(selectedFiles);
-  //     setFileGroups(prev => [...prev, newGroup]);
 
-  //     // Get selected files from both local files and drive files
-  //     const selectedLocalFiles = files.filter(file =>
-  //       selectedFiles.has(file.isDrive ? file.id : file.name)
-  //     );
-  //     const selectedDriveFiles = driveFiles.filter(file =>
-  //       selectedFiles.has(file.id)
-  //     ).map(file => ({ ...file, isDrive: true })); // Ensure isDrive flag is set
-
-  //     // Combine all selected files
-  //     const selectedFileObjects = [...selectedLocalFiles, ...selectedDriveFiles];
-
-  //     // Get unselected files from both arrays
-  //     const unselectedLocalFiles = files.filter(file =>
-  //       !selectedFiles.has(file.isDrive ? file.id : file.name)
-  //     );
-  //     const unselectedDriveFiles = driveFiles.filter(file =>
-  //       !selectedFiles.has(file.id)
-  //     ).map(file => ({ ...file, isDrive: true })); // Ensure isDrive flag is set
-
-  //     // Combine all unselected files
-  //     const unselectedFileObjects = [...unselectedLocalFiles, ...unselectedDriveFiles];
-
-  //     // Update both arrays - move selected files to the end, grouped together
-  //     const allFiles = [...unselectedFileObjects, ...selectedFileObjects];
-
-  //     // Separate back into local and drive files - use more reliable detection
-  //     const newLocalFiles = allFiles.filter(file => !file.isDrive);
-  //     const newDriveFiles = allFiles.filter(file => file.isDrive);
-
-
-  //     setFiles(newLocalFiles);
-  //     setDriveFiles(newDriveFiles);
-  //     setSelectedFiles(new Set()); // Clear selection
-  //   }
-  // };
 
   const handleGroupAds = () => {
     if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
@@ -354,7 +318,7 @@ export default function MediaPreview({
   const canGroupFiles = selectedFiles.size >= 2 && selectedFiles.size <= 3;
 
   const preload = new Image();
-  preload.src = "https://api.withblip.com/bg.png";
+
 
   return (
     <>
@@ -404,7 +368,7 @@ export default function MediaPreview({
                   disabled={!canGroupFiles}
                   className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
                 >
-                  <Users className="h-4 w-4 mr-2" />
+                  <Groupads />
                   Group Ads
                 </Button>
               )}
@@ -433,19 +397,20 @@ export default function MediaPreview({
                   id="placementCustomization"
                   checked={enablePlacementCustomization}
                   onCheckedChange={handlePlacementCustomizationChange}
+                  className="border-gray-400 rounded-md"
                 />
                 <label
                   htmlFor="placementCustomization"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  Enable placement customization (use different images for different placements)
+                  Group media for same ad
                 </label>
               </div>
-              {enablePlacementCustomization && (
+              {/* {enablePlacementCustomization && (
                 <p className="text-xs text-gray-500 mt-1 ml-6">
                   Requires 2-3 images with different aspect ratios per group
                 </p>
-              )}
+              )} */}
             </div>
           )}
 
@@ -463,18 +428,33 @@ export default function MediaPreview({
                   {fileGroups.map((group, groupIndex) => (
                     <div key={`group-${groupIndex}`} className="relative">
                       {/* Shared group background */}
-                      <div className="absolute inset-0 bg-blue-100 border-2 border-blue-300 rounded-xl -z-10" style={{ margin: '-8px' }} />
+                      <div
+                        className={`absolute inset-0 border-2 rounded-2xl -z-10 ${groupIndex % 2 === 0
+                          ? 'bg-blue-100 border-blue-300'
+                          : 'bg-orange-100 border-orange-300'
+                          }`}
+                        style={{ margin: '0px' }}
+                      />
+
 
                       {/* Ungroup button */}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleUngroup(groupIndex)}
-                        className="absolute top-2 right-2 z-20 bg-white hover:bg-red-50 text-red-600 border-red-200 rounded-lg text-xs px-2 py-1"
+                        className="absolute top-2 right-2 z-20 bg-white hover:bg-red-50 text-red-700 border-red-200 rounded-xl text-xs px-2 py-1"
                       >
                         Ungroup
                       </Button>
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-2">
+                      {/* Add this new group label */}
+                      <div className={`absolute bottom-2 right-2 z-20 text-white text-xs px-2 py-1 rounded-xl font-semibold ${groupIndex % 2 === 0
+                        ? 'bg-blue-500'
+                        : 'bg-orange-500'
+                        }`}>
+                        Group {groupIndex + 1}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
                         {group.map(fileId => {
                           let file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
                           if (!file) {
@@ -508,7 +488,7 @@ export default function MediaPreview({
                   ))}
 
                   {/* Ungrouped files */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-6" style={{ padding: '6px', }}>
                     {files
                       .filter(file => !fileGroups.some(group => group.includes(file.isDrive ? file.id : file.name)))
                       .map((file, index) => {
