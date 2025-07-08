@@ -1076,7 +1076,7 @@ export default function AdCreationForm({
             // Process ONLY grouped files
             fileGroups.forEach((group, groupIndex) => {
               const formData = new FormData();
-              formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType) + ` - Group ${groupIndex + 1}`);
+              formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -1135,9 +1135,16 @@ export default function AdCreationForm({
             });
           }
 
-          else {
+          const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
+          const hasUngroupedFiles = (
+            files.some(file => !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024) ||
+            smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
+            [...s3Results, ...s3DriveResults].some(s3File => !groupedFileIds.has(s3File.name))
+          );
+
+          if (hasUngroupedFiles) {
             // Regular processing - one ad per file
-            const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
+
             // Handle local files
             files.forEach((file, index) => {
               if (file.size > 100 * 1024 * 1024 || groupedFileIds.has(file.name)) return; // Skip large files (already handled via S3)
