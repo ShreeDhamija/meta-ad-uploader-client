@@ -318,10 +318,8 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove, i
       style={style}
       className={`relative group ${isDragging ? 'opacity-50' : ''}`}
     >
-      {/* Group background */}
-      {groupNumber && (
-        <div className="absolute inset-0 bg-blue-100 border-2 border-blue-300 rounded-xl -z-10"></div>
-      )}
+
+
 
       {/* Selection overlay for placement customization */}
       {enablePlacementCustomization && !groupNumber && (
@@ -484,6 +482,17 @@ export default function MediaPreview({
     if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
       const newGroup = Array.from(selectedFiles);
       setFileGroups(prev => [...prev, newGroup]);
+
+      // Reposition grouped files to be together
+      const selectedFileObjects = files.filter(file =>
+        selectedFiles.has(file.isDrive ? file.id : file.name)
+      );
+      const unselectedFileObjects = files.filter(file =>
+        !selectedFiles.has(file.isDrive ? file.id : file.name)
+      );
+
+      // Move selected files to the end, grouped together
+      setFiles([...unselectedFileObjects, ...selectedFileObjects]);
       setSelectedFiles(new Set()); // Clear selection
     }
   };
@@ -614,7 +623,7 @@ export default function MediaPreview({
                 items={files.map(file => file.isDrive ? file.id : file.name)}
                 strategy={verticalListSortingStrategy}
               >
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                {/* <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                   {files.map((file, index) => {
                     const fileId = file.isDrive ? file.id : file.name;
                     return (
@@ -632,25 +641,46 @@ export default function MediaPreview({
                       />
                     );
                   })}
+                </div> */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  {files.map((file, index) => {
+                    const fileId = file.isDrive ? file.id : file.name;
+                    const groupNumber = getFileGroupNumber(fileId);
+                    const isFirstInGroup = groupNumber && index > 0 && getFileGroupNumber(files[index - 1].isDrive ? files[index - 1].id : files[index - 1].name) !== groupNumber;
+                    const isLastInGroup = groupNumber && index < files.length - 1 && getFileGroupNumber(files[index + 1].isDrive ? files[index + 1].id : files[index + 1].name) !== groupNumber;
+                    const isOnlyInGroup = groupNumber && (index === 0 || getFileGroupNumber(files[index - 1].isDrive ? files[index - 1].id : files[index - 1].name) !== groupNumber) && (index === files.length - 1 || getFileGroupNumber(files[index + 1].isDrive ? files[index + 1].id : files[index + 1].name) !== groupNumber);
+
+                    return (
+                      <div key={fileId} className="relative">
+                        {/* Group background overlay */}
+                        {groupNumber && (
+                          <div
+                            className="absolute bg-blue-100 border-2 border-blue-300 rounded-xl"
+                            style={{
+                              inset: '-8px',
+                              zIndex: -1,
+                              left: isFirstInGroup || isOnlyInGroup ? '-8px' : '-4px',
+                              right: isLastInGroup || isOnlyInGroup ? '-8px' : '-4px',
+                            }}
+                          />
+                        )}
+                        <SortableMediaItem
+                          file={file}
+                          index={index}
+                          isCarouselAd={isCarouselAd}
+                          videoThumbs={videoThumbs}
+                          onRemove={() => removeFile(file)}
+                          isSelected={selectedFiles.has(fileId)}
+                          onSelect={handleFileSelect}
+                          groupNumber={groupNumber}
+                          enablePlacementCustomization={enablePlacementCustomization}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </SortableContext>
             </DndContext>
-
-            {/* Groups Summary */}
-            {enablePlacementCustomization && fileGroups.length > 0 && (
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="text-sm font-semibold text-blue-800 mb-2">
-                  Created Groups ({fileGroups.length})
-                </h4>
-                <div className="text-xs text-blue-600">
-                  {fileGroups.map((group, index) => (
-                    <div key={index} className="mb-1">
-                      Group {index + 1}: {group.length} files
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       ) : (
@@ -686,22 +716,7 @@ export default function MediaPreview({
             }}
           >
             <div className="bg-white rounded-2xl shadow-md p-8 max-w-sm w-full mx-4 text-center min-h-[500px] border border-gray-100 flex flex-col justify-center">
-              {/* Placement Customization Checkbox */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-2 justify-center">
-                  <Checkbox
-                    id="placementCustomizationEmpty"
-                    checked={enablePlacementCustomization}
-                    onCheckedChange={setEnablePlacementCustomization}
-                  />
-                  <label
-                    htmlFor="placementCustomizationEmpty"
-                    className="text-sm font-medium text-center"
-                  >
-                    Enable placement customization
-                  </label>
-                </div>
-              </div>
+
 
               {/* UPLOAD Text */}
               <div className="mb-8">
