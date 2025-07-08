@@ -2110,7 +2110,7 @@ export default function AdCreationForm({
             )}
           </Button>
 
-          <div className="form-check">
+          {/* <div className="form-check">
             <input
               type="checkbox"
               id="placementCustomization"
@@ -2121,7 +2121,7 @@ export default function AdCreationForm({
             <label htmlFor="placementCustomization" className="form-check-label">
               Use different images for different placements (requires 2-3 images with different aspect ratios)
             </label>
-          </div>
+          </div> */}
 
           <div
             className={cn(
