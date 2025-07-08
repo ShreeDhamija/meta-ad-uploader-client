@@ -219,16 +219,37 @@ export default function MediaPreview({
       const newGroup = Array.from(selectedFiles);
       setFileGroups(prev => [...prev, newGroup]);
 
-      // Reposition grouped files to be together
-      const selectedFileObjects = files.filter(file =>
+      // Get selected files from both local files and drive files
+      const selectedLocalFiles = files.filter(file =>
         selectedFiles.has(file.isDrive ? file.id : file.name)
       );
-      const unselectedFileObjects = files.filter(file =>
-        !selectedFiles.has(file.isDrive ? file.id : file.name)
+      const selectedDriveFiles = driveFiles.filter(file =>
+        selectedFiles.has(file.id)
       );
 
-      // Move selected files to the end, grouped together
-      setFiles([...unselectedFileObjects, ...selectedFileObjects]);
+      // Combine all selected files
+      const selectedFileObjects = [...selectedLocalFiles, ...selectedDriveFiles];
+
+      // Get unselected files from both arrays
+      const unselectedLocalFiles = files.filter(file =>
+        !selectedFiles.has(file.isDrive ? file.id : file.name)
+      );
+      const unselectedDriveFiles = driveFiles.filter(file =>
+        !selectedFiles.has(file.id)
+      );
+
+      // Combine all unselected files
+      const unselectedFileObjects = [...unselectedLocalFiles, ...unselectedDriveFiles];
+
+      // Update both arrays - move selected files to the end, grouped together
+      const allFiles = [...unselectedFileObjects, ...selectedFileObjects];
+
+      // Separate back into local and drive files
+      const newLocalFiles = allFiles.filter(file => !file.isDrive);
+      const newDriveFiles = allFiles.filter(file => file.isDrive);
+
+      setFiles(newLocalFiles);
+      setDriveFiles(newDriveFiles);
       setSelectedFiles(new Set()); // Clear selection
     }
   };
