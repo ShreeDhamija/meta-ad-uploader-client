@@ -509,6 +509,10 @@ export default function MediaPreview({
     }
   };
 
+  const handleUngroup = (groupIndex) => {
+    setFileGroups(prev => prev.filter((_, index) => index !== groupIndex));
+  };
+
   const getFileGroupNumber = (fileId) => {
     for (let i = 0; i < fileGroups.length; i++) {
       if (fileGroups[i].includes(fileId)) {
@@ -603,27 +607,30 @@ export default function MediaPreview({
             </div>
           </CardHeader>
 
-          {/* Placement Customization Checkbox */}
-          <div className="px-6 pb-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="placementCustomization"
-                checked={enablePlacementCustomization}
-                onCheckedChange={handlePlacementCustomizationChange} // Changed this line
-              />
-              <label
-                htmlFor="placementCustomization"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Enable placement customization (use different images for different placements)
-              </label>
+
+          {/* Placement Customization Checkbox - only show when carousel is disabled */}
+          {!isCarouselAd && (
+            <div className="px-6 pb-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="placementCustomization"
+                  checked={enablePlacementCustomization}
+                  onCheckedChange={handlePlacementCustomizationChange}
+                />
+                <label
+                  htmlFor="placementCustomization"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Enable placement customization (use different images for different placements)
+                </label>
+              </div>
+              {enablePlacementCustomization && (
+                <p className="text-xs text-gray-500 mt-1 ml-6">
+                  Requires 2-3 images with different aspect ratios per group
+                </p>
+              )}
             </div>
-            {enablePlacementCustomization && (
-              <p className="text-xs text-gray-500 mt-1 ml-6">
-                Requires 2-3 images with different aspect ratios per group
-              </p>
-            )}
-          </div>
+          )}
 
           <CardContent className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
             <DndContext
@@ -635,30 +642,21 @@ export default function MediaPreview({
                 items={files.map(file => file.isDrive ? file.id : file.name)}
                 strategy={verticalListSortingStrategy}
               >
-                {/* <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  {files.map((file, index) => {
-                    const fileId = file.isDrive ? file.id : file.name;
-                    return (
-                      <SortableMediaItem
-                        key={fileId}
-                        file={file}
-                        index={index}
-                        isCarouselAd={isCarouselAd}
-                        videoThumbs={videoThumbs}
-                        onRemove={() => removeFile(file)}
-                        isSelected={selectedFiles.has(fileId)}
-                        onSelect={handleFileSelect}
-                        groupNumber={getFileGroupNumber(fileId)}
-                        enablePlacementCustomization={enablePlacementCustomization}
-                      />
-                    );
-                  })}
-                </div> */}
                 <div className="space-y-4">
                   {fileGroups.map((group, groupIndex) => (
                     <div key={`group-${groupIndex}`} className="relative">
                       {/* Shared group background */}
                       <div className="absolute inset-0 bg-blue-100 border-2 border-blue-300 rounded-xl -z-10" style={{ margin: '-8px' }} />
+
+                      {/* Ungroup button */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleUngroup(groupIndex)}
+                        className="absolute top-2 right-2 z-20 bg-white hover:bg-red-50 text-red-600 border-red-200 rounded-lg text-xs px-2 py-1"
+                      >
+                        Ungroup
+                      </Button>
                       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-2">
                         {group.map(fileId => {
                           const file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);

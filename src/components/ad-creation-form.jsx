@@ -2109,20 +2109,6 @@ export default function AdCreationForm({
               "Publish Ads"
             )}
           </Button>
-
-          {/* <div className="form-check">
-            <input
-              type="checkbox"
-              id="placementCustomization"
-              checked={enablePlacementCustomization}
-              onChange={(e) => setEnablePlacementCustomization(e.target.checked)}
-              className="form-check-input"
-            />
-            <label htmlFor="placementCustomization" className="form-check-label">
-              Use different images for different placements (requires 2-3 images with different aspect ratios)
-            </label>
-          </div> */}
-
           <div
             className={cn(
               "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
