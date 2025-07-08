@@ -214,46 +214,74 @@ export default function MediaPreview({
     });
   };
 
+  // const handleGroupAds = () => {
+  //   if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
+  //     const newGroup = Array.from(selectedFiles);
+  //     setFileGroups(prev => [...prev, newGroup]);
+
+  //     // Get selected files from both local files and drive files
+  //     const selectedLocalFiles = files.filter(file =>
+  //       selectedFiles.has(file.isDrive ? file.id : file.name)
+  //     );
+  //     const selectedDriveFiles = driveFiles.filter(file =>
+  //       selectedFiles.has(file.id)
+  //     ).map(file => ({ ...file, isDrive: true })); // Ensure isDrive flag is set
+
+  //     // Combine all selected files
+  //     const selectedFileObjects = [...selectedLocalFiles, ...selectedDriveFiles];
+
+  //     // Get unselected files from both arrays
+  //     const unselectedLocalFiles = files.filter(file =>
+  //       !selectedFiles.has(file.isDrive ? file.id : file.name)
+  //     );
+  //     const unselectedDriveFiles = driveFiles.filter(file =>
+  //       !selectedFiles.has(file.id)
+  //     ).map(file => ({ ...file, isDrive: true })); // Ensure isDrive flag is set
+
+  //     // Combine all unselected files
+  //     const unselectedFileObjects = [...unselectedLocalFiles, ...unselectedDriveFiles];
+
+  //     // Update both arrays - move selected files to the end, grouped together
+  //     const allFiles = [...unselectedFileObjects, ...selectedFileObjects];
+
+  //     // Separate back into local and drive files - use more reliable detection
+  //     const newLocalFiles = allFiles.filter(file => !file.isDrive);
+  //     const newDriveFiles = allFiles.filter(file => file.isDrive);
+
+
+  //     setFiles(newLocalFiles);
+  //     setDriveFiles(newDriveFiles);
+  //     setSelectedFiles(new Set()); // Clear selection
+  //   }
+  // };
+
   const handleGroupAds = () => {
     if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
       const newGroup = Array.from(selectedFiles);
       setFileGroups(prev => [...prev, newGroup]);
 
-      // Get selected files from both local files and drive files
+      // Local files
       const selectedLocalFiles = files.filter(file =>
-        selectedFiles.has(file.isDrive ? file.id : file.name)
+        selectedFiles.has(file.name)
       );
+      const unselectedLocalFiles = files.filter(file =>
+        !selectedFiles.has(file.name)
+      );
+      setFiles([...unselectedLocalFiles, ...selectedLocalFiles]);
+
+      // Drive files
       const selectedDriveFiles = driveFiles.filter(file =>
         selectedFiles.has(file.id)
-      ).map(file => ({ ...file, isDrive: true })); // Ensure isDrive flag is set
-
-      // Combine all selected files
-      const selectedFileObjects = [...selectedLocalFiles, ...selectedDriveFiles];
-
-      // Get unselected files from both arrays
-      const unselectedLocalFiles = files.filter(file =>
-        !selectedFiles.has(file.isDrive ? file.id : file.name)
       );
       const unselectedDriveFiles = driveFiles.filter(file =>
         !selectedFiles.has(file.id)
-      ).map(file => ({ ...file, isDrive: true })); // Ensure isDrive flag is set
+      );
+      setDriveFiles([...unselectedDriveFiles, ...selectedDriveFiles]);
 
-      // Combine all unselected files
-      const unselectedFileObjects = [...unselectedLocalFiles, ...unselectedDriveFiles];
-
-      // Update both arrays - move selected files to the end, grouped together
-      const allFiles = [...unselectedFileObjects, ...selectedFileObjects];
-
-      // Separate back into local and drive files - use more reliable detection
-      const newLocalFiles = allFiles.filter(file => !file.isDrive);
-      const newDriveFiles = allFiles.filter(file => file.isDrive);
-
-
-      setFiles(newLocalFiles);
-      setDriveFiles(newDriveFiles);
-      setSelectedFiles(new Set()); // Clear selection
+      setSelectedFiles(new Set());
     }
   };
+
 
   const handleUngroup = (groupIndex) => {
     setFileGroups(prev => prev.filter((_, index) => index !== groupIndex));
