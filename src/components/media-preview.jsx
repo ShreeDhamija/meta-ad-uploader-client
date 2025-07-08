@@ -321,7 +321,8 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove, i
 
 
 
-      {/* Selection overlay for placement customization */}
+
+      {/* Selection overlay for placement customization - only show when NOT grouped */}
       {enablePlacementCustomization && !groupNumber && (
         <div
           className={`absolute inset-0 rounded-xl cursor-pointer transition-all ${isSelected ? 'bg-blue-200 bg-opacity-50 border-2 border-blue-500' : 'hover:bg-gray-100 hover:bg-opacity-30'
@@ -338,7 +339,8 @@ function SortableMediaItem({ file, index, isCarouselAd, videoThumbs, onRemove, i
         </div>
       )}
 
-      {/* Selection checkbox for placement customization */}
+
+      {/* Selection checkbox for placement customization - only show when NOT grouped */}
       {enablePlacementCustomization && !groupNumber && (
         <div className="absolute top-2 left-2 z-20">
           <Checkbox
@@ -465,6 +467,16 @@ export default function MediaPreview({
       setFiles((prev) => prev.filter((f) => f.name !== file.name))
     }
   }
+
+  // Add this useEffect or modify setEnablePlacementCustomization call
+  const handlePlacementCustomizationChange = (checked) => {
+    setEnablePlacementCustomization(checked);
+    if (!checked) {
+      // Clear all grouping when disabled
+      setFileGroups([]);
+      setSelectedFiles(new Set());
+    }
+  };
 
   const handleFileSelect = (fileId) => {
     setSelectedFiles(prev => {
@@ -597,7 +609,7 @@ export default function MediaPreview({
               <Checkbox
                 id="placementCustomization"
                 checked={enablePlacementCustomization}
-                onCheckedChange={setEnablePlacementCustomization}
+                onCheckedChange={handlePlacementCustomizationChange} // Changed this line
               />
               <label
                 htmlFor="placementCustomization"
@@ -642,42 +654,56 @@ export default function MediaPreview({
                     );
                   })}
                 </div> */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                  {files.map((file, index) => {
-                    const fileId = file.isDrive ? file.id : file.name;
-                    const groupNumber = getFileGroupNumber(fileId);
-                    const isFirstInGroup = groupNumber && index > 0 && getFileGroupNumber(files[index - 1].isDrive ? files[index - 1].id : files[index - 1].name) !== groupNumber;
-                    const isLastInGroup = groupNumber && index < files.length - 1 && getFileGroupNumber(files[index + 1].isDrive ? files[index + 1].id : files[index + 1].name) !== groupNumber;
-                    const isOnlyInGroup = groupNumber && (index === 0 || getFileGroupNumber(files[index - 1].isDrive ? files[index - 1].id : files[index - 1].name) !== groupNumber) && (index === files.length - 1 || getFileGroupNumber(files[index + 1].isDrive ? files[index + 1].id : files[index + 1].name) !== groupNumber);
-
-                    return (
-                      <div key={fileId} className="relative">
-                        {/* Group background overlay */}
-                        {groupNumber && (
-                          <div
-                            className="absolute bg-blue-100 border-2 border-blue-300 rounded-xl"
-                            style={{
-                              inset: '-8px',
-                              zIndex: -1,
-                              left: isFirstInGroup || isOnlyInGroup ? '-8px' : '-4px',
-                              right: isLastInGroup || isOnlyInGroup ? '-8px' : '-4px',
-                            }}
-                          />
-                        )}
-                        <SortableMediaItem
-                          file={file}
-                          index={index}
-                          isCarouselAd={isCarouselAd}
-                          videoThumbs={videoThumbs}
-                          onRemove={() => removeFile(file)}
-                          isSelected={selectedFiles.has(fileId)}
-                          onSelect={handleFileSelect}
-                          groupNumber={groupNumber}
-                          enablePlacementCustomization={enablePlacementCustomization}
-                        />
+                <div className="space-y-4">
+                  {fileGroups.map((group, groupIndex) => (
+                    <div key={`group-${groupIndex}`} className="relative">
+                      {/* Shared group background */}
+                      <div className="absolute inset-0 bg-blue-100 border-2 border-blue-300 rounded-xl -z-10" style={{ margin: '-8px' }} />
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-2">
+                        {group.map(fileId => {
+                          const file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
+                          const index = files.findIndex(f => (f.isDrive ? f.id : f.name) === fileId);
+                          return file ? (
+                            <SortableMediaItem
+                              key={fileId}
+                              file={file}
+                              index={index}
+                              isCarouselAd={isCarouselAd}
+                              videoThumbs={videoThumbs}
+                              onRemove={() => removeFile(file)}
+                              isSelected={false} // Never selected when grouped
+                              onSelect={handleFileSelect}
+                              groupNumber={groupIndex + 1}
+                              enablePlacementCustomization={enablePlacementCustomization}
+                            />
+                          ) : null;
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
+
+                  {/* Ungrouped files */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    {files
+                      .filter(file => !fileGroups.some(group => group.includes(file.isDrive ? file.id : file.name)))
+                      .map((file, index) => {
+                        const fileId = file.isDrive ? file.id : file.name;
+                        return (
+                          <SortableMediaItem
+                            key={fileId}
+                            file={file}
+                            index={index}
+                            isCarouselAd={isCarouselAd}
+                            videoThumbs={videoThumbs}
+                            onRemove={() => removeFile(file)}
+                            isSelected={selectedFiles.has(fileId)}
+                            onSelect={handleFileSelect}
+                            groupNumber={null}
+                            enablePlacementCustomization={enablePlacementCustomization}
+                          />
+                        );
+                      })}
+                  </div>
                 </div>
               </SortableContext>
             </DndContext>
