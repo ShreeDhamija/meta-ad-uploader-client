@@ -414,7 +414,13 @@ export default function MediaPreview({
             </div>
           )}
 
-          <CardContent className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+          <CardContent
+            className="flex-1 overflow-y-auto min-h-0 pr-2"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#CBD5E0 transparent'
+            }}
+          >
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
