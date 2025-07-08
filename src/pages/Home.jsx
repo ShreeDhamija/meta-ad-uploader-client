@@ -278,6 +278,7 @@ export default function Home() {
                     <MediaPreview
                         files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
                         setFiles={setFiles}
+                        driveFiles={driveFiles}
                         setDriveFiles={setDriveFiles}
                         videoThumbs={videoThumbs}
                         isCarouselAd={isCarouselAd}
