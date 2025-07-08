@@ -1074,7 +1074,23 @@ export default function AdCreationForm({
           // NEW: Check if placement customization is enabled
           if (enablePlacementCustomization && fileGroups.length > 0) {
             // Process ONLY grouped files
+
             fileGroups.forEach((group, groupIndex) => {
+              console.log(`\n📁 Group ${groupIndex + 1}:`, group);
+
+              // Log which actual files are in this group
+              const groupFiles = group.map(fileId => {
+                const localFile = files.find(f => f.name === fileId);
+                const driveFile = smallDriveFiles.find(f => f.id === fileId);
+                const s3File = [...s3Results, ...s3DriveResults].find(f => f.name === fileId);
+
+                if (localFile) return `📄 Local: ${localFile.name}`;
+                if (driveFile) return `☁️ Drive: ${driveFile.name}`;
+                if (s3File) return `🗄️ S3: ${s3File.name}`;
+                return `❓ Unknown: ${fileId}`;
+              });
+              console.log(`   Files in group:`, groupFiles);
+
               const formData = new FormData();
               formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
               formData.append("headlines", JSON.stringify(headlines));
