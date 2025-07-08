@@ -1076,23 +1076,16 @@ export default function AdCreationForm({
             // Process ONLY grouped files
 
             fileGroups.forEach((group, groupIndex) => {
-              console.log(`\n📁 Group ${groupIndex + 1}:`, group);
+              const firstFileId = group[0];
+              let firstFileForNaming = null;
 
-              // Log which actual files are in this group
-              const groupFiles = group.map(fileId => {
-                const localFile = files.find(f => f.name === fileId);
-                const driveFile = smallDriveFiles.find(f => f.id === fileId);
-                const s3File = [...s3Results, ...s3DriveResults].find(f => f.name === fileId);
-
-                if (localFile) return `📄 Local: ${localFile.name}`;
-                if (driveFile) return `☁️ Drive: ${driveFile.name}`;
-                if (s3File) return `🗄️ S3: ${s3File.name}`;
-                return `❓ Unknown: ${fileId}`;
-              });
-              console.log(`   Files in group:`, groupFiles);
+              // Find the actual file object for the first file in this group
+              firstFileForNaming = files.find(f => (f.isDrive ? f.id : f.name) === firstFileId) ||
+                smallDriveFiles.find(f => f.id === firstFileId) ||
+                [...s3Results, ...s3DriveResults].find(f => f.name === firstFileId);
 
               const formData = new FormData();
-              formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
+              formData.append("adName", computeAdName(firstFileForNaming || files[0] || driveFiles[0], adValues.dateType)); // ✅ FIXED
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));

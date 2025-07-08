@@ -245,8 +245,9 @@ export default function MediaPreview({
       const allFiles = [...unselectedFileObjects, ...selectedFileObjects];
 
       // Separate back into local and drive files - use more reliable detection
-      const newLocalFiles = allFiles.filter(file => !file.isDrive && !file.id);
-      const newDriveFiles = allFiles.filter(file => file.isDrive || file.id);
+      const newLocalFiles = allFiles.filter(file => !file.isDrive);
+      const newDriveFiles = allFiles.filter(file => file.isDrive);
+
 
       setFiles(newLocalFiles);
       setDriveFiles(newDriveFiles);
