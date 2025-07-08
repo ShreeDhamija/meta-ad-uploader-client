@@ -1209,7 +1209,7 @@ export default function AdCreationForm({
               formData.append("instagramAccountId", instagramAccountId);
               formData.append("link", JSON.stringify(link));
               formData.append("cta", cta);
-              formData.append("enablePlacementCustomization", enablePlacementCustomization);
+              formData.append("enablePlacementCustomization", false);
               formData.append("driveFile", "true");
               formData.append("driveId", driveFile.id);
               formData.append("driveMimeType", driveFile.mimeType);
@@ -1244,7 +1244,7 @@ export default function AdCreationForm({
               formData.append("instagramAccountId", instagramAccountId);
               formData.append("link", JSON.stringify(link));
               formData.append("cta", cta);
-              formData.append("enablePlacementCustomization", enablePlacementCustomization);
+              formData.append("enablePlacementCustomization", false);
               if (selectedShopDestination && showShopDestinationSelector) {
                 formData.append("shopDestination", selectedShopDestination);
                 formData.append("shopDestinationType", selectedShopDestinationType);
