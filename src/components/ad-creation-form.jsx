@@ -1160,7 +1160,7 @@ export default function AdCreationForm({
               formData.append("instagramAccountId", instagramAccountId);
               formData.append("link", JSON.stringify(link));
               formData.append("cta", cta);
-              formData.append("enablePlacementCustomization", enablePlacementCustomization);
+              formData.append("enablePlacementCustomization", false);
               if (thumbnail) {
                 formData.append("thumbnail", thumbnail);
               }
