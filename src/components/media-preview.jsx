@@ -260,27 +260,70 @@ export default function MediaPreview({
       const newGroup = Array.from(selectedFiles);
       setFileGroups(prev => [...prev, newGroup]);
 
-      // Local files
-      const selectedLocalFiles = files.filter(file =>
-        selectedFiles.has(file.name)
-      );
-      const unselectedLocalFiles = files.filter(file =>
-        !selectedFiles.has(file.name)
-      );
-      setFiles([...unselectedLocalFiles, ...selectedLocalFiles]);
+      // Get unique selected file IDs
+      const selectedFileIds = Array.from(selectedFiles);
 
-      // Drive files
-      const selectedDriveFiles = driveFiles.filter(file =>
-        selectedFiles.has(file.id)
-      );
-      const unselectedDriveFiles = driveFiles.filter(file =>
-        !selectedFiles.has(file.id)
-      );
-      setDriveFiles([...unselectedDriveFiles, ...selectedDriveFiles]);
+      // Get selected files from both arrays, but ensure no duplicates
+      const selectedLocalFiles = files.filter(file => {
+        const fileId = file.isDrive ? file.id : file.name;
+        return selectedFileIds.includes(fileId);
+      });
 
+      const selectedDriveFiles = driveFiles.filter(file => {
+        // Only include if not already in selectedLocalFiles
+        const alreadyInLocal = selectedLocalFiles.some(localFile =>
+          localFile.isDrive && localFile.id === file.id
+        );
+        return selectedFileIds.includes(file.id) && !alreadyInLocal;
+      }).map(file => ({ ...file, isDrive: true }));
+
+      // Get unselected files, avoiding duplicates
+      const unselectedLocalFiles = files.filter(file => {
+        const fileId = file.isDrive ? file.id : file.name;
+        return !selectedFileIds.includes(fileId);
+      });
+
+      const unselectedDriveFiles = driveFiles.filter(file => {
+        // Only include if not already in unselectedLocalFiles
+        const alreadyInLocal = unselectedLocalFiles.some(localFile =>
+          localFile.isDrive && localFile.id === file.id
+        );
+        return !selectedFileIds.includes(file.id) && !alreadyInLocal;
+      }).map(file => ({ ...file, isDrive: true }));
+
+      // Combine files: unselected first, then selected (for grouping)
+      const allFiles = [
+        ...unselectedLocalFiles,
+        ...unselectedDriveFiles,
+        ...selectedLocalFiles,
+        ...selectedDriveFiles
+      ];
+
+      // Separate into final arrays - ensuring no duplicates
+      const newLocalFiles = [];
+      const newDriveFiles = [];
+      const seenFiles = new Set();
+
+      allFiles.forEach(file => {
+        const uniqueKey = file.isDrive ? file.id : file.name;
+
+        if (!seenFiles.has(uniqueKey)) {
+          seenFiles.add(uniqueKey);
+
+          if (file.isDrive) {
+            newDriveFiles.push(file);
+          } else {
+            newLocalFiles.push(file);
+          }
+        }
+      });
+
+      setFiles(newLocalFiles);
+      setDriveFiles(newDriveFiles);
       setSelectedFiles(new Set());
     }
   };
+
 
 
   const handleUngroup = (groupIndex) => {
