@@ -611,6 +611,47 @@ export default function AdCreationForm({
 
 
 
+  const getVideoAspectRatio = async (file) => {
+    if (file.mimeType && file.mimeType.startsWith('video/')) {
+      // For Drive files
+      return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.src = `https://drive.google.com/uc?id=${file.id}&export=download`;
+
+        video.addEventListener('loadedmetadata', () => {
+          resolve(video.videoWidth / video.videoHeight);
+        });
+
+        video.addEventListener('error', () => {
+          resolve(16 / 9); // Default aspect ratio
+        });
+
+        // Timeout fallback
+        setTimeout(() => resolve(16 / 9), 5000);
+      });
+    } else if (file.type && file.type.startsWith('video/')) {
+      // For local files
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.src = url;
+
+        video.addEventListener('loadedmetadata', () => {
+          const aspectRatio = video.videoWidth / video.videoHeight;
+          URL.revokeObjectURL(url);
+          resolve(aspectRatio);
+        });
+
+        video.addEventListener('error', () => {
+          URL.revokeObjectURL(url);
+          resolve(16 / 9); // Default to 16:9 on error
+        });
+      });
+    }
+    return null; // Not a video file
+  };
 
 
 
@@ -651,6 +692,7 @@ export default function AdCreationForm({
 
   // Update your useEffect to be much simpler:
   useEffect(() => {
+
     // Generate thumbnails for local video files only
     files.forEach((file) => {
       if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
@@ -811,6 +853,33 @@ export default function AdCreationForm({
     }
 
 
+    let aspectRatioMap = {};
+
+    if (enablePlacementCustomization) {
+      setProgressMessage('Analyzing video files...');
+
+      try {
+        // Get aspect ratios for all video files
+        const allFiles = [...files, ...driveFiles];
+
+        for (const file of allFiles) {
+          const isVideo = file.type?.startsWith('video/') || file.mimeType?.startsWith('video/');
+          if (isVideo) {
+            const aspectRatio = await getVideoAspectRatio(file);
+            if (aspectRatio) {
+              // Use appropriate key based on file type
+              const key = file.id || file.name;
+              aspectRatioMap[key] = aspectRatio;
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error getting video aspect ratios:', error);
+        // Continue anyway with defaults
+      }
+    }
+
+
 
     setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
@@ -837,6 +906,9 @@ export default function AdCreationForm({
 
         try {
           const result = await uploadToS3(largeFiles[i]);
+          if (enablePlacementCustomization && aspectRatioMap[largeFiles[i].name]) {
+            result.aspectRatio = aspectRatioMap[largeFiles[i].name];
+          }
           s3Results.push(result);
         } catch (err) {
           toast.error(`Failed to upload ${largeFiles[i].name} to S3`);
@@ -854,7 +926,15 @@ export default function AdCreationForm({
 
         try {
           const s3Url = await uploadDriveFileToS3(largeDriveFiles[i]);
-          s3DriveResults.push({ ...largeDriveFiles[i], s3Url });
+          const result = {
+            ...largeDriveFiles[i],
+            s3Url
+          };
+          // Include aspect ratio if we have it
+          if (enablePlacementCustomization && aspectRatioMap[largeDriveFiles[i].id]) {
+            result.aspectRatio = aspectRatioMap[largeDriveFiles[i].id];
+          }
+          s3DriveResults.push(result);
         } catch (err) {
           toast.error(`Failed to upload Drive video: ${largeDriveFiles[i].name}`);
           console.error("❌ Drive to S3 upload failed", err);
@@ -962,7 +1042,7 @@ export default function AdCreationForm({
           formData.append("cta", cta);
           formData.append("isCarouselAd", isCarouselAd);
           formData.append("launchPaused", launchPaused);
-          formData.append("enablePlacementCustomization", enablePlacementCustomization);
+          formData.append("enablePlacementCustomization", false);
           formData.append("jobId", frontendJobId);
           console.log("jobId in attached form", frontendJobId);
 
@@ -1019,7 +1099,7 @@ export default function AdCreationForm({
           formData.append("link", JSON.stringify(link));
           formData.append("cta", cta);
           formData.append("isCarouselAd", isCarouselAd);
-          formData.append("enablePlacementCustomization", enablePlacementCustomization);
+          formData.append("enablePlacementCustomization", false);
           formData.append("launchPaused", launchPaused);
           formData.append("jobId", frontendJobId);
 
@@ -1099,11 +1179,50 @@ export default function AdCreationForm({
               formData.append("launchPaused", launchPaused);
               formData.append("jobId", frontendJobId);
 
-              // Add only files from this group
+              const groupVideoMetadata = [];
+
+
+              // // Add only files from this group
+              // group.forEach(fileId => {
+              //   const file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
+              //   if (file && !file.isDrive && file.size <= 100 * 1024 * 1024) {
+              //     formData.append("mediaFiles", file);
+              //   }
+              // });
+
+              // // Add drive files from this group
+              // group.forEach(fileId => {
+              //   const driveFile = smallDriveFiles.find(f => f.id === fileId);
+              //   if (driveFile) {
+              //     formData.append("driveFiles", JSON.stringify({
+              //       id: driveFile.id,
+              //       name: driveFile.name,
+              //       mimeType: driveFile.mimeType,
+              //       accessToken: driveFile.accessToken
+              //     }));
+              //   }
+              // });
+
+              // // Add S3 files from this group
+              // group.forEach(fileId => {
+              //   const s3File = [...s3Results, ...s3DriveResults].find(f =>
+              //     f.name && f.name.includes(fileId)
+              //   );
+              //   if (s3File) {
+              //     formData.append("s3VideoUrls", s3File.s3Url);
+              //   }
+              // });
+
               group.forEach(fileId => {
                 const file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
                 if (file && !file.isDrive && file.size <= 100 * 1024 * 1024) {
                   formData.append("mediaFiles", file);
+                  if (file.type.startsWith("video/")) {
+                    groupVideoMetadata.push({
+                      fileName: file.name,
+                      aspectRatio: aspectRatioMap[file.name] || 16 / 9
+                    });
+                  }
                 }
               });
 
@@ -1117,18 +1236,37 @@ export default function AdCreationForm({
                     mimeType: driveFile.mimeType,
                     accessToken: driveFile.accessToken
                   }));
+                  if (driveFile.mimeType.startsWith("video/")) {
+                    groupVideoMetadata.push({
+                      driveId: driveFile.id,
+                      aspectRatio: aspectRatioMap[driveFile.id] || 16 / 9
+                    });
+                  }
                 }
               });
 
               // Add S3 files from this group
               group.forEach(fileId => {
-                const s3File = [...s3Results, ...s3DriveResults].find(f =>
-                  f.name && f.name.includes(fileId)
-                );
+                const s3File = [...s3Results, ...s3DriveResults].find(f => {
+                  // Match by original file name or Drive ID
+                  return (f.name && f.name === fileId) || (f.id && f.id === fileId);
+                });
                 if (s3File) {
                   formData.append("s3VideoUrls", s3File.s3Url);
+                  if (s3File.mimeType?.startsWith("video/") || s3File.type?.startsWith("video/")) {
+                    groupVideoMetadata.push({
+                      s3Url: s3File.s3Url,
+                      aspectRatio: s3File.aspectRatio || 16 / 9
+                    });
+                  }
                 }
               });
+
+              // Only add video metadata if we have any videos
+              if (groupVideoMetadata.length > 0) {
+                formData.append("videoMetadata", JSON.stringify(groupVideoMetadata));
+              }
+
 
               if (selectedShopDestination && showShopDestinationSelector) {
                 formData.append("shopDestination", selectedShopDestination);

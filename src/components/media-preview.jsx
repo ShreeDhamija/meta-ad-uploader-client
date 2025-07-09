@@ -403,7 +403,7 @@ export default function MediaPreview({
                   htmlFor="placementCustomization"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  Group media for same ad
+                  Group different aspect ratio media for same ad (Only Works With Images)
                 </label>
               </div>
               {/* {enablePlacementCustomization && (
