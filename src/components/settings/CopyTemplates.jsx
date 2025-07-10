@@ -50,11 +50,11 @@ const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
       value={value}
       className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg p-0 relative"
     >
-      <div className="flex items-center w-full">
-        <div className="flex-1 px-3 py-2 hover:bg-gray-100 pointer-events-none">
+      <div className="flex items-center justify-between w-full">
+        <div className="flex-1 px-2 py-1.5 data-[highlighted]:bg-accent data-[state=checked]:bg-accent">
           {name} {isDefault ? "(Default)" : ""}
         </div>
-        <div className="px-2 py-2 hover:bg-red-50 flex items-center justify-center">
+        <div className="px-1 py-1.5 hover:bg-red-100 rounded-md mr-1 flex items-center justify-center">
           <Trash2
             tabIndex={-1}
             className="w-4 h-4 text-gray-400 hover:text-red-500 cursor-pointer pointer-events-auto"
