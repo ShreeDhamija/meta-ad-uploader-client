@@ -15,9 +15,9 @@ import { saveSettings } from "@/lib/saveSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import CreativeEnhancements from "./CreativeEnhancements"
 
-export default function AdAccountSettings() {
+export default function AdAccountSettings({ preselectedAdAccount }) {
   const { adAccounts, pages } = useAppData()
-  const [selectedAdAccount, setSelectedAdAccount] = useState(null)
+  const [selectedAdAccount, setSelectedAdAccount] = useState(preselectedAdAccount || null)
   const [openAdAccount, setOpenAdAccount] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [selectedPage, setSelectedPage] = useState(null)

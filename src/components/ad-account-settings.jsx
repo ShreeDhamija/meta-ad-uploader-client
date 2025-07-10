@@ -487,7 +487,7 @@ export default function AdAccountSettings({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => navigate('/settings')}
+                  onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
                   className="text-xs px-3 py-1 border-gray-300 text-white bg-zinc-900 rounded-lg"
                 >
                   Settings
