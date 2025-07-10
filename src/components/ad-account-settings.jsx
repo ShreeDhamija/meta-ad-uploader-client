@@ -362,7 +362,7 @@ export default function AdAccountSettings({
     if (duplicateAdSet) {
       const selectedAdSet = adSets.find((adset) => adset.id === duplicateAdSet)
       if (selectedAdSet) {
-        setNewAdSetName(selectedAdSet.name + "_02")
+        setNewAdSetName(selectedAdSet.name + "_Copy")
       }
     } else {
       setNewAdSetName("")
@@ -374,7 +374,7 @@ export default function AdAccountSettings({
     if (duplicateCampaign) {
       const selectedCampaign = campaigns.find((campaign) => campaign.id === duplicateCampaign);
       if (selectedCampaign) {
-        setNewCampaignName(selectedCampaign.name + "_02");
+        setNewCampaignName(selectedCampaign.name + "_Copy");
       }
     } else {
       setNewCampaignName("");

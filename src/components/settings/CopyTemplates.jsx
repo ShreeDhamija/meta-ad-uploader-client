@@ -12,6 +12,31 @@ import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 
 
+// Custom SelectItem component with delete button
+const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
+  const handleDeleteClick = (e) => {
+    e.stopPropagation()
+    e.preventDefault()
+    onDelete(name)
+  }
+
+  return (
+    <SelectItem
+      value={value}
+      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg pr-8 relative"
+    >
+      <span className="flex-1">
+        {name} {isDefault ? "(Default)" : ""}
+      </span>
+      <Trash2
+        className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10"
+        onClick={handleDeleteClick}
+      />
+    </SelectItem>
+  )
+}
+
+
 
 
 const initialState = {
@@ -345,21 +370,57 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     }
   }
 
-  const handleDeleteTemplate = async () => {
-    if (!selectedName) return
+  // const handleDeleteTemplate = async () => {
+  //   if (!selectedName) return
+
+  //   setIsProcessing(true)
+  //   try {
+  //     await deleteCopyTemplate(selectedAdAccount, selectedName)
+
+  //     // Update parent component state
+  //     setAdSettings((prev) => {
+  //       const updatedCopyTemplates = { ...prev.copyTemplates }
+  //       delete updatedCopyTemplates[selectedName]
+
+  //       // If we're deleting the default template, find a new default
+  //       const updatedDefaultTemplateName =
+  //         prev.defaultTemplateName === selectedName
+  //           ? Object.keys(updatedCopyTemplates)[0] || ""
+  //           : prev.defaultTemplateName
+
+  //       return {
+  //         ...prev,
+  //         copyTemplates: updatedCopyTemplates,
+  //         defaultTemplateName: updatedDefaultTemplateName,
+  //       }
+  //     })
+
+  //     // Update local state
+  //     dispatch({ type: "DELETE_TEMPLATE", payload: selectedName })
+
+  //     toast.success("Template deleted")
+  //   } catch (err) {
+  //     toast.error("Failed to delete template")
+  //   } finally {
+  //     setIsProcessing(false)
+  //   }
+  // }
+
+  const handleDeleteTemplate = async (templateName) => {
+    if (!templateName) return
 
     setIsProcessing(true)
     try {
-      await deleteCopyTemplate(selectedAdAccount, selectedName)
+      await deleteCopyTemplate(selectedAdAccount, templateName)
 
       // Update parent component state
       setAdSettings((prev) => {
         const updatedCopyTemplates = { ...prev.copyTemplates }
-        delete updatedCopyTemplates[selectedName]
+        delete updatedCopyTemplates[templateName]
 
         // If we're deleting the default template, find a new default
         const updatedDefaultTemplateName =
-          prev.defaultTemplateName === selectedName
+          prev.defaultTemplateName === templateName
             ? Object.keys(updatedCopyTemplates)[0] || ""
             : prev.defaultTemplateName
 
@@ -371,7 +432,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       })
 
       // Update local state
-      dispatch({ type: "DELETE_TEMPLATE", payload: selectedName })
+      dispatch({ type: "DELETE_TEMPLATE", payload: templateName })
 
       toast.success("Template deleted")
     } catch (err) {
@@ -422,7 +483,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           <SelectTrigger className="flex-1 rounded-xl px-3 py-2 text-sm justify-between bg-white">
             <SelectValue placeholder="Select a template" />
           </SelectTrigger>
-          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
+          {/* <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
             {availableTemplates.map(([name]) => (
               <SelectItem
                 key={name}
@@ -431,6 +492,17 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               >
                 {name} {name === defaultName ? "(Default)" : ""}
               </SelectItem>
+            ))}
+          </SelectContent> */}
+          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
+            {availableTemplates.map(([name]) => (
+              <SelectItemWithDelete
+                key={name}
+                value={name}
+                name={name}
+                isDefault={name === defaultName}
+                onDelete={handleDeleteTemplate}
+              />
             ))}
           </SelectContent>
         </Select>
@@ -550,7 +622,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             Add New Template
           </Button>
 
-          <Button
+          {/* <Button
             variant="destructive"
             className="w-full rounded-xl h-[40px] hover:bg-red-600 flex items-center gap-2"
             onClick={handleDeleteTemplate}
@@ -558,7 +630,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           >
             <Trash2 className="w-4 h-4" />
             Delete Template
-          </Button>
+          </Button> */}
         </div>
       </div>
       {showImportPopup && (

@@ -141,7 +141,7 @@ export default function CreativeEnhancements({ enhancements, setEnhancements }) 
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">
-                        {allEnabled ? "All On" : someEnabled ? "Some On" : "All Off"}
+                        Toggle All
                     </span>
                     <Switch
                         checked={allEnabled}

@@ -156,14 +156,26 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, cu
     }
 
     // Default case for adType, fileName, iteration
+
     return (
       <div className="flex items-center gap-2">
         <CustomRadioButton checked={isSelected} onClick={onToggle} />
         <span className={cn(variant === "home" ? "text-xs" : "text-sm")}>
           {labelMap[id]}
         </span>
+        {variant === "home" && id === "adType" && (
+          <span className="text-gray-500 text-[10px] font-medium">
+            (Static/Video)
+          </span>
+        )}
+        {variant === "home" && id === "iteration" && (
+          <span className="text-gray-500 text-[10px] font-medium">
+            (1/2/3...)
+          </span>
+        )}
       </div>
     )
+
   }
 
   return (

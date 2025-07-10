@@ -1485,7 +1485,7 @@ export default function AdCreationForm({
 
               {/* Disclaimer */}
               <p className="text-xs font-medium text-gray-500">
-                *Video Processing Estimates might not be accurate.
+                Video Processing Estimates are still in Beta
               </p>
             </div>
           </div>
@@ -1721,13 +1721,13 @@ export default function AdCreationForm({
             <div className="space-y-1">
               <Label htmlFor="adName" className="flex items-center gap-2">
                 <LabelIcon className="w-4 h-4" />
-                Ad Name (Internal Name)
-                <Infotooltip
+                Ad Name
+                {/* <Infotooltip
                   side="bottom"
-                />
+                /> */}
               </Label>
               <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
-                You can generate an ad name by selecting and re-ordering the properties below
+                Generate an ad name by selecting and re-ordering the properties below
               </Label>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -1980,7 +1980,7 @@ export default function AdCreationForm({
                   )}
                 </Label>
                 <p className="text-gray-500 text-[12px] font-regular">
-                  Your UTMs will be auto applied from your Configuration Settings
+                  Your UTMs will be auto applied from Preferences
                 </p>
 
                 <div className="space-y-3">
