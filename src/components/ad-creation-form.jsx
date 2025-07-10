@@ -386,18 +386,44 @@ export default function AdCreationForm({
 
 
 
-
   useEffect(() => {
-
-    if (!selectedTemplate || !copyTemplates[selectedTemplate]) {
+    // If no templates, reset everything including the selected template!
+    if (Object.keys(copyTemplates).length === 0) {
+      if (selectedTemplate !== undefined) {
+        setSelectedTemplate(undefined);
+      }
       setMessages([""]);
       setHeadlines([""]);
       return;
     }
+
+    // If selectedTemplate is invalid (not present in current templates), reset it
+    if (!selectedTemplate || !copyTemplates[selectedTemplate]) {
+      if (selectedTemplate !== undefined) {
+        setSelectedTemplate(undefined);
+      }
+      setMessages([""]);
+      setHeadlines([""]);
+      return;
+    }
+
+    // Otherwise, sync fields with the selected template
     const tpl = copyTemplates[selectedTemplate];
     setMessages(tpl.primaryTexts || [""]);
     setHeadlines(tpl.headlines || [""]);
   }, [selectedTemplate, copyTemplates]);
+
+  // useEffect(() => {
+
+  //   if (!selectedTemplate || !copyTemplates[selectedTemplate]) {
+  //     setMessages([""]);
+  //     setHeadlines([""]);
+  //     return;
+  //   }
+  //   const tpl = copyTemplates[selectedTemplate];
+  //   setMessages(tpl.primaryTexts || [""]);
+  //   setHeadlines(tpl.headlines || [""]);
+  // }, [selectedTemplate, copyTemplates]);
 
 
 
