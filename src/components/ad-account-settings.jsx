@@ -21,9 +21,6 @@ import CopyIcon from '@/assets/icons/copy.svg?react';
 import { useNavigate } from "react-router-dom"
 
 
-
-
-
 export default function AdAccountSettings({
   //isLoggedIn,
   isLoading,
@@ -391,7 +388,7 @@ export default function AdAccountSettings({
     .map(id => adSets.find(a => a.id === id))
     .filter(adset => adset?.is_dynamic_creative);
 
-  const dynamicAdSetNames = selectedDynamicAdSets.map(a => a?.name || a?.id);
+  // const dynamicAdSetNames = selectedDynamicAdSets.map(a => a?.name || a?.id);
 
 
   return (
