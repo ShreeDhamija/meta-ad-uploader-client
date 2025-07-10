@@ -701,6 +701,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                             setPrimaryTexts(ad.primaryTexts.slice(0, 5))
                             setHeadlines(ad.headlines.slice(0, 5))
                             setShowImportPopup(false)
+                            toast.success("Copy imported")
                           }}
                         >
                           <Download className="w-4 h-4" />
