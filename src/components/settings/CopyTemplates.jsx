@@ -48,23 +48,29 @@ const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
   return (
     <SelectItem
       value={value}
-      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg p-0 relative"
+      // Remove p-0 so base padding returns, then tweak below.
+      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg pl-3 pr-2 py-2 flex items-center"
     >
-      <div className="flex items-center justify-between w-full">
-        <div className="flex-1 px-2 py-1.5 data-[highlighted]:bg-accent data-[state=checked]:bg-accent">
-          {name} {isDefault ? "(Default)" : ""}
-        </div>
-        <div className="px-1 py-1.5 hover:bg-red-100 rounded-md mr-1 flex items-center justify-center">
-          <Trash2
-            tabIndex={-1}
-            className="w-4 h-4 text-gray-400 hover:text-red-500 cursor-pointer pointer-events-auto"
-            onMouseDown={handleDeleteClick}
-          />
-        </div>
+      {/* Name (row highlight only on this part) */}
+      <div className="flex-1 min-w-0 truncate">
+        {name} {isDefault ? "(Default)" : ""}
+      </div>
+      {/* Trash - at end, with its own hover/rounding */}
+      <div className="ml-auto flex items-center">
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="Delete template"
+          onMouseDown={handleDeleteClick}
+          className="p-1 hover:bg-red-100 rounded-lg transition"
+        >
+          <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors" />
+        </button>
       </div>
     </SelectItem>
   )
 }
+
 
 
 
