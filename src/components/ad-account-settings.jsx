@@ -478,6 +478,13 @@ export default function AdAccountSettings({
 
               </PopoverContent>
             </Popover>
+            {selectedAdAccount && isLoading && (
+              <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
+                <Loader className="h-4 w-4 animate-spin" />
+                Loading settings...
+              </div>
+            )}
+
             {selectedAdAccount && !documentExists && (
               <div className="flex items-center gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl">
                 <CogIcon className="w-4 h-4 text-orange-700" />
@@ -713,7 +720,7 @@ export default function AdAccountSettings({
                       />
 
                       {/* Duplicate Button */}
-                      {/* Duplicate Button with spinner */}
+
                       <Button
                         onClick={duplicateCampaignFunction}
                         disabled={!isLoggedIn || !duplicateCampaign || isLoading}
