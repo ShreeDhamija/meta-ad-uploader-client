@@ -387,7 +387,12 @@ export default function AdAccountSettings({
     }
   }, [duplicateCampaign, campaigns]);
 
+  const isAnyDynamicCreativeAdSet = selectedAdSets
+    .map(id => adSets.find(a => a.id === id))
+    .some(adset => adset?.is_dynamic_creative);
+
   return (
+
     <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -860,6 +865,11 @@ export default function AdAccountSettings({
                 </Command>
               </PopoverContent>
             </Popover>
+            {isAnyDynamicCreativeAdSet && (
+              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-900 text-xs">
+                Dynamic Creative Ad Sets can not have more than 1 ad.
+              </div>
+            )}
 
             {showDuplicateBlock && (
               <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 relative mt-2">
