@@ -1750,7 +1750,7 @@ export default function AdCreationForm({
                     size="sm"
                     variant="outline"
                     onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                    className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-900 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
+                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
                   >
                     <CogIcon className="w-3 h-3 text-white" />
                     Setup Templates
