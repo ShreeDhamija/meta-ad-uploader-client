@@ -48,26 +48,23 @@ const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
   return (
     <SelectItem
       value={value}
-      className="relative pr-8 text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg flex items-center"
+      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg p-0 relative"
     >
-      <span className="flex-1 pointer-events-none truncate">
-        {name} {isDefault ? "(Default)" : ""}
-      </span>
-      <span
-        className="ml-2 flex items-center z-10"
-        onMouseDown={handleDeleteClick}
-        tabIndex={-1}
-        aria-label="Delete template"
-        role="button"
-      >
-        <Trash2
-          className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors"
-        />
-      </span>
+      <div className="flex items-center w-full">
+        <div className="flex-1 px-3 py-2 hover:bg-gray-100 pointer-events-none">
+          {name} {isDefault ? "(Default)" : ""}
+        </div>
+        <div className="px-2 py-2 hover:bg-red-50 flex items-center justify-center">
+          <Trash2
+            tabIndex={-1}
+            className="w-4 h-4 text-gray-400 hover:text-red-500 cursor-pointer pointer-events-auto"
+            onMouseDown={handleDeleteClick}
+          />
+        </div>
+      </div>
     </SelectItem>
   )
 }
-
 
 
 
