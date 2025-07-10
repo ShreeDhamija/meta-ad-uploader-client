@@ -117,6 +117,6 @@ export default function useAdAccountSettings(adAccountId) {
         settings,
         setSettings,
         documentExists,
-        createDefaultSettings,
+
     };
 }
