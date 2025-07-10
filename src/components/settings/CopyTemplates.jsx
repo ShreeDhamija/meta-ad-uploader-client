@@ -479,7 +479,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       </div>
 
       {/* New row with template dropdown and set as default button */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 transition-all duration-300">
         <Select value={selectedName} onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}>
           <SelectTrigger className="flex-1 rounded-xl px-3 py-2 text-sm justify-between bg-white">
             <SelectValue placeholder="Select a template" />
@@ -507,19 +507,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             ))}
           </SelectContent>
         </Select>
-
-        {/* <Button
-          className={`w-[250px] rounded-xl h-[35px] flex items-center gap-2 transition-colors ${isEditingDefault
-            ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
-            : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
-            }`}
-          onClick={handleSetAsDefault}
-          disabled={!templateName.trim() || isEditingDefault || isProcessing}
-        >
-          <CircleCheck className="w-4 h-4" />
-          {isEditingDefault ? "Default Template" : "Set as Default Template"}
-        </Button> */}
-        {editingTemplate && (
+        {/* {editingTemplate && (
           <Button
             className={`w-[250px] rounded-xl h-[35px] flex items-center gap-2 transition-colors ${isEditingDefault
               ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
@@ -531,7 +519,21 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             <CircleCheck className="w-4 h-4" />
             {isEditingDefault ? "Default Template" : "Set as Default Template"}
           </Button>
-        )}
+        )} */}
+        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${editingTemplate ? 'w-[250px] opacity-100' : 'w-0 opacity-0'
+          }`}>
+          <Button
+            className={`w-[250px] rounded-xl h-[35px] flex items-center gap-2 transition-colors whitespace-nowrap ${isEditingDefault
+              ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
+              : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
+              }`}
+            onClick={handleSetAsDefault}
+            disabled={!templateName.trim() || isEditingDefault || isProcessing}
+          >
+            <CircleCheck className="w-4 h-4" />
+            {isEditingDefault ? "Default Template" : "Set as Default Template"}
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-1">
