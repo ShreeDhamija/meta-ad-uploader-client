@@ -129,7 +129,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     Your ads will lead to this link by default if not edited while posting
                 </p>
                 <Input
-                    placeholder="Default link"
+                    placeholder="Enter Default Link Destination For Ads"
                     value={defaultLink}
                     onChange={(e) => setDefaultLink(e.target.value)}
                     className="rounded-xl bg-white"
