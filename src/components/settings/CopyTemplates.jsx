@@ -13,6 +13,31 @@ import { RotateLoader } from "react-spinners"
 
 
 // Custom SelectItem component with delete button
+// const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
+//   const handleDeleteClick = (e) => {
+//     e.stopPropagation()
+//     e.preventDefault()
+//     onDelete(name)
+//   }
+
+//   return (
+//     <SelectItem
+//       value={value}
+//       className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg pr-8 relative"
+//     >
+//       <span className="flex-1 pointer-events-none">
+//         {name} {isDefault ? "(Default)" : ""}
+//       </span>
+//       <Trash2
+//         tabIndex={-1}
+//         className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
+//         onMouseDown={handleDeleteClick}
+//       />
+
+//     </SelectItem>
+//   )
+// }
+
 const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
   const handleDeleteClick = (e) => {
     e.stopPropagation()
@@ -23,20 +48,26 @@ const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
   return (
     <SelectItem
       value={value}
-      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg pr-8 relative"
+      className="relative pr-8 text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg flex items-center"
     >
-      <span className="flex-1 pointer-events-none">
+      <span className="flex-1 pointer-events-none truncate">
         {name} {isDefault ? "(Default)" : ""}
       </span>
-      <Trash2
-        tabIndex={-1}
-        className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
+      <span
+        className="ml-2 flex items-center z-10"
         onMouseDown={handleDeleteClick}
-      />
-
+        tabIndex={-1}
+        aria-label="Delete template"
+        role="button"
+      >
+        <Trash2
+          className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors"
+        />
+      </span>
     </SelectItem>
   )
 }
+
 
 
 
