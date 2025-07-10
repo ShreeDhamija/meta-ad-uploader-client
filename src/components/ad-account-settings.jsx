@@ -488,7 +488,7 @@ export default function AdAccountSettings({
                   size="sm"
                   variant="outline"
                   onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                  className="text-xs px-3 py-0.25 border-orange-300 text-orange-700 bg-orange-300 rounded-xl"
+                  className="text-xs px-3 py-0.25 border-orange-300 text-orange-700 bg-orange-300 rounded-xl hover:text-orange-800 hover:bg-orange-500"
                 >
                   Add Settings
                 </Button>
