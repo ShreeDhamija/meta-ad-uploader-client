@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronsUpDown, RefreshCcw, X, Loader } from "lucide-react"
+import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import { useEffect } from "react"
@@ -387,9 +387,12 @@ export default function AdAccountSettings({
     }
   }, [duplicateCampaign, campaigns]);
 
-  const isAnyDynamicCreativeAdSet = selectedAdSets
+  const selectedDynamicAdSets = selectedAdSets
     .map(id => adSets.find(a => a.id === id))
-    .some(adset => adset?.is_dynamic_creative);
+    .filter(adset => adset?.is_dynamic_creative);
+
+  const dynamicAdSetNames = selectedDynamicAdSets.map(a => a?.name || a?.id);
+
 
   return (
 
@@ -865,11 +868,15 @@ export default function AdAccountSettings({
                 </Command>
               </PopoverContent>
             </Popover>
-            {isAnyDynamicCreativeAdSet && (
-              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-900 text-xs">
-                Dynamic Creative Ad Sets can not have more than 1 ad.
+            {selectedDynamicAdSets.length > 0 && (
+              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-900 text-xs flex items-center">
+                <AlertTriangle className="w-4 h-4 mr-2 text-yellow-700" />
+                Dynamic Creative Ad Set{dynamicAdSetNames.length > 1 ? 's' : ''}{' '}
+                <span className="font-semibold">{dynamicAdSetNames.join(", ")}</span>
+                {" "}cannot have more than 1 ad.
               </div>
             )}
+
 
             {showDuplicateBlock && (
               <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 relative mt-2">
