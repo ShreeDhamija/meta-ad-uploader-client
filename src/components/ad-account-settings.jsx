@@ -480,17 +480,17 @@ export default function AdAccountSettings({
             </Popover>
             {selectedAdAccount && !documentExists && (
               <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-xl">
-                <CogIcon className="w-4 h-4 text-yellow-600" />
-                <Label className="text-sm text-yellow-700 flex-1">
+                <CogIcon className="w-4 h-4 text-gray-800" />
+                <Label className="text-sm text-gray-700 flex-1">
                   No default settings found for this ad account
                 </Label>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => navigate('/settings')}
-                  disabled={creatingSettings}
-                  className="text-xs px-3 py-1 border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                  className="text-xs px-3 py-1 border-gray-300 text-gray-700 bg-zinc-900"
                 >
+                  Settings
                 </Button>
               </div>
             )}
