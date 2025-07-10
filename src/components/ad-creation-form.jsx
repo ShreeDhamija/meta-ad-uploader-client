@@ -1769,7 +1769,10 @@ export default function AdCreationForm({
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <TemplateIcon className="w-4 h-4" />
-                  Select Copy Template
+                  {Object.keys(copyTemplates).length === 0
+                    ? "Select a Copy Template(Set these up in settings)"
+                    : "Select a Copy Template"
+                  }
                 </Label>
                 <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
                   <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
