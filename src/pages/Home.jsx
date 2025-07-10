@@ -117,11 +117,15 @@ export default function Home() {
         if (!selectedAdAccount) return
 
         if (adAccountSettings.defaultPage?.id) {
-            setPageId(adAccountSettings.defaultPage.id)
+            setPageId(adAccountSettings.defaultPage.id);
+        } else {
+            setPageId("");
         }
 
         if (adAccountSettings.defaultInstagram?.id) {
-            setInstagramAccountId(adAccountSettings.defaultInstagram.id)
+            setInstagramAccountId(adAccountSettings.defaultInstagram.id);
+        } else {
+            setInstagramAccountId("");
         }
 
         if (adAccountSettings.defaultLink) {
