@@ -479,7 +479,7 @@ export default function AdAccountSettings({
               </PopoverContent>
             </Popover>
             {selectedAdAccount && !documentExists && (
-              <div className="flex items-center gap-2 p-0.5">
+              <div className="flex items-center gap-2 p-1 bg-orange-50 border border-orange-200 rounded-xl">
                 <CogIcon className="w-4 h-4 text-gray-800" />
                 <Label className="text-xs text-gray-700 flex-1">
                   Add default settings for this account to speed up your workflow
@@ -488,7 +488,7 @@ export default function AdAccountSettings({
                   size="sm"
                   variant="outline"
                   onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                  className="text-xs px-3 py-1 border-gray-300 text-white bg-zinc-900 rounded-xl"
+                  className="text-xs px-3 py-0.5 border-orange-300 text-orange bg-orange-900 rounded-xl"
                 >
                   Add Settings
                 </Button>
