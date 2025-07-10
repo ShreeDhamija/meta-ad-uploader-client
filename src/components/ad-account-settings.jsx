@@ -481,7 +481,7 @@ export default function AdAccountSettings({
             {selectedAdAccount && isLoading && (
               <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
                 <Loader className="h-4 w-4 animate-spin" />
-                Loading settings...
+                Loading Ad Account Preferences...
               </div>
             )}
 

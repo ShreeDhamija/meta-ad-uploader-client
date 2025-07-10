@@ -125,8 +125,11 @@ export default function Home() {
         }
 
         if (adAccountSettings.defaultLink) {
-            setLink([adAccountSettings.defaultLink])
+            setLink([adAccountSettings.defaultLink]);
+        } else {
+            setLink([""]);
         }
+
 
 
         if (adAccountSettings.defaultCTA) {
