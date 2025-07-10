@@ -28,6 +28,7 @@ import TemplateIcon from '@/assets/icons/file.svg?react';
 import LinkIcon from '@/assets/icons/link.svg?react';
 import CTAIcon from '@/assets/icons/cta.svg?react';
 import { useNavigate } from "react-router-dom"
+import CogIcon from '@/assets/icons/cog.svg?react';
 
 
 
@@ -1183,38 +1184,6 @@ export default function AdCreationForm({
 
               const groupVideoMetadata = [];
 
-
-              // // Add only files from this group
-              // group.forEach(fileId => {
-              //   const file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
-              //   if (file && !file.isDrive && file.size <= 100 * 1024 * 1024) {
-              //     formData.append("mediaFiles", file);
-              //   }
-              // });
-
-              // // Add drive files from this group
-              // group.forEach(fileId => {
-              //   const driveFile = smallDriveFiles.find(f => f.id === fileId);
-              //   if (driveFile) {
-              //     formData.append("driveFiles", JSON.stringify({
-              //       id: driveFile.id,
-              //       name: driveFile.name,
-              //       mimeType: driveFile.mimeType,
-              //       accessToken: driveFile.accessToken
-              //     }));
-              //   }
-              // });
-
-              // // Add S3 files from this group
-              // group.forEach(fileId => {
-              //   const s3File = [...s3Results, ...s3DriveResults].find(f =>
-              //     f.name && f.name.includes(fileId)
-              //   );
-              //   if (s3File) {
-              //     formData.append("s3VideoUrls", s3File.s3Url);
-              //   }
-              // });
-
               group.forEach(fileId => {
                 const file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
                 if (file && !file.isDrive && file.size <= 100 * 1024 * 1024) {
@@ -1768,41 +1737,6 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-3">
-              {/* <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <TemplateIcon className="w-4 h-4" />
-                  {Object.keys(copyTemplates).length === 0
-                    ? "Select a Copy Template (Set these up in settings)"
-                    : "Select a Copy Template"
-                  }
-                </Label>
-                <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                  <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
-                    <SelectValue placeholder={Object.keys(copyTemplates).length === 0
-                      ? "No templates available"
-                      : "Choose a Template"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
-                    {Object.entries(copyTemplates)
-                      .sort(([a], [b]) => {
-                        if (a === defaultTemplateName) return -1;
-                        if (b === defaultTemplateName) return 1;
-                        return a.localeCompare(b);
-                      })
-                      .map(([templateName]) => (
-                        <SelectItem
-                          key={templateName}
-                          value={templateName}
-                          className="text-sm px-4 py-2 rounded-xl hover:bg-gray-100"
-                        >
-                          {templateName}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div> */}
-
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Label className="flex items-center gap-2 mb-0">
@@ -1818,8 +1752,8 @@ export default function AdCreationForm({
                     onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
                     className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-900 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
                   >
-                    <CirclePlus className="w-3 h-3 text-white" />
-                    Add Templates
+                    <CogIcon className="w-3 h-3 text-white" />
+                    Setup Templates
                   </Button>
                   )}
                 </div>
