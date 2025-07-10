@@ -13,9 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader2, Plus, Trash2, Upload } from "lucide-react"
+import { ChevronDown, Loader2, Plus, Trash2, Upload, CirclePlus, ChevronsUpDown, RefreshCcw } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { ChevronsUpDown, RefreshCcw } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
@@ -1810,16 +1809,19 @@ export default function AdCreationForm({
                       ? "Select a Copy Template"
                       : "Select a Copy Template"}
                   </Label>
-                  <Button
+                  {Object.keys(copyTemplates).length === 0 && (<Button
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
                     className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-900 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
                   >
+                    <CirclePlus className="w-3 h-3 text-white" />
                     Add Templates
                   </Button>
+                  )}
                 </div>
+
                 <Select
                   value={selectedTemplate}
                   onValueChange={setSelectedTemplate}
