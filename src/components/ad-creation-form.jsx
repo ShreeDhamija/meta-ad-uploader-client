@@ -388,7 +388,12 @@ export default function AdCreationForm({
 
 
   useEffect(() => {
-    if (!selectedTemplate || !copyTemplates[selectedTemplate]) return;
+
+    if (!selectedTemplate || !copyTemplates[selectedTemplate]) {
+      setMessages([""]);
+      setHeadlines([""]);
+      return;
+    }
     const tpl = copyTemplates[selectedTemplate];
     setMessages(tpl.primaryTexts || [""]);
     setHeadlines(tpl.headlines || [""]);
