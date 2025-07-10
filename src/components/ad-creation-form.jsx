@@ -287,7 +287,7 @@ export default function AdCreationForm({
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "S3 upload failed");
+    if (!res.ok) throw new Error(data.error || "S3 upload failed again");
     return data.s3Url;
   }
 
