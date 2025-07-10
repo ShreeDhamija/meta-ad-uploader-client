@@ -871,12 +871,12 @@ export default function AdAccountSettings({
             {selectedDynamicAdSets.length > 0 && (
               <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-900 text-xs flex items-center">
                 <AlertTriangle className="w-4 h-4 mr-2 text-yellow-700" />
-                Dynamic Creative Ad Set -
+                Dynamic Creative Ad Set '
                 {selectedDynamicAdSets.length > 1 ? "s " : " "}
                 <span className="font-semibold">
                   {selectedDynamicAdSets.map(a => a?.name || a?.id).join(", ")}
                 </span>
-                {" - cannot have more than 1 ad. Please make sure it has no ads before posting"}
+                {" ' cannot have more than 1 ad. Please make sure it has no ads before posting"}
               </div>
             )}
 
