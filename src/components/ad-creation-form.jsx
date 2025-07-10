@@ -1810,16 +1810,13 @@ export default function AdCreationForm({
                       : "Select a Copy Template"}
                   </Label>
                   <Button
+                    type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() =>
-                      navigate(
-                        `/settings?tab=adaccount&adAccount=${selectedAdAccount}`
-                      )
-                    }
-                    className="text-xs px-3 py-0.5 border-orange-300 text-orange-700 bg-orange-100 rounded-xl hover:text-orange-800 hover:bg-orange-200 ml-auto"
+                    onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+                    className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-900 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
                   >
-                    Set Up Templates
+                    Add Templates
                   </Button>
                 </div>
                 <Select
