@@ -1,45 +1,166 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { motion } from 'framer-motion';
 import styles from "../styles/Landing.module.scss"
-import heroFormImg from "../assets/hero-form.webp"
-import logoImg from "../assets/logo.webp"
-import fileIcon from "../assets/file.svg"
-import tIcon from "../assets/t.svg"
-import tBlueIcon from "../assets/tBlue.svg"
-import chromeIcon from "../assets/chrome.svg"
-import rocketIcon from "../assets/rocket.svg"
-import settingsIcon from "../assets/settings.svg"
-import checkIcon from "../assets/check.svg"
-import avatar1 from "../assets/avatar1.png"
-import avatar2 from "../assets/avatar2.png"
-import avatar3 from "../assets/avatar3.png"
-import avatar4 from "../assets/avatar4.png"
-import form from "../assets/form.webp"
-import driveIntegration from "../assets/driveIntegration.webp"
-import settingsLanding from "../assets/settingslanding.webp"
-import teamSettingsLanding from "../assets/teamseatslanding.webp"
+import { useEffect, useRef, useState, useCallback } from "react";
+import logo from "../assets/logo.webp";
+import { motion, useReducedMotion } from "framer-motion";
+import roket from "../assets/uploadrocket2.png";
+import star from "../assets/star.png";
+import right from "../assets/check.svg";
+import video from "../assets/Screenshot.png";
+import plus from "../assets/pauseCtaFrame.svg";
+import rose from "../assets/rose.svg";
+import swap from "../assets/Frame.svg";
+import settings from "../assets/setting.svg";
+import rocket from "../assets/rocket.svg";
+import iconPink from "../assets/iconPink.svg";
+import iconPurple from "../assets/iconPurple.svg";
+import iconOrange from "../assets/iconOrange.svg";
+import iconBlue from "../assets/iconBlue.svg";
+import iconGreen from "../assets/iconGreen.svg";
+import iconRed from "../assets/iconRed.svg";
+import cardrocket from "../assets/tranparentRocket.svg";
+import uprocket from "../assets/uploadrocket2.png";
+import thumb1 from "../assets/thumb1.png";
+import thumb2 from "../assets/thumb2.png";
+import thumb3 from "../assets/thumb3.png";
+import copy from "../assets/transparentCopy.svg";
+import check from "../assets/checkmark.svg";
+import cardsettings from "../assets/transparentSetting.svg";
+import download from "../assets/transparentDoenload.svg";
+import dwimg from "../assets/download.svg";
+import copimg from "../assets/copy.svg";
+import image from "../assets/pic.svg";
+import driveIcon from "../assets/googledrive.png";
+import mobileHero from "../assets/mobilehero1.webp";
 
+const features = [
+    {
+        title: "Turn on/off All Creative Enhancement",
+        icon: iconPink,
+        iconClass: styles.iconPink,
+    },
+    {
+        title: "Custom Naming Convention",
+        icon: iconPurple,
+        iconClass: styles.iconPurple,
+    },
+    {
+        title: "Launch Ads Turned off",
+        icon: iconOrange,
+        iconClass: styles.iconOrange,
+    },
+    {
+        title: "Bulk Launch Ads 10X faster",
+        icon: iconBlue,
+        iconClass: styles.iconBlue,
+    },
+    {
+        title: "Enterprise Settings",
+        icon: iconGreen,
+        iconClass: styles.iconGreen,
+    },
+    {
+        title: "UTM Management",
+        icon: iconRed,
+        iconClass: styles.iconRed,
+    },
+];
 
-const Landing = () => {
-    const avatars = [avatar1, avatar2, avatar3, avatar4]
-    const [menuOpen, setMenuOpen] = useState(false)
-    const [isScrolled, setIsScrolled] = useState(false)
-    const mobileMenuRef = useRef(null)
-    const menuBtnRef = useRef(null)
+export default function Home() {
+    const [menuOpen, setMenuOpen] = useState(false);
+    const mobileMenuRef = useRef(null);
+    const menuBtnRef = useRef(null);
+    const shouldReduceMotion = useReducedMotion();
+    const landingRef = useRef();
+    const videoRef1 = useRef(null);
+    const videoRef2 = useRef(null);
+    const [showButton1, setShowButton1] = useState(true);
+    const [showButton2, setShowButton2] = useState(true);
+    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 0)
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 576);
+        };
+
+        checkMobile();
+
+        window.addEventListener("resize", checkMobile);
+
+        return () => {
+            window.removeEventListener("resize", checkMobile);
+        };
+    }, []);
+
+    const handlePlay1 = () => {
+        if (videoRef1.current) {
+            videoRef1.current
+                .play()
+                .catch((err) => console.error("Play failed", err));
         }
+        setShowButton1(false);
+    };
 
-        window.addEventListener("scroll", handleScroll)
-        return () => window.removeEventListener("scroll", handleScroll)
-    }, [])
+    const handlePlay2 = () => {
+        if (videoRef2.current) {
+            videoRef2.current
+                .play()
+                .catch((err) => console.error("Play failed", err));
+        }
+        setShowButton2(false);
+    };
+    useEffect(() => {
+        const video = videoRef1.current;
+        if (!video) return;
+
+        const handlePlay = () => {
+            setShowButton1(false);
+        };
+
+        video.addEventListener("play", handlePlay);
+
+        return () => {
+            video.removeEventListener("play", handlePlay);
+        };
+    }, []);
+    useEffect(() => {
+        const video = videoRef2.current;
+        if (!video) return;
+
+        const handlePlay = () => {
+            setShowButton2(false);
+        };
+
+        video.addEventListener("play", handlePlay);
+
+        return () => {
+            video.removeEventListener("play", handlePlay);
+        };
+    }, []);
+
+    const [isScrolled, setIsScrolled] = useState(false);
 
     useEffect(() => {
-        // Handle clicks outside the mobile menu
+        const scrollHandler = () => {
+            if (landingRef.current) {
+                setIsScrolled(landingRef.current.scrollTop > 10);
+            }
+        };
+
+        landingRef.current?.addEventListener("scroll", scrollHandler);
+        return () =>
+            landingRef.current?.removeEventListener("scroll", scrollHandler);
+    }, []);
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+        if ("scrollRestoration" in history) {
+            history.scrollRestoration = "manual";
+        }
+    }, []);
+
+    useEffect(() => {
         const handleClickOutside = (event) => {
             if (
                 menuOpen &&
@@ -48,347 +169,765 @@ const Landing = () => {
                 menuBtnRef.current &&
                 !menuBtnRef.current.contains(event.target)
             ) {
-                setMenuOpen(false)
+                setMenuOpen(false);
             }
-        }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [menuOpen]);
 
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside)
-        }
-    }, [menuOpen])
+    const scrollToSection = useCallback((e, sectionId) => {
+        e.preventDefault();
+        const section = document.getElementById(sectionId);
 
-
-    const scrollToSection = (e, sectionId) => {
-        e.preventDefault()
-        const section = document.getElementById(sectionId)
         if (section) {
-            // Get the navbar height to offset the scroll position - account for top margin
-            const navbarHeight = 105 // 75px navbar + 30px top margin
-            const sectionPosition = section.getBoundingClientRect().top
-            const offsetPosition = sectionPosition + window.pageYOffset - navbarHeight
-
-            window.scrollTo({
-                top: offsetPosition,
-                behavior: "smooth",
-            })
-
-            // Close mobile menu if open
-            if (menuOpen) setMenuOpen(false)
+            section.scrollIntoView({ behavior: "smooth", block: "start" });
+            setMenuOpen(false);
         }
-    }
-
+    }, []);
     return (
-        <div className={styles.landing}>
-            <header className={styles.header}>
-                <div className={styles.brand}>
-                    <img src={logoImg || "/placeholder.svg"} alt="Blip logo" className={styles.logo} />
-                    <span className={styles.brandText}>Blip</span>
-                </div>
-
-                <nav className={`${styles.navLinks} ${isScrolled ? styles.scrolled : ""}`}>
-                    <a href="#about" onClick={(e) => scrollToSection(e, "about")}>
-                        about
-                    </a>
-                    <a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")}>
-                        pricing
-                    </a>
-                    <a href="#contact" onClick={(e) => scrollToSection(e, "footer")}>
-                        Contact Us
-                    </a>
-                    <button className={styles.startBtn}>Coming Soon</button>
-                </nav>
-
-                <button ref={menuBtnRef} className={styles.menuBtn} onClick={() => setMenuOpen((open) => !open)}>
-                    Menu
-                </button>
-
-                <div ref={mobileMenuRef} className={`${styles.mobileMenu} ${menuOpen ? styles.open : ""}`}>
-                    <a href="#about" onClick={(e) => scrollToSection(e, "about")}>
-                        about
-                    </a>
-                    <a href="#pricing" onClick={(e) => scrollToSection(e, "pricing")}>
-                        pricing
-                    </a>
-                    <a href="#features" onClick={(e) => scrollToSection(e, "features")}>
-                        features
-                    </a>
-                    <button className={styles.startBtn} onClick={() => setMenuOpen(false)}>
-                        Start Now
-                    </button>
-                </div>
-            </header>
-
-            <motion.section
-                className={styles.hero}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-            >
-
-                <h1>
-                    The simplest, quickest
-                    <br />
-                    bulk ad uploader for Meta.
-                </h1>
-
-                <div className={styles.featuresList}>
-                    <div className={styles.featureItem}>
-                        <img src={checkIcon || "/placeholder.svg"} alt="" />
-                        <span>Launch 100s of ads in seconds</span>
-                    </div>
-                    <div className={styles.featureItem}>
-                        <img src={checkIcon || "/placeholder.svg"} alt="" />
-                        <span>Unlimited Ad Accounts</span>
-                    </div>
-                    <div className={styles.featureItem}>
-                        <img src={checkIcon || "/placeholder.svg"} alt="" />
-                        <span>Auto-imports all settings for instant use</span>
-                    </div>
-                </div>
-                <div className={styles.cta}>
-                    <button>Coming Soon</button>
-                </div>
-
-                <p className={styles.subText}>No CC required. 14 day free trial.</p>
-
-                <div className={styles.heroForm}>
-                    <img src={heroFormImg || "/placeholder.svg"} alt="Hero form UI" className={styles.heroBg} />
-                    <img src={form || "/placeholder.svg"} alt="Inner overlay" className={styles.heroInner} />
-                </div>
-            </motion.section>
-
-
-            <motion.section
-                id="about"
-                className={styles.featuresIntro}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-            >
-                <span>Escape button clicking hell</span>
-                <h2>The fastest way to manage multiple ad accounts</h2>
-                <p>
-                    End context-switching whiplash. No more selecting the same settings over and over, copy-pasting text dozens of
-                    times, or sluggish UI.
-                </p>
-            </motion.section>
-
-            <motion.section
-                id="features"
-                className={styles.featureBlocks}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-            >
-
-                <div className={`${styles.block} ${styles.yellow}`}>
-                    <div className={styles.icon}>
-                        <img src={fileIcon || "/placeholder.svg"} alt="Upload icon" />
-                    </div>
-                    <h3>Upload multiple creatives at once</h3>
-                    <p>
-                        Automate your ad creation flow with lightning-fast bulk uploads, saved settings, and ad previews — all in
-                        one clean dashboard.
-                    </p>
-                </div>
-                <div className={`${styles.block} ${styles.blue}`}>
-                    <div className={styles.icon}>
-                        <img src={tIcon || "/placeholder.svg"} alt="Templates icon" />
-                    </div>
-                    <h3>Apply saved templates for copy, CTA, and links</h3>
-                    <p>
-                        Stop wasting time in Meta Ads Manager's clunky interface. Simply select your ideal settings once. We take
-                        care of the rest.
-                    </p>
-                </div>
-            </motion.section>
-
-            {/* Persistent Settings Section */}
-
-            <motion.section
-                id="settings"
-                className={styles.persistentSettings}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-            >
-
-                <div className={styles.persistentContent}>
-                    <div className={styles.persistentIcon}>
-                        <img src={settingsIcon || "/placeholder.svg"} alt="Settings icon" />
-                    </div>
-                    <h3>Persistent Settings<br></br> Per Account</h3>
-                    <p>UTMs, page selections, ad name formulas,<br></br>all saved, per ad account, so nothing resets<br></br> on reload.</p>
-                </div>
-                <img src={settingsLanding} alt="Persistent Settings Screenshot" className={styles.settingsLanding} />
-
-            </motion.section>
-
-
-            <motion.section
-                id="about"
-                className={styles.publishRow}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-            >
-
-                <div className={styles.publishCard}>
-                    <div className={styles.icon}>
-                        <img src={chromeIcon || "/placeholder.svg"} alt="Chrome icon" />
-                    </div>
-                    <h3>Import files straight from your Google Drive</h3>
-                    <p>
-                        No need to spend hours downloading hundreds of ad assets. With Blip, you can one-click deploy media from
-                        your Drive to Meta Ads Manager.
-                    </p>
-                </div>
-                <img src={driveIntegration} alt="Google Drive Integration Screenshot" className={styles.driveIntegration} />
-
-            </motion.section>
-
-            {/* Pricing Section */}
-            <motion.section
-                id="pricing"
-                className={styles.pricingSection}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-            >
-
-                <div className={styles.pricingContent}>
-                    <div className={styles.pricingBadge}>1 Flat Price. Unlimited Ad Accounts</div>
-                    <h2>Pricing</h2>
-                    <p>UTMs, page selections, ad name formulas <br></br>all saved, per ad account, so nothing resets on reload.</p>
-                    <button className={styles.pricingBtn}>Coming Soon</button>
-                </div>
-                <div className={styles.pricingRight}>
-                    <div className={styles.pricingPrice}>$500/month</div>
-                    <div className={styles.pricingFeatures}>
-                        <div className={styles.pricingFeature}>
-                            <img src={checkIcon || "/placeholder.svg"} alt="Check" />
-                            <span>Launch 100s of ads together</span>
-                        </div>
-                        <div className={styles.pricingFeature}>
-                            <img src={checkIcon || "/placeholder.svg"} alt="Check" />
-                            <span>Unlimited Ad Accounts</span>
-                        </div>
-                        <div className={styles.pricingFeature}>
-                            <img src={checkIcon || "/placeholder.svg"} alt="Check" />
-                            <span>Persistent Settings</span>
-                        </div>
-                    </div>
-                </div>
-                {/* <div className={styles.pricingPlaceholder} /> */}
-            </motion.section>
-
-            {/* Team Seats Section */}
-            <motion.section
-                id="about"
-                className={styles.teamSeats}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-            >
-
-                <div className={styles.teamContent}>
-                    <div className={styles.teamIcon}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
+        <>
+            <div className={styles.landing} ref={landingRef}>
+                <div className={styles.container}>
+                    <div>
+                        <div className={styles.logoWrapper}>
+                            <img
+                                src={logo}
+                                alt="logo"
+                                width={48}
+                                height={48}
+                                className={styles.blipLogo}
                             />
-                            <path
-                                d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
-                    </div>
-                    <h3>Team seats<br></br> Coming Soon</h3>
-                    <p>
-                        Stop wasting time in Meta Ads Manager's <br></br>clunky interface. Automate your ad creation flow<br></br> with lightning-fast
-                        bulk uploads, saved settings,<br></br> and ad previews — all in one clean dashboard.
-                    </p>
-                </div>
-                <img src={teamSettingsLanding} alt="Team Seats Screenshot" className={styles.teamSettingsLanding} />
-            </motion.section>
-
-            {/* <motion.section
-                id="about"
-                className={styles.smallCardsRow}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.7, ease: 'easeOut' }}
-            >
-
-                <div className={`${styles.smallCard} ${styles.pink}`}>
-                    <div className={`${styles.cardHeader} ${styles.redBackground}`}>
-                        <img src={rocketIcon || "/placeholder.svg"} alt="" className={styles.cardIcon} />
-                        <h4>Bulk Uploads Done Right</h4>
-                    </div>
-                    <p>Drag, drop, and upload dozens of videos and images in seconds. No limits. No slowdowns.</p>
-                    <div className={styles.placeholder} />
-                </div>
-
-                <div className={`${styles.smallCard} ${styles.lightBlue}`}>
-                    <div className={`${styles.cardHeader} ${styles.lightBackground}`}>
-                        <img src={tBlueIcon || "/placeholder.svg"} alt="" className={styles.cardIcon} />
-                        <h4>Smart Defaults &amp; Copy Templates</h4>
-                    </div>
-                    <p>Save your most-used headlines, primary texts, CTAs, and URLs. Apply them instantly to any ad.</p>
-                    <div className={styles.placeholder} />
-                </div>
-
-                <div className={`${styles.smallCard} ${styles.green}`}>
-                    <div className={`${styles.cardHeader} ${styles.greenBackground}`}>
-                        <img src={settingsIcon || "/placeholder.svg"} alt="" className={styles.cardIcon} />
-                        <h4>Persistent Settings Per Account</h4>
-                    </div>
-                    <p>
-                        UTM parameters, page selections, ad name formulas — all saved, per ad account, so nothing resets on reload.
-                    </p>
-                    <div className={styles.placeholder} />
-                </div>
-            </motion.section> */}
-
-            {/* Footer */}
-            <footer id="footer" className={styles.footer}>
-                <div className={styles.footerContent}>
-                    <div className={styles.footerLeft}>
-                        <div className={styles.footerBrand}>
-                            <img src={logoImg || "/placeholder.svg"} alt="Blip logo" className={styles.footerLogo} />
-                            <span className={styles.footerBrandText}>Blip</span>
+                            <span className={styles.brandText}>Blip</span>
                         </div>
-                        <div className={styles.footerEmail}><a href="mailto:shree@withblip.com"> shree@withblip.com</a></div>
+                        <header className={styles.header}>
+                            <div className={styles.brand}>
+                                <img
+                                    src={logo}
+                                    alt="logo"
+                                    width={32}
+                                    height={32}
+                                    className={styles.blipLogo}
+                                />
+                                <span className={styles.brandText}>Blip</span>
+                            </div>
+                            <button
+                                className={styles.menuBtn}
+                                ref={menuBtnRef}
+                                onClick={() => setMenuOpen((open) => !open)}
+                            >
+                                <div className={styles.menuBtnText}>Menu</div>
+                            </button>
+
+                            <div
+                                ref={mobileMenuRef}
+                                className={`${styles.mobileMenu} ${menuOpen ? styles.open : ""
+                                    }`}
+                            >
+                                <a href="#about" onClick={(e) => scrollToSection(e, "about")}>
+                                    about
+                                </a>
+                                <a
+                                    href="#pricing"
+                                    onClick={(e) => scrollToSection(e, "pricing")}
+                                >
+                                    pricing
+                                </a>
+                                <a
+                                    href="#features"
+                                    onClick={(e) => scrollToSection(e, "features")}
+                                >
+                                    features
+                                </a>
+                                <button
+                                    className={styles.startBtn}
+                                    onClick={() => setMenuOpen(false)}
+                                >
+                                    Start Now
+                                </button>
+                            </div>
+                            <nav
+                                className={`${styles.navLinks} ${isScrolled ? styles.scrolled : ""
+                                    }`}
+                            >
+                                <a href="#about" onClick={(e) => scrollToSection(e, "about")}>
+                                    about
+                                </a>
+                                <a
+                                    href="#pricing"
+                                    onClick={(e) => scrollToSection(e, "pricing")}
+                                >
+                                    pricing
+                                </a>
+                                <a
+                                    href="#features"
+                                    onClick={(e) => scrollToSection(e, "features")}
+                                >
+                                    features
+                                </a>
+                                <button className={styles.startBtn}>Start Now</button>
+                            </nav>
+                        </header>
                     </div>
-                    <div className={styles.footerRight}>
-                        <a href="/privacy-policy" target="_blank" className={styles.footerLink}>
-                            Privacy Policy
-                        </a>
-                        <a href="/terms-of-service" target="_blank" className={styles.footerLink}>
-                            Terms of Service
-                        </a>
-                        <p>Blip use and transfer of information received from Google APIs to any other app will adhere to <a href="https://developers.google.com/workspace/workspace-api-user-data-developer-policy">Workspace API User Data and Developer Policy</a>, including the <a href="https://developers.google.com/workspace/workspace-api-user-data-developer-policy#limited-use"> Limited use of user data. </a></p>
+
+                    <motion.section
+                        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, amount: 0.3, margin: "-100px" }}
+                        transition={{
+                            duration: shouldReduceMotion ? 0 : isMobile ? 0.2 : 0.7,
+                            ease: "easeOut",
+                        }}
+                        className={styles.textcontainer}
+                    >
+                        <div className={styles.heroText}>
+                            The simplest,
+                            <span className={styles.inlineIcon}>
+                                <img
+                                    src={roket}
+                                    alt="rocket"
+                                    className={styles.herorocket}
+                                />
+                                quickest
+                                <span style={{ marginRight: "5px" }} />
+                            </span>
+                            <br />
+                            bulk ad uploader
+                            <span className={styles.inlineIcon}>
+                                <img src={star} alt="sparkles" className={styles.sparkle} />
+                            </span>
+                            for Meta.
+                        </div>
+                        <div className={styles.subText}>
+                            <div className={styles.griditem}>
+                                <img src={right} alt="right" width={21} height={21} />
+                                <div className={styles.text}> Launch 100s of ads together</div>
+                            </div>
+                            <div className={styles.griditem}>
+                                <img src={right} alt="right" width={21} height={21} />
+                                <div className={styles.text}> Unlimited Ad Accounts</div>
+                            </div>
+                            <div className={styles.griditem}>
+                                <img src={right} alt="right" width={21} height={21} />
+                                <div className={styles.text}>
+                                    {" "}
+                                    Save your settings and launch an ad in seconds
+                                </div>
+                            </div>
+                        </div>
+                        <div className={styles.buttoncontainer}>
+                            <div className={styles.button}>Get Started</div>
+                            <div className={styles.button1}>View Demo</div>
+                        </div>
+                    </motion.section>
+
+                    <motion.section
+                        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{
+                            once: true,
+                            amount: 0.3,
+                            margin: isMobile ? "0px" : "-100px",
+                        }}
+                        transition={{
+                            duration: shouldReduceMotion ? 0 : isMobile ? 0.2 : 0.7,
+                            ease: "easeOut",
+                        }}
+                        className={styles.textcontainer2}
+                    >
+                        <img
+                            src={mobileHero}
+                            width={221}
+                            height={331}
+                            alt="mobilehero"
+                            style={{ paddingBottom: 11 }}
+                        />
+                        <div className={styles.heroText}>
+                            The simplest,
+                            <br />
+                            quickest bulk ad <br /> uploader for
+                            <br />
+                            Meta{" "}
+                            <span className={`${styles.inlineIcon} ${styles.sparkle}`}>
+                                <img src={star} alt="sparkles" />
+                            </span>{" "}
+                        </div>
+                        <div className={styles.mobilesubtext}>
+                            Launch 100s of ads together. Unlimited Ad Accounts. Save your
+                            settings and launch ads in seconds
+                        </div>
+
+                        <div className={styles.buttoncontainer}>
+                            <div className={styles.button1}>View Demo</div>
+                        </div>
+                        <div className={styles.imageWrapper}>
+                            <div className={styles.videoContainer}>
+                                <video
+                                    ref={videoRef1}
+                                    className={styles.image}
+                                    controls
+                                    muted
+                                    loop
+                                    poster={video}
+                                    style={{
+                                        opacity: showButton1 ? 0.4 : 1,
+                                        transition: "opacity 0.3s ease",
+                                    }}
+                                >
+                                    <source src="../videos/sample.mp4" type="video/mp4" />
+                                    Your browser does not support the video tag.
+                                </video>
+                                {showButton1 && (
+                                    <button
+                                        onClick={handlePlay1}
+                                        className={styles.overlayButton}
+                                    >
+                                        <img
+                                            src={plus}
+                                            alt="icon"
+                                            className={styles.icon2}
+                                            width={24}
+                                            height={24}
+                                        />
+                                        Watch Demo Video
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </motion.section>
+
+                    <div className={styles.imageWrapper1}>
+                        <video
+                            ref={videoRef2}
+                            className={styles.image}
+                            width={1200}
+                            height={900}
+                            controls
+                            muted
+                            loop
+                            poster={video}
+                            style={{
+                                opacity: showButton2 ? 0.4 : 1,
+                                transition: "opacity 0.3s ease",
+                            }}
+                        >
+                            <source src="../videos/sample.mp4" type="video/mp4" />
+                            Your browser does not support the video tag.
+                        </video>
+                        {showButton2 && (
+                            <button onClick={handlePlay2} className={styles.overlayButton}>
+                                <img
+                                    src={plus}
+                                    alt="icon"
+                                    className={styles.icon2}
+                                    width={50}
+                                    height={50}
+                                />
+                                Watch Demo Video
+                            </button>
+                        )}
+                    </div>
+
+                    <motion.section
+                        id="about"
+                        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{
+                            once: true,
+                            amount: 0.3,
+                            margin: isMobile ? "0px" : "-100px",
+                        }}
+                        transition={{
+                            duration: shouldReduceMotion ? 0 : 0.7,
+                            ease: "easeOut",
+                        }}
+                        className={`${styles.content} ${styles.nopadding}`}
+                    >
+                        <div className={styles.head}>
+                            <img src={rose} width={24} height={24} alt="rose" />
+                            Escape from Button Clicking Hell
+                        </div>
+                        <div className={styles.groupText}>
+                            <div className={styles.title1}>
+                                The fastest way to manage multiple ad accounts
+                            </div>
+                            <div className={styles.subtitle1}>
+                                End context-switching whiplash. No more selecting the same
+                                settings over and over, copy-pasting text dozens of times, or
+                                sluggish UI.
+                            </div>
+                        </div>
+                        <div className={styles.buttonGroup}>
+                            <div className={styles.shadowButton}>
+                                <div className={styles.shadowWrapper}>
+                                    <img
+                                        src={swap}
+                                        alt="swap"
+                                        width={30}
+                                        height={30}
+                                        className={styles.myImg}
+                                    />
+                                    <span>Easily Swap Ad Accounts</span>
+                                </div>
+                            </div>
+                            <div className={styles.shadowButton}>
+                                <div className={styles.shadowWrapper}>
+                                    <img
+                                        src={settings}
+                                        alt="settings"
+                                        width={30}
+                                        height={30}
+                                        className={styles.myImg}
+                                    />
+                                    <span>Persistent Settings</span>
+                                </div>
+                            </div>
+                            <div className={styles.shadowButton}>
+                                <div className={styles.shadowWrapper}>
+                                    <img
+                                        src={rocket}
+                                        alt="rocket"
+                                        width={30}
+                                        height={30}
+                                        className={styles.rocketIcon}
+                                    />
+                                    <span>Fast launch all creatives</span>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.section>
+
+                    <div className={styles.mainGrid}>
+                        <div className={styles.grid}>
+                            <div className={styles.card}>
+                                <div className={styles.cardcontainer}>
+                                    <div className={styles.textwrap}>
+                                        <img
+                                            src={cardrocket}
+                                            alt="rocket"
+                                            width={33}
+                                            height={31}
+                                        />
+                                        <div className={styles.tag}>Fast and Furious</div>
+                                    </div>
+                                    <div className={styles.title2}>
+                                        Upload multiple creatives at once
+                                    </div>
+                                    <div className={styles.cardDes}>
+                                        Automate your ad creation flow with lightning-fast bulk
+                                        uploads, saved settings, and ad previews — all in one clean
+                                        dashboard.
+                                    </div>
+                                </div>
+
+                                <div className={styles.uploadContainer}>
+                                    <div className={styles.contentWrap}>
+                                        <div className={styles.uploadHeader}>
+                                            <img
+                                                src={uprocket}
+                                                alt="rocket"
+                                                width={45}
+                                                height={45}
+                                            />
+                                            <div className={styles.subheadspan}>
+                                                <strong>30 Files uploaded</strong>
+                                                <div className={styles.subhead}>to a new adset</div>
+                                            </div>
+                                        </div>
+                                        <div className={styles.progressBar}>
+                                            <div className={styles.progressBarFill}></div>
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.thumbnailStack}>
+                                        <img
+                                            src={thumb2}
+                                            alt="thumb1"
+                                            className={` ${styles.leftcard}`}
+                                        />
+                                        <img
+                                            src={thumb3}
+                                            alt="thumb2"
+                                            className={`${styles.centercard}`}
+                                        />
+                                        <img
+                                            src={thumb1}
+                                            alt="thumb3"
+                                            className={`${styles.rightcard}`}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={styles.card4}>
+                                <div>
+                                    <div className={styles.textwrap}>
+                                        <img
+                                            src={cardsettings}
+                                            alt="copy"
+                                            width={24}
+                                            height={24}
+                                        />
+                                        <div className={styles.tag}>
+                                            Every setting everywhere at once
+                                        </div>
+                                    </div>
+                                    <div className={styles.title2}>
+                                        Persistent Settings Per Ad Account
+                                    </div>
+                                    <div className={styles.cardDes}>
+                                        UTMs, page selections, ad name formulas, all saved, per ad
+                                        account, so nothing resets on reload.
+                                    </div>
+                                </div>
+                                <div className={styles.gridwrap1}>
+                                    <div className={styles.gridcontainer}>
+                                        <div className={styles.stepbadge}>1</div>
+                                        <div className={styles.point}>
+                                            Toggle all Meta Creative Enhancements
+                                        </div>
+                                    </div>
+                                    <div className={styles.gridcontainer}>
+                                        <div className={styles.stepbadge}>2</div>
+                                        <div className={styles.point}>
+                                            Default CTA, Links and UTMs
+                                        </div>
+                                    </div>
+                                    <div className={styles.gridcontainer}>
+                                        <div className={styles.stepbadge}>3</div>
+                                        <div className={styles.point}>
+                                            Custom Ad Naming Conventions
+                                        </div>
+                                    </div>
+                                    <div className={styles.addbutton1}>Save Settings</div>
+                                </div>
+                            </div>
+                            <div className={styles.mobilecard2}>
+                                <div>
+                                    <div className={styles.textwrap}>
+                                        <img src={copy} alt="copy" width={24} height={24} />
+                                        <div className={styles.tag}>Saving private templates</div>
+                                    </div>
+                                    <div className={styles.title2}>
+                                        Apply saved templates for copy, CTA, and links
+                                    </div>
+                                    <div className={styles.cardDes}>
+                                        Stop wasting time in Meta Ads Manager's clunky interface.
+                                        Simply select your ideal settings once. We take care of the
+                                        rest.
+                                    </div>
+                                </div>
+
+                                <div className={styles.gridwrap}>
+                                    <div className={styles.gridcontainer}>
+                                        <img src={dwimg} alt="rocket" width={18} height={18} />
+                                        <div className={styles.point}>
+                                            Import recently used copy from Meta
+                                        </div>
+                                    </div>
+                                    <div className={styles.gridcontainer}>
+                                        <img src={copimg} alt="rocket" width={18} height={18} />
+                                        <div className={styles.point}>
+                                            Save Variations of Primary Text and Headlines
+                                        </div>
+                                    </div>
+                                    <div className={styles.gridcontainer}>
+                                        <img src={image} alt="rocket" width={18} height={18} />
+                                        <div className={styles.point}>
+                                            Making ads using new template
+                                        </div>
+                                    </div>
+                                    <div className={styles.addbutton}>+ Add New Template</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className={styles.grid}>
+                            <div className={styles.mobilecard4}>
+                                <div>
+                                    <div className={styles.textwrap}>
+                                        <img
+                                            src={cardsettings}
+                                            alt="copy"
+                                            width={24}
+                                            height={24}
+                                        />
+                                        <div className={styles.tag}>
+                                            Every setting everywhere at once
+                                        </div>
+                                    </div>
+                                    <div className={styles.title2}>
+                                        Persistent Settings Per Ad Account
+                                    </div>
+                                    <div className={styles.cardDes}>
+                                        UTMs, page selections, ad name formulas, all saved, per ad
+                                        account, so nothing resets on reload.
+                                    </div>
+                                </div>
+                                <div className={styles.gridwrap1}>
+                                    <div className={styles.gridcontainer}>
+                                        <div className={styles.stepbadge}>1</div>
+                                        <div className={styles.point}>
+                                            Toggle all Meta Creative Enhancements
+                                        </div>
+                                    </div>
+                                    <div className={styles.gridcontainer}>
+                                        <div className={styles.stepbadge}>2</div>
+                                        <div className={styles.point}>
+                                            Default CTA, Links and UTMs
+                                        </div>
+                                    </div>
+                                    <div className={styles.gridcontainer}>
+                                        <div className={styles.stepbadge}>3</div>
+                                        <div className={styles.point}>
+                                            Custom Ad Naming Conventions
+                                        </div>
+                                    </div>
+                                    <div className={styles.addbutton1}>Save Settings</div>
+                                </div>
+                            </div>
+                            <div className={styles.card2}>
+                                <div>
+                                    <div className={styles.textwrap}>
+                                        <img src={copy} alt="copy" width={24} height={24} />
+                                        <div className={styles.tag}>Saving private templates</div>
+                                    </div>
+                                    <div className={styles.title2}>
+                                        Apply saved templates for copy, CTA, and links
+                                    </div>
+                                    <div className={styles.cardDes}>
+                                        Stop wasting time in Meta Ads Manager's clunky interface.
+                                        Simply select your ideal settings once. We take care of the
+                                        rest.
+                                    </div>
+                                </div>
+                                <div className={styles.gridwrap}>
+                                    <div className={styles.gridcontainer}>
+                                        <img src={dwimg} alt="rocket" width={20} height={20} />
+                                        <div className={styles.point}>
+                                            Import recently used copy from Meta
+                                        </div>
+                                    </div>
+                                    <div className={styles.gridcontainer}>
+                                        <img src={copimg} alt="rocket" width={20} height={20} />
+                                        <div className={styles.point}>
+                                            Save Variations of Primary Text and Headlines
+                                        </div>
+                                    </div>
+                                    <div className={styles.gridcontainer}>
+                                        <img src={image} alt="rocket" width={20} height={20} />
+                                        <div className={styles.point}>
+                                            Making ads using new template
+                                        </div>
+                                    </div>
+                                    <div className={styles.addbutton}>+ Add New Template</div>
+                                </div>
+                            </div>
+                            <div className={styles.card3}>
+                                <div>
+                                    <div className={styles.textwrap}>
+                                        <img
+                                            src={download}
+                                            alt="rocket"
+                                            width={24}
+                                            height={24}
+                                        />
+                                        <div className={styles.tag}>Arrival</div>
+                                    </div>
+                                    <div className={styles.title2}>
+                                        No more upload, download hell.
+                                    </div>
+                                    <div className={styles.cardDes}>
+                                        No need to spend hours downloading hundreds of ad assets.
+                                        With Blip, you can one-click deploy media from your Drive to
+                                        Meta Ads Manager.
+                                    </div>
+                                </div>
+
+                                <div className={styles.uploadContainer1}>
+                                    <div className={styles.uploadIconWrap1}>
+                                        <img
+                                            src={driveIcon}
+                                            alt="Drive"
+                                            className={styles.drive}
+                                            width={50}
+                                            height={50}
+                                        />
+                                    </div>
+                                    <div className={styles.contentWrap1}>
+                                        <div className={styles.progressBar1}>
+                                            <div className={styles.progressBarFill1}></div>
+                                        </div>
+                                    </div>
+                                    <div lassName={styles.uploadIconWrap1}>
+                                        <img
+                                            src={logo}
+                                            alt="Rocket"
+                                            width={92}
+                                            height={92}
+                                            className={styles.rocket}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <motion.section
+                        className={styles.wrapperIcon}
+                        id="features"
+                        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{
+                            once: true,
+                            amount: 0.3,
+                            margin: isMobile ? "0px" : "-100px",
+                        }}
+                        transition={{
+                            duration: shouldReduceMotion ? 0 : isMobile ? 0.2 : 0.7,
+                            ease: "easeOut",
+                        }}
+                    >
+                        <div className={styles.badgeTitle}>Built by the best</div>
+                        <h2 className={`${styles.title} ${styles.titleupdate}`}>
+                            Blip has been built by people with over 10 years of experience
+                            launching ads
+                        </h2>
+                        <div className={`${styles.subtitle} ${styles.nosubtitle}`}>
+                            The team behind blip has managed over 10mil in ad spend. <br />
+                            The experience has been tailored to the absolute essentials which
+                            will improve your quality of life.
+                        </div>
+                        <div className={styles.featuresGrid}>
+                            {features.map((feature, index) => (
+                                <div key={index} className={styles.featureItem}>
+                                    {feature.title === "Launch Ads Turned off" ? (
+                                        <div
+                                            className={`${styles.iconBox} ${styles.activeToggle} ${feature.iconClass}`}
+                                        >
+                                            <img src={iconOrange} alt="toggle" />
+                                        </div>
+                                    ) : (
+                                        <div className={`${styles.iconBox} ${feature.iconClass}`}>
+                                            <img src={feature.icon} alt={feature.title} />
+                                        </div>
+                                    )}
+                                    <p className={styles.featureText}>{feature.title}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </motion.section>
+
+                    <motion.section
+                        id="pricing"
+                        initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{
+                            once: true,
+                            amount: 0.3,
+                            margin: isMobile ? "0px" : "-100px",
+                        }}
+                        transition={{
+                            duration: shouldReduceMotion ? 0 : isMobile ? 0.2 : 0.7,
+                            ease: "easeOut",
+                        }}
+                        className={styles.wrapper}
+                    >
+                        <div className={styles.container2}>
+                            <div className={styles.left}>
+                                <div className={styles.badge}>
+                                    1 Flat Price. Unlimited Ad Accounts
+                                </div>
+                                <div className={styles.price1}>Pricing</div>
+                                <div className={styles.description}>
+                                    UTMs, page selections, ad name formulas — all saved, per ad
+                                    account, so nothing resets on reload.
+                                </div>
+                                <button className={styles.ctaBtn}>Start Posting Ads</button>
+                                <div className={styles.teamNote}>
+                                    have a lot of people on your team?
+                                </div>
+                                <p className={styles.teamComing}>Team seats Coming Soon</p>
+                            </div>
+
+                            <div className={styles.right}>
+                                <div className={styles.price}>$500/month</div>
+                                <ul className={styles.features}>
+                                    <li className={styles.feature}>
+                                        <span className={styles.icon}>
+                                            <img src={check} alt="check" width={14} height={14} />
+                                        </span>
+                                        Launch 100s of ads together
+                                    </li>
+                                    <li className={styles.feature}>
+                                        <span className={styles.icon}>
+                                            <img src={check} alt="check" width={14} height={14} />
+                                        </span>
+                                        Unlimited Ad Accounts
+                                    </li>
+                                    <li className={styles.feature}>
+                                        <span className={styles.icon}>
+                                            <img src={check} alt="check" width={14} height={14} />
+                                        </span>
+                                        Persistent Settings
+                                    </li>
+                                </ul>
+                                <p className={styles.teamNoteSm}>
+                                    have a lot of people on your team?
+                                </p>
+                                <p className={styles.comingSoonSm}>Team seats Coming Soon</p>
+                                <button className={styles.ctaSm}>Start Posting Ads</button>
+                            </div>
+                        </div>
+                    </motion.section>
+                    <div className={styles.footer}>
+                        <div className={styles.footerLeft}>
+                            <div className={styles.leftTop}>
+                                <img
+                                    src={logo}
+                                    alt="logo"
+                                    width={32}
+                                    height={32}
+                                    className={styles.blipLogo}
+                                />
+                                <span className={styles.brandTextFooter}>Blip</span>
+                            </div>
+
+                            <a
+                                href="mailto:shree@withblip.com"
+                                className={styles.footerEmail}
+                            >
+                                shree@withblip.com
+                            </a>
+                        </div>
+                        <div className={styles.footerRight}>
+                            <a
+                                href="https://www.withblip.com/privacy-policy"
+                                className={styles.footerPolicies}
+                                target="_blank"
+                            >
+                                Privacy Policy
+                            </a>
+                            <a
+                                href="https://www.withblip.com/terms-of-service"
+                                className={styles.footerPolicies}
+                                target="_blank"
+                            >
+                                Terms of Service
+                            </a>
+                            <div className={styles.footerPoliciesNew}>
+                                Blip use and transfer of information received from Google APIs
+                                to any other app will adhere to{" "}
+                                <a href="https://developers.google.com/workspace/workspace-api-user-data-developer-policy">
+                                    Workspace API User Data and Developer Policy
+                                </a>
+                                , including the{" "}
+                                <a href="https://developers.google.com/workspace/workspace-api-user-data-developer-policy#limited-use">
+                                    Limited use of user data.
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </footer>
-        </div>
-    )
+            </div>
+        </>
+    );
 }
-
-export default Landing

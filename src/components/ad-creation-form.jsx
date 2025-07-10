@@ -247,7 +247,7 @@ export default function AdCreationForm({
           'Content-Type': file.type,
         }
       });
-
+      console.log(publicUrl);
       return {
         name: file.name,
         type: file.type,
@@ -902,7 +902,7 @@ export default function AdCreationForm({
       for (let i = 0; i < largeFiles.length; i++) {
         const progressPercent = Math.round((i / totalLargeFiles) * 50);
         setProgress(progressPercent);
-        setProgressMessage(`Uploading file ${i + 1}/${totalLargeFiles} to S3...`);
+        setProgressMessage(`Uploading file ${i + 1}/${totalLargeFiles} ...`);
 
         try {
           const result = await uploadToS3(largeFiles[i]);
@@ -946,7 +946,7 @@ export default function AdCreationForm({
 
       setProgress(50);
       setProgressMessage('S3 uploads complete! Creating ads...');
-      toast.success("All large video files uploaded to S3!");
+      toast.success("All video files uploaded!");
     }
 
     // 🔧 NOW start the actual job (50-100% progress)
