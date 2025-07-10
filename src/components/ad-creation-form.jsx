@@ -1766,7 +1766,7 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-3">
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <TemplateIcon className="w-4 h-4" />
                   {Object.keys(copyTemplates).length === 0
@@ -1799,7 +1799,66 @@ export default function AdCreationForm({
                       ))}
                   </SelectContent>
                 </Select>
+              </div> */}
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label className="flex items-center gap-2 mb-0">
+                    <TemplateIcon className="w-4 h-4" />
+                    {Object.keys(copyTemplates).length === 0
+                      ? "Select a Copy Template"
+                      : "Select a Copy Template"}
+                  </Label>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      navigate(
+                        `/settings?tab=adaccount&adAccount=${selectedAdAccount}`
+                      )
+                    }
+                    className="text-xs px-3 py-0.5 border-orange-300 text-orange-700 bg-orange-100 rounded-xl hover:text-orange-800 hover:bg-orange-200 ml-auto"
+                  >
+                    Set Up Templates
+                  </Button>
+                </div>
+                <Select
+                  value={selectedTemplate}
+                  onValueChange={setSelectedTemplate}
+                  disabled={Object.keys(copyTemplates).length === 0}
+                >
+                  <SelectTrigger
+                    className="border border-gray-400 rounded-xl bg-white shadow"
+                    disabled={Object.keys(copyTemplates).length === 0}
+                  >
+                    <SelectValue
+                      placeholder={
+                        Object.keys(copyTemplates).length === 0
+                          ? "No templates available"
+                          : "Choose a Template"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
+                    {Object.entries(copyTemplates)
+                      .sort(([a], [b]) => {
+                        if (a === defaultTemplateName) return -1;
+                        if (b === defaultTemplateName) return 1;
+                        return a.localeCompare(b);
+                      })
+                      .map(([templateName]) => (
+                        <SelectItem
+                          key={templateName}
+                          value={templateName}
+                          className="text-sm px-4 py-2 rounded-xl hover:bg-gray-100"
+                        >
+                          {templateName}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
+
 
               <div className="space-y-2">
                 {/* Primary text Section */}
