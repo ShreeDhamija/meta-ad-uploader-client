@@ -480,21 +480,14 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       {/* New row with template dropdown and set as default button */}
       <div className="flex items-center gap-3 mb-4 transition-all duration-300">
-        <Select value={selectedName} onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}>
-          <SelectTrigger className="flex-1 rounded-xl px-3 py-2 text-sm justify-between bg-white">
-            <SelectValue placeholder="Select a template" />
+        <Select
+          value={selectedName}
+          onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
+          disabled={availableTemplates.length === 0}
+        >
+          <SelectTrigger className="flex-1 rounded-xl px-3 py-2 text-sm justify-between bg-white disabled:opacity-50 disabled:cursor-not-allowed">
+            <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
           </SelectTrigger>
-          {/* <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
-            {availableTemplates.map(([name]) => (
-              <SelectItem
-                key={name}
-                value={name}
-                className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg"
-              >
-                {name} {name === defaultName ? "(Default)" : ""}
-              </SelectItem>
-            ))}
-          </SelectContent> */}
           <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
             {availableTemplates.map(([name]) => (
               <SelectItemWithDelete
@@ -616,15 +609,17 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
         {/* Bottom row with remaining two buttons split 50/50 */}
         <div className="flex gap-4">
-          <Button
-            variant="outline"
-            className="w-full rounded-xl h-[40px] bg-zinc-800 hover:bg-black flex hover:text-white items-center gap-2 text-white"
-            onClick={handleNewTemplate}
-            disabled={isProcessing}
-          >
-            <CirclePlus className="w-4 h-4 text-white" />
-            Add New Template
-          </Button>
+          {availableTemplates.length > 0 && (
+            <Button
+              variant="outline"
+              className="w-full rounded-xl h-[40px] bg-zinc-800 hover:bg-black flex hover:text-white items-center gap-2 text-white transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-2"
+              onClick={handleNewTemplate}
+              disabled={isProcessing}
+            >
+              <CirclePlus className="w-4 h-4 text-white" />
+              Add New Template
+            </Button>
+          )}
 
           {/* <Button
             variant="destructive"
@@ -678,12 +673,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       </div>
 
                       {/* Import buttons */}
-                      <div className="flex gap-2 justify-end">
+                      <div className="flex gap-2 justify-start">
                         <Button
                           className="flex items-center text-xs rounded-xl px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 shrink-0"
                           onClick={() => {
                             setPrimaryTexts(ad.primaryTexts.slice(0, 5))
-                            setShowImportPopup(false)
+                            toast.success("Primary text imported")
                           }}
                         >
                           <Download className="w-4 h-4" />
@@ -693,11 +688,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                           className="flex items-center text-xs rounded-xl px-3 py-1 bg-green-600 text-white hover:bg-green-700 shrink-0"
                           onClick={() => {
                             setHeadlines(ad.headlines.slice(0, 5))
-                            setShowImportPopup(false)
+                            toast.success("Headlines imported")
                           }}
                         >
                           <Download className="w-4 h-4" />
                           Import Headlines
+
                         </Button>
                         <Button
                           className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:bg-black shrink-0"
