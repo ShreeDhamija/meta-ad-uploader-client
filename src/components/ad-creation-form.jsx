@@ -28,6 +28,7 @@ import LabelIcon from '@/assets/icons/label.svg?react';
 import TemplateIcon from '@/assets/icons/file.svg?react';
 import LinkIcon from '@/assets/icons/link.svg?react';
 import CTAIcon from '@/assets/icons/cta.svg?react';
+import { useNavigate } from "react-router-dom"
 
 
 
@@ -190,7 +191,7 @@ export default function AdCreationForm({
   setFileGroups
 }) {
   // Local state
-
+  const navigate = useNavigate()
   const [openPage, setOpenPage] = useState(false)
   const [googleAuthStatus, setGoogleAuthStatus] = useState({
     checking: true,
