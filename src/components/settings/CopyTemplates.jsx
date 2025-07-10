@@ -508,7 +508,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </SelectContent>
         </Select>
 
-        <Button
+        {/* <Button
           className={`w-[250px] rounded-xl h-[35px] flex items-center gap-2 transition-colors ${isEditingDefault
             ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
             : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
@@ -518,7 +518,20 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         >
           <CircleCheck className="w-4 h-4" />
           {isEditingDefault ? "Default Template" : "Set as Default Template"}
-        </Button>
+        </Button> */}
+        {editingTemplate && (
+          <Button
+            className={`w-[250px] rounded-xl h-[35px] flex items-center gap-2 transition-colors ${isEditingDefault
+              ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
+              : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
+              }`}
+            onClick={handleSetAsDefault}
+            disabled={!templateName.trim() || isEditingDefault || isProcessing}
+          >
+            <CircleCheck className="w-4 h-4" />
+            {isEditingDefault ? "Default Template" : "Set as Default Template"}
+          </Button>
+        )}
       </div>
 
       <div className="space-y-1">
