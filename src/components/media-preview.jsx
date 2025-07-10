@@ -167,8 +167,7 @@ export default function MediaPreview({
   setEnablePlacementCustomization,
   fileGroups,
   setFileGroups,
-  selectedAdSets,
-  adSets
+
 }) {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
 
@@ -321,10 +320,6 @@ export default function MediaPreview({
 
   const preload = new Image();
 
-  const selectedAdSetObj = adSets.find(a => a.id === selectedAdSets);
-  const isDynamicCreativeAdSet = selectedAdSetObj?.is_dynamic_creative;
-
-
 
   return (
     <>
@@ -396,7 +391,7 @@ export default function MediaPreview({
 
 
           {/* Placement Customization Checkbox - only show when carousel is disabled */}
-          {!isCarouselAd && !isDynamicCreativeAdSet(
+          {!isCarouselAd && (
             <div className="px-6 pb-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
