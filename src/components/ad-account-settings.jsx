@@ -70,7 +70,7 @@ export default function AdAccountSettings({
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("")
   const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
-  //console.log("🔍 selectedCampaignData", selectedCampaignData);
+  const [isAdAccountChanging, setIsAdAccountChanging] = useState(false);
   const navigate = useNavigate()
 
 
@@ -130,6 +130,7 @@ export default function AdAccountSettings({
     setSelectedAdSets([])
     if (!adAccountId) return
 
+    setIsAdAccountChanging(true);
     setIsLoading(true)
     try {
       const res = await fetch(
@@ -155,6 +156,7 @@ export default function AdAccountSettings({
       console.error("Failed to fetch campaigns:", err)
     } finally {
       setIsLoading(false)
+      setIsAdAccountChanging(false);
     }
   }
 
@@ -478,9 +480,9 @@ export default function AdAccountSettings({
 
               </PopoverContent>
             </Popover>
-            {selectedAdAccount && isLoading && (
-              <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
-                <Loader className="h-4 w-4 animate-spin" />
+            {selectedAdAccount && isAdAccountChanging && (
+              <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+                <Loader className="h-3 w-3 animate-spin" />
                 Loading Ad Account Preferences...
               </div>
             )}
