@@ -670,12 +670,37 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     // <div key={index} className="border-t border-gray-200 pt-4 space-y-3 -mx-6 px-6 first:border-t-0">
                     <div key={index} className="border-t border-gray-200 pt-4 space-y-3 -mx-6 px-6">
                       {/* Ad title + import button */}
+                      {/* Ad title */}
                       <div className="flex items-start justify-between gap-4 w-full">
                         <h3 className="text-md font-bold text-zinc-800 flex-1 min-w-0 break-words">
-                          {ad.adName || `Ad ${index + 1}`}
+                          Ad {index + 1}
                         </h3>
+                      </div>
+
+                      {/* Import buttons */}
+                      <div className="flex gap-2 justify-end">
                         <Button
-                          className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black shrink-0"
+                          className="flex items-center text-xs rounded-xl px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 shrink-0"
+                          onClick={() => {
+                            setPrimaryTexts(ad.primaryTexts.slice(0, 5))
+                            setShowImportPopup(false)
+                          }}
+                        >
+                          <Download className="w-4 h-4" />
+                          Import Primary
+                        </Button>
+                        <Button
+                          className="flex items-center text-xs rounded-xl px-3 py-1 bg-green-600 text-white hover:bg-green-700 shrink-0"
+                          onClick={() => {
+                            setHeadlines(ad.headlines.slice(0, 5))
+                            setShowImportPopup(false)
+                          }}
+                        >
+                          <Download className="w-4 h-4" />
+                          Import Headlines
+                        </Button>
+                        <Button
+                          className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:bg-black shrink-0"
                           onClick={() => {
                             setPrimaryTexts(ad.primaryTexts.slice(0, 5))
                             setHeadlines(ad.headlines.slice(0, 5))
@@ -683,7 +708,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                           }}
                         >
                           <Download className="w-4 h-4" />
-                          Import Copy
+                          Import Both
                         </Button>
                       </div>
 
