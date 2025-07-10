@@ -899,7 +899,7 @@ export default function AdCreationForm({
     const totalLargeFiles = largeFiles.length + largeDriveFiles.length;
 
     if (totalLargeFiles > 0) {
-      setProgressMessage(`Uploading ${totalLargeFiles} large files to S3...`);
+      setProgressMessage(`Uploading ${totalLargeFiles} videos...`);
 
       // Upload regular large files
       for (let i = 0; i < largeFiles.length; i++) {
@@ -925,7 +925,7 @@ export default function AdCreationForm({
       for (let i = 0; i < largeDriveFiles.length; i++) {
         const progressPercent = Math.round(((largeFiles.length + i) / totalLargeFiles) * 50);
         setProgress(progressPercent);
-        setProgressMessage(`Uploading Drive file ${largeFiles.length + i + 1}/${totalLargeFiles} to S3...`);
+        setProgressMessage(`Uploading Drive file ${largeFiles.length + i + 1}/${totalLargeFiles} ...`);
 
         try {
           const s3Url = await uploadDriveFileToS3(largeDriveFiles[i]);
