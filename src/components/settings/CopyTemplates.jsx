@@ -25,11 +25,11 @@ const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
       value={value}
       className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg pr-8 relative"
     >
-      <span className="flex-1">
+      <span className="flex-1 pointer-events-none">
         {name} {isDefault ? "(Default)" : ""}
       </span>
       <Trash2
-        className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10"
+        className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
         onClick={handleDeleteClick}
       />
     </SelectItem>
