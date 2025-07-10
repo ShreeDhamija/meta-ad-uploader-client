@@ -167,7 +167,8 @@ export default function MediaPreview({
   setEnablePlacementCustomization,
   fileGroups,
   setFileGroups,
-  selectedAdSets
+  selectedAdSets,
+  adSets
 }) {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
 
@@ -319,7 +320,8 @@ export default function MediaPreview({
   const canGroupFiles = selectedFiles.size >= 2 && selectedFiles.size <= 3;
 
   const preload = new Image();
-  const selectedAdSetObj = adSets.find(a => a.id === selectedAdSet);
+
+  const selectedAdSetObj = adSets.find(a => a.id === selectedAdSets);
   const isDynamicCreativeAdSet = selectedAdSetObj?.is_dynamic_creative;
 
 
