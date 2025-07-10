@@ -1257,7 +1257,7 @@ export default function AdCreationForm({
           const hasUngroupedFiles = (
             files.some(file => !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
-            [...s3Results, ...s3DriveResults].some(s3File => !groupedFileIds.has(s3File.name))
+            [...s3Results, ...s3DriveResults].some(s3File => !groupedFileIds.has(s3File.id))
           );
 
           if (hasUngroupedFiles) {
@@ -1456,7 +1456,7 @@ export default function AdCreationForm({
 
               {/* Disclaimer */}
               <p className="text-xs font-medium text-gray-500">
-                Video Processing Estimates are still in Beta
+                Video processing estimates are still in beta
               </p>
             </div>
           </div>
