@@ -18,6 +18,7 @@ import AdAccountIcon from '@/assets/icons/adaccount.svg?react';
 import CampaignIcon from '@/assets/icons/folder.svg?react';
 import AdSetIcon from '@/assets/icons/grid.svg?react';
 import CopyIcon from '@/assets/icons/copy.svg?react';
+import { useNavigate } from "react-router-dom"
 
 
 
@@ -53,6 +54,7 @@ export default function AdAccountSettings({
   setDuplicateCampaign,
   newCampaignName,
   setNewCampaignName,
+  documentExists
 
 }) {
   // Local state for comboboxes
@@ -69,6 +71,8 @@ export default function AdAccountSettings({
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("")
   const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
   //console.log("🔍 selectedCampaignData", selectedCampaignData);
+  const navigate = useNavigate()
+
 
   const isAdvantagePlusCampaign = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"].includes(
     selectedCampaignData?.smart_promotion_type
@@ -474,6 +478,22 @@ export default function AdAccountSettings({
 
               </PopoverContent>
             </Popover>
+            {selectedAdAccount && !documentExists && (
+              <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <Settings className="w-4 h-4 text-yellow-600" />
+                <Label className="text-sm text-yellow-700 flex-1">
+                  No default settings found for this ad account
+                </Label>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => navigate('/settings')}
+                  disabled={creatingSettings}
+                  className="text-xs px-3 py-1 border-yellow-300 text-yellow-700 hover:bg-yellow-100"
+                >
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

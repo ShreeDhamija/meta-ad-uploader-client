@@ -72,7 +72,7 @@ export default function Home() {
     const [videoThumbs, setVideoThumbs] = useState({})
 
     const { adAccounts, setAdAccounts, pages, setPages } = useAppData()
-    const { settings: adAccountSettings } = useAdAccountSettings(selectedAdAccount)
+    const { settings: adAccountSettings, documentExists } = useAdAccountSettings(selectedAdAccount)
 
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
@@ -208,6 +208,7 @@ export default function Home() {
                         setDuplicateCampaign={setDuplicateCampaign}
                         newCampaignName={newCampaignName}
                         setNewCampaignName={setNewCampaignName}
+                        documentExists={documentExists}
                     />
 
                     <AdCreationForm
