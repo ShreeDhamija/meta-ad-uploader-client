@@ -14,7 +14,7 @@ import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
 import ViewAds from "@/components/settings/view-ads"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
-import Home from '@/assets/icons/home.svg?react';
+import HomeBtn from '@/assets/icons/home.svg?react';
 
 export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
@@ -91,7 +91,7 @@ export default function Settings() {
                             className="flex items-center justify-start gap-2 bg-white border border-gray-200 shadow-sm rounded-[20px] py-6 text- font-medium w-full mb-4"
                             variant="ghost"
                         >
-                            <Home />
+                            <HomeBtn />
                             <div className="h-4 w-px bg-gray-300 max-lg:hidden" />
                             <span className="text-gray-700 max-lg:hidden">Back To Home</span>
                         </Button>
