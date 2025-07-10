@@ -141,22 +141,28 @@ export default function Home() {
         }
 
         // Copy templates
-        const templates = adAccountSettings.copyTemplates || {}
-        const keys = Object.keys(templates)
-        if (keys.length === 0) return
+        const templates = adAccountSettings.copyTemplates || {};
+        const keys = Object.keys(templates);
 
-        const initialTemplateName = keys.includes(adAccountSettings.defaultTemplateName)
-            ? adAccountSettings.defaultTemplateName
-            : keys[0]
+        if (keys.length === 0) {
+            setSelectedTemplate(undefined);
+            setMessages([""]);
+            setHeadlines([""]);
+        } else {
+            const initialTemplateName = keys.includes(adAccountSettings.defaultTemplateName)
+                ? adAccountSettings.defaultTemplateName
+                : keys[0];
 
-        setSelectedTemplate(initialTemplateName)
+            setSelectedTemplate(initialTemplateName);
 
-        const selectedTemplateData = templates[initialTemplateName]
-        if (selectedTemplateData) {
-            setMessages(selectedTemplateData.primaryTexts || [""])
-            setHeadlines(selectedTemplateData.headlines || [""])
+            const selectedTemplateData = templates[initialTemplateName];
+            setMessages(selectedTemplateData?.primaryTexts || [""]);
+            setHeadlines(selectedTemplateData?.headlines || [""]);
         }
+
     }, [selectedAdAccount, adAccountSettings])
+
+
 
     const handleCloseOnboarding = () => {
         setShowOnboardingPopup(false) // closes instantly
