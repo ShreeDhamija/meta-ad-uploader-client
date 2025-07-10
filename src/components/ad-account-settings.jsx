@@ -479,9 +479,9 @@ export default function AdAccountSettings({
               </PopoverContent>
             </Popover>
             {selectedAdAccount && !documentExists && (
-              <div className="flex items-center gap-2 p-2 bg-yellow-50 border border-yellow-200 rounded-xl">
+              <div className="flex items-center gap-2 p-2 border rounded-xl">
                 <CogIcon className="w-4 h-4 text-gray-800" />
-                <Label className="text-sm text-gray-700 flex-1">
+                <Label className="text-xs text-gray-700 flex-1">
                   No default settings found for this ad account
                 </Label>
                 <Button
