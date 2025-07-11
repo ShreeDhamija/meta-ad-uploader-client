@@ -94,11 +94,13 @@ export default function ShopDestinationSelector({
 
     return (
         <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-                <ShopIcon alt="" className="w-4 h-4" />
-                Shop Destination
-            </Label>
-            <Label className="text-gray-500 text-[12px] font-regular block">Select a shop or product set for your shop ads</Label>
+            <div className="space-y-1">
+                <Label className="flex items-center gap-2">
+                    <ShopIcon alt="" className="w-4 h-4" />
+                    Shop Destination
+                </Label>
+                <Label className="text-gray-500 text-[12px] font-regular block">Select a shop or product set for your shop ads</Label>
+            </div>
 
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
@@ -173,6 +175,39 @@ export default function ShopDestinationSelector({
                                 </CommandGroup>
                             )}
 
+                            {/* Products Section */}
+                            {productOptions.length > 0 && (
+                                <CommandGroup>
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
+                                        Products
+                                    </div>
+                                    {productOptions
+                                        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
+                                        .map((option) => (
+                                            <CommandItem
+                                                key={option.id}
+                                                value={option.id}
+                                                onSelect={() => {
+                                                    setSelectedShopDestination(option.id)
+                                                    setSelectedShopDestinationType(option.type)
+                                                    setOpen(false)
+                                                }}
+                                                className={cn(
+                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                                    "data-[selected=true]:bg-gray-100",
+                                                    selectedShopDestination === option.id && "bg-gray-100 rounded-xl font-semibold",
+                                                    "hover:bg-gray-100",
+                                                    "flex items-center justify-between",
+                                                )}
+                                                data-selected={option.id === selectedShopDestination}
+                                            >
+                                                <span>{option.label.replace('Product: ', '')}</span> {/* Remove prefix */}
+                                                {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
+                                            </CommandItem>
+                                        ))}
+                                </CommandGroup>
+                            )}
+
                             {/* Product Sets Section */}
                             {productSetOptions.length > 0 && (
                                 <CommandGroup>
@@ -206,38 +241,7 @@ export default function ShopDestinationSelector({
                                 </CommandGroup>
                             )}
 
-                            {/* Products Section */}
-                            {productOptions.length > 0 && (
-                                <CommandGroup>
-                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
-                                        Products
-                                    </div>
-                                    {productOptions
-                                        .filter((option) => option.label.toLowerCase().includes(searchValue.toLowerCase()))
-                                        .map((option) => (
-                                            <CommandItem
-                                                key={option.id}
-                                                value={option.id}
-                                                onSelect={() => {
-                                                    setSelectedShopDestination(option.id)
-                                                    setSelectedShopDestinationType(option.type)
-                                                    setOpen(false)
-                                                }}
-                                                className={cn(
-                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                                                    "data-[selected=true]:bg-gray-100",
-                                                    selectedShopDestination === option.id && "bg-gray-100 rounded-xl font-semibold",
-                                                    "hover:bg-gray-100",
-                                                    "flex items-center justify-between",
-                                                )}
-                                                data-selected={option.id === selectedShopDestination}
-                                            >
-                                                <span>{option.label.replace('Product: ', '')}</span> {/* Remove prefix */}
-                                                {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
-                                            </CommandItem>
-                                        ))}
-                                </CommandGroup>
-                            )}
+
 
                             {/* No results */}
                             {shopOptions.length === 0 && productSetOptions.length === 0 && productOptions.length === 0 && (

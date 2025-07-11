@@ -1262,6 +1262,7 @@ export default function AdCreationForm({
             )
           );
 
+
           if (hasUngroupedFiles) {
             // Regular processing - one ad per file
 
