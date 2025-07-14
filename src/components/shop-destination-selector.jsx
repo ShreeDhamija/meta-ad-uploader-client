@@ -209,7 +209,7 @@ export default function ShopDestinationSelector({
                             )}
 
                             {/* Product Sets Section */}
-                            {productSetOptions.length > 0 && (
+                            {/* {productSetOptions.length > 0 && (
                                 <CommandGroup>
                                     <div className="px-2 py-1.5 text-xs font-semibold text-gray-600 bg-gray-200 sticky top-0 rounded-lg">
                                         Product Sets
@@ -234,12 +234,12 @@ export default function ShopDestinationSelector({
                                                 )}
                                                 data-selected={option.id === selectedShopDestination}
                                             >
-                                                <span>{option.label.replace('Product Set: ', '')}</span> {/* Remove prefix */}
+                                                <span>{option.label.replace('Product Set: ', '')}</span> 
                                                 {selectedShopDestination === option.id && <Check className="ml-2 h-4 w-4" />}
                                             </CommandItem>
                                         ))}
                                 </CommandGroup>
-                            )}
+                            )} */}
 
 
 

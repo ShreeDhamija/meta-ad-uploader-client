@@ -15,7 +15,14 @@ const labelMap = {
   dateType: "Date",
   fileName: "File Name",
   iteration: "Iteration",
-  customText: "Custom Text",
+  // customText: "Custom Text",
+}
+
+const getLabel = (id) => {
+  if (id.startsWith("customText_")) {
+    return "Custom Text";
+  }
+  return labelMap[id];
 }
 
 const valueOptions = {
@@ -47,7 +54,7 @@ function CustomRadioButton({ checked, onClick, disabled = false }) {
   )
 }
 
-function SortableItem({ id, isSelected, onToggle, setValues, values, variant, customTextValue, onCustomTextChange }) {
+function SortableItem({ id, isSelected, onToggle, setValues, values, variant, }) {
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   })
@@ -87,27 +94,60 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, cu
   };
 
 
+  // In ReorderAdNameParts.jsx, update the renderContent function:
+
   const renderContent = () => {
-    if (id === "customText") {
+    // Handle multiple custom text fields
+    if (id.startsWith("customText_")) {
+      const customTextId = id;
+      const customTextData = values.customTexts?.[customTextId] || {};
+
       return (
         <div className="flex items-center gap-2 flex-1">
-          <CustomRadioButton checked={isSelected} onClick={onToggle} />
+          <CustomRadioButton
+            checked={isSelected}
+            onClick={onToggle}
+          />
           <Input
-            value={customTextValue || ""}
+            value={customTextData.text || ""}
             onChange={(e) => {
               const newText = e.target.value;
-              onCustomTextChange(newText);
+              setValues((prev) => ({
+                ...prev,
+                customTexts: {
+                  ...prev.customTexts,
+                  [customTextId]: {
+                    ...prev.customTexts?.[customTextId],
+                    text: newText
+                  }
+                }
+              }));
 
               if (newText.trim() !== "" && !isSelected) {
-                onToggle(); // Auto-select if user types
+                onToggle();
               } else if (newText.trim() === "" && isSelected) {
-                onToggle(); // Auto-deselect if user clears
+                onToggle();
               }
             }}
             placeholder="Enter Custom Text"
             className="flex-1 h-6 text-xs border-0 bg-transparent focus:ring-0 focus:outline-none"
           />
-
+          {variant === "default" && (
+            <button
+              onClick={() => {
+                // Remove this custom text field
+                setOrder((prev) => prev.filter(item => item !== customTextId));
+                setValues((prev) => {
+                  const newCustomTexts = { ...prev.customTexts };
+                  delete newCustomTexts[customTextId];
+                  return { ...prev, customTexts: newCustomTexts };
+                });
+              }}
+              className="text-red-500 hover:text-red-700 text-xs"
+            >
+              Remove
+            </button>
+          )}
         </div>
       )
     }
@@ -117,7 +157,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, cu
         <div className="flex items-center gap-2">
           <CustomRadioButton checked={isSelected} onClick={handleDateToggle} />
           <span className={cn(variant === "home" ? "text-xs" : "text-sm")}>
-            {labelMap[id]}
+            {getLabel(id)}
           </span>
           {isSelected && (
             <Popover open={dateDropdownOpen} onOpenChange={setDateDropdownOpen}>
@@ -161,7 +201,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, cu
       <div className="flex items-center gap-2">
         <CustomRadioButton checked={isSelected} onClick={onToggle} />
         <span className={cn(variant === "home" ? "text-xs" : "text-sm")}>
-          {labelMap[id]}
+          {getLabel(id)}
         </span>
         {variant === "home" && id === "adType" && (
           <span className="text-gray-500 text-[10px] font-medium">
@@ -207,8 +247,7 @@ export default function ReorderAdNameParts({
   variant = "default",
   selectedItems = [],
   onItemToggle,
-  customTextValue,
-  onCustomTextChange,
+
 }) {
   const sensors = useSensors(useSensor(PointerSensor))
 
@@ -225,20 +264,17 @@ export default function ReorderAdNameParts({
 
 
   // Determine which items to show based on variant
-  const availableItems =
-    variant === "home"
-      ? ["adType", "dateType", "fileName", "iteration", "customText"]
-      : ["adType", "dateType", "fileName", "iteration"]
+  // const availableItems =
+  //   variant === "home"
+  //     ? ["adType", "dateType", "fileName", "iteration", "customText"]
+  //     : ["adType", "dateType", "fileName", "iteration"]
 
   return (
     <div className="space-y-3">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={order} strategy={variant === "home" ? verticalListSortingStrategy : horizontalListSortingStrategy}>
+        <SortableContext items={order} strategy={verticalListSortingStrategy}>
           <div className="bg-gray-200 p-1 rounded-xl">
-            <div className={cn(
-              "flex gap-2",
-              variant === "home" ? "flex-col" : "flex-wrap gap-x-2 gap-y-1"
-            )}>
+            <div className="flex flex-col gap-2">
               {order.map((id) => (
                 <SortableItem
                   key={id}
@@ -248,14 +284,32 @@ export default function ReorderAdNameParts({
                   setValues={setValues}
                   values={values}
                   variant={variant}
-                  customTextValue={customTextValue}
-                  onCustomTextChange={onCustomTextChange}
+
                 />
               ))}
             </div>
           </div>
         </SortableContext>
       </DndContext>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => {
+          const newId = `customText_${Date.now()}`;
+          setOrder((prev) => [...prev, newId]);
+          setValues((prev) => ({
+            ...prev,
+            customTexts: {
+              ...prev.customTexts,
+              [newId]: { text: "" }
+            }
+          }));
+        }}
+        className="mt-2"
+      >
+        + Add Custom Text Field
+      </Button>
     </div>
   )
 }
