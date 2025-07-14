@@ -130,7 +130,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, se
               }
             }}
             placeholder="Enter Custom Text"
-            className="flex-1 h-6 text-xs border-0 bg-transparent focus:ring-0 focus:outline-none shadow-none ring-0 focus:shadow-none"
+            className="flex-1 h-6 text-xs border border-gray-100 bg-transparent focus:ring-0 focus:outline-none shadow-none ring-0 focus:shadow-none"
           />
           {variant === "default" && (
             <button
@@ -156,7 +156,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, se
       return (
         <div className="flex items-center gap-2">
           <CustomRadioButton checked={isSelected} onClick={handleDateToggle} />
-          <span className={cn(variant === "home" ? "text-xs" : "text-sm")}>
+          <span className="text-xs">
             {getLabel(id)}
           </span>
           {isSelected && (
@@ -180,7 +180,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, se
                       key={option}
                       onClick={() => handleDateOptionSelect(option)}
                       className={cn(
-                        "text-left px-2 py-1 rounded text-sm hover:bg-gray-100",
+                        "text-left px-2 py-1 rounded text-xs hover:bg-gray-100",
                         selectedDateOption === option && "bg-gray-100",
                       )}
                     >
@@ -200,7 +200,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, se
     return (
       <div className="flex items-center gap-2">
         <CustomRadioButton checked={isSelected} onClick={onToggle} />
-        <span className={cn(variant === "home" ? "text-xs" : "text-sm")}>
+        <span className="text-xs">
           {getLabel(id)}
         </span>
         {variant === "home" && id === "adType" && (
