@@ -16,7 +16,7 @@ export default function ViewAds() {
     useEffect(() => {
         async function fetchAdAccounts() {
             try {
-                const response = await fetch("api.withblip.com/auth/fetch-ad-accounts", {
+                const response = await fetch("https://api.withblip.com/auth/get-upload-url", {
                     method: "GET",
                     credentials: "include"
                 });
