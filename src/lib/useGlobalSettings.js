@@ -33,11 +33,7 @@ export default function useGlobalSettings() {
                             data.settings.adNameFormula.selected ||
                             data.settings.adNameFormula.values);
 
-                    const hasAnySettings = hasAdNameFormula ||
-                        data.settings?.hasSeenOnboarding ||
-                        data.settings?.hasSeenSettingsOnboarding;
-
-                    setGlobalDocumentExists(hasAnySettings);
+                    setGlobalDocumentExists(hasAdNameFormula);
                 }
 
                 const rawFormula = data.settings?.adNameFormula || {};
