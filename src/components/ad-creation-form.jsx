@@ -1737,22 +1737,23 @@ export default function AdCreationForm({
                 onItemToggle={onItemToggle}
                 variant="home"
               />
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">Ad Name Preview</label>
+                <div className="flex items-center w-full border border-gray-400 rounded-xl bg-white px-1 py-2 shadow h-[35px] !mt-[10px]">
+                  {formulaParts.length > 0 ? (
+                    <div className="flex items-center">
+                      {formulaParts.map((part, index) => (
+                        <div key={index} className="flex items-center">
+                          <span className="bg-gray-200 text-xs px-2 py-1 rounded-[8px]">{part}</span>
+                          {index < formulaParts.length - 1 && <span className="text-sm text-gray-500 mx-1">_</span>}
+                        </div>
+                      ))}
 
-              <label className="text-xs font-medium text-gray-600">Ad Name Preview</label>
-              <div className="flex items-center w-full border border-gray-400 rounded-xl bg-white px-1 py-2 shadow h-[35px] !mt-[10px]">
-                {formulaParts.length > 0 ? (
-                  <div className="flex items-center">
-                    {formulaParts.map((part, index) => (
-                      <div key={index} className="flex items-center">
-                        <span className="bg-gray-200 text-xs px-2 py-1 rounded-[8px]">{part}</span>
-                        {index < formulaParts.length - 1 && <span className="text-sm text-gray-500 mx-1">_</span>}
-                      </div>
-                    ))}
-
-                  </div>
-                ) : (
-                  <span className="text-gray-400 text-sm"> </span>
-                )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-sm"> </span>
+                  )}
+                </div>
               </div>
 
 
