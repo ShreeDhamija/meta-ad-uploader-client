@@ -130,7 +130,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, se
               }
             }}
             placeholder="Enter Custom Text"
-            className="flex-1 h-6 text-xs border border-gray-100 bg-transparent focus:ring-0 focus:outline-none shadow-none ring-0 focus:shadow-none"
+            className="flex-1 h-6 text-xs border border-gray-200 rounded-xl bg-transparent focus:ring-0 focus:outline-none shadow-none ring-0 focus:shadow-none"
           />
           {variant === "default" && (
             <button
@@ -143,7 +143,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, se
                   return { ...prev, customTexts: newCustomTexts };
                 });
               }}
-              className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
+              className="w-6 h-6 text-xs flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
             >
               <Trash2 className="w-3 h-3" />
             </button>
@@ -180,7 +180,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, se
                       key={option}
                       onClick={() => handleDateOptionSelect(option)}
                       className={cn(
-                        "text-left px-2 py-1 rounded text-xs hover:bg-gray-100",
+                        "text-left px-2 py-1 rounded-xl text-xs hover:bg-gray-100",
                         selectedDateOption === option && "bg-gray-100",
                       )}
                     >
