@@ -186,7 +186,8 @@ export default function AdCreationForm({
   enablePlacementCustomization,
   setEnablePlacementCustomization,
   fileGroups,
-  setFileGroups
+  setFileGroups,
+  globalDocumentExists
 }) {
   // Local state
   const navigate = useNavigate()
@@ -1697,9 +1698,23 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-1">
-              <Label htmlFor="adName" className="flex items-center gap-2">
-                <LabelIcon className="w-4 h-4" />
-                Ad Name
+              <Label htmlFor="adName" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <LabelIcon className="w-4 h-4" />
+                  Ad Name
+                </div>
+                {!globalDocumentExists && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/settings?tab=global`)}
+                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
+                  >
+                    <CogIcon className="w-3 h-3 text-white" />
+                    Setup Templates
+                  </Button>
+                )}
               </Label>
               <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
                 Generate an ad name by selecting and re-ordering the properties below
@@ -1773,7 +1788,7 @@ export default function AdCreationForm({
                     <SelectValue
                       placeholder={
                         Object.keys(copyTemplates).length === 0
-                          ? "No templates available"
+                          ? "No templates available for selected ad account"
                           : "Choose a Template"
                       }
                     />

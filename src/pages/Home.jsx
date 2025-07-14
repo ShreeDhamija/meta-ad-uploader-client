@@ -24,7 +24,7 @@ export default function Home() {
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
-    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading } = useGlobalSettings()
+    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, globalDocumentExists } = useGlobalSettings();
     const { subscriptionData, hasActiveAccess, isTrialExpired, loading: subscriptionLoading } = useSubscription();
 
     // Ad account selection and setup
@@ -283,6 +283,7 @@ export default function Home() {
                         setEnablePlacementCustomization={setEnablePlacementCustomization}
                         fileGroups={fileGroups}
                         setFileGroups={setFileGroups}
+                        globalDocumentExists={globalDocumentExists}
                     />
                 </div>
 

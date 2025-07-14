@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 export default function useGlobalSettings() {
     const [loading, setLoading] = useState(true);
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+    const [globalDocumentExists, setGlobalDocumentExists] = useState(true); // Add this
     const [adNameFormula, setAdNameFormula] = useState({
         order: ["adType", "dateType", "fileName", "iteration"], // default order
         values: {
@@ -23,6 +24,22 @@ export default function useGlobalSettings() {
                     credentials: "include",
                 });
                 const data = await res.json();
+                if (res.status === 404 || !data.settings || data.error === 'Document not found') {
+                    setGlobalDocumentExists(false);
+                } else {
+                    // Check if document has any meaningful fields
+                    const hasAdNameFormula = data.settings?.adNameFormula &&
+                        (data.settings.adNameFormula.order ||
+                            data.settings.adNameFormula.selected ||
+                            data.settings.adNameFormula.values);
+
+                    const hasAnySettings = hasAdNameFormula ||
+                        data.settings?.hasSeenOnboarding ||
+                        data.settings?.hasSeenSettingsOnboarding;
+
+                    setGlobalDocumentExists(hasAnySettings);
+                }
+
                 const rawFormula = data.settings?.adNameFormula || {};
                 const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
 
@@ -43,6 +60,8 @@ export default function useGlobalSettings() {
 
             } catch (err) {
                 console.error("Failed to fetch global settings:", err);
+                setGlobalDocumentExists(false); // Set to false on error
+
             } finally {
                 setLoading(false);
             }
@@ -58,7 +77,8 @@ export default function useGlobalSettings() {
         setAdNameFormula,
         hasSeenOnboarding,
         hasSeenSettingsOnboarding,
-        setHasSeenSettingsOnboarding
+        setHasSeenSettingsOnboarding,
+        globalDocumentExists
 
     };
 }
