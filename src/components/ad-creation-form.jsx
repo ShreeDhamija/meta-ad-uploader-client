@@ -766,59 +766,32 @@ export default function AdCreationForm({
 
 
 
-  // const computeAdName = (file, dateTypeInput, iterationIndex) => {
-  //   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  //     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  //   const now = new Date();
-  //   const monthAbbrev = monthNames[now.getMonth()];
-  //   const date = String(now.getDate()).padStart(2, "0");
-  //   const year = now.getFullYear();
-  //   const monthYear = `${monthAbbrev}${year}`;
-  //   const monthDayYear = `${monthAbbrev}${date}${year}`;
-
-  //   let fileName = "file_name"; // default if no file
-  //   if (file && file.name) {
-  //     fileName = file.name.replace(/\.[^/.]+$/, ""); // remove extension
-  //   }
-
-  //   const parts = adOrder.map((key) => {
-  //     if (!selectedItems.includes(key)) return null;
-
-  //     if (key === "adType") {
-  //       if (!file) {
-  //         return "file_type"; // Preview mode
-  //       }
-  //       const fileType = file.type || file.mimeType || "";
-  //       if (fileType.startsWith("image/")) return "static";
-  //       if (fileType.startsWith("video/")) return "video";
-  //       return "file_type"; // fallback
-  //     }
-  //     if (key === "dateType") {
-  //       return dateTypeInput === "MonthDDYYYY" ? monthDayYear : monthYear;
-  //     }
-  //     if (key === "fileName") return fileName;
-  //     if (key === "iteration") {
-  //       if (iterationIndex != null) {
-  //         return String(iterationIndex + 1).padStart(2, "0");
-  //       }
-  //       return "01"; // fallback
-  //     }
-  //     if (key === "customText") return customTextValue || "custom_text";
-  //     return null;
-  //   }).filter(Boolean);
-
-  //   const adName = parts.join("_");
-
-  //   return adName || "Ad Generated Through Blip";
-  // };
   const computeAdName = (file, dateTypeInput, iterationIndex) => {
-    // ... existing code for date formatting ...
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const monthAbbrev = monthNames[now.getMonth()];
+    const date = String(now.getDate()).padStart(2, "0");
+    const year = now.getFullYear();
+    const monthYear = `${monthAbbrev}${year}`;
+    const monthDayYear = `${monthAbbrev}${date}${year}`;
+
+    let fileName = "file_name"; // default if no file
+    if (file && file.name) {
+      fileName = file.name.replace(/\.[^/.]+$/, ""); // remove extension
+    }
 
     const parts = adOrder.map((key) => {
       if (!selectedItems.includes(key)) return null;
 
       if (key === "adType") {
-        // ... existing adType logic ...
+        if (!file) {
+          return "file_type"; // Preview mode
+        }
+        const fileType = file.type || file.mimeType || "";
+        if (fileType.startsWith("image/")) return "static";
+        if (fileType.startsWith("video/")) return "video";
+        return "file_type"; // fallback
       }
       if (key === "dateType") {
         return dateTypeInput === "MonthDDYYYY" ? monthDayYear : monthYear;
@@ -828,10 +801,8 @@ export default function AdCreationForm({
         if (iterationIndex != null) {
           return String(iterationIndex + 1).padStart(2, "0");
         }
-        return "01";
+        return "01"; // fallback
       }
-
-      // Handle multiple custom text fields
       if (key.startsWith("customText_")) {
         const customText = adValues.customTexts?.[key]?.text;
         return customText || "custom_text";
@@ -841,8 +812,11 @@ export default function AdCreationForm({
     }).filter(Boolean);
 
     const adName = parts.join("_");
+
     return adName || "Ad Generated Through Blip";
   };
+
+
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
     const response = await axios.post(
