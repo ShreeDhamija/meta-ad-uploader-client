@@ -3,7 +3,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { RefreshCcw } from "lucide-react";
 
 
-const SERVER_BASE_URL = "https://meta-ad-uploader-server-production.up.railway.app"
+
 
 export default function ViewAds() {
     const [adAccounts, setAdAccounts] = useState([]);
@@ -16,7 +16,7 @@ export default function ViewAds() {
     useEffect(() => {
         async function fetchAdAccounts() {
             try {
-                const response = await fetch(`${SERVER_BASE_URL}/auth/fetch-ad-accounts`, {
+                const response = await fetch("api.withblip.com/auth/fetch-ad-accounts", {
                     method: "GET",
                     credentials: "include"
                 });
