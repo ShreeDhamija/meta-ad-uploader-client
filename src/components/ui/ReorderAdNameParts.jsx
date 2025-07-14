@@ -15,7 +15,7 @@ const labelMap = {
   dateType: "Date",
   fileName: "File Name",
   iteration: "Iteration",
-  // customText: "Custom Text",
+
 }
 
 const getLabel = (id) => {
@@ -262,12 +262,6 @@ export default function ReorderAdNameParts({
     }
   };
 
-
-  // Determine which items to show based on variant
-  // const availableItems =
-  //   variant === "home"
-  //     ? ["adType", "dateType", "fileName", "iteration", "customText"]
-  //     : ["adType", "dateType", "fileName", "iteration"]
 
   return (
     <div className="space-y-3">

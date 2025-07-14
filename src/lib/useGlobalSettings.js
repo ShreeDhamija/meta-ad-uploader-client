@@ -26,17 +26,6 @@ export default function useGlobalSettings() {
                 const rawFormula = data.settings?.adNameFormula || {};
                 const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
 
-                // setAdNameFormula({
-                //     order: Array.from(new Set([...(rawFormula.order || defaultOrder)])),
-                //     selected: Array.isArray(rawFormula.selected) ? rawFormula.selected : [],
-                //     values: {
-                //         adType: rawFormula.values?.adType || "",
-                //         dateType: rawFormula.values?.dateType || "MonthYYYY",
-                //         fileName: rawFormula.values?.fileName || "",
-                //         iteration: rawFormula.values?.iteration || "",
-                //     }
-                // });
-                // In the fetchSettings function, update the setAdNameFormula call:
                 setAdNameFormula({
                     order: Array.from(new Set([...(rawFormula.order || defaultOrder)])),
                     selected: Array.isArray(rawFormula.selected) ? rawFormula.selected : [],

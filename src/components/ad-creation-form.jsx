@@ -307,15 +307,6 @@ export default function AdCreationForm({
     return null;
   }).filter(Boolean);
 
-  // const formulaParts = adOrder.map((key) => {
-  //   if (!selectedItems.includes(key)) return null;
-  //   if (key === "adType") return "[File_Type]";
-  //   if (key === "dateType") return adValues.dateType;
-  //   if (key === "fileName") return "File Name";
-  //   if (key === "iteration") return "itr";
-  //   if (key === "customText") return customTextValue || "Custom Text";
-  //   return null;
-  // }).filter(Boolean);
 
   // CTA options
   const ctaOptions = [
@@ -392,11 +383,6 @@ export default function AdCreationForm({
   }, [trackedProgress, trackedMessage, status, jobId]);
 
 
-  // useEffect(() => {
-  //   const adName = computeAdName(null, adValues.dateType);  // <-- Pass dateType explicitly
-  //   setAdName(adName);
-  // }, [customTextValue, adValues.dateType, adOrder, selectedItems]);
-
   useEffect(() => {
     const adName = computeAdName(null, adValues.dateType);
     setAdName(adName);
@@ -410,9 +396,6 @@ export default function AdCreationForm({
     setMessages(tpl.primaryTexts || [""]);
     setHeadlines(tpl.headlines || [""]);
   }, [selectedTemplate, copyTemplates]);
-
-
-
 
 
 
@@ -1717,9 +1700,6 @@ export default function AdCreationForm({
               <Label htmlFor="adName" className="flex items-center gap-2">
                 <LabelIcon className="w-4 h-4" />
                 Ad Name
-                {/* <Infotooltip
-                  side="bottom"
-                /> */}
               </Label>
               <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
                 Generate an ad name by selecting and re-ordering the properties below
@@ -1739,7 +1719,7 @@ export default function AdCreationForm({
               />
               <div className="space-y-1">
                 <label className="text-xs text-gray-500">Ad Name Preview</label>
-                <div className="flex items-center w-full border border-gray-400 rounded-xl bg-white px-1 py-2 shadow h-[35px] !mt-[10px]">
+                <div className="flex items-center w-full border border-gray-400 rounded-xl bg-white px-1 py-2 shadow h-[35px]">
                   {formulaParts.length > 0 ? (
                     <div className="flex items-center">
                       {formulaParts.map((part, index) => (

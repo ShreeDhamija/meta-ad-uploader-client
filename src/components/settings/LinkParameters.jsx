@@ -232,7 +232,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                     onClick={handleAddPair}
                     className="bg-zinc-600 text-white w-full rounded-xl hover:bg-black mt-2 h-[40px]"
                 >
-                    Add New Pairing
+                    + Add New Pairing
                 </Button>
             </div>
 

@@ -29,27 +29,6 @@ export default function GlobalSettings() {
   const [selectedAdNameItems, setSelectedAdNameItems] = useState(() => adNameFormula.selected || []);
   const [customAdNameText, setCustomAdNameText] = useState("")
 
-
-
-  // useEffect(() => {
-  //   if (adNameFormula && adNameFormula.order) {
-  //     const mergedOrder = Array.from(new Set([...(adNameFormula.order || []), "iteration"]));
-  //     setAdOrder(mergedOrder);
-  //   } else {
-  //     setAdOrder(defaultOrder);
-  //   }
-
-  //   if (adNameFormula && adNameFormula.values) {
-  //     setAdValues({
-  //       dateType: adNameFormula.values.dateType || "MonthYYYY", // ✅ Only dateType
-  //     });
-  //   }
-
-  //   if (adNameFormula && adNameFormula.selected) {
-  //     setSelectedAdNameItems(adNameFormula.selected);
-  //   }
-  // }, [adNameFormula]);
-
   useEffect(() => {
     if (adNameFormula && adNameFormula.order) {
       const mergedOrder = Array.from(new Set([...(adNameFormula.order || [])]));
@@ -113,32 +92,22 @@ export default function GlobalSettings() {
 
         <Button
           className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg rounded-xl h-[40px]"
-          // onClick={async () => {
-          //   const globalSettings = {
-          //     adNameFormula: {
-          //       order: adOrder,
-          //       selected: selectedAdNameItems, // ✅ which fields are selected
-          //       values: {
-          //         dateType: adValues.dateType // ✅ only dateType needs a value
-          //       }
-          //     }
-          //   };
-
-          //   try {
-          //     await saveSettings({ globalSettings });
-          //     toast.success("Global settings saved!");
-          //   } catch (err) {
-          //     toast.error("Failed to save global settings: " + err.message);
-          //   }
-          // }}
           onClick={async () => {
+            // Reorder so checked items come first, unchecked items last
+            const checkedItems = adOrder.filter(item => selectedAdNameItems.includes(item));
+            const uncheckedItems = adOrder.filter(item => !selectedAdNameItems.includes(item));
+            const reorderedItems = [...checkedItems, ...uncheckedItems];
+
+            // Update the local state to show the reorder immediately
+            setAdOrder(reorderedItems);
+
             const globalSettings = {
               adNameFormula: {
-                order: adOrder,
+                order: reorderedItems, // Use reordered array
                 selected: selectedAdNameItems,
                 values: {
                   dateType: adValues.dateType,
-                  customTexts: adValues.customTexts // Save all custom texts
+                  customTexts: adValues.customTexts
                 }
               }
             };
