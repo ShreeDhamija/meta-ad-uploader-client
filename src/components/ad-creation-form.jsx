@@ -147,8 +147,6 @@ export default function AdCreationForm({
   onItemToggle,
   adValues,
   setAdValues,
-  customTextValue,
-  setCustomTextValue,
   messages,
   setMessages,
   headlines,

@@ -243,8 +243,6 @@ export default function Home() {
                         onItemToggle={onItemToggle}
                         adValues={adValues}
                         setAdValues={setAdValues}
-                        customTextValue={customTextValue}
-                        setCustomTextValue={setCustomTextValue}
                         messages={messages}
                         setMessages={setMessages}
                         headlines={headlines}
