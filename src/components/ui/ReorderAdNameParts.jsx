@@ -143,7 +143,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, se
                   return { ...prev, customTexts: newCustomTexts };
                 });
               }}
-              className="w-6 h-6 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+              className="w-6 h-6 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors"
             >
               <Trash2 className="w-3 h-3" />
             </button>
