@@ -45,7 +45,7 @@ export default function ViewAds() {
     async function fetchPreviewsForAccount(accountId) {
         setLoadingPreviews(true);
         try {
-            const response = await fetch(`${SERVER_BASE_URL}/auth/generate-ad-preview?adAccountId=${accountId}`, {
+            const response = await fetch(`https://api.withblip.com/auth/generate-ad-preview?adAccountId=${accountId}`, {
                 method: "GET",
                 credentials: "include"
             });
