@@ -6,7 +6,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ChevronsUpDown, GripVertical } from "lucide-react"
+import { ChevronsUpDown, GripVertical, Trash2 } from "lucide-react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
@@ -143,9 +143,9 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, })
                   return { ...prev, customTexts: newCustomTexts };
                 });
               }}
-              className="text-red-500 hover:text-red-700 text-xs"
+              className="text-red-500 hover:text-red-700 p-1"
             >
-              Remove
+              <Trash2 className="w-3 h-3" />
             </button>
           )}
         </div>
@@ -291,25 +291,25 @@ export default function ReorderAdNameParts({
           </div>
         </SortableContext>
       </DndContext>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          const newId = `customText_${Date.now()}`;
-          setOrder((prev) => [...prev, newId]);
-          setValues((prev) => ({
-            ...prev,
-            customTexts: {
-              ...prev.customTexts,
-              [newId]: { text: "" }
-            }
-          }));
-        }}
-        className="mt-2"
-      >
-        + Add Custom Text Field
-      </Button>
+      {variant === "default" && (
+        <Button
+          type="button"
+          onClick={() => {
+            const newId = `customText_${Date.now()}`;
+            setOrder((prev) => [...prev, newId]);
+            setValues((prev) => ({
+              ...prev,
+              customTexts: {
+                ...prev.customTexts,
+                [newId]: { text: "" }
+              }
+            }));
+          }}
+          className="mt-2 w-full bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl"
+        >
+          + Add Custom Text Field
+        </Button>
+      )}
     </div>
   )
 }

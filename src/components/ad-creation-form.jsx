@@ -293,16 +293,31 @@ export default function AdCreationForm({
   }
 
 
-
   const formulaParts = adOrder.map((key) => {
     if (!selectedItems.includes(key)) return null;
     if (key === "adType") return "[File_Type]";
     if (key === "dateType") return adValues.dateType;
     if (key === "fileName") return "File Name";
     if (key === "iteration") return "itr";
-    if (key === "customText") return customTextValue || "Custom Text";
+
+    // Handle multiple custom text fields
+    if (key.startsWith("customText_")) {
+      const customText = adValues.customTexts?.[key]?.text;
+      return customText || "Custom Text";
+    }
+
     return null;
   }).filter(Boolean);
+
+  // const formulaParts = adOrder.map((key) => {
+  //   if (!selectedItems.includes(key)) return null;
+  //   if (key === "adType") return "[File_Type]";
+  //   if (key === "dateType") return adValues.dateType;
+  //   if (key === "fileName") return "File Name";
+  //   if (key === "iteration") return "itr";
+  //   if (key === "customText") return customTextValue || "Custom Text";
+  //   return null;
+  // }).filter(Boolean);
 
   // CTA options
   const ctaOptions = [
@@ -379,12 +394,15 @@ export default function AdCreationForm({
   }, [trackedProgress, trackedMessage, status, jobId]);
 
 
+  // useEffect(() => {
+  //   const adName = computeAdName(null, adValues.dateType);  // <-- Pass dateType explicitly
+  //   setAdName(adName);
+  // }, [customTextValue, adValues.dateType, adOrder, selectedItems]);
+
   useEffect(() => {
-    const adName = computeAdName(null, adValues.dateType);  // <-- Pass dateType explicitly
+    const adName = computeAdName(null, adValues.dateType);
     setAdName(adName);
-  }, [customTextValue, adValues.dateType, adOrder, selectedItems]);
-
-
+  }, [adValues, adOrder, selectedItems]); // Remove customTextValue, add adValues
 
 
 
@@ -750,32 +768,59 @@ export default function AdCreationForm({
 
 
 
-  const computeAdName = (file, dateTypeInput, iterationIndex) => {
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const now = new Date();
-    const monthAbbrev = monthNames[now.getMonth()];
-    const date = String(now.getDate()).padStart(2, "0");
-    const year = now.getFullYear();
-    const monthYear = `${monthAbbrev}${year}`;
-    const monthDayYear = `${monthAbbrev}${date}${year}`;
+  // const computeAdName = (file, dateTypeInput, iterationIndex) => {
+  //   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  //     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  //   const now = new Date();
+  //   const monthAbbrev = monthNames[now.getMonth()];
+  //   const date = String(now.getDate()).padStart(2, "0");
+  //   const year = now.getFullYear();
+  //   const monthYear = `${monthAbbrev}${year}`;
+  //   const monthDayYear = `${monthAbbrev}${date}${year}`;
 
-    let fileName = "file_name"; // default if no file
-    if (file && file.name) {
-      fileName = file.name.replace(/\.[^/.]+$/, ""); // remove extension
-    }
+  //   let fileName = "file_name"; // default if no file
+  //   if (file && file.name) {
+  //     fileName = file.name.replace(/\.[^/.]+$/, ""); // remove extension
+  //   }
+
+  //   const parts = adOrder.map((key) => {
+  //     if (!selectedItems.includes(key)) return null;
+
+  //     if (key === "adType") {
+  //       if (!file) {
+  //         return "file_type"; // Preview mode
+  //       }
+  //       const fileType = file.type || file.mimeType || "";
+  //       if (fileType.startsWith("image/")) return "static";
+  //       if (fileType.startsWith("video/")) return "video";
+  //       return "file_type"; // fallback
+  //     }
+  //     if (key === "dateType") {
+  //       return dateTypeInput === "MonthDDYYYY" ? monthDayYear : monthYear;
+  //     }
+  //     if (key === "fileName") return fileName;
+  //     if (key === "iteration") {
+  //       if (iterationIndex != null) {
+  //         return String(iterationIndex + 1).padStart(2, "0");
+  //       }
+  //       return "01"; // fallback
+  //     }
+  //     if (key === "customText") return customTextValue || "custom_text";
+  //     return null;
+  //   }).filter(Boolean);
+
+  //   const adName = parts.join("_");
+
+  //   return adName || "Ad Generated Through Blip";
+  // };
+  const computeAdName = (file, dateTypeInput, iterationIndex) => {
+    // ... existing code for date formatting ...
 
     const parts = adOrder.map((key) => {
       if (!selectedItems.includes(key)) return null;
 
       if (key === "adType") {
-        if (!file) {
-          return "file_type"; // Preview mode
-        }
-        const fileType = file.type || file.mimeType || "";
-        if (fileType.startsWith("image/")) return "static";
-        if (fileType.startsWith("video/")) return "video";
-        return "file_type"; // fallback
+        // ... existing adType logic ...
       }
       if (key === "dateType") {
         return dateTypeInput === "MonthDDYYYY" ? monthDayYear : monthYear;
@@ -785,17 +830,21 @@ export default function AdCreationForm({
         if (iterationIndex != null) {
           return String(iterationIndex + 1).padStart(2, "0");
         }
-        return "01"; // fallback
+        return "01";
       }
-      if (key === "customText") return customTextValue || "custom_text";
+
+      // Handle multiple custom text fields
+      if (key.startsWith("customText_")) {
+        const customText = adValues.customTexts?.[key]?.text;
+        return customText || "custom_text";
+      }
+
       return null;
     }).filter(Boolean);
 
     const adName = parts.join("_");
-
     return adName || "Ad Generated Through Blip";
   };
-
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
     const response = await axios.post(
@@ -1713,8 +1762,6 @@ export default function AdCreationForm({
                 setSelectedItems={setSelectedItems}
                 values={adValues}
                 setValues={setAdValues}
-                customTextValue={customTextValue}
-                onCustomTextChange={setCustomTextValue}
                 onItemToggle={onItemToggle}
                 variant="home"
               />

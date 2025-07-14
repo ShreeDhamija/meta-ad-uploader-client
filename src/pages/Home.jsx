@@ -43,7 +43,7 @@ export default function Home() {
 
 
     // Ad creation form
-    const [adName, setAdName] = useState("Ad Name Formula will be displayed here")
+    const [adName, setAdName] = useState("Default Ad Name With Blip")
     const [headlines, setHeadlines] = useState([""])
     const [descriptions, setDescriptions] = useState([""])
     const [messages, setMessages] = useState([""])
@@ -54,12 +54,13 @@ export default function Home() {
 
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("")
-    const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName", "iteration", "customText"]);
-    const [selectedItems, setSelectedItems] = useState(["adType", "dateType", "fileName"]);
+    const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName", "iteration"]); // Remove "customText"
+    const [selectedItems, setSelectedItems] = useState(["adType", "dateType", "fileName"]); // This is fine
     const [adValues, setAdValues] = useState({
         dateType: "MonthYYYY",
+        customTexts: {} // Add this for consistency
     });
-    const [customTextValue, setCustomTextValue] = useState("");
+    // const [customTextValue, setCustomTextValue] = useState("");
 
     const [driveFiles, setDriveFiles] = useState([])
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
@@ -102,11 +103,11 @@ export default function Home() {
         const { values, order, selected } = adNameFormula;
         setAdValues({
             dateType: values?.dateType || "MonthYYYY",
+            customTexts: values?.customTexts || {} // Add this
         });
-        const defaultOrder = ["adType", "dateType", "fileName", "iteration", "customText"];
-        const mergedOrder = Array.from(new Set([...(order || ["adType", "dateType", "fileName", "iteration"]), "customText"]));
-        setAdOrder(mergedOrder);
 
+        // Don't add "customText" anymore - use the order as-is from settings
+        setAdOrder(order || ["adType", "dateType", "fileName", "iteration"]);
         setSelectedItems(selected || ["adType", "dateType", "fileName"]);
     }, [isLoggedIn, loading, adNameFormula]);
 
