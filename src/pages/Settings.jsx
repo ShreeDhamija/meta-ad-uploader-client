@@ -103,9 +103,9 @@ export default function Settings() {
                                     key={tab}
                                     onClick={() => handleTabChange(tab)}
                                     className={cn(
-                                        "w-full flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-500 ease-in-out",
+                                        "w-full flex items-center gap-2 px-4 py-2 rounded-2xl",
                                         activeTab === tab
-                                            ? "bg-zinc-800 font-semibold text-white shadow-sm"
+                                            ? "bg-gradient-to-b from-zinc-600 to-zinc-700 border border-2 border-zinc-200/20 font-semibold text-white shadow-md"
                                             : "hover:bg-gray-300",
                                         "justify-start max-lg:justify-center max-lg:px-2",
                                     )}
