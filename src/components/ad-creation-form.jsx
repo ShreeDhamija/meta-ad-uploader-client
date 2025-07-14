@@ -1738,7 +1738,7 @@ export default function AdCreationForm({
                 variant="home"
               />
 
-
+              <label className="text-xs font-medium text-gray-600">Ad Name Preview</label>
               <div className="flex items-center w-full border border-gray-400 rounded-xl bg-white px-1 py-2 shadow h-[35px] !mt-[10px]">
                 {formulaParts.length > 0 ? (
                   <div className="flex items-center">

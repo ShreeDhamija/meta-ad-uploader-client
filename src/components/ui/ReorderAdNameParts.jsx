@@ -54,7 +54,7 @@ function CustomRadioButton({ checked, onClick, disabled = false }) {
   )
 }
 
-function SortableItem({ id, isSelected, onToggle, setValues, values, variant, }) {
+function SortableItem({ id, isSelected, onToggle, setValues, values, variant, setOrder }) {
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   })
@@ -130,7 +130,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, })
               }
             }}
             placeholder="Enter Custom Text"
-            className="flex-1 h-6 text-xs border-0 bg-transparent focus:ring-0 focus:outline-none"
+            className="flex-1 h-6 text-xs border-0 bg-transparent focus:ring-0 focus:outline-none shadow-none ring-0 focus:shadow-none"
           />
           {variant === "default" && (
             <button
@@ -284,6 +284,7 @@ export default function ReorderAdNameParts({
                   setValues={setValues}
                   values={values}
                   variant={variant}
+                  setOrder={setOrder}  // Add this line
 
                 />
               ))}
@@ -305,7 +306,7 @@ export default function ReorderAdNameParts({
               }
             }));
           }}
-          className="mt-2 w-full bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl"
+          className="mt-2 w-full bg-zinc-700 hover:bg-zinc-900 text-white rounded-xl"
         >
           + Add Custom Text Field
         </Button>
