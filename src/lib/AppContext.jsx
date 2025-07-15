@@ -80,7 +80,7 @@ export const AppProvider = ({ children }) => {
   }, [])
 
   return (
-    <AppContext.Provider value={{ pages, setPages, adAccounts, setAdAccounts, allAdAccounts, setAllAdAccounts }}>
+    <AppContext.Provider value={{ pages, setPages, adAccounts, setAdAccounts }}>
       {children}
     </AppContext.Provider>
   )
