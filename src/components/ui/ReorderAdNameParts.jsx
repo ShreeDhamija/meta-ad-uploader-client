@@ -269,6 +269,19 @@ export default function ReorderAdNameParts({
         <SortableContext items={order} strategy={verticalListSortingStrategy}>
           <div className="bg-gray-200 p-1 rounded-xl">
             <div className="flex flex-col gap-2">
+              {/* {order.map((id) => (
+                <SortableItem
+                  key={id}
+                  id={id}
+                  isSelected={selectedItems.includes(id)}
+                  onToggle={() => onItemToggle(id)}
+                  setValues={setValues}
+                  values={values}
+                  variant={variant}
+                  setOrder={setOrder}  // Add this line
+
+                />
+              ))} */}
               {(variant === "home" ? order.filter(id => selectedItems.includes(id)) : order).map((id) => (
                 <SortableItem
                   key={id}

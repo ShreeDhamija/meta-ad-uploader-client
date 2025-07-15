@@ -88,7 +88,7 @@ export default function Settings() {
                         {/* Back to Home Button */}
                         <Button
                             onClick={() => navigate("/")}
-                            className="flex items-center justify-start gap-2 bg-white border border-gray-200 shadow-sm rounded-[20px] py-6 text- font-medium w-full mb-4"
+                            className="flex items-center justify-start gap-2 bg-white border border-gray-200 shadow-sm rounded-[20px] py-6 text- font-medium w-full mb-4 hover:bg-gray-100"
                             variant="ghost"
                         >
                             <HomeBtn className="!w-5 !h-5" />
