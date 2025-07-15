@@ -17,7 +17,8 @@ export default function Login() {
     }, [isLoggedIn, navigate])
 
     const handleFacebookLogin = () => {
-        window.location.href = "https://api.withblip.com/auth/facebook"
+        window.location.href = "https://api.withblip.com/auth/facebook?source=login"
+
     }
 
     return (

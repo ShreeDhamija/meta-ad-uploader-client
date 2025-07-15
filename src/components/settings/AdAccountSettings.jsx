@@ -5,7 +5,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ChevronsUpDown, Loader, Plus } from "lucide-react"
+import { ChevronsUpDown, Loader, CirclePlus } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
 import PageSelectors from "./PageSelectors"
@@ -60,7 +60,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
 
   const handleFacebookReauth = () => {
     setIsReauthOpen(false)
-    window.location.href = "https://api.withblip.com/auth/facebook"
+    window.location.href = "https://api.withblip.com/auth/facebook?source=settings"
+
   }
 
 
@@ -184,14 +185,14 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-sm text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                className="text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
               >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Ad Accounts
+                <CirclePlus className="w-4 h-4 mr-1" />
+                Add New Ad Accounts
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <div className="text-center space-y-4 p-6">
+            <DialogContent className="sm:max-w-md rounded-lg">
+              <div className="text-left space-y-4 p-6">
                 <div className="space-y-2">
                   <img
                     src="https://api.withblip.com/logo.webp"
