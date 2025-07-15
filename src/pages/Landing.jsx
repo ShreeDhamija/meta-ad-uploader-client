@@ -598,7 +598,7 @@ export default function Home() {
                                             Custom Ad Naming Conventions
                                         </div>
                                     </div>
-                                    <div className={styles.addbutton1}>Save Settings</div>
+                                    <div className={styles.addbutton1}>Auto Populate All Settings</div>
                                 </div>
                             </div>
                             <div className={styles.mobilecard2}>
