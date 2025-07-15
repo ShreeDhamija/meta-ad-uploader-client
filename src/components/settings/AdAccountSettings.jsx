@@ -183,9 +183,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
             <DialogTrigger asChild>
               <Button
-                variant="outline"
                 size="sm"
-                className="text-sm text-white bg-blue-500 hover:bg-blue-600 rounded-lg"
+                className="text-sm text-white bg-blue-500 hover:bg-blue-600 hover:text-white rounded-xl"
               >
                 <CirclePlus className="w-4 h-4 mr-1" />
                 Add New Ad Accounts
@@ -194,11 +193,11 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
             <DialogContent className="sm:max-w-md rounded-lg">
               <div className="text-left space-y-4 p-6">
                 <div className="space-y-2">
-                  <img
+                  {/* <img
                     src="https://api.withblip.com/logo.webp"
                     alt="Logo"
                     className="w-12 h-12 mx-auto rounded-md mb-4"
-                  />
+                  /> */}
                   <h3 className="text-sm font-semibold">Add New Ad Accounts</h3>
                 </div>
 
