@@ -867,7 +867,7 @@ export default function Home() {
                                         <span className={styles.icon}>
                                             <img src={check} alt="check" width={14} height={14} />
                                         </span>
-                                        Persistent Settings
+                                        Auto Populate All Settings
                                     </li>
                                 </ul>
                                 <p className={styles.teamNoteSm}>
