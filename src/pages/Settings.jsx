@@ -15,6 +15,10 @@ import BillingSettings from "@/components/settings/Billing"
 import ViewAds from "@/components/settings/view-ads"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 import HomeBtn from '@/assets/icons/home.svg?react';
+import CogIcon from '@/assets/icons/cog.svg?react';
+import Folder from '@/assets/icons/folder.svg?react';
+import Card from '@/assets/icons/card.svg?react';
+import ViewAdsIcon from '@/assets/icons/viewads.svg?react';
 
 export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
@@ -25,12 +29,15 @@ export default function Settings() {
     const initialTab = urlParams.get('tab') || 'adaccount'
     const preselectedAdAccount = urlParams.get('adAccount') // Add this line
     const [activeTab, setActiveTab] = useState(initialTab)
+
     const tabIconMap = {
-        global: "https://api.withblip.com/icons/settings.svg",
-        adaccount: "https://api.withblip.com/icons/folder.svg",
-        billing: "https://api.withblip.com/icons/card.svg",
-        viewads: "https://api.withblip.com/icons/viewads.svg", // use your own icon or placeholder
+        global: CogIcon,
+        adaccount: Folder,
+        billing: Card,
+        viewads: ViewAdsIcon,
     }
+    // const Icon = tabIconMap[tab];
+
 
     const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading } = useGlobalSettings()
 
@@ -98,40 +105,43 @@ export default function Settings() {
 
                         {/* Tab Buttons */}
                         <div className="space-y-2">
-                            {["adaccount", "global", "billing", "viewads"].map((tab) => (
-                                <button
-                                    key={tab}
-                                    onClick={() => handleTabChange(tab)}
-                                    className={cn(
-                                        "w-full flex items-center gap-2 px-4 py-2 rounded-2xl",
-                                        activeTab === tab
-                                            ? "bg-gradient-to-b from-zinc-600 to-zinc-700 border border-2 border-zinc-200/20 font-semibold text-white shadow-md"
-                                            : "hover:bg-gray-300",
-                                        "justify-start max-lg:justify-center max-lg:px-2",
-                                    )}
-                                >
-                                    <img
-                                        src={tabIconMap[tab] || "/placeholder.svg"}
-                                        alt={`${tab} icon`}
+                            {["adaccount", "global", "billing", "viewads"].map((tab) => {
+                                const Icon = tabIconMap[tab];
+                                return (
+                                    <button
+                                        key={tab}
+                                        onClick={() => handleTabChange(tab)} t
                                         className={cn(
-                                            "w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-500 ease-in-out object-contain flex-shrink-0",
+                                            "w-full flex items-center gap-2 px-4 py-2 rounded-2xl",
                                             activeTab === tab
-                                                ? "brightness-0 invert" // let original color show
-                                                : "grayscale brightness-75 contrast-75 opacity-60",
+                                                ? "bg-gradient-to-b from-zinc-600 to-zinc-700 border border-2 border-zinc-200/20 font-semibold text-white shadow-md"
+                                                : "hover:bg-gray-300",
+                                            "justify-start max-lg:justify-center max-lg:px-2",
                                         )}
-                                    />
-                                    <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
-                                        {tab === "global"
-                                            ? "Global Settings"
-                                            : tab === "adaccount"
-                                                ? "Ad Account Settings"
-                                                : tab === "viewads"
-                                                    ? "View Ads"
-                                                    : "Billing"}
-                                    </span>
-                                </button>
-                            ))}
+                                    >
+                                        <Icon
+                                            aria-label={`${tab} icon`}
+                                            className={cn(
+                                                "w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-500 ease-in-out object-contain flex-shrink-0",
+                                                activeTab === tab
+                                                    ? "brightness-0 invert"
+                                                    : "grayscale brightness-75 contrast-75 opacity-60"
+                                            )}
+                                        />
+                                        <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
+                                            {tab === "global"
+                                                ? "Global Settings"
+                                                : tab === "adaccount"
+                                                    ? "Ad Account Settings"
+                                                    : tab === "viewads"
+                                                        ? "View Ads"
+                                                        : "Billing"}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
+
                         {/* Any other content, just add margin-bottom as needed */}
                     </div>
 
