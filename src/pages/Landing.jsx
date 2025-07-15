@@ -234,10 +234,10 @@ export default function Home() {
                                     pricing
                                 </a>
                                 <a
-                                    href="#features"
-                                    onClick={(e) => scrollToSection(e, "features")}
+                                    href="#realfeatures"
+                                    onClick={(e) => scrollToSection(e, "realfeatures")}
                                 >
-                                    features
+                                    realfeatures
                                 </a>
                                 <button
                                     className={styles.startBtn}
@@ -260,10 +260,10 @@ export default function Home() {
                                     pricing
                                 </a>
                                 <a
-                                    href="#features"
-                                    onClick={(e) => scrollToSection(e, "features")}
+                                    href="#realfeatures"
+                                    onClick={(e) => scrollToSection(e, "realfeatures")}
                                 >
-                                    features
+                                    realfeatures
                                 </a>
                                 <button className={styles.startBtn}>Start Now</button>
                             </nav>
@@ -497,7 +497,7 @@ export default function Home() {
                         </div>
                     </motion.section>
 
-                    <div className={styles.mainGrid}>
+                    <div className={styles.mainGrid} id="realfeatures">
                         <div className={styles.grid}>
                             <div className={styles.card}>
                                 <div className={styles.cardcontainer}>
