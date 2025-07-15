@@ -237,7 +237,7 @@ export default function Home() {
                                     href="#realfeatures"
                                     onClick={(e) => scrollToSection(e, "realfeatures")}
                                 >
-                                    realfeatures
+                                    features
                                 </a>
                                 <button
                                     className={styles.startBtn}
@@ -263,7 +263,7 @@ export default function Home() {
                                     href="#realfeatures"
                                     onClick={(e) => scrollToSection(e, "realfeatures")}
                                 >
-                                    realfeatures
+                                    features
                                 </a>
                                 <button className={styles.startBtn}>Start Now</button>
                             </nav>
@@ -479,7 +479,7 @@ export default function Home() {
                                         height={30}
                                         className={styles.myImg}
                                     />
-                                    <span>Persistent Settings</span>
+                                    <span>Auto-Populate All Settings</span>
                                 </div>
                             </div>
                             <div className={styles.shadowButton}>
