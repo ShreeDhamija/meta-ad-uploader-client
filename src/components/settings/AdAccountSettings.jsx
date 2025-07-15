@@ -190,14 +190,14 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
                 Add New Ad Accounts
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md rounded-lg">
+            <DialogContent className="sm:max-w-md rounded-xl">
               <div className="text-left space-y-4 p-6">
                 <div className="space-y-2">
-                  {/* <img
+                  <img
                     src="https://api.withblip.com/logo.webp"
                     alt="Logo"
-                    className="w-12 h-12 mx-auto rounded-md mb-4"
-                  /> */}
+                    className="w-12 h-12 rounded-md mb-4"
+                  />
                   <h3 className="text-sm font-semibold">Add New Ad Accounts</h3>
                 </div>
 
