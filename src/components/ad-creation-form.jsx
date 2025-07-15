@@ -1464,7 +1464,7 @@ export default function AdCreationForm({
 
               {/* Disclaimer */}
               <p className="text-xs font-medium text-gray-500">
-                Video processing estimates are still in beta
+                Progress Tracking is in beta.Popup goes away when ads are actually made.
               </p>
             </div>
           </div>
