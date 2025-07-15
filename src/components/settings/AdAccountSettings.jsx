@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ChevronsUpDown, Loader } from "lucide-react"
+import { ChevronsUpDown, Loader, Plus } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
 import PageSelectors from "./PageSelectors"
@@ -55,6 +56,12 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   const [mainButtonVisible, setMainButtonVisible] = useState(false)
   const [showFloatingButton, setShowFloatingButton] = useState(false)
   const [animateClass, setAnimateClass] = useState("")
+  const [isReauthOpen, setIsReauthOpen] = useState(false)
+
+  const handleFacebookReauth = () => {
+    setIsReauthOpen(false)
+    window.location.href = "https://api.withblip.com/auth/facebook"
+  }
 
 
   useEffect(() => {
@@ -166,8 +173,54 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     <div className="space-y-6 w-full max-w-3xl">
       {/* Ad Account Dropdown */}
       <div className="space-y-2">
-        <label className="text-md font-medium text-gray-800">Select Ad Account</label>
-        <p className="text-sm text-gray-500">Select an ad account to configure settings</p>
+        {/* <label className="text-md font-medium text-gray-800">Select Ad Account</label>
+        <p className="text-sm text-gray-500">Select an ad account to configure settings</p> */}
+        <div className="flex items-center justify-between">
+          <label className="text-md font-medium text-gray-800">Select Ad Account</label>
+
+          {/* Inline Add Ad Accounts Button with Dialog */}
+          <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-sm text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Ad Accounts
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <div className="text-center space-y-4 p-6">
+                <div className="space-y-2">
+                  <img
+                    src="https://api.withblip.com/logo.webp"
+                    alt="Logo"
+                    className="w-12 h-12 mx-auto rounded-md mb-4"
+                  />
+                  <h3 className="text-sm font-semibold">Add New Ad Accounts</h3>
+                </div>
+
+                <div className="space-y-3 text-sm text-gray-600">
+                  <p>1. You will have to reauthenticate to add new accounts</p>
+                  <p>2. Click on Edit previous settings in the login dialog to add new business portfolios</p>
+                </div>
+
+                <Button
+                  onClick={handleFacebookReauth}
+                  className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
+                >
+                  <img
+                    src="https://api.withblip.com/facebooklogo.png"
+                    alt="Facebook"
+                    className="w-5 h-5"
+                  />
+                  Login with Facebook
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
 
         <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
           <PopoverTrigger asChild>
