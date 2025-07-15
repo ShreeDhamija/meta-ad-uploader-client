@@ -479,7 +479,7 @@ export default function Home() {
                                         height={30}
                                         className={styles.myImg}
                                     />
-                                    <span>Auto-Populate All Settings</span>
+                                    <span>Auto-Populate Settings</span>
                                 </div>
                             </div>
                             <div className={styles.shadowButton}>
