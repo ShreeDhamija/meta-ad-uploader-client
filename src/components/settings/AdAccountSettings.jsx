@@ -60,7 +60,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
 
   const handleFacebookReauth = () => {
     setIsReauthOpen(false)
-    window.location.href = "https://api.withblip.com/auth/facebook?source=settings"
+    window.location.href = "https://api.withblip.com/auth/facebook?state=settings"
 
   }
 
@@ -190,8 +190,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
                 Add New Ad Accounts
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md rounded-xl">
-              <div className="text-left space-y-4 p-6">
+            <DialogContent className="sm:max-w-md !rounded-xl">
+              <div className="text-left space-y-4 p-6 !rounded-xl" >
                 <div className="space-y-2">
                   <img
                     src="https://api.withblip.com/logo.webp"
