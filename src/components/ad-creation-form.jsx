@@ -373,11 +373,11 @@ export default function AdCreationForm({
       setProgressMessage(trackedMessage);
 
       if (status === 'complete') {
-        setIsCreatingAds(false);
+        // setIsCreatingAds(false);
         setJobId(null);
         // toast.success("Ads created successfully!");
       } else if (status === 'error') {
-        setIsCreatingAds(false);
+        // setIsCreatingAds(false);
         setJobId(null);
       }
     }

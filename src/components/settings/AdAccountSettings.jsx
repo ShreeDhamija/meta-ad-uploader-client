@@ -202,8 +202,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
                 </div>
 
                 <div className="space-y-3 text-sm text-gray-600">
-                  <p>1. You will have to reauthenticate to add new accounts</p>
-                  <p>2. Click on Edit previous settings in the login dialog to add new business portfolios</p>
+                  <p>1. You will have to reauthenticate to add new ad accounts</p>
+                  <p>2. Click on "Edit previous settings" in the Login dialog to add new business portfolios</p>
                 </div>
 
                 <Button
