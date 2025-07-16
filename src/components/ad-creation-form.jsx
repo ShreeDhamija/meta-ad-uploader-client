@@ -119,6 +119,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
 
   useEffect(() => {
+
     if (!isCreatingAds) {
       console.log('🧹 Job completely finished, resetting hook state');
       setProgress(0);
@@ -221,6 +222,8 @@ export default function AdCreationForm({
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
+
+
 
   // const [isCarouselAd, setIsCarouselAd] = useState(false);
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
@@ -1481,7 +1484,7 @@ export default function AdCreationForm({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-[20px] py-4 px-6 shadow-xl max-w-md w-full mx-4">
             <div className="text-left">
-              {/* Header with rocket and title */}
+
               <div className="flex items-center gap-2 mb-6">
                 <div className="relative">
                   <img
@@ -1495,7 +1498,7 @@ export default function AdCreationForm({
                       animationTimingFunction: "ease-in-out",
                     }}
                   />
-                  {/* Sparkle effects */}
+
                   <div className="absolute -top-1 -right-1 w-2 h-2">
                     <div className="w-1 h-1 bg-yellow-400 rounded-full animate-ping"></div>
                   </div>
@@ -1506,7 +1509,7 @@ export default function AdCreationForm({
                 <h3 className="text-base font-bold text-gray-900">Creating Ads</h3>
               </div>
 
-              {/* Progress section */}
+
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-xs font-semibold text-gray-900">Progress</span>
@@ -1515,7 +1518,7 @@ export default function AdCreationForm({
                   </span>
                 </div>
 
-                {/* Thick progress bar */}
+
                 <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
                   <div
                     className="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-out"
@@ -1524,12 +1527,12 @@ export default function AdCreationForm({
                 </div>
               </div>
 
-              {/* Status message */}
+
               <p className="text-xs font-semibold text-gray-900 mb-4">
                 {jobId ? trackedMessage : progressMessage}
               </p>
 
-              {/* Disclaimer */}
+
               <p className="text-xs font-medium text-gray-500">
                 Progress Tracker is in beta. Popup goes away when ads are made.
               </p>
@@ -1537,6 +1540,7 @@ export default function AdCreationForm({
           </div>
         </div>
       )}
+
 
       <CardHeader>
         <CardTitle className="flex items-center justify-between w-full">
