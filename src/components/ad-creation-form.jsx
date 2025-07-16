@@ -893,11 +893,13 @@ export default function AdCreationForm({
 
     setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
-    const largeFiles = files.filter((file) => file.size > 100 * 1024 * 1024);
+    const largeFiles = files.filter((file) =>
+      file.type.startsWith("video/") && file.size > 50 * 1024 * 1024
+    );
 
     // Step: Upload large Drive videos to S3
     const largeDriveFiles = driveFiles.filter(file =>
-      file.mimeType.startsWith("video/") && file.size > 100 * 1024 * 1024
+      file.mimeType.startsWith("video/") && file.size > 50 * 1024 * 1024
     );
 
     let s3Results = [];
