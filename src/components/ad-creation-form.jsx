@@ -377,6 +377,11 @@ export default function AdCreationForm({
       if (status === 'complete') {
         // setIsCreatingAds(false);
         setJobId(null);
+        setFiles([]);
+        setDriveFiles([]);
+        setVideoThumbs({});
+        setFileGroups([]);
+        setEnablePlacementCustomization(false);
         // toast.success("Ads created successfully!");
       } else if (status === 'error') {
         // setIsCreatingAds(false);
