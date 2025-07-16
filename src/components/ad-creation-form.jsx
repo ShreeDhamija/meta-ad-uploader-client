@@ -29,6 +29,8 @@ import LinkIcon from '@/assets/icons/link.svg?react';
 import CTAIcon from '@/assets/icons/cta.svg?react';
 import { useNavigate } from "react-router-dom"
 import CogIcon from '@/assets/icons/cog.svg?react';
+import pLimit from 'p-limit';
+
 
 
 
@@ -903,54 +905,112 @@ export default function AdCreationForm({
 
     const totalLargeFiles = largeFiles.length + largeDriveFiles.length;
 
+    // if (totalLargeFiles > 0) {
+    //   setProgressMessage(`Uploading ${totalLargeFiles} videos...`);
+
+    //   // Upload regular large files
+    //   for (let i = 0; i < largeFiles.length; i++) {
+    //     const progressPercent = Math.round((i / totalLargeFiles) * 50);
+    //     setProgress(progressPercent);
+    //     setProgressMessage(`Uploading file ${i + 1}/${totalLargeFiles} ...`);
+
+    //     try {
+    //       const result = await uploadToS3(largeFiles[i]);
+    //       if (enablePlacementCustomization && aspectRatioMap[largeFiles[i].name]) {
+    //         result.aspectRatio = aspectRatioMap[largeFiles[i].name];
+    //       }
+    //       s3Results.push(result);
+    //     } catch (err) {
+    //       toast.error(`Failed to upload ${largeFiles[i].name} to S3`);
+    //       setIsCreatingAds(false);
+    //       setIsLoading(false);
+    //       return;
+    //     }
+    //   }
+
+    //   // Upload Drive large files
+    //   for (let i = 0; i < largeDriveFiles.length; i++) {
+    //     const progressPercent = Math.round(((largeFiles.length + i) / totalLargeFiles) * 50);
+    //     setProgress(progressPercent);
+    //     setProgressMessage(`Uploading Drive file ${largeFiles.length + i + 1}/${totalLargeFiles} ...`);
+
+    //     try {
+    //       const s3Url = await uploadDriveFileToS3(largeDriveFiles[i]);
+    //       const result = {
+    //         ...largeDriveFiles[i],
+    //         s3Url
+    //       };
+    //       // Include aspect ratio if we have it
+    //       if (enablePlacementCustomization && aspectRatioMap[largeDriveFiles[i].id]) {
+    //         result.aspectRatio = aspectRatioMap[largeDriveFiles[i].id];
+    //       }
+    //       s3DriveResults.push(result);
+    //     } catch (err) {
+    //       toast.error(`Failed to upload Drive video: ${largeDriveFiles[i].name}`);
+    //       console.error("❌ Drive to S3 upload failed", err);
+    //       setIsCreatingAds(false);
+    //       setIsLoading(false);
+    //       return;
+    //     }
+    //   }
+
+    //   setProgress(50);
+    //   setProgressMessage('S3 uploads complete! Creating ads...');
+    //   toast.success("All video files uploaded!");
+    // }
+
     if (totalLargeFiles > 0) {
       setProgressMessage(`Uploading ${totalLargeFiles} videos...`);
 
-      // Upload regular large files
-      for (let i = 0; i < largeFiles.length; i++) {
-        const progressPercent = Math.round((i / totalLargeFiles) * 50);
-        setProgress(progressPercent);
-        setProgressMessage(`Uploading file ${i + 1}/${totalLargeFiles} ...`);
+      // Set up concurrency limiter
+      const limit = pLimit(3);
 
-        try {
-          const result = await uploadToS3(largeFiles[i]);
-          if (enablePlacementCustomization && aspectRatioMap[largeFiles[i].name]) {
-            result.aspectRatio = aspectRatioMap[largeFiles[i].name];
+      // Upload regular large files with concurrency control
+      const uploadPromises = largeFiles.map(file =>
+        limit(() => uploadToS3(file)) // Your existing function unchanged
+      );
+
+      const results = await Promise.allSettled(uploadPromises);
+
+      // Process regular file results
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const uploadResult = result.value;
+          if (enablePlacementCustomization && aspectRatioMap[largeFiles[index].name]) {
+            uploadResult.aspectRatio = aspectRatioMap[largeFiles[index].name];
           }
-          s3Results.push(result);
-        } catch (err) {
-          toast.error(`Failed to upload ${largeFiles[i].name} to S3`);
-          setIsCreatingAds(false);
-          setIsLoading(false);
-          return;
+          s3Results.push(uploadResult);
+        } else {
+          toast.error(`Failed to upload ${largeFiles[index].name}`);
+          console.error(`❌ Failed to upload ${largeFiles[index].name}:`, result.reason);
         }
-      }
+      });
 
-      // Upload Drive large files
-      for (let i = 0; i < largeDriveFiles.length; i++) {
-        const progressPercent = Math.round(((largeFiles.length + i) / totalLargeFiles) * 50);
-        setProgress(progressPercent);
-        setProgressMessage(`Uploading Drive file ${largeFiles.length + i + 1}/${totalLargeFiles} ...`);
+      // Upload Drive files with concurrency control
+      const driveUploadPromises = largeDriveFiles.map(file =>
+        limit(() => uploadDriveFileToS3(file)) // Your existing function unchanged
+      );
 
-        try {
-          const s3Url = await uploadDriveFileToS3(largeDriveFiles[i]);
-          const result = {
-            ...largeDriveFiles[i],
+      const driveResults = await Promise.allSettled(driveUploadPromises);
+
+      // Process Drive file results
+      driveResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const s3Url = result.value;
+          const uploadResult = {
+            ...largeDriveFiles[index],
             s3Url
           };
           // Include aspect ratio if we have it
-          if (enablePlacementCustomization && aspectRatioMap[largeDriveFiles[i].id]) {
-            result.aspectRatio = aspectRatioMap[largeDriveFiles[i].id];
+          if (enablePlacementCustomization && aspectRatioMap[largeDriveFiles[index].id]) {
+            uploadResult.aspectRatio = aspectRatioMap[largeDriveFiles[index].id];
           }
-          s3DriveResults.push(result);
-        } catch (err) {
-          toast.error(`Failed to upload Drive video: ${largeDriveFiles[i].name}`);
-          console.error("❌ Drive to S3 upload failed", err);
-          setIsCreatingAds(false);
-          setIsLoading(false);
-          return;
+          s3DriveResults.push(uploadResult);
+        } else {
+          toast.error(`Failed to upload Drive video: ${largeDriveFiles[index].name}`);
+          console.error("❌ Drive to S3 upload failed", result.reason);
         }
-      }
+      });
 
       setProgress(50);
       setProgressMessage('S3 uploads complete! Creating ads...');
