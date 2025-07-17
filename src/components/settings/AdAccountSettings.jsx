@@ -190,7 +190,15 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     setUtmPairs(utms) // ⬅ override placeholder with real/default values
     setDefaultCTA(initial.defaultCTA)
     setEnhancements(initial.creativeEnhancements)
-    setAdNameFormula(initial.adNameFormula)  // ADD THIS LINE
+    setAdNameFormula({
+      order: initial.adNameFormula.order || ["adType", "dateType", "fileName", "iteration"],
+      selected: initial.adNameFormula.selected || [],
+      values: {
+        dateType: initial.adNameFormula.values?.dateType || "MonthYYYY",
+        customTexts: initial.adNameFormula.values?.customTexts || {}
+      }
+    });
+    // ADD THIS LINE
     setInitialSettings(initial)
   }, [adSettings, selectedAdAccount])
 
