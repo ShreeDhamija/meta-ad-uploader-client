@@ -222,6 +222,8 @@ export default function AdCreationForm({
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
   const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
+  const [showCompletedView, setShowCompletedView] = useState(false);
+
 
 
 
@@ -371,24 +373,40 @@ export default function AdCreationForm({
 
 
   // Update local state when progress changes
+  // useEffect(() => {
+  //   // console.log('🔄 Progress state update:', { trackedProgress, trackedMessage, status }); // ADD THIS
+  //   if (jobId) {
+  //     setProgress(trackedProgress);
+  //     setProgressMessage(trackedMessage);
+
+  //     if (status === 'complete') {
+  //       // setIsCreatingAds(false);
+  //       setJobId(null);
+  //       setFiles([]);
+  //       setDriveFiles([]);
+  //       setVideoThumbs({});
+  //       setFileGroups([]);
+  //       setEnablePlacementCustomization(false);
+  //       // toast.success("Ads created successfully!");
+  //     } else if (status === 'error') {
+  //       // setIsCreatingAds(false);
+  //       setJobId(null);
+  //     }
+  //   }
+  // }, [trackedProgress, trackedMessage, status, jobId]);
   useEffect(() => {
-    // console.log('🔄 Progress state update:', { trackedProgress, trackedMessage, status }); // ADD THIS
     if (jobId) {
       setProgress(trackedProgress);
       setProgressMessage(trackedMessage);
 
       if (status === 'complete') {
-        // setIsCreatingAds(false);
-        setJobId(null);
-        setFiles([]);
-        setDriveFiles([]);
-        setVideoThumbs({});
-        setFileGroups([]);
-        setEnablePlacementCustomization(false);
-        // toast.success("Ads created successfully!");
+        // Don't automatically close - just show the completed view
+        setShowCompletedView(true);
+        toast.success("Ads created successfully!");
       } else if (status === 'error') {
-        // setIsCreatingAds(false);
-        setJobId(null);
+        // For errors, you might want to also show a close button
+        setShowCompletedView(true);
+        toast.error("Error creating ads");
       }
     }
   }, [trackedProgress, trackedMessage, status, jobId]);
@@ -757,6 +775,20 @@ export default function AdCreationForm({
     newValues[index] = newValue
     setter(newValues)
   }
+
+  const handleCloseProgressPopup = () => {
+    // Reset all the states that were being reset automatically
+    setIsCreatingAds(false);
+    setJobId(null);
+    setFiles([]);
+    setDriveFiles([]);
+    setVideoThumbs({});
+    setFileGroups([]);
+    setEnablePlacementCustomization(false);
+    setShowCompletedView(false);
+    setProgress(0);
+    setProgressMessage('');
+  };
 
 
 
@@ -1479,8 +1511,102 @@ export default function AdCreationForm({
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
-
       {isCreatingAds && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-[20px] py-4 px-6 shadow-xl max-w-md w-full mx-4">
+            <div className="text-left">
+              {!showCompletedView ? (
+                <>
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="relative">
+                      <img
+                        src="https://api.withblip.com/uploadrocket.webp"
+                        alt="Rocket"
+                        width={30}
+                        height={30}
+                        className="animate-bounce"
+                        style={{
+                          animationDuration: "2s",
+                          animationTimingFunction: "ease-in-out",
+                        }}
+                      />
+                      <div className="absolute -top-1 -right-1 w-2 h-2">
+                        <div className="w-1 h-1 bg-yellow-400 rounded-full animate-ping"></div>
+                      </div>
+                      <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5">
+                        <div className="w-1 h-1 bg-yellow-300 rounded-full animate-ping delay-300"></div>
+                      </div>
+                    </div>
+                    <h3 className="text-base font-bold text-gray-900">Creating Ads</h3>
+                  </div>
+
+                  <div className="mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-xs font-semibold text-gray-900">Progress</span>
+                      <span className="text-xs font-semibold text-gray-900">
+                        {Math.round(jobId ? trackedProgress : progress)}%
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
+                      <div
+                        className="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-out"
+                        style={{ width: `${jobId ? trackedProgress : progress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  <p className="text-xs font-semibold text-gray-900 mb-4">
+                    {jobId ? trackedMessage : progressMessage}
+                  </p>
+
+                  <p className="text-xs font-medium text-gray-500">
+                    Progress Tracker is in beta. Popup goes away when ads are made.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2 mb-6">
+                    <div className="relative">
+                      {status === 'complete' ? (
+                        <div className="w-[30px] h-[30px] bg-green-500 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-[30px] h-[30px] bg-red-500 rounded-full flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-base font-bold text-gray-900">
+                      {status === 'complete' ? 'Ads Created Successfully!' : 'Error Creating Ads'}
+                    </h3>
+                  </div>
+
+                  <p className="text-sm text-gray-700 mb-6">
+                    {status === 'complete'
+                      ? 'Your ads have been successfully created and are ready to go live.'
+                      : 'There was an error creating your ads. Please try again.'}
+                  </p>
+
+                  <Button
+                    onClick={handleCloseProgressPopup}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2"
+                  >
+                    Close
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* {isCreatingAds && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-[20px] py-4 px-6 shadow-xl max-w-md w-full mx-4">
             <div className="text-left">
@@ -1539,7 +1665,7 @@ export default function AdCreationForm({
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
 
       <CardHeader>
