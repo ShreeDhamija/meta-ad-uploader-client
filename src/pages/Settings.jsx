@@ -15,7 +15,7 @@ import BillingSettings from "@/components/settings/Billing"
 import ViewAds from "@/components/settings/view-ads"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 import HomeBtn from '@/assets/icons/home.svg?react';
-import CogIcon from '@/assets/icons/cog.svg?react';
+// import CogIcon from '@/assets/icons/cog.svg?react';
 import Folder from '@/assets/icons/folder.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import ViewAdsIcon from '@/assets/icons/viewads.svg?react';
@@ -31,7 +31,6 @@ export default function Settings() {
     const [activeTab, setActiveTab] = useState(initialTab)
 
     const tabIconMap = {
-        global: CogIcon,
         adaccount: Folder,
         billing: Card,
         viewads: ViewAdsIcon,
@@ -42,14 +41,14 @@ export default function Settings() {
     const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading } = useGlobalSettings()
 
     const tabDescriptionMap = {
-        global: "These preferences will apply to ALL ad accounts in your account.",
+        // global: "These preferences will apply to ALL ad accounts in your account.",
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
         billing: "Manage your subscription, billing methods, and view invoices.",
         viewads: "Preview all ads created in the last hour.",
     }
 
     const tabLabelMap = {
-        global: "Global",
+        // global: "Global",
         adaccount: "Ad Account",
         billing: "Billing",
         viewads: "View Ads",
@@ -105,7 +104,7 @@ export default function Settings() {
 
                         {/* Tab Buttons */}
                         <div className="space-y-2">
-                            {["adaccount", "global", "billing", "viewads"].map((tab) => {
+                            {["adaccount", "billing", "viewads"].map((tab) => {
                                 const Icon = tabIconMap[tab];
                                 return (
                                     <button
@@ -129,13 +128,11 @@ export default function Settings() {
                                             )}
                                         />
                                         <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
-                                            {tab === "global"
-                                                ? "Global Settings"
-                                                : tab === "adaccount"
-                                                    ? "Ad Account Settings"
-                                                    : tab === "viewads"
-                                                        ? "View Ads"
-                                                        : "Billing"}
+                                            {tab === "adaccount"
+                                                ? "Ad Account Settings"
+                                                : tab === "viewads"
+                                                    ? "View Ads"
+                                                    : "Billing"}
                                         </span>
                                     </button>
                                 );
@@ -176,18 +173,16 @@ export default function Settings() {
                         <div className="w-full max-w-3xl mx-auto p-16">
                             <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
                             <h1 className="text-xl font-semibold mb-1 text-left">
-                                {activeTab === "global"
-                                    ? "Global Preferences"
-                                    : activeTab === "adaccount"
-                                        ? "Ad Account Settings"
-                                        : activeTab === "viewads"
-                                            ? "Recently Created Ads"
-                                            : "Billing and Subscription"}
+                                {activeTab === "adaccount"
+                                    ? "Ad Account Settings"
+                                    : activeTab === "viewads"
+                                        ? "Recently Created Ads"
+                                        : "Billing and Subscription"}
                             </h1>
                             <p className="text-gray-400 text-sm mb-6 text-left">{tabDescriptionMap[activeTab]}</p>
 
                             <div className="w-full">
-                                {activeTab === "global" && <GlobalSettings />}
+                                {/* {activeTab === "global" && <GlobalSettings />} */}
                                 {activeTab === "adaccount" && <AdAccountSettings preselectedAdAccount={preselectedAdAccount} />}
                                 {activeTab === "viewads" && <ViewAds />}
                                 {activeTab === "billing" && <BillingSettings />}
