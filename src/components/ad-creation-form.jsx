@@ -402,7 +402,7 @@ export default function AdCreationForm({
       if (status === 'complete') {
         // Don't automatically close - just show the completed view
         setShowCompletedView(true);
-        toast.success("Ads created successfully!");
+        // toast.success("Ads created successfully!");
       } else if (status === 'error') {
         // For errors, you might want to also show a close button
         setShowCompletedView(true);
@@ -1206,6 +1206,15 @@ export default function AdCreationForm({
       if (nonDynamicAdSetIds.length > 0 && !isCarouselAd) {
         nonDynamicAdSetIds.forEach((adSetId) => {
 
+          const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
+          const hasUngroupedFiles = (
+            files.some(file => !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024) ||
+            smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
+            [...s3Results, ...s3DriveResults].some(s3File =>
+              !groupedFileIds.has(s3File.name) && !groupedFileIds.has(s3File.id)
+            )
+          );
+
           // NEW: Check if placement customization is enabled
           if (enablePlacementCustomization && fileGroups.length > 0) {
             // Process ONLY grouped files
@@ -1296,6 +1305,11 @@ export default function AdCreationForm({
                 formData.append("shopDestinationType", selectedShopDestinationType);
               }
 
+              formData.append("totalGroups", fileGroups.length);
+              formData.append("currentGroupIndex", groupIndex + 1);
+              formData.append("hasUngroupedFiles", hasUngroupedFiles);
+
+
               promises.push(
                 axios.post("https://api.withblip.com/auth/create-ad", formData, {
                   withCredentials: true,
@@ -1305,14 +1319,14 @@ export default function AdCreationForm({
             });
           }
 
-          const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
-          const hasUngroupedFiles = (
-            files.some(file => !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024) ||
-            smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
-            [...s3Results, ...s3DriveResults].some(s3File =>
-              !groupedFileIds.has(s3File.name) && !groupedFileIds.has(s3File.id)
-            )
-          );
+          // const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
+          // const hasUngroupedFiles = (
+          //   files.some(file => !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024) ||
+          //   smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
+          //   [...s3Results, ...s3DriveResults].some(s3File =>
+          //     !groupedFileIds.has(s3File.name) && !groupedFileIds.has(s3File.id)
+          //   )
+          // );
 
 
           if (hasUngroupedFiles) {
