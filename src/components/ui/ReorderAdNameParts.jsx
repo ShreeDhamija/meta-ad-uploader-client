@@ -319,7 +319,7 @@ export default function ReorderAdNameParts({
           "mt-2 w-full rounded-xl", // Base classes for all variants
           {
             "bg-zinc-700 hover:bg-zinc-900 text-white": variant === "default",
-            "bg-zinc-600 hover:bg-black text-white text-sm h-8": variant === "home"
+            "bg-zinc-600 hover:bg-black text-white text-xs h-8": variant === "home"
           }
         )}
       >
