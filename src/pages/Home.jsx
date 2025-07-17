@@ -98,98 +98,6 @@ export default function Home() {
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
-    // useEffect(() => {
-    //     if (!isLoggedIn || loading) return;
-    //     const { values, order, selected } = adNameFormula;
-    //     setAdValues({
-    //         dateType: values?.dateType || "MonthYYYY",
-    //         customTexts: values?.customTexts || {} // Add this
-    //     });
-
-    //     // Don't add "customText" anymore - use the order as-is from settings
-    //     setAdOrder(order || ["adType", "dateType", "fileName", "iteration"]);
-    //     setSelectedItems(selected || ["adType", "dateType", "fileName"]);
-    // }, [isLoggedIn, loading, adNameFormula]);
-
-    // useEffect(() => {
-    //     // Always set defaults first
-    //     const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
-    //     const defaultSelected = []; // Empty array = all unchecked
-    //     const defaultValues = {
-    //         dateType: "MonthYYYY",
-    //         customTexts: {}
-    //     };
-
-    //     if (!selectedAdAccount || !adAccountSettings.adNameFormula) {
-    //         // No ad account selected or no formula saved - show defaults unchecked
-    //         setAdOrder(defaultOrder);
-    //         setSelectedItems(defaultSelected);
-    //         setAdValues(defaultValues);
-    //         return;
-    //     }
-
-    //     // Ad account has saved formula - use it
-    //     const { values, order, selected } = adAccountSettings.adNameFormula;
-    //     setAdValues({
-    //         dateType: values?.dateType || "MonthYYYY",
-    //         customTexts: values?.customTexts || {}
-    //     });
-    //     setAdOrder(order || defaultOrder);
-    //     setSelectedItems(selected || defaultSelected);
-    // }, [selectedAdAccount, adAccountSettings.adNameFormula]);
-
-
-
-
-    // 🧠 Load default ad account settings
-    // useEffect(() => {
-    //     if (!selectedAdAccount) return
-
-    //     if (adAccountSettings.defaultPage?.id) {
-    //         setPageId(adAccountSettings.defaultPage.id);
-    //     } else {
-    //         setPageId("");
-    //     }
-
-    //     if (adAccountSettings.defaultInstagram?.id) {
-    //         setInstagramAccountId(adAccountSettings.defaultInstagram.id);
-    //     } else {
-    //         setInstagramAccountId("");
-    //     }
-
-    //     if (adAccountSettings.defaultLink) {
-    //         setLink([adAccountSettings.defaultLink]);
-    //     } else {
-    //         setLink([""]);
-    //     }
-
-
-
-    //     if (adAccountSettings.defaultCTA) {
-    //         setCta(adAccountSettings.defaultCTA)
-    //     }
-
-    //     // Copy templates
-    //     const templates = adAccountSettings.copyTemplates || {};
-    //     const keys = Object.keys(templates);
-
-    //     if (keys.length === 0) {
-    //         setSelectedTemplate(undefined);
-    //         setMessages([""]);
-    //         setHeadlines([""]);
-    //     } else {
-    //         const initialTemplateName = keys.includes(adAccountSettings.defaultTemplateName)
-    //             ? adAccountSettings.defaultTemplateName
-    //             : keys[0];
-
-    //         setSelectedTemplate(initialTemplateName);
-
-    //         const selectedTemplateData = templates[initialTemplateName];
-    //         setMessages(selectedTemplateData?.primaryTexts || [""]);
-    //         setHeadlines(selectedTemplateData?.headlines || [""]);
-    //     }
-
-    // }, [selectedAdAccount, adAccountSettings])
 
 
     // --- NEW, CORRECTED CODE ---
@@ -289,7 +197,6 @@ export default function Home() {
         <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
             <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
             <div className="flex flex-col xl:flex-row gap-6 min-w-0">
-                {/* <div className="w-full xl:w-auto xl:min-w-[500px] xl:max-w-[770px] xl:flex-shrink-0 space-y-6"> */}
                 <div className="flex-1 xl:flex-[55] min-w-0 space-y-6">
                     <AdAccountSettings
                         isLoading={isLoading}

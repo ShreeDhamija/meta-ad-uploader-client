@@ -1783,18 +1783,18 @@ export default function AdCreationForm({
                   <LabelIcon className="w-4 h-4" />
                   Ad Name
                 </div>
-                {/* {!globalDocumentExists && (
+                {selectedAdAccount && (!adAccountSettings?.adNameFormula || Object.keys(adAccountSettings.adNameFormula).length === 0) && (
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate(`/settings?tab=global`)}
-                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
+                    onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
                   >
-                    <CogIcon className="w-3 h-3 text-white" />
-                    Setup Ad Name Preset
+                    <CogIcon className="w-3 h-3 mr-1 text-white" />
+                    Setup Formula
                   </Button>
-                )} */}
+                )}
               </Label>
               <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
                 Generate an ad name by selecting and re-ordering the properties below
