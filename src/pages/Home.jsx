@@ -287,7 +287,7 @@ export default function Home() {
                         setEnablePlacementCustomization={setEnablePlacementCustomization}
                         fileGroups={fileGroups}
                         setFileGroups={setFileGroups}
-                        globalDocumentExists={globalDocumentExists}
+                        adAccountSettings={adAccountSettings}
                     />
                 </div>
 
