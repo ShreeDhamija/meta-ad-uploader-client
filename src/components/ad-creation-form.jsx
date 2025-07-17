@@ -946,61 +946,6 @@ export default function AdCreationForm({
     const s3DriveResults = [];
 
     const totalLargeFiles = largeFiles.length + largeDriveFiles.length;
-
-    // if (totalLargeFiles > 0) {
-    //   setProgressMessage(`Uploading ${totalLargeFiles} videos...`);
-
-    //   // Upload regular large files
-    //   for (let i = 0; i < largeFiles.length; i++) {
-    //     const progressPercent = Math.round((i / totalLargeFiles) * 50);
-    //     setProgress(progressPercent);
-    //     setProgressMessage(`Uploading file ${i + 1}/${totalLargeFiles} ...`);
-
-    //     try {
-    //       const result = await uploadToS3(largeFiles[i]);
-    //       if (enablePlacementCustomization && aspectRatioMap[largeFiles[i].name]) {
-    //         result.aspectRatio = aspectRatioMap[largeFiles[i].name];
-    //       }
-    //       s3Results.push(result);
-    //     } catch (err) {
-    //       toast.error(`Failed to upload ${largeFiles[i].name} to S3`);
-    //       setIsCreatingAds(false);
-    //       setIsLoading(false);
-    //       return;
-    //     }
-    //   }
-
-    //   // Upload Drive large files
-    //   for (let i = 0; i < largeDriveFiles.length; i++) {
-    //     const progressPercent = Math.round(((largeFiles.length + i) / totalLargeFiles) * 50);
-    //     setProgress(progressPercent);
-    //     setProgressMessage(`Uploading Drive file ${largeFiles.length + i + 1}/${totalLargeFiles} ...`);
-
-    //     try {
-    //       const s3Url = await uploadDriveFileToS3(largeDriveFiles[i]);
-    //       const result = {
-    //         ...largeDriveFiles[i],
-    //         s3Url
-    //       };
-    //       // Include aspect ratio if we have it
-    //       if (enablePlacementCustomization && aspectRatioMap[largeDriveFiles[i].id]) {
-    //         result.aspectRatio = aspectRatioMap[largeDriveFiles[i].id];
-    //       }
-    //       s3DriveResults.push(result);
-    //     } catch (err) {
-    //       toast.error(`Failed to upload Drive video: ${largeDriveFiles[i].name}`);
-    //       console.error("❌ Drive to S3 upload failed", err);
-    //       setIsCreatingAds(false);
-    //       setIsLoading(false);
-    //       return;
-    //     }
-    //   }
-
-    //   setProgress(50);
-    //   setProgressMessage('S3 uploads complete! Creating ads...');
-    //   toast.success("All video files uploaded!");
-    // }
-
     if (totalLargeFiles > 0) {
       setProgressMessage(`Uploading ${totalLargeFiles} videos...`);
 
@@ -1589,7 +1534,7 @@ export default function AdCreationForm({
 
                   <p className="text-sm text-gray-700 mb-6">
                     {status === 'complete'
-                      ? 'Your ads have been successfully created and are ready to go live.'
+                      ? 'Your ads have been successfully created!'
                       : 'There was an error creating your ads. Please try again.'}
                   </p>
 
@@ -1605,68 +1550,6 @@ export default function AdCreationForm({
           </div>
         </div>
       )}
-
-      {/* {isCreatingAds && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-[20px] py-4 px-6 shadow-xl max-w-md w-full mx-4">
-            <div className="text-left">
-
-              <div className="flex items-center gap-2 mb-6">
-                <div className="relative">
-                  <img
-                    src="https://api.withblip.com/uploadrocket.webp" // Replace with your image path
-                    alt="Rocket"
-                    width={30}
-                    height={30}
-                    className="animate-bounce"
-                    style={{
-                      animationDuration: "2s",
-                      animationTimingFunction: "ease-in-out",
-                    }}
-                  />
-
-                  <div className="absolute -top-1 -right-1 w-2 h-2">
-                    <div className="w-1 h-1 bg-yellow-400 rounded-full animate-ping"></div>
-                  </div>
-                  <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5">
-                    <div className="w-1 h-1 bg-yellow-300 rounded-full animate-ping delay-300"></div>
-                  </div>
-                </div>
-                <h3 className="text-base font-bold text-gray-900">Creating Ads</h3>
-              </div>
-
-
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-semibold text-gray-900">Progress</span>
-                  <span className="text-xs font-semibold text-gray-900">
-                    {Math.round(jobId ? trackedProgress : progress)}%
-                  </span>
-                </div>
-
-
-                <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
-                  <div
-                    className="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${jobId ? trackedProgress : progress}%` }}
-                  ></div>
-                </div>
-              </div>
-
-
-              <p className="text-xs font-semibold text-gray-900 mb-4">
-                {jobId ? trackedMessage : progressMessage}
-              </p>
-
-
-              <p className="text-xs font-medium text-gray-500">
-                Progress Tracker is in beta. Popup goes away when ads are made.
-              </p>
-            </div>
-          </div>
-        </div>
-      )} */}
-
 
       <CardHeader>
         <CardTitle className="flex items-center justify-between w-full">
