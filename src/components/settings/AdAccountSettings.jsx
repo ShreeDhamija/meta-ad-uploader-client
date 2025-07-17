@@ -336,11 +336,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
             </p>
 
             <ReorderAdNameParts
-              order={Array.isArray(adNameFormula.order) ? adNameFormula.order : ["adType", "dateType", "fileName", "iteration"]}
-              setOrder={(newOrder) => setAdNameFormula(prev => ({
-                ...prev,
-                order: Array.isArray(newOrder) ? newOrder : [newOrder]
-              }))}
+              order={adNameFormula.order}
+              setOrder={(newOrder) => setAdNameFormula(prev => ({ ...prev, order: newOrder }))}
               values={adNameFormula.values}
               setValues={(newValues) => setAdNameFormula(prev => ({ ...prev, values: newValues }))}
               selectedItems={adNameFormula.selected}
