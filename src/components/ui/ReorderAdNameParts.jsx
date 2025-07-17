@@ -266,7 +266,7 @@ export default function ReorderAdNameParts({
   const formulaParts = order.map((key) => {
     if (!selectedItems.includes(key)) return null;
     if (key === "adType") return "[File_Type]";
-    if (key === "dateType") return adValues.dateType;
+    if (key === "dateType") return values.dateType;
     if (key === "fileName") return "File Name";
     if (key === "iteration") return "itr";
 
