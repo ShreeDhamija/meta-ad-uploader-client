@@ -682,7 +682,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       <div className="space-y-4">
                         <h3 className="text-md font-bold text-zinc-800">Primary Texts</h3>
 
-                        <div className="border border-gray-200 rounded-2xl p-4 py-2 space-y-3">
+                        <div className="border bg-gray-100 border-gray-200 rounded-2xl p-4 py-2 space-y-3">
                           {recentAds.primaryTexts.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
@@ -709,7 +709,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   Import
                                 </Button>
                               </div>
-                              <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="bg-white rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
@@ -723,7 +723,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       <div className="space-y-4">
                         <h3 className="text-md font-bold text-zinc-800">Headlines</h3>
 
-                        <div className="border border-gray-200 rounded-2xl p-4 py-2 space-y-3">
+                        <div className="border bg-gray-100 border-gray-200 rounded-2xl p-4 py-2 space-y-3">
                           {recentAds.headlines.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
@@ -750,7 +750,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   Import
                                 </Button>
                               </div>
-                              <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="bg-white rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
