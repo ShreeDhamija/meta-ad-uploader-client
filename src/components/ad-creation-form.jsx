@@ -384,7 +384,7 @@ export default function AdCreationForm({
         setDriveFiles([]);
         setVideoThumbs({});
         setFileGroups([]);
-        setEnablePlacementCustomization(false);
+        // setEnablePlacementCustomization(false);
         // toast.success("Ads created successfully!");
       } else if (status === 'error') {
         // setIsCreatingAds(false);
