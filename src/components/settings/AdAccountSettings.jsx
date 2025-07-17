@@ -15,6 +15,7 @@ import { toast } from "sonner"
 import { saveSettings } from "@/lib/saveSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import CreativeEnhancements from "./CreativeEnhancements"
+import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 
 export default function AdAccountSettings({ preselectedAdAccount }) {
   const { adAccounts, pages } = useAppData()
@@ -51,6 +52,16 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     catalogItems: false,
     textGeneration: false,
   })
+
+  const [adNameFormula, setAdNameFormula] = useState({
+    order: ["adType", "dateType", "fileName", "iteration"],
+    selected: [],
+    values: {
+      dateType: "MonthYYYY",
+      customTexts: {}
+    }
+  })
+
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
   const [mainButtonVisible, setMainButtonVisible] = useState(false)
@@ -112,7 +123,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       defaultLink !== initialSettings.defaultLink ||
       defaultCTA !== initialSettings.defaultCTA ||
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
-      JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements)
+      JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
+      JSON.stringify(adNameFormula) !== JSON.stringify(initialSettings.adNameFormula)  // ADD THIS LINE
+
 
     setIsDirty(hasChanges)
   }, [
@@ -124,6 +137,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     enhancements,
     initialSettings,
     selectedAdAccount,
+    adNameFormula  // ADD THIS TO DEPENDENCIES
+
   ])
 
   useEffect(() => {
@@ -158,6 +173,14 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         catalogItems: false,
         textGeneration: false,
       },
+      adNameFormula: adSettings.adNameFormula || {  // ADD THIS
+        order: ["adType", "dateType", "fileName", "iteration"],
+        selected: [],
+        values: {
+          dateType: "MonthYYYY",
+          customTexts: {}
+        }
+      }
     }
 
     setSelectedPage(initial.defaultPage)
@@ -166,6 +189,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     setUtmPairs(utms) // ⬅ override placeholder with real/default values
     setDefaultCTA(initial.defaultCTA)
     setEnhancements(initial.creativeEnhancements)
+    setAdNameFormula(initial.adNameFormula)  // ADD THIS LINE
     setInitialSettings(initial)
   }, [adSettings, selectedAdAccount])
 
@@ -297,6 +321,37 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
 
           <CopyTemplates selectedAdAccount={selectedAdAccount} adSettings={adSettings} setAdSettings={setAdSettings} />
 
+          {/* Ad Naming Convention */}
+          <div className="bg-[#f7f7f7] rounded-xl p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+              <h3 className="font-medium text-[14px] text-zinc-950">
+                Ad Name Formula
+              </h3>
+            </div>
+
+            <p className="text-xs text-black text-gray-500">
+              You can generate an ad name formula by selecting and re-ordering the properties below.
+            </p>
+
+            <ReorderAdNameParts
+              order={adNameFormula.order}
+              setOrder={(newOrder) => setAdNameFormula(prev => ({ ...prev, order: newOrder }))}
+              values={adNameFormula.values}
+              setValues={(newValues) => setAdNameFormula(prev => ({ ...prev, values: newValues }))}
+              selectedItems={adNameFormula.selected}
+              onItemToggle={(item) => {
+                setAdNameFormula(prev => ({
+                  ...prev,
+                  selected: prev.selected.includes(item)
+                    ? prev.selected.filter(i => i !== item)
+                    : [...prev.selected, item]
+                }))
+              }}
+              variant="default"
+            />
+          </div>
+
           <LinkParameters
             defaultLink={defaultLink}
             setDefaultLink={setDefaultLink}
@@ -324,6 +379,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
                   defaultCTA,
                   defaultUTMs: utmPairs, // ✅ always include full list, even blank ones
                   creativeEnhancements: enhancements,
+                  adNameFormula: adNameFormula // Add this line
+
                 }
 
                 try {
@@ -368,6 +425,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
                 defaultCTA,
                 defaultUTMs: utmPairs, // ✅ always include full list, even blank ones
                 creativeEnhancements: enhancements,
+                adNameFormula: adNameFormula // Add this line
+
               }
 
               try {

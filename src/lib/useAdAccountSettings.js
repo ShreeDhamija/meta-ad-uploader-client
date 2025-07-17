@@ -32,7 +32,15 @@ export default function useAdAccountSettings(adAccountId) {
                         defaultUTMs: [],
                         copyTemplates: {},
                         defaultTemplateName: "",
-                        creativeEnhancements: {}
+                        creativeEnhancements: {},
+                        adNameFormula: {
+                            order: ["adType", "dateType", "fileName", "iteration"],
+                            selected: [],
+                            values: {
+                                dateType: "MonthYYYY",
+                                customTexts: {}
+                            }
+                        }
                     });
                 } else {
                     setDocumentExists(true);
@@ -46,7 +54,16 @@ export default function useAdAccountSettings(adAccountId) {
                         defaultUTMs: Array.isArray(s.defaultUTMs) ? s.defaultUTMs : [], // ← store as array
                         copyTemplates: s.copyTemplates,
                         defaultTemplateName: s.defaultTemplateName || "" || {},
-                        creativeEnhancements: s.creativeEnhancements || {}
+                        creativeEnhancements: s.creativeEnhancements || {},
+                        adNameFormula: s.adNameFormula || {
+                            order: ["adType", "dateType", "fileName", "iteration"],
+                            selected: [],
+                            values: {
+                                dateType: "MonthYYYY",
+                                customTexts: {}
+                            }
+                        }
+
                     });
                 }
             } catch (err) {

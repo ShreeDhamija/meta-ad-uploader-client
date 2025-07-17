@@ -1783,7 +1783,7 @@ export default function AdCreationForm({
                   <LabelIcon className="w-4 h-4" />
                   Ad Name
                 </div>
-                {!globalDocumentExists && (
+                {/* {!globalDocumentExists && (
                   <Button
                     type="button"
                     size="sm"
@@ -1794,7 +1794,7 @@ export default function AdCreationForm({
                     <CogIcon className="w-3 h-3 text-white" />
                     Setup Ad Name Preset
                   </Button>
-                )}
+                )} */}
               </Label>
               <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
                 Generate an ad name by selecting and re-ordering the properties below

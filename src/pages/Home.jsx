@@ -24,7 +24,7 @@ export default function Home() {
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
-    const { adNameFormula, hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, globalDocumentExists } = useGlobalSettings();
+    const { hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, globalDocumentExists } = useGlobalSettings();
     const { subscriptionData, hasActiveAccess, isTrialExpired, loading: subscriptionLoading } = useSubscription();
 
     // Ad account selection and setup
@@ -98,18 +98,30 @@ export default function Home() {
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
+    // useEffect(() => {
+    //     if (!isLoggedIn || loading) return;
+    //     const { values, order, selected } = adNameFormula;
+    //     setAdValues({
+    //         dateType: values?.dateType || "MonthYYYY",
+    //         customTexts: values?.customTexts || {} // Add this
+    //     });
+
+    //     // Don't add "customText" anymore - use the order as-is from settings
+    //     setAdOrder(order || ["adType", "dateType", "fileName", "iteration"]);
+    //     setSelectedItems(selected || ["adType", "dateType", "fileName"]);
+    // }, [isLoggedIn, loading, adNameFormula]);
+
     useEffect(() => {
-        if (!isLoggedIn || loading) return;
-        const { values, order, selected } = adNameFormula;
+        if (!selectedAdAccount || !adAccountSettings.adNameFormula) return;
+
+        const { values, order, selected } = adAccountSettings.adNameFormula;
         setAdValues({
             dateType: values?.dateType || "MonthYYYY",
-            customTexts: values?.customTexts || {} // Add this
+            customTexts: values?.customTexts || {}
         });
-
-        // Don't add "customText" anymore - use the order as-is from settings
         setAdOrder(order || ["adType", "dateType", "fileName", "iteration"]);
         setSelectedItems(selected || ["adType", "dateType", "fileName"]);
-    }, [isLoggedIn, loading, adNameFormula]);
+    }, [selectedAdAccount, adAccountSettings.adNameFormula]);
 
 
 
