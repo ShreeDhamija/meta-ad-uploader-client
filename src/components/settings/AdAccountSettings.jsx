@@ -345,9 +345,28 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
 
             <ReorderAdNameParts
               order={adNameFormula.order}
-              setOrder={(newOrder) => setAdNameFormula(prev => ({ ...prev, order: newOrder }))}
+              setOrder={(orderUpdater) => {
+                setAdNameFormula((currentFormula) => {
+                  // If the child passed a function (e.g., prev => ...), execute it with the current order.
+                  // Otherwise, use the value directly.
+                  const newOrder = typeof orderUpdater === 'function'
+                    ? orderUpdater(currentFormula.order)
+                    : orderUpdater;
+
+                  return { ...currentFormula, order: newOrder };
+                });
+              }}
               values={adNameFormula.values}
-              setValues={(newValues) => setAdNameFormula(prev => ({ ...prev, values: newValues }))}
+              setValues={(valuesUpdater) => {
+                setAdNameFormula((currentFormula) => {
+                  // Do the same for values.
+                  const newValues = typeof valuesUpdater === 'function'
+                    ? valuesUpdater(currentFormula.values)
+                    : valuesUpdater;
+
+                  return { ...currentFormula, values: newValues };
+                });
+              }}
               selectedItems={adNameFormula.selected}
               onItemToggle={(item) => {
                 setAdNameFormula(prev => ({
