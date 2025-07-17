@@ -682,10 +682,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       <div className="space-y-4">
                         <h3 className="text-md font-bold text-zinc-800">Primary Texts</h3>
 
-                        <div className="space-y-3">
+                        <div className="border bg-gray-50 border-gray-200 rounded-xl p-4 space-y-3">
                           {recentAds.primaryTexts.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
-                              <div className="flex justify-between items-start mb-2">
+                              <div className="flex justify-between items-center mb-2">
                                 <div className="text-xs font-medium text-gray-500">
                                   Primary Text {index + 1}
                                 </div>
@@ -723,9 +723,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       <div className="space-y-4">
                         <h3 className="text-md font-bold text-zinc-800">Headlines</h3>
 
-                        <div className="space-y-3">
+                        <div className="border bg-gray-50 border-gray-200 rounded-xl p-4 space-y-3">
                           {recentAds.headlines.map((text, index) => (
-                            <div key={index} className="border border-gray-200 rounded-lg p-4">
+                            <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
                                 <div className="text-xs font-medium text-gray-500">
                                   Headline {index + 1}
