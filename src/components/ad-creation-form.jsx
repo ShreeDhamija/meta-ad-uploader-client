@@ -1479,7 +1479,7 @@ export default function AdCreationForm({
       console.log('🚀 Starting API calls (Promise.all) now');
       const responses = await Promise.all(promises);
       toast.success("Ads created successfully!");
-      setIsCreatingAds(false);
+      // setIsCreatingAds(false);
     } catch (error) {
       let errorMessage = "Unknown error occurred";
 
@@ -1497,7 +1497,7 @@ export default function AdCreationForm({
       toast.error(`Error uploading ads: ${errorMessage}`);
       console.error("Error uploading ads:", error.response?.data || error);
       console.error("Error uploading ads:", error.response?.data || error);
-      setIsCreatingAds(false);
+      // setIsCreatingAds(false);
       setJobId(null);
       selectedAdSets
     } finally {
