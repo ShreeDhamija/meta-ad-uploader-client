@@ -55,7 +55,7 @@ export default function Home() {
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("")
     const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName", "iteration"]); // Remove "customText"
-    const [selectedItems, setSelectedItems] = useState([]); // Empty array = all unchecked
+    const [selectedItems, setSelectedItems] = useState(["adType", "dateType", "fileName"]); // This is fine
     const [adValues, setAdValues] = useState({
         dateType: "MonthYYYY",
         customTexts: {} // Add this for consistency
@@ -192,43 +192,45 @@ export default function Home() {
     // }, [selectedAdAccount, adAccountSettings])
 
 
+    // --- NEW, CORRECTED CODE ---
     useEffect(() => {
-        if (!selectedAdAccount) return
-
-        if (adAccountSettings.defaultPage?.id) {
-            setPageId(adAccountSettings.defaultPage.id);
-        } else {
+        // This part handles resetting when no ad account is selected.
+        if (!selectedAdAccount) {
+            // Reset all settings to their initial "blank" state
             setPageId("");
-        }
-
-        if (adAccountSettings.defaultInstagram?.id) {
-            setInstagramAccountId(adAccountSettings.defaultInstagram.id);
-        } else {
             setInstagramAccountId("");
-        }
-
-        if (adAccountSettings.defaultLink) {
-            setLink([adAccountSettings.defaultLink]);
-        } else {
             setLink([""]);
-        }
+            setCta("LEARN_MORE");
+            setSelectedTemplate(undefined);
+            setMessages([""]);
+            setHeadlines([""]);
 
-        if (adAccountSettings.defaultCTA) {
-            setCta(adAccountSettings.defaultCTA)
-        }
-
-        // Ad Name Formula
-        if (!adAccountSettings.adNameFormula || Object.keys(adAccountSettings.adNameFormula).length === 0) {
-            // No formula saved - show all fields unchecked
+            // --- Core logic for your request (Scenario 1) ---
+            // No ad account selected, so show all fields unchecked.
             setAdOrder(["adType", "dateType", "fileName", "iteration"]);
-            setSelectedItems([]); // Empty array = all unchecked
-            setAdValues({
-                dateType: "MonthYYYY",
-                customTexts: {}
-            });
+            setSelectedItems([]); // Set to empty array to uncheck all.
+            setAdValues({ dateType: "MonthYYYY", customTexts: {} });
+            return; // Exit the hook early
+        }
+
+        // This part runs only when an ad account IS selected.
+
+        // Load default Page, Instagram, Link, CTA
+        setPageId(adAccountSettings.defaultPage?.id || "");
+        setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
+        setLink([adAccountSettings.defaultLink || ""]);
+        setCta(adAccountSettings.defaultCTA || "LEARN_MORE");
+
+        // --- Core logic for your request (Scenario 2) ---
+        const formula = adAccountSettings.adNameFormula;
+        // Check if the formula is missing, null, or an empty object.
+        if (!formula || Object.keys(formula).length === 0) {
+            // Formula doesn't exist for this account, so show all fields unchecked.
+            setAdOrder(["adType", "dateType", "fileName", "iteration"]);
+            setSelectedItems([]); // Set to empty array to uncheck all.
+            setAdValues({ dateType: "MonthYYYY", customTexts: {} });
         } else {
-            // Use saved formula
-            const formula = adAccountSettings.adNameFormula;
+            // A valid formula exists, so load its settings.
             setAdValues({
                 dateType: formula.values?.dateType || "MonthYYYY",
                 customTexts: formula.values?.customTexts || {}
@@ -237,7 +239,7 @@ export default function Home() {
             setSelectedItems(formula.selected || []);
         }
 
-        // Copy templates
+        // Load Copy templates (this logic is fine as is)
         const templates = adAccountSettings.copyTemplates || {};
         const keys = Object.keys(templates);
 
@@ -251,13 +253,12 @@ export default function Home() {
                 : keys[0];
 
             setSelectedTemplate(initialTemplateName);
-
             const selectedTemplateData = templates[initialTemplateName];
             setMessages(selectedTemplateData?.primaryTexts || [""]);
             setHeadlines(selectedTemplateData?.headlines || [""]);
         }
 
-    }, [selectedAdAccount, adAccountSettings])
+    }, [selectedAdAccount, adAccountSettings]); // Keep dependencies the same
 
 
 
