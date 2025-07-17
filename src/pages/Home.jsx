@@ -55,7 +55,7 @@ export default function Home() {
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState("")
     const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName", "iteration"]); // Remove "customText"
-    const [selectedItems, setSelectedItems] = useState(["adType", "dateType", "fileName"]); // This is fine
+    const [selectedItems, setSelectedItems] = useState([]); // Empty array = all unchecked
     const [adValues, setAdValues] = useState({
         dateType: "MonthYYYY",
         customTexts: {} // Add this for consistency
@@ -218,13 +218,24 @@ export default function Home() {
         }
 
         // Ad Name Formula
-        const formula = adAccountSettings.adNameFormula || {};
-        setAdValues({
-            dateType: formula.values?.dateType || "MonthYYYY",
-            customTexts: formula.values?.customTexts || {}
-        });
-        setAdOrder(formula.order || ["adType", "dateType", "fileName", "iteration"]);
-        setSelectedItems(formula.selected || []);
+        if (!adAccountSettings.adNameFormula || Object.keys(adAccountSettings.adNameFormula).length === 0) {
+            // No formula saved - show all fields unchecked
+            setAdOrder(["adType", "dateType", "fileName", "iteration"]);
+            setSelectedItems([]); // Empty array = all unchecked
+            setAdValues({
+                dateType: "MonthYYYY",
+                customTexts: {}
+            });
+        } else {
+            // Use saved formula
+            const formula = adAccountSettings.adNameFormula;
+            setAdValues({
+                dateType: formula.values?.dateType || "MonthYYYY",
+                customTexts: formula.values?.customTexts || {}
+            });
+            setAdOrder(formula.order || ["adType", "dateType", "fileName", "iteration"]);
+            setSelectedItems(formula.selected || []);
+        }
 
         // Copy templates
         const templates = adAccountSettings.copyTemplates || {};
