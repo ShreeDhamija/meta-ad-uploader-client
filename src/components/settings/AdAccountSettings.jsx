@@ -16,6 +16,7 @@ import { saveSettings } from "@/lib/saveSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import CreativeEnhancements from "./CreativeEnhancements"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
+import LabelIcon from '@/assets/icons/label.svg?react';
 
 export default function AdAccountSettings({ preselectedAdAccount }) {
   const { adAccounts, pages } = useAppData()
@@ -207,8 +208,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     <div className="space-y-6 w-full max-w-3xl">
       {/* Ad Account Dropdown */}
       <div className="space-y-2">
-        {/* <label className="text-md font-medium text-gray-800">Select Ad Account</label>
-        <p className="text-sm text-gray-500">Select an ad account to configure settings</p> */}
         <div className="flex items-center justify-between">
           <label className="text-md font-medium text-gray-800">Select Ad Account</label>
 
@@ -333,7 +332,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           {/* Ad Naming Convention */}
           <div className="bg-[#f7f7f7] rounded-xl p-3 space-y-3">
             <div className="flex items-center gap-2">
-              <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+              <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
               <h3 className="font-medium text-[14px] text-zinc-950">
                 Ad Name Formula
               </h3>

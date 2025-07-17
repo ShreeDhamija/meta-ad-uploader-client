@@ -1812,9 +1812,6 @@ export default function AdCreationForm({
                 onItemToggle={onItemToggle}
                 variant="home"
               />
-
-
-
             </div>
 
             <div className="space-y-3">

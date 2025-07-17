@@ -315,7 +315,13 @@ export default function ReorderAdNameParts({
             }
           }));
         }}
-        className="mt-2 w-full bg-zinc-700 hover:bg-zinc-900 text-white rounded-xl"
+        className={cn(
+          "mt-2 w-full rounded-xl", // Base classes for all variants
+          {
+            "bg-zinc-700 hover:bg-zinc-900 text-white": variant === "default",
+            "bg-zinc-600 hover:bg-black text-white text-sm": variant === "home"
+          }
+        )}
       >
         + Add Custom Text Field
       </Button>
