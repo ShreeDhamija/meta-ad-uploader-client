@@ -263,6 +263,23 @@ export default function ReorderAdNameParts({
   };
 
 
+  const formulaParts = order.map((key) => {
+    if (!selectedItems.includes(key)) return null;
+    if (key === "adType") return "[File_Type]";
+    if (key === "dateType") return adValues.dateType;
+    if (key === "fileName") return "File Name";
+    if (key === "iteration") return "itr";
+
+    // Handle multiple custom text fields
+    if (key.startsWith("customText_")) {
+      const customText = adValues.customTexts?.[key]?.text;
+      return customText || "Custom Text";
+    }
+
+    return null;
+  }).filter(Boolean);
+
+
   return (
     <div className="space-y-3">
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
