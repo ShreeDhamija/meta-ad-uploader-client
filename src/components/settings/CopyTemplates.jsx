@@ -173,6 +173,25 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }, [showImportPopup])
 
 
+  // useEffect(() => {
+  //   if (!showImportPopup || !selectedAdAccount) return;
+
+  //   setIsFetchingCopy(true)
+  //   fetch(`https://api.withblip.com/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
+  //     credentials: "include"
+  //   })
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       if (data.ads) setRecentAds(data.ads);
+  //       else throw new Error("No data");
+  //     })
+  //     .catch(err => {
+  //       console.error("Error fetching ad copy:", err);
+  //       toast.error("Failed to load recent ad copy");
+  //     })
+  //     .finally(() => setIsFetchingCopy(false))
+  // }, [showImportPopup]);
+
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
 
@@ -182,8 +201,14 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     })
       .then(res => res.json())
       .then(data => {
-        if (data.ads) setRecentAds(data.ads);
-        else throw new Error("No data");
+        if (data.primaryTexts || data.headlines) {
+          setRecentAds({
+            primaryTexts: data.primaryTexts || [],
+            headlines: data.headlines || []
+          });
+        } else {
+          throw new Error("No data");
+        }
       })
       .catch(err => {
         console.error("Error fetching ad copy:", err);
@@ -632,15 +657,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </Button> */}
         </div>
       </div>
-      {showImportPopup && (
+      {/* {showImportPopup && (
         <div
           className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-center"
           style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
         >
-          {/* <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[750px] shadow-xl relative border border-gray-200 import-popup-scroll"> */}
+          
           <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden">
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll">
-              {/* Header row: title + close - make this sticky */}
+              
               <div className={`sticky top-0 bg-white z-10 px-6 py-3 ${isScrolled ? 'border-b border-gray-200' : ''}`}>
                 <div className="flex justify-between items-center">
                   <h2 className="text-lg font-medium text-zinc-900">Recently Created Ad Copy</h2>
@@ -662,17 +687,16 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   </div>
                 ) : (
                   recentAds.map((ad, index) => (
-                    // <div key={index} className="border-t border-gray-200 pt-4 space-y-3 -mx-6 px-6 first:border-t-0">
+                    
                     <div key={index} className="border-t border-gray-200 pt-4 space-y-3 -mx-6 px-6">
-                      {/* Ad title + import button */}
-                      {/* Ad title */}
+                      
                       <div className="flex items-start justify-between gap-4 w-full">
                         <h3 className="text-md font-bold text-zinc-800 flex-1 min-w-0 break-words">
                           Ad {index + 1}
                         </h3>
                       </div>
 
-                      {/* Import buttons */}
+                      
                       <div className="flex gap-2 justify-start">
                         <Button
                           className="flex items-center text-xs rounded-xl px-3 py-1 bg-blue-600 text-white hover:bg-blue-700 shrink-0"
@@ -709,7 +733,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </Button>
                       </div>
 
-                      {/* Primary Texts */}
+                      
                       {ad.primaryTexts.slice(0, 5).map((text, i) => (
                         <div key={`pt-${i}`}>
                           <div className="text-xs font-medium text-gray-500 mb-1">
@@ -721,7 +745,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </div>
                       ))}
 
-                      {/* Headlines */}
+                      
                       {ad.headlines.slice(0, 5).map((text, i) => (
                         <div key={`hl-${i}`}>
                           <div className="text-xs font-medium text-gray-500 mb-1">
@@ -734,6 +758,131 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       ))}
                     </div>
                   ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )} */}
+
+      {showImportPopup && (
+        <div
+          className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-center"
+          style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+        >
+          <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden">
+            <div className="max-h-[80vh] overflow-y-auto import-popup-scroll">
+              {/* Header row: title + close - make this sticky */}
+              <div className={`sticky top-0 bg-white z-10 px-6 py-3 ${isScrolled ? 'border-b border-gray-200' : ''}`}>
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-medium text-zinc-900">Recently Created Ad Copy</h2>
+                  <Button
+                    className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
+                    onClick={() => setShowImportPopup(false)}
+                  >
+                    <CirclePlus className="w-4 h-4 transform rotate-45" />
+                    Close
+                  </Button>
+                </div>
+              </div>
+
+              <div className="px-6 pb-6 space-y-6">
+                {isFetchingCopy ? (
+                  <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                    <RotateLoader size={6} margin={-16} color="#adadad" />
+                    <span className="text-sm text-gray-600">Loading text copy...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-8">
+                    {/* Primary Texts Section */}
+                    {recentAds.primaryTexts?.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-md font-bold text-zinc-800">Primary Texts</h3>
+
+                        <div className="space-y-3">
+                          {recentAds.primaryTexts.map((text, index) => (
+                            <div key={index} className="border border-gray-200 rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="text-xs font-medium text-gray-500">
+                                  Primary Text {index + 1}
+                                </div>
+                                <Button
+                                  className="flex items-center text-xs rounded-xl px-2 py-1 bg-blue-600 text-white hover:bg-blue-700 shrink-0"
+                                  onClick={() => {
+                                    const currentTexts = [...primaryTexts];
+                                    const emptyIndex = currentTexts.findIndex(text => text === "");
+                                    if (emptyIndex !== -1) {
+                                      currentTexts[emptyIndex] = text;
+                                    } else if (currentTexts.length < 5) {
+                                      currentTexts.push(text);
+                                    } else {
+                                      currentTexts[currentTexts.length - 1] = text;
+                                    }
+                                    setPrimaryTexts(currentTexts);
+                                    toast.success("Primary text imported");
+                                  }}
+                                >
+                                  <Download className="w-3 h-3" />
+                                  Import
+                                </Button>
+                              </div>
+                              <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                                {text}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Headlines Section */}
+                    {recentAds.headlines?.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="text-md font-bold text-zinc-800">Headlines</h3>
+
+                        <div className="space-y-3">
+                          {recentAds.headlines.map((text, index) => (
+                            <div key={index} className="border border-gray-200 rounded-lg p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="text-xs font-medium text-gray-500">
+                                  Headline {index + 1}
+                                </div>
+                                <Button
+                                  className="flex items-center text-xs rounded-xl px-2 py-1 bg-green-600 text-white hover:bg-green-700 shrink-0"
+                                  onClick={() => {
+                                    const currentHeadlines = [...headlines];
+                                    const emptyIndex = currentHeadlines.findIndex(text => text === "");
+                                    if (emptyIndex !== -1) {
+                                      currentHeadlines[emptyIndex] = text;
+                                    } else if (currentHeadlines.length < 5) {
+                                      currentHeadlines.push(text);
+                                    } else {
+                                      currentHeadlines[currentHeadlines.length - 1] = text;
+                                    }
+                                    setHeadlines(currentHeadlines);
+                                    toast.success("Headline imported");
+                                  }}
+                                >
+                                  <Download className="w-3 h-3" />
+                                  Import
+                                </Button>
+                              </div>
+                              <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                                {text}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No data message */}
+                    {(!recentAds.primaryTexts?.length && !recentAds.headlines?.length) && (
+                      <div className="text-center py-10 text-gray-500">
+                        No recent ad copy found
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
