@@ -155,42 +155,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [showImportPopup, setShowImportPopup] = useState(false)
   const [recentAds, setRecentAds] = useState([])
   const [isFetchingCopy, setIsFetchingCopy] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-
-  // Add this useEffect after your existing useEffects
-  useEffect(() => {
-    if (!showImportPopup) return
-
-    const handleScroll = (e) => {
-      setIsScrolled(e.target.scrollTop > 0)
-    }
-
-    const scrollContainer = document.querySelector('.import-popup-scroll')
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll)
-      return () => scrollContainer.removeEventListener('scroll', handleScroll)
-    }
-  }, [showImportPopup])
 
 
-  // useEffect(() => {
-  //   if (!showImportPopup || !selectedAdAccount) return;
-
-  //   setIsFetchingCopy(true)
-  //   fetch(`https://api.withblip.com/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
-  //     credentials: "include"
-  //   })
-  //     .then(res => res.json())
-  //     .then(data => {
-  //       if (data.ads) setRecentAds(data.ads);
-  //       else throw new Error("No data");
-  //     })
-  //     .catch(err => {
-  //       console.error("Error fetching ad copy:", err);
-  //       toast.error("Failed to load recent ad copy");
-  //     })
-  //     .finally(() => setIsFetchingCopy(false))
-  // }, [showImportPopup]);
 
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
@@ -396,41 +362,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     }
   }
 
-  // const handleDeleteTemplate = async () => {
-  //   if (!selectedName) return
-
-  //   setIsProcessing(true)
-  //   try {
-  //     await deleteCopyTemplate(selectedAdAccount, selectedName)
-
-  //     // Update parent component state
-  //     setAdSettings((prev) => {
-  //       const updatedCopyTemplates = { ...prev.copyTemplates }
-  //       delete updatedCopyTemplates[selectedName]
-
-  //       // If we're deleting the default template, find a new default
-  //       const updatedDefaultTemplateName =
-  //         prev.defaultTemplateName === selectedName
-  //           ? Object.keys(updatedCopyTemplates)[0] || ""
-  //           : prev.defaultTemplateName
-
-  //       return {
-  //         ...prev,
-  //         copyTemplates: updatedCopyTemplates,
-  //         defaultTemplateName: updatedDefaultTemplateName,
-  //       }
-  //     })
-
-  //     // Update local state
-  //     dispatch({ type: "DELETE_TEMPLATE", payload: selectedName })
-
-  //     toast.success("Template deleted")
-  //   } catch (err) {
-  //     toast.error("Failed to delete template")
-  //   } finally {
-  //     setIsProcessing(false)
-  //   }
-  // }
 
   const handleDeleteTemplate = async (templateName) => {
     if (!templateName) return
@@ -656,7 +587,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden">
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll">
               {/* Header row: title + close - make this sticky */}
-              <div className={`sticky top-0 bg-white z-10 px-6 py-3 ${isScrolled ? 'border-b border-gray-200' : ''}`}>
+              <div className={`sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200`}>
                 <div className="flex justify-between items-center">
                   <h2 className="text-lg font-medium text-zinc-900">Recently Created Ad Copy</h2>
                   <Button
@@ -682,7 +613,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       <div className="space-y-4">
                         <h3 className="text-md font-bold text-zinc-800">Primary Texts</h3>
 
-                        <div className="border bg-gray-100 border-gray-200 rounded-2xl p-4 py-2 space-y-3">
+                        <div className="border border-gray-200 rounded-2xl p-4 py-2 space-y-2">
                           {recentAds.primaryTexts.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
@@ -709,7 +640,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   Import
                                 </Button>
                               </div>
-                              <div className="bg-white rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
@@ -723,7 +654,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       <div className="space-y-4">
                         <h3 className="text-md font-bold text-zinc-800">Headlines</h3>
 
-                        <div className="border bg-gray-100 border-gray-200 rounded-2xl p-4 py-2 space-y-3">
+                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-4 py-2 space-y-2">
                           {recentAds.headlines.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
@@ -750,7 +681,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   Import
                                 </Button>
                               </div>
-                              <div className="bg-white rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
