@@ -155,6 +155,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           { key: "utm_term", value: "{{adset.name}}" },
         ]
 
+    const formula = adSettings.adNameFormula || {};
     const initial = {
       defaultPage: adSettings.defaultPage || null,
       defaultInstagram: adSettings.defaultInstagram || null,
@@ -173,12 +174,12 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         catalogItems: false,
         textGeneration: false,
       },
-      adNameFormula: adSettings.adNameFormula || {  // ADD THIS
-        order: ["adType", "dateType", "fileName", "iteration"],
-        selected: [],
+      adNameFormula: {
+        order: formula.order || ["adType", "dateType", "fileName", "iteration"],
+        selected: formula.selected || [],
         values: {
-          dateType: "MonthYYYY",
-          customTexts: {}
+          dateType: formula.values?.dateType || "MonthYYYY",  // <-- Note the ?. here
+          customTexts: formula.values?.customTexts || {}
         }
       }
     }

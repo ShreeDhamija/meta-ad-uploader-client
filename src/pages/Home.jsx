@@ -111,21 +111,87 @@ export default function Home() {
     //     setSelectedItems(selected || ["adType", "dateType", "fileName"]);
     // }, [isLoggedIn, loading, adNameFormula]);
 
-    useEffect(() => {
-        if (!selectedAdAccount || !adAccountSettings.adNameFormula) return;
+    // useEffect(() => {
+    //     // Always set defaults first
+    //     const defaultOrder = ["adType", "dateType", "fileName", "iteration"];
+    //     const defaultSelected = []; // Empty array = all unchecked
+    //     const defaultValues = {
+    //         dateType: "MonthYYYY",
+    //         customTexts: {}
+    //     };
 
-        const { values, order, selected } = adAccountSettings.adNameFormula;
-        setAdValues({
-            dateType: values?.dateType || "MonthYYYY",
-            customTexts: values?.customTexts || {}
-        });
-        setAdOrder(order || ["adType", "dateType", "fileName", "iteration"]);
-        setSelectedItems(selected || ["adType", "dateType", "fileName"]);
-    }, [selectedAdAccount, adAccountSettings.adNameFormula]);
+    //     if (!selectedAdAccount || !adAccountSettings.adNameFormula) {
+    //         // No ad account selected or no formula saved - show defaults unchecked
+    //         setAdOrder(defaultOrder);
+    //         setSelectedItems(defaultSelected);
+    //         setAdValues(defaultValues);
+    //         return;
+    //     }
+
+    //     // Ad account has saved formula - use it
+    //     const { values, order, selected } = adAccountSettings.adNameFormula;
+    //     setAdValues({
+    //         dateType: values?.dateType || "MonthYYYY",
+    //         customTexts: values?.customTexts || {}
+    //     });
+    //     setAdOrder(order || defaultOrder);
+    //     setSelectedItems(selected || defaultSelected);
+    // }, [selectedAdAccount, adAccountSettings.adNameFormula]);
+
 
 
 
     // 🧠 Load default ad account settings
+    // useEffect(() => {
+    //     if (!selectedAdAccount) return
+
+    //     if (adAccountSettings.defaultPage?.id) {
+    //         setPageId(adAccountSettings.defaultPage.id);
+    //     } else {
+    //         setPageId("");
+    //     }
+
+    //     if (adAccountSettings.defaultInstagram?.id) {
+    //         setInstagramAccountId(adAccountSettings.defaultInstagram.id);
+    //     } else {
+    //         setInstagramAccountId("");
+    //     }
+
+    //     if (adAccountSettings.defaultLink) {
+    //         setLink([adAccountSettings.defaultLink]);
+    //     } else {
+    //         setLink([""]);
+    //     }
+
+
+
+    //     if (adAccountSettings.defaultCTA) {
+    //         setCta(adAccountSettings.defaultCTA)
+    //     }
+
+    //     // Copy templates
+    //     const templates = adAccountSettings.copyTemplates || {};
+    //     const keys = Object.keys(templates);
+
+    //     if (keys.length === 0) {
+    //         setSelectedTemplate(undefined);
+    //         setMessages([""]);
+    //         setHeadlines([""]);
+    //     } else {
+    //         const initialTemplateName = keys.includes(adAccountSettings.defaultTemplateName)
+    //             ? adAccountSettings.defaultTemplateName
+    //             : keys[0];
+
+    //         setSelectedTemplate(initialTemplateName);
+
+    //         const selectedTemplateData = templates[initialTemplateName];
+    //         setMessages(selectedTemplateData?.primaryTexts || [""]);
+    //         setHeadlines(selectedTemplateData?.headlines || [""]);
+    //     }
+
+    // }, [selectedAdAccount, adAccountSettings])
+
+
     useEffect(() => {
         if (!selectedAdAccount) return
 
@@ -147,11 +213,18 @@ export default function Home() {
             setLink([""]);
         }
 
-
-
         if (adAccountSettings.defaultCTA) {
             setCta(adAccountSettings.defaultCTA)
         }
+
+        // Ad Name Formula
+        const formula = adAccountSettings.adNameFormula || {};
+        setAdValues({
+            dateType: formula.values?.dateType || "MonthYYYY",
+            customTexts: formula.values?.customTexts || {}
+        });
+        setAdOrder(formula.order || ["adType", "dateType", "fileName", "iteration"]);
+        setSelectedItems(formula.selected || []);
 
         // Copy templates
         const templates = adAccountSettings.copyTemplates || {};
