@@ -24,7 +24,7 @@ export default function Home() {
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
-    const { hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, globalDocumentExists } = useGlobalSettings();
+    const { hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, } = useGlobalSettings();
     const { subscriptionData, hasActiveAccess, isTrialExpired, loading: subscriptionLoading } = useSubscription();
 
     // Ad account selection and setup
