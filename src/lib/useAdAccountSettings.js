@@ -33,14 +33,15 @@ export default function useAdAccountSettings(adAccountId) {
                         copyTemplates: {},
                         defaultTemplateName: "",
                         creativeEnhancements: {},
-                        adNameFormula: {
-                            order: ["adType", "dateType", "fileName", "iteration"],
-                            selected: [],
-                            values: {
-                                dateType: "MonthYYYY",
-                                customTexts: {}
-                            }
-                        }
+                        adNameFormula: null // <--- SET TO NULL INSTEAD OF A DEFAULT OBJECT
+                        // adNameFormula: {
+                        //     order: ["adType", "dateType", "fileName", "iteration"],
+                        //     selected: [],
+                        //     values: {
+                        //         dateType: "MonthYYYY",
+                        //         customTexts: {}
+                        //     }
+                        // }
                     });
                 } else {
                     setDocumentExists(true);
@@ -55,14 +56,16 @@ export default function useAdAccountSettings(adAccountId) {
                         copyTemplates: s.copyTemplates,
                         defaultTemplateName: s.defaultTemplateName || "" || {},
                         creativeEnhancements: s.creativeEnhancements || {},
-                        adNameFormula: s.adNameFormula || {
-                            order: ["adType", "dateType", "fileName", "iteration"],
-                            selected: [],
-                            values: {
-                                dateType: "MonthYYYY",
-                                customTexts: {}
-                            }
-                        }
+                        // adNameFormula: s.adNameFormula || {
+                        //     order: ["adType", "dateType", "fileName", "iteration"],
+                        //     selected: [],
+                        //     values: {
+                        //         dateType: "MonthYYYY",
+                        //         customTexts: {}
+                        //     }
+                        // }
+                        adNameFormula: s.adNameFormula || null // <--- SET TO NULL IF IT DOESN'T EXIST
+
 
                     });
                 }
