@@ -1520,7 +1520,7 @@ export default function AdCreationForm({
                   </p>
 
                   <p className="text-xs font-medium text-gray-500">
-                    Progress Tracker is in beta. Popup goes away when ads are made.
+                    Progress Tracker is in beta.
                   </p>
                 </>
               ) : (
