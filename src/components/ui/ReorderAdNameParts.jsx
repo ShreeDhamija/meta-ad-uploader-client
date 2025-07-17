@@ -272,7 +272,7 @@ export default function ReorderAdNameParts({
 
     // Handle multiple custom text fields
     if (key.startsWith("customText_")) {
-      const customText = adValues.customTexts?.[key]?.text;
+      const customText = values.customTexts?.[key]?.text;
       return customText || "Custom Text";
     }
 
