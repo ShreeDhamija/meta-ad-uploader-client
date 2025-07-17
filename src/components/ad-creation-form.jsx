@@ -1819,14 +1819,17 @@ export default function AdCreationForm({
                     <div className="flex items-center">
                       {formulaParts.map((part, index) => (
                         <div key={index} className="flex items-center">
+
                           <span className="bg-gray-200 text-xs px-2 py-1 rounded-[8px]">{part}</span>
                           {index < formulaParts.length - 1 && <span className="text-sm text-gray-500 mx-1">_</span>}
                         </div>
                       ))}
-
                     </div>
                   ) : (
-                    <span className="text-gray-400 text-sm"> </span>
+                    // --- HERE IS THE FIX ---
+                    <span className="text-gray-400 text-sm px-2">
+                      Select items above to build ad name...
+                    </span>
                   )}
                 </div>
               </div>

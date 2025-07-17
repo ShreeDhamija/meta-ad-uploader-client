@@ -285,25 +285,45 @@ export default function ReorderAdNameParts({
           </div>
         </SortableContext>
       </DndContext>
-      {variant === "default" && (
-        <Button
-          type="button"
-          onClick={() => {
-            const newId = `customText_${Date.now()}`;
-            setOrder((prev) => [...prev, newId]);
-            setValues((prev) => ({
-              ...prev,
-              customTexts: {
-                ...prev.customTexts,
-                [newId]: { text: "" }
-              }
-            }));
-          }}
-          className="mt-2 w-full bg-zinc-700 hover:bg-zinc-900 text-white rounded-xl"
-        >
-          + Add Custom Text Field
-        </Button>
-      )}
+      <Button
+        type="button"
+        onClick={() => {
+          const newId = `customText_${Date.now()}`;
+          setOrder((prev) => [...prev, newId]);
+          setValues((prev) => ({
+            ...prev,
+            customTexts: {
+              ...prev.customTexts,
+              [newId]: { text: "" }
+            }
+          }));
+        }}
+        className="mt-2 w-full bg-zinc-700 hover:bg-zinc-900 text-white rounded-xl"
+      >
+        + Add Custom Text Field
+      </Button>
+      <div className="space-y-1">
+        <label className="text-xs text-gray-500">Ad Name Preview</label>
+        <div className="flex items-center w-full border border-gray-400 rounded-xl bg-white px-1 py-2 shadow h-[35px]">
+          {formulaParts.length > 0 ? (
+            <div className="flex items-center">
+              {formulaParts.map((part, index) => (
+                <div key={index} className="flex items-center">
+                  {/* Note: You might want to map `part` to a more user-friendly label here later */}
+                  <span className="bg-gray-200 text-xs px-2 py-1 rounded-[8px]">{part}</span>
+                  {index < formulaParts.length - 1 && <span className="text-sm text-gray-500 mx-1">_</span>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            // --- HERE IS THE FIX ---
+            <span className="text-gray-400 text-sm px-2">
+              Select items above to build ad name...
+            </span>
+          )}
+        </div>
+      </div>
+
     </div>
   )
 }
