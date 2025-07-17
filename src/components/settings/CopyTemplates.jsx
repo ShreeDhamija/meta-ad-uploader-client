@@ -600,7 +600,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 </div>
               </div>
 
-              <div className="px-6 pb-6 space-y-6">
+              <div className="px-6 pb-6 pt-4 space-y-6">
                 {isFetchingCopy ? (
                   <div className="flex flex-col items-center justify-center py-10 space-y-4">
                     <RotateLoader size={6} margin={-16} color="#adadad" />
@@ -654,7 +654,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       <div className="space-y-4">
                         <h3 className="text-md font-bold text-zinc-800">Headlines</h3>
 
-                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-4 py-2 space-y-2">
+                        <div className="border bg-50 border-gray-200 rounded-2xl p-4 py-2 space-y-2">
                           {recentAds.headlines.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
@@ -681,7 +681,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   Import
                                 </Button>
                               </div>
-                              <div className="bg-gray-100 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
