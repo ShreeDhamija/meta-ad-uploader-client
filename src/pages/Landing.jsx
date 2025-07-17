@@ -2001,7 +2001,7 @@ import image from "../assets/landing/pic.svg";
 import driveIcon from "../assets/landing/googledrive.png";
 import mobileHero from "../assets/landing/mobilehero1.webp";
 import cardmobile1 from "../assets/landing/mobilecard1.webp";
-import cardmobile2 from "../assets/landing/mobilecard2.webp";
+import cardmobile2 from "../assets/landing/mobileCard2.webp";
 import cardmobile3 from "../assets/landing/mobilecard3.webp";
 import cardmobile4 from "../assets/landing/mobilecard4.webp";
 
