@@ -712,6 +712,7 @@ export default function AdCreationForm({
   // }, [])
 
   const generateThumbnail = (file, timeoutMs = 5000) => {
+    console.log(`[DEBUG] Starting thumbnail generation for ${file.name}`);
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
       const video = document.createElement("video");
@@ -724,6 +725,8 @@ export default function AdCreationForm({
       let timeoutId;
 
       const cleanup = () => {
+        console.log(`[DEBUG] Cleaned up for ${file.name}`);
+
         video.removeEventListener("loadeddata", onLoadedData);
         video.removeEventListener("error", onError);
         clearTimeout(timeoutId);
@@ -731,6 +734,8 @@ export default function AdCreationForm({
       };
 
       const onLoadedData = () => {
+        console.log(`[DEBUG] loadeddata event for ${file.name}`);
+
         try {
           const canvas = document.createElement("canvas");
           canvas.width = video.videoWidth;
@@ -747,6 +752,7 @@ export default function AdCreationForm({
       };
 
       const onError = () => {
+        console.error(`[DEBUG] Error event for ${file.name}:`, event);
         cleanup();
         reject("Error generating thumbnail (video error)");
       };
@@ -809,9 +815,13 @@ export default function AdCreationForm({
         file.type.startsWith("video/") &&
         !videoThumbs[file.name]
       ) {
+        console.log(`[DEBUG] Attempting to generate thumbnail for ${file.name}`);
+
         generateThumbnail(file)
           .then((thumb) => {
             if (!isCancelled) {
+              console.log(`[DEBUG] Setting generated thumbnail for ${file.name}`);
+
               setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
             }
           })
