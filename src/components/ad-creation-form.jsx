@@ -820,9 +820,19 @@ export default function AdCreationForm({
         generateThumbnail(file)
           .then((thumb) => {
             if (!isCancelled) {
-              console.log(`[DEBUG] Setting generated thumbnail for ${file.name}`);
-
-              setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
+              if (typeof thumb === "string" && thumb.startsWith("data:image/")) {
+                console.log(`[DEBUG] Setting generated thumbnail for ${file.name}`);
+                setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
+              } else {
+                console.error(`[DEBUG] Invalid thumbnail data for ${file.name}:`, thumb);
+                setVideoThumbs((prev) => ({
+                  ...prev,
+                  [file.name]: defaultVideoThumb,
+                }));
+                toast.error(
+                  `Thumbnail for ${file.name} was invalid. Showing default preview.`
+                );
+              }
             }
           })
           .catch((err) => {
