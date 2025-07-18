@@ -1445,6 +1445,9 @@ export default function AdCreationForm({
 
             // Handle S3 uploaded files
             [...s3Results, ...s3DriveResults].forEach((s3File, index) => {
+              if (groupedFileIds.has(s3File.name) || groupedFileIds.has(s3File.id)) {
+                return; // Skip grouped files
+              }
               const formData = new FormData();
               formData.append("adName", computeAdName(s3File, adValues.dateType, index));
               formData.append("headlines", JSON.stringify(headlines));
