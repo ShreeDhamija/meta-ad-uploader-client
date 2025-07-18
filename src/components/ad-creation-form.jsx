@@ -686,86 +686,32 @@ export default function AdCreationForm({
 
 
   // Generate thumbnail from video file
-  // const generateThumbnail = useCallback((file) => {
-  //   return new Promise((resolve, reject) => {
-  //     const url = URL.createObjectURL(file)
-  //     const video = document.createElement("video")
-  //     video.preload = "metadata"
-  //     video.src = url
-  //     video.muted = true
-  //     video.playsInline = true
-  //     video.currentTime = 0.1
-  //     video.addEventListener("loadeddata", () => {
-  //       const canvas = document.createElement("canvas")
-  //       canvas.width = video.videoWidth
-  //       canvas.height = video.videoHeight
-  //       const ctx = canvas.getContext("2d")
-  //       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-  //       const dataURL = canvas.toDataURL()
-  //       URL.revokeObjectURL(url)
-  //       resolve(dataURL)
-  //     })
-  //     video.addEventListener("error", () => {
-  //       reject("Error generating thumbnail")
-  //     })
-  //   })
-  // }, [])
-
-  const generateThumbnail = (file, timeoutMs = 5000) => {
-    console.log(`[DEBUG] Starting thumbnail generation for ${file.name}`);
+  const generateThumbnail = useCallback((file) => {
     return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const video = document.createElement("video");
-      video.preload = "metadata";
-      video.src = url;
-      video.muted = true;
-      video.playsInline = true;
-      video.currentTime = 0.1;
+      const url = URL.createObjectURL(file)
+      const video = document.createElement("video")
+      video.preload = "metadata"
+      video.src = url
+      video.muted = true
+      video.playsInline = true
+      video.currentTime = 0.1
+      video.addEventListener("loadeddata", () => {
+        const canvas = document.createElement("canvas")
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        const ctx = canvas.getContext("2d")
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const dataURL = canvas.toDataURL()
+        URL.revokeObjectURL(url)
+        resolve(dataURL)
+      })
+      video.addEventListener("error", () => {
+        reject("Error generating thumbnail")
+      })
+    })
+  }, [])
 
-      let timeoutId;
 
-      const cleanup = () => {
-        console.log(`[DEBUG] Cleaned up for ${file.name}`);
-
-        video.removeEventListener("loadeddata", onLoadedData);
-        video.removeEventListener("error", onError);
-        clearTimeout(timeoutId);
-        URL.revokeObjectURL(url);
-      };
-
-      const onLoadedData = () => {
-        console.log(`[DEBUG] loadeddata event for ${file.name}`);
-
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const dataURL = canvas.toDataURL();
-          cleanup();
-          resolve(dataURL);
-        } catch (err) {
-          cleanup();
-          reject("Failed to generate thumbnail: " + (err?.message || err));
-        }
-      };
-
-      const onError = () => {
-        console.error(`[DEBUG] Error event for ${file.name}:`, event);
-        cleanup();
-        reject("Error generating thumbnail (video error)");
-      };
-
-      video.addEventListener("loadeddata", onLoadedData);
-      video.addEventListener("error", onError);
-
-      timeoutId = setTimeout(() => {
-        cleanup();
-        reject("Error generating thumbnail (timeout)");
-      }, timeoutMs);
-    });
-  };
 
 
 
@@ -778,98 +724,33 @@ export default function AdCreationForm({
 
 
 
-  // Update your useEffect to be much simpler:
-  // useEffect(() => {
-
-  //   // Generate thumbnails for local video files only
-  //   files.forEach((file) => {
-  //     if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
-  //       generateThumbnail(file)
-  //         .then((thumb) => {
-  //           setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
-  //         })
-  //         .catch((err) => {
-  //           toast.error(`Thumbnail generation error: ${err}`);
-  //           console.error("Thumbnail generation error:", err);
-  //         });
-  //     }
-  //   });
-
-  //   // For Google Drive videos, just store the thumbnail URL
-  //   driveFiles.forEach((driveFile) => {
-  //     if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
-  //       const thumbnailUrl = getDriveVideoThumbnail(driveFile);
-  //       if (thumbnailUrl) {
-  //         setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
-  //       }
-  //     }
-  //   });
-  // }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
-
-
   useEffect(() => {
-    let isCancelled = false; // prevents state updates if unmounted
 
+    // Generate thumbnails for local video files only
     files.forEach((file) => {
-      if (
-        file.type.startsWith("video/") &&
-        !videoThumbs[file.name]
-      ) {
-        console.log(`[DEBUG] Attempting to generate thumbnail for ${file.name}`);
-
+      if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
         generateThumbnail(file)
           .then((thumb) => {
-            if (!isCancelled) {
-              if (typeof thumb === "string" && thumb.startsWith("data:image/")) {
-                console.log(`[DEBUG] Setting generated thumbnail for ${file.name}`);
-                setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
-              } else {
-                console.error(`[DEBUG] Invalid thumbnail data for ${file.name}:`, thumb);
-                setVideoThumbs((prev) => ({
-                  ...prev,
-                  [file.name]: defaultVideoThumb,
-                }));
-                toast.error(
-                  `Thumbnail for ${file.name} was invalid. Showing default preview.`
-                );
-              }
-            }
+            setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
           })
           .catch((err) => {
-            if (!isCancelled) {
-              setVideoThumbs((prev) => ({
-                ...prev,
-                [file.name]: defaultVideoThumb,
-              }));
-              toast.error(
-                `Could not generate thumbnail for ${file.name}. Showing default preview.`
-              );
-              console.error("Thumbnail generation error:", err);
-            }
+            toast.error(`Thumbnail generation error: ${err}`);
+            console.error("Thumbnail generation error:", err);
           });
       }
     });
 
+    // For Google Drive videos, just store the thumbnail URL
     driveFiles.forEach((driveFile) => {
-      if (
-        driveFile.mimeType.startsWith("video/") &&
-        !videoThumbs[driveFile.name]
-      ) {
+      if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
         const thumbnailUrl = getDriveVideoThumbnail(driveFile);
-        if (thumbnailUrl && !isCancelled) {
-          setVideoThumbs((prev) => ({
-            ...prev,
-            [driveFile.name]: thumbnailUrl,
-          }));
+        if (thumbnailUrl) {
+          setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
         }
       }
     });
+  }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
 
-    // Cleanup to prevent memory leaks/state updates after unmount
-    return () => {
-      isCancelled = true;
-    };
-  }, [files, driveFiles, videoThumbs, setVideoThumbs]);
 
 
 
