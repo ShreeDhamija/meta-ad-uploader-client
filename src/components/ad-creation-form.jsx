@@ -1208,62 +1208,45 @@ export default function AdCreationForm({
 
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
 
-          // DEBUG LOGGING START
-          // console.log("=== FILE GROUPING DEBUG ===");
-          // console.log("enablePlacementCustomization:", enablePlacementCustomization);
-          // console.log("fileGroups:", JSON.stringify(fileGroups, null, 2));
-          // console.log("groupedFileIds Set:", Array.from(groupedFileIds));
+          // MINIMAL DEBUG LOGGING
+          console.log("=== FILE GROUPING DEBUG (MINIMAL) ===");
+          console.log("fileGroups:", fileGroups);
+          console.log("groupedFileIds:", Array.from(groupedFileIds));
+          console.log("Total files in groups:", groupedFileIds.size);
 
-          // // Log all files with their identifiers
-          // console.log("\n--- All Local Files ---");
-          // files.forEach(file => {
-          //   const id = file.isDrive ? file.id : file.name;
-          //   console.log(`File: ${file.name}, ID used: ${id}, Size: ${file.size}, isDrive: ${file.isDrive}`);
-          // });
+          // Count ungrouped files - these should match what gets sent
+          let ungroupedCount = 0;
 
-          // console.log("\n--- All Small Drive Files ---");
-          // smallDriveFiles.forEach(file => {
-          //   console.log(`Drive File: ${file.name}, ID: ${file.id}, Size: ${file.size}`);
-          // });
+          // Check local files
+          if (files && files.length > 0) {
+            const ungroupedLocal = files.filter(file =>
+              !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024
+            ).length;
+            console.log("Ungrouped local files:", ungroupedLocal);
+            ungroupedCount += ungroupedLocal;
+          }
 
-          // console.log("\n--- All S3 Files ---");
-          // [...s3Results, ...s3DriveResults].forEach(file => {
-          //   console.log(`S3 File: ${file.name || 'unnamed'}, ID: ${file.id || 'no-id'}, S3 URL: ${file.s3Url}`);
-          // });
+          // Check drive files
+          if (smallDriveFiles && smallDriveFiles.length > 0) {
+            const ungroupedDrive = smallDriveFiles.filter(file =>
+              !groupedFileIds.has(file.id)
+            ).length;
+            console.log("Ungrouped drive files:", ungroupedDrive);
+            ungroupedCount += ungroupedDrive;
+          }
 
-          // // Check which files are considered ungrouped
-          // console.log("\n--- Ungrouped File Check ---");
-          // const ungroupedLocalFiles = files.filter(file => {
-          //   const fileId = file.isDrive ? file.id : file.name;
-          //   const isGrouped = groupedFileIds.has(fileId);
-          //   const isLarge = file.size > 100 * 1024 * 1024;
-          //   console.log(`File ${file.name}: fileId=${fileId}, isGrouped=${isGrouped}, isLarge=${isLarge}`);
-          //   return !isGrouped && !isLarge;
-          // });
+          // Check S3 files
+          if ((s3Results && s3Results.length > 0) || (s3DriveResults && s3DriveResults.length > 0)) {
+            const ungroupedS3 = [...s3Results, ...s3DriveResults].filter(file =>
+              !groupedFileIds.has(file.name) && !groupedFileIds.has(file.id)
+            ).length;
+            console.log("Ungrouped S3 files:", ungroupedS3);
+            ungroupedCount += ungroupedS3;
+          }
 
-          // const ungroupedDriveFiles = smallDriveFiles.filter(file => {
-          //   const isGrouped = groupedFileIds.has(file.id);
-          //   console.log(`Drive File ${file.name}: id=${file.id}, isGrouped=${isGrouped}`);
-          //   return !isGrouped;
-          // });
-
-          // const ungroupedS3Files = [...s3Results, ...s3DriveResults].filter(file => {
-          //   // Check both possible identifiers
-          //   const isGroupedByName = groupedFileIds.has(file.name);
-          //   const isGroupedById = groupedFileIds.has(file.id);
-          //   const isGrouped = isGroupedByName || isGroupedById;
-          //   console.log(`S3 File ${file.name || file.id}: name=${file.name}, id=${file.id}, isGrouped=${isGrouped} (byName=${isGroupedByName}, byId=${isGroupedById})`);
-          //   return !isGrouped;
-          // });
-
-          // console.log("\n--- Final Counts ---");
-          // console.log("Total grouped files:", groupedFileIds.size);
-          // console.log("Ungrouped local files:", ungroupedLocalFiles.length);
-          // console.log("Ungrouped drive files:", ungroupedDriveFiles.length);
-          // console.log("Ungrouped S3 files:", ungroupedS3Files.length);
-          // console.log("hasUngroupedFiles:", hasUngroupedFiles);
-          // console.log("=== END FILE GROUPING DEBUG ===\n");
-          // DEBUG LOGGING END
+          console.log("TOTAL UNGROUPED FILES:", ungroupedCount);
+          console.log("=== END DEBUG ===");
+          //END DEBUG
 
 
           const hasUngroupedFiles = (
