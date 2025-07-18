@@ -44,7 +44,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   useEffect(() => {
     if (!jobId) return;
 
-    console.log('🔄 New jobId detected, resetting state:', jobId);
+    // console.log('🔄 New jobId detected, resetting state:', jobId);
     setProgress(0);
     setMessage('');
     setStatus('idle');
@@ -57,21 +57,21 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     const connectSSE = () => {
       if (!isConnecting) return;
 
-      console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
+      // console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
       const eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
 
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('📨 Raw SSE data received:', data);
+        // console.log('📨 Raw SSE data received:', data);
 
         if (data.message === 'Job not found') {
-          console.log(`❌ Job not found, closing connection...`);
+          // console.log(`❌ Job not found, closing connection...`);
           eventSource.close();
           retryCount++;
 
           const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
 
-          console.log(`⏳ Retrying in ${delay}ms... (attempt ${retryCount})`);
+          // console.log(`⏳ Retrying in ${delay}ms... (attempt ${retryCount})`);
           setTimeout(() => {
             if (isConnecting) {
               connectSSE();
@@ -81,13 +81,13 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
         }
 
         retryCount = 0; // Reset retry counter on success
-        console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
+        // console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
         setProgress(data.progress);
         setMessage(data.message);
         setStatus(data.status);
 
         if (data.status === 'complete' || data.status === 'error') {
-          console.log('🏁 Job finished, closing SSE connection');
+          // console.log('🏁 Job finished, closing SSE connection');
           eventSource.close();
           isConnecting = false;
         }
@@ -121,7 +121,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   useEffect(() => {
 
     if (!isCreatingAds) {
-      console.log('🧹 Job completely finished, resetting hook state');
+      // console.log('🧹 Job completely finished, resetting hook state');
       setProgress(0);
       setMessage('');
       setStatus('idle');
@@ -254,7 +254,7 @@ export default function AdCreationForm({
           'Content-Type': file.type,
         }
       });
-      console.log(publicUrl);
+      // console.log(publicUrl);
       return {
         name: file.name,
         type: file.type,
@@ -273,11 +273,11 @@ export default function AdCreationForm({
   async function uploadDriveFileToS3(file) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
-    console.log("🚀 Uploading Drive files to S3:", {
-      name: file.name,
-      size: file.size,
-      hasAccessToken: !!file.accessToken
-    });
+    // console.log("🚀 Uploading Drive files to S3:", {
+    //   name: file.name,
+    //   size: file.size,
+    //   hasAccessToken: !!file.accessToken
+    // });
 
     const res = await fetch("https://api.withblip.com/api/upload-from-drive", {
       method: "POST",
@@ -471,7 +471,7 @@ export default function AdCreationForm({
 
 
   const handleDriveClick = async () => {
-    console.log("handle Drive Click");
+    // console.log("handle Drive Click");
     try {
       // 🔁 Check if already authenticated
       const res = await axios.get(
@@ -1006,7 +1006,7 @@ export default function AdCreationForm({
 
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
-    console.log(frontendJobId);
+    // console.log(frontendJobId);
     setJobId(frontendJobId); // This triggers SSE
 
 
@@ -1049,13 +1049,13 @@ export default function AdCreationForm({
         }
       }
     });
-    console.log("✅ About to reach try block");
+    // console.log("✅ About to reach try block");
 
     // Add carousel validation
     if (isCarouselAd) {
-      console.log("reached validation check");
+      // console.log("reached validation check");
       const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
-      console.log("totalFiles", totalFiles);
+      // console.log("totalFiles", totalFiles);
       if (totalFiles < 2) {
         toast.error("Carousel ads require at least 2 files");
         setIsLoading(false);
@@ -1066,13 +1066,13 @@ export default function AdCreationForm({
         setIsLoading(false);
         return;
       }
-      console.log("passed validation check");
+      // console.log("passed validation check");
     }
 
     try {
       const promises = [];
-      console.log("is carousel ad", isCarouselAd);
-      console.log("dynamic adset length", dynamicAdSetIds.length);
+      // console.log("is carousel ad", isCarouselAd);
+      // console.log("dynamic adset length", dynamicAdSetIds.length);
 
       // FIRST: Handle carousel ads (completely separate from dynamic/non-dynamic)
       if (isCarouselAd && dynamicAdSetIds.length === 0) {
@@ -1080,10 +1080,10 @@ export default function AdCreationForm({
           toast.error("Please select at least one ad set for carousel");
           return;
         }
-        console.log("reached carousel handling block for nonDynamicAdsets,", nonDynamicAdSetIds);
+        // console.log("reached carousel handling block for nonDynamicAdsets,", nonDynamicAdSetIds);
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
-          console.log("🎠 Creating carousel for adSetId:", adSetId);
+          // console.log("🎠 Creating carousel for adSetId:", adSetId);
           const formData = new FormData();
           formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
           formData.append("headlines", JSON.stringify(headlines));
@@ -1099,7 +1099,7 @@ export default function AdCreationForm({
           formData.append("launchPaused", launchPaused);
           formData.append("enablePlacementCustomization", false);
           formData.append("jobId", frontendJobId);
-          console.log("jobId in attached form", frontendJobId);
+          // console.log("jobId in attached form", frontendJobId);
 
           // Add all local files (small ones)
           files.forEach((file) => {
@@ -1127,7 +1127,7 @@ export default function AdCreationForm({
             formData.append("shopDestination", selectedShopDestination);
             formData.append("shopDestinationType", selectedShopDestinationType);
           }
-          console.log("reached backend endpoint");
+          // console.log("reached backend endpoint");
 
           promises.push(
             axios.post("https://api.withblip.com/auth/create-ad", formData, {
@@ -1207,6 +1207,65 @@ export default function AdCreationForm({
         nonDynamicAdSetIds.forEach((adSetId) => {
 
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
+
+          // DEBUG LOGGING START
+          console.log("=== FILE GROUPING DEBUG ===");
+          console.log("enablePlacementCustomization:", enablePlacementCustomization);
+          console.log("fileGroups:", JSON.stringify(fileGroups, null, 2));
+          console.log("groupedFileIds Set:", Array.from(groupedFileIds));
+
+          // Log all files with their identifiers
+          console.log("\n--- All Local Files ---");
+          files.forEach(file => {
+            const id = file.isDrive ? file.id : file.name;
+            console.log(`File: ${file.name}, ID used: ${id}, Size: ${file.size}, isDrive: ${file.isDrive}`);
+          });
+
+          console.log("\n--- All Small Drive Files ---");
+          smallDriveFiles.forEach(file => {
+            console.log(`Drive File: ${file.name}, ID: ${file.id}, Size: ${file.size}`);
+          });
+
+          console.log("\n--- All S3 Files ---");
+          [...s3Results, ...s3DriveResults].forEach(file => {
+            console.log(`S3 File: ${file.name || 'unnamed'}, ID: ${file.id || 'no-id'}, S3 URL: ${file.s3Url}`);
+          });
+
+          // Check which files are considered ungrouped
+          console.log("\n--- Ungrouped File Check ---");
+          const ungroupedLocalFiles = files.filter(file => {
+            const fileId = file.isDrive ? file.id : file.name;
+            const isGrouped = groupedFileIds.has(fileId);
+            const isLarge = file.size > 100 * 1024 * 1024;
+            console.log(`File ${file.name}: fileId=${fileId}, isGrouped=${isGrouped}, isLarge=${isLarge}`);
+            return !isGrouped && !isLarge;
+          });
+
+          const ungroupedDriveFiles = smallDriveFiles.filter(file => {
+            const isGrouped = groupedFileIds.has(file.id);
+            console.log(`Drive File ${file.name}: id=${file.id}, isGrouped=${isGrouped}`);
+            return !isGrouped;
+          });
+
+          const ungroupedS3Files = [...s3Results, ...s3DriveResults].filter(file => {
+            // Check both possible identifiers
+            const isGroupedByName = groupedFileIds.has(file.name);
+            const isGroupedById = groupedFileIds.has(file.id);
+            const isGrouped = isGroupedByName || isGroupedById;
+            console.log(`S3 File ${file.name || file.id}: name=${file.name}, id=${file.id}, isGrouped=${isGrouped} (byName=${isGroupedByName}, byId=${isGroupedById})`);
+            return !isGrouped;
+          });
+
+          console.log("\n--- Final Counts ---");
+          console.log("Total grouped files:", groupedFileIds.size);
+          console.log("Ungrouped local files:", ungroupedLocalFiles.length);
+          console.log("Ungrouped drive files:", ungroupedDriveFiles.length);
+          console.log("Ungrouped S3 files:", ungroupedS3Files.length);
+          console.log("hasUngroupedFiles:", hasUngroupedFiles);
+          console.log("=== END FILE GROUPING DEBUG ===\n");
+          // DEBUG LOGGING END
+
+
           const hasUngroupedFiles = (
             files.some(file => !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
@@ -1435,7 +1494,7 @@ export default function AdCreationForm({
         }); // Close forEach
       } // Close if condition
 
-      console.log('🚀 Starting API calls (Promise.all) now');
+      // console.log('🚀 Starting API calls (Promise.all) now');
       const responses = await Promise.all(promises);
       toast.success("Ads created successfully!");
       // setIsCreatingAds(false);
