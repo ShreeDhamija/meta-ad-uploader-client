@@ -859,95 +859,32 @@ export default function AdCreationForm({
 
 
 
-  // useEffect(() => {
-
-  //   // Generate thumbnails for local video files only
-  //   files.forEach((file) => {
-  //     if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
-  //       generateThumbnail(file)
-  //         .then((thumb) => {
-  //           setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
-  //         })
-  //         .catch((err) => {
-  //           toast.error(`Thumbnail generation error: ${err}`);
-  //           console.error("Thumbnail generation error:", err);
-  //         });
-  //     }
-  //   });
-
-  //   // For Google Drive videos, just store the thumbnail URL
-  //   driveFiles.forEach((driveFile) => {
-  //     if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
-  //       const thumbnailUrl = getDriveVideoThumbnail(driveFile);
-  //       if (thumbnailUrl) {
-  //         setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
-  //       }
-  //     }
-  //   });
-  // }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
-
   useEffect(() => {
-    const processThumbnails = async () => {
-      // Process local video files in batches
-      const videoFiles = files.filter(file =>
-        file.type.startsWith("video/") && !videoThumbs[file.name]
-      );
 
-      if (videoFiles.length > 0) {
-        const BATCH_SIZE = Math.min(3, videoFiles.length); // Never process more than needed
-
-
-        for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
-          const batch = videoFiles.slice(i, i + BATCH_SIZE);
-
-          // Process batch in parallel
-          const thumbnailPromises = batch.map(file =>
-            generateThumbnail(file)
-              .then(thumb => ({ name: file.name, thumb }))
-              .catch(err => {
-                toast.error(`Thumbnail generation error: ${err}`);
-                console.error("Thumbnail generation error:", err);
-                return null;
-              })
-          );
-
-          const results = await Promise.all(thumbnailPromises);
-
-          // Update state once per batch
-          setVideoThumbs(prev => {
-            const updates = {};
-            results.forEach(result => {
-              if (result) updates[result.name] = result.thumb;
-            });
-            return { ...prev, ...updates };
+    // Generate thumbnails for local video files only
+    files.forEach((file) => {
+      if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
+        generateThumbnail(file)
+          .then((thumb) => {
+            setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
+          })
+          .catch((err) => {
+            toast.error(`Thumbnail generation error: ${err}`);
+            console.error("Thumbnail generation error:", err);
           });
+      }
+    });
 
-          // Let UI breathe between batches (only if more batches remain)
-          if (i + BATCH_SIZE < videoFiles.length) {
-            await new Promise(resolve => setTimeout(resolve, 50));
-          }
+    // For Google Drive videos, just store the thumbnail URL
+    driveFiles.forEach((driveFile) => {
+      if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
+        const thumbnailUrl = getDriveVideoThumbnail(driveFile);
+        if (thumbnailUrl) {
+          setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
         }
       }
-
-      // Handle Google Drive videos (these are just URLs, so no batching needed)
-      const driveUpdates = {};
-      driveFiles.forEach((driveFile) => {
-        if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
-          const thumbnailUrl = getDriveVideoThumbnail(driveFile);
-          if (thumbnailUrl) {
-            driveUpdates[driveFile.name] = thumbnailUrl;
-          }
-        }
-      });
-
-      // Update drive thumbnails all at once
-      if (Object.keys(driveUpdates).length > 0) {
-        setVideoThumbs(prev => ({ ...prev, ...driveUpdates }));
-      }
-    };
-
-    processThumbnails();
-  }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+    });
+  }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
 
 
 
@@ -1108,78 +1045,21 @@ export default function AdCreationForm({
 
     let aspectRatioMap = {};
 
-    // if (enablePlacementCustomization) {
-    //   setProgressMessage('Analyzing video files...');
-
-    //   try {
-    //     // Get aspect ratios for all video files
-    //     const allFiles = [...files, ...driveFiles];
-
-    //     for (const file of allFiles) {
-    //       const isVideo = file.type?.startsWith('video/') || file.mimeType?.startsWith('video/');
-    //       if (isVideo) {
-    //         const aspectRatio = await getVideoAspectRatio(file);
-    //         if (aspectRatio) {
-    //           // Use appropriate key based on file type
-    //           const key = file.id || file.name;
-    //           aspectRatioMap[key] = aspectRatio;
-    //         }
-    //       }
-    //     }
-    //   } catch (error) {
-    //     console.error('Error getting video aspect ratios:', error);
-    //     // Continue anyway with defaults
-    //   }
-    // }
-
-    // Replace your existing code with this:
     if (enablePlacementCustomization) {
       setProgressMessage('Analyzing video files...');
 
       try {
+        // Get aspect ratios for all video files
         const allFiles = [...files, ...driveFiles];
-        const videoFiles = allFiles.filter(file =>
-          file.type?.startsWith('video/') || file.mimeType?.startsWith('video/')
-        );
 
-        if (videoFiles.length > 0) {
-          const BATCH_SIZE = 3;
-
-          for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
-            const batch = videoFiles.slice(i, i + BATCH_SIZE);
-
-            // Update progress message
-            setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
-
-            // Process batch in parallel
-            const batchPromises = batch.map(async (file) => {
-              try {
-                const aspectRatio = await getVideoAspectRatio(file);
-                if (aspectRatio) {
-                  const key = file.id || file.name;
-                  return { key, aspectRatio };
-                }
-                return null;
-              } catch (error) {
-                console.error(`Failed to get aspect ratio for ${file.name}:`, error);
-                const key = file.id || file.name;
-                return { key, aspectRatio: 16 / 9 }; // Default fallback
-              }
-            });
-
-            // Wait for batch to complete
-            const results = await Promise.all(batchPromises);
-
-            // Add results to map
-            results.forEach(result => {
-              if (result) {
-                aspectRatioMap[result.key] = result.aspectRatio;
-              }
-            });
-
-            // Let UI breathe between batches (only if more batches remain)
-            if (i + BATCH_SIZE < videoFiles.length) {
-              await new Promise(resolve => setTimeout(resolve, 50));
+        for (const file of allFiles) {
+          const isVideo = file.type?.startsWith('video/') || file.mimeType?.startsWith('video/');
+          if (isVideo) {
+            const aspectRatio = await getVideoAspectRatio(file);
+            if (aspectRatio) {
+              // Use appropriate key based on file type
+              const key = file.id || file.name;
+              aspectRatioMap[key] = aspectRatio;
             }
           }
         }
