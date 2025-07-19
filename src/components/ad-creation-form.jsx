@@ -329,21 +329,13 @@ export default function AdCreationForm({
     { value: "APPLY_NOW", label: "Apply Now" },
   ]
 
-  // Filtered pages for combobox
-  // const filteredPages = pages.filter((page) => page.name.toLowerCase().includes(pageSearchValue.toLowerCase()))
-  // Add this after your state declarations
   const filteredPages = useMemo(() =>
     pages.filter((page) =>
       page.name.toLowerCase().includes(pageSearchValue.toLowerCase())
     ),
     [pages, pageSearchValue]
   );
-  // const filteredInstagramAccounts = pages
-  //   .filter((page) => page.instagramAccount)
-  //   .filter((page) =>
-  //     page.instagramAccount.username.toLowerCase().includes(instagramSearchValue.toLowerCase())
-  //   )
-  // Add this after filteredPages
+
   const filteredInstagramAccounts = useMemo(() =>
     pages
       .filter((page) => page.instagramAccount)
@@ -387,29 +379,6 @@ export default function AdCreationForm({
     }
   };
 
-
-  // Update local state when progress changes
-  // useEffect(() => {
-  //   // console.log('🔄 Progress state update:', { trackedProgress, trackedMessage, status }); // ADD THIS
-  //   if (jobId) {
-  //     setProgress(trackedProgress);
-  //     setProgressMessage(trackedMessage);
-
-  //     if (status === 'complete') {
-  //       // setIsCreatingAds(false);
-  //       setJobId(null);
-  //       setFiles([]);
-  //       setDriveFiles([]);
-  //       setVideoThumbs({});
-  //       setFileGroups([]);
-  //       setEnablePlacementCustomization(false);
-  //       // toast.success("Ads created successfully!");
-  //     } else if (status === 'error') {
-  //       // setIsCreatingAds(false);
-  //       setJobId(null);
-  //     }
-  //   }
-  // }, [trackedProgress, trackedMessage, status, jobId]);
   useEffect(() => {
     if (jobId) {
       setProgress(trackedProgress);
@@ -485,11 +454,8 @@ export default function AdCreationForm({
 
 
 
-
-  const handleDriveClick = async () => {
-    // console.log("handle Drive Click");
+  const handleDriveClick = useCallback(async () => {
     try {
-      // 🔁 Check if already authenticated
       const res = await axios.get(
         "https://api.withblip.com/auth/google/status",
         { withCredentials: true }
@@ -508,7 +474,6 @@ export default function AdCreationForm({
       console.warn("No valid Google session, proceeding to popup login.");
     }
 
-    // ⬇️ If not authenticated, fallback to popup login
     const authWindow = window.open(
       "https://api.withblip.com/auth/google?popup=true",
       "_blank",
@@ -551,14 +516,9 @@ export default function AdCreationForm({
     };
 
     window.addEventListener("message", listener);
-  };
+  }, [openPicker]); // Note: openPicker needs to be memoized too
 
-
-
-
-  const openPicker = (token) => {
-    // Load the picker API if not already loaded
-
+  const openPicker = useCallback((token) => {
     if (!window.google || !window.google.picker) {
       const script = document.createElement('script');
       script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
@@ -572,10 +532,10 @@ export default function AdCreationForm({
     } else {
       createPicker(token);
     }
-  };
+  }, [createPicker]); // Note: createPicker needs to be memoized too
 
-  const createPicker = (token) => {
 
+  const createPicker = useCallback((token) => {
     const mimeTypes = [
       "application/vnd.google-apps.folder",
       "image/jpeg",
@@ -587,11 +547,10 @@ export default function AdCreationForm({
       "video/quicktime"
     ].join(",");
 
-
     const allFolders = new google.picker.DocsView()
       .setIncludeFolders(true)
-      .setMimeTypes(mimeTypes)// ✅ Show folders
-      .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
+      .setMimeTypes(mimeTypes)
+      .setSelectFolderEnabled(false);
 
     const myFolders = new google.picker.DocsView()
       .setOwnedByMe(true)
@@ -641,7 +600,166 @@ export default function AdCreationForm({
       .build();
 
     picker.setVisible(true);
-  };
+  }, [setDriveFiles]);
+
+
+
+  // const handleDriveClick = async () => {
+  //   // console.log("handle Drive Click");
+  //   try {
+  //     // 🔁 Check if already authenticated
+  //     const res = await axios.get(
+  //       "https://api.withblip.com/auth/google/status",
+  //       { withCredentials: true }
+  //     );
+
+  //     if (res.data.authenticated && res.data.accessToken) {
+  //       setGoogleAuthStatus({
+  //         authenticated: true,
+  //         checking: false,
+  //         accessToken: res.data.accessToken
+  //       });
+  //       openPicker(res.data.accessToken);
+  //       return;
+  //     }
+  //   } catch (err) {
+  //     console.warn("No valid Google session, proceeding to popup login.");
+  //   }
+
+  //   // ⬇️ If not authenticated, fallback to popup login
+  //   const authWindow = window.open(
+  //     "https://api.withblip.com/auth/google?popup=true",
+  //     "_blank",
+  //     "width=1100,height=750"
+  //   );
+
+  //   if (!authWindow) {
+  //     toast.error("Popup blocked. Please allow popups and try again.");
+  //     return;
+  //   }
+
+  //   const timeoutId = setTimeout(() => {
+  //     window.removeEventListener("message", listener);
+  //     if (!authWindow.closed) authWindow.close();
+  //     toast.error("Google login timed out.");
+  //   }, 65000);
+
+  //   const listener = (event) => {
+  //     if (event.origin !== "https://api.withblip.com") return;
+
+  //     const { type, accessToken } = event.data || {};
+  //     if (type === "google-auth-success") {
+  //       clearTimeout(timeoutId);
+  //       window.removeEventListener("message", listener);
+  //       authWindow.close();
+
+  //       setGoogleAuthStatus({
+  //         authenticated: true,
+  //         checking: false,
+  //         accessToken
+  //       });
+
+  //       openPicker(accessToken);
+  //     } else if (type === "google-auth-error") {
+  //       clearTimeout(timeoutId);
+  //       window.removeEventListener("message", listener);
+  //       authWindow.close();
+  //       toast.error("Google authentication failed");
+  //     }
+  //   };
+
+  //   window.addEventListener("message", listener);
+  // };
+
+
+
+
+  // const openPicker = (token) => {
+  //   // Load the picker API if not already loaded
+
+  //   if (!window.google || !window.google.picker) {
+  //     const script = document.createElement('script');
+  //     script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
+  //     document.body.appendChild(script);
+
+  //     window.onApiLoad = () => {
+  //       window.gapi.load('picker', () => {
+  //         createPicker(token);
+  //       });
+  //     };
+  //   } else {
+  //     createPicker(token);
+  //   }
+  // };
+
+  // const createPicker = (token) => {
+
+  //   const mimeTypes = [
+  //     "application/vnd.google-apps.folder",
+  //     "image/jpeg",
+  //     "image/png",
+  //     "image/gif",
+  //     "image/webp",
+  //     "video/mp4",
+  //     "video/webm",
+  //     "video/quicktime"
+  //   ].join(",");
+
+
+  //   const allFolders = new google.picker.DocsView()
+  //     .setIncludeFolders(true)
+  //     .setMimeTypes(mimeTypes)// ✅ Show folders
+  //     .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
+
+  //   const myFolders = new google.picker.DocsView()
+  //     .setOwnedByMe(true)
+  //     .setIncludeFolders(true)
+  //     .setMimeTypes(mimeTypes)
+  //     .setSelectFolderEnabled(false);
+
+  //   const sharedDriveFolders = new google.picker.DocsView()
+  //     .setOwnedByMe(true)
+  //     .setIncludeFolders(true)
+  //     .setMimeTypes(mimeTypes)
+  //     .setSelectFolderEnabled(false)
+  //     .setEnableDrives(true);
+
+  //   const onlySharedFolders = new google.picker.DocsView()
+  //     .setOwnedByMe(false)
+  //     .setIncludeFolders(true)
+  //     .setMimeTypes(mimeTypes)
+  //     .setSelectFolderEnabled(false);
+
+  //   const picker = new google.picker.PickerBuilder()
+  //     .addView(myFolders)
+  //     .addView(allFolders)
+  //     .addView(sharedDriveFolders)
+  //     .addView(onlySharedFolders)
+  //     .setOAuthToken(token)
+  //     .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+  //     .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+  //     .hideTitleBar()
+  //     .setAppId(102886794705)
+  //     .setCallback((data) => {
+  //       if (data.action !== "picked") return;
+
+  //       const selected = data.docs.map((doc) => ({
+  //         id: doc.id,
+  //         name: doc.name,
+  //         mimeType: doc.mimeType,
+  //         size: doc.sizeBytes,
+  //         accessToken: token
+  //       }));
+
+  //       setDriveFiles((prev) => [...prev, ...selected]);
+  //       if (data.action === "picked" || data.action === "cancel") {
+  //         picker.setVisible(false);
+  //       }
+  //     })
+  //     .build();
+
+  //   picker.setVisible(true);
+  // };
 
 
   // Dropzone logic
@@ -741,32 +859,95 @@ export default function AdCreationForm({
 
 
 
+  // useEffect(() => {
+
+  //   // Generate thumbnails for local video files only
+  //   files.forEach((file) => {
+  //     if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
+  //       generateThumbnail(file)
+  //         .then((thumb) => {
+  //           setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
+  //         })
+  //         .catch((err) => {
+  //           toast.error(`Thumbnail generation error: ${err}`);
+  //           console.error("Thumbnail generation error:", err);
+  //         });
+  //     }
+  //   });
+
+  //   // For Google Drive videos, just store the thumbnail URL
+  //   driveFiles.forEach((driveFile) => {
+  //     if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
+  //       const thumbnailUrl = getDriveVideoThumbnail(driveFile);
+  //       if (thumbnailUrl) {
+  //         setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
+  //       }
+  //     }
+  //   });
+  // }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
+
   useEffect(() => {
+    const processThumbnails = async () => {
+      // Process local video files in batches
+      const videoFiles = files.filter(file =>
+        file.type.startsWith("video/") && !videoThumbs[file.name]
+      );
 
-    // Generate thumbnails for local video files only
-    files.forEach((file) => {
-      if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
-        generateThumbnail(file)
-          .then((thumb) => {
-            setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
-          })
-          .catch((err) => {
-            toast.error(`Thumbnail generation error: ${err}`);
-            console.error("Thumbnail generation error:", err);
+      if (videoFiles.length > 0) {
+        const BATCH_SIZE = Math.min(3, videoFiles.length); // Never process more than needed
+
+
+        for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
+          const batch = videoFiles.slice(i, i + BATCH_SIZE);
+
+          // Process batch in parallel
+          const thumbnailPromises = batch.map(file =>
+            generateThumbnail(file)
+              .then(thumb => ({ name: file.name, thumb }))
+              .catch(err => {
+                toast.error(`Thumbnail generation error: ${err}`);
+                console.error("Thumbnail generation error:", err);
+                return null;
+              })
+          );
+
+          const results = await Promise.all(thumbnailPromises);
+
+          // Update state once per batch
+          setVideoThumbs(prev => {
+            const updates = {};
+            results.forEach(result => {
+              if (result) updates[result.name] = result.thumb;
+            });
+            return { ...prev, ...updates };
           });
-      }
-    });
 
-    // For Google Drive videos, just store the thumbnail URL
-    driveFiles.forEach((driveFile) => {
-      if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
-        const thumbnailUrl = getDriveVideoThumbnail(driveFile);
-        if (thumbnailUrl) {
-          setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
+          // Let UI breathe between batches (only if more batches remain)
+          if (i + BATCH_SIZE < videoFiles.length) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
         }
       }
-    });
-  }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
+
+      // Handle Google Drive videos (these are just URLs, so no batching needed)
+      const driveUpdates = {};
+      driveFiles.forEach((driveFile) => {
+        if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
+          const thumbnailUrl = getDriveVideoThumbnail(driveFile);
+          if (thumbnailUrl) {
+            driveUpdates[driveFile.name] = thumbnailUrl;
+          }
+        }
+      });
+
+      // Update drive thumbnails all at once
+      if (Object.keys(driveUpdates).length > 0) {
+        setVideoThumbs(prev => ({ ...prev, ...driveUpdates }));
+      }
+    };
+
+    processThumbnails();
+  }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
 
@@ -862,55 +1043,6 @@ export default function AdCreationForm({
   }, [adOrder, selectedItems, adValues]);
 
 
-  // const computeAdName = (file, dateTypeInput, iterationIndex) => {
-  //   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  //     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  //   const now = new Date();
-  //   const monthAbbrev = monthNames[now.getMonth()];
-  //   const date = String(now.getDate()).padStart(2, "0");
-  //   const year = now.getFullYear();
-  //   const monthYear = `${monthAbbrev}${year}`;
-  //   const monthDayYear = `${monthAbbrev}${date}${year}`;
-
-  //   let fileName = "file_name"; // default if no file
-  //   if (file && file.name) {
-  //     fileName = file.name.replace(/\.[^/.]+$/, ""); // remove extension
-  //   }
-
-  //   const parts = adOrder.map((key) => {
-  //     if (!selectedItems.includes(key)) return null;
-
-  //     if (key === "adType") {
-  //       if (!file) {
-  //         return "file_type"; // Preview mode
-  //       }
-  //       const fileType = file.type || file.mimeType || "";
-  //       if (fileType.startsWith("image/")) return "static";
-  //       if (fileType.startsWith("video/")) return "video";
-  //       return "file_type"; // fallback
-  //     }
-  //     if (key === "dateType") {
-  //       return dateTypeInput === "MonthDDYYYY" ? monthDayYear : monthYear;
-  //     }
-  //     if (key === "fileName") return fileName;
-  //     if (key === "iteration") {
-  //       if (iterationIndex != null) {
-  //         return String(iterationIndex + 1).padStart(2, "0");
-  //       }
-  //       return "01"; // fallback
-  //     }
-  //     if (key.startsWith("customText_")) {
-  //       const customText = adValues.customTexts?.[key]?.text;
-  //       return customText || "custom_text";
-  //     }
-
-  //     return null;
-  //   }).filter(Boolean);
-
-  //   const adName = parts.join("_");
-
-  //   return adName || "Ad Generated Through Blip";
-  // };
 
 
 
@@ -924,18 +1056,6 @@ export default function AdCreationForm({
   }
 
 
-  // Check if any selected ad sets have SHOP_AUTOMATIC destination type
-  // const hasShopAutomaticAdSets = () => {
-  //   if (duplicateAdSet) {
-  //     const adset = adSets.find((a) => a.id === duplicateAdSet)
-  //     return adset?.destination_type === "SHOP_AUTOMATIC"
-  //   }
-
-  //   return selectedAdSets.some((adsetId) => {
-  //     const adset = adSets.find((a) => a.id === adsetId)
-  //     return adset?.destination_type === "SHOP_AUTOMATIC"
-  //   })
-  // }
   const hasShopAutomaticAdSets = useMemo(() => {
     if (duplicateAdSet) {
       const adset = adSets.find((a) => a.id === duplicateAdSet);
@@ -988,21 +1108,78 @@ export default function AdCreationForm({
 
     let aspectRatioMap = {};
 
+    // if (enablePlacementCustomization) {
+    //   setProgressMessage('Analyzing video files...');
+
+    //   try {
+    //     // Get aspect ratios for all video files
+    //     const allFiles = [...files, ...driveFiles];
+
+    //     for (const file of allFiles) {
+    //       const isVideo = file.type?.startsWith('video/') || file.mimeType?.startsWith('video/');
+    //       if (isVideo) {
+    //         const aspectRatio = await getVideoAspectRatio(file);
+    //         if (aspectRatio) {
+    //           // Use appropriate key based on file type
+    //           const key = file.id || file.name;
+    //           aspectRatioMap[key] = aspectRatio;
+    //         }
+    //       }
+    //     }
+    //   } catch (error) {
+    //     console.error('Error getting video aspect ratios:', error);
+    //     // Continue anyway with defaults
+    //   }
+    // }
+
+    // Replace your existing code with this:
     if (enablePlacementCustomization) {
       setProgressMessage('Analyzing video files...');
 
       try {
-        // Get aspect ratios for all video files
         const allFiles = [...files, ...driveFiles];
+        const videoFiles = allFiles.filter(file =>
+          file.type?.startsWith('video/') || file.mimeType?.startsWith('video/')
+        );
 
-        for (const file of allFiles) {
-          const isVideo = file.type?.startsWith('video/') || file.mimeType?.startsWith('video/');
-          if (isVideo) {
-            const aspectRatio = await getVideoAspectRatio(file);
-            if (aspectRatio) {
-              // Use appropriate key based on file type
-              const key = file.id || file.name;
-              aspectRatioMap[key] = aspectRatio;
+        if (videoFiles.length > 0) {
+          const BATCH_SIZE = 3;
+
+          for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
+            const batch = videoFiles.slice(i, i + BATCH_SIZE);
+
+            // Update progress message
+            setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
+
+            // Process batch in parallel
+            const batchPromises = batch.map(async (file) => {
+              try {
+                const aspectRatio = await getVideoAspectRatio(file);
+                if (aspectRatio) {
+                  const key = file.id || file.name;
+                  return { key, aspectRatio };
+                }
+                return null;
+              } catch (error) {
+                console.error(`Failed to get aspect ratio for ${file.name}:`, error);
+                const key = file.id || file.name;
+                return { key, aspectRatio: 16 / 9 }; // Default fallback
+              }
+            });
+
+            // Wait for batch to complete
+            const results = await Promise.all(batchPromises);
+
+            // Add results to map
+            results.forEach(result => {
+              if (result) {
+                aspectRatioMap[result.key] = result.aspectRatio;
+              }
+            });
+
+            // Let UI breathe between batches (only if more batches remain)
+            if (i + BATCH_SIZE < videoFiles.length) {
+              await new Promise(resolve => setTimeout(resolve, 50));
             }
           }
         }
