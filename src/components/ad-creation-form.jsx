@@ -603,163 +603,6 @@ export default function AdCreationForm({
   }, [openPicker]); // Note: openPicker needs to be memoized too
 
 
-  // const handleDriveClick = async () => {
-  //   // console.log("handle Drive Click");
-  //   try {
-  //     // 🔁 Check if already authenticated
-  //     const res = await axios.get(
-  //       "https://api.withblip.com/auth/google/status",
-  //       { withCredentials: true }
-  //     );
-
-  //     if (res.data.authenticated && res.data.accessToken) {
-  //       setGoogleAuthStatus({
-  //         authenticated: true,
-  //         checking: false,
-  //         accessToken: res.data.accessToken
-  //       });
-  //       openPicker(res.data.accessToken);
-  //       return;
-  //     }
-  //   } catch (err) {
-  //     console.warn("No valid Google session, proceeding to popup login.");
-  //   }
-
-  //   // ⬇️ If not authenticated, fallback to popup login
-  //   const authWindow = window.open(
-  //     "https://api.withblip.com/auth/google?popup=true",
-  //     "_blank",
-  //     "width=1100,height=750"
-  //   );
-
-  //   if (!authWindow) {
-  //     toast.error("Popup blocked. Please allow popups and try again.");
-  //     return;
-  //   }
-
-  //   const timeoutId = setTimeout(() => {
-  //     window.removeEventListener("message", listener);
-  //     if (!authWindow.closed) authWindow.close();
-  //     toast.error("Google login timed out.");
-  //   }, 65000);
-
-  //   const listener = (event) => {
-  //     if (event.origin !== "https://api.withblip.com") return;
-
-  //     const { type, accessToken } = event.data || {};
-  //     if (type === "google-auth-success") {
-  //       clearTimeout(timeoutId);
-  //       window.removeEventListener("message", listener);
-  //       authWindow.close();
-
-  //       setGoogleAuthStatus({
-  //         authenticated: true,
-  //         checking: false,
-  //         accessToken
-  //       });
-
-  //       openPicker(accessToken);
-  //     } else if (type === "google-auth-error") {
-  //       clearTimeout(timeoutId);
-  //       window.removeEventListener("message", listener);
-  //       authWindow.close();
-  //       toast.error("Google authentication failed");
-  //     }
-  //   };
-
-  //   window.addEventListener("message", listener);
-  // };
-
-
-
-
-  // const openPicker = (token) => {
-  //   // Load the picker API if not already loaded
-
-  //   if (!window.google || !window.google.picker) {
-  //     const script = document.createElement('script');
-  //     script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
-  //     document.body.appendChild(script);
-
-  //     window.onApiLoad = () => {
-  //       window.gapi.load('picker', () => {
-  //         createPicker(token);
-  //       });
-  //     };
-  //   } else {
-  //     createPicker(token);
-  //   }
-  // };
-
-  // const createPicker = (token) => {
-
-  //   const mimeTypes = [
-  //     "application/vnd.google-apps.folder",
-  //     "image/jpeg",
-  //     "image/png",
-  //     "image/gif",
-  //     "image/webp",
-  //     "video/mp4",
-  //     "video/webm",
-  //     "video/quicktime"
-  //   ].join(",");
-
-
-  //   const allFolders = new google.picker.DocsView()
-  //     .setIncludeFolders(true)
-  //     .setMimeTypes(mimeTypes)// ✅ Show folders
-  //     .setSelectFolderEnabled(false); // ✅ Don't allow selecting folders
-
-  //   const myFolders = new google.picker.DocsView()
-  //     .setOwnedByMe(true)
-  //     .setIncludeFolders(true)
-  //     .setMimeTypes(mimeTypes)
-  //     .setSelectFolderEnabled(false);
-
-  //   const sharedDriveFolders = new google.picker.DocsView()
-  //     .setOwnedByMe(true)
-  //     .setIncludeFolders(true)
-  //     .setMimeTypes(mimeTypes)
-  //     .setSelectFolderEnabled(false)
-  //     .setEnableDrives(true);
-
-  //   const onlySharedFolders = new google.picker.DocsView()
-  //     .setOwnedByMe(false)
-  //     .setIncludeFolders(true)
-  //     .setMimeTypes(mimeTypes)
-  //     .setSelectFolderEnabled(false);
-
-  //   const picker = new google.picker.PickerBuilder()
-  //     .addView(myFolders)
-  //     .addView(allFolders)
-  //     .addView(sharedDriveFolders)
-  //     .addView(onlySharedFolders)
-  //     .setOAuthToken(token)
-  //     .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-  //     .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
-  //     .hideTitleBar()
-  //     .setAppId(102886794705)
-  //     .setCallback((data) => {
-  //       if (data.action !== "picked") return;
-
-  //       const selected = data.docs.map((doc) => ({
-  //         id: doc.id,
-  //         name: doc.name,
-  //         mimeType: doc.mimeType,
-  //         size: doc.sizeBytes,
-  //         accessToken: token
-  //       }));
-
-  //       setDriveFiles((prev) => [...prev, ...selected]);
-  //       if (data.action === "picked" || data.action === "cancel") {
-  //         picker.setVisible(false);
-  //       }
-  //     })
-  //     .build();
-
-  //   picker.setVisible(true);
-  // };
-
 
   // Dropzone logic
   const onDrop = useCallback((acceptedFiles) => {
@@ -772,7 +615,6 @@ export default function AdCreationForm({
     onDrop,
     multiple: true,
   })
-
 
 
   const getVideoAspectRatio = async (file) => {
@@ -858,32 +700,84 @@ export default function AdCreationForm({
 
 
 
+  // useEffect(() => {
+
+  //   // Generate thumbnails for local video files only
+  //   files.forEach((file) => {
+  //     if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
+  //       generateThumbnail(file)
+  //         .then((thumb) => {
+  //           setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
+  //         })
+  //         .catch((err) => {
+  //           toast.error(`Thumbnail generation error: ${err}`);
+  //           console.error("Thumbnail generation error:", err);
+  //         });
+  //     }
+  //   });
+
+  //   // For Google Drive videos, just store the thumbnail URL
+  //   driveFiles.forEach((driveFile) => {
+  //     if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
+  //       const thumbnailUrl = getDriveVideoThumbnail(driveFile);
+  //       if (thumbnailUrl) {
+  //         setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
+  //       }
+  //     }
+  //   });
+  // }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
+
   useEffect(() => {
+    const processThumbnails = async () => {
+      const videoFiles = files.filter(file =>
+        file.type.startsWith("video/") && !videoThumbs[file.name]
+      );
 
-    // Generate thumbnails for local video files only
-    files.forEach((file) => {
-      if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
-        generateThumbnail(file)
-          .then((thumb) => {
-            setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
-          })
-          .catch((err) => {
-            toast.error(`Thumbnail generation error: ${err}`);
-            console.error("Thumbnail generation error:", err);
-          });
+      if (videoFiles.length === 0) return;
+
+      // Adaptive batch size
+      const BATCH_SIZE = videoFiles.length <= 3 ? videoFiles.length
+        : videoFiles.length <= 10 ? 3
+          : 4; // Slightly larger batches for many files
+
+      // Show initial progress if many files
+      if (videoFiles.length > 5) {
+        toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
       }
-    });
 
-    // For Google Drive videos, just store the thumbnail URL
-    driveFiles.forEach((driveFile) => {
-      if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
-        const thumbnailUrl = getDriveVideoThumbnail(driveFile);
-        if (thumbnailUrl) {
-          setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
+      for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
+        const batch = videoFiles.slice(i, i + BATCH_SIZE);
+
+        const thumbnailPromises = batch.map(file =>
+          generateThumbnail(file)
+            .then(thumb => ({ name: file.name, thumb }))
+            .catch(err => {
+              console.error(`Thumbnail error for ${file.name}:`, err);
+              return null;
+            })
+        );
+
+        const results = await Promise.all(thumbnailPromises);
+
+        setVideoThumbs(prev => {
+          const updates = {};
+          results.forEach(result => {
+            if (result) updates[result.name] = result.thumb;
+          });
+          return { ...prev, ...updates };
+        });
+
+        // Shorter pause for better UX
+        if (i + BATCH_SIZE < videoFiles.length) {
+          await new Promise(resolve => setTimeout(resolve, 10));
         }
       }
-    });
-  }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
+
+      // Handle Drive files...
+    };
+
+    processThumbnails();
+  }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
 
@@ -1045,21 +939,78 @@ export default function AdCreationForm({
 
     let aspectRatioMap = {};
 
+    // if (enablePlacementCustomization) {
+    //   setProgressMessage('Analyzing video files...');
+
+    //   try {
+    //     // Get aspect ratios for all video files
+    //     const allFiles = [...files, ...driveFiles];
+
+    //     for (const file of allFiles) {
+    //       const isVideo = file.type?.startsWith('video/') || file.mimeType?.startsWith('video/');
+    //       if (isVideo) {
+    //         const aspectRatio = await getVideoAspectRatio(file);
+    //         if (aspectRatio) {
+    //           // Use appropriate key based on file type
+    //           const key = file.id || file.name;
+    //           aspectRatioMap[key] = aspectRatio;
+    //         }
+    //       }
+    //     }
+    //   } catch (error) {
+    //     console.error('Error getting video aspect ratios:', error);
+    //     // Continue anyway with defaults
+    //   }
+    // }
+
+    // Replace your existing code with this:
     if (enablePlacementCustomization) {
       setProgressMessage('Analyzing video files...');
 
       try {
-        // Get aspect ratios for all video files
         const allFiles = [...files, ...driveFiles];
+        const videoFiles = allFiles.filter(file =>
+          file.type?.startsWith('video/') || file.mimeType?.startsWith('video/')
+        );
 
-        for (const file of allFiles) {
-          const isVideo = file.type?.startsWith('video/') || file.mimeType?.startsWith('video/');
-          if (isVideo) {
-            const aspectRatio = await getVideoAspectRatio(file);
-            if (aspectRatio) {
-              // Use appropriate key based on file type
-              const key = file.id || file.name;
-              aspectRatioMap[key] = aspectRatio;
+        if (videoFiles.length > 0) {
+          const BATCH_SIZE = 3;
+
+          for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
+            const batch = videoFiles.slice(i, i + BATCH_SIZE);
+
+            // Update progress message
+            setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
+
+            // Process batch in parallel
+            const batchPromises = batch.map(async (file) => {
+              try {
+                const aspectRatio = await getVideoAspectRatio(file);
+                if (aspectRatio) {
+                  const key = file.id || file.name;
+                  return { key, aspectRatio };
+                }
+                return null;
+              } catch (error) {
+                console.error(`Failed to get aspect ratio for ${file.name}:`, error);
+                const key = file.id || file.name;
+                return { key, aspectRatio: 16 / 9 }; // Default fallback
+              }
+            });
+
+            // Wait for batch to complete
+            const results = await Promise.all(batchPromises);
+
+            // Add results to map
+            results.forEach(result => {
+              if (result) {
+                aspectRatioMap[result.key] = result.aspectRatio;
+              }
+            });
+
+            // Let UI breathe between batches (only if more batches remain)
+            if (i + BATCH_SIZE < videoFiles.length) {
+              await new Promise(resolve => setTimeout(resolve, 50));
             }
           }
         }
