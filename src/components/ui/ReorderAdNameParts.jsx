@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
@@ -263,21 +263,40 @@ export default function ReorderAdNameParts({
   };
 
 
-  const formulaParts = order.map((key) => {
-    if (!selectedItems.includes(key)) return null;
-    if (key === "adType") return "[File_Type]";
-    if (key === "dateType") return values.dateType;
-    if (key === "fileName") return "File Name";
-    if (key === "iteration") return "itr";
+  // const formulaParts = order.map((key) => {
+  //   if (!selectedItems.includes(key)) return null;
+  //   if (key === "adType") return "[File_Type]";
+  //   if (key === "dateType") return values.dateType;
+  //   if (key === "fileName") return "File Name";
+  //   if (key === "iteration") return "itr";
 
-    // Handle multiple custom text fields
-    if (key.startsWith("customText_")) {
-      const customText = values.customTexts?.[key]?.text;
-      return customText || "Custom Text";
-    }
+  //   // Handle multiple custom text fields
+  //   if (key.startsWith("customText_")) {
+  //     const customText = values.customTexts?.[key]?.text;
+  //     return customText || "Custom Text";
+  //   }
 
-    return null;
-  }).filter(Boolean);
+  //   return null;
+  // }).filter(Boolean);
+
+  // Add this after your state declarations
+  const formulaParts = useMemo(() =>
+    order.map((key) => {
+      if (!selectedItems.includes(key)) return null;
+      if (key === "adType") return "[File_Type]";
+      if (key === "dateType") return values.dateType;
+      if (key === "fileName") return "File Name";
+      if (key === "iteration") return "itr";
+
+      if (key.startsWith("customText_")) {
+        const customText = values.customTexts?.[key]?.text;
+        return customText || "Custom Text";
+      }
+
+      return null;
+    }).filter(Boolean),
+    [order, selectedItems, values]
+  );
 
 
   return (

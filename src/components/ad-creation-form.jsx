@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import axios from "axios"
 import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
@@ -18,7 +18,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
-import { Infotooltip } from "./ui/infotooltip"
+// import { Infotooltip } from "./ui/infotooltip"
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -30,7 +30,7 @@ import CTAIcon from '@/assets/icons/cta.svg?react';
 import { useNavigate } from "react-router-dom"
 import CogIcon from '@/assets/icons/cog.svg?react';
 import pLimit from 'p-limit';
-import defaultVideoThumb from "@/assets/logo.webp"; // Your default image path
+
 
 
 
@@ -298,21 +298,21 @@ export default function AdCreationForm({
   }
 
 
-  const formulaParts = adOrder.map((key) => {
-    if (!selectedItems.includes(key)) return null;
-    if (key === "adType") return "[File_Type]";
-    if (key === "dateType") return adValues.dateType;
-    if (key === "fileName") return "File Name";
-    if (key === "iteration") return "itr";
+  // const formulaParts = adOrder.map((key) => {
+  //   if (!selectedItems.includes(key)) return null;
+  //   if (key === "adType") return "[File_Type]";
+  //   if (key === "dateType") return adValues.dateType;
+  //   if (key === "fileName") return "File Name";
+  //   if (key === "iteration") return "itr";
 
-    // Handle multiple custom text fields
-    if (key.startsWith("customText_")) {
-      const customText = adValues.customTexts?.[key]?.text;
-      return customText || "Custom Text";
-    }
+  //   // Handle multiple custom text fields
+  //   if (key.startsWith("customText_")) {
+  //     const customText = adValues.customTexts?.[key]?.text;
+  //     return customText || "Custom Text";
+  //   }
 
-    return null;
-  }).filter(Boolean);
+  //   return null;
+  // }).filter(Boolean);
 
 
   // CTA options
@@ -330,12 +330,29 @@ export default function AdCreationForm({
   ]
 
   // Filtered pages for combobox
-  const filteredPages = pages.filter((page) => page.name.toLowerCase().includes(pageSearchValue.toLowerCase()))
-  const filteredInstagramAccounts = pages
-    .filter((page) => page.instagramAccount)
-    .filter((page) =>
-      page.instagramAccount.username.toLowerCase().includes(instagramSearchValue.toLowerCase())
-    )
+  // const filteredPages = pages.filter((page) => page.name.toLowerCase().includes(pageSearchValue.toLowerCase()))
+  // Add this after your state declarations
+  const filteredPages = useMemo(() =>
+    pages.filter((page) =>
+      page.name.toLowerCase().includes(pageSearchValue.toLowerCase())
+    ),
+    [pages, pageSearchValue]
+  );
+  // const filteredInstagramAccounts = pages
+  //   .filter((page) => page.instagramAccount)
+  //   .filter((page) =>
+  //     page.instagramAccount.username.toLowerCase().includes(instagramSearchValue.toLowerCase())
+  //   )
+  // Add this after filteredPages
+  const filteredInstagramAccounts = useMemo(() =>
+    pages
+      .filter((page) => page.instagramAccount)
+      .filter((page) =>
+        page.instagramAccount.username.toLowerCase()
+          .includes(instagramSearchValue.toLowerCase())
+      ),
+    [pages, instagramSearchValue]
+  );
 
 
   const refreshPages = async () => {
@@ -796,7 +813,8 @@ export default function AdCreationForm({
 
 
 
-  const computeAdName = (file, dateTypeInput, iterationIndex) => {
+  // Replace the existing function with this
+  const computeAdName = useCallback((file, dateTypeInput, iterationIndex) => {
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const now = new Date();
@@ -806,22 +824,20 @@ export default function AdCreationForm({
     const monthYear = `${monthAbbrev}${year}`;
     const monthDayYear = `${monthAbbrev}${date}${year}`;
 
-    let fileName = "file_name"; // default if no file
+    let fileName = "file_name";
     if (file && file.name) {
-      fileName = file.name.replace(/\.[^/.]+$/, ""); // remove extension
+      fileName = file.name.replace(/\.[^/.]+$/, "");
     }
 
     const parts = adOrder.map((key) => {
       if (!selectedItems.includes(key)) return null;
 
       if (key === "adType") {
-        if (!file) {
-          return "file_type"; // Preview mode
-        }
+        if (!file) return "file_type";
         const fileType = file.type || file.mimeType || "";
         if (fileType.startsWith("image/")) return "static";
         if (fileType.startsWith("video/")) return "video";
-        return "file_type"; // fallback
+        return "file_type";
       }
       if (key === "dateType") {
         return dateTypeInput === "MonthDDYYYY" ? monthDayYear : monthYear;
@@ -831,7 +847,7 @@ export default function AdCreationForm({
         if (iterationIndex != null) {
           return String(iterationIndex + 1).padStart(2, "0");
         }
-        return "01"; // fallback
+        return "01";
       }
       if (key.startsWith("customText_")) {
         const customText = adValues.customTexts?.[key]?.text;
@@ -842,9 +858,59 @@ export default function AdCreationForm({
     }).filter(Boolean);
 
     const adName = parts.join("_");
-
     return adName || "Ad Generated Through Blip";
-  };
+  }, [adOrder, selectedItems, adValues]);
+
+
+  // const computeAdName = (file, dateTypeInput, iterationIndex) => {
+  //   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  //     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  //   const now = new Date();
+  //   const monthAbbrev = monthNames[now.getMonth()];
+  //   const date = String(now.getDate()).padStart(2, "0");
+  //   const year = now.getFullYear();
+  //   const monthYear = `${monthAbbrev}${year}`;
+  //   const monthDayYear = `${monthAbbrev}${date}${year}`;
+
+  //   let fileName = "file_name"; // default if no file
+  //   if (file && file.name) {
+  //     fileName = file.name.replace(/\.[^/.]+$/, ""); // remove extension
+  //   }
+
+  //   const parts = adOrder.map((key) => {
+  //     if (!selectedItems.includes(key)) return null;
+
+  //     if (key === "adType") {
+  //       if (!file) {
+  //         return "file_type"; // Preview mode
+  //       }
+  //       const fileType = file.type || file.mimeType || "";
+  //       if (fileType.startsWith("image/")) return "static";
+  //       if (fileType.startsWith("video/")) return "video";
+  //       return "file_type"; // fallback
+  //     }
+  //     if (key === "dateType") {
+  //       return dateTypeInput === "MonthDDYYYY" ? monthDayYear : monthYear;
+  //     }
+  //     if (key === "fileName") return fileName;
+  //     if (key === "iteration") {
+  //       if (iterationIndex != null) {
+  //         return String(iterationIndex + 1).padStart(2, "0");
+  //       }
+  //       return "01"; // fallback
+  //     }
+  //     if (key.startsWith("customText_")) {
+  //       const customText = adValues.customTexts?.[key]?.text;
+  //       return customText || "custom_text";
+  //     }
+
+  //     return null;
+  //   }).filter(Boolean);
+
+  //   const adName = parts.join("_");
+
+  //   return adName || "Ad Generated Through Blip";
+  // };
 
 
 
@@ -859,19 +925,32 @@ export default function AdCreationForm({
 
 
   // Check if any selected ad sets have SHOP_AUTOMATIC destination type
-  const hasShopAutomaticAdSets = () => {
+  // const hasShopAutomaticAdSets = () => {
+  //   if (duplicateAdSet) {
+  //     const adset = adSets.find((a) => a.id === duplicateAdSet)
+  //     return adset?.destination_type === "SHOP_AUTOMATIC"
+  //   }
+
+  //   return selectedAdSets.some((adsetId) => {
+  //     const adset = adSets.find((a) => a.id === adsetId)
+  //     return adset?.destination_type === "SHOP_AUTOMATIC"
+  //   })
+  // }
+  const hasShopAutomaticAdSets = useMemo(() => {
     if (duplicateAdSet) {
-      const adset = adSets.find((a) => a.id === duplicateAdSet)
-      return adset?.destination_type === "SHOP_AUTOMATIC"
+      const adset = adSets.find((a) => a.id === duplicateAdSet);
+      return adset?.destination_type === "SHOP_AUTOMATIC";
     }
 
     return selectedAdSets.some((adsetId) => {
-      const adset = adSets.find((a) => a.id === adsetId)
-      return adset?.destination_type === "SHOP_AUTOMATIC"
-    })
-  }
+      const adset = adSets.find((a) => a.id === adsetId);
+      return adset?.destination_type === "SHOP_AUTOMATIC";
+    });
+  }, [duplicateAdSet, selectedAdSets, adSets]);
 
-  const showShopDestinationSelector = hasShopAutomaticAdSets() && pageId
+  // const showShopDestinationSelector = hasShopAutomaticAdSets() && pageId
+  const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
+
 
   const handleCreateAd = async (e) => {
     e.preventDefault();
@@ -943,7 +1022,7 @@ export default function AdCreationForm({
 
     // Step: Upload large Drive videos to S3
     const largeDriveFiles = driveFiles.filter(file =>
-      file.mimeType.startsWith("video/") && file.size > 50 * 1024 * 1024
+      file.mimeType.startsWith("video/") && file.size > 100 * 1024 * 1024
     );
 
     let s3Results = [];
@@ -1211,46 +1290,6 @@ export default function AdCreationForm({
         nonDynamicAdSetIds.forEach((adSetId) => {
 
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
-
-          // MINIMAL DEBUG LOGGING
-          console.log("=== FILE GROUPING DEBUG (MINIMAL) ===");
-          console.log("fileGroups:", fileGroups);
-          console.log("groupedFileIds:", Array.from(groupedFileIds));
-          console.log("Total files in groups:", groupedFileIds.size);
-
-          // Count ungrouped files - these should match what gets sent
-          let ungroupedCount = 0;
-
-          // Check local files
-          if (files && files.length > 0) {
-            const ungroupedLocal = files.filter(file =>
-              !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024
-            ).length;
-            console.log("Ungrouped local files:", ungroupedLocal);
-            ungroupedCount += ungroupedLocal;
-          }
-
-          // Check drive files
-          if (smallDriveFiles && smallDriveFiles.length > 0) {
-            const ungroupedDrive = smallDriveFiles.filter(file =>
-              !groupedFileIds.has(file.id)
-            ).length;
-            console.log("Ungrouped drive files:", ungroupedDrive);
-            ungroupedCount += ungroupedDrive;
-          }
-
-          // Check S3 files
-          if ((s3Results && s3Results.length > 0) || (s3DriveResults && s3DriveResults.length > 0)) {
-            const ungroupedS3 = [...s3Results, ...s3DriveResults].filter(file =>
-              !groupedFileIds.has(file.name) && !groupedFileIds.has(file.id)
-            ).length;
-            console.log("Ungrouped S3 files:", ungroupedS3);
-            ungroupedCount += ungroupedS3;
-          }
-
-          console.log("TOTAL UNGROUPED FILES:", ungroupedCount);
-          console.log("=== END DEBUG ===");
-          //END DEBUG
 
 
           const hasUngroupedFiles = (
