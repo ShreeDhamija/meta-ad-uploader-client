@@ -35,7 +35,6 @@ import pLimit from 'p-limit';
 
 
 //Progress Tracker Hook
-
 const useAdCreationProgress = (jobId, isCreatingAds) => {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -44,264 +43,93 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   useEffect(() => {
     if (!jobId) return;
 
-    // Reset state for new job
+    // console.log('🔄 New jobId detected, resetting state:', jobId);
     setProgress(0);
     setMessage('');
     setStatus('idle');
 
-    // Track all cleanup items
-    let eventSource = null;
-    let retryTimeoutId = null;
-    let isSubscribed = true;
     let retryCount = 0;
     const baseRetryDelay = 500;
     const maxRetryDelay = 5000;
-    const maxRetries = 10; // Prevent infinite retries
-
-    // Cleanup function
-    const cleanup = () => {
-      isSubscribed = false;
-
-      // Clear any pending retry
-      if (retryTimeoutId) {
-        clearTimeout(retryTimeoutId);
-        retryTimeoutId = null;
-      }
-
-      // Close SSE connection
-      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
-        eventSource.close();
-        eventSource = null;
-      }
-    };
+    let isConnecting = true;
 
     const connectSSE = () => {
-      // Don't connect if already cleaned up
-      if (!isSubscribed) return;
+      if (!isConnecting) return;
 
-      // Don't retry forever
-      if (retryCount >= maxRetries) {
-        console.error('Max SSE retry attempts reached');
-        setStatus('error');
-        setMessage('Connection failed. Please refresh the page.');
-        return;
-      }
+      // console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
+      const eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
 
-      try {
-        console.log(`🔌 SSE connecting to job: ${jobId} (attempt ${retryCount + 1})`);
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        // console.log('📨 Raw SSE data received:', data);
 
-        eventSource = new EventSource(
-          `https://api.withblip.com/api/progress/${jobId}`
-        );
+        if (data.message === 'Job not found') {
+          // console.log(`❌ Job not found, closing connection...`);
+          eventSource.close();
+          retryCount++;
 
-        eventSource.onopen = () => {
-          console.log('✅ SSE connected successfully');
-          retryCount = 0; // Reset on successful connection
-        };
+          const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
 
-        eventSource.onmessage = (event) => {
-          // Prevent updates if component unmounted
-          if (!isSubscribed) {
-            cleanup();
-            return;
-          }
-
-          try {
-            const data = JSON.parse(event.data);
-
-            if (data.message === 'Job not found') {
-              console.log('Job not found, retrying...');
-              cleanup();
-
-              if (isSubscribed && retryCount < maxRetries) {
-                retryCount++;
-                const delay = Math.min(
-                  baseRetryDelay * Math.pow(2, retryCount - 1),
-                  maxRetryDelay
-                );
-
-                retryTimeoutId = setTimeout(() => {
-                  if (isSubscribed) connectSSE();
-                }, delay);
-              }
-              return;
+          // console.log(`⏳ Retrying in ${delay}ms... (attempt ${retryCount})`);
+          setTimeout(() => {
+            if (isConnecting) {
+              connectSSE();
             }
-
-            // Update state only if still subscribed
-            if (isSubscribed) {
-              setProgress(data.progress);
-              setMessage(data.message);
-              setStatus(data.status);
-
-              // Auto-cleanup on completion
-              if (data.status === 'complete' || data.status === 'error') {
-                console.log('🏁 Job finished, closing SSE');
-                cleanup();
-              }
-            }
-          } catch (err) {
-            console.error('Failed to parse SSE message:', err);
-          }
-        };
-
-        eventSource.onerror = (error) => {
-          console.error('❌ SSE Error:', error);
-
-          // Don't retry if component is unmounted
-          if (!isSubscribed) {
-            cleanup();
-            return;
-          }
-
-          // Close the failed connection
-          if (eventSource) {
-            eventSource.close();
-            eventSource = null;
-          }
-
-          // Retry with exponential backoff
-          if (retryCount < maxRetries) {
-            retryCount++;
-            const delay = Math.min(
-              baseRetryDelay * Math.pow(2, retryCount - 1),
-              maxRetryDelay
-            );
-
-            console.log(`⏳ Retrying in ${delay}ms...`);
-
-            retryTimeoutId = setTimeout(() => {
-              if (isSubscribed) connectSSE();
-            }, delay);
-          } else {
-            // Max retries reached
-            setStatus('error');
-            setMessage('Connection lost. Please check your internet connection.');
-          }
-        };
-      } catch (error) {
-        console.error('Failed to create EventSource:', error);
-        if (isSubscribed) {
-          setStatus('error');
-          setMessage('Failed to connect to progress updates.');
+          }, delay);
+          return;
         }
-        cleanup();
-      }
+
+        retryCount = 0; // Reset retry counter on success
+        // console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
+        setProgress(data.progress);
+        setMessage(data.message);
+        setStatus(data.status);
+
+        if (data.status === 'complete' || data.status === 'error') {
+          // console.log('🏁 Job finished, closing SSE connection');
+          eventSource.close();
+          isConnecting = false;
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('❌ SSE Error:', error);
+        eventSource.close();
+
+        if (isConnecting) {
+          retryCount++;
+          const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
+          setTimeout(() => {
+            if (isConnecting) {
+              connectSSE();
+            }
+          }, delay);
+        }
+      };
     };
 
-    // Start connection
     connectSSE();
 
-    // Cleanup on unmount or jobId change
-    return cleanup;
+    return () => {
+      isConnecting = false;
+    };
   }, [jobId]);
 
-  // Additional cleanup when ad creation stops
+
+
   useEffect(() => {
+
     if (!isCreatingAds) {
+      // console.log('🧹 Job completely finished, resetting hook state');
       setProgress(0);
       setMessage('');
       setStatus('idle');
     }
   }, [isCreatingAds]);
 
+
   return { progress, message, status };
 };
-
-// const useAdCreationProgress = (jobId, isCreatingAds) => {
-//   const [progress, setProgress] = useState(0);
-//   const [message, setMessage] = useState('');
-//   const [status, setStatus] = useState('idle');
-
-//   useEffect(() => {
-//     if (!jobId) return;
-
-//     // console.log('🔄 New jobId detected, resetting state:', jobId);
-//     setProgress(0);
-//     setMessage('');
-//     setStatus('idle');
-
-//     let retryCount = 0;
-//     const baseRetryDelay = 500;
-//     const maxRetryDelay = 5000;
-//     let isConnecting = true;
-
-//     const connectSSE = () => {
-//       if (!isConnecting) return;
-
-//       // console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
-//       const eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
-
-//       eventSource.onmessage = (event) => {
-//         const data = JSON.parse(event.data);
-//         // console.log('📨 Raw SSE data received:', data);
-
-//         if (data.message === 'Job not found') {
-//           // console.log(`❌ Job not found, closing connection...`);
-//           eventSource.close();
-//           retryCount++;
-
-//           const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
-
-//           // console.log(`⏳ Retrying in ${delay}ms... (attempt ${retryCount})`);
-//           setTimeout(() => {
-//             if (isConnecting) {
-//               connectSSE();
-//             }
-//           }, delay);
-//           return;
-//         }
-
-//         retryCount = 0; // Reset retry counter on success
-//         // console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
-//         setProgress(data.progress);
-//         setMessage(data.message);
-//         setStatus(data.status);
-
-//         if (data.status === 'complete' || data.status === 'error') {
-//           // console.log('🏁 Job finished, closing SSE connection');
-//           eventSource.close();
-//           isConnecting = false;
-//         }
-//       };
-
-//       eventSource.onerror = (error) => {
-//         console.error('❌ SSE Error:', error);
-//         eventSource.close();
-
-//         if (isConnecting) {
-//           retryCount++;
-//           const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
-//           setTimeout(() => {
-//             if (isConnecting) {
-//               connectSSE();
-//             }
-//           }, delay);
-//         }
-//       };
-//     };
-
-//     connectSSE();
-
-//     return () => {
-//       isConnecting = false;
-//     };
-//   }, [jobId]);
-
-
-
-//   useEffect(() => {
-
-//     if (!isCreatingAds) {
-//       // console.log('🧹 Job completely finished, resetting hook state');
-//       setProgress(0);
-//       setMessage('');
-//       setStatus('idle');
-//     }
-//   }, [isCreatingAds]);
-
-
-//   return { progress, message, status };
-// };
 
 export default function AdCreationForm({
   isLoading,
