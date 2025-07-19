@@ -453,88 +453,6 @@ export default function AdCreationForm({
 
 
 
-
-  const handleDriveClick = useCallback(async () => {
-    try {
-      const res = await axios.get(
-        "https://api.withblip.com/auth/google/status",
-        { withCredentials: true }
-      );
-
-      if (res.data.authenticated && res.data.accessToken) {
-        setGoogleAuthStatus({
-          authenticated: true,
-          checking: false,
-          accessToken: res.data.accessToken
-        });
-        openPicker(res.data.accessToken);
-        return;
-      }
-    } catch (err) {
-      console.warn("No valid Google session, proceeding to popup login.");
-    }
-
-    const authWindow = window.open(
-      "https://api.withblip.com/auth/google?popup=true",
-      "_blank",
-      "width=1100,height=750"
-    );
-
-    if (!authWindow) {
-      toast.error("Popup blocked. Please allow popups and try again.");
-      return;
-    }
-
-    const timeoutId = setTimeout(() => {
-      window.removeEventListener("message", listener);
-      if (!authWindow.closed) authWindow.close();
-      toast.error("Google login timed out.");
-    }, 65000);
-
-    const listener = (event) => {
-      if (event.origin !== "https://api.withblip.com") return;
-
-      const { type, accessToken } = event.data || {};
-      if (type === "google-auth-success") {
-        clearTimeout(timeoutId);
-        window.removeEventListener("message", listener);
-        authWindow.close();
-
-        setGoogleAuthStatus({
-          authenticated: true,
-          checking: false,
-          accessToken
-        });
-
-        openPicker(accessToken);
-      } else if (type === "google-auth-error") {
-        clearTimeout(timeoutId);
-        window.removeEventListener("message", listener);
-        authWindow.close();
-        toast.error("Google authentication failed");
-      }
-    };
-
-    window.addEventListener("message", listener);
-  }, [openPicker]); // Note: openPicker needs to be memoized too
-
-  const openPicker = useCallback((token) => {
-    if (!window.google || !window.google.picker) {
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
-      document.body.appendChild(script);
-
-      window.onApiLoad = () => {
-        window.gapi.load('picker', () => {
-          createPicker(token);
-        });
-      };
-    } else {
-      createPicker(token);
-    }
-  }, [createPicker]); // Note: createPicker needs to be memoized too
-
-
   const createPicker = useCallback((token) => {
     const mimeTypes = [
       "application/vnd.google-apps.folder",
@@ -602,6 +520,87 @@ export default function AdCreationForm({
     picker.setVisible(true);
   }, [setDriveFiles]);
 
+
+  const openPicker = useCallback((token) => {
+    if (!window.google || !window.google.picker) {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
+      document.body.appendChild(script);
+
+      window.onApiLoad = () => {
+        window.gapi.load('picker', () => {
+          createPicker(token);
+        });
+      };
+    } else {
+      createPicker(token);
+    }
+  }, [createPicker]); // Note: createPicker needs to be memoized too
+
+
+  const handleDriveClick = useCallback(async () => {
+    try {
+      const res = await axios.get(
+        "https://api.withblip.com/auth/google/status",
+        { withCredentials: true }
+      );
+
+      if (res.data.authenticated && res.data.accessToken) {
+        setGoogleAuthStatus({
+          authenticated: true,
+          checking: false,
+          accessToken: res.data.accessToken
+        });
+        openPicker(res.data.accessToken);
+        return;
+      }
+    } catch (err) {
+      console.warn("No valid Google session, proceeding to popup login.");
+    }
+
+    const authWindow = window.open(
+      "https://api.withblip.com/auth/google?popup=true",
+      "_blank",
+      "width=1100,height=750"
+    );
+
+    if (!authWindow) {
+      toast.error("Popup blocked. Please allow popups and try again.");
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      window.removeEventListener("message", listener);
+      if (!authWindow.closed) authWindow.close();
+      toast.error("Google login timed out.");
+    }, 65000);
+
+    const listener = (event) => {
+      if (event.origin !== "https://api.withblip.com") return;
+
+      const { type, accessToken } = event.data || {};
+      if (type === "google-auth-success") {
+        clearTimeout(timeoutId);
+        window.removeEventListener("message", listener);
+        authWindow.close();
+
+        setGoogleAuthStatus({
+          authenticated: true,
+          checking: false,
+          accessToken
+        });
+
+        openPicker(accessToken);
+      } else if (type === "google-auth-error") {
+        clearTimeout(timeoutId);
+        window.removeEventListener("message", listener);
+        authWindow.close();
+        toast.error("Google authentication failed");
+      }
+    };
+
+    window.addEventListener("message", listener);
+  }, [openPicker]); // Note: openPicker needs to be memoized too
 
 
   // const handleDriveClick = async () => {
@@ -860,7 +859,7 @@ export default function AdCreationForm({
 
 
   useEffect(() => {
-    console.log("reached");
+
     // Generate thumbnails for local video files only
     files.forEach((file) => {
       if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
@@ -991,6 +990,7 @@ export default function AdCreationForm({
     )
     return response.data.copied_adset_id
   }
+
 
 
   const hasShopAutomaticAdSets = useMemo(() => {
