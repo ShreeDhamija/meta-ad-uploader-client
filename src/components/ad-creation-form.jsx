@@ -860,7 +860,7 @@ export default function AdCreationForm({
 
 
   useEffect(() => {
-
+    console.log("reached");
     // Generate thumbnails for local video files only
     files.forEach((file) => {
       if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
