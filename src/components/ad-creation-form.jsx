@@ -32,9 +32,6 @@ import CogIcon from '@/assets/icons/cog.svg?react';
 import pLimit from 'p-limit';
 
 
-
-
-//Progress Tracker Hook
 const useAdCreationProgress = (jobId, isCreatingAds) => {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -43,93 +40,321 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   useEffect(() => {
     if (!jobId) return;
 
-    // console.log('🔄 New jobId detected, resetting state:', jobId);
+    // Reset state for new job
     setProgress(0);
     setMessage('');
     setStatus('idle');
 
+    // Track all cleanup items
+    let eventSource = null;
+    let retryTimeoutId = null;
+    let connectionTimeoutId = null;
+    let isSubscribed = true;
     let retryCount = 0;
+    let jobNotFoundCount = 0; // Separate counter for job not found
+
     const baseRetryDelay = 500;
     const maxRetryDelay = 5000;
-    let isConnecting = true;
+    const maxConnectionRetries = 10; // For connection errors
+    const maxJobNotFoundRetries = 30; // More patient for job not found (15 seconds total)
+    const connectionTimeout = 10000;
+
+    // Complete cleanup function
+    const cleanup = () => {
+      isSubscribed = false;
+
+      if (retryTimeoutId) {
+        clearTimeout(retryTimeoutId);
+        retryTimeoutId = null;
+      }
+
+      if (connectionTimeoutId) {
+        clearTimeout(connectionTimeoutId);
+        connectionTimeoutId = null;
+      }
+
+      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+        eventSource.close();
+        eventSource = null;
+      }
+    };
+
+    // Separate retry logic for different scenarios
+    const scheduleConnectionRetry = (reason) => {
+      if (!isSubscribed || retryCount >= maxConnectionRetries) {
+        if (retryCount >= maxConnectionRetries) {
+          console.error('Max connection retry attempts reached');
+          setStatus('error');
+          setMessage('Connection failed. Please check your internet connection.');
+        }
+        return;
+      }
+
+      retryCount++;
+      const delay = Math.min(
+        baseRetryDelay * Math.pow(2, retryCount - 1),
+        maxRetryDelay
+      );
+
+      console.log(`⏳ ${reason} - Retrying connection in ${delay}ms... (attempt ${retryCount})`);
+
+      retryTimeoutId = setTimeout(() => {
+        if (isSubscribed) connectSSE();
+      }, delay);
+    };
+
+    const scheduleJobRetry = () => {
+      if (!isSubscribed || jobNotFoundCount >= maxJobNotFoundRetries) {
+        if (jobNotFoundCount >= maxJobNotFoundRetries) {
+          console.error('Job not found after maximum attempts - job may not exist');
+          setStatus('error');
+          setMessage('Job not found. The task may have expired or been cancelled.');
+        }
+        return;
+      }
+
+      jobNotFoundCount++;
+      // Shorter delay for job not found since server is responding
+      const delay = Math.min(baseRetryDelay, 1000);
+
+      console.log(`⏳ Job not found - Retrying in ${delay}ms... (attempt ${jobNotFoundCount}/${maxJobNotFoundRetries})`);
+
+      retryTimeoutId = setTimeout(() => {
+        if (isSubscribed) connectSSE();
+      }, delay);
+    };
 
     const connectSSE = () => {
-      if (!isConnecting) return;
+      if (!isSubscribed) return;
 
-      // console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
-      const eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
+      try {
+        console.log(`🔌 SSE connecting to job: ${jobId} (connection attempt ${retryCount + 1}, job search attempt ${jobNotFoundCount + 1})`);
 
-      eventSource.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        // console.log('📨 Raw SSE data received:', data);
-
-        if (data.message === 'Job not found') {
-          // console.log(`❌ Job not found, closing connection...`);
+        // Close any existing connection
+        if (eventSource) {
           eventSource.close();
-          retryCount++;
+          eventSource = null;
+        }
 
-          const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
+        eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
 
-          // console.log(`⏳ Retrying in ${delay}ms... (attempt ${retryCount})`);
-          setTimeout(() => {
-            if (isConnecting) {
-              connectSSE();
+        // Set connection timeout
+        connectionTimeoutId = setTimeout(() => {
+          if (eventSource && eventSource.readyState === EventSource.CONNECTING) {
+            console.warn('SSE connection timeout');
+            eventSource.close();
+            scheduleConnectionRetry('Connection timeout');
+          }
+        }, connectionTimeout);
+
+        eventSource.onopen = () => {
+          console.log('✅ SSE connected successfully');
+          retryCount = 0; // Reset connection retry counter
+
+          if (connectionTimeoutId) {
+            clearTimeout(connectionTimeoutId);
+            connectionTimeoutId = null;
+          }
+        };
+
+        eventSource.onmessage = (event) => {
+          if (!isSubscribed) {
+            cleanup();
+            return;
+          }
+
+          try {
+            const data = JSON.parse(event.data);
+
+            // Handle job not found with patience
+            if (data.message === 'Job not found') {
+              console.log(`📋 Job not found yet (${jobNotFoundCount + 1}/${maxJobNotFoundRetries}), server is working...`);
+
+              // Close current connection cleanly but don't cleanup everything
+              if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+              }
+
+              // Reset connection retry counter since server responded
+              retryCount = 0;
+
+              // Schedule patient retry for job availability
+              scheduleJobRetry();
+              return;
             }
-          }, delay);
-          return;
-        }
 
-        retryCount = 0; // Reset retry counter on success
-        // console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
-        setProgress(data.progress);
-        setMessage(data.message);
-        setStatus(data.status);
+            // Job found! Reset all counters and update state
+            if (isSubscribed) {
+              console.log('✅ Job found! Receiving progress updates');
+              retryCount = 0;
+              jobNotFoundCount = 0;
 
-        if (data.status === 'complete' || data.status === 'error') {
-          // console.log('🏁 Job finished, closing SSE connection');
-          eventSource.close();
-          isConnecting = false;
-        }
-      };
+              setProgress(data.progress);
+              setMessage(data.message);
+              setStatus(data.status);
 
-      eventSource.onerror = (error) => {
-        console.error('❌ SSE Error:', error);
-        eventSource.close();
-
-        if (isConnecting) {
-          retryCount++;
-          const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
-          setTimeout(() => {
-            if (isConnecting) {
-              connectSSE();
+              // Auto-cleanup on job completion
+              if (data.status === 'complete' || data.status === 'error') {
+                console.log('🏁 Job finished, closing SSE');
+                cleanup();
+              }
             }
-          }, delay);
+          } catch (err) {
+            console.error('Failed to parse SSE message:', err);
+            // Don't retry on parse errors, just log them
+          }
+        };
+
+        eventSource.onerror = (error) => {
+          console.error('❌ SSE Error:', error);
+
+          if (!isSubscribed) {
+            cleanup();
+            return;
+          }
+
+          // Close the failed connection
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+
+          // Clear connection timeout if it exists
+          if (connectionTimeoutId) {
+            clearTimeout(connectionTimeoutId);
+            connectionTimeoutId = null;
+          }
+
+          // Retry connection errors with exponential backoff
+          scheduleConnectionRetry('Connection error');
+        };
+
+      } catch (error) {
+        console.error('Failed to create EventSource:', error);
+        if (isSubscribed) {
+          setStatus('error');
+          setMessage('Failed to initialize progress tracking.');
         }
-      };
+        cleanup();
+      }
     };
 
+    // Start the connection
     connectSSE();
 
-    return () => {
-      isConnecting = false;
-    };
+    // Cleanup on unmount or jobId change
+    return cleanup;
   }, [jobId]);
 
-
-
+  // Reset state when ad creation stops
   useEffect(() => {
-
     if (!isCreatingAds) {
-      // console.log('🧹 Job completely finished, resetting hook state');
       setProgress(0);
       setMessage('');
       setStatus('idle');
     }
   }, [isCreatingAds]);
 
-
   return { progress, message, status };
 };
+
+// //Progress Tracker Hook
+// const useAdCreationProgress = (jobId, isCreatingAds) => {
+//   const [progress, setProgress] = useState(0);
+//   const [message, setMessage] = useState('');
+//   const [status, setStatus] = useState('idle');
+
+//   useEffect(() => {
+//     if (!jobId) return;
+
+//     // console.log('🔄 New jobId detected, resetting state:', jobId);
+//     setProgress(0);
+//     setMessage('');
+//     setStatus('idle');
+
+//     let retryCount = 0;
+//     const baseRetryDelay = 500;
+//     const maxRetryDelay = 5000;
+//     let isConnecting = true;
+
+//     const connectSSE = () => {
+//       if (!isConnecting) return;
+
+//       // console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
+//       const eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
+
+//       eventSource.onmessage = (event) => {
+//         const data = JSON.parse(event.data);
+//         // console.log('📨 Raw SSE data received:', data);
+
+//         if (data.message === 'Job not found') {
+//           // console.log(`❌ Job not found, closing connection...`);
+//           eventSource.close();
+//           retryCount++;
+
+//           const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
+
+//           // console.log(`⏳ Retrying in ${delay}ms... (attempt ${retryCount})`);
+//           setTimeout(() => {
+//             if (isConnecting) {
+//               connectSSE();
+//             }
+//           }, delay);
+//           return;
+//         }
+
+//         retryCount = 0; // Reset retry counter on success
+//         // console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
+//         setProgress(data.progress);
+//         setMessage(data.message);
+//         setStatus(data.status);
+
+//         if (data.status === 'complete' || data.status === 'error') {
+//           // console.log('🏁 Job finished, closing SSE connection');
+//           eventSource.close();
+//           isConnecting = false;
+//         }
+//       };
+
+//       eventSource.onerror = (error) => {
+//         console.error('❌ SSE Error:', error);
+//         eventSource.close();
+
+//         if (isConnecting) {
+//           retryCount++;
+//           const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
+//           setTimeout(() => {
+//             if (isConnecting) {
+//               connectSSE();
+//             }
+//           }, delay);
+//         }
+//       };
+//     };
+
+//     connectSSE();
+
+//     return () => {
+//       isConnecting = false;
+//     };
+//   }, [jobId]);
+
+
+
+//   useEffect(() => {
+
+//     if (!isCreatingAds) {
+//       // console.log('🧹 Job completely finished, resetting hook state');
+//       setProgress(0);
+//       setMessage('');
+//       setStatus('idle');
+//     }
+//   }, [isCreatingAds]);
+
+
+//   return { progress, message, status };
+// };
 
 export default function AdCreationForm({
   isLoading,
@@ -272,11 +497,7 @@ export default function AdCreationForm({
   async function uploadDriveFileToS3(file) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
-    // console.log("🚀 Uploading Drive files to S3:", {
-    //   name: file.name,
-    //   size: file.size,
-    //   hasAccessToken: !!file.accessToken
-    // });
+
 
     const res = await fetch("https://api.withblip.com/api/upload-from-drive", {
       method: "POST",
@@ -298,21 +519,7 @@ export default function AdCreationForm({
   }
 
 
-  // const formulaParts = adOrder.map((key) => {
-  //   if (!selectedItems.includes(key)) return null;
-  //   if (key === "adType") return "[File_Type]";
-  //   if (key === "dateType") return adValues.dateType;
-  //   if (key === "fileName") return "File Name";
-  //   if (key === "iteration") return "itr";
 
-  //   // Handle multiple custom text fields
-  //   if (key.startsWith("customText_")) {
-  //     const customText = adValues.customTexts?.[key]?.text;
-  //     return customText || "Custom Text";
-  //   }
-
-  //   return null;
-  // }).filter(Boolean);
 
 
   // CTA options
@@ -899,7 +1106,7 @@ export default function AdCreationForm({
     });
   }, [duplicateAdSet, selectedAdSets, adSets]);
 
-  // const showShopDestinationSelector = hasShopAutomaticAdSets() && pageId
+
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
 
 
@@ -2264,43 +2471,6 @@ export default function AdCreationForm({
                 setSelectedShopDestinationType={setSelectedShopDestinationType}
                 isVisible={showShopDestinationSelector}
               />
-
-              {/* <div className="space-y-2">
-                <Label htmlFor="thumbnail">Thumbnail - Optional(Only for videos)</Label>
-                <div className="flex items-center space-x-2"> */}
-              {/* Custom button for file input */}
-              {/* <label
-                    htmlFor="thumbnail"
-                    className="cursor-pointer inline-flex items-center px-3 py-1 border border-gray-400 rounded-xl bg-white shadow hover:bg-gray-100 text-xs"
-                  >
-                    Choose File
-                  </label> */}
-              {/* Hidden file input */}
-              {/* <input
-                    id="thumbnail"
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => setThumbnail(e.target.files[0])}
-                    disabled={!isLoggedIn}
-                  /> */}
-              {/* Display uploaded file name and trash button if a file is selected */}
-              {/* {thumbnail && (
-                    <div className="flex items-center space-x-1">
-                      <span className="text-sm">{thumbnail.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                        size="icon"
-                        onClick={() => setThumbnail(null)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Remove thumbnail</span>
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div> */}
             </div>
 
             <div className="space-y-2">
