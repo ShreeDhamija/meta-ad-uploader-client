@@ -360,41 +360,8 @@ export default function AdCreationForm({
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
 
-  // Upload large file to S3
-  // const uploadToS3 = async (file) => {
-  //   try {
-  //     // Get presigned URL
-  //     const response = await axios.post(
-  //       "https://api.withblip.com/auth/get-upload-url",
-  //       {
-  //         fileName: file.name,
-  //         fileType: file.type,
-  //         fileSize: file.size
-  //       },
-  //       { withCredentials: true }
-  //     )
+  const S3_UPLOAD_THRESHOLD = 40 * 1024 * 1024; // 40 MB
 
-  //     const { uploadUrl, publicUrl } = response.data
-
-  //     // Upload directly to S3
-  //     await axios.put(uploadUrl, file, {
-  //       headers: {
-  //         'Content-Type': file.type,
-  //       }
-  //     });
-  //     // console.log(publicUrl);
-  //     return {
-  //       name: file.name,
-  //       type: file.type,
-  //       size: file.size,
-  //       s3Url: publicUrl,
-  //       isS3Upload: true
-  //     }
-  //   } catch (error) {
-  //     console.error('S3 upload failed:', error)
-  //     throw new Error(`Failed to upload ${file.name} to S3`)
-  //   }
-  // }
 
   const uploadToS3 = async (file) => {
     // S3 requires parts to be at least 5MB, except for the last part.
@@ -1186,12 +1153,12 @@ export default function AdCreationForm({
     setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
     const largeFiles = files.filter((file) =>
-      file.type.startsWith("video/") && file.size > 40 * 1024 * 1024
+      file.type.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
     );
 
     // Step: Upload large Drive videos to S3
     const largeDriveFiles = driveFiles.filter(file =>
-      file.mimeType.startsWith("video/") && file.size > 40 * 1024 * 1024
+      file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
     );
 
     let s3Results = [];
@@ -1263,7 +1230,7 @@ export default function AdCreationForm({
 
 
     const smallDriveFiles = driveFiles.filter(file =>
-      !(file.mimeType.startsWith("video/") && file.size > 100 * 1024 * 1024)
+      !(file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD)
     );
 
 
@@ -1323,8 +1290,6 @@ export default function AdCreationForm({
 
     try {
       const promises = [];
-      // console.log("is carousel ad", isCarouselAd);
-      // console.log("dynamic adset length", dynamicAdSetIds.length);
 
       // FIRST: Handle carousel ads (completely separate from dynamic/non-dynamic)
       if (isCarouselAd && dynamicAdSetIds.length === 0) {
@@ -1332,7 +1297,7 @@ export default function AdCreationForm({
           toast.error("Please select at least one ad set for carousel");
           return;
         }
-        // console.log("reached carousel handling block for nonDynamicAdsets,", nonDynamicAdSetIds);
+
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
           // console.log("🎠 Creating carousel for adSetId:", adSetId);
@@ -1355,7 +1320,7 @@ export default function AdCreationForm({
 
           // Add all local files (small ones)
           files.forEach((file) => {
-            if (file.size <= 100 * 1024 * 1024) {
+            if (file.size <= S3_UPLOAD_THRESHOLD) {
               formData.append("mediaFiles", file);
             }
           });
@@ -1412,7 +1377,7 @@ export default function AdCreationForm({
 
           // Add all local files
           files.forEach((file) => {
-            if (file.size <= 100 * 1024 * 1024) {
+            if (file.size <= S3_UPLOAD_THRESHOLD) {
               formData.append("mediaFiles", file);
             }
           });
@@ -1462,7 +1427,7 @@ export default function AdCreationForm({
 
 
           const hasUngroupedFiles = (
-            files.some(file => !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024) ||
+            files.some(file => !groupedFileIds.has(file.name) && file.size <= S3_UPLOAD_THRESHOLD) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
             [...s3Results, ...s3DriveResults].some(s3File =>
               !groupedFileIds.has(s3File.name) && !groupedFileIds.has(s3File.id)
@@ -1501,7 +1466,7 @@ export default function AdCreationForm({
 
               group.forEach(fileId => {
                 const file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
-                if (file && !file.isDrive && file.size <= 100 * 1024 * 1024) {
+                if (file && !file.isDrive && file.size <= S3_UPLOAD_THRESHOLD) {
                   formData.append("mediaFiles", file);
                   if (file.type.startsWith("video/")) {
                     groupVideoMetadata.push({
@@ -1575,7 +1540,7 @@ export default function AdCreationForm({
 
           // const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
           // const hasUngroupedFiles = (
-          //   files.some(file => !groupedFileIds.has(file.name) && file.size <= 100 * 1024 * 1024) ||
+          //   files.some(file => !groupedFileIds.has(file.name) && file.size <= S3_UPLOAD_THRESHOLD) ||
           //   smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
           //   [...s3Results, ...s3DriveResults].some(s3File =>
           //     !groupedFileIds.has(s3File.name) && !groupedFileIds.has(s3File.id)
@@ -1588,7 +1553,7 @@ export default function AdCreationForm({
 
             // Handle local files
             files.forEach((file, index) => {
-              if (file.size > 100 * 1024 * 1024 || groupedFileIds.has(file.name)) return; // Skip large files (already handled via S3)
+              if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(file.name)) return; // Skip large files (already handled via S3)
               const formData = new FormData();
               formData.append("adName", computeAdName(file, adValues.dateType, index));
               formData.append("headlines", JSON.stringify(headlines));
