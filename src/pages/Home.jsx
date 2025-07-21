@@ -306,6 +306,7 @@ export default function Home() {
                         setFileGroups={setFileGroups}
                         selectedAdSets={selectedAdSets}
                         adSets={adSets}
+                        duplicateAdSet={duplicateAdSet}
 
                     />
 

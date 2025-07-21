@@ -162,7 +162,8 @@ export default function MediaPreview({
   fileGroups,
   setFileGroups,
   selectedAdSets,
-  adSets
+  adSets,
+  duplicateAdSet
 }) {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
 
@@ -174,13 +175,30 @@ export default function MediaPreview({
     [selectedFiles.size]
   );
 
-  const hasOnlyNonDynamicCreativeAdSets = useMemo(() =>
-    selectedAdSets.length > 0 &&
-    selectedAdSets
-      .map(id => adSets.find(a => a.id === id))
-      .every(adset => adset && !adset.is_dynamic_creative),
-    [selectedAdSets, adSets]
-  );
+  // const hasOnlyNonDynamicCreativeAdSets = useMemo(() =>
+  //   selectedAdSets.length > 0 &&
+  //   selectedAdSets
+  //     .map(id => adSets.find(a => a.id === id))
+  //     .every(adset => adset && !adset.is_dynamic_creative),
+  //   [selectedAdSets, adSets]
+  // );
+
+  const hasOnlyNonDynamicCreativeAdSets = useMemo(() => {
+    // Check if we have selected non-dynamic adsets
+    if (selectedAdSets.length > 0) {
+      return selectedAdSets
+        .map(id => adSets.find(a => a.id === id))
+        .every(adset => adset && !adset.is_dynamic_creative);
+    }
+
+    // Check if we're duplicating a non-dynamic adset
+    if (duplicateAdSet) {
+      const originalAdset = adSets.find(a => a.id === duplicateAdSet);
+      return originalAdset && !originalAdset.is_dynamic_creative;
+    }
+
+    return false;
+  }, [selectedAdSets, adSets, duplicateAdSet]);
 
   const ungroupedFiles = useMemo(() =>
     files.filter(file =>

@@ -895,7 +895,7 @@ export default function AdAccountSettings({
                 <span className="font-semibold">
                   {selectedDynamicAdSets.map(a => a?.name || a?.id).join(", ")}
                 </span>
-                {" ' cannot have more than 1 ad. Please make sure it has no ads before posting"}
+                {" ' cannot have more than 1 ad."}
               </div>
             )}
 
