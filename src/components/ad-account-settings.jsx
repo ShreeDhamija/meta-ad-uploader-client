@@ -49,7 +49,7 @@ const sortAdSets = (adSets) => {
 };
 
 // Add constant
-const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
+// const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
 
 export default function AdAccountSettings({
   //isLoggedIn,
@@ -96,21 +96,21 @@ export default function AdAccountSettings({
   const [duplicateAdSetSearchValue, setDuplicateAdSetSearchValue] = useState("")
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("")
-  // const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
+  const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
   const [isAdAccountChanging, setIsAdAccountChanging] = useState(false);
   const navigate = useNavigate()
 
 
 
-  const selectedCampaignData = useMemo(() =>
-    campaigns.find(c => c.id === selectedCampaign),
-    [campaigns, selectedCampaign]
-  );
+  // const selectedCampaignData = useMemo(() =>
+  //   campaigns.find(c => c.id === selectedCampaign),
+  //   [campaigns, selectedCampaign]
+  // );
 
-  const isAdvantagePlusCampaign = useMemo(() =>
-    ADVANTAGE_PLUS_TYPES.includes(selectedCampaignData?.smart_promotion_type),
-    [selectedCampaignData?.smart_promotion_type]
-  );
+  // const isAdvantagePlusCampaign = useMemo(() =>
+  //   ADVANTAGE_PLUS_TYPES.includes(selectedCampaignData?.smart_promotion_type),
+  //   [selectedCampaignData?.smart_promotion_type]
+  // );
 
 
   const filteredAccounts = useMemo(() =>
@@ -134,9 +134,9 @@ export default function AdAccountSettings({
     [adSets, adSetSearchValue]
   );
 
-  // const isAdvantagePlusCampaign = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"].includes(
-  //   selectedCampaignData?.smart_promotion_type
-  // );
+  const isAdvantagePlusCampaign = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"].includes(
+    selectedCampaignData?.smart_promotion_type
+  );
   //console.log("🛑 isAdvantagePlusCampaign:", isAdvantagePlusCampaign);
 
 
