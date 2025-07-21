@@ -259,102 +259,6 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   return { progress, message, status };
 };
 
-// //Progress Tracker Hook
-// const useAdCreationProgress = (jobId, isCreatingAds) => {
-//   const [progress, setProgress] = useState(0);
-//   const [message, setMessage] = useState('');
-//   const [status, setStatus] = useState('idle');
-
-//   useEffect(() => {
-//     if (!jobId) return;
-
-//     // console.log('🔄 New jobId detected, resetting state:', jobId);
-//     setProgress(0);
-//     setMessage('');
-//     setStatus('idle');
-
-//     let retryCount = 0;
-//     const baseRetryDelay = 500;
-//     const maxRetryDelay = 5000;
-//     let isConnecting = true;
-
-//     const connectSSE = () => {
-//       if (!isConnecting) return;
-
-//       // console.log(`🔌 SSE attempt #${retryCount + 1} for:`, jobId);
-//       const eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
-
-//       eventSource.onmessage = (event) => {
-//         const data = JSON.parse(event.data);
-//         // console.log('📨 Raw SSE data received:', data);
-
-//         if (data.message === 'Job not found') {
-//           // console.log(`❌ Job not found, closing connection...`);
-//           eventSource.close();
-//           retryCount++;
-
-//           const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
-
-//           // console.log(`⏳ Retrying in ${delay}ms... (attempt ${retryCount})`);
-//           setTimeout(() => {
-//             if (isConnecting) {
-//               connectSSE();
-//             }
-//           }, delay);
-//           return;
-//         }
-
-//         retryCount = 0; // Reset retry counter on success
-//         // console.log('✅ Setting state - Progress:', data.progress, 'Status:', data.status);
-//         setProgress(data.progress);
-//         setMessage(data.message);
-//         setStatus(data.status);
-
-//         if (data.status === 'complete' || data.status === 'error') {
-//           // console.log('🏁 Job finished, closing SSE connection');
-//           eventSource.close();
-//           isConnecting = false;
-//         }
-//       };
-
-//       eventSource.onerror = (error) => {
-//         console.error('❌ SSE Error:', error);
-//         eventSource.close();
-
-//         if (isConnecting) {
-//           retryCount++;
-//           const delay = Math.min(baseRetryDelay * Math.pow(2, retryCount - 1), maxRetryDelay);
-//           setTimeout(() => {
-//             if (isConnecting) {
-//               connectSSE();
-//             }
-//           }, delay);
-//         }
-//       };
-//     };
-
-//     connectSSE();
-
-//     return () => {
-//       isConnecting = false;
-//     };
-//   }, [jobId]);
-
-
-
-//   useEffect(() => {
-
-//     if (!isCreatingAds) {
-//       // console.log('🧹 Job completely finished, resetting hook state');
-//       setProgress(0);
-//       setMessage('');
-//       setStatus('idle');
-//     }
-//   }, [isCreatingAds]);
-
-
-//   return { progress, message, status };
-// };
 
 export default function AdCreationForm({
   isLoading,
@@ -457,40 +361,143 @@ export default function AdCreationForm({
 
 
   // Upload large file to S3
+  // const uploadToS3 = async (file) => {
+  //   try {
+  //     // Get presigned URL
+  //     const response = await axios.post(
+  //       "https://api.withblip.com/auth/get-upload-url",
+  //       {
+  //         fileName: file.name,
+  //         fileType: file.type,
+  //         fileSize: file.size
+  //       },
+  //       { withCredentials: true }
+  //     )
+
+  //     const { uploadUrl, publicUrl } = response.data
+
+  //     // Upload directly to S3
+  //     await axios.put(uploadUrl, file, {
+  //       headers: {
+  //         'Content-Type': file.type,
+  //       }
+  //     });
+  //     // console.log(publicUrl);
+  //     return {
+  //       name: file.name,
+  //       type: file.type,
+  //       size: file.size,
+  //       s3Url: publicUrl,
+  //       isS3Upload: true
+  //     }
+  //   } catch (error) {
+  //     console.error('S3 upload failed:', error)
+  //     throw new Error(`Failed to upload ${file.name} to S3`)
+  //   }
+  // }
+
   const uploadToS3 = async (file) => {
+    // S3 requires parts to be at least 5MB, except for the last part.
+    // Choosing a larger chunk size (e.g., 10-25MB) can be more efficient.
+    const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+    // Concurrency limit for uploading chunks. 5 is a good starting point.
+    const limit = pLimit(5);
+
+    let uploadId = null;
+    let s3Key = null;
+
     try {
-      // Get presigned URL
-      const response = await axios.post(
-        "https://api.withblip.com/auth/get-upload-url",
+      // 1. Start multipart upload and get UploadId
+      console.log(`[${file.name}] Starting multipart upload...`);
+      const startResponse = await axios.post(
+        "https://api.withblip.com/auth/s3/start-upload",
         {
           fileName: file.name,
-          fileType: file.type,
-          fileSize: file.size
+          fileType: file.type
         },
         { withCredentials: true }
-      )
+      );
 
-      const { uploadUrl, publicUrl } = response.data
+      uploadId = startResponse.data.uploadId;
+      s3Key = startResponse.data.key;
 
-      // Upload directly to S3
-      await axios.put(uploadUrl, file, {
-        headers: {
-          'Content-Type': file.type,
-        }
+      // 2. Get presigned URLs for each part
+      console.log(`[${file.name}] Getting presigned URLs for ${totalChunks} chunks...`);
+      const urlsResponse = await axios.post(
+        "https://api.withblip.com/auth/s3/get-upload-urls",
+        {
+          key: s3Key,
+          uploadId: uploadId,
+          parts: totalChunks
+        },
+        { withCredentials: true }
+      );
+      const presignedUrls = urlsResponse.data.parts;
+
+      // 3. Upload chunks in parallel
+      console.log(`[${file.name}] Uploading ${totalChunks} chunks concurrently...`);
+      const uploadPromises = presignedUrls.map(part => {
+        const { partNumber, url } = part;
+        const start = (partNumber - 1) * CHUNK_SIZE;
+        const end = start + CHUNK_SIZE;
+        const chunk = file.slice(start, end);
+
+        // Use p-limit to control concurrency
+        return limit(async () => {
+          const uploadResponse = await axios.put(url, chunk, {
+            headers: { 'Content-Type': file.type }
+          });
+          // The ETag is a hash of the content, returned by S3. It's crucial for completion.
+          const etag = uploadResponse.headers.etag;
+          console.log(`[${file.name}] Chunk ${partNumber}/${totalChunks} uploaded.`);
+          return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') }; // S3 ETag is quoted
+        });
       });
-      // console.log(publicUrl);
+
+      const completedParts = await Promise.all(uploadPromises);
+
+      // 4. Complete the upload
+      console.log(`[${file.name}] Finalizing upload...`);
+      const completeResponse = await axios.post(
+        "https://api.withblip.com/auth/s3/complete-upload",
+        {
+          key: s3Key,
+          uploadId: uploadId,
+          parts: completedParts
+        },
+        { withCredentials: true }
+      );
+
+      console.log(`[${file.name}] Successfully uploaded to ${completeResponse.data.publicUrl}`);
       return {
         name: file.name,
         type: file.type,
         size: file.size,
-        s3Url: publicUrl,
+        s3Url: completeResponse.data.publicUrl,
         isS3Upload: true
-      }
+      };
+
     } catch (error) {
-      console.error('S3 upload failed:', error)
-      throw new Error(`Failed to upload ${file.name} to S3`)
+      console.error(`[${file.name}] S3 multipart upload failed:`, error);
+
+      // 5. Abort the upload on any failure
+      if (uploadId && s3Key) {
+        console.log(`[${file.name}] Aborting multipart upload...`);
+        await axios.post(
+          "https://api.withblip.com/auth/s3/abort-upload",
+          {
+            key: s3Key,
+            uploadId: uploadId
+          },
+          { withCredentials: true }
+        );
+      }
+
+      throw new Error(`Failed to upload ${file.name} to S3`);
     }
-  }
+  };
 
 
 
