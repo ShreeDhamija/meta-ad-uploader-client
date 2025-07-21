@@ -111,7 +111,7 @@ export default function Header() {
       {/* Action Buttons (Right) */}
       <div className="flex items-center gap-2 bg-white shadow-md border border-gray-300 rounded-[40px] px-3 py-2 ml-2">
         {/* Trial Status Button - only show if on trial and not loading */}
-        {/* {!subscriptionLoading && isOnTrial() && (
+        {!subscriptionLoading && isOnTrial() && (
           <>
             <button
               onClick={handleUpgrade}
@@ -134,7 +134,7 @@ export default function Header() {
         )}
 
         {/* Trial Expired Warning - only show if expired */}
-        {/* {!subscriptionLoading && isTrialExpired() && (
+        {!subscriptionLoading && isTrialExpired() && (
           <>
             <button
               onClick={handleUpgrade}
@@ -154,7 +154,7 @@ export default function Header() {
             </Button>
             <div className="h-8 w-px bg-gray-300" />
           </>
-        )}  */}
+        )}
 
         <button
           onClick={() => navigate("/settings")}

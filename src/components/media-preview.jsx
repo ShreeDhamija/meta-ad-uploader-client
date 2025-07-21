@@ -175,13 +175,7 @@ export default function MediaPreview({
     [selectedFiles.size]
   );
 
-  // const hasOnlyNonDynamicCreativeAdSets = useMemo(() =>
-  //   selectedAdSets.length > 0 &&
-  //   selectedAdSets
-  //     .map(id => adSets.find(a => a.id === id))
-  //     .every(adset => adset && !adset.is_dynamic_creative),
-  //   [selectedAdSets, adSets]
-  // );
+
 
   const hasOnlyNonDynamicCreativeAdSets = useMemo(() => {
     // Check if we have selected non-dynamic adsets
