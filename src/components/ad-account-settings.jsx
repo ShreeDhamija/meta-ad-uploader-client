@@ -49,7 +49,7 @@ const sortAdSets = (adSets) => {
 };
 
 // Add constant
-// const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
+const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
 
 export default function AdAccountSettings({
   //isLoggedIn,
@@ -96,21 +96,21 @@ export default function AdAccountSettings({
   const [duplicateAdSetSearchValue, setDuplicateAdSetSearchValue] = useState("")
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("")
-  const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
+  // const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
   const [isAdAccountChanging, setIsAdAccountChanging] = useState(false);
   const navigate = useNavigate()
 
 
 
-  // const selectedCampaignData = useMemo(() =>
-  //   campaigns.find(c => c.id === selectedCampaign),
-  //   [campaigns, selectedCampaign]
-  // );
+  const selectedCampaignData = useMemo(() =>
+    campaigns.find(c => c.id === selectedCampaign),
+    [campaigns, selectedCampaign]
+  );
 
-  // const isAdvantagePlusCampaign = useMemo(() =>
-  //   ADVANTAGE_PLUS_TYPES.includes(selectedCampaignData?.smart_promotion_type),
-  //   [selectedCampaignData?.smart_promotion_type]
-  // );
+  const isAdvantagePlusCampaign = useMemo(() =>
+    ADVANTAGE_PLUS_TYPES.includes(selectedCampaignData?.smart_promotion_type),
+    [selectedCampaignData?.smart_promotion_type]
+  );
 
 
   const filteredAccounts = useMemo(() =>
@@ -133,52 +133,6 @@ export default function AdAccountSettings({
     ),
     [adSets, adSetSearchValue]
   );
-
-  const isAdvantagePlusCampaign = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"].includes(
-    selectedCampaignData?.smart_promotion_type
-  );
-  //console.log("🛑 isAdvantagePlusCampaign:", isAdvantagePlusCampaign);
-
-
-  // const sortCampaigns = (campaigns) => {
-  //   const priority = { ACTIVE: 1, PAUSED: 2 };
-
-  //   return [...campaigns].sort((a, b) => {
-  //     const aPriority = priority[a.status] || 3;
-  //     const bPriority = priority[b.status] || 3;
-
-  //     if (aPriority !== bPriority) return aPriority - bPriority;
-
-  //     if (a.status === "ACTIVE" && b.status === "ACTIVE") {
-  //       const parseSpend = (camp) => {
-  //         const spend = parseFloat(camp.spend);
-  //         const safeSpend = isNaN(spend) ? 0 : spend;
-  //         return safeSpend;
-  //       };
-
-  //       const aSpend = parseSpend(a);
-  //       const bSpend = parseSpend(b);
-  //       return bSpend - aSpend;
-  //     }
-
-  //     return 0;
-  //   });
-  // };
-
-  // const sortAdSets = (adSets) => {
-  //   const priority = { ACTIVE: 1, PAUSED: 2 };
-  //   return [...adSets].sort((a, b) => {
-  //     const aPriority = priority[a.status] || 3;
-  //     const bPriority = priority[b.status] || 3;
-  //     if (aPriority !== bPriority) return aPriority - bPriority;
-
-  //     const aSpend = parseFloat(a.spend || 0);
-  //     const bSpend = parseFloat(b.spend || 0);
-  //     return bSpend - aSpend;
-  //   });
-  // };
-
-
 
 
   const handleAdAccountChange = useCallback(async (value) => {
