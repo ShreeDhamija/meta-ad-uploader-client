@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
-import { useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import CogIcon from '@/assets/icons/cog.svg?react';
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react';
@@ -20,6 +19,37 @@ import AdSetIcon from '@/assets/icons/grid.svg?react';
 import CopyIcon from '@/assets/icons/copy.svg?react';
 import { useNavigate } from "react-router-dom"
 
+
+// Move these functions outside the component - around line 20, before the component
+const sortCampaigns = (campaigns) => {
+  const priority = { ACTIVE: 1, PAUSED: 2 };
+  return [...campaigns].sort((a, b) => {
+    const aPriority = priority[a.status] || 3;
+    const bPriority = priority[b.status] || 3;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    if (a.status === "ACTIVE" && b.status === "ACTIVE") {
+      const aSpend = parseFloat(a.spend) || 0;
+      const bSpend = parseFloat(b.spend) || 0;
+      return bSpend - aSpend;
+    }
+    return 0;
+  });
+};
+
+const sortAdSets = (adSets) => {
+  const priority = { ACTIVE: 1, PAUSED: 2 };
+  return [...adSets].sort((a, b) => {
+    const aPriority = priority[a.status] || 3;
+    const bPriority = priority[b.status] || 3;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    const aSpend = parseFloat(a.spend || 0);
+    const bSpend = parseFloat(b.spend || 0);
+    return bSpend - aSpend;
+  });
+};
+
+// Add constant
+const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
 
 export default function AdAccountSettings({
   //isLoggedIn,
@@ -66,59 +96,92 @@ export default function AdAccountSettings({
   const [duplicateAdSetSearchValue, setDuplicateAdSetSearchValue] = useState("")
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("")
-  const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
+  // const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
   const [isAdAccountChanging, setIsAdAccountChanging] = useState(false);
   const navigate = useNavigate()
 
 
-  const isAdvantagePlusCampaign = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"].includes(
-    selectedCampaignData?.smart_promotion_type
+
+  const selectedCampaignData = useMemo(() =>
+    campaigns.find(c => c.id === selectedCampaign),
+    [campaigns, selectedCampaign]
   );
+
+  const isAdvantagePlusCampaign = useMemo(() =>
+    ADVANTAGE_PLUS_TYPES.includes(selectedCampaignData?.smart_promotion_type),
+    [selectedCampaignData?.smart_promotion_type]
+  );
+
+
+  const filteredAccounts = useMemo(() =>
+    adAccounts.filter((acct) =>
+      (acct.name?.toLowerCase() || acct.id.toLowerCase()).includes(searchValue.toLowerCase())
+    ),
+    [adAccounts, searchValue]
+  );
+
+  const filteredCampaigns = useMemo(() =>
+    campaigns.filter((camp) =>
+      (camp.name?.toLowerCase() || camp.id.toLowerCase()).includes(campaignSearchValue.toLowerCase())
+    ),
+    [campaigns, campaignSearchValue]
+  );
+
+  const filteredAdSets = useMemo(() =>
+    adSets.filter((adset) =>
+      (adset.name || adset.id).toLowerCase().includes(adSetSearchValue.toLowerCase())
+    ),
+    [adSets, adSetSearchValue]
+  );
+
+  // const isAdvantagePlusCampaign = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"].includes(
+  //   selectedCampaignData?.smart_promotion_type
+  // );
   //console.log("🛑 isAdvantagePlusCampaign:", isAdvantagePlusCampaign);
 
 
-  const sortCampaigns = (campaigns) => {
-    const priority = { ACTIVE: 1, PAUSED: 2 };
+  // const sortCampaigns = (campaigns) => {
+  //   const priority = { ACTIVE: 1, PAUSED: 2 };
 
-    return [...campaigns].sort((a, b) => {
-      const aPriority = priority[a.status] || 3;
-      const bPriority = priority[b.status] || 3;
+  //   return [...campaigns].sort((a, b) => {
+  //     const aPriority = priority[a.status] || 3;
+  //     const bPriority = priority[b.status] || 3;
 
-      if (aPriority !== bPriority) return aPriority - bPriority;
+  //     if (aPriority !== bPriority) return aPriority - bPriority;
 
-      if (a.status === "ACTIVE" && b.status === "ACTIVE") {
-        const parseSpend = (camp) => {
-          const spend = parseFloat(camp.spend);
-          const safeSpend = isNaN(spend) ? 0 : spend;
-          return safeSpend;
-        };
+  //     if (a.status === "ACTIVE" && b.status === "ACTIVE") {
+  //       const parseSpend = (camp) => {
+  //         const spend = parseFloat(camp.spend);
+  //         const safeSpend = isNaN(spend) ? 0 : spend;
+  //         return safeSpend;
+  //       };
 
-        const aSpend = parseSpend(a);
-        const bSpend = parseSpend(b);
-        return bSpend - aSpend;
-      }
+  //       const aSpend = parseSpend(a);
+  //       const bSpend = parseSpend(b);
+  //       return bSpend - aSpend;
+  //     }
 
-      return 0;
-    });
-  };
+  //     return 0;
+  //   });
+  // };
 
-  const sortAdSets = (adSets) => {
-    const priority = { ACTIVE: 1, PAUSED: 2 };
-    return [...adSets].sort((a, b) => {
-      const aPriority = priority[a.status] || 3;
-      const bPriority = priority[b.status] || 3;
-      if (aPriority !== bPriority) return aPriority - bPriority;
+  // const sortAdSets = (adSets) => {
+  //   const priority = { ACTIVE: 1, PAUSED: 2 };
+  //   return [...adSets].sort((a, b) => {
+  //     const aPriority = priority[a.status] || 3;
+  //     const bPriority = priority[b.status] || 3;
+  //     if (aPriority !== bPriority) return aPriority - bPriority;
 
-      const aSpend = parseFloat(a.spend || 0);
-      const bSpend = parseFloat(b.spend || 0);
-      return bSpend - aSpend;
-    });
-  };
-
-
+  //     const aSpend = parseFloat(a.spend || 0);
+  //     const bSpend = parseFloat(b.spend || 0);
+  //     return bSpend - aSpend;
+  //   });
+  // };
 
 
-  const handleAdAccountChange = async (value) => {
+
+
+  const handleAdAccountChange = useCallback(async (value) => {
     const adAccountId = value
     setSelectedAdAccount(adAccountId)
     setCampaigns([])
@@ -155,9 +218,9 @@ export default function AdAccountSettings({
       setIsLoading(false)
       setIsAdAccountChanging(false);
     }
-  }
+  });
 
-  const handleCampaignChange = async (value) => {
+  const handleCampaignChange = useCallback(async (value) => {
     const campaignId = value
     setSelectedCampaign(campaignId)
     setAdSets([])
@@ -196,9 +259,9 @@ export default function AdAccountSettings({
     } finally {
       setIsLoading(false)
     }
-  }
+  });
 
-  const handleAdSetCheckboxChange = (adsetId, checked) => {
+  const handleAdSetCheckboxChange = useCallback((adsetId, checked) => {
     if (checked) {
       setSelectedAdSets((prev) => [...prev, adsetId])
       // If selecting an ad set, we should hide the duplicate block
@@ -210,10 +273,10 @@ export default function AdAccountSettings({
     } else {
       setSelectedAdSets((prev) => prev.filter((id) => id !== adsetId))
     }
-  }
+  });
 
   // Refresh functions
-  const refreshAdAccounts = async () => {
+  const refreshAdAccounts = useCallback(async () => {
     setIsLoading(true)
     try {
       const res = await fetch("https://api.withblip.com/auth/fetch-ad-accounts", {
@@ -230,9 +293,9 @@ export default function AdAccountSettings({
     } finally {
       setIsLoading(false)
     }
-  }
+  });
 
-  const refreshCampaigns = async () => {
+  const refreshCampaigns = useCallback(async () => {
     if (!selectedAdAccount) return;
     setIsLoading(true);
 
@@ -256,10 +319,10 @@ export default function AdAccountSettings({
     } finally {
       setIsLoading(false);
     }
-  };
+  });
 
 
-  const refreshAdSets = async () => {
+  const refreshAdSets = useCallback(async () => {
     if (!selectedCampaign) return
     setIsLoading(true)
     try {
@@ -278,22 +341,24 @@ export default function AdAccountSettings({
     } finally {
       setIsLoading(false)
     }
-  }
+  });
 
   // Filtered data for comboboxes
-  const filteredAccounts = adAccounts.filter((acct) =>
-    (acct.name?.toLowerCase() || acct.id.toLowerCase()).includes(searchValue.toLowerCase()),
-  )
+  // const filteredAccounts = adAccounts.filter((acct) =>
+  //   (acct.name?.toLowerCase() || acct.id.toLowerCase()).includes(searchValue.toLowerCase()),
+  // )
 
-  const filteredCampaigns = campaigns.filter((camp) =>
-    (camp.name?.toLowerCase() || camp.id.toLowerCase()).includes(campaignSearchValue.toLowerCase()),
-  )
+  // const filteredCampaigns = campaigns.filter((camp) =>
+  //   (camp.name?.toLowerCase() || camp.id.toLowerCase()).includes(campaignSearchValue.toLowerCase()),
+  // )
 
-  const filteredAdSets = adSets.filter((adset) =>
-    (adset.name || adset.id).toLowerCase().includes(adSetSearchValue.toLowerCase()),
-  )
+  // const filteredAdSets = adSets.filter((adset) =>
+  //   (adset.name || adset.id).toLowerCase().includes(adSetSearchValue.toLowerCase()),
+  // )
 
-  const duplicateCampaignFunction = async () => {
+
+
+  const duplicateCampaignFunction = useCallback(async () => {
     if (!duplicateCampaign || !selectedAdAccount) {
       toast.error("Please select a campaign to duplicate");
       return;
@@ -358,7 +423,7 @@ export default function AdAccountSettings({
     } finally {
       setIsLoading(false);
     }
-  };
+  });
 
   // Auto-populate new ad set name when duplicate ad set is selected
   useEffect(() => {
@@ -384,11 +449,14 @@ export default function AdAccountSettings({
     }
   }, [duplicateCampaign, campaigns]);
 
-  const selectedDynamicAdSets = selectedAdSets
-    .map(id => adSets.find(a => a.id === id))
-    .filter(adset => adset?.is_dynamic_creative);
+  const selectedDynamicAdSets = useMemo(() =>
+    selectedAdSets
+      .map(id => adSets.find(a => a.id === id))
+      .filter(adset => adset?.is_dynamic_creative),
+    [selectedAdSets, adSets]
+  );
 
-  // const dynamicAdSetNames = selectedDynamicAdSets.map(a => a?.name || a?.id);
+
 
 
   return (

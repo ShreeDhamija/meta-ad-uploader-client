@@ -906,34 +906,6 @@ export default function AdCreationForm({
   };
 
 
-
-  // useEffect(() => {
-
-  //   // Generate thumbnails for local video files only
-  //   files.forEach((file) => {
-  //     if (file.type.startsWith("video/") && !videoThumbs[file.name]) {
-  //       generateThumbnail(file)
-  //         .then((thumb) => {
-  //           setVideoThumbs((prev) => ({ ...prev, [file.name]: thumb }));
-  //         })
-  //         .catch((err) => {
-  //           toast.error(`Thumbnail generation error: ${err}`);
-  //           console.error("Thumbnail generation error:", err);
-  //         });
-  //     }
-  //   });
-
-  //   // For Google Drive videos, just store the thumbnail URL
-  //   driveFiles.forEach((driveFile) => {
-  //     if (driveFile.mimeType.startsWith("video/") && !videoThumbs[driveFile.name]) {
-  //       const thumbnailUrl = getDriveVideoThumbnail(driveFile);
-  //       if (thumbnailUrl) {
-  //         setVideoThumbs((prev) => ({ ...prev, [driveFile.name]: thumbnailUrl }));
-  //       }
-  //     }
-  //   });
-  // }, [files, driveFiles, videoThumbs, generateThumbnail, setVideoThumbs]);
-
   useEffect(() => {
     const processThumbnails = async () => {
       const videoFiles = files.filter(file =>
@@ -1145,31 +1117,6 @@ export default function AdCreationForm({
 
 
     let aspectRatioMap = {};
-
-    // if (enablePlacementCustomization) {
-    //   setProgressMessage('Analyzing video files...');
-
-    //   try {
-    //     // Get aspect ratios for all video files
-    //     const allFiles = [...files, ...driveFiles];
-
-    //     for (const file of allFiles) {
-    //       const isVideo = file.type?.startsWith('video/') || file.mimeType?.startsWith('video/');
-    //       if (isVideo) {
-    //         const aspectRatio = await getVideoAspectRatio(file);
-    //         if (aspectRatio) {
-    //           // Use appropriate key based on file type
-    //           const key = file.id || file.name;
-    //           aspectRatioMap[key] = aspectRatio;
-    //         }
-    //       }
-    //     }
-    //   } catch (error) {
-    //     console.error('Error getting video aspect ratios:', error);
-    //     // Continue anyway with defaults
-    //   }
-    // }
-
     // Replace your existing code with this:
     if (enablePlacementCustomization) {
       setProgressMessage('Analyzing video files...');
