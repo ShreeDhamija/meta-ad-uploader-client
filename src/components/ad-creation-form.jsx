@@ -1133,7 +1133,7 @@ export default function AdCreationForm({
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
-    // Validate shop destination for shop automatic ad sets
+
     if (showShopDestinationSelector && !selectedShopDestination) {
       toast.error("Please select a shop destination for shop ads")
       return
