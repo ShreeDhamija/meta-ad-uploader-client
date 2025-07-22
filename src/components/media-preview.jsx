@@ -102,6 +102,16 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                 src={videoThumbs[file.name] || "https://api.withblip.com/thumbnail.jpg"}
                 alt={file.name}
                 className="w-full h-auto object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                }}
+                onLoad={(e) => {
+                  // Check if image actually rendered
+                  if (e.target.naturalWidth === 0) {
+                    e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                  }
+                }}
               />
             ) : (
               <div className="w-full h-32 bg-gray-200 flex items-center justify-center">

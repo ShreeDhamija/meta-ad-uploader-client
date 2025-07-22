@@ -1,6 +1,6 @@
 // "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, React } from "react"
 import { toast, Toaster } from "sonner"
 import { useNavigate } from "react-router-dom"
 
@@ -192,6 +192,39 @@ export default function Home() {
         );
     };
 
+    class ErrorBoundary extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = { hasError: false };
+        }
+
+        static getDerivedStateFromError(error) {
+            return { hasError: true };
+        }
+
+        componentDidCatch(error, errorInfo) {
+            console.error('Error caught:', error, errorInfo);
+        }
+
+        render() {
+            if (this.state.hasError) {
+                return (
+                    <div className="p-4 text-center">
+                        <p className="text-red-600 mb-2">Something went wrong</p>
+                        <button
+                            onClick={() => this.setState({ hasError: false })}
+                            className="px-4 py-2 bg-blue-500 text-white rounded"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                );
+            }
+
+            return this.props.children;
+        }
+    }
+
 
     return (
         <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
@@ -293,22 +326,24 @@ export default function Home() {
 
                 {/* <div className="flex-1 min-w-0"> */}
                 <div className="flex-1 xl:flex-[45] min-w-0" >
-                    <MediaPreview
-                        files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
-                        setFiles={setFiles}
-                        driveFiles={driveFiles}
-                        setDriveFiles={setDriveFiles}
-                        videoThumbs={videoThumbs}
-                        isCarouselAd={isCarouselAd}
-                        enablePlacementCustomization={enablePlacementCustomization}
-                        setEnablePlacementCustomization={setEnablePlacementCustomization}
-                        fileGroups={fileGroups}
-                        setFileGroups={setFileGroups}
-                        selectedAdSets={selectedAdSets}
-                        adSets={adSets}
-                        duplicateAdSet={duplicateAdSet}
+                    <ErrorBoundary>
+                        <MediaPreview
+                            files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
+                            setFiles={setFiles}
+                            driveFiles={driveFiles}
+                            setDriveFiles={setDriveFiles}
+                            videoThumbs={videoThumbs}
+                            isCarouselAd={isCarouselAd}
+                            enablePlacementCustomization={enablePlacementCustomization}
+                            setEnablePlacementCustomization={setEnablePlacementCustomization}
+                            fileGroups={fileGroups}
+                            setFileGroups={setFileGroups}
+                            selectedAdSets={selectedAdSets}
+                            adSets={adSets}
+                            duplicateAdSet={duplicateAdSet}
 
-                    />
+                        />
+                    </ErrorBoundary>
 
                 </div>
             </div>

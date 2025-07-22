@@ -843,26 +843,67 @@ export default function AdCreationForm({
 
 
   // Generate thumbnail from video file
+  // const generateThumbnail = useCallback((file) => {
+  //   return new Promise((resolve, reject) => {
+  //     const url = URL.createObjectURL(file)
+  //     const video = document.createElement("video")
+  //     video.preload = "metadata"
+  //     video.src = url
+  //     video.muted = true
+  //     video.playsInline = true
+  //     video.currentTime = 0.1
+  //     video.addEventListener("loadeddata", () => {
+  //       const canvas = document.createElement("canvas")
+  //       canvas.width = video.videoWidth
+  //       canvas.height = video.videoHeight
+  //       const ctx = canvas.getContext("2d")
+  //       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+  //       const dataURL = canvas.toDataURL()
+  //       URL.revokeObjectURL(url)
+  //       resolve(dataURL)
+  //     })
+  //     video.addEventListener("error", () => {
+  //       reject("Error generating thumbnail")
+  //     })
+  //   })
+  // }, [])
+
   const generateThumbnail = useCallback((file) => {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file)
       const video = document.createElement("video")
+
+      // CRITICAL: Add timeout
+      const timeout = setTimeout(() => {
+        URL.revokeObjectURL(url)
+        reject("Timeout")
+      }, 8000)
+
       video.preload = "metadata"
       video.src = url
       video.muted = true
       video.playsInline = true
       video.currentTime = 0.1
+
       video.addEventListener("loadeddata", () => {
-        const canvas = document.createElement("canvas")
-        canvas.width = video.videoWidth
-        canvas.height = video.videoHeight
-        const ctx = canvas.getContext("2d")
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-        const dataURL = canvas.toDataURL()
-        URL.revokeObjectURL(url)
-        resolve(dataURL)
+        clearTimeout(timeout) // Clear timeout on success
+        try {
+          const canvas = document.createElement("canvas")
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+          const ctx = canvas.getContext("2d")
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+          const dataURL = canvas.toDataURL()
+          URL.revokeObjectURL(url)
+          resolve(dataURL)
+        } catch (err) {
+          reject(err)
+        }
       })
+
       video.addEventListener("error", () => {
+        clearTimeout(timeout)
+        URL.revokeObjectURL(url)
         reject("Error generating thumbnail")
       })
     })
@@ -906,7 +947,11 @@ export default function AdCreationForm({
             .then(thumb => ({ name: file.name, thumb }))
             .catch(err => {
               console.error(`Thumbnail error for ${file.name}:`, err);
-              return null;
+              // Change this line from returning null to returning fallback:
+              return {
+                name: file.name,
+                thumb: "https://api.withblip.com/thumbnail.jpg"
+              };
             })
         );
 
