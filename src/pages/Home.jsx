@@ -52,6 +52,19 @@ class ErrorBoundary extends React.Component {
 }
 
 
+const sortAdSets = (adSets) => {
+    const priority = { ACTIVE: 1, PAUSED: 2 };
+    return [...adSets].sort((a, b) => {
+        const aPriority = priority[a.status] || 3;
+        const bPriority = priority[b.status] || 3;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        const aSpend = parseFloat(a.spend || 0);
+        const bSpend = parseFloat(b.spend || 0);
+        return bSpend - aSpend;
+    });
+};
+
+
 export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
     const navigate = useNavigate()
@@ -229,6 +242,27 @@ export default function Home() {
 
 
 
+    const refreshAdSets = useCallback(async () => {
+        if (!selectedCampaign) return
+        setIsLoading(true)
+        try {
+            const res = await fetch(
+                `https://api.withblip.com/auth/fetch-adsets?campaignId=${selectedCampaign}`,
+                { credentials: "include" },
+            )
+            const data = await res.json()
+            if (data.adSets) {
+                setAdSets(sortAdSets(data.adSets))
+                toast.success("Ad Sets refreshed successfully!")
+            }
+        } catch (err) {
+            toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error"}`)
+            console.error("Failed to fetch ad sets:", err)
+        } finally {
+            setIsLoading(false)
+        }
+    });
+
 
     return (
         <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
@@ -264,6 +298,8 @@ export default function Home() {
                         newCampaignName={newCampaignName}
                         setNewCampaignName={setNewCampaignName}
                         documentExists={documentExists}
+                        refreshAdSets={refreshAdSets}
+                        sortAdSets={sortAdSets}
                     />
 
                     <AdCreationForm
@@ -325,6 +361,7 @@ export default function Home() {
                         fileGroups={fileGroups}
                         setFileGroups={setFileGroups}
                         adAccountSettings={adAccountSettings}
+                        refreshAdSets={refreshAdSets}
                     />
                 </div>
 

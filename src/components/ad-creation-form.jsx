@@ -318,7 +318,8 @@ export default function AdCreationForm({
   setEnablePlacementCustomization,
   fileGroups,
   setFileGroups,
-  adAccountSettings
+  adAccountSettings,
+  refreshAdSets
 }) {
   // Local state
   const navigate = useNavigate()
@@ -842,32 +843,6 @@ export default function AdCreationForm({
 
 
 
-  // Generate thumbnail from video file
-  // const generateThumbnail = useCallback((file) => {
-  //   return new Promise((resolve, reject) => {
-  //     const url = URL.createObjectURL(file)
-  //     const video = document.createElement("video")
-  //     video.preload = "metadata"
-  //     video.src = url
-  //     video.muted = true
-  //     video.playsInline = true
-  //     video.currentTime = 0.1
-  //     video.addEventListener("loadeddata", () => {
-  //       const canvas = document.createElement("canvas")
-  //       canvas.width = video.videoWidth
-  //       canvas.height = video.videoHeight
-  //       const ctx = canvas.getContext("2d")
-  //       ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-  //       const dataURL = canvas.toDataURL()
-  //       URL.revokeObjectURL(url)
-  //       resolve(dataURL)
-  //     })
-  //     video.addEventListener("error", () => {
-  //       reject("Error generating thumbnail")
-  //     })
-  //   })
-  // }, [])
-
   const generateThumbnail = useCallback((file) => {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file)
@@ -1285,6 +1260,7 @@ export default function AdCreationForm({
       try {
         const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetName.trim());
         finalAdSetIds = [newAdSetId];
+        if (refreshAdSets) await refreshAdSets();
       } catch (error) {
         toast.error("Error duplicating ad set: " + (error.message || "Unknown error"));
         setIsLoading(false);

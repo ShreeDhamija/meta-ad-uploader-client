@@ -36,17 +36,17 @@ const sortCampaigns = (campaigns) => {
   });
 };
 
-const sortAdSets = (adSets) => {
-  const priority = { ACTIVE: 1, PAUSED: 2 };
-  return [...adSets].sort((a, b) => {
-    const aPriority = priority[a.status] || 3;
-    const bPriority = priority[b.status] || 3;
-    if (aPriority !== bPriority) return aPriority - bPriority;
-    const aSpend = parseFloat(a.spend || 0);
-    const bSpend = parseFloat(b.spend || 0);
-    return bSpend - aSpend;
-  });
-};
+// const sortAdSets = (adSets) => {
+//   const priority = { ACTIVE: 1, PAUSED: 2 };
+//   return [...adSets].sort((a, b) => {
+//     const aPriority = priority[a.status] || 3;
+//     const bPriority = priority[b.status] || 3;
+//     if (aPriority !== bPriority) return aPriority - bPriority;
+//     const aSpend = parseFloat(a.spend || 0);
+//     const bSpend = parseFloat(b.spend || 0);
+//     return bSpend - aSpend;
+//   });
+// };
 
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
@@ -81,7 +81,9 @@ export default function AdAccountSettings({
   setDuplicateCampaign,
   newCampaignName,
   setNewCampaignName,
-  documentExists
+  documentExists,
+  refreshAdSets,
+  sortAdSets
 
 }) {
   // Local state for comboboxes
@@ -276,39 +278,27 @@ export default function AdAccountSettings({
   });
 
 
-  const refreshAdSets = useCallback(async () => {
-    if (!selectedCampaign) return
-    setIsLoading(true)
-    try {
-      const res = await fetch(
-        `https://api.withblip.com/auth/fetch-adsets?campaignId=${selectedCampaign}`,
-        { credentials: "include" },
-      )
-      const data = await res.json()
-      if (data.adSets) {
-        setAdSets(sortAdSets(data.adSets))
-        toast.success("Ad Sets refreshed successfully!")
-      }
-    } catch (err) {
-      toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error"}`)
-      console.error("Failed to fetch ad sets:", err)
-    } finally {
-      setIsLoading(false)
-    }
-  });
+  // const refreshAdSets = useCallback(async () => {
+  //   if (!selectedCampaign) return
+  //   setIsLoading(true)
+  //   try {
+  //     const res = await fetch(
+  //       `https://api.withblip.com/auth/fetch-adsets?campaignId=${selectedCampaign}`,
+  //       { credentials: "include" },
+  //     )
+  //     const data = await res.json()
+  //     if (data.adSets) {
+  //       setAdSets(sortAdSets(data.adSets))
+  //       toast.success("Ad Sets refreshed successfully!")
+  //     }
+  //   } catch (err) {
+  //     toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error"}`)
+  //     console.error("Failed to fetch ad sets:", err)
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // });
 
-  // Filtered data for comboboxes
-  // const filteredAccounts = adAccounts.filter((acct) =>
-  //   (acct.name?.toLowerCase() || acct.id.toLowerCase()).includes(searchValue.toLowerCase()),
-  // )
-
-  // const filteredCampaigns = campaigns.filter((camp) =>
-  //   (camp.name?.toLowerCase() || camp.id.toLowerCase()).includes(campaignSearchValue.toLowerCase()),
-  // )
-
-  // const filteredAdSets = adSets.filter((adset) =>
-  //   (adset.name || adset.id).toLowerCase().includes(adSetSearchValue.toLowerCase()),
-  // )
 
 
 
