@@ -1469,8 +1469,6 @@ export default function AdCreationForm({
         nonDynamicAdSetIds.forEach((adSetId) => {
 
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
-
-
           const hasUngroupedFiles = (
             files.some(file => !groupedFileIds.has(file.name) && file.size <= S3_UPLOAD_THRESHOLD) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
@@ -1478,6 +1476,8 @@ export default function AdCreationForm({
               !groupedFileIds.has(s3File.name) && !groupedFileIds.has(s3File.id)
             )
           );
+
+          let globalIterationIndex = 0;
 
           // NEW: Check if placement customization is enabled
           if (enablePlacementCustomization && fileGroups.length > 0) {
@@ -1493,7 +1493,7 @@ export default function AdCreationForm({
                 [...s3Results, ...s3DriveResults].find(f => f.name === firstFileId);
 
               const formData = new FormData();
-              formData.append("adName", computeAdName(firstFileForNaming || files[0] || driveFiles[0], adValues.dateType)); // ✅ FIXED
+              formData.append("adName", computeAdName(firstFileForNaming || files[0] || driveFiles[0], adValues.dateType, globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -1580,17 +1580,9 @@ export default function AdCreationForm({
                   headers: { "Content-Type": "multipart/form-data" },
                 })
               );
+              globalIterationIndex++;
             });
           }
-
-          // const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
-          // const hasUngroupedFiles = (
-          //   files.some(file => !groupedFileIds.has(file.name) && file.size <= S3_UPLOAD_THRESHOLD) ||
-          //   smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
-          //   [...s3Results, ...s3DriveResults].some(s3File =>
-          //     !groupedFileIds.has(s3File.name) && !groupedFileIds.has(s3File.id)
-          //   )
-          // );
 
 
           if (hasUngroupedFiles) {
@@ -1600,7 +1592,7 @@ export default function AdCreationForm({
             files.forEach((file, index) => {
               if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(file.name)) return; // Skip large files (already handled via S3)
               const formData = new FormData();
-              formData.append("adName", computeAdName(file, adValues.dateType, index));
+              formData.append("adName", computeAdName(file, adValues.dateType, globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -1628,13 +1620,14 @@ export default function AdCreationForm({
                   headers: { "Content-Type": "multipart/form-data" },
                 })
               );
+              globalIterationIndex++;
             });
 
             // Handle small drive files
             smallDriveFiles.forEach((driveFile, index) => {
               if (groupedFileIds.has(driveFile.id)) return;
               const formData = new FormData();
-              formData.append("adName", computeAdName(driveFile, adValues.dateType, index));
+              formData.append("adName", computeAdName(driveFile, adValues.dateType, globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -1663,6 +1656,7 @@ export default function AdCreationForm({
                   headers: { "Content-Type": "multipart/form-data" },
                 })
               );
+              globalIterationIndex++;
             });
 
             // Handle S3 uploaded files
@@ -1671,7 +1665,7 @@ export default function AdCreationForm({
                 return; // Skip grouped files
               }
               const formData = new FormData();
-              formData.append("adName", computeAdName(s3File, adValues.dateType, index));
+              formData.append("adName", computeAdName(s3File, adValues.dateType, globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -1696,6 +1690,7 @@ export default function AdCreationForm({
                   headers: { "Content-Type": "multipart/form-data" },
                 })
               );
+              globalIterationIndex++;
             });
 
           } // Close else block
