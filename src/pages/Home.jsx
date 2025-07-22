@@ -259,7 +259,7 @@ export default function Home() {
             toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error"}`)
             console.error("Failed to fetch ad sets:", err)
         } finally {
-            setIsLoading(false)
+            // setIsLoading(false)
         }
     });
 
