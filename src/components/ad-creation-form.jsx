@@ -1260,7 +1260,7 @@ export default function AdCreationForm({
       try {
         const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetName.trim());
         finalAdSetIds = [newAdSetId];
-        if (refreshAdSets) await refreshAdSets();
+        // if (refreshAdSets) await refreshAdSets();
       } catch (error) {
         toast.error("Error duplicating ad set: " + (error.message || "Unknown error"));
         setIsLoading(false);
