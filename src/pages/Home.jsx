@@ -17,6 +17,41 @@ import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useSubscription from "@/lib/useSubscriptionSettings"
 
 
+
+class ErrorBoundary extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error) {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error, errorInfo) {
+        console.error('Error caught:', error, errorInfo);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="p-4 text-center">
+                    <p className="text-red-600 mb-2">Something went wrong</p>
+                    <button
+                        onClick={() => this.setState({ hasError: false })}
+                        className="px-4 py-2 bg-blue-500 text-white rounded"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
+}
+
+
 export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
     const navigate = useNavigate()
@@ -192,38 +227,7 @@ export default function Home() {
         );
     };
 
-    class ErrorBoundary extends React.Component {
-        constructor(props) {
-            super(props);
-            this.state = { hasError: false };
-        }
 
-        static getDerivedStateFromError(error) {
-            return { hasError: true };
-        }
-
-        componentDidCatch(error, errorInfo) {
-            console.error('Error caught:', error, errorInfo);
-        }
-
-        render() {
-            if (this.state.hasError) {
-                return (
-                    <div className="p-4 text-center">
-                        <p className="text-red-600 mb-2">Something went wrong</p>
-                        <button
-                            onClick={() => this.setState({ hasError: false })}
-                            className="px-4 py-2 bg-blue-500 text-white rounded"
-                        >
-                            Try Again
-                        </button>
-                    </div>
-                );
-            }
-
-            return this.props.children;
-        }
-    }
 
 
     return (
