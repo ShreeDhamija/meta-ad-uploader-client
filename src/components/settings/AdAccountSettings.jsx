@@ -204,6 +204,58 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   }, [adSettings, selectedAdAccount])
 
 
+  const handleSave = async () => {
+    if (!selectedAdAccount) {
+      alert("Select an Ad Account first")
+      return
+    }
+
+    // ✅ REORGANIZE: Move selected items to top, unselected to bottom
+    const reorganizedFormula = {
+      ...adNameFormula,
+      order: [
+        // First: all selected items (maintaining their relative order)
+        ...adNameFormula.order.filter(item => adNameFormula.selected.includes(item)),
+        // Then: all unselected items (maintaining their relative order)  
+        ...adNameFormula.order.filter(item => !adNameFormula.selected.includes(item))
+      ]
+    };
+
+    const adAccountSettings = {
+      defaultPage: selectedPage,
+      defaultInstagram: selectedInstagram,
+      defaultLink,
+      defaultCTA,
+      defaultUTMs: utmPairs,
+      creativeEnhancements: enhancements,
+      adNameFormula: reorganizedFormula // ✅ Use reorganized formula
+    }
+
+    try {
+      await saveSettings({
+        adAccountId: selectedAdAccount,
+        adAccountSettings,
+      })
+
+      // ✅ Update local state with reorganized order
+      setAdNameFormula(reorganizedFormula);
+
+      toast.success("Ad account settings saved!")
+      setInitialSettings({
+        defaultPage: selectedPage,
+        defaultInstagram: selectedInstagram,
+        defaultLink,
+        defaultCTA,
+        defaultUTMs: utmPairs,
+        creativeEnhancements: enhancements,
+        adNameFormula: reorganizedFormula // ✅ Use reorganized formula for initial settings too
+      })
+      setIsDirty(false)
+    } catch (err) {
+      toast.error("Failed to save ad account settings: " + err.message)
+    }
+  }
+
   return (
     <div className="space-y-6 w-full max-w-3xl">
       {/* Ad Account Dropdown */}
@@ -390,7 +442,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
 
           <div className="pt-2">
-            <Button
+            {/* <Button
               id="main-save-button"
               className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[45px]"
               onClick={async () => {
@@ -423,6 +475,14 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
             >
               Save Settings
             </Button>
+             */}
+            <Button
+              id="main-save-button"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[45px]"
+              onClick={handleSave}
+            >
+              Save Settings
+            </Button>
           </div>
         </div>
       </fieldset>
@@ -441,33 +501,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         >
           <Button
             className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg rounded-xl"
-            //style={{ borderRadius: "12px" }}
-            onClick={async () => {
-              if (!selectedAdAccount) return
-              //const cleanedUTMs = utmPairs.filter((pair) => pair.key && pair.value)
-              const adAccountSettings = {
-                defaultPage: selectedPage,
-                defaultInstagram: selectedInstagram,
-                defaultLink,
-                defaultCTA,
-                defaultUTMs: utmPairs, // ✅ always include full list, even blank ones
-                creativeEnhancements: enhancements,
-                adNameFormula: adNameFormula // Add this line
-
-              }
-
-              try {
-                await saveSettings({
-                  adAccountId: selectedAdAccount,
-                  adAccountSettings,
-                })
-                toast.success("Ad account settings saved!")
-                setInitialSettings(adAccountSettings)
-                setIsDirty(false)
-              } catch (err) {
-                toast.error("Failed to save ad account settings: " + err.message)
-              }
-            }}
+            onClick={handleSave}
           >
             Save Settings
           </Button>
