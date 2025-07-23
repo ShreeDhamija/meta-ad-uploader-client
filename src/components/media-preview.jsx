@@ -354,17 +354,26 @@ export default function MediaPreview({
 
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
+    if (!over || active.id === over.id) return;
 
-    if (active.id !== over?.id) {
-      const oldIndex = files.findIndex(file => (file.isDrive ? file.id : file.name) === active.id);
-      const newIndex = files.findIndex(file => (file.isDrive ? file.id : file.name) === over.id);
+    // Combine all files (local + drive) in current order
+    const allFiles = [
+      ...files,
+      ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)),
+    ];
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newFiles = arrayMove(files, oldIndex, newIndex);
-        setFiles(newFiles);
-      }
+    const getFileKey = (file) => file.isDrive ? file.id : file.name;
+    const oldIndex = allFiles.findIndex(file => getFileKey(file) === active.id);
+    const newIndex = allFiles.findIndex(file => getFileKey(file) === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newAllFiles = arrayMove(allFiles, oldIndex, newIndex);
+      // After reordering, split back into files and driveFiles
+      setFiles(newAllFiles.filter(f => !f.isDrive));
+      setDriveFiles(newAllFiles.filter(f => f.isDrive));
     }
-  }, [files, setFiles]);
+  }, [files, driveFiles, setFiles, setDriveFiles]);
+
 
   const preload = new Image();
 
