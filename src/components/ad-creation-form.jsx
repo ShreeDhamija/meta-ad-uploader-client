@@ -406,26 +406,7 @@ export default function AdCreationForm({
       // 3. Upload chunks in parallel
       let uploadedChunks = 0;
 
-      // const uploadPromises = presignedUrls.map(part => {
-      //   const { partNumber, url } = part;
-      //   const start = (partNumber - 1) * CHUNK_SIZE;
-      //   const end = start + CHUNK_SIZE;
-      //   const chunk = file.slice(start, end);
 
-      //   return limit(async () => {
-      //     const uploadResponse = await axios.put(url, chunk, {
-      //       headers: { 'Content-Type': file.type }
-      //     });
-      //     const etag = uploadResponse.headers.etag;
-      //     uploadedChunks++;
-      //     if (onProgress) {
-      //       // Percent for this file only (out of 50%)
-      //       const percent = Math.round((uploadedChunks / totalChunks) * 50); // uploads are first half (0-50%)
-      //       onProgress(percent, `Uploading ${file.name}`);
-      //     }
-      //     return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') };
-      //   });
-      // });
 
       const uploadPromises = presignedUrls.map(part => {
         const { partNumber, url } = part;
@@ -1272,7 +1253,7 @@ export default function AdCreationForm({
 
       setProgress(100);
       setProgressMessage('S3 uploads complete! Creating ads...');
-      toast.success("Large video files uploaded!");
+      toast.success("Video files uploaded!");
     }
 
     // 🔧 NOW start the actual job (50-100% progress)
