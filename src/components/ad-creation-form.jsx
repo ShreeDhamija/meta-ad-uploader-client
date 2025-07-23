@@ -364,7 +364,110 @@ export default function AdCreationForm({
   const S3_UPLOAD_THRESHOLD = 40 * 1024 * 1024; // 40 MB
 
 
-  const uploadToS3 = async (file) => {
+  // const uploadToS3 = async (file) => {
+  //   // S3 requires parts to be at least 5MB, except for the last part.
+  //   // Choosing a larger chunk size (e.g., 10-25MB) can be more efficient.
+  //   const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
+  //   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+  //   // Concurrency limit for uploading chunks. 5 is a good starting point.
+  //   const limit = pLimit(5);
+
+  //   let uploadId = null;
+  //   let s3Key = null;
+
+  //   try {
+  //     // 1. Start multipart upload and get UploadId
+  //     console.log(`[${file.name}] Starting multipart upload...`);
+  //     const startResponse = await axios.post(
+  //       "https://api.withblip.com/auth/s3/start-upload",
+  //       {
+  //         fileName: file.name,
+  //         fileType: file.type
+  //       },
+  //       { withCredentials: true }
+  //     );
+
+  //     uploadId = startResponse.data.uploadId;
+  //     s3Key = startResponse.data.key;
+
+  //     // 2. Get presigned URLs for each part
+  //     console.log(`[${file.name}] Getting presigned URLs for ${totalChunks} chunks...`);
+  //     const urlsResponse = await axios.post(
+  //       "https://api.withblip.com/auth/s3/get-upload-urls",
+  //       {
+  //         key: s3Key,
+  //         uploadId: uploadId,
+  //         parts: totalChunks
+  //       },
+  //       { withCredentials: true }
+  //     );
+  //     const presignedUrls = urlsResponse.data.parts;
+
+  //     // 3. Upload chunks in parallel
+  //     console.log(`[${file.name}] Uploading ${totalChunks} chunks concurrently...`);
+  //     const uploadPromises = presignedUrls.map(part => {
+  //       const { partNumber, url } = part;
+  //       const start = (partNumber - 1) * CHUNK_SIZE;
+  //       const end = start + CHUNK_SIZE;
+  //       const chunk = file.slice(start, end);
+
+  //       // Use p-limit to control concurrency
+  //       return limit(async () => {
+  //         const uploadResponse = await axios.put(url, chunk, {
+  //           headers: { 'Content-Type': file.type }
+  //         });
+  //         // The ETag is a hash of the content, returned by S3. It's crucial for completion.
+  //         const etag = uploadResponse.headers.etag;
+  //         console.log(`[${file.name}] Chunk ${partNumber}/${totalChunks} uploaded.`);
+  //         return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') }; // S3 ETag is quoted
+  //       });
+  //     });
+
+  //     const completedParts = await Promise.all(uploadPromises);
+
+  //     // 4. Complete the upload
+  //     console.log(`[${file.name}] Finalizing upload...`);
+  //     const completeResponse = await axios.post(
+  //       "https://api.withblip.com/auth/s3/complete-upload",
+  //       {
+  //         key: s3Key,
+  //         uploadId: uploadId,
+  //         parts: completedParts
+  //       },
+  //       { withCredentials: true }
+  //     );
+
+  //     console.log(`[${file.name}] Successfully uploaded to ${completeResponse.data.publicUrl}`);
+  //     return {
+  //       name: file.name,
+  //       type: file.type,
+  //       size: file.size,
+  //       s3Url: completeResponse.data.publicUrl,
+  //       isS3Upload: true
+  //     };
+
+  //   } catch (error) {
+  //     console.error(`[${file.name}] S3 multipart upload failed:`, error);
+
+  //     // 5. Abort the upload on any failure
+  //     if (uploadId && s3Key) {
+  //       console.log(`[${file.name}] Aborting multipart upload...`);
+  //       await axios.post(
+  //         "https://api.withblip.com/auth/s3/abort-upload",
+  //         {
+  //           key: s3Key,
+  //           uploadId: uploadId
+  //         },
+  //         { withCredentials: true }
+  //       );
+  //     }
+
+  //     throw new Error(`Failed to upload ${file.name} to S3`);
+  //   }
+  // };
+
+  const uploadToS3 = async (file, onProgress = null) => {
     // S3 requires parts to be at least 5MB, except for the last part.
     // Choosing a larger chunk size (e.g., 10-25MB) can be more efficient.
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -419,6 +522,12 @@ export default function AdCreationForm({
           });
           // The ETag is a hash of the content, returned by S3. It's crucial for completion.
           const etag = uploadResponse.headers.etag;
+
+          // Call progress callback after each chunk completes
+          if (onProgress) {
+            onProgress();
+          }
+
           console.log(`[${file.name}] Chunk ${partNumber}/${totalChunks} uploaded.`);
           return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') }; // S3 ETag is quoted
         });
@@ -467,12 +576,32 @@ export default function AdCreationForm({
     }
   };
 
+  // async function uploadDriveFileToS3(file) {
+  //   const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
 
-  async function uploadDriveFileToS3(file) {
+
+  //   const res = await fetch("https://api.withblip.com/api/upload-from-drive", {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json"
+  //     },
+  //     body: JSON.stringify({
+  //       driveFileUrl: driveDownloadUrl,
+  //       fileName: file.name,
+  //       mimeType: file.mimeType,
+  //       accessToken: file.accessToken,
+  //       size: file.size// ✅ Pass the access token from the file object
+  //     })
+  //   });
+
+  //   const data = await res.json();
+  //   if (!res.ok) throw new Error(data.error || "S3 upload failed again");
+  //   return data.s3Url;
+  // }
+
+  async function uploadDriveFileToS3(file, onProgress = null) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
-
-
 
     const res = await fetch("https://api.withblip.com/api/upload-from-drive", {
       method: "POST",
@@ -484,20 +613,25 @@ export default function AdCreationForm({
         fileName: file.name,
         mimeType: file.mimeType,
         accessToken: file.accessToken,
-        size: file.size// ✅ Pass the access token from the file object
+        size: file.size
       })
     });
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "S3 upload failed again");
+
+    // Call progress callback when upload completes
+    // Note: This only tracks completion, not chunked progress since that happens on your backend
+    if (onProgress) {
+      onProgress();
+    }
+
     return data.s3Url;
   }
 
 
 
 
-
-  // CTA options
   const ctaOptions = [
     { value: "LEARN_MORE", label: "Learn More" },
     { value: "SHOP_NOW", label: "Shop Now" },
@@ -1172,6 +1306,78 @@ export default function AdCreationForm({
 
     setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
+    // const largeFiles = files.filter((file) =>
+    //   file.type.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
+    // );
+
+    // // Step: Upload large Drive videos to S3
+    // const largeDriveFiles = driveFiles.filter(file =>
+    //   file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
+    // );
+
+    // let s3Results = [];
+    // const s3DriveResults = [];
+
+    // const totalLargeFiles = largeFiles.length + largeDriveFiles.length;
+    // if (totalLargeFiles > 0) {
+    //   setProgressMessage(`Uploading ${totalLargeFiles} videos...`);
+
+    //   // Set up concurrency limiter
+    //   const limit = pLimit(3)
+    //   // Upload regular large files with concurrency control
+    //   const uploadPromises = largeFiles.map(file =>
+    //     limit(() => uploadToS3(file)) // Your existing function unchanged
+    //   );
+
+    //   const results = await Promise.allSettled(uploadPromises);
+
+    //   // Process regular file results
+    //   results.forEach((result, index) => {
+    //     if (result.status === 'fulfilled') {
+    //       const uploadResult = result.value;
+    //       if (enablePlacementCustomization && aspectRatioMap[largeFiles[index].name]) {
+    //         uploadResult.aspectRatio = aspectRatioMap[largeFiles[index].name];
+    //       }
+    //       s3Results.push(uploadResult);
+    //     } else {
+    //       toast.error(`Failed to upload ${largeFiles[index].name}`);
+    //       console.error(`❌ Failed to upload ${largeFiles[index].name}:`, result.reason);
+    //     }
+    //   });
+
+    //   // Upload Drive files with concurrency control
+    //   const driveUploadPromises = largeDriveFiles.map(file =>
+    //     limit(() => uploadDriveFileToS3(file)) // Your existing function unchanged
+    //   );
+
+    //   const driveResults = await Promise.allSettled(driveUploadPromises);
+
+    //   // Process Drive file results
+    //   driveResults.forEach((result, index) => {
+    //     if (result.status === 'fulfilled') {
+    //       const s3Url = result.value;
+    //       const uploadResult = {
+    //         ...largeDriveFiles[index],
+    //         s3Url
+    //       };
+    //       // Include aspect ratio if we have it
+    //       if (enablePlacementCustomization && aspectRatioMap[largeDriveFiles[index].id]) {
+    //         uploadResult.aspectRatio = aspectRatioMap[largeDriveFiles[index].id];
+    //       }
+    //       s3DriveResults.push(uploadResult);
+    //     } else {
+    //       toast.error(`Failed to upload Drive video: ${largeDriveFiles[index].name}`);
+    //       console.error("❌ Drive to S3 upload failed", result.reason);
+    //     }
+    //   });
+
+    //   setProgress(50);
+    //   setProgressMessage('S3 uploads complete! Creating ads...');
+    //   toast.success("Large video files uploaded!");
+    // }
+
+
+
     const largeFiles = files.filter((file) =>
       file.type.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
     );
@@ -1188,12 +1394,25 @@ export default function AdCreationForm({
     if (totalLargeFiles > 0) {
       setProgressMessage(`Uploading ${totalLargeFiles} videos...`);
 
+      // Add progress tracking variables
+      let completedFiles = 0;
+      const updateUploadProgress = () => {
+        const progress = Math.min((completedFiles / totalLargeFiles) * 100, 100);
+        setProgress(progress);
+        setProgressMessage(`Uploading videos... ${completedFiles}/${totalLargeFiles} files completed`);
+      };
+
       // Set up concurrency limiter
       const limit = pLimit(3);
 
       // Upload regular large files with concurrency control
       const uploadPromises = largeFiles.map(file =>
-        limit(() => uploadToS3(file)) // Your existing function unchanged
+        limit(async () => {
+          const result = await uploadToS3(file);
+          completedFiles++;
+          updateUploadProgress();
+          return result;
+        })
       );
 
       const results = await Promise.allSettled(uploadPromises);
@@ -1214,7 +1433,12 @@ export default function AdCreationForm({
 
       // Upload Drive files with concurrency control
       const driveUploadPromises = largeDriveFiles.map(file =>
-        limit(() => uploadDriveFileToS3(file)) // Your existing function unchanged
+        limit(async () => {
+          const result = await uploadDriveFileToS3(file);
+          completedFiles++;
+          updateUploadProgress();
+          return result;
+        })
       );
 
       const driveResults = await Promise.allSettled(driveUploadPromises);
@@ -1238,10 +1462,15 @@ export default function AdCreationForm({
         }
       });
 
-      setProgress(50);
+      setProgress(100);
       setProgressMessage('S3 uploads complete! Creating ads...');
       toast.success("Large video files uploaded!");
     }
+
+    // 🔧 NOW reset and start the backend job
+    setProgress(0);
+    setProgressMessage('Starting ad creation...');
+
 
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
