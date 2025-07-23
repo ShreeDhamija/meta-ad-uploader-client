@@ -340,6 +340,18 @@ export default function MediaPreview({
     return null;
   }, [fileGroups]);
 
+  // const handleDragEnd = useCallback((event) => {
+  //   const { active, over } = event;
+
+  //   if (active.id !== over?.id) {
+  //     const oldIndex = files.findIndex(file => (file.isDrive ? file.id : file.name) === active.id);
+  //     const newIndex = files.findIndex(file => (file.isDrive ? file.id : file.name) === over.id);
+
+  //     const newFiles = arrayMove(files, oldIndex, newIndex);
+  //     setFiles(newFiles);
+  //   }
+  // }, [files, setFiles]);
+
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
 
@@ -347,8 +359,10 @@ export default function MediaPreview({
       const oldIndex = files.findIndex(file => (file.isDrive ? file.id : file.name) === active.id);
       const newIndex = files.findIndex(file => (file.isDrive ? file.id : file.name) === over.id);
 
-      const newFiles = arrayMove(files, oldIndex, newIndex);
-      setFiles(newFiles);
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newFiles = arrayMove(files, oldIndex, newIndex);
+        setFiles(newFiles);
+      }
     }
   }, [files, setFiles]);
 
