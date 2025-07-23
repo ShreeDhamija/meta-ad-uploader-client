@@ -458,10 +458,6 @@ export default function AdCreationForm({
         { withCredentials: true }
       );
 
-      if (onProgress) {
-        onProgress(50, `${file.name} upload complete!`);
-      }
-
       return {
         name: file.name,
         type: file.type,
@@ -1209,24 +1205,6 @@ export default function AdCreationForm({
       // Set up concurrency limiter
       const limit = pLimit(3)
 
-      // let uploadedFiles = 0;
-      // const totalFiles = largeFiles.length;
-
-      // const uploadPromises = largeFiles.map((file) =>
-      //   limit(() =>
-      //     uploadToS3(file, (filePercent, msg) => {
-      //       // Calculate overall progress (uploads = 0-50%)
-      //       const percent = Math.round(
-      //         ((uploadedFiles + filePercent / 50) / totalFiles) * 50
-      //       );
-      //       setProgress(percent);
-      //       setProgressMessage(msg);
-      //     }).then((res) => {
-      //       uploadedFiles++;
-      //       return res;
-      //     })
-      //   )
-      // );
 
       const CHUNK_SIZE = 10 * 1024 * 1024;
       const allFiles = largeFiles; // Or largeFiles + largeDriveFiles if needed
@@ -1241,7 +1219,7 @@ export default function AdCreationForm({
         uploadedChunks += 1;
         const percent = Math.round((uploadedChunks / totalChunksAllFiles) * 100);
         setProgress(percent);
-        setProgressMessage(`Uploading ${uploadedChunks} / ${totalChunksAllFiles} chunks...`);
+        setProgressMessage("Uploading files for processing...");
       };
 
       const uploadPromises = largeFiles.map(file =>
