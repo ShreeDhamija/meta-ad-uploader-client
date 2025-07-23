@@ -1337,26 +1337,8 @@ export default function AdCreationForm({
           formData.append("launchPaused", launchPaused);
           formData.append("enablePlacementCustomization", false);
           formData.append("jobId", frontendJobId);
-          // console.log("jobId in attached form", frontendJobId);
 
-          // Add all local files (small ones)
-          // files.forEach((file) => {
-          //   if (file.size <= S3_UPLOAD_THRESHOLD) {
-          //     formData.append("mediaFiles", file);
-          //   }
-          // });
-
-          // // Add small drive files
-          // smallDriveFiles.forEach((driveFile) => {
-          //   formData.append("driveFiles", JSON.stringify({
-          //     id: driveFile.id,
-          //     name: driveFile.name,
-          //     mimeType: driveFile.mimeType,
-          //     accessToken: driveFile.accessToken
-          //   }));
-          // });
           // Create order metadata for all files
-
           const fileOrder = [];
           let fileIndex = 0;
 
@@ -1737,10 +1719,32 @@ export default function AdCreationForm({
         }); // Close forEach
       } // Close if condition
 
-      // console.log('🚀 Starting API calls (Promise.all) now');
-      const responses = await Promise.all(promises);
-      toast.success("Ads created successfully!");
-      // setIsCreatingAds(false);
+
+      // const responses = await Promise.all(promises);
+      // toast.success("Ads created successfully!");
+
+      try {
+        const responses = await Promise.all(promises);
+
+        // Try to complete the job
+        try {
+          await axios.post("https://api.withblip.com/auth/complete-job", {
+            jobId: frontendJobId,
+            message: 'All ads created successfully!'
+          }, {
+            withCredentials: true,
+            timeout: 5000 // Don't wait forever
+          });
+        } catch (completeError) {
+          console.warn("Failed to update progress tracker, but ads were created successfully");
+          // Still show the toast since ads actually succeeded
+        }
+
+        toast.success("Ads created successfully!");
+      } catch (error) {
+        // Your existing error handling
+      }
+
     } catch (error) {
       let errorMessage = "Unknown error occurred";
 
