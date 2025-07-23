@@ -1240,7 +1240,7 @@ export default function AdCreationForm({
 
       setProgress(50);
       setProgressMessage('S3 uploads complete! Creating ads...');
-      toast.success("All video files uploaded!");
+      toast.success("Large video files uploaded!");
     }
 
     // 🔧 NOW start the actual job (50-100% progress)
@@ -1340,21 +1340,85 @@ export default function AdCreationForm({
           // console.log("jobId in attached form", frontendJobId);
 
           // Add all local files (small ones)
+          // files.forEach((file) => {
+          //   if (file.size <= S3_UPLOAD_THRESHOLD) {
+          //     formData.append("mediaFiles", file);
+          //   }
+          // });
+
+          // // Add small drive files
+          // smallDriveFiles.forEach((driveFile) => {
+          //   formData.append("driveFiles", JSON.stringify({
+          //     id: driveFile.id,
+          //     name: driveFile.name,
+          //     mimeType: driveFile.mimeType,
+          //     accessToken: driveFile.accessToken
+          //   }));
+          // });
+          // Create order metadata for all files
+
+          const fileOrder = [];
+          let fileIndex = 0;
+
+          // Process files in the order they appear in the UI
           files.forEach((file) => {
-            if (file.size <= S3_UPLOAD_THRESHOLD) {
+            if (file.size <= 100 * 1024 * 1024) {
+              // Small local file
+              fileOrder.push({
+                index: fileIndex++,
+                type: 'local',
+                name: file.name
+              });
               formData.append("mediaFiles", file);
+            } else {
+              // Large local file (should be in s3Results)
+              const s3File = s3Results.find(s3f => s3f.name === file.name);
+              if (s3File) {
+                fileOrder.push({
+                  index: fileIndex++,
+                  type: 's3',
+                  url: s3File.s3Url,
+                  name: file.name
+                });
+              }
             }
           });
 
-          // Add small drive files
-          smallDriveFiles.forEach((driveFile) => {
-            formData.append("driveFiles", JSON.stringify({
-              id: driveFile.id,
-              name: driveFile.name,
-              mimeType: driveFile.mimeType,
-              accessToken: driveFile.accessToken
-            }));
+          // Process drive files
+          driveFiles.forEach((driveFile) => {
+            if (driveFile.size <= 100 * 1024 * 1024) {
+              // Small drive file
+              fileOrder.push({
+                index: fileIndex++,
+                type: 'drive',
+                id: driveFile.id,
+                name: driveFile.name
+              });
+              formData.append("driveFiles", JSON.stringify({
+                id: driveFile.id,
+                name: driveFile.name,
+                mimeType: driveFile.mimeType,
+                accessToken: driveFile.accessToken
+              }));
+            } else {
+              // Large drive file (should be in s3DriveResults)
+              const s3DriveFile = s3DriveResults.find(s3f => s3f.id === driveFile.id);
+              if (s3DriveFile) {
+                fileOrder.push({
+                  index: fileIndex++,
+                  type: 's3',
+                  url: s3DriveFile.s3Url,
+                  name: driveFile.name,
+                  driveId: driveFile.id
+                });
+              }
+            }
           });
+
+          // Send the file order metadata
+          formData.append("fileOrder", JSON.stringify(fileOrder));
+
+
 
           // Add S3 URLs for large files
           [...s3Results, ...s3DriveResults].forEach((s3File) => {
