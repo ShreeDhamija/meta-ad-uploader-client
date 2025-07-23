@@ -1699,6 +1699,9 @@ export default function AdCreationForm({
       selectedAdSets
     } finally {
       setIsLoading(false);
+      if (duplicateAdSet) {
+        await refreshAdSets()
+      }
     }
   }
 
