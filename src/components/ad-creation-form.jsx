@@ -364,109 +364,8 @@ export default function AdCreationForm({
   const S3_UPLOAD_THRESHOLD = 40 * 1024 * 1024; // 40 MB
 
 
-  // const uploadToS3 = async (file) => {
-  //   // S3 requires parts to be at least 5MB, except for the last part.
-  //   // Choosing a larger chunk size (e.g., 10-25MB) can be more efficient.
-  //   const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
-  //   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
-  //   // Concurrency limit for uploading chunks. 5 is a good starting point.
-  //   const limit = pLimit(5);
-
-  //   let uploadId = null;
-  //   let s3Key = null;
-
-  //   try {
-  //     // 1. Start multipart upload and get UploadId
-  //     console.log(`[${file.name}] Starting multipart upload...`);
-  //     const startResponse = await axios.post(
-  //       "https://api.withblip.com/auth/s3/start-upload",
-  //       {
-  //         fileName: file.name,
-  //         fileType: file.type
-  //       },
-  //       { withCredentials: true }
-  //     );
-
-  //     uploadId = startResponse.data.uploadId;
-  //     s3Key = startResponse.data.key;
-
-  //     // 2. Get presigned URLs for each part
-  //     console.log(`[${file.name}] Getting presigned URLs for ${totalChunks} chunks...`);
-  //     const urlsResponse = await axios.post(
-  //       "https://api.withblip.com/auth/s3/get-upload-urls",
-  //       {
-  //         key: s3Key,
-  //         uploadId: uploadId,
-  //         parts: totalChunks
-  //       },
-  //       { withCredentials: true }
-  //     );
-  //     const presignedUrls = urlsResponse.data.parts;
-
-  //     // 3. Upload chunks in parallel
-  //     console.log(`[${file.name}] Uploading ${totalChunks} chunks concurrently...`);
-  //     const uploadPromises = presignedUrls.map(part => {
-  //       const { partNumber, url } = part;
-  //       const start = (partNumber - 1) * CHUNK_SIZE;
-  //       const end = start + CHUNK_SIZE;
-  //       const chunk = file.slice(start, end);
-
-  //       // Use p-limit to control concurrency
-  //       return limit(async () => {
-  //         const uploadResponse = await axios.put(url, chunk, {
-  //           headers: { 'Content-Type': file.type }
-  //         });
-  //         // The ETag is a hash of the content, returned by S3. It's crucial for completion.
-  //         const etag = uploadResponse.headers.etag;
-  //         console.log(`[${file.name}] Chunk ${partNumber}/${totalChunks} uploaded.`);
-  //         return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') }; // S3 ETag is quoted
-  //       });
-  //     });
-
-  //     const completedParts = await Promise.all(uploadPromises);
-
-  //     // 4. Complete the upload
-  //     console.log(`[${file.name}] Finalizing upload...`);
-  //     const completeResponse = await axios.post(
-  //       "https://api.withblip.com/auth/s3/complete-upload",
-  //       {
-  //         key: s3Key,
-  //         uploadId: uploadId,
-  //         parts: completedParts
-  //       },
-  //       { withCredentials: true }
-  //     );
-
-  //     console.log(`[${file.name}] Successfully uploaded to ${completeResponse.data.publicUrl}`);
-  //     return {
-  //       name: file.name,
-  //       type: file.type,
-  //       size: file.size,
-  //       s3Url: completeResponse.data.publicUrl,
-  //       isS3Upload: true
-  //     };
-
-  //   } catch (error) {
-  //     console.error(`[${file.name}] S3 multipart upload failed:`, error);
-
-  //     // 5. Abort the upload on any failure
-  //     if (uploadId && s3Key) {
-  //       console.log(`[${file.name}] Aborting multipart upload...`);
-  //       await axios.post(
-  //         "https://api.withblip.com/auth/s3/abort-upload",
-  //         {
-  //           key: s3Key,
-  //           uploadId: uploadId
-  //         },
-  //         { withCredentials: true }
-  //       );
-  //     }
-
-  //     throw new Error(`Failed to upload ${file.name} to S3`);
-  //   }
-  // };
-  const uploadToS3 = async (file, onProgress) => {
+  const uploadToS3 = async (file, onChunkUploaded) => {
     // S3 requires parts to be at least 5MB, except for the last part.
     // Choosing a larger chunk size (e.g., 10-25MB) can be more efficient.
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -507,6 +406,27 @@ export default function AdCreationForm({
       // 3. Upload chunks in parallel
       let uploadedChunks = 0;
 
+      // const uploadPromises = presignedUrls.map(part => {
+      //   const { partNumber, url } = part;
+      //   const start = (partNumber - 1) * CHUNK_SIZE;
+      //   const end = start + CHUNK_SIZE;
+      //   const chunk = file.slice(start, end);
+
+      //   return limit(async () => {
+      //     const uploadResponse = await axios.put(url, chunk, {
+      //       headers: { 'Content-Type': file.type }
+      //     });
+      //     const etag = uploadResponse.headers.etag;
+      //     uploadedChunks++;
+      //     if (onProgress) {
+      //       // Percent for this file only (out of 50%)
+      //       const percent = Math.round((uploadedChunks / totalChunks) * 50); // uploads are first half (0-50%)
+      //       onProgress(percent, `Uploading ${file.name}`);
+      //     }
+      //     return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') };
+      //   });
+      // });
+
       const uploadPromises = presignedUrls.map(part => {
         const { partNumber, url } = part;
         const start = (partNumber - 1) * CHUNK_SIZE;
@@ -517,16 +437,13 @@ export default function AdCreationForm({
           const uploadResponse = await axios.put(url, chunk, {
             headers: { 'Content-Type': file.type }
           });
+          // Call the overall progress callback after each chunk
+          if (onChunkUploaded) onChunkUploaded();
           const etag = uploadResponse.headers.etag;
-          uploadedChunks++;
-          if (onProgress) {
-            // Percent for this file only (out of 50%)
-            const percent = Math.round((uploadedChunks / totalChunks) * 50); // uploads are first half (0-50%)
-            onProgress(percent, `Uploading ${file.name}: Chunk ${uploadedChunks} / ${totalChunks}`);
-          }
           return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') };
         });
       });
+
 
       const completedParts = await Promise.all(uploadPromises);
 
@@ -1291,29 +1208,46 @@ export default function AdCreationForm({
 
       // Set up concurrency limiter
       const limit = pLimit(3)
-      // Upload regular large files with concurrency control
-      // const uploadPromises = largeFiles.map(file =>
-      //   limit(() => uploadToS3(file)) // Your existing function unchanged
+
+      // let uploadedFiles = 0;
+      // const totalFiles = largeFiles.length;
+
+      // const uploadPromises = largeFiles.map((file) =>
+      //   limit(() =>
+      //     uploadToS3(file, (filePercent, msg) => {
+      //       // Calculate overall progress (uploads = 0-50%)
+      //       const percent = Math.round(
+      //         ((uploadedFiles + filePercent / 50) / totalFiles) * 50
+      //       );
+      //       setProgress(percent);
+      //       setProgressMessage(msg);
+      //     }).then((res) => {
+      //       uploadedFiles++;
+      //       return res;
+      //     })
+      //   )
       // );
 
-      let uploadedFiles = 0;
-      const totalFiles = largeFiles.length;
+      const CHUNK_SIZE = 10 * 1024 * 1024;
+      const allFiles = largeFiles; // Or largeFiles + largeDriveFiles if needed
 
-      const uploadPromises = largeFiles.map((file) =>
-        limit(() =>
-          uploadToS3(file, (filePercent, msg) => {
-            // Calculate overall progress (uploads = 0-50%)
-            const percent = Math.round(
-              ((uploadedFiles + filePercent / 50) / totalFiles) * 50
-            );
-            setProgress(percent);
-            setProgressMessage(msg);
-          }).then((res) => {
-            uploadedFiles++;
-            return res;
-          })
-        )
+      const totalChunksAllFiles = allFiles.reduce(
+        (sum, file) => sum + Math.ceil(file.size / CHUNK_SIZE),
+        0
       );
+      let uploadedChunks = 0;
+
+      const updateOverallProgress = () => {
+        uploadedChunks += 1;
+        const percent = Math.round((uploadedChunks / totalChunksAllFiles) * 100);
+        setProgress(percent);
+        setProgressMessage(`Uploading ${uploadedChunks} / ${totalChunksAllFiles} chunks...`);
+      };
+
+      const uploadPromises = largeFiles.map(file =>
+        limit(() => uploadToS3(file, updateOverallProgress))
+      );
+
 
 
       const results = await Promise.allSettled(uploadPromises);
@@ -1358,7 +1292,7 @@ export default function AdCreationForm({
         }
       });
 
-      setProgress(50);
+      setProgress(100);
       setProgressMessage('S3 uploads complete! Creating ads...');
       toast.success("Large video files uploaded!");
     }
