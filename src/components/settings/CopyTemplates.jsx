@@ -26,16 +26,19 @@ const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) =
   return (
     <SelectItem
       value={value}
-      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg pr-8 relative"
+      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg relative overflow-hidden"
+      style={{ position: 'relative' }} // Force relative positioning
     >
-      <span className="flex-1 pointer-events-none">
-        {name} {isDefault ? "(Default)" : ""}
-      </span>
-      <Trash2
-        tabIndex={-1}
-        className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
-        onMouseDown={handleDeleteClick}
-      />
+      <div className="relative w-full pr-8">
+        <span className="block truncate">
+          {name} {isDefault ? "(Default)" : ""}
+        </span>
+        <Trash2
+          tabIndex={-1}
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 hover:text-red-500 cursor-pointer"
+          onMouseDown={handleDeleteClick}
+        />
+      </div>
     </SelectItem>
   )
 })
