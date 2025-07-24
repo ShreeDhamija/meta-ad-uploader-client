@@ -10,7 +10,7 @@ import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
-
+import TemplateIcon from '@/assets/icons/template.svg?react';
 
 
 
@@ -470,8 +470,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       <div className="flex items-start justify-between mb-6">
         <div className="flex flex-col gap-[12px]">
           <div className="flex items-center gap-2">
-            <img
-              src="https://unpkg.com/@mynaui/icons/icons/file-text.svg"
+            <TemplateIcon
               alt=""
               className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60"
             />

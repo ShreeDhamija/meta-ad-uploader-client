@@ -15,7 +15,6 @@ import BillingSettings from "@/components/settings/Billing"
 import ViewAds from "@/components/settings/view-ads"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 import HomeBtn from '@/assets/icons/home.svg?react';
-// import CogIcon from '@/assets/icons/cog.svg?react';
 import Folder from '@/assets/icons/folder.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import ViewAdsIcon from '@/assets/icons/viewads.svg?react';

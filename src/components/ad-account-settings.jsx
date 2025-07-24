@@ -20,6 +20,7 @@ import CopyIcon from '@/assets/icons/copy.svg?react';
 import { useNavigate } from "react-router-dom"
 
 
+
 // Move these functions outside the component - around line 20, before the component
 const sortCampaigns = (campaigns) => {
   const priority = { ACTIVE: 1, PAUSED: 2 };
@@ -908,7 +909,7 @@ export default function AdAccountSettings({
                 </button>
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="duplicateAdSet" className="flex items-center gap-2" >
-                    <img src="https://unpkg.com/@mynaui/icons/icons/copy.svg" className="w-4 h-4" />
+                    <CopyIcon className="w-4 h-4" />
                     Select an ad set shell to duplicate
                   </Label>
                   <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
