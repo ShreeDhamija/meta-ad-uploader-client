@@ -12,37 +12,31 @@ import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 
 
+useEffect(() => {
+  const allTrashIcons = document.querySelectorAll('[data-lucide="trash-2"]');
+  console.log('=== TRASH ICON AUDIT ===');
+  console.log('Total Trash2 icons found:', allTrashIcons.length);
+
+  allTrashIcons.forEach((icon, index) => {
+    const rect = icon.getBoundingClientRect();
+    const parent = icon.closest('[role="option"], .primary-text-item, .headline-item');
+    console.log(`Icon ${index}:`, {
+      position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      isVisible: rect.width > 0 && rect.height > 0,
+      parentContext: parent ? parent.className : 'NO PARENT CONTEXT',
+      innerHTML: icon.parentElement?.innerHTML?.substring(0, 100)
+    });
+  });
+}, [templates, primaryTexts, headlines]);
+
+
 // Custom SelectItem component with delete button
-// const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) => {
-//   const handleDeleteClick = useCallback((e) => {
-//     e.stopPropagation()
-//     e.preventDefault()
-//     onDelete(name)
-//   }, [onDelete, name])
-
-//   return (
-//     <SelectItem
-//       value={value}
-//       className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg pr-8 relative"
-//     >
-//       <span className="flex-1 pointer-events-none">
-//         {name} {isDefault ? "(Default)" : ""}
-//       </span>
-//       <Trash2
-//         tabIndex={-1}
-//         className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
-//         onMouseDown={handleDeleteClick}
-//       />
-//     </SelectItem>
-//   )
-// })
-
-const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
-  const handleDeleteClick = (e) => {
+const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) => {
+  const handleDeleteClick = useCallback((e) => {
     e.stopPropagation()
     e.preventDefault()
     onDelete(name)
-  }
+  }, [onDelete, name])
 
   return (
     <SelectItem
@@ -52,15 +46,14 @@ const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
       <span className="flex-1 pointer-events-none">
         {name} {isDefault ? "(Default)" : ""}
       </span>
-      <Trash2
+      {/* <Trash2
         tabIndex={-1}
         className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
         onMouseDown={handleDeleteClick}
-      />
-
+      /> */}
     </SelectItem>
   )
-}
+})
 
 
 const initialState = {
