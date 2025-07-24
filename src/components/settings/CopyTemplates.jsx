@@ -17,27 +17,32 @@ import { RotateLoader } from "react-spinners"
 
 // Custom SelectItem component with delete button
 const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) => {
-  const handleDeleteClick = useCallback((e) => {
-    e.stopPropagation()
-    e.preventDefault()
-    onDelete(name)
-  }, [onDelete, name])
+  const handleDeleteClick = useCallback(
+    (e) => {
+      e.stopPropagation()
+      e.preventDefault()
+      onDelete(name)
+    },
+    [onDelete, name],
+  )
 
   return (
     <SelectItem
       value={value}
-      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg relative overflow-hidden group"
-      style={{ position: 'relative' }}
+      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg group cursor-pointer pr-8"
     >
-      <div className="relative w-full pr-6">
-        <span className="block truncate pr-2">
+      <div className="flex items-center justify-between w-full">
+        <span className="block truncate">
           {name} {isDefault ? "(Default)" : ""}
         </span>
-        <Trash2
-          tabIndex={-1}
-          className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 hover:text-red-500 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200 data-[state=checked]:hidden"
+        <button
+          type="button"
+          className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0 data-[state=checked]:hidden"
           onMouseDown={handleDeleteClick}
-        />
+          onClick={handleDeleteClick}
+        >
+          <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
+        </button>
       </div>
     </SelectItem>
   )
