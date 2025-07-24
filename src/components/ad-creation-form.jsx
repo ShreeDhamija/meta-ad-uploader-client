@@ -2543,6 +2543,15 @@ export default function AdCreationForm({
               "Publish Ads"
             )}
           </Button>
+
+          <div className="text-sm text-red-600 text-center mt-2">
+            {!isLoggedIn && "Please log in to continue"}
+            {isLoggedIn && (selectedAdSets.length === 0 && !duplicateAdSet) && "Please select at least one ad set"}
+            {isLoggedIn && (selectedAdSets.length > 0 || duplicateAdSet) && (files.length === 0 && driveFiles.length === 0) && "Please upload at least one file"}
+            {isLoggedIn && (selectedAdSets.length > 0 || duplicateAdSet) && (files.length > 0 || driveFiles.length > 0) && duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "") && "Please enter a name for the new ad set"}
+            {isLoggedIn && (selectedAdSets.length > 0 || duplicateAdSet) && (files.length > 0 || driveFiles.length > 0) && (!duplicateAdSet || (newAdSetName && newAdSetName.trim() !== "")) && showShopDestinationSelector && !selectedShopDestination && "Please select a shop destination"}
+          </div>
+
           <div
             className={cn(
               "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition

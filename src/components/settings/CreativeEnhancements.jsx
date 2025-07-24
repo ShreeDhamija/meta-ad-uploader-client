@@ -113,7 +113,7 @@ function CreativeEnhancements({ enhancements, setEnhancements }) {
                         <h3 className="font-medium text-[14px] text-zinc-950">
                             Meta Creative Enhancements
                         </h3>
-                        <label className="text-xs text-gray-500">
+                        <label className="text-xs text-gray-400">
                             Some enhancements might not be available for some ad accounts
                         </label>
                     </div>
