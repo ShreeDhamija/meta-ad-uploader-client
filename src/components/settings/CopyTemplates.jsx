@@ -37,7 +37,7 @@ const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) =
         </span>
         <button
           type="button"
-          className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0 data-[state=checked]:hidden"
+          className="absolute right-2 p-1 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0 data-[state=checked]:hidden"
           onMouseDown={handleDeleteClick}
           onClick={handleDeleteClick}
         >
