@@ -625,15 +625,19 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   onClick={() => {
                                     const currentTexts = [...primaryTexts];
                                     const emptyIndex = currentTexts.findIndex(text => text === "");
+                                    let importedToIndex;
                                     if (emptyIndex !== -1) {
                                       currentTexts[emptyIndex] = text;
+                                      importedToIndex = emptyIndex;
                                     } else if (currentTexts.length < 5) {
                                       currentTexts.push(text);
+                                      importedToIndex = currentTexts.length - 1;
                                     } else {
                                       currentTexts[currentTexts.length - 1] = text;
+                                      importedToIndex = currentTexts.length - 1;
                                     }
                                     setPrimaryTexts(currentTexts);
-                                    toast.success("Primary text imported");
+                                    toast.success(`Imported copy into Primary Text ${importedToIndex + 1}`);
                                   }}
                                 >
                                   <Download className="w-3 h-3" />
@@ -666,15 +670,19 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   onClick={() => {
                                     const currentHeadlines = [...headlines];
                                     const emptyIndex = currentHeadlines.findIndex(text => text === "");
+                                    let importedToIndex;
                                     if (emptyIndex !== -1) {
                                       currentHeadlines[emptyIndex] = text;
+                                      importedToIndex = emptyIndex;
                                     } else if (currentHeadlines.length < 5) {
                                       currentHeadlines.push(text);
+                                      importedToIndex = currentHeadlines.length - 1;
                                     } else {
                                       currentHeadlines[currentHeadlines.length - 1] = text;
+                                      importedToIndex = currentHeadlines.length - 1;
                                     }
                                     setHeadlines(currentHeadlines);
-                                    toast.success("Headline imported");
+                                    toast.success(`Imported copy into Headline ${importedToIndex + 1}`);
                                   }}
                                 >
                                   <Download className="w-3 h-3" />

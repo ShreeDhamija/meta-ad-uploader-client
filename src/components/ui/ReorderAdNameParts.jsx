@@ -130,7 +130,7 @@ function SortableItem({ id, isSelected, onToggle, setValues, values, variant, se
               }
             }}
             placeholder="Enter Custom Text"
-            className="flex-1 h-6 border border-gray-200 rounded-lg bg-transparent focus:ring-0 focus:outline-none shadow-none ring-0 focus:shadow-none"
+            className="flex-1 h-6 rounded-lg bg-gray-100 focus:ring-0 focus:outline-none shadow-none ring-0 focus:shadow-none"
           />
           {variant === "default" && (
             <button
