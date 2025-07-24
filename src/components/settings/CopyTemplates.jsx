@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useReducer, useState, useRef } from "react"
+import { useEffect, useReducer, useState, useRef, useCallback, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
@@ -13,12 +13,12 @@ import { RotateLoader } from "react-spinners"
 
 
 // Custom SelectItem component with delete button
-const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
-  const handleDeleteClick = (e) => {
+const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) => {
+  const handleDeleteClick = useCallback((e) => {
     e.stopPropagation()
     e.preventDefault()
     onDelete(name)
-  }
+  }, [onDelete, name])
 
   return (
     <SelectItem
@@ -33,11 +33,9 @@ const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
         className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
         onMouseDown={handleDeleteClick}
       />
-
     </SelectItem>
   )
-}
-
+})
 
 
 const initialState = {
@@ -142,16 +140,27 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [primaryTexts, setPrimaryTexts] = useState([""])
   const [headlines, setHeadlines] = useState([""])
   const [isProcessing, setIsProcessing] = useState(false)
-  const isEditingDefault = defaultName === editingTemplate
-  const nameAlreadyExists =
+  const isEditingDefault = useMemo(() =>
+    defaultName === editingTemplate, [defaultName, editingTemplate]
+  )
+  const nameAlreadyExists = useMemo(() =>
     templateName.trim() &&
     templateName !== editingTemplate &&
-    Object.keys(templates).includes(templateName)
-  const currentTemplate = templates[editingTemplate] || {}
-  const templateChanged =
+    Object.keys(templates).includes(templateName),
+    [templateName, editingTemplate, templates]
+  )
+
+  const currentTemplate = useMemo(() =>
+    templates[editingTemplate] || {}, [templates, editingTemplate]
+  )
+
+  const templateChanged = useMemo(() =>
     templateName !== currentTemplate.name ||
     JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
-    JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
+    JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []),
+    [templateName, currentTemplate.name, primaryTexts, currentTemplate.primaryTexts, headlines, currentTemplate.headlines]
+  )
+
   const [showImportPopup, setShowImportPopup] = useState(false)
   const [recentAds, setRecentAds] = useState([])
   const [isFetchingCopy, setIsFetchingCopy] = useState(false)
@@ -231,28 +240,30 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }, [selectedName, templates, editingTemplate])
 
 
-  const handleAdd = (setter, state) => {
+  const handleAdd = useCallback((setter, state) => {
     if (state.length < 5) setter([...state, ""])
-  }
+  }, [])
 
-  const handleRemove = (index, setter, state) => {
+  const handleRemove = useCallback((index, setter, state) => {
     const updated = [...state]
     updated.splice(index, 1)
     setter(updated)
-  }
+  }, [])
 
-  const handleChange = (index, setter, state, value) => {
+  const handleChange = useCallback((index, setter, state, value) => {
     const updated = [...state]
     updated[index] = value
     setter(updated)
-  }
+  }, [])
 
-  const handleNewTemplate = () => {
+  // 2. IMPORTANT: Memoize template operations
+  const handleNewTemplate = useCallback(() => {
     dispatch({ type: "NEW_TEMPLATE" })
     setTemplateName("")
     setPrimaryTexts([""])
     setHeadlines([""])
-  }
+  }, [])
+
 
   const handleSaveTemplate = async () => {
     if (!templateName.trim()) {
@@ -363,19 +374,17 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }
 
 
-  const handleDeleteTemplate = async (templateName) => {
+  const handleDeleteTemplate = useCallback(async (templateName) => {
     if (!templateName) return
 
     setIsProcessing(true)
     try {
       await deleteCopyTemplate(selectedAdAccount, templateName)
 
-      // Update parent component state
       setAdSettings((prev) => {
         const updatedCopyTemplates = { ...prev.copyTemplates }
         delete updatedCopyTemplates[templateName]
 
-        // If we're deleting the default template, find a new default
         const updatedDefaultTemplateName =
           prev.defaultTemplateName === templateName
             ? Object.keys(updatedCopyTemplates)[0] || ""
@@ -388,22 +397,62 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         }
       })
 
-      // Update local state
       dispatch({ type: "DELETE_TEMPLATE", payload: templateName })
-
       toast.success("Template deleted")
     } catch (err) {
       toast.error("Failed to delete template")
     } finally {
       setIsProcessing(false)
     }
-  }
+  }, [selectedAdAccount, setAdSettings])
 
-  const availableTemplates = Object.entries(templates).sort(([a], [b]) => {
-    if (a === defaultName) return -1
-    if (b === defaultName) return 1
-    return 0
-  })
+  const availableTemplates = useMemo(() =>
+    Object.entries(templates).sort(([a], [b]) => {
+      if (a === defaultName) return -1
+      if (b === defaultName) return 1
+      return 0
+    }), [templates, defaultName]
+  )
+
+  const createPrimaryTextImportHandler = useCallback((text) => () => {
+    const currentTexts = [...primaryTexts];
+    const emptyIndex = currentTexts.findIndex(t => t === "");
+    let importedToIndex;
+
+    if (emptyIndex !== -1) {
+      currentTexts[emptyIndex] = text;
+      importedToIndex = emptyIndex;
+    } else if (currentTexts.length < 5) {
+      currentTexts.push(text);
+      importedToIndex = currentTexts.length - 1;
+    } else {
+      currentTexts[currentTexts.length - 1] = text;
+      importedToIndex = currentTexts.length - 1;
+    }
+
+    setPrimaryTexts(currentTexts);
+    toast.success(`Imported text into Primary Text ${importedToIndex + 1}`);
+  }, [primaryTexts])
+
+  const createHeadlineImportHandler = useCallback((text) => () => {
+    const currentHeadlines = [...headlines];
+    const emptyIndex = currentHeadlines.findIndex(t => t === "");
+    let importedToIndex;
+
+    if (emptyIndex !== -1) {
+      currentHeadlines[emptyIndex] = text;
+      importedToIndex = emptyIndex;
+    } else if (currentHeadlines.length < 5) {
+      currentHeadlines.push(text);
+      importedToIndex = currentHeadlines.length - 1;
+    } else {
+      currentHeadlines[currentHeadlines.length - 1] = text;
+      importedToIndex = currentHeadlines.length - 1;
+    }
+
+    setHeadlines(currentHeadlines);
+    toast.success(`Imported text into Headline ${importedToIndex + 1}`);
+  }, [headlines])
 
   return (
     <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
@@ -622,23 +671,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className="flex items-center text-xs rounded-xl px-2 py-1 bg-blue-600 text-white hover:bg-blue-700 shrink-0"
-                                  onClick={() => {
-                                    const currentTexts = [...primaryTexts];
-                                    const emptyIndex = currentTexts.findIndex(text => text === "");
-                                    let importedToIndex;
-                                    if (emptyIndex !== -1) {
-                                      currentTexts[emptyIndex] = text;
-                                      importedToIndex = emptyIndex;
-                                    } else if (currentTexts.length < 5) {
-                                      currentTexts.push(text);
-                                      importedToIndex = currentTexts.length - 1;
-                                    } else {
-                                      currentTexts[currentTexts.length - 1] = text;
-                                      importedToIndex = currentTexts.length - 1;
-                                    }
-                                    setPrimaryTexts(currentTexts);
-                                    toast.success(`Imported copy into Primary Text ${importedToIndex + 1}`);
-                                  }}
+                                  onClick={() => { createPrimaryTextImportHandler(text) }}
                                 >
                                   <Download className="w-3 h-3" />
                                   Import
@@ -667,23 +700,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className="flex items-center text-xs rounded-xl px-2 py-1 bg-green-600 text-white hover:bg-green-700 shrink-0"
-                                  onClick={() => {
-                                    const currentHeadlines = [...headlines];
-                                    const emptyIndex = currentHeadlines.findIndex(text => text === "");
-                                    let importedToIndex;
-                                    if (emptyIndex !== -1) {
-                                      currentHeadlines[emptyIndex] = text;
-                                      importedToIndex = emptyIndex;
-                                    } else if (currentHeadlines.length < 5) {
-                                      currentHeadlines.push(text);
-                                      importedToIndex = currentHeadlines.length - 1;
-                                    } else {
-                                      currentHeadlines[currentHeadlines.length - 1] = text;
-                                      importedToIndex = currentHeadlines.length - 1;
-                                    }
-                                    setHeadlines(currentHeadlines);
-                                    toast.success(`Imported copy into Headline ${importedToIndex + 1}`);
-                                  }}
+                                  onClick={() => { createHeadlineImportHandler(text) }}
                                 >
                                   <Download className="w-3 h-3" />
                                   Import
