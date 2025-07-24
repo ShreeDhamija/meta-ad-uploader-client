@@ -12,22 +12,7 @@ import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 
 
-useEffect(() => {
-  const allTrashIcons = document.querySelectorAll('[data-lucide="trash-2"]');
-  console.log('=== TRASH ICON AUDIT ===');
-  console.log('Total Trash2 icons found:', allTrashIcons.length);
 
-  allTrashIcons.forEach((icon, index) => {
-    const rect = icon.getBoundingClientRect();
-    const parent = icon.closest('[role="option"], .primary-text-item, .headline-item');
-    console.log(`Icon ${index}:`, {
-      position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-      isVisible: rect.width > 0 && rect.height > 0,
-      parentContext: parent ? parent.className : 'NO PARENT CONTEXT',
-      innerHTML: icon.parentElement?.innerHTML?.substring(0, 100)
-    });
-  });
-}, [templates, primaryTexts, headlines]);
 
 
 // Custom SelectItem component with delete button
@@ -183,6 +168,22 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [recentAds, setRecentAds] = useState([])
   const [isFetchingCopy, setIsFetchingCopy] = useState(false)
 
+  useEffect(() => {
+    const allTrashIcons = document.querySelectorAll('[data-lucide="trash-2"]');
+    console.log('=== TRASH ICON AUDIT ===');
+    console.log('Total Trash2 icons found:', allTrashIcons.length);
+
+    allTrashIcons.forEach((icon, index) => {
+      const rect = icon.getBoundingClientRect();
+      const parent = icon.closest('[role="option"], .primary-text-item, .headline-item');
+      console.log(`Icon ${index}:`, {
+        position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        isVisible: rect.width > 0 && rect.height > 0,
+        parentContext: parent ? parent.className : 'NO PARENT CONTEXT',
+        innerHTML: icon.parentElement?.innerHTML?.substring(0, 100)
+      });
+    });
+  }, [templates, primaryTexts, headlines]);
 
 
   useEffect(() => {
