@@ -26,19 +26,16 @@ const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) =
   return (
     <SelectItem
       value={value}
-      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg relative overflow-hidden"
-      style={{ position: 'relative' }} // Force relative positioning
+      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg pr-8 relative"
     >
-      <div className="relative w-full pr-8">
-        <span className="block truncate">
-          {name} {isDefault ? "(Default)" : ""}
-        </span>
-        <Trash2
-          tabIndex={-1}
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 hover:text-red-500 cursor-pointer"
-          onMouseDown={handleDeleteClick}
-        />
-      </div>
+      <span className="flex-1 pointer-events-none">
+        {name} {isDefault ? "(Default)" : ""}
+      </span>
+      <Trash2
+        tabIndex={-1}
+        className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
+        onMouseDown={handleDeleteClick}
+      />
     </SelectItem>
   )
 })
@@ -171,22 +168,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [recentAds, setRecentAds] = useState([])
   const [isFetchingCopy, setIsFetchingCopy] = useState(false)
 
-  useEffect(() => {
-    const allTrashIcons = document.querySelectorAll('[data-lucide="trash-2"]');
-    console.log('=== TRASH ICON AUDIT ===');
-    console.log('Total Trash2 icons found:', allTrashIcons.length);
-
-    allTrashIcons.forEach((icon, index) => {
-      const rect = icon.getBoundingClientRect();
-      const parent = icon.closest('[role="option"], .primary-text-item, .headline-item');
-      console.log(`Icon ${index}:`, {
-        position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-        isVisible: rect.width > 0 && rect.height > 0,
-        parentContext: parent ? parent.className : 'NO PARENT CONTEXT',
-        innerHTML: icon.parentElement?.innerHTML?.substring(0, 100)
-      });
-    });
-  }, [templates, primaryTexts, headlines]);
 
 
   useEffect(() => {
@@ -515,7 +496,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           <SelectTrigger className="flex-1 rounded-xl px-3 py-2 text-sm justify-between bg-white disabled:opacity-50 disabled:cursor-not-allowed">
             <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
           </SelectTrigger>
-          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto">
+          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto relative">
             {availableTemplates.map(([name]) => (
               <SelectItemWithDelete
                 key={name}
