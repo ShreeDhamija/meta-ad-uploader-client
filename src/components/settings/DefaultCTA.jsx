@@ -92,7 +92,7 @@ function DefaultCTA({ defaultCTA, setDefaultCTA }) {
             <SelectItem
                 key={cta.value}
                 value={cta.value}
-                className="data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 data-[state=checked]:font-semibold rounded-xl space-y-2"
+                className="data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 data-[state=checked]:font-semibold rounded-xl"
             >
                 {cta.label}
             </SelectItem>
