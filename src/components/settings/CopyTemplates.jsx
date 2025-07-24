@@ -671,7 +671,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className="flex items-center text-xs rounded-xl px-2 py-1 bg-blue-600 text-white hover:bg-blue-700 shrink-0"
-                                  onClick={() => { createPrimaryTextImportHandler(text) }}
+                                  onClick={createPrimaryTextImportHandler(text)}
                                 >
                                   <Download className="w-3 h-3" />
                                   Import
@@ -700,7 +700,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className="flex items-center text-xs rounded-xl px-2 py-1 bg-green-600 text-white hover:bg-green-700 shrink-0"
-                                  onClick={() => { createHeadlineImportHandler(text) }}
+                                  onClick={createHeadlineImportHandler(text)}
                                 >
                                   <Download className="w-3 h-3" />
                                   Import
