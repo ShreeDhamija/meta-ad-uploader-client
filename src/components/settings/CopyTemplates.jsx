@@ -31,11 +31,11 @@ const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) =
       <span className="flex-1 pointer-events-none">
         {name} {isDefault ? "(Default)" : ""}
       </span>
-      {/* <Trash2
+      <Trash2
         tabIndex={-1}
         className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
         onMouseDown={handleDeleteClick}
-      /> */}
+      />
     </SelectItem>
   )
 })
