@@ -13,12 +13,36 @@ import { RotateLoader } from "react-spinners"
 
 
 // Custom SelectItem component with delete button
-const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) => {
-  const handleDeleteClick = useCallback((e) => {
+// const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) => {
+//   const handleDeleteClick = useCallback((e) => {
+//     e.stopPropagation()
+//     e.preventDefault()
+//     onDelete(name)
+//   }, [onDelete, name])
+
+//   return (
+//     <SelectItem
+//       value={value}
+//       className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg pr-8 relative"
+//     >
+//       <span className="flex-1 pointer-events-none">
+//         {name} {isDefault ? "(Default)" : ""}
+//       </span>
+//       <Trash2
+//         tabIndex={-1}
+//         className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
+//         onMouseDown={handleDeleteClick}
+//       />
+//     </SelectItem>
+//   )
+// })
+
+const SelectItemWithDelete = ({ value, name, isDefault, onDelete }) => {
+  const handleDeleteClick = (e) => {
     e.stopPropagation()
     e.preventDefault()
     onDelete(name)
-  }, [onDelete, name])
+  }
 
   return (
     <SelectItem
@@ -33,9 +57,10 @@ const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) =
         className="w-4 h-4 text-gray-400 hover:text-red-500 absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer z-10 pointer-events-auto"
         onMouseDown={handleDeleteClick}
       />
+
     </SelectItem>
   )
-})
+}
 
 
 const initialState = {
