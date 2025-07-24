@@ -424,7 +424,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           />
 
           {/* Ad Naming Convention */}
-          <div className="bg-[#f7f7f7] rounded-xl p-3 space-y-3">
+          <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
               <h3 className="font-medium text-[14px] text-zinc-950">

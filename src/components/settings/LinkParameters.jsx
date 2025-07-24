@@ -98,7 +98,7 @@ function LinkParameters({ defaultLink, setDefaultLink, utmPairs, setUtmPairs, se
     return (
         <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-4 w-full max-w-3xl">
             {/* Section Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
                     <LinkIcon
                         alt="link icon"

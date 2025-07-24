@@ -102,16 +102,22 @@ function CreativeEnhancements({ enhancements, setEnhancements }) {
     );
 
     return (
-        <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-4">
+        <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-6">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
                     <EnhanceIcon
                         alt="Enhancement Icon"
                         className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60"
                     />
-                    <h3 className="font-medium text-[14px] text-zinc-950">
-                        Meta Creative Enhancements
-                    </h3>
+                    <div className="flex flex-col">
+                        <h3 className="font-medium text-[14px] text-zinc-950">
+                            Meta Creative Enhancements
+                        </h3>
+                        <label className="text-xs text-gray-500">
+                            Some enhancements might not be available for some ad accounts
+                        </label>
+                    </div>
+
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">
