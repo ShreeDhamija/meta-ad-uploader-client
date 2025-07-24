@@ -31,13 +31,13 @@ const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) =
       value={value}
       className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg group cursor-pointer"
     >
-      <div className="flex items-center justify-between w-full min-w-0">
+      <div className="flex items-center w-full min-w-0">
         <span className="block truncate flex-1 min-w-0">
           {name} {isDefault ? "(Default)" : ""}
         </span>
         <button
           type="button"
-          className="ml-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0"
+          className="ml-auto p-1 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0"
           onMouseDown={handleDeleteClick}
           onClick={handleDeleteClick}
         >
