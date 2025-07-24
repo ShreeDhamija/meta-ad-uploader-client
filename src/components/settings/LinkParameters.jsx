@@ -1,12 +1,8 @@
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2 } from "lucide-react"
-// import {
-//     Popover,
-//     PopoverTrigger,
-//     PopoverContent,
-// } from "@/components/ui/popover"
+
 import {
     Command,
     CommandInput,
@@ -21,51 +17,29 @@ import { RotateLoader } from "react-spinners";
 
 
 
-
+const VALUE_SUGGESTIONS = ["facebook", "paid", "{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"]
 export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, setUtmPairs, selectedAdAccount }) {
     const [inputValue, setInputValue] = useState("")
-    const valueSuggestions = ["facebook", "paid", "{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"]
+    // const valueSuggestions = ["facebook", "paid", "{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"]
     const [openIndex, setOpenIndex] = useState(null)
 
-    const handlePairChange = (index, field, value) => {
+    const handlePairChange = useCallback((index, field, value) => {
         const updated = utmPairs.map((pair, i) =>
             i === index ? { ...pair, [field]: value } : pair
         )
         setUtmPairs(updated)
-    }
+    }, [utmPairs, setUtmPairs])
 
-    const handleAddPair = () => {
+
+    const handleAddPair = useCallback(() => {
         setUtmPairs([...utmPairs, { key: "", value: "" }])
-    }
+    }, [utmPairs, setUtmPairs])
+
+
     const [importPreview, setImportPreview] = useState(null); // null or array of { key, value }
     const [showImportPopup, setShowImportPopup] = useState(false);
     const [isFetchingTags, setIsFetchingTags] = useState(false);
 
-
-    // const handleImportUTMs = async () => {
-    //     if (!selectedAdAccount) {
-    //         toast.error("No ad account selected");
-    //         return;
-    //     }
-
-    //     try {
-    //         const res = await fetch(
-    //             `https://api.withblip.com/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
-    //             { credentials: "include" }
-    //         );
-    //         const data = await res.json();
-
-    //         if (data.pairs) {
-    //             setImportPreview(data.pairs);
-    //             setShowImportPopup(true);
-    //         } else {
-    //             toast.error("No UTM tags found in recent ad.");
-    //         }
-    //     } catch (err) {
-    //         toast.error("Failed to fetch UTM tags");
-    //         console.error("Import UTM error:", err);
-    //     }
-    // };
     const handleImportUTMs = async () => {
         if (!selectedAdAccount) {
             toast.error("No ad account selected");
@@ -190,7 +164,7 @@ export default function LinkParameters({ defaultLink, setDefaultLink, utmPairs, 
                                     <div className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-md mt-1 p-2">
                                         <Command className="max-h-full">
                                             <CommandList>
-                                                {valueSuggestions
+                                                {VALUE_SUGGESTIONS
                                                     .filter((suggestion) =>
                                                         inputValue === "" || suggestion.toLowerCase().includes(inputValue.toLowerCase())
                                                     )
