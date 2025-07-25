@@ -2525,35 +2525,33 @@ export default function AdCreationForm({
 
             </Button>
           </div>
-          <Button
-            type="submit"
-            className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
-            disabled={
-              !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || isLoading || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "") ||
-                (showShopDestinationSelector && !selectedShopDestination)
-              )
-            }
-          >
-            {isLoading || uploadingToS3 ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {uploadingToS3 ? "Uploading to cloud..." : "Publishing Ads..."}
-              </>
-            ) : (
-              "Publish Ads"
+          <div className="space-y-1">
+            <Button
+              type="submit"
+              className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
+              disabled={
+                !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || isLoading || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "") ||
+                  (showShopDestinationSelector && !selectedShopDestination)
+                )
+              }
+            >
+              {isLoading || uploadingToS3 ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {uploadingToS3 ? "Uploading to cloud..." : "Publishing Ads..."}
+                </>
+              ) : (
+                "Publish Ads"
+              )}
+            </Button>
+
+            {/* Validation message */}
+            {showShopDestinationSelector && !selectedShopDestination && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please select a shop destination
+              </div>
             )}
-          </Button>
-
-          {/* Validation message */}
-          {(!isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) || (showShopDestinationSelector && !selectedShopDestination)) && (
-            <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-              {/* {isLoggedIn && (selectedAdSets.length === 0 && !duplicateAdSet) && "Please select at least one ad set"}
-              {isLoggedIn && (selectedAdSets.length > 0 || duplicateAdSet) && (files.length === 0 && driveFiles.length === 0) && "Please upload at least one file"}
-              {isLoggedIn && (selectedAdSets.length > 0 || duplicateAdSet) && (files.length > 0 || driveFiles.length > 0) && duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "") && "Please enter a name for the new ad set"} */}
-              {isLoggedIn && (selectedAdSets.length > 0 || duplicateAdSet) && (files.length > 0 || driveFiles.length > 0) && (!duplicateAdSet || (newAdSetName && newAdSetName.trim() !== "")) && showShopDestinationSelector && !selectedShopDestination && "Please select a shop destination"}
-            </div>
-          )}
-
+          </div>
           <div
             className={cn(
               "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
