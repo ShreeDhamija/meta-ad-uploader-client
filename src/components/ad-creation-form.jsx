@@ -2546,7 +2546,7 @@ export default function AdCreationForm({
 
           {/* Validation message */}
           {(!isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) || (showShopDestinationSelector && !selectedShopDestination)) && (
-            <div className="text-xs text-red-600 text-left p-1 bg-red-50 border border-red-200 rounded-xl">
+            <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
               {/* {isLoggedIn && (selectedAdSets.length === 0 && !duplicateAdSet) && "Please select at least one ad set"}
               {isLoggedIn && (selectedAdSets.length > 0 || duplicateAdSet) && (files.length === 0 && driveFiles.length === 0) && "Please upload at least one file"}
               {isLoggedIn && (selectedAdSets.length > 0 || duplicateAdSet) && (files.length > 0 || driveFiles.length > 0) && duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "") && "Please enter a name for the new ad set"} */}
