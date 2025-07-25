@@ -2524,6 +2524,9 @@ export default function AdCreationForm({
               Choose Files from Google Drive
 
             </Button>
+            <div className="text-xs text-gray-500 text-left">
+              Drive files upload 5X faster
+            </div>
           </div>
           <div className="space-y-1">
             <Button
