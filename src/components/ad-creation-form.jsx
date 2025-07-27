@@ -117,7 +117,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
       // Shorter delay for job not found since server is responding
       const delay = Math.min(baseRetryDelay, 1000);
 
-      console.log(`⏳ Job not found - Retrying in ${delay}ms... (attempt ${jobNotFoundCount}/${maxJobNotFoundRetries})`);
+      // console.log(`⏳ Job not found - Retrying in ${delay}ms... (attempt ${jobNotFoundCount}/${maxJobNotFoundRetries})`);
 
       retryTimeoutId = setTimeout(() => {
         if (isSubscribed) connectSSE();
@@ -2524,7 +2524,7 @@ export default function AdCreationForm({
               Choose Files from Google Drive
 
             </Button>
-            <div className="text-xs text-gray-500 text-left">
+            <div className="text-xs text-gray-500 text-left mt-0.5">
               Drive files upload 5X faster
             </div>
           </div>
