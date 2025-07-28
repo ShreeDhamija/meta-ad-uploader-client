@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { toast } from "sonner"
-
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 const AuthContext = createContext()
@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const res = await fetch("https://api.withblip.com/auth/me", {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
           credentials: "include",
         })
         if (res.ok) {
