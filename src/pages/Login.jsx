@@ -131,7 +131,7 @@ export default function Login() {
             </div >
             <div className="w-[470px] h-[670px] overflow-visible">
                 <img
-                    src="https://api.withblip.com/SignUp.png"
+                    src="https://api.withblip.com/Sigup2.png"
                     alt="Login Visual"
                     className="w-full h-full object-cover rounded-[25px] shadow-xl"
                 />
