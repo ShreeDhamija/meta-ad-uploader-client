@@ -131,6 +131,18 @@ export default function BillingSettings() {
                         </Button>
                     )}
 
+                    {!isPaidSubscriber() && (
+                        <Button
+                            onClick={handleUpgrade}
+                            disabled={isLoading}
+                            className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-2xl text-base font-medium h-12"
+                            size="lg"
+                        >
+                            <span className="mr-2">🚀</span>
+                            Upgrade To Pro | $400/mo
+                        </Button>
+                    )}
+
                     {isPaidSubscriber() && (
                         <div className="space-y-2">
                             {subscriptionData.willCancelAt ? (
@@ -153,7 +165,7 @@ export default function BillingSettings() {
                                     onClick={handleCancel}
                                     variant="outline"
                                     disabled={isLoading}
-                                    className="w-full text-red-100 bg-red-500 rounded-xl"
+                                    className="w-full"
                                 >
                                     Cancel Subscription
                                 </Button>
