@@ -719,7 +719,7 @@ export default function AdCreationForm({
   const handleDriveClick = useCallback(async () => {
     try {
       const res = await axios.get(
-        `${API_BASE_URL} /auth/google/status`,
+        `${API_BASE_URL}/auth/google/status`,
         { withCredentials: true }
       );
 
