@@ -18,6 +18,7 @@ import CampaignIcon from '@/assets/icons/folder.svg?react';
 import AdSetIcon from '@/assets/icons/grid.svg?react';
 import CopyIcon from '@/assets/icons/copy.svg?react';
 import { useNavigate } from "react-router-dom"
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 
@@ -37,17 +38,7 @@ const sortCampaigns = (campaigns) => {
   });
 };
 
-// const sortAdSets = (adSets) => {
-//   const priority = { ACTIVE: 1, PAUSED: 2 };
-//   return [...adSets].sort((a, b) => {
-//     const aPriority = priority[a.status] || 3;
-//     const bPriority = priority[b.status] || 3;
-//     if (aPriority !== bPriority) return aPriority - bPriority;
-//     const aSpend = parseFloat(a.spend || 0);
-//     const bSpend = parseFloat(b.spend || 0);
-//     return bSpend - aSpend;
-//   });
-// };
+
 
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
@@ -151,7 +142,7 @@ export default function AdAccountSettings({
     setIsLoading(true)
     try {
       const res = await fetch(
-        `https://api.withblip.com/auth/fetch-campaigns?adAccountId=${adAccountId}`,
+        `https://${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${adAccountId}`,
         { credentials: "include" },
       )
       const data = await res.json()
@@ -203,7 +194,7 @@ export default function AdAccountSettings({
     setIsLoading(true)
     try {
       const res = await fetch(
-        `https://api.withblip.com/auth/fetch-adsets?campaignId=${campaignId}`,
+        `https://${API_BASE_URL}/auth/fetch-adsets?campaignId=${campaignId}`,
         { credentials: "include" },
       )
       const data = await res.json()
@@ -236,7 +227,7 @@ export default function AdAccountSettings({
   const refreshAdAccounts = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch("https://api.withblip.com/auth/fetch-ad-accounts", {
+      const res = await fetch(`https://${API_BASE_URL}/auth/fetch-ad-accounts`, {
         credentials: "include",
       })
       const data = await res.json()
@@ -258,7 +249,7 @@ export default function AdAccountSettings({
 
     try {
       const res = await fetch(
-        `https://api.withblip.com/auth/fetch-campaigns?adAccountId=${selectedAdAccount}`,
+        `https://${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${selectedAdAccount}`,
         { credentials: "include" }
       );
 
@@ -279,29 +270,6 @@ export default function AdAccountSettings({
   });
 
 
-  // const refreshAdSets = useCallback(async () => {
-  //   if (!selectedCampaign) return
-  //   setIsLoading(true)
-  //   try {
-  //     const res = await fetch(
-  //       `https://api.withblip.com/auth/fetch-adsets?campaignId=${selectedCampaign}`,
-  //       { credentials: "include" },
-  //     )
-  //     const data = await res.json()
-  //     if (data.adSets) {
-  //       setAdSets(sortAdSets(data.adSets))
-  //       toast.success("Ad Sets refreshed successfully!")
-  //     }
-  //   } catch (err) {
-  //     toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error"}`)
-  //     console.error("Failed to fetch ad sets:", err)
-  //   } finally {
-  //     setIsLoading(false)
-  //   }
-  // });
-
-
-
 
   const duplicateCampaignFunction = useCallback(async () => {
     if (!duplicateCampaign || !selectedAdAccount) {
@@ -311,7 +279,7 @@ export default function AdAccountSettings({
 
     setIsLoading(true);
     try {
-      const response = await fetch("https://api.withblip.com/auth/duplicate-campaign", {
+      const response = await fetch(`https://${API_BASE_URL}/auth/duplicate-campaign`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -347,7 +315,7 @@ export default function AdAccountSettings({
         // Fetch ad sets for the new campaign
         try {
           const res = await fetch(
-            `https://api.withblip.com/auth/fetch-adsets?campaignId=${data.copied_campaign_id}`,
+            `https://${API_BASE_URL}/auth/fetch-adsets?campaignId=${data.copied_campaign_id}`,
             { credentials: "include" },
           );
           const adsetData = await res.json();
