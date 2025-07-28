@@ -15,7 +15,7 @@ export default function useSubscription() {
     const fetchSubscriptionData = async () => {
         try {
             setLoading(true);
-            const res = await fetch(`${API_BASE_URL}.com/api/subscription/status`, {
+            const res = await fetch(`${API_BASE_URL}/api/subscription/status`, {
                 credentials: "include",
             });
 
