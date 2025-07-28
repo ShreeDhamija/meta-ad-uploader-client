@@ -17,7 +17,7 @@ import {
 
 } from "@/components/ui/dialog"
 import useSubscription from "@/lib/useSubscriptionSettings"
-import Card from '@/assets/icons/card.svg?react';
+import CardIcon from '@/assets/icons/card.svg?react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function BillingSettings() {
@@ -156,7 +156,7 @@ export default function BillingSettings() {
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2 text-lg">
-                                <Card />
+                                <CardIcon />
                                 Your Plan
                             </CardTitle>
                             <CardDescription className="text-gray-500 text-xs">Your current plan type</CardDescription>
