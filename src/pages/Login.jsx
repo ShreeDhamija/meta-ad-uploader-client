@@ -18,6 +18,8 @@ export default function Login() {
     }, [isLoggedIn, navigate])
 
     const handleFacebookLogin = () => {
+        console.log(meta.env.VITE_API_URL);
+        console.log(API_BASE_URL);
         window.location.href = `${API_BASE_URL}/auth/facebook?state=login`;
     }
 
