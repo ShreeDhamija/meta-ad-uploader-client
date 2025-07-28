@@ -15,7 +15,7 @@ import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useSubscription from "@/lib/useSubscriptionSettings"
-
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 class ErrorBoundary extends React.Component {
@@ -221,7 +221,7 @@ export default function Home() {
     const handleCloseOnboarding = () => {
         setShowOnboardingPopup(false) // closes instantly
 
-        fetch("https://api.withblip.com/settings/save", {
+        fetch(`${API_BASE_URL}/settings/save`, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
@@ -247,7 +247,7 @@ export default function Home() {
         setIsLoading(true)
         try {
             const res = await fetch(
-                `https://api.withblip.com/auth/fetch-adsets?campaignId=${selectedCampaign}`,
+                `${API_BASE_URL}/auth/fetch-adsets?campaignId=${selectedCampaign}`,
                 { credentials: "include" },
             )
             const data = await res.json()
@@ -410,7 +410,7 @@ export default function Home() {
                             setShowOnboardingPopup(false)
 
                             // Save settings after navigation
-                            fetch("https://api.withblip.com/settings/save", {
+                            fetch(`${API_BASE_URL}/settings/save`, {
                                 method: "POST",
                                 credentials: "include",
                                 headers: { "Content-Type": "application/json" },

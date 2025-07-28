@@ -1,4 +1,5 @@
 import { useEffect, useState, useContext, createContext } from "react"
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 const AppContext = createContext()
 
@@ -11,7 +12,7 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     const fetchAdAccounts = async () => {
       try {
-        const res = await fetch("https://api.withblip.com/auth/fetch-ad-accounts", {
+        const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, {
           credentials: "include",
         })
         const data = await res.json()
@@ -22,47 +23,11 @@ export const AppProvider = ({ children }) => {
         console.error("Failed to fetch ad accounts:", err)
       }
     }
-    // const fetchAdAccounts = async () => {
-    //   try {
-    //     // Fetch all available ad accounts from Meta
-    //     const allAdAccountsResponse = await fetch('https://api.withblip.com/auth/fetch-ad-accounts', {
-    //       credentials: 'include'
-    //     });
-    //     const allAdAccountsData = await allAdAccountsResponse.json();
 
-    //     // Store all available accounts
-    //     setAllAdAccounts(allAdAccountsData.adAccounts);
-
-    //     // Try to get user's selected ad accounts from database
-    //     try {
-    //       const userAdAccountsResponse = await fetch(`https://api.withblip.com/settings/ad-account?adAccountId=user-ad-accounts`, {
-    //         credentials: 'include'
-    //       });
-    //       const userAdAccountsData = await userAdAccountsResponse.json();
-
-    //       if (userAdAccountsData.settings && Array.isArray(userAdAccountsData.settings) && userAdAccountsData.settings.length > 0) {
-    //         // Filter to only show user's selected ad accounts
-    //         const filteredAdAccounts = allAdAccountsData.adAccounts.filter(account =>
-    //           userAdAccountsData.settings.includes(account.id)
-    //         );
-    //         setAdAccounts(filteredAdAccounts);
-    //       } else {
-    //         // If no saved selection exists, show all available accounts
-    //         setAdAccounts(allAdAccountsData.adAccounts);
-    //       }
-    //     } catch (dbError) {
-    //       // If database call fails, show all available accounts
-    //       setAdAccounts(allAdAccountsData.adAccounts);
-    //     }
-
-    //   } catch (error) {
-    //     console.error('Error fetching ad accounts:', error);
-    //   }
-    // };
 
     const fetchPages = async () => {
       try {
-        const res = await fetch("https://api.withblip.com/auth/fetch-pages", {
+        const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, {
           credentials: "include",
         })
         const data = await res.json()

@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
 
   const handleLogout = async () => {
     try {
-      const res = await fetch("https://api.withblip.com/auth/logout", {
+      const res = await fetch(`${API_BASE_URL}/auth/logout`, {
         credentials: "include",
       })
       if (res.ok) {
