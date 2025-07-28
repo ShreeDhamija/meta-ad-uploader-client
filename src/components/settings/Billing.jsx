@@ -39,6 +39,30 @@ export default function BillingSettings() {
         }
     };
 
+
+    const handleReactivate = async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/reactivate-subscription`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                toast.success("Subscription reactivated successfully!");
+                refreshSubscriptionData();
+            } else {
+                const error = await response.json();
+                toast.error(error.message || "Failed to reactivate subscription");
+            }
+        } catch (error) {
+            toast.error("Failed to reactivate subscription");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
     const handleCancel = async () => {
         if (!confirm('Are you sure you want to cancel your subscription?')) return;
 
@@ -127,19 +151,7 @@ export default function BillingSettings() {
                             size="lg"
                         >
                             <span className="mr-2">🚀</span>
-                            Upgrade To Pro | $400/mo
-                        </Button>
-                    )}
-
-                    {!isPaidSubscriber() && (
-                        <Button
-                            onClick={handleUpgrade}
-                            disabled={isLoading}
-                            className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-2xl text-base font-medium h-12"
-                            size="lg"
-                        >
-                            <span className="mr-2">🚀</span>
-                            Upgrade To Pro | $400/mo
+                            Upgrade To Pro | $500/mo
                         </Button>
                     )}
 
@@ -153,11 +165,11 @@ export default function BillingSettings() {
                                         </p>
                                     </div>
                                     <Button
-                                        onClick={handleUpgrade}
+                                        onClick={handleReactivate}
                                         disabled={isLoading}
                                         className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
                                     >
-                                        Reactivate Subscription
+                                        Reactivate Subscription | $500/mo
                                     </Button>
                                 </>
                             ) : (
@@ -214,7 +226,7 @@ export default function BillingSettings() {
                             <CardDescription className="text-gray-500" text-xs>{"Here's everything you get by upgrading"}</CardDescription>
                         </div>
                         <div className="text-right items-center flex flex-row space-x-1">
-                            <div className="text-2xl font-bold text-gray-900">$400</div>
+                            <div className="text-2xl font-bold text-gray-900">$500</div>
                             <div className="text-sm text-gray-400">/month</div>
                         </div>
                     </div>
