@@ -132,14 +132,33 @@ export default function BillingSettings() {
                     )}
 
                     {isPaidSubscriber() && (
-                        <Button
-                            onClick={handleCancel}
-                            variant="outline"
-                            disabled={isLoading}
-                            className="w-full mt-2"
-                        >
-                            Cancel Subscription
-                        </Button>
+                        <div className="space-y-2">
+                            {subscriptionData.willCancelAt ? (
+                                <>
+                                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
+                                        <p className="text-sm text-orange-800">
+                                            Your subscription will continue until {new Date(subscriptionData.willCancelAt).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <Button
+                                        onClick={handleUpgrade}
+                                        disabled={isLoading}
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                        Reactivate Subscription
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button
+                                    onClick={handleCancel}
+                                    variant="outline"
+                                    disabled={isLoading}
+                                    className="w-full text-red-200 bg-red-700 rounded-xl"
+                                >
+                                    Cancel Subscription
+                                </Button>
+                            )}
+                        </div>
                     )}
 
                     {/* Trial Warning */}
