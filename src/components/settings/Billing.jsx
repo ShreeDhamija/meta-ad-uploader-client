@@ -156,7 +156,7 @@ export default function BillingSettings() {
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2 text-lg">
-                                <CardIcon />
+                                <CardIcon className="w-5 h-5" />
                                 Your Plan
                             </CardTitle>
                             <CardDescription className="text-gray-500 text-xs">Your current plan type</CardDescription>
@@ -204,7 +204,7 @@ export default function BillingSettings() {
                                     onClick={handleCancel}
                                     variant="outline"
                                     disabled={isLoading}
-                                    className="w-full h-12 bg-red-500 text-white rounded-xl"
+                                    className="w-full h-12 bg-red-500 text-white rounded-xl hover:bg-red-500 hover:text-white"
                                 >
                                     Cancel Subscription
                                 </Button>
@@ -281,7 +281,7 @@ export default function BillingSettings() {
             </Card>
             {/* Cancel Confirmation Dialog */}
             <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                <DialogOverlay className="bg-black/50" /> {/* Custom overlay */}
+                <DialogOverlay className="bg-black/50 !-mt-[20px]" /> {/* Custom overlay */}
                 <DialogContent className="rounded-3xl">
                     <DialogHeader>
                         <DialogTitle>Cancel Subscription</DialogTitle>
