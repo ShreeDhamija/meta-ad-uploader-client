@@ -9,7 +9,7 @@ export default function useGlobalSettings() {
     useEffect(() => {
         const fetchSettings = async () => {
             try {
-                const res = await fetch(`${API_BASE_URL}.com/settings/global`, {
+                const res = await fetch(`${API_BASE_URL}/settings/global`, {
                     credentials: "include",
                 });
                 // We don't need to worry about 404s, the optional chaining below handles it.
