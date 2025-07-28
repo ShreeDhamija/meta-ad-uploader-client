@@ -155,7 +155,7 @@ export default function BillingSettings() {
                                     <Button
                                         onClick={handleUpgrade}
                                         disabled={isLoading}
-                                        className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
                                     >
                                         Reactivate Subscription
                                     </Button>
@@ -165,7 +165,7 @@ export default function BillingSettings() {
                                     onClick={handleCancel}
                                     variant="outline"
                                     disabled={isLoading}
-                                    className="w-full"
+                                    className="w-full h-12 bg-red-500 text-white rounded-xl"
                                 >
                                     Cancel Subscription
                                 </Button>
