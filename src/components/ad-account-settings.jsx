@@ -142,7 +142,7 @@ export default function AdAccountSettings({
     setIsLoading(true)
     try {
       const res = await fetch(
-        `https://${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${adAccountId}`,
+        `${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${adAccountId}`,
         { credentials: "include" },
       )
       const data = await res.json()
@@ -194,7 +194,7 @@ export default function AdAccountSettings({
     setIsLoading(true)
     try {
       const res = await fetch(
-        `https://${API_BASE_URL}/auth/fetch-adsets?campaignId=${campaignId}`,
+        `${API_BASE_URL}/auth/fetch-adsets?campaignId=${campaignId}`,
         { credentials: "include" },
       )
       const data = await res.json()
@@ -227,7 +227,7 @@ export default function AdAccountSettings({
   const refreshAdAccounts = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch(`https://${API_BASE_URL}/auth/fetch-ad-accounts`, {
+      const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, {
         credentials: "include",
       })
       const data = await res.json()
@@ -249,7 +249,7 @@ export default function AdAccountSettings({
 
     try {
       const res = await fetch(
-        `https://${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${selectedAdAccount}`,
+        `${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${selectedAdAccount}`,
         { credentials: "include" }
       );
 
@@ -279,7 +279,7 @@ export default function AdAccountSettings({
 
     setIsLoading(true);
     try {
-      const response = await fetch(`https://${API_BASE_URL}/auth/duplicate-campaign`, {
+      const response = await fetch(`${API_BASE_URL}/auth/duplicate-campaign`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -315,7 +315,7 @@ export default function AdAccountSettings({
         // Fetch ad sets for the new campaign
         try {
           const res = await fetch(
-            `https://${API_BASE_URL}/auth/fetch-adsets?campaignId=${data.copied_campaign_id}`,
+            `${API_BASE_URL}/auth/fetch-adsets?campaignId=${data.copied_campaign_id}`,
             { credentials: "include" },
           );
           const adsetData = await res.json();
