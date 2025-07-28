@@ -21,10 +21,44 @@ export default function BillingSettings() {
         isPaidSubscriber,
     } = useSubscription()
 
+    // In Billing.jsx, update the API calls:
     const handleUpgrade = async () => {
-        // For now, just show a message since we don't have Stripe yet
-        toast.info("Upgrade functionality will be available soon!")
-    }
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/create-checkout-session`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            const { url } = await response.json();
+            window.location.href = url;
+        } catch (error) {
+            toast.error("Failed to start upgrade process");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleCancel = async () => {
+        if (!confirm('Are you sure you want to cancel your subscription?')) return;
+
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/billing/cancel-subscription`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                toast.success("Subscription will cancel at the end of your billing period");
+                refreshSubscriptionData();
+            }
+        } catch (error) {
+            toast.error("Failed to cancel subscription");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -94,6 +128,17 @@ export default function BillingSettings() {
                         >
                             <span className="mr-2">🚀</span>
                             Upgrade To Pro | $400/mo
+                        </Button>
+                    )}
+
+                    {isPaidSubscriber() && (
+                        <Button
+                            onClick={handleCancel}
+                            variant="outline"
+                            disabled={isLoading}
+                            className="w-full mt-2"
+                        >
+                            Cancel Subscription
                         </Button>
                     )}
 
