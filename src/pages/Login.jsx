@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 export default function Login() {
@@ -17,8 +18,7 @@ export default function Login() {
     }, [isLoggedIn, navigate])
 
     const handleFacebookLogin = () => {
-        window.location.href = "https://api.withblip.com/auth/facebook?state=login"
-
+        window.location.href = `${API_BASE_URL}/auth/facebook?state=login`;
     }
 
     return (
