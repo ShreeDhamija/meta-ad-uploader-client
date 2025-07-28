@@ -6,11 +6,20 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
 import useSubscription from "@/lib/useSubscriptionSettings"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function BillingSettings() {
     const [isLoading, setIsLoading] = useState(false)
+    const [showCancelDialog, setShowCancelDialog] = useState(false)
     const {
         loading,
         subscriptionData,
@@ -63,9 +72,33 @@ export default function BillingSettings() {
     };
 
 
-    const handleCancel = async () => {
-        if (!confirm('Are you sure you want to cancel your subscription?')) return;
+    // const handleCancel = async () => {
+    //     if (!confirm('Are you sure you want to cancel your subscription?')) return;
 
+    //     setIsLoading(true);
+    //     try {
+    //         const response = await fetch(`${API_BASE_URL}/api/stripe/cancel-subscription`, {
+    //             method: 'POST',
+    //             credentials: 'include',
+    //         });
+
+    //         if (response.ok) {
+    //             toast.success("Subscription will cancel at the end of your billing period");
+    //             refreshSubscriptionData();
+    //         }
+    //     } catch (error) {
+    //         toast.error("Failed to cancel subscription");
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
+
+    const handleCancel = () => {
+        setShowCancelDialog(true);
+    };
+
+    const confirmCancel = async () => {
+        setShowCancelDialog(false);
         setIsLoading(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/stripe/cancel-subscription`, {
@@ -99,7 +132,7 @@ export default function BillingSettings() {
         if (isPaidSubscriber())
             return (
                 <Badge variant="default" className="bg-green-100 text-green-800">
-                    Active
+                    Pro
                 </Badge>
             )
         if (isTrialExpired()) return <Badge variant="destructive">Trial Expired</Badge>
@@ -125,23 +158,14 @@ export default function BillingSettings() {
                             </CardTitle>
                             <CardDescription className="text-gray-500 text-xs">Your current plan type</CardDescription>
                         </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div>
+                        {/* Move plan type here */}
+                        <div className="text-right">
                             <p className="text-sm font-medium text-gray-600 mb-1">Plan Type</p>
                             {getStatusBadge()}
                         </div>
-
-                        {isOnTrial() && (
-                            <div className="text-right">
-                                <p className="text-sm font-medium text-gray-600 mb-1">Trial Ends</p>
-                                <p className="text-md font-semibold text-red-500">{subscriptionData.trialDaysLeft} days</p>
-                            </div>
-                        )}
                     </div>
-
+                </CardHeader>
+                <CardContent className="space-y-4">
                     {/* Upgrade Button */}
                     {!isPaidSubscriber() && (
                         <Button
@@ -252,6 +276,31 @@ export default function BillingSettings() {
                     </div>
                 </CardContent>
             </Card>
+            {/* Cancel Confirmation Dialog */}
+            <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Cancel Subscription</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to cancel your subscription? Your plan will remain active until the end of your current billing period.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowCancelDialog(false)}
+                        >
+                            Keep Subscription
+                        </Button>
+                        <Button
+                            onClick={confirmCancel}
+                            className="bg-red-600 hover:bg-red-700"
+                        >
+                            Yes, Cancel
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
