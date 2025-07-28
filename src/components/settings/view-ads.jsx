@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { RefreshCcw } from "lucide-react";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 
@@ -16,7 +17,7 @@ export default function ViewAds() {
     useEffect(() => {
         async function fetchAdAccounts() {
             try {
-                const response = await fetch("https://api.withblip.com/auth/fetch-ad-accounts", {
+                const response = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, {
                     method: "GET",
                     credentials: "include"
                 });
@@ -45,7 +46,7 @@ export default function ViewAds() {
     async function fetchPreviewsForAccount(accountId) {
         setLoadingPreviews(true);
         try {
-            const response = await fetch(`https://api.withblip.com/auth/generate-ad-preview?adAccountId=${accountId}`, {
+            const response = await fetch(`${API_BASE_URL}/auth/generate-ad-preview?adAccountId=${accountId}`, {
                 method: "GET",
                 credentials: "include"
             });

@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CheckCircle, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import useSubscription from "@/lib/useSubscriptionSettings"
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function BillingSettings() {
     const [isLoading, setIsLoading] = useState(false)

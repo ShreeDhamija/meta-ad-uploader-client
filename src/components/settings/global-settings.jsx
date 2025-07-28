@@ -10,6 +10,7 @@ import { saveSettings } from "@/lib/saveSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings";
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts";
 import { Infotooltip } from "@/components/ui/infotooltip"
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 

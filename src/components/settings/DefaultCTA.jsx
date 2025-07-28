@@ -8,6 +8,7 @@ import {
     SelectItem,
 } from "@/components/ui/select"
 import CTAIcon from '@/assets/icons/cta.svg?react';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 // Move constants outside component to prevent recreation on every render
 const CTA_OPTIONS = [

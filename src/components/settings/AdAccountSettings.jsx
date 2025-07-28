@@ -71,11 +71,14 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   const [showFloatingButton, setShowFloatingButton] = useState(false)
   const [animateClass, setAnimateClass] = useState("")
   const [isReauthOpen, setIsReauthOpen] = useState(false)
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+
 
   // Memoized Facebook reauth handler
   const handleFacebookReauth = useCallback(() => {
     setIsReauthOpen(false)
-    window.location.href = "https://api.withblip.com/auth/facebook?state=settings"
+    window.location.href = `${API_BASE_URL}/auth/facebook?state=settings`
   }, [])
 
   // Memoized filtered ad accounts for dropdown

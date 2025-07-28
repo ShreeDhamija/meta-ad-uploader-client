@@ -14,6 +14,7 @@ import { RotateLoader } from "react-spinners";
 import LinkIcon from '@/assets/icons/link.svg?react';
 // Move constants outside component
 const VALUE_SUGGESTIONS = ["facebook", "paid", "{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"];
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 const DEFAULT_PREFILL_PAIRS = [
     { key: "utm_source", value: "facebook" },
@@ -56,7 +57,7 @@ function LinkParameters({ defaultLink, setDefaultLink, utmPairs, setUtmPairs, se
 
         try {
             const res = await fetch(
-                `https://api.withblip.com/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
+                `${API_BASE_URL}/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
                 { credentials: "include" }
             );
             const data = await res.json();

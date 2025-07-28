@@ -11,7 +11,7 @@ import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 import TemplateIcon from '@/assets/icons/template.svg?react';
-
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 
@@ -182,7 +182,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     if (!showImportPopup || !selectedAdAccount) return;
 
     setIsFetchingCopy(true)
-    fetch(`https://api.withblip.com/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
+    fetch(`${API_BASE_URL}/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
       credentials: "include"
     })
       .then(res => res.json())

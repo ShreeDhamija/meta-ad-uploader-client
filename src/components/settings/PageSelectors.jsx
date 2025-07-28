@@ -15,6 +15,7 @@ import { ChevronsUpDown, RefreshCcw } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
 import { toast } from "sonner";
 import MetaIcon from '@/assets/icons/meta.svg?react';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 function PageSelectors({
   selectedPage,
@@ -50,7 +51,7 @@ function PageSelectors({
   // Memoized refresh function
   const refreshPages = useCallback(async () => {
     try {
-      const res = await fetch("https://api.withblip.com/auth/fetch-pages", {
+      const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, {
         credentials: "include"
       });
 
