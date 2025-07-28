@@ -153,7 +153,7 @@ export default function BillingSettings() {
                                     onClick={handleCancel}
                                     variant="outline"
                                     disabled={isLoading}
-                                    className="w-full text-red-200 bg-red-700 rounded-xl"
+                                    className="w-full text-red-100 bg-red-500 rounded-xl"
                                 >
                                     Cancel Subscription
                                 </Button>
