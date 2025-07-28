@@ -44,7 +44,7 @@ export default function BillingSettings() {
 
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/billing/cancel-subscription`, {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/cancel-subscription`, {
                 method: 'POST',
                 credentials: 'include',
             });
