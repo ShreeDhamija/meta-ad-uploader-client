@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import SignUpImg from "../assets/signup.webp?url"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
@@ -26,7 +27,7 @@ export default function Login() {
     return (
         <div className="flex justify-center align-center items-center h-screen px-4 overflow-visible">
             <div className="flex rounded-xl overflow-hidden p-6 overflow-visible">
-                <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-xl shadow-md min-w-[420px] min-h-[670px] flex flex-col justify-center">
+                <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-3xl shadow-lg min-w-[420px] min-h-[650px] flex flex-col justify-center">
                     <div className="text-center space-y-1">
                         <img
                             src="https://api.withblip.com/logo.webp"
@@ -129,11 +130,11 @@ export default function Login() {
                     </p>
                 </div>
             </div >
-            <div className="w-[470px] h-[670px] overflow-visible">
-                <img
-                    src="https://api.withblip.com/Sigup2.png"
+            <div className="w-[490px] h-[700px] overflow-visible">
+                <img src={SignUpImg}
                     alt="Login Visual"
-                    className="w-full h-full object-cover rounded-[25px] shadow-xl"
+                    className="w-full h-full object-cover"
+
                 />
             </div>
         </div>
