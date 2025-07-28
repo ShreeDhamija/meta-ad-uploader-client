@@ -13,8 +13,11 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogOverlay, // Add this import
+
 } from "@/components/ui/dialog"
 import useSubscription from "@/lib/useSubscriptionSettings"
+import Card from '@/assets/icons/card.svg?react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function BillingSettings() {
@@ -153,7 +156,7 @@ export default function BillingSettings() {
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2 text-lg">
-                                <img src="https://unpkg.com/@mynaui/icons/icons/credit-card.svg" />
+                                <Card />
                                 Your Plan
                             </CardTitle>
                             <CardDescription className="text-gray-500 text-xs">Your current plan type</CardDescription>
@@ -278,7 +281,8 @@ export default function BillingSettings() {
             </Card>
             {/* Cancel Confirmation Dialog */}
             <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                <DialogContent>
+                <DialogOverlay className="bg-black/50" /> {/* Custom overlay */}
+                <DialogContent className="rounded-3xl">
                     <DialogHeader>
                         <DialogTitle>Cancel Subscription</DialogTitle>
                         <DialogDescription>
@@ -289,12 +293,13 @@ export default function BillingSettings() {
                         <Button
                             variant="outline"
                             onClick={() => setShowCancelDialog(false)}
+                            className="rounded-2xl"
                         >
                             Keep Subscription
                         </Button>
                         <Button
                             onClick={confirmCancel}
-                            className="bg-red-600 hover:bg-red-700"
+                            className="bg-red-600 hover:bg-red-700 rounded-2xl"
                         >
                             Yes, Cancel
                         </Button>
