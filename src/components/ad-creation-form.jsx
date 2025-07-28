@@ -30,6 +30,7 @@ import CTAIcon from '@/assets/icons/cta.svg?react';
 import { useNavigate } from "react-router-dom"
 import CogIcon from '@/assets/icons/cog.svg?react';
 import pLimit from 'p-limit';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 const useAdCreationProgress = (jobId, isCreatingAds) => {
@@ -136,7 +137,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
           eventSource = null;
         }
 
-        eventSource = new EventSource(`https://api.withblip.com/api/progress/${jobId}`);
+        eventSource = new EventSource(`${API_BASE_URL}/api/progress/${jobId}`);
 
         // Set connection timeout
         connectionTimeoutId = setTimeout(() => {
@@ -380,7 +381,7 @@ export default function AdCreationForm({
     try {
       // 1. Start multipart upload and get UploadId
       const startResponse = await axios.post(
-        "https://api.withblip.com/auth/s3/start-upload",
+        `${API_BASE_URL}/auth/s3/start-upload`,
         {
           fileName: file.name,
           fileType: file.type
@@ -393,7 +394,7 @@ export default function AdCreationForm({
 
       // 2. Get presigned URLs for each part
       const urlsResponse = await axios.post(
-        "https://api.withblip.com/auth/s3/get-upload-urls",
+        `${API_BASE_URL}/auth/s3/get-upload-urls`,
         {
           key: s3Key,
           uploadId: uploadId,
@@ -430,7 +431,7 @@ export default function AdCreationForm({
 
       // 4. Complete the upload
       const completeResponse = await axios.post(
-        "https://api.withblip.com/auth/s3/complete-upload",
+        `${API_BASE_URL}/auth/s3/complete-upload`,
         {
           key: s3Key,
           uploadId: uploadId,
@@ -450,7 +451,7 @@ export default function AdCreationForm({
     } catch (error) {
       if (uploadId && s3Key) {
         await axios.post(
-          "https://api.withblip.com/auth/s3/abort-upload",
+          `${API_BASE_URL}/auth/s3/abort-upload`,
           {
             key: s3Key,
             uploadId: uploadId
@@ -469,7 +470,7 @@ export default function AdCreationForm({
 
 
 
-    const res = await fetch("https://api.withblip.com/api/upload-from-drive", {
+    const res = await fetch(`${API_BASE_URL}/api/upload-from-drive`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -527,7 +528,7 @@ export default function AdCreationForm({
   const refreshPages = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("https://api.withblip.com/auth/fetch-pages", {
+      const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, {
         credentials: "include"
       });
 
@@ -596,7 +597,7 @@ export default function AdCreationForm({
     const checkGoogleAuth = async () => {
       try {
         const response = await axios.get(
-          "https://api.withblip.com/auth/google/status",
+          `${API_BASE_URL}/auth/google/status`,
           { withCredentials: true }
         );
 
@@ -718,7 +719,7 @@ export default function AdCreationForm({
   const handleDriveClick = useCallback(async () => {
     try {
       const res = await axios.get(
-        "https://api.withblip.com/auth/google/status",
+        `${API_BASE_URL} /auth/google/status`,
         { withCredentials: true }
       );
 
@@ -736,7 +737,7 @@ export default function AdCreationForm({
     }
 
     const authWindow = window.open(
-      "https://api.withblip.com/auth/google?popup=true",
+      `${API_BASE_URL}/auth/google?popup=true`,
       "_blank",
       "width=1100,height=750"
     );
@@ -753,7 +754,7 @@ export default function AdCreationForm({
     }, 65000);
 
     const listener = (event) => {
-      if (event.origin !== "https://api.withblip.com") return;
+      if (event.origin !== `${API_BASE_URL}`) return;
 
       const { type, accessToken } = event.data || {};
       if (type === "google-auth-success") {
@@ -1046,7 +1047,7 @@ export default function AdCreationForm({
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
     const response = await axios.post(
-      "https://api.withblip.com/auth/duplicate-adset",
+      `${API_BASE_URL}/auth/duplicate-adset`,
       { adSetId, campaignId, adAccountId, newAdSetName },
       { withCredentials: true },
     )
@@ -1427,7 +1428,7 @@ export default function AdCreationForm({
           // console.log("reached backend endpoint");
 
           promises.push(
-            axios.post("https://api.withblip.com/auth/create-ad", formData, {
+            axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
               withCredentials: true,
               headers: { "Content-Type": "multipart/form-data" },
             })
@@ -1491,7 +1492,7 @@ export default function AdCreationForm({
 
 
           promises.push(
-            axios.post("https://api.withblip.com/auth/create-ad", formData, {
+            axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
               withCredentials: true,
               headers: { "Content-Type": "multipart/form-data" },
             })
@@ -1610,7 +1611,7 @@ export default function AdCreationForm({
 
 
               promises.push(
-                axios.post("https://api.withblip.com/auth/create-ad", formData, {
+                axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
                   withCredentials: true,
                   headers: { "Content-Type": "multipart/form-data" },
                 })
@@ -1650,7 +1651,7 @@ export default function AdCreationForm({
               formData.append("jobId", frontendJobId);
 
               promises.push(
-                axios.post("https://api.withblip.com/auth/create-ad", formData, {
+                axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
                   withCredentials: true,
                   headers: { "Content-Type": "multipart/form-data" },
                 })
@@ -1686,7 +1687,7 @@ export default function AdCreationForm({
               formData.append("jobId", frontendJobId);
 
               promises.push(
-                axios.post("https://api.withblip.com/auth/create-ad", formData, {
+                axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
                   withCredentials: true,
                   headers: { "Content-Type": "multipart/form-data" },
                 })
@@ -1720,7 +1721,7 @@ export default function AdCreationForm({
               formData.append("jobId", frontendJobId);
 
               promises.push(
-                axios.post("https://api.withblip.com/auth/create-ad", formData, {
+                axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
                   withCredentials: true,
                   headers: { "Content-Type": "multipart/form-data" },
                 })
@@ -1733,15 +1734,14 @@ export default function AdCreationForm({
       } // Close if condition
 
 
-      // const responses = await Promise.all(promises);
-      // toast.success("Ads created successfully!");
+
 
       try {
         const responses = await Promise.all(promises);
 
         // Try to complete the job
         try {
-          await axios.post("https://api.withblip.com/auth/complete-job", {
+          await axios.post(`${API_BASE_URL}/auth/complete-job`, {
             jobId: frontendJobId,
             message: 'All ads created successfully!'
           }, {

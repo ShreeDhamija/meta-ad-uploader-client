@@ -1,5 +1,8 @@
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+
 export async function deleteCopyTemplate(adAccountId, templateName) {
-    const response = await fetch("https://api.withblip.com/settings/delete-template", {
+    const response = await fetch(`${API_BASE_URL}/settings/delete-template`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function useAdAccountSettings(adAccountId) {
     const [loading, setLoading] = useState(true);
@@ -14,7 +15,7 @@ export default function useAdAccountSettings(adAccountId) {
         setLoading(true); // ← This is essential for account switches
         const fetchAdAccountSettings = async () => {
             try {
-                const res = await fetch(`https://api.withblip.com/settings/ad-account?adAccountId=${adAccountId}`, {
+                const res = await fetch(`${API_BASE_URL}/settings/ad-account?adAccountId=${adAccountId}`, {
                     credentials: "include",
                 });
                 const data = await res.json();

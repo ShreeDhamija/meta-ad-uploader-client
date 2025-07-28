@@ -8,6 +8,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ChevronsUpDown, Check } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import ShopIcon from '@/assets/icons/bag.svg?react';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function ShopDestinationSelector({
     pageId,
@@ -26,42 +27,7 @@ export default function ShopDestinationSelector({
     const [isLoading, setIsLoading] = useState(false)
     const [lastFetchedPageId, setLastFetchedPageId] = useState(null)
 
-    // Fetch shop data when pageId changes and component is visible
-    // useEffect(() => {
-    //     if (!pageId || !isVisible) {
-    //         setShopData({ shops: [], productSets: [], products: [] })
-    //         return
-    //     }
 
-    //     const fetchShopData = async () => {
-    //         setIsLoading(true)
-    //         try {
-    //             const res = await fetch(
-    //                 `https://api.withblip.com/auth/fetch-shop-data?pageId=${pageId}`,
-    //                 { credentials: "include" },
-    //             )
-    //             const data = await res.json()
-
-    //             if (res.ok) {
-    //                 setShopData({
-    //                     shops: data.shops || [],
-    //                     productSets: data.product_sets || [],
-    //                     products: data.products || [],
-    //                 })
-    //             } else {
-    //                 console.error("Failed to fetch shop data:", data.error)
-    //                 setShopData({ shops: [], productSets: [], products: [] })
-    //             }
-    //         } catch (err) {
-    //             console.error("Error fetching shop data:", err)
-    //             setShopData({ shops: [], productSets: [], products: [] })
-    //         } finally {
-    //             setIsLoading(false)
-    //         }
-    //     }
-
-    //     fetchShopData()
-    // }, [pageId, isVisible])
 
     // Fetch shop data only when pageId changes (not when isVisible changes)
     useEffect(() => {
@@ -80,7 +46,7 @@ export default function ShopDestinationSelector({
             setIsLoading(true)
             try {
                 const res = await fetch(
-                    `https://api.withblip.com/auth/fetch-shop-data?pageId=${pageId}`,
+                    `${API_BASE_URL}/auth/fetch-shop-data?pageId=${pageId}`,
                     { credentials: "include" },
                 )
                 const data = await res.json()
