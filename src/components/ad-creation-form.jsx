@@ -29,7 +29,7 @@ import LinkIcon from '@/assets/icons/link.svg?react';
 import CTAIcon from '@/assets/icons/cta.svg?react';
 import { useNavigate } from "react-router-dom"
 import CogIcon from '@/assets/icons/cog.svg?react';
-import RocketIcon from '@/assets/icons/rocket.svg?react';
+import RocketIcon from '@/assets/icons/rocket.webp';
 import CheckIcon from '@/assets/icons/check.svg?react';
 import UploadIcon from '@/assets/icons/upload.svg?react';
 import QueueIcon from '@/assets/icons/queue.svg?react';
@@ -1985,11 +1985,11 @@ export default function AdCreationForm({
           {/* Collapsed State */}
           {!isJobTrackerExpanded && (
             <div
-              className="bg-white rounded-lg border border-gray-100/50 shadow-xl p-3 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
+              className="bg-white rounded-lg border border-gray-300/50 shadow-xl p-3 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
               onClick={() => setIsJobTrackerExpanded(true)}
             >
               <div className="flex items-center gap-2">
-                <RocketIcon className="w-4 h-4" />
+                <img src={RocketIcon} className="w-4 h-4" />
                 <span className="font-semibold text-sm">Job Queue</span>
               </div>
               <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
@@ -2001,11 +2001,11 @@ export default function AdCreationForm({
 
           {/* Expanded State */}
           {isJobTrackerExpanded && (
-            <div className="bg-white border border-gray-100/50 rounded-xl shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-5">
+            <div className="bg-white border border-gray-300/50 rounded-[20px] shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-5">
               {/* Header */}
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <RocketIcon className="w-5 h-5" />
+                  <img src={RocketIcon} className="w-7 h-7" />
                   <h3 className="font-semibold">Job Queue</h3>
                 </div>
                 <button
@@ -2049,7 +2049,7 @@ export default function AdCreationForm({
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex-shrink-0">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <UploadIcon className="w-4 h-4" />
+                          <UploadIcon className="w-7 h-7" />
                         </div>
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700">
@@ -2072,7 +2072,7 @@ export default function AdCreationForm({
                   <div key={job.id || index} className="p-4 border-b border-gray-100 flex items-center gap-3">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                        <QueueIcon className="w-4 h-4 text-yellow-600" />
+                        <QueueIcon className="w-7 h-7 text-yellow-600" />
                       </div>
                     </div>
                     <p className="flex-1 text-sm text-gray-600">
