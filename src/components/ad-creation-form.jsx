@@ -1874,16 +1874,16 @@ export default function AdCreationForm({
         errorMessage = error.message;
       }
       toast.error(`Error uploading ads: ${errorMessage}`);
+
       console.error("Error uploading ads:", error.response?.data || error);
       console.error("Error uploading ads:", error.response?.data || error);
       // setIsCreatingAds(false);
-      setJobId(null);
-      selectedAdSets
+      // setJobId(null);
+      throw new Error(errorMessage);
+      // selectedAdSets
     } finally {
       setIsLoading(false);
-      // if (duplicateAdSet) {
-      //   await refreshAdSets()
-      // }
+
     }
   }
 
@@ -1997,126 +1997,126 @@ export default function AdCreationForm({
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
-      {/* {hasStartedAnyJob && ( */}
-      <div className="fixed bottom-4 right-4 z-50">
-        {/* Collapsed State */}
-        {!isJobTrackerExpanded && (
-          <div
-            className="bg-white rounded-3xl border border-gray-200/50 border-4 shadow-xl p-2 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
-            onClick={() => setIsJobTrackerExpanded(true)}
-          >
-            <div className="flex items-center gap-2">
-              <RocketIcon2
-                alt="Rocket Icon"
-                className="!w-10 h-10 object-contain" // Image fills its container
-              />
-              <span className="font-medium text-sm">Job Queue</span>
-            </div>
-            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
-              {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
-            </span>
-            <ChevronDown className="h-4 w-4 text-gray-500 rotate-180" />
-          </div>
-        )}
-
-        {/* Expanded State */}
-        {isJobTrackerExpanded && (
-          <div className="bg-white border border-gray-200/50 border-4 rounded-[20px] shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-2">
-            {/* Header */}
-            <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+      {hasStartedAnyJob && (
+        <div className="fixed bottom-4 right-4 z-50">
+          {/* Collapsed State */}
+          {!isJobTrackerExpanded && (
+            <div
+              className="bg-white rounded-3xl border border-gray-200/50 border-4 shadow-xl p-2 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
+              onClick={() => setIsJobTrackerExpanded(true)}
+            >
               <div className="flex items-center gap-2">
-                {/* Fixed size container for the RocketIcon */}
-                <div className="w-12 h-12 flex-shrink-0">
-                  <RocketIcon2
-                    alt="Rocket Icon"
-                    className="w-full h-full object-contain" // Image fills its container
-                  />
-                </div>
-                <div className="flex flex-col">
-                  <h3 className="font-semibold text-sm">Job Queue</h3>
-                  <p className="text-sm font-medium text-gray-400">{jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active</p>
-                </div>
+                <RocketIcon2
+                  alt="Rocket Icon"
+                  className="!w-10 h-10 object-contain" // Image fills its container
+                />
+                <span className="font-medium text-sm">Job Queue</span>
               </div>
-              <button
-                onClick={() => setIsJobTrackerExpanded(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <ChevronDown className="h-4 w-4" />
-              </button>
+              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
+                {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
+              </span>
+              <ChevronDown className="h-4 w-4 text-gray-500 rotate-180" />
             </div>
+          )}
 
-            {/* Jobs List */}
-            <div className="flex-1 overflow-y-auto">
-              {/* Completed Jobs */}
-              {/* Completed Jobs */}
-              {completedJobs.map((job) => (
-                <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
-                  <div className="flex-shrink-0">
-                    {job.status === 'error' ? (
-                      <CircleX className="w-6 h-6 text-red-500" />
-                    ) : (
-                      <CheckIcon className="w-6 h-6" />
-                    )}
-                  </div>
-                  <p className={`flex-1 text-sm ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
-                    {job.message}
-                  </p>
-                  <button
-                    onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <CircleX className="h-4 w-4 text-gray-500" />
-                  </button>
-                </div>
-              ))}
-
-              {/* Current Job */}
-              {currentJob && (
-                <div className="p-3.5 border-b border-gray-100">
-                  <div className="flex items-center gap-3 mb-2.5">
-                    <div className="flex-shrink-0">
-                      <UploadIcon className="w-6 h-6" />
-                    </div>
-                    <p className="flex-1 text-sm font-medium text-gray-700">
-                      Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
-                    </p>
-                    <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
-
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${progress || trackedProgress}%` }}
+          {/* Expanded State */}
+          {isJobTrackerExpanded && (
+            <div className="bg-white border border-gray-200/50 border-4 rounded-[20px] shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-2">
+              {/* Header */}
+              <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {/* Fixed size container for the RocketIcon */}
+                  <div className="w-12 h-12 flex-shrink-0">
+                    <RocketIcon2
+                      alt="Rocket Icon"
+                      className="w-full h-full object-contain" // Image fills its container
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">{progressMessage || trackedMessage}</p>
-
-                </div>
-              )}
-
-              {/* Queued Jobs */}
-              {jobQueue.slice(currentJob ? 1 : 0).map((job, index) => (
-                <div key={job.id || index} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
-                  <div className="flex-shrink-0">
-                    <QueueIcon className="w-6 h-6 text-yellow-600" />
+                  <div className="flex flex-col">
+                    <h3 className="font-semibold text-sm">Job Queue</h3>
+                    <p className="text-sm font-medium text-gray-400">{jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active</p>
                   </div>
-                  <p className="flex-1 text-sm text-gray-600">
-                    Queued {job.adCount} ad{job.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}
-                  </p>
-                  <button
-                    onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
-                    className="text-gray-400 hover:text-red-600"
-                  >
-                    <CircleX className="h-4 w-4 text-red-500" />
-                  </button>
                 </div>
-              ))}
+                <button
+                  onClick={() => setIsJobTrackerExpanded(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Jobs List */}
+              <div className="flex-1 overflow-y-auto">
+                {/* Completed Jobs */}
+                {/* Completed Jobs */}
+                {completedJobs.map((job) => (
+                  <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      {job.status === 'error' ? (
+                        <CircleX className="w-6 h-6 text-red-500" />
+                      ) : (
+                        <CheckIcon className="w-6 h-6" />
+                      )}
+                    </div>
+                    <p className={`flex-1 text-sm ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
+                      {job.message}
+                    </p>
+                    <button
+                      onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <CircleX className="h-4 w-4 text-gray-500" />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Current Job */}
+                {currentJob && (
+                  <div className="p-3.5 border-b border-gray-100">
+                    <div className="flex items-center gap-3 mb-2.5">
+                      <div className="flex-shrink-0">
+                        <UploadIcon className="w-6 h-6" />
+                      </div>
+                      <p className="flex-1 text-sm font-medium text-gray-700">
+                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
+                      </p>
+                      <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
+
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progress || trackedProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">{progressMessage || trackedMessage}</p>
+
+                  </div>
+                )}
+
+                {/* Queued Jobs */}
+                {jobQueue.slice(currentJob ? 1 : 0).map((job, index) => (
+                  <div key={job.id || index} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <QueueIcon className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <p className="flex-1 text-sm text-gray-600">
+                      Queued {job.adCount} ad{job.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}
+                    </p>
+                    <button
+                      onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <CircleX className="h-4 w-4 text-red-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
-      {/* // )
-      // } */}
+          )}
+        </div>
+      )
+      }
 
       <CardHeader>
         <CardTitle className="flex items-center justify-between w-full">
@@ -2768,6 +2768,7 @@ export default function AdCreationForm({
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
                 (files.length === 0 && driveFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
+                (isCarouselAd && (files.length + driveFiles.length) < 2) ||
                 (showShopDestinationSelector && !selectedShopDestination)
               }
             >
@@ -2778,6 +2779,12 @@ export default function AdCreationForm({
             {showShopDestinationSelector && !selectedShopDestination && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a shop destination
+              </div>
+            )}
+            {/* Validation message for Carousel Ads */}
+            {isCarouselAd && (files.length + driveFiles.length) > 0 && (files.length + driveFiles.length) < 2 && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Carousel ads require at least 2 files. You have {files.length + driveFiles.length}.
               </div>
             )}
           </div>
