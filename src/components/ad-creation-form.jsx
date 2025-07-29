@@ -1359,7 +1359,7 @@ export default function AdCreationForm({
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
     // console.log(frontendJobId);
-    setJobId(frontendJobId); // This triggers SSE
+    // setJobId(frontendJobId); // This triggers SSE
 
 
     const smallDriveFiles = driveFiles.filter(file =>
@@ -1421,6 +1421,8 @@ export default function AdCreationForm({
       }
       // console.log("passed validation check");
     }
+
+    setJobId(frontendJobId); // This triggers SSE
 
     try {
       const promises = [];
