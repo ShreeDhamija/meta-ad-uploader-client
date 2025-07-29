@@ -181,7 +181,7 @@ export default function BillingSettings() {
                             ) : (
                                 <Button
                                     onClick={handleCancel}
-                                    variant="destrurctive"
+                                    variant="destructive"
                                     disabled={isLoading}
                                     className="w-full h-12 rounded-2xl"
                                 >
@@ -261,29 +261,31 @@ export default function BillingSettings() {
             {/* Cancel Confirmation Dialog */}
             <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" /> {/* Custom overlay */}
-                <DialogContent className="rounded-3xl !p-4 !space-y-6">
-                    <DialogHeader className="space-y-2">
-                        <DialogTitle>Cancel Subscription</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to cancel your subscription? Your plan will remain active until the end of your current billing period.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowCancelDialog(false)}
-                            className="rounded-2xl"
-                        >
-                            Keep Subscription
-                        </Button>
-                        <Button
-                            onClick={confirmCancel}
-                            className="bg-red-600 hover:bg-red-700 rounded-2xl"
-                        >
-                            Yes, Cancel
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
+                <div className="!p-6 !space-y-6">
+                    <DialogContent className="rounded-3xl">
+                        <DialogHeader className="space-y-2">
+                            <DialogTitle>Cancel Subscription</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to cancel your subscription? Your plan will remain active until the end of your current billing period.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowCancelDialog(false)}
+                                className="rounded-2xl"
+                            >
+                                Keep Subscription
+                            </Button>
+                            <Button
+                                onClick={confirmCancel}
+                                className="bg-red-600 hover:bg-red-700 rounded-2xl"
+                            >
+                                Yes, Cancel
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </div>
             </Dialog>
         </div>
     )
