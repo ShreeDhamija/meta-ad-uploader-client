@@ -128,23 +128,23 @@ export default function Home() {
 
 
 
-    // if (authLoading) return null
+    if (authLoading) return null
 
 
-    // useEffect(() => {
-    //     if (!authLoading && !isLoggedIn) {
-    //         navigate("/login");
-    //     }
-    // }, [authLoading, isLoggedIn]);
+    useEffect(() => {
+        if (!authLoading && !isLoggedIn) {
+            navigate("/login");
+        }
+    }, [authLoading, isLoggedIn]);
 
 
-    // //  Show onboarding popup once settings are loaded
-    // useEffect(() => {
-    //     if (!isLoggedIn || loading) return
-    //     if (!hasSeenOnboarding) {
-    //         setShowOnboardingPopup(true)
-    //     }
-    // }, [isLoggedIn, loading, hasSeenOnboarding])
+    //  Show onboarding popup once settings are loaded
+    useEffect(() => {
+        if (!isLoggedIn || loading) return
+        if (!hasSeenOnboarding) {
+            setShowOnboardingPopup(true)
+        }
+    }, [isLoggedIn, loading, hasSeenOnboarding])
 
 
 

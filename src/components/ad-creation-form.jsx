@@ -252,13 +252,13 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   }, [jobId]);
 
   // Reset state when ad creation stops
-  useEffect(() => {
-    if (!isCreatingAds) {
-      setProgress(0);
-      setMessage('');
-      setStatus('idle');
-    }
-  }, [isCreatingAds]);
+  // useEffect(() => {
+  //   if (!isCreatingAds) {
+  //     setProgress(0);
+  //     setMessage('');
+  //     setStatus('idle');
+  //   }
+  // }, [isCreatingAds]);
 
   return { progress, message, status };
 };
@@ -372,10 +372,23 @@ export default function AdCreationForm({
   const S3_UPLOAD_THRESHOLD = 40 * 1024 * 1024; // 40 MB
 
   const captureFormDataAsJob = () => {
+
+    let adCount = 0;
+    if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
+      const groupedFileIds = new Set(fileGroups.flat());
+      const ungroupedFiles = [...files, ...driveFiles].filter(f =>
+        !groupedFileIds.has(f.isDrive ? f.id : f.name)
+      );
+      adCount = fileGroups.length + ungroupedFiles.length;
+    } else {
+      adCount = files.length + driveFiles.length;
+    }
+
     return {
       id: uuidv4(),
       createdAt: Date.now(),
       status: 'queued',
+      adCount: adCount,
       formData: {
         // Form content states
         headlines: [...headlines],
@@ -1009,12 +1022,12 @@ export default function AdCreationForm({
 
 
 
-  useEffect(() => {
-    if (!uploadingToS3 && publishPending) {
-      setPublishPending(false);
-      handleCreateAd(new Event('submit')); // fake event to reuse logic
-    }
-  }, [uploadingToS3, publishPending]);
+  // useEffect(() => {
+  //   if (!uploadingToS3 && publishPending) {
+  //     setPublishPending(false);
+  //     handleCreateAd(new Event('submit')); // fake event to reuse logic
+  //   }
+  // }, [uploadingToS3, publishPending]);
 
   // Functions for managing dynamic input fields
   const addField = (setter, values, ma) => {
@@ -1901,11 +1914,25 @@ export default function AdCreationForm({
 
       await handleCreateAd(job);
       // Add to completed jobs with details
+      // let adCount = 0;
+      // if (job.formData.enablePlacementCustomization && job.formData.fileGroups.length > 0) {
+      //   // Count groups + ungrouped files
+      //   const groupedFileIds = new Set(job.formData.fileGroups.flat());
+      //   const ungroupedFiles = [...job.formData.files, ...job.formData.driveFiles].filter(f =>
+      //     !groupedFileIds.has(f.isDrive ? f.id : f.name)
+      //   );
+      //   adCount = job.formData.fileGroups.length + ungroupedFiles.length;
+      // } else {
+      //   // Regular count
+      //   adCount = job.formData.files.length + job.formData.driveFiles.length;
+      // }
+
       const completedJob = {
         id: job.id || uuidv4(),
-        message: `${job.formData.files.length + job.formData.driveFiles.length} Ads successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
+        message: `${job.adCount} Ad${job.adCount !== 1 ? 's' : ''} successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
         completedAt: Date.now()
       };
+
       setCompletedJobs(prev => [...prev, completedJob]);
 
 
@@ -2047,7 +2074,7 @@ export default function AdCreationForm({
                       <UploadIcon className="w-6 h-6" />
                     </div>
                     <p className="flex-1 text-sm font-medium text-gray-700">
-                      Posting Ads to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
+                      Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
                     </p>
                     <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
 
@@ -2070,7 +2097,7 @@ export default function AdCreationForm({
                     <QueueIcon className="w-6 h-6 text-yellow-600" />
                   </div>
                   <p className="flex-1 text-sm text-gray-600">
-                    Queued {job.formData.files.length + job.formData.driveFiles.length} ads to {adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}
+                    Queued {job.adCount} ad{job.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}
                   </p>
                   <button
                     onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
