@@ -259,8 +259,8 @@ export default function BillingSettings() {
                 </CardContent>
             </Card>
             {/* Cancel Confirmation Dialog */}
-            <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                <DialogOverlay className="bg-black/50 !-mt-[20px]" /> {/* Custom overlay */}
+            {/* <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                <DialogOverlay className="bg-black/50 !-mt-[20px]" /> 
                 <div className="!p-6 !space-y-6">
                     <DialogContent className="rounded-3xl">
                         <DialogHeader className="space-y-2">
@@ -286,6 +286,27 @@ export default function BillingSettings() {
                         </DialogFooter>
                     </DialogContent>
                 </div>
+            </Dialog> */}
+
+            <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                <DialogContent className="sm:max-w-[425px] rounded-3xl p-8 space-y-6">
+                    <DialogHeader className="space-y-4">
+                        <DialogTitle className="text-xl">Cancel Subscription</DialogTitle>
+                        <DialogDescription className="text-base leading-relaxed">
+                            Are you sure you want to cancel your subscription? Your plan will remain active until the end of your
+                            current billing period.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
+                        <Button variant="outline" onClick={() => setShowCancelDialog(false)} className="rounded-2xl flex-1">
+                            Keep Subscription
+                        </Button>
+                        <Button onClick={confirmCancel} className="bg-red-600 hover:bg-red-700 rounded-2xl flex-1">
+                            Yes, Cancel
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
             </Dialog>
         </div>
     )
