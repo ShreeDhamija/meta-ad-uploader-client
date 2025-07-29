@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader2, Plus, Trash2, Upload, CirclePlus, ChevronsUpDown, RefreshCcw } from "lucide-react"
+import { ChevronDown, Loader2, Plus, Trash2, Upload, CirclePlus, ChevronsUpDown, RefreshCcw, X, Menu, ArrowUp } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
@@ -357,6 +357,9 @@ export default function AdCreationForm({
   const [jobQueue, setJobQueue] = useState([]);
   const [currentJob, setCurrentJob] = useState(null);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+  const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
+  const [completedJobs, setCompletedJobs] = useState([]);
+  const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
 
 
   // const [isCarouselAd, setIsCarouselAd] = useState(false);
@@ -1256,7 +1259,7 @@ export default function AdCreationForm({
 
 
 
-    setIsLoading(true);
+    // setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
     const largeFiles = files.filter((file) =>
       file.type.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
@@ -1878,9 +1881,9 @@ export default function AdCreationForm({
 
   const processJobQueue = async () => {
 
-    console.log("processJobQueue called");
-    console.log("Queue length:", jobQueue.length);
-    console.log("isProcessingQueue:", isProcessingQueue);
+    // console.log("processJobQueue called");
+    // console.log("Queue length:", jobQueue.length);
+    // console.log("isProcessingQueue:", isProcessingQueue);
 
     if (jobQueue.length === 0 || isProcessingQueue) {
       console.log("Returning early from processJobQueue");
@@ -1891,6 +1894,9 @@ export default function AdCreationForm({
 
 
     const job = jobQueue[0];
+    setCurrentJob(job);
+    setIsProcessingQueue(true);
+    setHasStartedAnyJob(true);
     console.log("Processing job:", job);
 
     setCurrentJob(job);
@@ -1901,10 +1907,18 @@ export default function AdCreationForm({
       console.log("About to call handleCreateAd");
 
       await handleCreateAd(job);
+      // Add to completed jobs with details
+      const completedJob = {
+        id: job.id || uuidv4(),
+        message: `${job.formData.files.length + job.formData.driveFiles.length} Ads successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
+        completedAt: Date.now()
+      };
+      setCompletedJobs(prev => [...prev, completedJob]);
+
 
       // Remove completed job from queue
       setJobQueue(prev => prev.slice(1));
-      // toast.success("Job completed successfully!");
+
 
     } catch (error) {
       console.error("Job failed:", error);
@@ -1955,37 +1969,123 @@ export default function AdCreationForm({
     setFileGroups([]);
     setEnablePlacementCustomization(false);
 
-    toast.success(`Job added to queue (Position: ${jobQueue.length + 1})`);
+    // toast.success(`Job added to queue (Position: ${jobQueue.length + 1})`);
 
   };
 
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
-      {isCreatingAds && (
-        <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-xl p-4 w-80 z-50">
-          <div className="flex justify-between items-start mb-2">
-            <h4 className="text-sm font-semibold">Processing Job</h4>
-            <span className="text-xs text-gray-500">
-              {jobQueue.length > 0 && `${jobQueue.length} queued`}
-            </span>
-          </div>
-
-          <div className="mb-2">
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${trackedProgress}%` }}
-              />
+      {hasStartedAnyJob && (
+        <div className="fixed bottom-4 right-4 z-50">
+          {/* Collapsed State */}
+          {!isJobTrackerExpanded && (
+            <div
+              className="bg-white rounded-lg shadow-xl p-3 flex items-center gap-3 cursor-pointer hover:shadow-2xl transition-shadow"
+              onClick={() => setIsJobTrackerExpanded(true)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🚀</span>
+                <span className="font-semibold text-sm">Job Queue</span>
+              </div>
+              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
+                {(currentJob ? 1 : 0) + jobQueue.length} Active
+              </span>
+              <ChevronDown className="h-4 w-4 text-gray-500 rotate-180" />
             </div>
-          </div>
+          )}
 
-          <p className="text-xs text-gray-600">{trackedMessage}</p>
+          {/* Expanded State */}
+          {isJobTrackerExpanded && (
+            <div className="bg-white rounded-lg shadow-xl w-96 max-h-[600px] overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🚀</span>
+                  <h3 className="font-semibold">Job Queue</h3>
+                </div>
+                <button
+                  onClick={() => setIsJobTrackerExpanded(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+              </div>
 
-          {jobQueue.length > 0 && (
-            <p className="text-xs text-gray-500 mt-2">
-              Next: {jobQueue[0].formData.adName}
-            </p>
+              {/* Active Jobs Count */}
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+                <p className="text-sm font-medium text-gray-700">
+                  {(currentJob ? 1 : 0) + jobQueue.length} Active Jobs
+                </p>
+              </div>
+
+              {/* Jobs List */}
+              <div className="flex-1 overflow-y-auto">
+                {/* Completed Jobs */}
+                {completedJobs.map((job) => (
+                  <div key={job.id} className="p-4 border-b border-gray-100 flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p className="flex-1 text-sm text-gray-700">{job.message}</p>
+                    <button
+                      onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+
+                {/* Current Job */}
+                {currentJob && (
+                  <div className="p-4 border-b border-gray-100">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <ArrowUp className="w-5 h-5 text-blue-600" />
+                        </div>
+                      </div>
+                      <p className="flex-1 text-sm font-medium text-gray-700">
+                        Posting Ads to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
+                      </p>
+                      <span className="text-sm font-semibold text-gray-900">{Math.round(trackedProgress)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${trackedProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">{trackedMessage}</p>
+                  </div>
+                )}
+
+                {/* Queued Jobs */}
+                {jobQueue.slice(currentJob ? 1 : 0).map((job, index) => (
+                  <div key={job.id || index} className="p-4 border-b border-gray-100 flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <Menu className="w-5 h-5 text-yellow-600" />
+                      </div>
+                    </div>
+                    <p className="flex-1 text-sm text-gray-600">
+                      Queued {job.formData.files.length + job.formData.driveFiles.length} ads to {adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}
+                    </p>
+                    <button
+                      onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -2634,7 +2734,6 @@ export default function AdCreationForm({
           <div className="space-y-1">
             <Button
               type="submit"
-              onClick={handleQueueJob}  // Changed from handleCreateAd
               className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
               disabled={
                 !isLoggedIn ||
@@ -2644,14 +2743,7 @@ export default function AdCreationForm({
                 (showShopDestinationSelector && !selectedShopDestination)
               }
             >
-              {isProcessingQueue ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing... ({jobQueue.length} in queue)
-                </>
-              ) : (
-                `Publish Ads${jobQueue.length > 0 ? ` (${jobQueue.length} queued)` : ''}`
-              )}
+              Publish Ads
             </Button>
 
             {/* Validation message */}
