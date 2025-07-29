@@ -1883,7 +1883,7 @@ export default function AdCreationForm({
     }
   }
 
-  const processJobQueue = async () => {
+  const processJobQueue = useCallback(async () => {
 
     // console.log("processJobQueue called");
     // console.log("Queue length:", jobQueue.length);
@@ -1933,13 +1933,19 @@ export default function AdCreationForm({
     } finally {
       setCurrentJob(null);
       setIsProcessingQueue(false);
+      // setCurrentJobPhase('uploading');
+      setProgress(0);
+      setProgressMessage('');
+
+      // CRITICAL: Reset SSE tracking
+      setJobId(null);
 
       // Process next job if any
       if (jobQueue.length > 1) {
         setTimeout(() => processJobQueue(), 1000); // Small delay between jobs
       }
     }
-  };
+  }, [jobQueue.length, isProcessingQueue, processJobQueue]);
 
   const handleQueueJob = (e) => {
     e.preventDefault();
@@ -1985,7 +1991,7 @@ export default function AdCreationForm({
           {/* Collapsed State */}
           {!isJobTrackerExpanded && (
             <div
-              className="bg-white rounded-lg border border-gray-300/50 shadow-xl p-3 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
+              className="bg-white rounded-xl border border-gray-300/50 shadow-xl p-3 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
               onClick={() => setIsJobTrackerExpanded(true)}
             >
               <div className="flex items-center gap-2">
@@ -2003,86 +2009,76 @@ export default function AdCreationForm({
           {isJobTrackerExpanded && (
             <div className="bg-white border border-gray-300/50 rounded-[20px] shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-5">
               {/* Header */}
-              <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="p-3 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src={RocketIcon} className="w-7 h-7" />
-                  <h3 className="font-semibold">Job Queue</h3>
+                  <img src={RocketIcon || "/placeholder.svg"} className="!w-6 !h-6" />
+                  <div className="flex flex-col">
+                    <h3 className="font-semibold text-sm">Job Queue</h3>
+                    <p className="text-xs font-medium text-gray-600">{jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setIsJobTrackerExpanded(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  <ChevronDown className="h-5 w-5" />
+                  <ChevronDown className="h-4 w-4" />
                 </button>
-              </div>
-
-              {/* Active Jobs Count */}
-              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
-                <p className="text-sm font-medium text-gray-700">
-                  {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
-                </p>
               </div>
 
               {/* Jobs List */}
               <div className="flex-1 overflow-y-auto">
                 {/* Completed Jobs */}
                 {completedJobs.map((job) => (
-                  <div key={job.id} className="p-4 border-b border-gray-100 flex items-center gap-3">
+                  <div key={job.id} className="p-3 border-b border-gray-100 flex items-center gap-2">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <CheckIcon className="w-4 h-4" />
-                      </div>
+                      <CheckIcon className="w-5 h-5" />
                     </div>
-                    <p className="flex-1 text-sm text-gray-700">{job.message}</p>
+                    <p className="flex-1 text-xs text-gray-700">{job.message}</p>
                     <button
                       onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
                       className="text-gray-400 hover:text-gray-600"
                     >
-                      <CircleX className="h-4 w-4 text-gray-500" />
+                      <CircleX className="h-3 w-3 text-gray-500" />
                     </button>
                   </div>
                 ))}
 
                 {/* Current Job */}
                 {currentJob && (
-                  <div className="p-4 border-b border-gray-100">
-                    <div className="flex items-center gap-3 mb-3">
+                  <div className="p-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2 mb-2">
                       <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <UploadIcon className="w-7 h-7" />
-                        </div>
+                        <UploadIcon className="w-5 h-5" />
                       </div>
-                      <p className="flex-1 text-sm font-medium text-gray-700">
+                      <p className="flex-1 text-xs font-medium text-gray-700">
                         Posting Ads to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
                       </p>
-                      <span className="text-sm font-semibold text-gray-900">{Math.round(trackedProgress)}%</span>
+                      <span className="text-xs font-semibold text-gray-900">{Math.round(trackedProgress)}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
                       <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
                         style={{ width: `${trackedProgress}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">{trackedMessage}</p>
+                    <p className="text-xs text-gray-500 mt-1">{trackedMessage}</p>
                   </div>
                 )}
 
                 {/* Queued Jobs */}
                 {jobQueue.slice(currentJob ? 1 : 0).map((job, index) => (
-                  <div key={job.id || index} className="p-4 border-b border-gray-100 flex items-center gap-3">
+                  <div key={job.id || index} className="p-3 border-b border-gray-100 flex items-center gap-2">
                     <div className="flex-shrink-0">
-                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                        <QueueIcon className="w-7 h-7 text-yellow-600" />
-                      </div>
+                      <QueueIcon className="w-5 h-5 text-yellow-600" />
                     </div>
-                    <p className="flex-1 text-sm text-gray-600">
+                    <p className="flex-1 text-xs text-gray-600">
                       Queued {job.formData.files.length + job.formData.driveFiles.length} ads to {adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}
                     </p>
                     <button
                       onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
                       className="text-gray-400 hover:text-red-600"
                     >
-                      <CircleX className="h-4 w-4 text-red-500" />
+                      <CircleX className="h-3 w-3 text-red-500" />
                     </button>
                   </div>
                 ))}
