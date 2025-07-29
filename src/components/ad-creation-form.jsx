@@ -18,7 +18,6 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
-// import { Infotooltip } from "./ui/infotooltip"
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -611,10 +610,10 @@ export default function AdCreationForm({
   };
 
   useEffect(() => {
-    if (jobQueue.length > 0 && !isProcessingQueue) {
+    if (jobQueue.length > 0 && !isProcessingQueue && !currentJob) {
       processJobQueue();
     }
-  }, [jobQueue.length]); // Watch for queue length changes
+  }, [jobQueue.length, isProcessingQueue, currentJob]);
 
   useEffect(() => {
     if (jobId) {
@@ -1035,20 +1034,6 @@ export default function AdCreationForm({
     newValues[index] = newValue
     setter(newValues)
   }
-
-  // const handleCloseProgressPopup = () => {
-  //   // Reset all the states that were being reset automatically
-  //   setIsCreatingAds(false);
-  //   setJobId(null);
-  //   setFiles([]);
-  //   setDriveFiles([]);
-  //   setVideoThumbs({});
-  //   setFileGroups([]);
-  //   setEnablePlacementCustomization(false);
-  //   setShowCompletedView(false);
-  //   setProgress(0);
-  //   setProgressMessage('');
-  // };
 
 
 
@@ -1877,9 +1862,9 @@ export default function AdCreationForm({
       selectedAdSets
     } finally {
       setIsLoading(false);
-      if (duplicateAdSet) {
-        await refreshAdSets()
-      }
+      // if (duplicateAdSet) {
+      //   await refreshAdSets()
+      // }
     }
   }
 
@@ -1900,6 +1885,10 @@ export default function AdCreationForm({
     const job = jobQueue[0];
     setCurrentJob(job);
     setIsProcessingQueue(true);
+    setProgress(0);
+    setProgressMessage('Initializing...');
+    setJobId(null); // Force reset SSE connection
+    await new Promise(resolve => setTimeout(resolve, 100));
     setHasStartedAnyJob(true);
     console.log("Processing job:", job);
 
@@ -1922,6 +1911,12 @@ export default function AdCreationForm({
 
       // Remove completed job from queue
       setJobQueue(prev => prev.slice(1));
+
+      if (job.formData.duplicateAdSet) {
+        await refreshAdSets();
+        // Small delay to let the refresh complete before next job
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
 
 
     } catch (error) {
@@ -1967,10 +1962,7 @@ export default function AdCreationForm({
     setDriveFiles([]);
     setVideoThumbs({});
     setThumbnail(null);
-    // setHeadlines(['']);
-    // setDescriptions(['']);
-    // setMessages(['']);
-    // setLink(['']);
+
     setFileGroups([]);
     setEnablePlacementCustomization(false);
 
@@ -2006,7 +1998,14 @@ export default function AdCreationForm({
               {/* Header */}
               <div className="p-3.5 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src={RocketIcon || "/placeholder.svg"} className="w-6 h-6" style={{ width: '24px', height: '24px' }} />
+                  {/* Fixed size container for the RocketIcon */}
+                  <div className="w-6 h-6 flex-shrink-0">
+                    <img
+                      src={RocketIcon || "/placeholder.svg"}
+                      alt="Rocket Icon"
+                      className="w-full h-full object-contain" // Image fills its container
+                    />
+                  </div>
                   <div className="flex flex-col">
                     <h3 className="font-semibold text-sm">Job Queue</h3>
                     <p className="text-sm font-medium text-gray-600">{jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active</p>
@@ -2048,15 +2047,17 @@ export default function AdCreationForm({
                       <p className="flex-1 text-sm font-medium text-gray-700">
                         Posting Ads to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
                       </p>
-                      <span className="text-sm font-semibold text-gray-900">{Math.round(trackedProgress)}%</span>
+                      <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
+
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${trackedProgress}%` }}
+                        style={{ width: `${progress || trackedProgress}%` }}
                       />
                     </div>
-                    <p className="text-sm text-gray-500 mt-2">{trackedMessage}</p>
+                    <p className="text-xs text-gray-500 mt-2">{progressMessage || trackedMessage}</p>
+
                   </div>
                 )}
 
