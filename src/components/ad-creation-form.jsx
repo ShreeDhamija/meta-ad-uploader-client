@@ -1883,9 +1883,7 @@ export default function AdCreationForm({
 
   const processJobQueue = async () => {
 
-    // console.log("processJobQueue called");
-    // console.log("Queue length:", jobQueue.length);
-    // console.log("isProcessingQueue:", isProcessingQueue);
+
 
     if (jobQueue.length === 0 || isProcessingQueue) {
       console.log("Returning early from processJobQueue");
@@ -1905,27 +1903,13 @@ export default function AdCreationForm({
     setHasStartedAnyJob(true);
     console.log("Processing job:", job);
 
-    setCurrentJob(job);
-    setIsProcessingQueue(true);
 
     try {
       // Process this specific job
       console.log("About to call handleCreateAd");
 
       await handleCreateAd(job);
-      // Add to completed jobs with details
-      // let adCount = 0;
-      // if (job.formData.enablePlacementCustomization && job.formData.fileGroups.length > 0) {
-      //   // Count groups + ungrouped files
-      //   const groupedFileIds = new Set(job.formData.fileGroups.flat());
-      //   const ungroupedFiles = [...job.formData.files, ...job.formData.driveFiles].filter(f =>
-      //     !groupedFileIds.has(f.isDrive ? f.id : f.name)
-      //   );
-      //   adCount = job.formData.fileGroups.length + ungroupedFiles.length;
-      // } else {
-      //   // Regular count
-      //   adCount = job.formData.files.length + job.formData.driveFiles.length;
-      // }
+
 
       const completedJob = {
         id: job.id || uuidv4(),
@@ -1957,10 +1941,7 @@ export default function AdCreationForm({
       setIsProcessingQueue(false);
       setProgress(0);
       setProgressMessage('Starting ad creation...');
-      // Process next job if any
-      if (jobQueue.length > 1) {
-        setTimeout(() => processJobQueue(), 1000); // Small delay between jobs
-      }
+
     }
   };
 
