@@ -2,6 +2,8 @@ import { useCallback, useMemo, memo } from "react";
 import { Switch } from "@/components/ui/switch";
 import EnhanceIcon from '@/assets/icons/enhance.svg?react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
 // Move constants outside component to prevent recreation on every render
 const ENHANCEMENT_ITEMS = [
     {

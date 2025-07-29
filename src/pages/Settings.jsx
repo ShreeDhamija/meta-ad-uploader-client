@@ -18,6 +18,7 @@ import HomeBtn from '@/assets/icons/home.svg?react';
 import Folder from '@/assets/icons/folder.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import ViewAdsIcon from '@/assets/icons/viewads.svg?react';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
@@ -55,7 +56,7 @@ export default function Settings() {
 
     const handleCloseSettingsPopup = () => {
         setShowSettingsPopup(false)
-        fetch("https://api.withblip.com/settings/save", {
+        fetch(`${API_BASE_URL}/settings/save`, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },

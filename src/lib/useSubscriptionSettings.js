@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function useSubscription() {
     const [loading, setLoading] = useState(true);
@@ -14,7 +15,7 @@ export default function useSubscription() {
     const fetchSubscriptionData = async () => {
         try {
             setLoading(true);
-            const res = await fetch('https://api.withblip.com/api/subscription/status', {
+            const res = await fetch(`${API_BASE_URL}/api/subscription/status`, {
                 credentials: "include",
             });
 

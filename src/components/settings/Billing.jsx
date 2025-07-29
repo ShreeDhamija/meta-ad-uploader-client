@@ -6,10 +6,23 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogOverlay, // Add this import
+
+} from "@/components/ui/dialog"
 import useSubscription from "@/lib/useSubscriptionSettings"
+import CardIcon from '@/assets/icons/card.svg?react';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function BillingSettings() {
     const [isLoading, setIsLoading] = useState(false)
+    const [showCancelDialog, setShowCancelDialog] = useState(false)
     const {
         loading,
         subscriptionData,
@@ -20,10 +33,71 @@ export default function BillingSettings() {
         isPaidSubscriber,
     } = useSubscription()
 
+    // In Billing.jsx, update the API calls:
     const handleUpgrade = async () => {
-        // For now, just show a message since we don't have Stripe yet
-        toast.info("Upgrade functionality will be available soon!")
-    }
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/create-checkout-session`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            const { url } = await response.json();
+            window.location.href = url;
+        } catch (error) {
+            toast.error("Failed to start upgrade process");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+    const handleReactivate = async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/reactivate-subscription`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                toast.success("Subscription reactivated successfully!");
+                refreshSubscriptionData();
+            } else {
+                const error = await response.json();
+                toast.error(error.message || "Failed to reactivate subscription");
+            }
+        } catch (error) {
+            toast.error("Failed to reactivate subscription");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+
+    const handleCancel = () => {
+        setShowCancelDialog(true);
+    };
+
+    const confirmCancel = async () => {
+        setShowCancelDialog(false);
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/cancel-subscription`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                toast.success("Subscription will cancel at the end of your billing period");
+                refreshSubscriptionData();
+            }
+        } catch (error) {
+            toast.error("Failed to cancel subscription");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     if (loading) {
         return (
@@ -40,7 +114,7 @@ export default function BillingSettings() {
         if (isPaidSubscriber())
             return (
                 <Badge variant="default" className="bg-green-100 text-green-800">
-                    Active
+                    Pro
                 </Badge>
             )
         if (isTrialExpired()) return <Badge variant="destructive">Trial Expired</Badge>
@@ -61,28 +135,18 @@ export default function BillingSettings() {
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2 text-lg">
-                                <img src="https://unpkg.com/@mynaui/icons/icons/credit-card.svg" />
-                                Your Plan
+                                <CardIcon className="w-5 h-5" />
+                                Manage your billing
                             </CardTitle>
-                            <CardDescription className="text-gray-500 text-xs">Your current plan type</CardDescription>
+                            <CardDescription className="text-gray-500 text-xs">Upgrade, cancel or add team seats!</CardDescription>
+                        </div>
+                        <div className="text-right">
+                            <p className="text-sm font-medium text-gray-600 mb-1 !shadow-none">Plan Type</p>
+                            {getStatusBadge()}
                         </div>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-600 mb-1">Plan Type</p>
-                            {getStatusBadge()}
-                        </div>
-
-                        {isOnTrial() && (
-                            <div className="text-right">
-                                <p className="text-sm font-medium text-gray-600 mb-1">Trial Ends</p>
-                                <p className="text-md font-semibold text-red-500">{subscriptionData.trialDaysLeft} days</p>
-                            </div>
-                        )}
-                    </div>
-
                     {/* Upgrade Button */}
                     {!isPaidSubscriber() && (
                         <Button
@@ -92,8 +156,38 @@ export default function BillingSettings() {
                             size="lg"
                         >
                             <span className="mr-2">🚀</span>
-                            Upgrade To Pro | $400/mo
+                            Upgrade To Pro | $500/mo
                         </Button>
+                    )}
+
+                    {isPaidSubscriber() && (
+                        <div className="space-y-2">
+                            {subscriptionData.willCancelAt ? (
+                                <>
+                                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
+                                        <p className="text-sm text-orange-800">
+                                            Your subscription will continue until {new Date(subscriptionData.willCancelAt).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <Button
+                                        onClick={handleReactivate}
+                                        disabled={isLoading}
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
+                                    >
+                                        Reactivate Subscription | $500/mo
+                                    </Button>
+                                </>
+                            ) : (
+                                <Button
+                                    onClick={handleCancel}
+                                    variant="destructive"
+                                    disabled={isLoading}
+                                    className="w-full h-12 rounded-2xl"
+                                >
+                                    Cancel Subscription
+                                </Button>
+                            )}
+                        </div>
                     )}
 
                     {/* Trial Warning */}
@@ -137,7 +231,7 @@ export default function BillingSettings() {
                             <CardDescription className="text-gray-500" text-xs>{"Here's everything you get by upgrading"}</CardDescription>
                         </div>
                         <div className="text-right items-center flex flex-row space-x-1">
-                            <div className="text-2xl font-bold text-gray-900">$400</div>
+                            <div className="text-2xl font-bold text-gray-900">$500</div>
                             <div className="text-sm text-gray-400">/month</div>
                         </div>
                     </div>
@@ -163,6 +257,28 @@ export default function BillingSettings() {
                     </div>
                 </CardContent>
             </Card>
+            {/* Cancel Confirmation Dialog */}
+            <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                <DialogOverlay className="bg-black/50 !-mt-[20px]" />
+                <DialogContent className="sm:max-w-[425px] !rounded-[30px] p-8 space-y-6">
+                    <DialogHeader className="space-y-4">
+                        <DialogTitle className="text-xl">Cancel Subscription</DialogTitle>
+                        <DialogDescription className="text-base leading-relaxed">
+                            Are you sure you want to cancel your subscription? Your plan will remain active until the end of your
+                            current billing period.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
+                        <Button variant="outline" onClick={() => setShowCancelDialog(false)} className="rounded-2xl flex-1">
+                            Keep Subscription
+                        </Button>
+                        <Button onClick={confirmCancel} className="bg-red-600 hover:bg-red-700 rounded-2xl flex-1">
+                            Yes, Cancel
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
