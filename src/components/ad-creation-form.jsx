@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader2, Plus, Trash2, Upload, CirclePlus, ChevronsUpDown, RefreshCcw, X, Menu, ArrowUp } from "lucide-react"
+import { ChevronDown, Loader2, Plus, Trash2, Upload, CirclePlus, ChevronsUpDown, RefreshCcw, CircleX, Menu } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
@@ -29,6 +29,10 @@ import LinkIcon from '@/assets/icons/link.svg?react';
 import CTAIcon from '@/assets/icons/cta.svg?react';
 import { useNavigate } from "react-router-dom"
 import CogIcon from '@/assets/icons/cog.svg?react';
+import RocketIcon from '@/assets/icons/rocket.svg?react';
+import CheckIcon from '@/assets/icons/check.svg?react';
+import UploadIcon from '@/assets/icons/upload.svg?react';
+import QueueIcon from '@/assets/icons/queue.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -1981,15 +1985,15 @@ export default function AdCreationForm({
           {/* Collapsed State */}
           {!isJobTrackerExpanded && (
             <div
-              className="bg-white rounded-lg shadow-xl p-3 flex items-center gap-3 cursor-pointer hover:shadow-2xl transition-shadow"
+              className="bg-white rounded-lg border border-gray-100/50 shadow-xl p-3 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
               onClick={() => setIsJobTrackerExpanded(true)}
             >
               <div className="flex items-center gap-2">
-                <span className="text-2xl">🚀</span>
+                <RocketIcon className="w-4 h-4" />
                 <span className="font-semibold text-sm">Job Queue</span>
               </div>
               <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
-                {(currentJob ? 1 : 0) + jobQueue.length} Active
+                {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
               </span>
               <ChevronDown className="h-4 w-4 text-gray-500 rotate-180" />
             </div>
@@ -1997,11 +2001,11 @@ export default function AdCreationForm({
 
           {/* Expanded State */}
           {isJobTrackerExpanded && (
-            <div className="bg-white rounded-lg shadow-xl w-96 max-h-[600px] overflow-hidden flex flex-col">
+            <div className="bg-white border border-gray-100/50 rounded-xl shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-5">
               {/* Header */}
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl">🚀</span>
+                  <RocketIcon className="w-5 h-5" />
                   <h3 className="font-semibold">Job Queue</h3>
                 </div>
                 <button
@@ -2015,7 +2019,7 @@ export default function AdCreationForm({
               {/* Active Jobs Count */}
               <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
                 <p className="text-sm font-medium text-gray-700">
-                  {(currentJob ? 1 : 0) + jobQueue.length} Active Jobs
+                  {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
                 </p>
               </div>
 
@@ -2026,9 +2030,7 @@ export default function AdCreationForm({
                   <div key={job.id} className="p-4 border-b border-gray-100 flex items-center gap-3">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+                        <CheckIcon className="w-4 h-4" />
                       </div>
                     </div>
                     <p className="flex-1 text-sm text-gray-700">{job.message}</p>
@@ -2036,7 +2038,7 @@ export default function AdCreationForm({
                       onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
                       className="text-gray-400 hover:text-gray-600"
                     >
-                      <X className="h-4 w-4" />
+                      <CircleX className="h-4 w-4 text-gray-500" />
                     </button>
                   </div>
                 ))}
@@ -2047,7 +2049,7 @@ export default function AdCreationForm({
                     <div className="flex items-center gap-3 mb-3">
                       <div className="flex-shrink-0">
                         <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <ArrowUp className="w-5 h-5 text-blue-600" />
+                          <UploadIcon className="w-4 h-4" />
                         </div>
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700">
@@ -2070,7 +2072,7 @@ export default function AdCreationForm({
                   <div key={job.id || index} className="p-4 border-b border-gray-100 flex items-center gap-3">
                     <div className="flex-shrink-0">
                       <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                        <Menu className="w-5 h-5 text-yellow-600" />
+                        <QueueIcon className="w-4 h-4 text-yellow-600" />
                       </div>
                     </div>
                     <p className="flex-1 text-sm text-gray-600">
@@ -2080,7 +2082,7 @@ export default function AdCreationForm({
                       onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
                       className="text-gray-400 hover:text-red-600"
                     >
-                      <X className="h-4 w-4" />
+                      <CircleX className="h-4 w-4 text-red-500" />
                     </button>
                   </div>
                 ))}
@@ -2088,7 +2090,8 @@ export default function AdCreationForm({
             </div>
           )}
         </div>
-      )}
+      )
+      }
 
       <CardHeader>
         <CardTitle className="flex items-center justify-between w-full">
