@@ -374,7 +374,10 @@ export default function AdCreationForm({
   const captureFormDataAsJob = () => {
 
     let adCount = 0;
-    if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
+    if (isCarouselAd) {
+      // Carousel is always 1 ad, regardless of files
+      adCount = selectedAdSets.length || 1; // 1 per selected adset
+    } else if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
       const groupedFileIds = new Set(fileGroups.flat());
       const ungroupedFiles = [...files, ...driveFiles].filter(f =>
         !groupedFileIds.has(f.isDrive ? f.id : f.name)
@@ -383,6 +386,7 @@ export default function AdCreationForm({
     } else {
       adCount = files.length + driveFiles.length;
     }
+
 
     return {
       id: uuidv4(),
@@ -1921,7 +1925,7 @@ export default function AdCreationForm({
 
 
       // Remove completed job from queue
-      setJobQueue(prev => prev.slice(1));
+      // setJobQueue(prev => prev.slice(1));
 
       if (job.formData.duplicateAdSet) {
         await refreshAdSets();
@@ -1932,11 +1936,21 @@ export default function AdCreationForm({
 
     } catch (error) {
       console.error("Job failed:", error);
+      const failedJob = {
+        id: job.id || uuidv4(),
+        message: error.message || 'Failed to create ads',
+        completedAt: Date.now(),
+        status: 'error' // Mark as error
+      };
+
+      setCompletedJobs(prev => [...prev, failedJob]);
+
       toast.error("Job failed: " + error.message);
 
       // Remove failed job from queue
-      setJobQueue(prev => prev.slice(1));
+      // setJobQueue(prev => prev.slice(1));
     } finally {
+      setJobQueue(prev => prev.slice(1));
       setCurrentJob(null);
       setIsProcessingQueue(false);
       setProgress(0);
@@ -2032,12 +2046,19 @@ export default function AdCreationForm({
             {/* Jobs List */}
             <div className="flex-1 overflow-y-auto">
               {/* Completed Jobs */}
+              {/* Completed Jobs */}
               {completedJobs.map((job) => (
                 <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
                   <div className="flex-shrink-0">
-                    <CheckIcon className="w-6 h-6" />
+                    {job.status === 'error' ? (
+                      <CircleX className="w-6 h-6 text-red-500" />
+                    ) : (
+                      <CheckIcon className="w-6 h-6" />
+                    )}
                   </div>
-                  <p className="flex-1 text-sm text-gray-700">{job.message}</p>
+                  <p className={`flex-1 text-sm ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
+                    {job.message}
+                  </p>
                   <button
                     onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
                     className="text-gray-400 hover:text-gray-600"
