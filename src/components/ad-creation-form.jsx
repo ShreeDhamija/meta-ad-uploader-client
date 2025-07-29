@@ -604,6 +604,12 @@ export default function AdCreationForm({
   };
 
   useEffect(() => {
+    if (jobQueue.length > 0 && !isProcessingQueue) {
+      processJobQueue();
+    }
+  }, [jobQueue.length]); // Watch for queue length changes
+
+  useEffect(() => {
     if (jobId) {
       setProgress(trackedProgress);
       setProgressMessage(trackedMessage);
@@ -1871,17 +1877,29 @@ export default function AdCreationForm({
   }
 
   const processJobQueue = async () => {
-    if (jobQueue.length === 0 || isProcessingQueue) return;
+
+    console.log("processJobQueue called");
+    console.log("Queue length:", jobQueue.length);
+    console.log("isProcessingQueue:", isProcessingQueue);
+
+    if (jobQueue.length === 0 || isProcessingQueue) {
+      console.log("Returning early from processJobQueue");
+      return;
+    }
 
     if (!jobQueue[0]) return;
 
 
     const job = jobQueue[0];
+    console.log("Processing job:", job);
+
     setCurrentJob(job);
     setIsProcessingQueue(true);
 
     try {
       // Process this specific job
+      console.log("About to call handleCreateAd");
+
       await handleCreateAd(job);
 
       // Remove completed job from queue
@@ -1939,10 +1957,14 @@ export default function AdCreationForm({
 
     toast.success(`Job added to queue (Position: ${jobQueue.length + 1})`);
 
+    console.log("Current isProcessingQueue:", isProcessingQueue);
+    console.log("Current jobQueue length:", jobQueue.length);
+
     // Start processing if not already running
-    if (!isProcessingQueue) {
-      processJobQueue();
-    }
+    // if (!isProcessingQueue) {
+    //   console.log("Calling processJobQueue...");
+    //   processJobQueue();
+    // }
   };
 
 
