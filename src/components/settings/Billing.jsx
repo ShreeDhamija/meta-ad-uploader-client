@@ -181,9 +181,9 @@ export default function BillingSettings() {
                             ) : (
                                 <Button
                                     onClick={handleCancel}
-                                    variant="outline"
+                                    variant="destrurctive"
                                     disabled={isLoading}
-                                    className="w-full h-12 bg-red-500 text-white rounded-2xl"
+                                    className="w-full h-12 rounded-2xl"
                                 >
                                     Cancel Subscription
                                 </Button>
@@ -261,8 +261,8 @@ export default function BillingSettings() {
             {/* Cancel Confirmation Dialog */}
             <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" /> {/* Custom overlay */}
-                <DialogContent className="rounded-3xl p-4">
-                    <DialogHeader>
+                <DialogContent className="rounded-3xl !p-4 !space-y-6">
+                    <DialogHeader className="space-y-2">
                         <DialogTitle>Cancel Subscription</DialogTitle>
                         <DialogDescription>
                             Are you sure you want to cancel your subscription? Your plan will remain active until the end of your current billing period.
