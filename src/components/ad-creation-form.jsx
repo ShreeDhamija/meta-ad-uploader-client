@@ -353,18 +353,64 @@ export default function AdCreationForm({
   const [progressMessage, setProgressMessage] = useState('');
   const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
   const [showCompletedView, setShowCompletedView] = useState(false);
-
-
+  // Add these new states at the top of AdCreationForm
+  const [jobQueue, setJobQueue] = useState([]);
+  const [currentJob, setCurrentJob] = useState(null);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
 
 
   // const [isCarouselAd, setIsCarouselAd] = useState(false);
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
-
   const S3_UPLOAD_THRESHOLD = 40 * 1024 * 1024; // 40 MB
 
+  const captureFormDataAsJob = () => {
+    return {
+      id: uuidv4(),
+      createdAt: Date.now(),
+      status: 'queued',
+      formData: {
+        // Form content states
+        headlines: [...headlines],
+        descriptions: [...descriptions],
+        messages: [...messages],
+        link: [...link],
+        cta,
 
+        // File states
+        files: [...files],
+        driveFiles: [...driveFiles],  // These already contain accessToken per file
+        videoThumbs: { ...videoThumbs },
+        thumbnail,
+
+        // Selection states
+        selectedAdSets: [...selectedAdSets],
+        duplicateAdSet,
+        newAdSetName,
+        pageId,
+        instagramAccountId,
+        selectedAdAccount,
+        selectedCampaign,
+
+        // Ad configuration
+        launchPaused,
+        isCarouselAd,
+        enablePlacementCustomization,
+        fileGroups: fileGroups ? [...fileGroups.map(group => [...group])] : [],
+
+        // Shop configuration
+        selectedShopDestination,
+        selectedShopDestinationType,
+
+        // For computing adName
+        adValues,
+
+        // Reference data needed for processing
+        adSets: [...adSets]
+      }
+    };
+  };
 
   const uploadToS3 = async (file, onChunkUploaded) => {
     // S3 requires parts to be at least 5MB, except for the last part.
@@ -1072,8 +1118,46 @@ export default function AdCreationForm({
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
 
 
-  const handleCreateAd = async (e) => {
-    e.preventDefault();
+  const handleCreateAd = async (jobData) => {
+    // e.preventDefault();
+
+    const {
+      // Form content
+      headlines,
+      descriptions,
+      messages,
+      link,
+      cta,
+
+      // Files
+      files,
+      driveFiles,
+      videoThumbs,
+      thumbnail,
+
+      // Selections
+      selectedAdSets,
+      duplicateAdSet,
+      newAdSetName,
+      pageId,
+      instagramAccountId,
+      selectedAdAccount,
+      selectedCampaign,
+
+      // Configuration
+      launchPaused,
+      isCarouselAd,
+      enablePlacementCustomization,
+      fileGroups,
+
+      // Shop
+      selectedShopDestination,
+      selectedShopDestinationType,
+
+      // Other
+      adValues,
+      adSets
+    } = jobData.formData;
 
     setIsCreatingAds(true);
     setProgress(0);
@@ -1786,104 +1870,109 @@ export default function AdCreationForm({
     }
   }
 
+  const processJobQueue = async () => {
+    if (jobQueue.length === 0 || isProcessingQueue) return;
+
+    if (!jobQueue[0]) return;
 
 
+    const job = jobQueue[0];
+    setCurrentJob(job);
+    setIsProcessingQueue(true);
+
+    try {
+      // Process this specific job
+      await handleCreateAd(job);
+
+      // Remove completed job from queue
+      setJobQueue(prev => prev.slice(1));
+      toast.success("Job completed successfully!");
+
+    } catch (error) {
+      console.error("Job failed:", error);
+      toast.error("Job failed: " + error.message);
+
+      // Remove failed job from queue
+      setJobQueue(prev => prev.slice(1));
+    } finally {
+      setCurrentJob(null);
+      setIsProcessingQueue(false);
+
+      // Process next job if any
+      if (jobQueue.length > 1) {
+        setTimeout(() => processJobQueue(), 1000); // Small delay between jobs
+      }
+    }
+  };
+
+  const handleQueueJob = (e) => {
+    e.preventDefault();
+
+    // Validation (keep your existing validation)
+    if (selectedAdSets.length === 0 && !duplicateAdSet) {
+      toast.error("Please select at least one ad set");
+      return;
+    }
+
+    if (files.length === 0 && driveFiles.length === 0) {
+      toast.error("Please upload at least one file or import from Drive");
+      return;
+    }
+
+    // Capture current form state as a job
+    const newJob = captureFormDataAsJob();
+
+    // Add to queue
+    setJobQueue(prev => [...prev, newJob]);
+
+    // Clear form immediately
+    setFiles([]);
+    setDriveFiles([]);
+    setVideoThumbs({});
+    setThumbnail(null);
+    setHeadlines(['']);
+    setDescriptions(['']);
+    setMessages(['']);
+    setLink(['']);
+    setFileGroups([]);
+    setEnablePlacementCustomization(false);
+
+    toast.success(`Job added to queue (Position: ${jobQueue.length + 1})`);
+
+    // Start processing if not already running
+    if (!isProcessingQueue) {
+      processJobQueue();
+    }
+  };
 
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
       {isCreatingAds && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-[20px] py-4 px-6 shadow-xl max-w-md w-full mx-4">
-            <div className="text-left">
-              {!showCompletedView ? (
-                <>
-                  <div className="flex items-center gap-2 mb-6">
-                    <div className="relative">
-                      <img
-                        src="https://api.withblip.com/uploadrocket.webp"
-                        alt="Rocket"
-                        width={30}
-                        height={30}
-                        className="animate-bounce"
-                        style={{
-                          animationDuration: "2s",
-                          animationTimingFunction: "ease-in-out",
-                        }}
-                      />
-                      <div className="absolute -top-1 -right-1 w-2 h-2">
-                        <div className="w-1 h-1 bg-yellow-400 rounded-full animate-ping"></div>
-                      </div>
-                      <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5">
-                        <div className="w-1 h-1 bg-yellow-300 rounded-full animate-ping delay-300"></div>
-                      </div>
-                    </div>
-                    <h3 className="text-base font-bold text-gray-900">Creating Ads</h3>
-                  </div>
+        <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-xl p-4 w-80 z-50">
+          <div className="flex justify-between items-start mb-2">
+            <h4 className="text-sm font-semibold">Processing Job</h4>
+            <span className="text-xs text-gray-500">
+              {jobQueue.length > 0 && `${jobQueue.length} queued`}
+            </span>
+          </div>
 
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-semibold text-gray-900">Progress</span>
-                      <span className="text-xs font-semibold text-gray-900">
-                        {Math.round(jobId ? trackedProgress : progress)}%
-                      </span>
-                    </div>
-
-                    <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
-                      <div
-                        className="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-out"
-                        style={{ width: `${jobId ? trackedProgress : progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  <p className="text-xs font-semibold text-gray-900 mb-4">
-                    {jobId ? trackedMessage : progressMessage}
-                  </p>
-
-                  <p className="text-xs font-medium text-gray-500">
-                    Progress Tracker is in beta.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 mb-6">
-                    <div className="relative">
-                      {status === 'complete' ? (
-                        <div className="w-[30px] h-[30px] bg-green-500 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      ) : (
-                        <div className="w-[30px] h-[30px] bg-red-500 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="text-base font-bold text-gray-900">
-                      {status === 'complete' ? 'Ads Created Successfully!' : 'Error Creating Ads'}
-                    </h3>
-                  </div>
-
-                  <p className="text-sm text-gray-700 mb-6">
-                    {status === 'complete'
-                      ? 'Your ads have been successfully created!'
-                      : 'There was an error creating your ads. Please try again.'}
-                  </p>
-
-                  <Button
-                    onClick={handleCloseProgressPopup}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2"
-                  >
-                    Close
-                  </Button>
-                </>
-              )}
+          <div className="mb-2">
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${trackedProgress}%` }}
+              />
             </div>
           </div>
+
+          <p className="text-xs text-gray-600">{trackedMessage}</p>
+
+          {jobQueue.length > 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              Next: {jobQueue[0].formData.adName}
+            </p>
+          )}
         </div>
       )}
 
@@ -1917,7 +2006,7 @@ export default function AdCreationForm({
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleCreateAd} className="space-y-6">
+        <form onSubmit={handleQueueJob} className="space-y-6">
           <div className="space-y-10">
             <div className="space-y-4">
               <div className="space-y-2">
@@ -2531,20 +2620,23 @@ export default function AdCreationForm({
           <div className="space-y-1">
             <Button
               type="submit"
+              onClick={handleQueueJob}  // Changed from handleCreateAd
               className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
               disabled={
-                !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || isLoading || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "") ||
-                  (showShopDestinationSelector && !selectedShopDestination)
-                )
+                !isLoggedIn ||
+                (selectedAdSets.length === 0 && !duplicateAdSet) ||
+                (files.length === 0 && driveFiles.length === 0) ||
+                (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
+                (showShopDestinationSelector && !selectedShopDestination)
               }
             >
-              {isLoading || uploadingToS3 ? (
+              {isProcessingQueue ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {uploadingToS3 ? "Uploading to cloud..." : "Publishing Ads..."}
+                  Processing... ({jobQueue.length} in queue)
                 </>
               ) : (
-                "Publish Ads"
+                `Publish Ads${jobQueue.length > 0 ? ` (${jobQueue.length} queued)` : ''}`
               )}
             </Button>
 
