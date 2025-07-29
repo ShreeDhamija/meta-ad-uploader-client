@@ -1036,19 +1036,19 @@ export default function AdCreationForm({
     setter(newValues)
   }
 
-  const handleCloseProgressPopup = () => {
-    // Reset all the states that were being reset automatically
-    setIsCreatingAds(false);
-    setJobId(null);
-    setFiles([]);
-    setDriveFiles([]);
-    setVideoThumbs({});
-    setFileGroups([]);
-    setEnablePlacementCustomization(false);
-    setShowCompletedView(false);
-    setProgress(0);
-    setProgressMessage('');
-  };
+  // const handleCloseProgressPopup = () => {
+  //   // Reset all the states that were being reset automatically
+  //   setIsCreatingAds(false);
+  //   setJobId(null);
+  //   setFiles([]);
+  //   setDriveFiles([]);
+  //   setVideoThumbs({});
+  //   setFileGroups([]);
+  //   setEnablePlacementCustomization(false);
+  //   setShowCompletedView(false);
+  //   setProgress(0);
+  //   setProgressMessage('');
+  // };
 
 
 
@@ -1933,8 +1933,8 @@ export default function AdCreationForm({
     } finally {
       setCurrentJob(null);
       setIsProcessingQueue(false);
-
-
+      setProgress(0);
+      setProgressMessage('Starting ad creation...');
       // Process next job if any
       if (jobQueue.length > 1) {
         setTimeout(() => processJobQueue(), 1000); // Small delay between jobs
@@ -1986,12 +1986,12 @@ export default function AdCreationForm({
           {/* Collapsed State */}
           {!isJobTrackerExpanded && (
             <div
-              className="bg-white rounded-xl border border-gray-300/50 shadow-xl p-3 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
+              className="bg-white rounded-2xl border border-gray-300/50 shadow-xl p-3 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
               onClick={() => setIsJobTrackerExpanded(true)}
             >
               <div className="flex items-center gap-2">
-                <img src={RocketIcon} className="w-4 h-4" />
-                <span className="font-semibold text-sm">Job Queue</span>
+                <img src={RocketIcon} className="!w-4 !h-4" />
+                <span className="font-medium text-sm">Job Queue</span>
               </div>
               <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
                 {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
@@ -2004,12 +2004,12 @@ export default function AdCreationForm({
           {isJobTrackerExpanded && (
             <div className="bg-white border border-gray-300/50 rounded-[20px] shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-5">
               {/* Header */}
-              <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+              <div className="p-3.5 border-b border-gray-200 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src={RocketIcon || "/placeholder.svg"} className="!w-6 !h-6" />
+                  <img src={RocketIcon || "/placeholder.svg"} className="w-6 h-6" style={{ width: '24px', height: '24px' }} />
                   <div className="flex flex-col">
                     <h3 className="font-semibold text-sm">Job Queue</h3>
-                    <p className="text-xs font-medium text-gray-600">{jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active</p>
+                    <p className="text-sm font-medium text-gray-600">{jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active</p>
                   </div>
                 </div>
                 <button
@@ -2024,56 +2024,56 @@ export default function AdCreationForm({
               <div className="flex-1 overflow-y-auto">
                 {/* Completed Jobs */}
                 {completedJobs.map((job) => (
-                  <div key={job.id} className="p-3 border-b border-gray-100 flex items-center gap-2">
+                  <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
                     <div className="flex-shrink-0">
-                      <CheckIcon className="w-5 h-5" />
+                      <CheckIcon className="w-6 h-6" />
                     </div>
-                    <p className="flex-1 text-xs text-gray-700">{job.message}</p>
+                    <p className="flex-1 text-sm text-gray-700">{job.message}</p>
                     <button
                       onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
                       className="text-gray-400 hover:text-gray-600"
                     >
-                      <CircleX className="h-3 w-3 text-gray-500" />
+                      <CircleX className="h-4 w-4 text-gray-500" />
                     </button>
                   </div>
                 ))}
 
                 {/* Current Job */}
                 {currentJob && (
-                  <div className="p-3 border-b border-gray-100">
-                    <div className="flex items-center gap-2 mb-2">
+                  <div className="p-3.5 border-b border-gray-100">
+                    <div className="flex items-center gap-3 mb-2.5">
                       <div className="flex-shrink-0">
-                        <UploadIcon className="w-5 h-5" />
+                        <UploadIcon className="w-6 h-6" />
                       </div>
-                      <p className="flex-1 text-xs font-medium text-gray-700">
+                      <p className="flex-1 text-sm font-medium text-gray-700">
                         Posting Ads to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
                       </p>
-                      <span className="text-xs font-semibold text-gray-900">{Math.round(trackedProgress)}%</span>
+                      <span className="text-sm font-semibold text-gray-900">{Math.round(trackedProgress)}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="bg-blue-600 h-1.5 rounded-full transition-all duration-300"
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                         style={{ width: `${trackedProgress}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{trackedMessage}</p>
+                    <p className="text-sm text-gray-500 mt-2">{trackedMessage}</p>
                   </div>
                 )}
 
                 {/* Queued Jobs */}
                 {jobQueue.slice(currentJob ? 1 : 0).map((job, index) => (
-                  <div key={job.id || index} className="p-3 border-b border-gray-100 flex items-center gap-2">
+                  <div key={job.id || index} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
                     <div className="flex-shrink-0">
-                      <QueueIcon className="w-5 h-5 text-yellow-600" />
+                      <QueueIcon className="w-6 h-6 text-yellow-600" />
                     </div>
-                    <p className="flex-1 text-xs text-gray-600">
+                    <p className="flex-1 text-sm text-gray-600">
                       Queued {job.formData.files.length + job.formData.driveFiles.length} ads to {adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}
                     </p>
                     <button
                       onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
                       className="text-gray-400 hover:text-red-600"
                     >
-                      <CircleX className="h-3 w-3 text-red-500" />
+                      <CircleX className="h-4 w-4 text-red-500" />
                     </button>
                   </div>
                 ))}
