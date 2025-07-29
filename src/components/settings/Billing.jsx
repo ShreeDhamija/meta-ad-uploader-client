@@ -75,27 +75,6 @@ export default function BillingSettings() {
     };
 
 
-    // const handleCancel = async () => {
-    //     if (!confirm('Are you sure you want to cancel your subscription?')) return;
-
-    //     setIsLoading(true);
-    //     try {
-    //         const response = await fetch(`${API_BASE_URL}/api/stripe/cancel-subscription`, {
-    //             method: 'POST',
-    //             credentials: 'include',
-    //         });
-
-    //         if (response.ok) {
-    //             toast.success("Subscription will cancel at the end of your billing period");
-    //             refreshSubscriptionData();
-    //         }
-    //     } catch (error) {
-    //         toast.error("Failed to cancel subscription");
-    //     } finally {
-    //         setIsLoading(false);
-    //     }
-    // };
-
     const handleCancel = () => {
         setShowCancelDialog(true);
     };
@@ -204,7 +183,7 @@ export default function BillingSettings() {
                                     onClick={handleCancel}
                                     variant="outline"
                                     disabled={isLoading}
-                                    className="w-full h-12 bg-red-500 text-white rounded-xl hover:bg-red-500 hover:text-white"
+                                    className="w-full h-12 bg-red-500 text-white rounded-2xl"
                                 >
                                     Cancel Subscription
                                 </Button>
@@ -282,7 +261,7 @@ export default function BillingSettings() {
             {/* Cancel Confirmation Dialog */}
             <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" /> {/* Custom overlay */}
-                <DialogContent className="rounded-3xl">
+                <DialogContent className="rounded-3xl p-4">
                     <DialogHeader>
                         <DialogTitle>Cancel Subscription</DialogTitle>
                         <DialogDescription>
