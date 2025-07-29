@@ -1904,7 +1904,7 @@ export default function AdCreationForm({
 
       // Remove completed job from queue
       setJobQueue(prev => prev.slice(1));
-      toast.success("Job completed successfully!");
+      // toast.success("Job completed successfully!");
 
     } catch (error) {
       console.error("Job failed:", error);
@@ -1948,23 +1948,15 @@ export default function AdCreationForm({
     setDriveFiles([]);
     setVideoThumbs({});
     setThumbnail(null);
-    setHeadlines(['']);
-    setDescriptions(['']);
-    setMessages(['']);
-    setLink(['']);
+    // setHeadlines(['']);
+    // setDescriptions(['']);
+    // setMessages(['']);
+    // setLink(['']);
     setFileGroups([]);
     setEnablePlacementCustomization(false);
 
     toast.success(`Job added to queue (Position: ${jobQueue.length + 1})`);
 
-    console.log("Current isProcessingQueue:", isProcessingQueue);
-    console.log("Current jobQueue length:", jobQueue.length);
-
-    // Start processing if not already running
-    // if (!isProcessingQueue) {
-    //   console.log("Calling processJobQueue...");
-    //   processJobQueue();
-    // }
   };
 
 
