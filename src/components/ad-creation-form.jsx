@@ -1908,10 +1908,6 @@ export default function AdCreationForm({
 
     try {
 
-      console.log("1️⃣ Before handleCreateAd");
-      await handleCreateAd(job);
-      console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
-
       // await new Promise(resolve => setTimeout(resolve, 100));
 
       console.log(status);
@@ -2045,7 +2041,7 @@ export default function AdCreationForm({
 
               {/* Jobs List */}
               <div className="flex-1 overflow-y-auto">
-                {/* Completed Jobs */}
+
                 {/* Completed Jobs */}
                 {completedJobs.map((job) => (
                   <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
