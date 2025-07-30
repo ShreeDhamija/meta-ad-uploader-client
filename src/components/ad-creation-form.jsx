@@ -42,7 +42,13 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   const [status, setStatus] = useState('idle');
 
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId) {
+      setProgress(0);
+      setMessage('');
+      setStatus('idle');
+      return;
+    }
+
 
     // Reset state for new job
     setProgress(0);
