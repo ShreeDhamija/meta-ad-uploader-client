@@ -363,6 +363,8 @@ export default function AdCreationForm({
   const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
+  const [lastJobFailed, setLastJobFailed] = useState(false);
+
 
 
   // const [isCarouselAd, setIsCarouselAd] = useState(false);
@@ -1135,6 +1137,7 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (jobData) => {
     // e.preventDefault();
+    setLastJobFailed(false);
 
     const {
       // Form content
@@ -1874,9 +1877,8 @@ export default function AdCreationForm({
         errorMessage = error.message;
       }
       toast.error(`Error uploading ads: ${errorMessage}`);
+      setLastJobFailed(true);
 
-      console.error("Error uploading ads:", error.response?.data || error);
-      console.error("Error uploading ads:", error.response?.data || error);
       throw new Error(errorMessage);
 
     } finally {
@@ -1885,6 +1887,67 @@ export default function AdCreationForm({
     }
   }
   // Replace the entire processJobQueue function in ad-creation-form.jsx with this:
+
+  // const processJobQueue = async () => {
+  //   if (jobQueue.length === 0 || isProcessingQueue || !jobQueue[0]) {
+  //     return;
+  //   }
+
+  //   const job = jobQueue[0];
+  //   setCurrentJob(job);
+  //   setIsProcessingQueue(true);
+  //   setProgress(0);
+  //   setProgressMessage('Initializing...');
+  //   setJobId(null);
+  //   await new Promise(resolve => setTimeout(resolve, 100));
+  //   setHasStartedAnyJob(true);
+
+  //   try {
+  //     // Await the job. If it throws an error, execution jumps DIRECTLY to the catch block.
+  //     await handleCreateAd(job);
+
+  //     // --- SUCCESS PATH ---
+  //     // This code ONLY runs if handleCreateAd completes without throwing an error.
+  //     const completedJob = {
+  //       id: job.id || uuidv4(),
+  //       message: `${job.adCount} Ad${job.adCount !== 1 ? 's' : ''} successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
+  //       completedAt: Date.now(),
+  //       status: 'success'
+  //     };
+  //     setCompletedJobs(prev => [...prev, completedJob]);
+
+  //     // Refresh ad sets only on success if a new one was created.
+  //     if (job.formData.duplicateAdSet) {
+  //       await refreshAdSets();
+  //       // Small delay to let the refresh complete before next job
+  //       await new Promise(resolve => setTimeout(resolve, 200));
+  //     }
+
+  //   } catch (error) {
+  //     // --- FAILURE PATH ---
+  //     // This code ONLY runs if handleCreateAd throws an error.
+  //     console.error("Job failed:", error);
+  //     const failedJob = {
+  //       id: job.id || uuidv4(),
+  //       message: `Job Failed: ${error.message || 'An unknown error occurred.'}`,
+  //       completedAt: Date.now(),
+  //       status: 'error'
+  //     };
+  //     setCompletedJobs(prev => [...prev, failedJob]);
+  //     toast.error("Job failed: " + error.message);
+
+  //   } finally {
+  //     // --- CLEANUP PATH (Always Runs) ---
+  //     // This code runs after EITHER the try or the catch block completes.
+
+  //     // Remove the processed job from the queue, regardless of its outcome.
+  //     setJobQueue(prev => prev.slice(1));
+
+  //     // Reset the state to be ready for the next job in the queue.
+  //     setCurrentJob(null);
+  //     setIsProcessingQueue(false);
+  //   }
+  // };
 
   const processJobQueue = async () => {
     if (jobQueue.length === 0 || isProcessingQueue || !jobQueue[0]) {
@@ -1901,30 +1964,29 @@ export default function AdCreationForm({
     setHasStartedAnyJob(true);
 
     try {
-      // Await the job. If it throws an error, execution jumps DIRECTLY to the catch block.
       await handleCreateAd(job);
 
-      // --- SUCCESS PATH ---
-      // This code ONLY runs if handleCreateAd completes without throwing an error.
+      // Check if job actually failed despite no error thrown
+      if (lastJobFailed) {
+        throw new Error("Job failed during execution");
+      }
+
+      // SUCCESS - Add to completed
       const completedJob = {
         id: job.id || uuidv4(),
-        message: `${job.adCount} Ad${job.adCount !== 1 ? 's' : ''} successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
+        message: `${job.adCount || 1} Ad${job.adCount !== 1 ? 's' : ''} successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
         completedAt: Date.now(),
         status: 'success'
       };
       setCompletedJobs(prev => [...prev, completedJob]);
 
-      // Refresh ad sets only on success if a new one was created.
       if (job.formData.duplicateAdSet) {
         await refreshAdSets();
-        // Small delay to let the refresh complete before next job
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
     } catch (error) {
-      // --- FAILURE PATH ---
-      // This code ONLY runs if handleCreateAd throws an error.
-      console.error("Job failed:", error);
+      // FAILURE - Add to completed with error
       const failedJob = {
         id: job.id || uuidv4(),
         message: `Job Failed: ${error.message || 'An unknown error occurred.'}`,
@@ -1935,91 +1997,12 @@ export default function AdCreationForm({
       toast.error("Job failed: " + error.message);
 
     } finally {
-      // --- CLEANUP PATH (Always Runs) ---
-      // This code runs after EITHER the try or the catch block completes.
-
-      // Remove the processed job from the queue, regardless of its outcome.
       setJobQueue(prev => prev.slice(1));
-
-      // Reset the state to be ready for the next job in the queue.
       setCurrentJob(null);
       setIsProcessingQueue(false);
+      setLastJobFailed(false); // Reset for next job
     }
   };
-
-  // const processJobQueue = async () => {
-
-
-
-  //   if (jobQueue.length === 0 || isProcessingQueue) {
-  //     console.log("Returning early from processJobQueue");
-  //     return;
-  //   }
-
-  //   if (!jobQueue[0]) return;
-
-
-  //   const job = jobQueue[0];
-  //   setCurrentJob(job);
-  //   setIsProcessingQueue(true);
-  //   setProgress(0);
-  //   setProgressMessage('Initializing...');
-  //   setJobId(null); // Force reset SSE connection
-  //   await new Promise(resolve => setTimeout(resolve, 100));
-  //   setHasStartedAnyJob(true);
-  //   console.log("Processing job:", job);
-
-
-  //   try {
-  //     // Process this specific job
-  //     console.log("About to call handleCreateAd");
-
-  //     await handleCreateAd(job);
-
-
-  //     const completedJob = {
-  //       id: job.id || uuidv4(),
-  //       message: `${job.adCount} Ad${job.adCount !== 1 ? 's' : ''} successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
-  //       completedAt: Date.now()
-  //     };
-
-  //     setCompletedJobs(prev => [...prev, completedJob]);
-
-
-  //     // Remove completed job from queue
-  //     // setJobQueue(prev => prev.slice(1));
-
-  //     if (job.formData.duplicateAdSet) {
-  //       await refreshAdSets();
-  //       // Small delay to let the refresh complete before next job
-  //       await new Promise(resolve => setTimeout(resolve, 200));
-  //     }
-
-
-  //   } catch (error) {
-  //     console.error("Job failed:", error);
-  //     const failedJob = {
-  //       id: job.id || uuidv4(),
-  //       message: error.message || 'Failed to create ads',
-  //       completedAt: Date.now(),
-  //       status: 'error' // Mark as error
-  //     };
-
-  //     setCompletedJobs(prev => [...prev, failedJob]);
-
-  //     toast.error("Job failed: " + error.message);
-
-  //     // Remove failed job from queue
-  //     // setJobQueue(prev => prev.slice(1));
-  //   } finally {
-  //     setJobQueue(prev => prev.slice(1));
-  //     setCurrentJob(null);
-  //     setIsProcessingQueue(false);
-  //     setProgress(0);
-  //     setProgressMessage('Starting ad creation...');
-
-  //   }
-  // };
 
   const handleQueueJob = (e) => {
     e.preventDefault();
