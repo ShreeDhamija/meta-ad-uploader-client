@@ -41,6 +41,14 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('idle');
 
+
+  const resetProgress = useCallback(() => {
+    setProgress(0);
+    setMessage('');
+    setStatus('idle');
+  }, []);
+
+
   useEffect(() => {
     if (!jobId) {
       setProgress(0);
@@ -257,16 +265,9 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     return cleanup;
   }, [jobId]);
 
-  // Reset state when ad creation stops
-  // useEffect(() => {
-  //   if (!isCreatingAds) {
-  //     setProgress(0);
-  //     setMessage('');
-  //     setStatus('idle');
-  //   }
-  // }, [isCreatingAds]);
 
-  return { progress, message, status };
+
+  return { progress, message, status, resetProgress };
 };
 
 
@@ -360,7 +361,7 @@ export default function AdCreationForm({
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
-  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
+  const { progress: trackedProgress, message: trackedMessage, status, resetProgress } = useAdCreationProgress(jobId, isCreatingAds);
   const [showCompletedView, setShowCompletedView] = useState(false);
   // Add these new states at the top of AdCreationForm
   const [jobQueue, setJobQueue] = useState([]);
@@ -668,41 +669,42 @@ export default function AdCreationForm({
   }, [trackedProgress, trackedMessage, currentJob]);
 
   // This hook STARTS a new job from the queue.
+  // This hook STARTS a new job from the queue when ready.
   useEffect(() => {
-    if (jobQueue.length > 0 && !isProcessingQueue) {
-      const jobToProcess = jobQueue[0];
-
-      setIsProcessingQueue(true);
-      setCurrentJob(jobToProcess);
-      setHasStartedAnyJob(true);
-
-      // Reset UI for the new job
-      setProgress(0);
-      setProgressMessage('Initializing...');
-      setShowCompletedView(false);
-      setJobId(null); // Clear previous job ID before setting a new one
-
-      // Fire the ad creation process. Its result will be handled by the next useEffect.
-      handleCreateAd(jobToProcess).catch(err => {
-        // This handles critical errors that occur *before* the backend job starts 
-        // (e.g., S3 upload failure), where the SSE tracker would not report an error.
-        console.error("Error during job initialization:", err);
-
-        const failedJob = {
-          id: jobToProcess.id,
-          message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
-          completedAt: Date.now(),
-          status: 'error'
-        };
-        setCompletedJobs(prev => [...prev, failedJob]);
-
-        // Manually advance the queue since the SSE handler won't fire for this error.
-        setJobQueue(prev => prev.slice(1));
-        setCurrentJob(null);
-        setIsProcessingQueue(false);
-      });
+    // Do nothing if the queue is empty or a job is already processing.
+    if (jobQueue.length === 0 || isProcessingQueue) {
+      return;
     }
-  }, [jobQueue, isProcessingQueue]);
+
+    // ✅ Call the reset function to clear the previous job's state.
+    resetProgress();
+
+    const jobToProcess = jobQueue[0];
+
+    setIsProcessingQueue(true);
+    setCurrentJob(jobToProcess);
+    setHasStartedAnyJob(true);
+
+    setProgress(0);
+    setMessage('Initializing...');
+    setShowCompletedView(false);
+    setJobId(null);
+
+    handleCreateAd(jobToProcess).catch(err => {
+      console.error("Critical error during job initialization:", err);
+      const failedJob = {
+        id: jobToProcess.id,
+        message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
+        completedAt: Date.now(),
+        status: 'error'
+      };
+      setCompletedJobs(prev => [...prev, failedJob]);
+      setJobQueue(prev => prev.slice(1));
+      setCurrentJob(null);
+      setIsProcessingQueue(false);
+    });
+
+  }, [jobQueue, isProcessingQueue, resetProgress]);
 
 
   // This hook watches the SSE status of the CURRENT job and handles its COMPLETION or ERROR.
@@ -710,6 +712,14 @@ export default function AdCreationForm({
     if (!isProcessingQueue || !currentJob) {
       return; // Do nothing if a job isn't active
     }
+
+
+    // ✅ Guard clause to ignore stale status after a reset.
+    if (status === 'idle') {
+      return;
+    }
+
+
 
     // Only act on the final states reported by the SSE hook
     if (status === 'complete' || status === 'error') {
