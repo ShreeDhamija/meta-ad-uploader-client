@@ -363,7 +363,7 @@ export default function AdCreationForm({
   const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
-  const [lastJobFailed, setLastJobFailed] = useState(false);
+  const [jobFailures, setJobFailures] = useState({});
 
 
 
@@ -647,7 +647,7 @@ export default function AdCreationForm({
         // For errors, you might want to also show a close button
         setShowCompletedView(true);
         console.log("setting last job failed to true");
-        setLastJobFailed(true);  // Add this!
+        setJobFailures(prev => ({ ...prev, [jobId]: true }));
         toast.error("Error creating ads");
       }
     }
@@ -1914,9 +1914,10 @@ export default function AdCreationForm({
 
       console.log(status);
       console.log(lastJobFailed);
-      if (lastJobFailed || status === 'error') {
-        throw new Error(trackedMessage || "Job failed during execution");
+      if (jobFailures[job.id]) {
+        throw new Error(trackedMessage || "Job failed");
       }
+
 
 
       console.log("3️⃣ Creating success job");
@@ -1952,7 +1953,11 @@ export default function AdCreationForm({
       setJobQueue(prev => prev.slice(1));
       setCurrentJob(null);
       setIsProcessingQueue(false);
-      setLastJobFailed(false);
+      setJobFailures(prev => {
+        const updated = { ...prev };
+        delete updated[job.id];
+        return updated;
+      });
     }
   };
 
