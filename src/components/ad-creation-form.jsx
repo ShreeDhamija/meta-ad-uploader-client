@@ -36,7 +36,7 @@ import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
-const useAdCreationProgress = (jobId, isCreatingAds, setLastJobFailed) => {
+const useAdCreationProgress = (jobId, isCreatingAds) => {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('idle');
@@ -48,8 +48,6 @@ const useAdCreationProgress = (jobId, isCreatingAds, setLastJobFailed) => {
     setProgress(0);
     setMessage('');
     setStatus('idle');
-    setLastJobFailed(false); // ✅ Reset failure state on new job start
-
 
     // Track all cleanup items
     let eventSource = null;
@@ -356,6 +354,7 @@ export default function AdCreationForm({
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
+  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
   const [showCompletedView, setShowCompletedView] = useState(false);
   // Add these new states at the top of AdCreationForm
   const [jobQueue, setJobQueue] = useState([]);
@@ -363,9 +362,8 @@ export default function AdCreationForm({
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
   const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
   const [completedJobs, setCompletedJobs] = useState([]);
-  const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false)
-  const [lastJobFailed, setLastJobFailed] = useState(false);
-  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds, setLastJobFailed);
+  const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
+  // const [lastJobFailed, setLastJobFailed] = useState(false);
 
 
 
@@ -630,30 +628,118 @@ export default function AdCreationForm({
     }
   };
 
-  useEffect(() => {
-    if (jobQueue.length > 0 && !isProcessingQueue && !currentJob) {
-      processJobQueue();
-    }
-  }, [jobQueue.length, isProcessingQueue, currentJob]);
+  // useEffect(() => {
+  //   if (jobQueue.length > 0 && !isProcessingQueue && !currentJob) {
+  //     processJobQueue();
+  //   }
+  // }, [jobQueue.length, isProcessingQueue, currentJob]);
 
+  // useEffect(() => {
+  //   if (jobId) {
+  //     setProgress(trackedProgress);
+  //     setProgressMessage(trackedMessage);
+
+  //     if (status === 'complete') {
+  //       // Don't automatically close - just show the completed view
+  //       setShowCompletedView(true);
+  //       // toast.success("Ads created successfully!");
+  //     } else if (status === 'error') {
+  //       // For errors, you might want to also show a close button
+  //       setShowCompletedView(true);
+  //       console.log("setting last job failed to true");
+  //       // setLastJobFailed(true);  // Add this!
+  //       toast.error("Error creating ads");
+  //     }
+  //   }
+  // }, [trackedProgress, trackedMessage, status, jobId]);
+
+  // This useEffect now only handles the UI updates for the progress bar.
   useEffect(() => {
-    if (jobId) {
+    if (currentJob) {
       setProgress(trackedProgress);
       setProgressMessage(trackedMessage);
-
-      if (status === 'complete') {
-        // Don't automatically close - just show the completed view
-        setShowCompletedView(true);
-        // toast.success("Ads created successfully!");
-      } else if (status === 'error') {
-        // For errors, you might want to also show a close button
-        setShowCompletedView(true);
-        console.log("setting last job failed to true");
-        setLastJobFailed(true);  // Add this!
-        toast.error("Error creating ads");
-      }
     }
-  }, [trackedProgress, trackedMessage, status, jobId]);
+  }, [trackedProgress, trackedMessage, currentJob]);
+
+  // This hook STARTS a new job from the queue.
+  useEffect(() => {
+    if (jobQueue.length > 0 && !isProcessingQueue) {
+      const jobToProcess = jobQueue[0];
+
+      setIsProcessingQueue(true);
+      setCurrentJob(jobToProcess);
+      setHasStartedAnyJob(true);
+
+      // Reset UI for the new job
+      setProgress(0);
+      setProgressMessage('Initializing...');
+      setShowCompletedView(false);
+      setJobId(null); // Clear previous job ID before setting a new one
+
+      // Fire the ad creation process. Its result will be handled by the next useEffect.
+      handleCreateAd(jobToProcess).catch(err => {
+        // This handles critical errors that occur *before* the backend job starts 
+        // (e.g., S3 upload failure), where the SSE tracker would not report an error.
+        console.error("Error during job initialization:", err);
+
+        const failedJob = {
+          id: jobToProcess.id,
+          message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
+          completedAt: Date.now(),
+          status: 'error'
+        };
+        setCompletedJobs(prev => [...prev, failedJob]);
+
+        // Manually advance the queue since the SSE handler won't fire for this error.
+        setJobQueue(prev => prev.slice(1));
+        setCurrentJob(null);
+        setIsProcessingQueue(false);
+      });
+    }
+  }, [jobQueue, isProcessingQueue]);
+
+
+  // This hook watches the SSE status of the CURRENT job and handles its COMPLETION or ERROR.
+  useEffect(() => {
+    if (!isProcessingQueue || !currentJob) {
+      return; // Do nothing if a job isn't active
+    }
+
+    // Only act on the final states reported by the SSE hook
+    if (status === 'complete' || status === 'error') {
+      if (status === 'complete') {
+        const adSet = adSets.find(a => a.id === currentJob.formData.selectedAdSets[0]);
+        const adSetName = adSet?.name || (currentJob.formData.duplicateAdSet ? currentJob.formData.newAdSetName : 'selected adset');
+
+        const completedJob = {
+          id: currentJob.id,
+          message: `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${adSetName}`,
+          completedAt: Date.now(),
+          status: 'success'
+        };
+        setCompletedJobs(prev => [...prev, completedJob]);
+
+        if (currentJob.formData.duplicateAdSet) {
+          refreshAdSets();
+        }
+      } else { // status === 'error'
+        const failedJob = {
+          id: currentJob.id,
+          message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
+          completedAt: Date.now(),
+          status: 'error'
+        };
+        setCompletedJobs(prev => [...prev, failedJob]);
+        toast.error(`Job failed: ${trackedMessage || 'An unknown error occurred.'}`);
+      }
+
+      // The job is finished. Clean up and advance to the next one.
+      setShowCompletedView(true);
+      setJobQueue(prev => prev.slice(1));
+      setCurrentJob(null);
+      setIsProcessingQueue(false);
+    }
+  }, [status, isProcessingQueue, currentJob]);
 
 
   useEffect(() => {
@@ -1141,7 +1227,7 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (jobData) => {
     // e.preventDefault();
-    // console.log("setting last job failed to false");
+    console.log("setting last job failed to false");
     // setLastJobFailed(false);
 
     const {
@@ -1883,7 +1969,7 @@ export default function AdCreationForm({
       }
 
       console.log("❌ handleCreateAd catch:", error.message);
-      setLastJobFailed(true);
+      // setLastJobFailed(true);
       toast.error(`Error uploading ads: ${errorMessage}`);
       throw new Error(errorMessage);
 
@@ -1894,69 +1980,69 @@ export default function AdCreationForm({
   }
 
 
-  const processJobQueue = async () => {
-    if (jobQueue.length === 0 || isProcessingQueue || !jobQueue[0]) {
-      return;
-    }
+  // const processJobQueue = async () => {
+  //   if (jobQueue.length === 0 || isProcessingQueue || !jobQueue[0]) {
+  //     return;
+  //   }
 
-    const job = jobQueue[0];
-    setCurrentJob(job);
-    setIsProcessingQueue(true);
-    setProgress(0);
-    setProgressMessage('Initializing...');
-    setJobId(null);
-    await new Promise(resolve => setTimeout(resolve, 100));
-    setHasStartedAnyJob(true);
+  //   const job = jobQueue[0];
+  //   setCurrentJob(job);
+  //   setIsProcessingQueue(true);
+  //   setProgress(0);
+  //   setProgressMessage('Initializing...');
+  //   setJobId(null);
+  //   await new Promise(resolve => setTimeout(resolve, 100));
+  //   setHasStartedAnyJob(true);
 
-    try {
+  //   try {
 
-      console.log("1️⃣ Before handleCreateAd");
-      await handleCreateAd(job);
-      console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
+  //     console.log("1️⃣ Before handleCreateAd");
+  //     await handleCreateAd(job);
+  //     // console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
 
-      console.log(status);
-      console.log(lastJobFailed);
-      if (lastJobFailed || status === 'error') {
-        throw new Error(trackedMessage || "Job failed during execution");
-      }
+  //     console.log(status);
+  //     // console.log(lastJobFailed);
+  //     // if (lastJobFailed || status === 'error') {
+  //     //   throw new Error(trackedMessage || "Job failed during execution");
+  //     // }
 
 
-      console.log("3️⃣ Creating success job");
+  //     console.log("3️⃣ Creating success job");
 
-      // SUCCESS - Add to completed
-      const completedJob = {
-        id: job.id || uuidv4(),
-        message: `${job.adCount || 1} Ad${job.adCount !== 1 ? 's' : ''} successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
-        completedAt: Date.now(),
-        status: 'success'
-      };
-      setCompletedJobs(prev => [...prev, completedJob]);
+  //     // SUCCESS - Add to completed
+  //     const completedJob = {
+  //       id: job.id || uuidv4(),
+  //       message: `${job.adCount || 1} Ad${job.adCount !== 1 ? 's' : ''} successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
+  //       completedAt: Date.now(),
+  //       status: 'success'
+  //     };
+  //     setCompletedJobs(prev => [...prev, completedJob]);
 
-      if (job.formData.duplicateAdSet) {
-        await refreshAdSets();
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
+  //     if (job.formData.duplicateAdSet) {
+  //       await refreshAdSets();
+  //       await new Promise(resolve => setTimeout(resolve, 200));
+  //     }
 
-    } catch (error) {
-      // FAILURE - Add to completed with error
-      console.log("4️⃣ processJobQueue catch:", error.message);
+  //   } catch (error) {
+  //     // FAILURE - Add to completed with error
+  //     console.log("4️⃣ processJobQueue catch:", error.message);
 
-      const failedJob = {
-        id: job.id || uuidv4(),
-        message: `Job Failed: ${error.message || 'An unknown error occurred.'}`,
-        completedAt: Date.now(),
-        status: 'error'
-      };
-      setCompletedJobs(prev => [...prev, failedJob]);
-      toast.error("Job failed: " + error.message);
+  //     const failedJob = {
+  //       id: job.id || uuidv4(),
+  //       message: `Job Failed: ${error.message || 'An unknown error occurred.'}`,
+  //       completedAt: Date.now(),
+  //       status: 'error'
+  //     };
+  //     setCompletedJobs(prev => [...prev, failedJob]);
+  //     toast.error("Job failed: " + error.message);
 
-    } finally {
-      setJobQueue(prev => prev.slice(1));
-      setCurrentJob(null);
-      setIsProcessingQueue(false);
-      // setLastJobFailed(false);
-    }
-  };
+  //   } finally {
+  //     setJobQueue(prev => prev.slice(1));
+  //     setCurrentJob(null);
+  //     setIsProcessingQueue(false);
+  //     // setLastJobFailed(false);
+  //   }
+  // };
 
   const handleQueueJob = (e) => {
     e.preventDefault();
