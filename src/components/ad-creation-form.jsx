@@ -1139,8 +1139,6 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (jobData) => {
     // e.preventDefault();
-    // console.log("setting last job failed to false");
-    // setLastJobFailed(false);
 
     const {
       // Form content
@@ -1881,7 +1879,7 @@ export default function AdCreationForm({
       }
 
       console.log("❌ handleCreateAd catch:", error.message);
-      setLastJobFailed(true);
+
       toast.error(`Error uploading ads: ${errorMessage}`);
       throw new Error(errorMessage);
 
@@ -1908,12 +1906,11 @@ export default function AdCreationForm({
 
     try {
 
-      console.log("1️⃣ Before handleCreateAd");
+
       await handleCreateAd(job);
-      console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
 
       console.log(status);
-      console.log(lastJobFailed);
+
       if (jobFailures[job.id]) {
         throw new Error(trackedMessage || "Job failed");
       }
