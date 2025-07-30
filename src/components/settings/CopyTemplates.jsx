@@ -11,6 +11,8 @@ import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 import TemplateIcon from '@/assets/icons/template.svg?react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
@@ -659,7 +661,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 </div>
               </div>
 
-              <div className="px-6 pb-6 pt-4 space-y-6">
+              {/* <div className="px-6 pb-6 pt-4 space-y-6">
                 {isFetchingCopy ? (
                   <div className="flex flex-col items-center justify-center py-10 space-y-4">
                     <RotateLoader size={6} margin={-16} color="#adadad" />
@@ -667,7 +669,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   </div>
                 ) : (
                   <div className="space-y-8">
-                    {/* Primary Texts Section */}
+                    
                     {recentAds.primaryTexts?.length > 0 && (
                       <div className="space-y-4">
                         <h3 className="text-md font-bold text-zinc-800">Primary Texts</h3>
@@ -696,7 +698,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       </div>
                     )}
 
-                    {/* Headlines Section */}
+                    
                     {recentAds.headlines?.length > 0 && (
                       <div className="space-y-4">
                         <h3 className="text-md font-bold text-zinc-800">Headlines</h3>
@@ -725,13 +727,92 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       </div>
                     )}
 
-                    {/* No data message */}
+
                     {(!recentAds.primaryTexts?.length && !recentAds.headlines?.length) && (
                       <div className="text-center py-10 text-gray-500">
                         No recent ad copy found
                       </div>
                     )}
                   </div>
+                )}
+              </div> */}
+              <div className="px-6 pb-6 pt-4">
+                {isFetchingCopy ? (
+                  <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                    <RotateLoader size={6} margin={-16} color="#adadad" />
+                    <span className="text-sm text-gray-600">Loading text copy...</span>
+                  </div>
+                ) : (
+                  <Tabs defaultValue="primary-texts" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-6">
+                      <TabsTrigger value="primary-texts">
+                        Primary Texts ({recentAds.primaryTexts?.length || 0})
+                      </TabsTrigger>
+                      <TabsTrigger value="headlines">
+                        Headlines ({recentAds.headlines?.length || 0})
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="primary-texts" className="space-y-4">
+                      {recentAds.primaryTexts?.length > 0 ? (
+                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
+                          {recentAds.primaryTexts.map((text, index) => (
+                            <div key={index} className="rounded-lg p-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <div className="text-xs font-medium text-gray-500">
+                                  Primary Text {index + 1}
+                                </div>
+                                <Button
+                                  className="flex items-center text-xs rounded-xl px-2 py-1 bg-blue-600 text-white hover:bg-blue-700 shrink-0"
+                                  onClick={createPrimaryTextImportHandler(text)}
+                                >
+                                  <Download className="w-3 h-3" />
+                                  Import
+                                </Button>
+                              </div>
+                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                                {text}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10 text-gray-500">
+                          No primary texts found
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="headlines" className="space-y-4">
+                      {recentAds.headlines?.length > 0 ? (
+                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
+                          {recentAds.headlines.map((text, index) => (
+                            <div key={index} className="rounded-lg p-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <div className="text-xs font-medium text-gray-500">
+                                  Headline {index + 1}
+                                </div>
+                                <Button
+                                  className="flex items-center text-xs rounded-xl px-2 py-1 bg-green-600 text-white hover:bg-green-700 shrink-0"
+                                  onClick={createHeadlineImportHandler(text)}
+                                >
+                                  <Download className="w-3 h-3" />
+                                  Import
+                                </Button>
+                              </div>
+                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                                {text}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10 text-gray-500">
+                          No headlines found
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
                 )}
               </div>
             </div>
