@@ -851,11 +851,11 @@ export default function AdAccountSettings({
                 {" "}
                 {/* Changed items-center to items-start */}
                 <AlertTriangle className="w-4 h-4 mr-2 text-yellow-700" /> {/* Icon is now a direct sibling */}
-                <span className="break-words">
+                <span className="break-all">
                   {" "}
                   {/* This span now only contains the text content */}
                   Dynamic Creative Ad Set{selectedDynamicAdSets.length > 1 ? "s " : " "}
-                  <span className="font-semibold break-words">{selectedDynamicAdSets.map((a) => a?.name || a?.id).join(", ")}</span>
+                  <span className="font-semibold break-all">{selectedDynamicAdSets.map((a) => a?.name || a?.id).join(", ")}</span>
                   {" cannot have more than 1 ad."}
                 </span>
               </div>
