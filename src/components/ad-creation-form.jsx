@@ -686,7 +686,7 @@ export default function AdCreationForm({
     setHasStartedAnyJob(true);
 
     setProgress(0);
-    setMessage('Initializing...');
+    // setMessage('Initializing...');
     setShowCompletedView(false);
     setJobId(null);
 
