@@ -1908,6 +1908,8 @@ export default function AdCreationForm({
 
     try {
 
+
+
       // await new Promise(resolve => setTimeout(resolve, 100));
 
       console.log(status);
@@ -1917,6 +1919,10 @@ export default function AdCreationForm({
       if (lastJobFailed || status === 'error') {
         throw new Error(trackedMessage || "Job failed during execution");
       }
+
+      console.log("1️⃣ Before handleCreateAd");
+      await handleCreateAd(job);
+      console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
 
       console.log("3️⃣ Creating success job");
 
