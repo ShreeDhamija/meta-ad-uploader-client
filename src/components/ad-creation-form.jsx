@@ -635,30 +635,7 @@ export default function AdCreationForm({
     }
   };
 
-  // useEffect(() => {
-  //   if (jobQueue.length > 0 && !isProcessingQueue && !currentJob) {
-  //     processJobQueue();
-  //   }
-  // }, [jobQueue.length, isProcessingQueue, currentJob]);
 
-  // useEffect(() => {
-  //   if (jobId) {
-  //     setProgress(trackedProgress);
-  //     setProgressMessage(trackedMessage);
-
-  //     if (status === 'complete') {
-  //       // Don't automatically close - just show the completed view
-  //       setShowCompletedView(true);
-  //       // toast.success("Ads created successfully!");
-  //     } else if (status === 'error') {
-  //       // For errors, you might want to also show a close button
-  //       setShowCompletedView(true);
-  //       console.log("setting last job failed to true");
-  //       // setLastJobFailed(true);  // Add this!
-  //       toast.error("Error creating ads");
-  //     }
-  //   }
-  // }, [trackedProgress, trackedMessage, status, jobId]);
 
   // This useEffect now only handles the UI updates for the progress bar.
   useEffect(() => {
@@ -1131,15 +1108,6 @@ export default function AdCreationForm({
     processThumbnails();
   }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
-
-
-
-  // useEffect(() => {
-  //   if (!uploadingToS3 && publishPending) {
-  //     setPublishPending(false);
-  //     handleCreateAd(new Event('submit')); // fake event to reuse logic
-  //   }
-  // }, [uploadingToS3, publishPending]);
 
   // Functions for managing dynamic input fields
   const addField = (setter, values, ma) => {
@@ -1964,7 +1932,7 @@ export default function AdCreationForm({
           // Still show the toast since ads actually succeeded
         }
 
-        toast.success("Ads created successfully!");
+        // toast.success("Ads created successfully!");
       } catch (error) {
         // Your existing error handling
       }
@@ -1986,7 +1954,7 @@ export default function AdCreationForm({
 
       console.log("❌ handleCreateAd catch:", error.message);
       // setLastJobFailed(true);
-      toast.error(`Error uploading ads: ${errorMessage}`);
+      // toast.error(`Error uploading ads: ${errorMessage}`);
       throw new Error(errorMessage);
 
     } finally {
