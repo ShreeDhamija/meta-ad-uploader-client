@@ -1970,9 +1970,8 @@ export default function AdCreationForm({
       await handleCreateAd(job);
       console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
 
-      if (lastJobFailed) {
-        console.log("last job failed true in ProcessJobQueue");
-        throw new Error("Job failed during execution");
+      if (status === 'error') {
+        throw new Error(trackedMessage || "Job failed");
       }
 
       console.log("3️⃣ Creating success job");
