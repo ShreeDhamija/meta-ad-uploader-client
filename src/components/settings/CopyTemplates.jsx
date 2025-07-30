@@ -642,8 +642,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       {showImportPopup && (
         <div
-          className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-center"
-          style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+          className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-start pt-16"
+          style={{ position: 'fixed' }}
         >
           <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out">
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
@@ -670,7 +670,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   </div>
                 ) : (
                   <Tabs defaultValue="primary-texts" className="w-full">
-                    <TabsList className="inline-flex h-10 items-center justify-center rounded-full bg-muted p-1 text-muted-foreground mb-6 mx-auto">
+                    <TabsList className="flex h-10 items-center justify-center rounded-full bg-muted p-1 text-muted-foreground mb-6 w-fit mx-auto">
                       <TabsTrigger
                         value="primary-texts"
                         className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
