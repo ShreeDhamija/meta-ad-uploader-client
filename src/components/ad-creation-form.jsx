@@ -36,7 +36,7 @@ import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
-const useAdCreationProgress = (jobId, isCreatingAds) => {
+const useAdCreationProgress = (jobId, isCreatingAds, setLastJobFailed) => {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('idle');
@@ -48,6 +48,8 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     setProgress(0);
     setMessage('');
     setStatus('idle');
+    setLastJobFailed(false); // ✅ Reset failure state on new job start
+
 
     // Track all cleanup items
     let eventSource = null;
@@ -354,7 +356,7 @@ export default function AdCreationForm({
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
-  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
+  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds, setLastJobFailed);
   const [showCompletedView, setShowCompletedView] = useState(false);
   // Add these new states at the top of AdCreationForm
   const [jobQueue, setJobQueue] = useState([]);
@@ -363,7 +365,7 @@ export default function AdCreationForm({
   const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
-  const [jobFailures, setJobFailures] = useState({});
+  const [lastJobFailed, setLastJobFailed] = useState(false);
 
 
 
@@ -647,7 +649,7 @@ export default function AdCreationForm({
         // For errors, you might want to also show a close button
         setShowCompletedView(true);
         console.log("setting last job failed to true");
-        setJobFailures(prev => ({ ...prev, [jobId]: true }));
+        setLastJobFailed(true);  // Add this!
         toast.error("Error creating ads");
       }
     }
@@ -1139,6 +1141,8 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (jobData) => {
     // e.preventDefault();
+    // console.log("setting last job failed to false");
+    // setLastJobFailed(false);
 
     const {
       // Form content
@@ -1879,7 +1883,7 @@ export default function AdCreationForm({
       }
 
       console.log("❌ handleCreateAd catch:", error.message);
-
+      setLastJobFailed(true);
       toast.error(`Error uploading ads: ${errorMessage}`);
       throw new Error(errorMessage);
 
@@ -1906,17 +1910,15 @@ export default function AdCreationForm({
 
     try {
 
-
+      console.log("1️⃣ Before handleCreateAd");
       await handleCreateAd(job);
+      console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
 
       console.log(status);
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      if (jobFailures[job.id]) {
-        throw new Error(trackedMessage || "Job failed");
+      console.log(lastJobFailed);
+      if (lastJobFailed || status === 'error') {
+        throw new Error(trackedMessage || "Job failed during execution");
       }
-
 
 
       console.log("3️⃣ Creating success job");
@@ -1952,11 +1954,7 @@ export default function AdCreationForm({
       setJobQueue(prev => prev.slice(1));
       setCurrentJob(null);
       setIsProcessingQueue(false);
-      setJobFailures(prev => {
-        const updated = { ...prev };
-        delete updated[job.id];
-        return updated;
-      });
+      // setLastJobFailed(false);
     }
   };
 
