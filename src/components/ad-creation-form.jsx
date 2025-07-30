@@ -1876,9 +1876,10 @@ export default function AdCreationForm({
       } else if (error.message) {
         errorMessage = error.message;
       }
-      toast.error(`Error uploading ads: ${errorMessage}`);
-      setLastJobFailed(true);
 
+      console.log("❌ handleCreateAd catch:", error.message);
+      setLastJobFailed(true);
+      toast.error(`Error uploading ads: ${errorMessage}`);
       throw new Error(errorMessage);
 
     } finally {
@@ -1964,12 +1965,17 @@ export default function AdCreationForm({
     setHasStartedAnyJob(true);
 
     try {
-      await handleCreateAd(job);
 
-      // Check if job actually failed despite no error thrown
+      console.log("1️⃣ Before handleCreateAd");
+      await handleCreateAd(job);
+      console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
+
       if (lastJobFailed) {
+        console.log("last job failed true in ProcessJobQueue");
         throw new Error("Job failed during execution");
       }
+
+      console.log("3️⃣ Creating success job");
 
       // SUCCESS - Add to completed
       const completedJob = {
@@ -1987,6 +1993,8 @@ export default function AdCreationForm({
 
     } catch (error) {
       // FAILURE - Add to completed with error
+      console.log("4️⃣ processJobQueue catch:", error.message);
+
       const failedJob = {
         id: job.id || uuidv4(),
         message: `Job Failed: ${error.message || 'An unknown error occurred.'}`,
