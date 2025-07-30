@@ -866,7 +866,7 @@ export default function AdAccountSettings({
                   {" "}
                   {/* This span now only contains the text content */}
                   Dynamic Creative Ad Set{selectedDynamicAdSets.length > 1 ? "s " : " "}
-                  <span className="font-semibold">{selectedDynamicAdSets.map((a) => a?.name || a?.id).join(", ")}</span>
+                  <span className="font-semibold break-words">{selectedDynamicAdSets.map((a) => a?.name || a?.id).join(", ")}</span>
                   {" cannot have more than 1 ad."}
                 </span>
               </div>
@@ -1018,7 +1018,7 @@ export default function AdAccountSettings({
           </div>
         </div>
       </CardContent>
-    </Card>
+    </Card >
   )
 }
 
