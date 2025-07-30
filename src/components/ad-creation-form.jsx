@@ -356,7 +356,6 @@ export default function AdCreationForm({
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
-  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds, setLastJobFailed);
   const [showCompletedView, setShowCompletedView] = useState(false);
   // Add these new states at the top of AdCreationForm
   const [jobQueue, setJobQueue] = useState([]);
@@ -364,8 +363,9 @@ export default function AdCreationForm({
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
   const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
   const [completedJobs, setCompletedJobs] = useState([]);
-  const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
+  const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false)
   const [lastJobFailed, setLastJobFailed] = useState(false);
+  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds, setLastJobFailed);
 
 
 
