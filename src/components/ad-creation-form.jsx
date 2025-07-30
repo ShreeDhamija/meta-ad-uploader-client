@@ -1911,6 +1911,8 @@ export default function AdCreationForm({
 
       console.log(status);
 
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       if (jobFailures[job.id]) {
         throw new Error(trackedMessage || "Job failed");
       }
