@@ -646,6 +646,7 @@ export default function AdCreationForm({
       } else if (status === 'error') {
         // For errors, you might want to also show a close button
         setShowCompletedView(true);
+        setLastJobFailed(true);  // Add this!
         toast.error("Error creating ads");
       }
     }
@@ -1887,68 +1888,7 @@ export default function AdCreationForm({
 
     }
   }
-  // Replace the entire processJobQueue function in ad-creation-form.jsx with this:
 
-  // const processJobQueue = async () => {
-  //   if (jobQueue.length === 0 || isProcessingQueue || !jobQueue[0]) {
-  //     return;
-  //   }
-
-  //   const job = jobQueue[0];
-  //   setCurrentJob(job);
-  //   setIsProcessingQueue(true);
-  //   setProgress(0);
-  //   setProgressMessage('Initializing...');
-  //   setJobId(null);
-  //   await new Promise(resolve => setTimeout(resolve, 100));
-  //   setHasStartedAnyJob(true);
-
-  //   try {
-  //     // Await the job. If it throws an error, execution jumps DIRECTLY to the catch block.
-  //     await handleCreateAd(job);
-
-  //     // --- SUCCESS PATH ---
-  //     // This code ONLY runs if handleCreateAd completes without throwing an error.
-  //     const completedJob = {
-  //       id: job.id || uuidv4(),
-  //       message: `${job.adCount} Ad${job.adCount !== 1 ? 's' : ''} successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
-  //       completedAt: Date.now(),
-  //       status: 'success'
-  //     };
-  //     setCompletedJobs(prev => [...prev, completedJob]);
-
-  //     // Refresh ad sets only on success if a new one was created.
-  //     if (job.formData.duplicateAdSet) {
-  //       await refreshAdSets();
-  //       // Small delay to let the refresh complete before next job
-  //       await new Promise(resolve => setTimeout(resolve, 200));
-  //     }
-
-  //   } catch (error) {
-  //     // --- FAILURE PATH ---
-  //     // This code ONLY runs if handleCreateAd throws an error.
-  //     console.error("Job failed:", error);
-  //     const failedJob = {
-  //       id: job.id || uuidv4(),
-  //       message: `Job Failed: ${error.message || 'An unknown error occurred.'}`,
-  //       completedAt: Date.now(),
-  //       status: 'error'
-  //     };
-  //     setCompletedJobs(prev => [...prev, failedJob]);
-  //     toast.error("Job failed: " + error.message);
-
-  //   } finally {
-  //     // --- CLEANUP PATH (Always Runs) ---
-  //     // This code runs after EITHER the try or the catch block completes.
-
-  //     // Remove the processed job from the queue, regardless of its outcome.
-  //     setJobQueue(prev => prev.slice(1));
-
-  //     // Reset the state to be ready for the next job in the queue.
-  //     setCurrentJob(null);
-  //     setIsProcessingQueue(false);
-  //   }
-  // };
 
   const processJobQueue = async () => {
     if (jobQueue.length === 0 || isProcessingQueue || !jobQueue[0]) {
@@ -1970,8 +1910,14 @@ export default function AdCreationForm({
       await handleCreateAd(job);
       console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
 
-      if (status === 'error') {
-        throw new Error(trackedMessage || "Job failed");
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      console.log(status);
+      console.log(lastJobFailed);
+
+
+      if (lastJobFailed || status === 'error') {
+        throw new Error(trackedMessage || "Job failed during execution");
       }
 
       console.log("3️⃣ Creating success job");
