@@ -13,12 +13,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader2, Plus, Trash2, Upload, CirclePlus, ChevronsUpDown, RefreshCcw } from "lucide-react"
+import { ChevronDown, Loader2, Plus, Trash2, Upload, CirclePlus, ChevronsUpDown, RefreshCcw, CircleX, Menu } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
-// import { Infotooltip } from "./ui/infotooltip"
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -29,6 +28,10 @@ import LinkIcon from '@/assets/icons/link.svg?react';
 import CTAIcon from '@/assets/icons/cta.svg?react';
 import { useNavigate } from "react-router-dom"
 import CogIcon from '@/assets/icons/cog.svg?react';
+import RocketIcon2 from '@/assets/icons/rocket.svg?react';
+import CheckIcon from '@/assets/icons/check.svg?react';
+import UploadIcon from '@/assets/icons/upload.svg?react';
+import QueueIcon from '@/assets/icons/queue.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -38,8 +41,22 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('idle');
 
+
+  const resetProgress = useCallback(() => {
+    setProgress(0);
+    setMessage('');
+    setStatus('idle');
+  }, []);
+
+
   useEffect(() => {
-    if (!jobId) return;
+    if (!jobId) {
+      setProgress(0);
+      setMessage('');
+      setStatus('idle');
+      return;
+    }
+
 
     // Reset state for new job
     setProgress(0);
@@ -248,16 +265,9 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     return cleanup;
   }, [jobId]);
 
-  // Reset state when ad creation stops
-  useEffect(() => {
-    if (!isCreatingAds) {
-      setProgress(0);
-      setMessage('');
-      setStatus('idle');
-    }
-  }, [isCreatingAds]);
 
-  return { progress, message, status };
+
+  return { progress, message, status, resetProgress };
 };
 
 
@@ -351,9 +361,16 @@ export default function AdCreationForm({
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
-  const { progress: trackedProgress, message: trackedMessage, status } = useAdCreationProgress(jobId, isCreatingAds);
+  const { progress: trackedProgress, message: trackedMessage, status, resetProgress } = useAdCreationProgress(jobId, isCreatingAds);
   const [showCompletedView, setShowCompletedView] = useState(false);
-
+  // Add these new states at the top of AdCreationForm
+  const [jobQueue, setJobQueue] = useState([]);
+  const [currentJob, setCurrentJob] = useState(null);
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+  const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
+  const [completedJobs, setCompletedJobs] = useState([]);
+  const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
+  // const [lastJobFailed, setLastJobFailed] = useState(false);
 
 
 
@@ -361,10 +378,71 @@ export default function AdCreationForm({
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
-
   const S3_UPLOAD_THRESHOLD = 40 * 1024 * 1024; // 40 MB
 
+  const captureFormDataAsJob = () => {
 
+    let adCount = 0;
+    if (isCarouselAd) {
+      // Carousel is always 1 ad, regardless of files
+      adCount = selectedAdSets.length || 1; // 1 per selected adset
+    } else if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
+      const groupedFileIds = new Set(fileGroups.flat());
+      const ungroupedFiles = [...files, ...driveFiles].filter(f =>
+        !groupedFileIds.has(f.isDrive ? f.id : f.name)
+      );
+      adCount = fileGroups.length + ungroupedFiles.length;
+    } else {
+      adCount = files.length + driveFiles.length;
+    }
+
+
+    return {
+      id: uuidv4(),
+      createdAt: Date.now(),
+      status: 'queued',
+      adCount: adCount,
+      formData: {
+        // Form content states
+        headlines: [...headlines],
+        descriptions: [...descriptions],
+        messages: [...messages],
+        link: [...link],
+        cta,
+
+        // File states
+        files: [...files],
+        driveFiles: [...driveFiles],  // These already contain accessToken per file
+        videoThumbs: { ...videoThumbs },
+        thumbnail,
+
+        // Selection states
+        selectedAdSets: [...selectedAdSets],
+        duplicateAdSet,
+        newAdSetName,
+        pageId,
+        instagramAccountId,
+        selectedAdAccount,
+        selectedCampaign,
+
+        // Ad configuration
+        launchPaused,
+        isCarouselAd,
+        enablePlacementCustomization,
+        fileGroups: fileGroups ? [...fileGroups.map(group => [...group])] : [],
+
+        // Shop configuration
+        selectedShopDestination,
+        selectedShopDestinationType,
+
+        // For computing adName
+        adValues,
+
+        // Reference data needed for processing
+        adSets: [...adSets]
+      }
+    };
+  };
 
   const uploadToS3 = async (file, onChunkUploaded) => {
     // S3 requires parts to be at least 5MB, except for the last part.
@@ -557,22 +635,104 @@ export default function AdCreationForm({
     }
   };
 
+
+
+  // This useEffect now only handles the UI updates for the progress bar.
   useEffect(() => {
-    if (jobId) {
+    if (currentJob) {
       setProgress(trackedProgress);
       setProgressMessage(trackedMessage);
-
-      if (status === 'complete') {
-        // Don't automatically close - just show the completed view
-        setShowCompletedView(true);
-        // toast.success("Ads created successfully!");
-      } else if (status === 'error') {
-        // For errors, you might want to also show a close button
-        setShowCompletedView(true);
-        toast.error("Error creating ads");
-      }
     }
-  }, [trackedProgress, trackedMessage, status, jobId]);
+  }, [trackedProgress, trackedMessage, currentJob]);
+
+  // This hook STARTS a new job from the queue.
+  // This hook STARTS a new job from the queue when ready.
+  useEffect(() => {
+    // Do nothing if the queue is empty or a job is already processing.
+    if (jobQueue.length === 0 || isProcessingQueue) {
+      return;
+    }
+
+    // ✅ Call the reset function to clear the previous job's state.
+    resetProgress();
+
+    const jobToProcess = jobQueue[0];
+
+    setIsProcessingQueue(true);
+    setCurrentJob(jobToProcess);
+    setHasStartedAnyJob(true);
+
+    setProgress(0);
+    // setMessage('Initializing...');
+    setShowCompletedView(false);
+    setJobId(null);
+
+    handleCreateAd(jobToProcess).catch(err => {
+      console.error("Critical error during job initialization:", err);
+      const failedJob = {
+        id: jobToProcess.id,
+        message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
+        completedAt: Date.now(),
+        status: 'error'
+      };
+      setCompletedJobs(prev => [...prev, failedJob]);
+      setJobQueue(prev => prev.slice(1));
+      setCurrentJob(null);
+      setIsProcessingQueue(false);
+    });
+
+  }, [jobQueue, isProcessingQueue, resetProgress]);
+
+
+  // This hook watches the SSE status of the CURRENT job and handles its COMPLETION or ERROR.
+  useEffect(() => {
+    if (!isProcessingQueue || !currentJob) {
+      return; // Do nothing if a job isn't active
+    }
+
+
+    // ✅ Guard clause to ignore stale status after a reset.
+    if (status === 'idle') {
+      return;
+    }
+
+
+
+    // Only act on the final states reported by the SSE hook
+    if (status === 'complete' || status === 'error') {
+      if (status === 'complete') {
+        const adSet = adSets.find(a => a.id === currentJob.formData.selectedAdSets[0]);
+        const adSetName = adSet?.name || (currentJob.formData.duplicateAdSet ? currentJob.formData.newAdSetName : 'selected adset');
+
+        const completedJob = {
+          id: currentJob.id,
+          message: `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${adSetName}`,
+          completedAt: Date.now(),
+          status: 'success'
+        };
+        setCompletedJobs(prev => [...prev, completedJob]);
+
+        if (currentJob.formData.duplicateAdSet) {
+          refreshAdSets();
+        }
+      } else { // status === 'error'
+        const failedJob = {
+          id: currentJob.id,
+          message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
+          completedAt: Date.now(),
+          status: 'error'
+        };
+        setCompletedJobs(prev => [...prev, failedJob]);
+        toast.error(`Job failed: ${trackedMessage || 'An unknown error occurred.'}`);
+      }
+
+      // The job is finished. Clean up and advance to the next one.
+      setShowCompletedView(true);
+      setJobQueue(prev => prev.slice(1));
+      setCurrentJob(null);
+      setIsProcessingQueue(false);
+    }
+  }, [status, isProcessingQueue, currentJob]);
 
 
   useEffect(() => {
@@ -949,15 +1109,6 @@ export default function AdCreationForm({
   }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
-
-
-  useEffect(() => {
-    if (!uploadingToS3 && publishPending) {
-      setPublishPending(false);
-      handleCreateAd(new Event('submit')); // fake event to reuse logic
-    }
-  }, [uploadingToS3, publishPending]);
-
   // Functions for managing dynamic input fields
   const addField = (setter, values, ma) => {
     if (values.length < 5) {
@@ -976,20 +1127,6 @@ export default function AdCreationForm({
     newValues[index] = newValue
     setter(newValues)
   }
-
-  const handleCloseProgressPopup = () => {
-    // Reset all the states that were being reset automatically
-    setIsCreatingAds(false);
-    setJobId(null);
-    setFiles([]);
-    setDriveFiles([]);
-    setVideoThumbs({});
-    setFileGroups([]);
-    setEnablePlacementCustomization(false);
-    setShowCompletedView(false);
-    setProgress(0);
-    setProgressMessage('');
-  };
 
 
 
@@ -1072,8 +1209,48 @@ export default function AdCreationForm({
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
 
 
-  const handleCreateAd = async (e) => {
-    e.preventDefault();
+  const handleCreateAd = async (jobData) => {
+    // e.preventDefault();
+    console.log("setting last job failed to false");
+    // setLastJobFailed(false);
+
+    const {
+      // Form content
+      headlines,
+      descriptions,
+      messages,
+      link,
+      cta,
+
+      // Files
+      files,
+      driveFiles,
+      videoThumbs,
+      thumbnail,
+
+      // Selections
+      selectedAdSets,
+      duplicateAdSet,
+      newAdSetName,
+      pageId,
+      instagramAccountId,
+      selectedAdAccount,
+      selectedCampaign,
+
+      // Configuration
+      launchPaused,
+      isCarouselAd,
+      enablePlacementCustomization,
+      fileGroups,
+
+      // Shop
+      selectedShopDestination,
+      selectedShopDestinationType,
+
+      // Other
+      adValues,
+      adSets
+    } = jobData.formData;
 
     setIsCreatingAds(true);
     setProgress(0);
@@ -1166,7 +1343,7 @@ export default function AdCreationForm({
 
 
 
-    setIsLoading(true);
+    // setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
     const largeFiles = files.filter((file) =>
       file.type.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
@@ -1260,7 +1437,7 @@ export default function AdCreationForm({
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
     // console.log(frontendJobId);
-    setJobId(frontendJobId); // This triggers SSE
+    // setJobId(frontendJobId); // This triggers SSE
 
 
     const smallDriveFiles = driveFiles.filter(file =>
@@ -1322,6 +1499,8 @@ export default function AdCreationForm({
       }
       // console.log("passed validation check");
     }
+
+    setJobId(frontendJobId); // This triggers SSE
 
     try {
       const promises = [];
@@ -1753,7 +1932,7 @@ export default function AdCreationForm({
           // Still show the toast since ads actually succeeded
         }
 
-        toast.success("Ads created successfully!");
+        // toast.success("Ads created successfully!");
       } catch (error) {
         // Your existing error handling
       }
@@ -1772,120 +1951,239 @@ export default function AdCreationForm({
       } else if (error.message) {
         errorMessage = error.message;
       }
-      toast.error(`Error uploading ads: ${errorMessage}`);
-      console.error("Error uploading ads:", error.response?.data || error);
-      console.error("Error uploading ads:", error.response?.data || error);
-      // setIsCreatingAds(false);
-      setJobId(null);
-      selectedAdSets
+
+      console.log("❌ handleCreateAd catch:", error.message);
+      // setLastJobFailed(true);
+      // toast.error(`Error uploading ads: ${errorMessage}`);
+      throw new Error(errorMessage);
+
     } finally {
       setIsLoading(false);
-      if (duplicateAdSet) {
-        await refreshAdSets()
-      }
+
     }
   }
 
 
+  // const processJobQueue = async () => {
+  //   if (jobQueue.length === 0 || isProcessingQueue || !jobQueue[0]) {
+  //     return;
+  //   }
 
+  //   const job = jobQueue[0];
+  //   setCurrentJob(job);
+  //   setIsProcessingQueue(true);
+  //   setProgress(0);
+  //   setProgressMessage('Initializing...');
+  //   setJobId(null);
+  //   await new Promise(resolve => setTimeout(resolve, 100));
+  //   setHasStartedAnyJob(true);
+
+  //   try {
+
+  //     console.log("1️⃣ Before handleCreateAd");
+  //     await handleCreateAd(job);
+  //     // console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
+
+  //     console.log(status);
+  //     // console.log(lastJobFailed);
+  //     // if (lastJobFailed || status === 'error') {
+  //     //   throw new Error(trackedMessage || "Job failed during execution");
+  //     // }
+
+
+  //     console.log("3️⃣ Creating success job");
+
+  //     // SUCCESS - Add to completed
+  //     const completedJob = {
+  //       id: job.id || uuidv4(),
+  //       message: `${job.adCount || 1} Ad${job.adCount !== 1 ? 's' : ''} successfully posted to ${adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}`,
+  //       completedAt: Date.now(),
+  //       status: 'success'
+  //     };
+  //     setCompletedJobs(prev => [...prev, completedJob]);
+
+  //     if (job.formData.duplicateAdSet) {
+  //       await refreshAdSets();
+  //       await new Promise(resolve => setTimeout(resolve, 200));
+  //     }
+
+  //   } catch (error) {
+  //     // FAILURE - Add to completed with error
+  //     console.log("4️⃣ processJobQueue catch:", error.message);
+
+  //     const failedJob = {
+  //       id: job.id || uuidv4(),
+  //       message: `Job Failed: ${error.message || 'An unknown error occurred.'}`,
+  //       completedAt: Date.now(),
+  //       status: 'error'
+  //     };
+  //     setCompletedJobs(prev => [...prev, failedJob]);
+  //     toast.error("Job failed: " + error.message);
+
+  //   } finally {
+  //     setJobQueue(prev => prev.slice(1));
+  //     setCurrentJob(null);
+  //     setIsProcessingQueue(false);
+  //     // setLastJobFailed(false);
+  //   }
+  // };
+
+  const handleQueueJob = (e) => {
+    e.preventDefault();
+
+    // Validation (keep your existing validation)
+    if (selectedAdSets.length === 0 && !duplicateAdSet) {
+      toast.error("Please select at least one ad set");
+      return;
+    }
+
+    if (files.length === 0 && driveFiles.length === 0) {
+      toast.error("Please upload at least one file or import from Drive");
+      return;
+    }
+
+    // Capture current form state as a job
+    const newJob = captureFormDataAsJob();
+
+    // Add to queue
+    setJobQueue(prev => [...prev, newJob]);
+
+    // Clear form immediately
+    setFiles([]);
+    setDriveFiles([]);
+    setVideoThumbs({});
+    setThumbnail(null);
+
+    setFileGroups([]);
+    setEnablePlacementCustomization(false);
+
+    // toast.success(`Job added to queue (Position: ${jobQueue.length + 1})`);
+
+  };
 
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
-      {isCreatingAds && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-[20px] py-4 px-6 shadow-xl max-w-md w-full mx-4">
-            <div className="text-left">
-              {!showCompletedView ? (
-                <>
-                  <div className="flex items-center gap-2 mb-6">
-                    <div className="relative">
-                      <img
-                        src="https://api.withblip.com/uploadrocket.webp"
-                        alt="Rocket"
-                        width={30}
-                        height={30}
-                        className="animate-bounce"
-                        style={{
-                          animationDuration: "2s",
-                          animationTimingFunction: "ease-in-out",
-                        }}
-                      />
-                      <div className="absolute -top-1 -right-1 w-2 h-2">
-                        <div className="w-1 h-1 bg-yellow-400 rounded-full animate-ping"></div>
-                      </div>
-                      <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5">
-                        <div className="w-1 h-1 bg-yellow-300 rounded-full animate-ping delay-300"></div>
-                      </div>
-                    </div>
-                    <h3 className="text-base font-bold text-gray-900">Creating Ads</h3>
+      {hasStartedAnyJob && (
+        <div className="fixed bottom-4 right-4 z-50">
+          {/* Collapsed State */}
+          {!isJobTrackerExpanded && (
+            <div
+              className="bg-white rounded-3xl border border-gray-200/50 border-4 shadow-xl p-2 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
+              onClick={() => setIsJobTrackerExpanded(true)}
+            >
+              <div className="flex items-center gap-2">
+                <RocketIcon2
+                  alt="Rocket Icon"
+                  className="!w-10 h-10 object-contain" // Image fills its container
+                />
+                <span className="font-medium text-sm">Job Queue</span>
+              </div>
+              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
+                {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
+              </span>
+              <ChevronDown className="h-4 w-4 text-gray-500 rotate-180" />
+            </div>
+          )}
+
+          {/* Expanded State */}
+          {isJobTrackerExpanded && (
+            <div className="bg-white border border-gray-200/50 border-4 rounded-[20px] shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-2">
+              {/* Header */}
+              <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {/* Fixed size container for the RocketIcon */}
+                  <div className="w-12 h-12 flex-shrink-0">
+                    <RocketIcon2
+                      alt="Rocket Icon"
+                      className="w-full h-full object-contain" // Image fills its container
+                    />
                   </div>
-
-                  <div className="mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-semibold text-gray-900">Progress</span>
-                      <span className="text-xs font-semibold text-gray-900">
-                        {Math.round(jobId ? trackedProgress : progress)}%
-                      </span>
-                    </div>
-
-                    <div className="w-full bg-gray-200 rounded-full h-4 mb-4">
-                      <div
-                        className="bg-blue-600 h-4 rounded-full transition-all duration-300 ease-out"
-                        style={{ width: `${jobId ? trackedProgress : progress}%` }}
-                      ></div>
-                    </div>
+                  <div className="flex flex-col">
+                    <h3 className="font-semibold text-sm">Job Queue</h3>
+                    <p className="text-sm font-medium text-gray-400">{jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active</p>
                   </div>
+                </div>
+                <button
+                  onClick={() => setIsJobTrackerExpanded(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
 
-                  <p className="text-xs font-semibold text-gray-900 mb-4">
-                    {jobId ? trackedMessage : progressMessage}
-                  </p>
+              {/* Jobs List */}
+              <div className="flex-1 overflow-y-auto">
 
-                  <p className="text-xs font-medium text-gray-500">
-                    Progress Tracker is in beta.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 mb-6">
-                    <div className="relative">
-                      {status === 'complete' ? (
-                        <div className="w-[30px] h-[30px] bg-green-500 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
+                {/* Completed Jobs */}
+                {completedJobs.map((job) => (
+                  <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      {job.status === 'error' ? (
+                        <CircleX className="w-6 h-6 text-red-500" />
                       ) : (
-                        <div className="w-[30px] h-[30px] bg-red-500 rounded-full flex items-center justify-center">
-                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </div>
+                        <CheckIcon className="w-6 h-6" />
                       )}
                     </div>
-                    <h3 className="text-base font-bold text-gray-900">
-                      {status === 'complete' ? 'Ads Created Successfully!' : 'Error Creating Ads'}
-                    </h3>
+                    <p className={`flex-1 text-sm ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
+                      {job.message}
+                    </p>
+                    <button
+                      onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <CircleX className="h-4 w-4 text-gray-500" />
+                    </button>
                   </div>
+                ))}
 
-                  <p className="text-sm text-gray-700 mb-6">
-                    {status === 'complete'
-                      ? 'Your ads have been successfully created!'
-                      : 'There was an error creating your ads. Please try again.'}
-                  </p>
+                {/* Current Job */}
+                {currentJob && (
+                  <div className="p-3.5 border-b border-gray-100">
+                    <div className="flex items-center gap-3 mb-2.5">
+                      <div className="flex-shrink-0">
+                        <UploadIcon className="w-6 h-6" />
+                      </div>
+                      <p className="flex-1 text-sm font-medium text-gray-700">
+                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
+                      </p>
+                      <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
 
-                  <Button
-                    onClick={handleCloseProgressPopup}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2"
-                  >
-                    Close
-                  </Button>
-                </>
-              )}
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progress || trackedProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">{progressMessage || trackedMessage}</p>
+
+                  </div>
+                )}
+
+                {/* Queued Jobs */}
+                {jobQueue.slice(currentJob ? 1 : 0).map((job, index) => (
+                  <div key={job.id || index} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <QueueIcon className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <p className="flex-1 text-sm text-gray-600">
+                      Queued {job.adCount} ad{job.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}
+                    </p>
+                    <button
+                      onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <CircleX className="h-4 w-4 text-red-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
-      )}
+      )
+      }
 
       <CardHeader>
         <CardTitle className="flex items-center justify-between w-full">
@@ -1917,7 +2215,7 @@ export default function AdCreationForm({
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleCreateAd} className="space-y-6">
+        <form onSubmit={handleQueueJob} className="space-y-6">
           <div className="space-y-10">
             <div className="space-y-4">
               <div className="space-y-2">
@@ -2533,25 +2831,27 @@ export default function AdCreationForm({
               type="submit"
               className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
               disabled={
-                !isLoggedIn || (selectedAdSets.length === 0 && !duplicateAdSet) || (files.length === 0 && driveFiles.length === 0) || isLoading || (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "") ||
-                  (showShopDestinationSelector && !selectedShopDestination)
-                )
+                !isLoggedIn ||
+                (selectedAdSets.length === 0 && !duplicateAdSet) ||
+                (files.length === 0 && driveFiles.length === 0) ||
+                (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
+                (isCarouselAd && (files.length + driveFiles.length) < 2) ||
+                (showShopDestinationSelector && !selectedShopDestination)
               }
             >
-              {isLoading || uploadingToS3 ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {uploadingToS3 ? "Uploading to cloud..." : "Publishing Ads..."}
-                </>
-              ) : (
-                "Publish Ads"
-              )}
+              Publish Ads
             </Button>
 
             {/* Validation message */}
             {showShopDestinationSelector && !selectedShopDestination && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a shop destination
+              </div>
+            )}
+            {/* Validation message for Carousel Ads */}
+            {isCarouselAd && (files.length + driveFiles.length) > 0 && (files.length + driveFiles.length) < 2 && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Carousel ads require at least 2 files. You have {files.length + driveFiles.length}.
               </div>
             )}
           </div>

@@ -424,7 +424,7 @@ export default function Home() {
                 />
             )}
 
-            <Toaster richColors position="bottom-right" closeButton />
+            <Toaster richColors position="bottom-left" closeButton />
         </div>
     )
 }
