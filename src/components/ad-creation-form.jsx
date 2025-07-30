@@ -646,6 +646,7 @@ export default function AdCreationForm({
       } else if (status === 'error') {
         // For errors, you might want to also show a close button
         setShowCompletedView(true);
+        console.log("setting last job failed to true");
         setLastJobFailed(true);  // Add this!
         toast.error("Error creating ads");
       }
@@ -1138,6 +1139,7 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (jobData) => {
     // e.preventDefault();
+    console.log("setting last job failed to false");
     setLastJobFailed(false);
 
     const {
@@ -1910,7 +1912,7 @@ export default function AdCreationForm({
       await handleCreateAd(job);
       console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // await new Promise(resolve => setTimeout(resolve, 100));
 
       console.log(status);
       console.log(lastJobFailed);
