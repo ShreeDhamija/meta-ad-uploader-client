@@ -253,7 +253,7 @@ export default function Home() {
             const data = await res.json()
             if (data.adSets) {
                 setAdSets(sortAdSets(data.adSets))
-                toast.success("Ad Sets refreshed!")
+                // toast.success("New!")
             }
         } catch (err) {
             toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error"}`)

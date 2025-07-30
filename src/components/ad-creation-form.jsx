@@ -1430,7 +1430,7 @@ export default function AdCreationForm({
       });
 
       setProgress(100);
-      setProgressMessage('S3 uploads complete! Creating ads...');
+      setProgressMessage('File upload complete! Creating ads...');
       toast.success("Video files uploaded!");
     }
 
