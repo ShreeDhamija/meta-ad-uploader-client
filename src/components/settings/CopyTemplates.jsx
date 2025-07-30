@@ -645,8 +645,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-center"
           style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
         >
-          <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden">
-            <div className="max-h-[80vh] overflow-y-auto import-popup-scroll">
+          <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out">
+            <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
               {/* Header row: title + close - make this sticky */}
               <div className={`sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200`}>
                 <div className="flex justify-between items-center">
@@ -661,81 +661,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 </div>
               </div>
 
-              {/* <div className="px-6 pb-6 pt-4 space-y-6">
-                {isFetchingCopy ? (
-                  <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                    <RotateLoader size={6} margin={-16} color="#adadad" />
-                    <span className="text-sm text-gray-600">Loading text copy...</span>
-                  </div>
-                ) : (
-                  <div className="space-y-8">
-                    
-                    {recentAds.primaryTexts?.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="text-md font-bold text-zinc-800">Primary Texts</h3>
 
-                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
-                          {recentAds.primaryTexts.map((text, index) => (
-                            <div key={index} className="rounded-lg p-4">
-                              <div className="flex justify-between items-center mb-2">
-                                <div className="text-xs font-medium text-gray-500">
-                                  Primary Text {index + 1}
-                                </div>
-                                <Button
-                                  className="flex items-center text-xs rounded-xl px-2 py-1 bg-blue-600 text-white hover:bg-blue-700 shrink-0"
-                                  onClick={createPrimaryTextImportHandler(text)}
-                                >
-                                  <Download className="w-3 h-3" />
-                                  Import
-                                </Button>
-                              </div>
-                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
-                                {text}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    
-                    {recentAds.headlines?.length > 0 && (
-                      <div className="space-y-4">
-                        <h3 className="text-md font-bold text-zinc-800">Headlines</h3>
-
-                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
-                          {recentAds.headlines.map((text, index) => (
-                            <div key={index} className="rounded-lg p-4">
-                              <div className="flex justify-between items-center mb-2">
-                                <div className="text-xs font-medium text-gray-500">
-                                  Headline {index + 1}
-                                </div>
-                                <Button
-                                  className="flex items-center text-xs rounded-xl px-2 py-1 bg-green-600 text-white hover:bg-green-700 shrink-0"
-                                  onClick={createHeadlineImportHandler(text)}
-                                >
-                                  <Download className="w-3 h-3" />
-                                  Import
-                                </Button>
-                              </div>
-                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
-                                {text}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-
-                    {(!recentAds.primaryTexts?.length && !recentAds.headlines?.length) && (
-                      <div className="text-center py-10 text-gray-500">
-                        No recent ad copy found
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div> */}
               <div className="px-6 pb-6 pt-4">
                 {isFetchingCopy ? (
                   <div className="flex flex-col items-center justify-center py-10 space-y-4">
@@ -744,11 +670,17 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   </div>
                 ) : (
                   <Tabs defaultValue="primary-texts" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-6">
-                      <TabsTrigger value="primary-texts">
+                    <TabsList className="inline-flex h-10 items-center justify-center rounded-full bg-muted p-1 text-muted-foreground mb-6 mx-auto">
+                      <TabsTrigger
+                        value="primary-texts"
+                        className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                      >
                         Primary Texts ({recentAds.primaryTexts?.length || 0})
                       </TabsTrigger>
-                      <TabsTrigger value="headlines">
+                      <TabsTrigger
+                        value="headlines"
+                        className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                      >
                         Headlines ({recentAds.headlines?.length || 0})
                       </TabsTrigger>
                     </TabsList>
