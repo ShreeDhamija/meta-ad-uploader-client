@@ -1139,8 +1139,8 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (jobData) => {
     // e.preventDefault();
-    console.log("setting last job failed to false");
-    setLastJobFailed(false);
+    // console.log("setting last job failed to false");
+    // setLastJobFailed(false);
 
     const {
       // Form content
@@ -1908,14 +1908,16 @@ export default function AdCreationForm({
 
     try {
 
+      console.log("1️⃣ Before handleCreateAd");
+      await handleCreateAd(job);
+      console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
+
       console.log(status);
       console.log(lastJobFailed);
       if (lastJobFailed || status === 'error') {
         throw new Error(trackedMessage || "Job failed during execution");
       }
-      console.log("1️⃣ Before handleCreateAd");
-      await handleCreateAd(job);
-      console.log("2️⃣ After handleCreateAd, lastJobFailed:", lastJobFailed);
+
 
       console.log("3️⃣ Creating success job");
 
@@ -1950,7 +1952,7 @@ export default function AdCreationForm({
       setJobQueue(prev => prev.slice(1));
       setCurrentJob(null);
       setIsProcessingQueue(false);
-      // setLastJobFailed(false); // Reset for next job
+      setLastJobFailed(false);
     }
   };
 
