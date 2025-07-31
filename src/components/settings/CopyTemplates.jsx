@@ -663,21 +663,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         >
           <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out">
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
-              {/* Header row: title + close - make this sticky */}
-              {/* <div className={`sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200`}>
-                <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-medium text-zinc-900">Recently Created Ad Copy</h2>
-                  <Button
-                    className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
-                    onClick={() => setShowImportPopup(false)}
-                  >
-                    <CirclePlus className="w-4 h-4 transform rotate-45" />
-                    Close
-                  </Button>
-                </div>
-              </div> */}
-
-
               <div className="px-6 pb-6 pt-4">
                 {isFetchingCopy ? (
                   <div className="flex flex-col items-center justify-center py-10 space-y-4">
@@ -686,7 +671,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   </div>
                 ) : (
                   <Tabs defaultValue="primary-texts" className="w-full">
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-4 w-full">
                       <TabsList className="flex h-10 items-center justify-center rounded-full bg-muted p-1 text-muted-foreground mb-6 w-fit mx-auto">
                         <TabsTrigger
                           value="primary-texts"
@@ -702,12 +687,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </TabsTrigger>
                       </TabsList>
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
                         onClick={() => setShowImportPopup(false)}
-                        className="rounded-xl"
                       >
-                        <X className="w-4 h-4" />
+                        <CirclePlus className="w-4 h-4 rotate-45" />
+                        Close
                       </Button>
                     </div>
 
