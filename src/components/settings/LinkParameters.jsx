@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { Download, CirclePlus } from "lucide-react";
 import { RotateLoader } from "react-spinners";
 import LinkIcon from '@/assets/icons/link.svg?react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 
 // Move constants outside component
 const VALUE_SUGGESTIONS = ["facebook", "paid", "{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"];
@@ -106,7 +108,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         setNewLinkUrl("");
         setShowAddForm(false);
 
-        toast.success("Link added successfully");
+        // toast.success("Link added successfully");
     }, [newLinkUrl, links, setLinks]);
 
     const handleSetAsDefault = useCallback(() => {
@@ -117,7 +119,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             isDefault: index === selectedLinkIndex
         })));
 
-        toast.success("Default link updated");
+        // toast.success("Default link updated");
     }, [selectedLink, selectedLinkIndex, setLinks]);
 
     const handleImportUTMs = useCallback(async () => {
@@ -442,7 +444,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 </Button>
             </div>
 
-            {showImportPopup && (
+            {/* {showImportPopup && (
                 <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center" style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}>
                     <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200">
                         <div className="sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200">
@@ -493,6 +495,78 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     </div>
                                 </>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )} */}
+            {showImportPopup && (
+                <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center" style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}>
+                    <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200">
+                        <div className="sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200">
+                            <div className="flex justify-between items-center">
+                                <Tabs defaultValue="utms" className="w-full">
+                                    <div className="flex items-center justify-between">
+                                        <TabsList className="grid w-fit grid-cols-2">
+                                            <TabsTrigger value="links">Links</TabsTrigger>
+                                            <TabsTrigger value="utms">UTMs</TabsTrigger>
+                                        </TabsList>
+
+                                        <Button
+                                            className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
+                                            onClick={handleCloseImportPopup}
+                                        >
+                                            <CirclePlus className="w-4 h-4 rotate-45" />
+                                            Close
+                                        </Button>
+                                    </div>
+
+                                    <div className="px-6 py-6">
+                                        <TabsContent value="links">
+                                            {/* Links content - empty for now */}
+                                            <p className="text-sm text-gray-500 mb-4">
+                                                Links import coming soon...
+                                            </p>
+                                        </TabsContent>
+
+                                        <TabsContent value="utms">
+                                            {isFetchingTags ? (
+                                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                                    <RotateLoader size={6} margin={-16} color="#adadad" />
+                                                    <span className="text-sm text-gray-600">Fetching parameters…</span>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <p className="text-sm text-gray-500 mb-4">
+                                                        The following parameters were found in your most recent ad. Click "Import" to apply them.
+                                                    </p>
+
+                                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                                        {importPreview?.map(({ key, value }, idx) => (
+                                                            <div key={idx} className="flex gap-3 items-center">
+                                                                <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
+                                                                    {key}
+                                                                </div>
+                                                                <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
+                                                                    {value}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div className="flex justify-end mt-6">
+                                                        <Button
+                                                            className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
+                                                            onClick={handleImportConfirm}
+                                                        >
+                                                            Import
+                                                        </Button>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </TabsContent>
+                                    </div>
+                                </Tabs>
+                            </div>
                         </div>
                     </div>
                 </div>

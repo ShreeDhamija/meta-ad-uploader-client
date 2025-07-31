@@ -664,7 +664,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out">
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
               {/* Header row: title + close - make this sticky */}
-              <div className={`sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200`}>
+              {/* <div className={`sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200`}>
                 <div className="flex justify-between items-center">
                   <h2 className="text-lg font-medium text-zinc-900">Recently Created Ad Copy</h2>
                   <Button
@@ -675,7 +675,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     Close
                   </Button>
                 </div>
-              </div>
+              </div> */}
 
 
               <div className="px-6 pb-6 pt-4">
@@ -686,20 +686,30 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   </div>
                 ) : (
                   <Tabs defaultValue="primary-texts" className="w-full">
-                    <TabsList className="flex h-10 items-center justify-center rounded-full bg-muted p-1 text-muted-foreground mb-6 w-fit mx-auto">
-                      <TabsTrigger
-                        value="primary-texts"
-                        className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                    <div className="flex items-center justify-between mb-4">
+                      <TabsList className="flex h-10 items-center justify-center rounded-full bg-muted p-1 text-muted-foreground mb-6 w-fit mx-auto">
+                        <TabsTrigger
+                          value="primary-texts"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                        >
+                          Primary Texts ({recentAds.primaryTexts?.length || 0})
+                        </TabsTrigger>
+                        <TabsTrigger
+                          value="headlines"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                        >
+                          Headlines ({recentAds.headlines?.length || 0})
+                        </TabsTrigger>
+                      </TabsList>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onClose}
+                        className="rounded-xl"
                       >
-                        Primary Texts ({recentAds.primaryTexts?.length || 0})
-                      </TabsTrigger>
-                      <TabsTrigger
-                        value="headlines"
-                        className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                      >
-                        Headlines ({recentAds.headlines?.length || 0})
-                      </TabsTrigger>
-                    </TabsList>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
 
                     <TabsContent value="primary-texts" className="space-y-4">
                       {recentAds.primaryTexts?.length > 0 ? (
