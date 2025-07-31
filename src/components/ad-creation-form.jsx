@@ -355,8 +355,10 @@ export default function AdCreationForm({
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
-  const [useCustomLink, setUseCustomLink] = useState(false)
+  // const [useCustomLink, setUseCustomLink] = useState(false)
   const [customLink, setCustomLink] = useState("")
+  const [showCustomLink, setShowCustomLink] = useState(false)
+  const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
 
   //Porgress Trackers
   const [isCreatingAds, setIsCreatingAds] = useState(false);
@@ -2619,11 +2621,9 @@ export default function AdCreationForm({
                         checked={link.length === 1}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            // Apply current link to all cards
                             const currentLink = customLink.trim() || link[0] || "";
                             setLink([currentLink]);
                           } else {
-                            // Create separate links for each card
                             const currentLink = customLink.trim() || link[0] || "";
                             setLink([currentLink, ""]);
                           }
@@ -2643,14 +2643,11 @@ export default function AdCreationForm({
                 {!isCarouselAd || link.length === 1 ? (
                   // Single link mode (normal ads or carousel with "apply to all")
                   <div className="space-y-3">
-                    <div>
+                    {!showCustomLink && (
                       <Select
-                        value={customLink.trim() ? "" : (link[0] || "")}
-                        onValueChange={(value) => {
-                          setLink([value]);
-                          setCustomLink(""); // Clear custom link when dropdown is used
-                        }}
-                        disabled={!isLoggedIn || availableLinks.length === 0 || customLink.trim()}
+                        value={link[0] || ""}
+                        onValueChange={(value) => setLink([value])}
+                        disabled={!isLoggedIn || availableLinks.length === 0}
                       >
                         <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
                           <SelectValue placeholder={availableLinks.length === 0 ? "No links available - Add links in Settings" : "Select a link"} />
@@ -2660,7 +2657,7 @@ export default function AdCreationForm({
                             <SelectItem
                               key={index}
                               value={linkObj.url}
-                              className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl m-1"
+                              className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl mx-2 my-1"
                             >
                               <div className="flex items-center justify-between w-full">
                                 <span className="truncate max-w-[300px]">{linkObj.url}</span>
@@ -2674,64 +2671,144 @@ export default function AdCreationForm({
                           ))}
                         </SelectContent>
                       </Select>
+                    )}
+
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="custom-link-toggle"
+                        checked={showCustomLink}
+                        onCheckedChange={(checked) => {
+                          setShowCustomLink(checked);
+                          if (!checked) {
+                            setCustomLink("");
+                            const dropdownValue = defaultLink?.url || "";
+                            setLink([dropdownValue]);
+                          }
+                        }}
+                        className="border-gray-300 w-4 h-4 rounded-md"
+                      />
+                      <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
+                        Use custom link
+                      </label>
                     </div>
 
-                    <div>
-                      <Label className="text-xs text-gray-500 mb-1 block">
-                        Custom link (takes precedence over dropdown selection)
-                      </Label>
+                    {showCustomLink && (
                       <Input
                         type="url"
                         value={customLink}
                         onChange={(e) => {
                           setCustomLink(e.target.value);
-                          if (e.target.value.trim()) {
-                            setLink([e.target.value]);
-                          } else {
-                            const dropdownValue = defaultLink?.url || "";
-                            setLink([dropdownValue]);
-                          }
+                          setLink([e.target.value]);
                         }}
                         className="border border-gray-400 rounded-xl bg-white shadow"
-                        placeholder="https://example.com (optional)"
+                        placeholder="https://example.com"
                         disabled={!isLoggedIn}
+                        required
                       />
-                    </div>
+                    )}
                   </div>
                 ) : (
                   // Multiple links mode (carousel with separate links per card)
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {link.map((value, index) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <Input
-                          type="url"
-                          value={value}
-                          className="border border-gray-400 rounded-xl bg-white shadow"
-                          onChange={(e) => {
-                            const newLinks = [...link];
-                            newLinks[index] = e.target.value;
-                            setLink(newLinks);
-                          }}
-                          placeholder={`Link for card ${index + 1}`}
-                          disabled={!isLoggedIn}
-                          required
-                        />
-                        {link.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                            size="icon"
-                            onClick={() => {
-                              const newLinks = link.filter((_, i) => i !== index);
+                      <div key={index} className="border border-gray-200 rounded-xl p-3 space-y-3">
+                        <Label className="text-sm font-medium">Card {index + 1} Link</Label>
+
+                        {(!linkCustomStates || !linkCustomStates[index]) && (
+                          <Select
+                            value={value || ""}
+                            onValueChange={(newValue) => {
+                              const newLinks = [...link];
+                              newLinks[index] = newValue;
                               setLink(newLinks);
                             }}
+                            disabled={!isLoggedIn || availableLinks.length === 0}
                           >
-                            <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                          </Button>
+                            <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
+                              <SelectValue placeholder="Select a link" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white shadow-lg rounded-xl">
+                              {availableLinks.map((linkObj, linkIndex) => (
+                                <SelectItem
+                                  key={linkIndex}
+                                  value={linkObj.url}
+                                  className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl mx-2 my-1"
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="truncate max-w-[250px]">{linkObj.url}</span>
+                                    {linkObj.isDefault && (
+                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                        Default
+                                      </span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`custom-link-${index}`}
+                              checked={linkCustomStates?.[index] || false}
+                              onCheckedChange={(checked) => {
+                                const newStates = { ...linkCustomStates };
+                                newStates[index] = checked;
+                                setLinkCustomStates(newStates);
+
+                                if (!checked) {
+                                  // Reset to dropdown value
+                                  const newLinks = [...link];
+                                  newLinks[index] = defaultLink?.url || "";
+                                  setLink(newLinks);
+                                }
+                              }}
+                              className="border-gray-300 w-4 h-4 rounded-md"
+                            />
+                            <label htmlFor={`custom-link-${index}`} className="text-xs font-medium text-gray-600">
+                              Use custom link
+                            </label>
+                          </div>
+
+                          {link.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const newLinks = link.filter((_, i) => i !== index);
+                                setLink(newLinks);
+                                // Also clean up custom states
+                                const newStates = { ...linkCustomStates };
+                                delete newStates[index];
+                                setLinkCustomStates(newStates);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4 text-gray-600 hover:text-red-500" />
+                            </Button>
+                          )}
+                        </div>
+
+                        {linkCustomStates?.[index] && (
+                          <Input
+                            type="url"
+                            value={value}
+                            onChange={(e) => {
+                              const newLinks = [...link];
+                              newLinks[index] = e.target.value;
+                              setLink(newLinks);
+                            }}
+                            className="border border-gray-400 rounded-xl bg-white shadow"
+                            placeholder="https://example.com"
+                            disabled={!isLoggedIn}
+                            required
+                          />
                         )}
                       </div>
                     ))}
+
                     {link.length < 10 && (
                       <Button
                         type="button"
@@ -2740,7 +2817,7 @@ export default function AdCreationForm({
                         onClick={() => setLink([...link, ""])}
                       >
                         <Plus className="mr-2 h-4 w-4 text-white" />
-                        Add link field
+                        Add Card Link
                       </Button>
                     )}
                   </div>
