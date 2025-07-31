@@ -355,6 +355,8 @@ export default function AdCreationForm({
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
+  const [useCustomLink, setUseCustomLink] = useState(false)
+  const [customLink, setCustomLink] = useState("")
 
   //Porgress Trackers
   const [isCreatingAds, setIsCreatingAds] = useState(false);
@@ -584,6 +586,9 @@ export default function AdCreationForm({
     { value: "SEE_MORE", label: "See More" },
     { value: "APPLY_NOW", label: "Apply Now" },
   ]
+
+  const availableLinks = adAccountSettings?.links || [];
+  const defaultLink = availableLinks.find(l => l.isDefault) || availableLinks[0];
 
   const filteredPages = useMemo(() =>
     pages.filter((page) =>
@@ -2601,7 +2606,7 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-3">
-              <div className="space-y-2">
+              {/* <div className="space-y-2">
                 <Label className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <LinkIcon className="w-4 h-4" />
@@ -2680,6 +2685,105 @@ export default function AdCreationForm({
                     </Button>
                   )}
                 </div>
+              </div> */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <LinkIcon className="w-4 h-4" />
+                  Link (URL)
+                </Label>
+                <p className="text-gray-500 text-[12px] font-regular">
+                  Your UTMs will be auto applied from Preferences
+                </p>
+
+                {!useCustomLink ? (
+                  // Link Selector
+                  <div className="space-y-3">
+                    <Select
+                      value={link[0] || ""}
+                      onValueChange={(value) => setLink([value])}
+                      disabled={!isLoggedIn || availableLinks.length === 0}
+                    >
+                      <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
+                        <SelectValue placeholder={availableLinks.length === 0 ? "No links available - Add links in Settings" : "Select a link"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white shadow-lg rounded-xl">
+                        {availableLinks.map((linkObj, index) => (
+                          <SelectItem key={index} value={linkObj.url}>
+                            <div className="flex items-center justify-between w-full">
+                              <span className="truncate max-w-[300px]">{linkObj.url}</span>
+                              {linkObj.isDefault && (
+                                <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                  Default
+                                </span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full rounded-xl border-dashed"
+                      onClick={() => {
+                        setUseCustomLink(true);
+                        setCustomLink(link[0] || "");
+                      }}
+                    >
+                      Enter Custom Link
+                    </Button>
+                  </div>
+                ) : (
+                  // Custom Link Input
+                  <div className="space-y-3">
+                    <Input
+                      type="url"
+                      value={customLink}
+                      onChange={(e) => {
+                        setCustomLink(e.target.value);
+                        setLink([e.target.value]);
+                      }}
+                      className="border border-gray-400 rounded-xl bg-white shadow"
+                      placeholder="https://example.com"
+                      disabled={!isLoggedIn}
+                      required
+                    />
+
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl"
+                        onClick={() => {
+                          setUseCustomLink(false);
+                          setCustomLink("");
+                          // Reset to default link
+                          const resetLink = defaultLink?.url || "";
+                          setLink([resetLink]);
+                        }}
+                      >
+                        Cancel
+                      </Button>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-blue-500 text-white rounded-xl hover:bg-blue-600"
+                        onClick={() => {
+                          if (customLink.trim()) {
+                            setLink([customLink.trim()]);
+                            setUseCustomLink(false);
+                          }
+                        }}
+                      >
+                        Use This Link
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

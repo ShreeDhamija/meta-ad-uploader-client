@@ -236,7 +236,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                             key={index}
                                             value={index.toString()}
                                             onSelect={() => handleLinkSelect(index)}
-                                            className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl m-1"
+                                            className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1"
                                         >
                                             <div className="flex items-center justify-between w-full">
                                                 <span className="text-sm truncate">

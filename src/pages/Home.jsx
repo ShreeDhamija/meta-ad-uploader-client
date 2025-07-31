@@ -155,7 +155,7 @@ export default function Home() {
             // Reset all settings to their initial "blank" state
             setPageId("");
             setInstagramAccountId("");
-            setLink([""]);
+            setSelectedLink(""); // ✅ Updated
             setCta("LEARN_MORE");
             setSelectedTemplate(undefined);
             setMessages([""]);
@@ -174,7 +174,10 @@ export default function Home() {
         // Load default Page, Instagram, Link, CTA
         setPageId(adAccountSettings.defaultPage?.id || "");
         setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
-        setLink([adAccountSettings.defaultLink || ""]);
+        const defaultLink = adAccountSettings.links?.find(link => link.isDefault);
+        const linkToUse = defaultLink?.url || adAccountSettings.links?.[0]?.url || "";
+        setLink([linkToUse]);
+
         setCta(adAccountSettings.defaultCTA || "LEARN_MORE");
 
         // --- Core logic for your request (Scenario 2) ---
