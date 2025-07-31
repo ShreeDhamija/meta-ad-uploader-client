@@ -466,7 +466,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 <div>
                                     <TabsContent value="links">
                                         {/* Links content - empty for now */}
-                                        <div> {/* Add padding here */}
+                                        <div className="px-6 py-6"> {/* Add padding here */}
                                             <p className="text-sm text-gray-500 mb-4">
                                                 Links import coming soon...
                                             </p>
@@ -474,7 +474,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     </TabsContent>
 
                                     <TabsContent value="utms">
-                                        <div> {/* Add padding here */}
+                                        <div className="px-6 py-6"> {/* Add padding here */}
                                             {isFetchingTags ? (
                                                 <div className="flex flex-col items-center justify-center py-10 space-y-4">
                                                     <RotateLoader size={6} margin={-16} color="#adadad" />
