@@ -917,7 +917,7 @@ export default function AdCreationForm({
     const timeoutId = setTimeout(() => {
       window.removeEventListener("message", listener);
       if (!authWindow.closed) authWindow.close();
-      toast.error("Google login timed out.");
+      // toast.error("Google login timed out.");
     }, 65000);
 
     const listener = (event) => {
@@ -1606,7 +1606,7 @@ export default function AdCreationForm({
           [...s3Results, ...s3DriveResults].forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
             formData.append("s3VideoName", s3File.name); // <<< ADD THIS LINE
-
+            console.log("s3VideoName", s3File.name);
           });
 
           if (selectedShopDestination && showShopDestinationSelector) {
@@ -1665,7 +1665,7 @@ export default function AdCreationForm({
           [...s3Results, ...s3DriveResults].forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
             formData.append("s3VideoName", s3File.name); // <<< ADD THIS LINE
-
+            console.log("s3VideoName", s3File.name);
           });
 
 
@@ -1776,6 +1776,7 @@ export default function AdCreationForm({
                 if (s3File) {
                   formData.append("s3VideoUrls", s3File.s3Url);
                   formData.append("s3VideoName", s3File.name); // <<< ADD THIS LINE
+                  console.log("s3VideoName", s3File.name);
                   if (s3File.mimeType?.startsWith("video/") || s3File.type?.startsWith("video/")) {
                     groupVideoMetadata.push({
                       s3Url: s3File.s3Url,
@@ -1891,6 +1892,7 @@ export default function AdCreationForm({
               if (groupedFileIds.has(s3File.name) || groupedFileIds.has(s3File.id)) {
                 return; // Skip grouped files
               }
+              console.log("s3VideoName", s3File.name);
               const formData = new FormData();
               formData.append("adName", computeAdName(s3File, adValues.dateType, globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
