@@ -99,7 +99,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         };
 
         setLinks(prev => [...prev, newLink]);
-        toast.success("Link imported successfully");
+        // toast.success("Link imported successfully");
     }, [links, setLinks]);
 
     const handleImportAllLinks = useCallback(() => {
@@ -118,7 +118,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
         if (newLinks.length > 0) {
             setLinks(prev => [...prev, ...newLinks]);
-            toast.success(`Imported ${addedCount} link${addedCount > 1 ? 's' : ''}`);
+            // toast.success(`Imported ${addedCount} link${addedCount > 1 ? 's' : ''}`);
         } else {
             toast.info("All links already exist");
         }
@@ -163,36 +163,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         // toast.success("Default link updated");
     }, [selectedLink, selectedLinkIndex, setLinks]);
 
-    // const handleImportUTMs = useCallback(async () => {
-    //     if (!selectedAdAccount) {
-    //         toast.error("No ad account selected");
-    //         return;
-    //     }
 
-    //     setIsFetchingTags(true);
-    //     setShowImportPopup(true);
-
-    //     try {
-    //         const res = await fetch(
-    //             `${API_BASE_URL}/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
-    //             { credentials: "include" }
-    //         );
-    //         const data = await res.json();
-
-    //         if (data.pairs) {
-    //             setImportPreview(data.pairs);
-    //         } else {
-    //             toast.error("No UTM tags found in recent ad.");
-    //             setShowImportPopup(false);
-    //         }
-    //     } catch (err) {
-    //         toast.error("Failed to fetch UTM tags");
-    //         console.error("Import UTM error:", err);
-    //         setShowImportPopup(false);
-    //     } finally {
-    //         setIsFetchingTags(false);
-    //     }
-    // }, [selectedAdAccount])
 
     const handleImportUTMs = useCallback(async () => {
         if (!selectedAdAccount) {
@@ -225,7 +196,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         } catch (err) {
             toast.error("Failed to fetch UTM tags and links");
             console.error("Import error:", err);
-            setShowImportPopup(false);
+            // setShowImportPopup(false);
         } finally {
             setIsFetchingTags(false);
         }
@@ -275,7 +246,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
 
         setLinkDropdownOpen(false);
-        toast.success("Link deleted");
+        // toast.success("Link deleted");
     }, [links, selectedLinkIndex, setLinks]);
 
     return (
@@ -336,46 +307,47 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent
-                            className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                            className="w-auto min-w-[--radix-popover-trigger-width] max-w-[600px] p-0 bg-white shadow-lg rounded-2xl"
                             align="start"
+                            sideOffset={5}
                         >
                             <Command>
-                                <CommandList className="max-h-[200px] overflow-y-auto p-1">
+                                <CommandList className="max-h-[500px] overflow-y-auto p-1">
                                     {links.map((link, index) => (
                                         <CommandItem
                                             key={index}
                                             value={index.toString()}
                                             onSelect={() => handleLinkSelect(index)}
-                                            className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1 group pr-8"
+                                            className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1 group relative"
                                         >
-                                            <div className="flex items-center justify-between w-full">
-                                                <div className="flex items-center">
-                                                    <span className="text-sm truncate">
+                                            <div className="flex items-center justify-between w-full pr-6">
+                                                <div className="flex items-center min-w-0 flex-1">
+                                                    <span className="text-sm truncate max-w-[500px]" title={link.url}>
                                                         {link.url}
                                                     </span>
                                                     {link.isDefault && (
-                                                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
+                                                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg whitespace-nowrap flex-shrink-0">
                                                             Default
                                                         </span>
                                                     )}
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0"
-                                                    onMouseDown={(e) => {
-                                                        e.stopPropagation();
-                                                        e.preventDefault();
-                                                        handleDeleteLink(index);
-                                                    }}
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        e.preventDefault();
-                                                        handleDeleteLink(index);
-                                                    }}
-                                                >
-                                                    <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
-                                                </button>
                                             </div>
+                                            <button
+                                                type="button"
+                                                className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0"
+                                                onMouseDown={(e) => {
+                                                    e.stopPropagation();
+                                                    e.preventDefault();
+                                                    handleDeleteLink(index);
+                                                }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    e.preventDefault();
+                                                    handleDeleteLink(index);
+                                                }}
+                                            >
+                                                <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                                            </button>
                                         </CommandItem>
                                     ))}
                                 </CommandList>
@@ -533,7 +505,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     </TabsList>
 
                                     <Button
-                                        className="bg-white hover:bg-white"
+                                        className="bg-white hover:bg-white !shadow-none"
                                         onClick={handleCloseImportPopup}
                                     >
                                         <CirclePlus className="w-4 h-4 rotate-45 text-red-600" />
@@ -542,6 +514,57 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 </div>
 
                                 <div>
+                                    {/* <TabsContent value="links">
+                                        <div>
+                                            {isFetchingTags ? (
+                                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                                    <RotateLoader size={6} margin={-16} color="#adadad" />
+                                                    <span className="text-sm text-gray-600">Fetching links…</span>
+                                                </div>
+                                            ) : linkImportPreview.length > 0 ? (
+                                                <>
+                                                    <div className="flex items-center justify-between mb-4 mt-4">
+                                                        <p className="text-sm text-gray-500">
+                                                            Found {linkImportPreview.length} recent link{linkImportPreview.length > 1 ? 's' : ''} from your ads.
+                                                        </p>
+                                                        <Button
+                                                            className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
+                                                            onClick={handleImportAllLinks}
+                                                        >
+                                                            Import All
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                                                        {linkImportPreview.map((linkUrl, idx) => {
+                                                            const alreadyExists = links.some(link => link.url === linkUrl);
+                                                            return (
+                                                                <div key={idx} className="flex gap-3 items-center">
+                                                                    <div className={`flex-1 bg-gray-100 text-sm px-3 py-[10px] rounded-xl truncate ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
+                                                                        {linkUrl}
+                                                                    </div>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        className="rounded-xl"
+                                                                        variant={alreadyExists ? "outline" : "default"}
+                                                                        disabled={alreadyExists}
+                                                                        onClick={() => handleImportLink(linkUrl)}
+                                                                    >
+                                                                        {alreadyExists ? "Exists" : "Import"}
+                                                                    </Button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="py-10 text-center">
+                                                    <p className="text-sm text-gray-500">No recent links found in your ads.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </TabsContent> */}
+
                                     <TabsContent value="links">
                                         <div>
                                             {isFetchingTags ? (
@@ -563,17 +586,19 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                         </Button>
                                                     </div>
 
-                                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                                    <div className="space-y-4 max-h-[300px] overflow-y-auto px-1">
                                                         {linkImportPreview.map((linkUrl, idx) => {
                                                             const alreadyExists = links.some(link => link.url === linkUrl);
                                                             return (
-                                                                <div key={idx} className="flex gap-3 items-center">
-                                                                    <div className={`flex-1 bg-gray-100 text-sm px-3 py-[10px] rounded-xl truncate ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
-                                                                        {linkUrl}
+                                                                <div key={idx} className="flex gap-3 items-center p-2 hover:bg-gray-50 rounded-lg transition-colors">
+                                                                    <div className={`flex-1 bg-gray-100 text-sm px-4 py-3 rounded-xl ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
+                                                                        <div className="truncate" title={linkUrl}>
+                                                                            {linkUrl}
+                                                                        </div>
                                                                     </div>
                                                                     <Button
                                                                         size="sm"
-                                                                        className="rounded-xl"
+                                                                        className="rounded-xl px-4"
                                                                         variant={alreadyExists ? "outline" : "default"}
                                                                         disabled={alreadyExists}
                                                                         onClick={() => handleImportLink(linkUrl)}

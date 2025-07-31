@@ -687,7 +687,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </TabsTrigger>
                       </TabsList>
                       <Button
-                        className="bg-white hover:bg-white"
+                        className="bg-white hover:bg-white !shadow-none"
                         onClick={() => setShowImportPopup(false)}
                       >
                         <CirclePlus className="w-4 h-4 rotate-45 text-red-600" />
