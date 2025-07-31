@@ -276,10 +276,10 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       const linksChanged = JSON.stringify(links) !== JSON.stringify(initialSettings.links);
 
       if (linksChanged) {
-
-        handleSave();
-        // toast.success("Links auto-saved!");
-
+        const timeoutId = setTimeout(() => {
+          handleSave();
+          // toast.success("Links auto-saved!");
+        }, 100); // 1 second delay
 
         return () => clearTimeout(timeoutId);
       }
