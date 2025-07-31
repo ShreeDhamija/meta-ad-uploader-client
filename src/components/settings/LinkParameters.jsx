@@ -446,7 +446,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             {showImportPopup && (
                 <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center" style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}>
                     <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200">
-                        <div className="sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200">
+                        <div className="sticky top-0 bg-white z-10 px-6 py-4 border-b border-gray-200">
                             <Tabs defaultValue="utms">
                                 <div className="flex items-center justify-between">
                                     <TabsList className="grid w-fit grid-cols-2 rounded-full">
@@ -459,7 +459,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                         onClick={handleCloseImportPopup}
                                     >
                                         <CirclePlus className="w-4 h-4 rotate-45" />
-                                        Close
+
                                     </Button>
                                 </div>
 
