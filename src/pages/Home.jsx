@@ -155,7 +155,8 @@ export default function Home() {
             // Reset all settings to their initial "blank" state
             setPageId("");
             setInstagramAccountId("");
-            setSelectedLink(""); // ✅ Updated
+            // setSelectedLink(""); // ✅ Updated
+            setLink([""]);  // ❌ Change this
             setCta("LEARN_MORE");
             setSelectedTemplate(undefined);
             setMessages([""]);

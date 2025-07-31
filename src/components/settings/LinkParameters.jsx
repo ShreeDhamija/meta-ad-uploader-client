@@ -205,7 +205,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             <Button
                                 variant="outline"
                                 role="combobox"
-                                className="flex-1 justify-between rounded-xl bg-white"
+                                className="flex-1 justify-between rounded-xl bg-white hover:bg-white"
                                 disabled={links.length === 0}
                             >
                                 {selectedLink ? (
@@ -214,7 +214,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                             {selectedLink.url}
                                         </span>
                                         {selectedLink.isDefault && (
-                                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
                                                 Default
                                             </span>
                                         )}
