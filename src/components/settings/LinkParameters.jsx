@@ -307,7 +307,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent
-                            className="w-auto min-w-[--radix-popover-trigger-width] max-w-[600px] p-0 bg-white shadow-lg rounded-2xl"
+                            className="w-auto min-w-[--radix-popover-trigger-width] max-w-[700px] p-0 bg-white shadow-lg rounded-2xl"
                             align="start"
                             sideOffset={5}
                         >

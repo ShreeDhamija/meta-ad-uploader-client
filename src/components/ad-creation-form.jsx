@@ -1544,7 +1544,7 @@ export default function AdCreationForm({
 
           // Process files in the order they appear in the UI
           files.forEach((file) => {
-            if (file.size <= 100 * 1024 * 1024) {
+            if (file.size <= S3_UPLOAD_THRESHOLD) {
               // Small local file
               fileOrder.push({
                 index: fileIndex++,
@@ -1568,7 +1568,7 @@ export default function AdCreationForm({
 
           // Process drive files
           driveFiles.forEach((driveFile) => {
-            if (driveFile.size <= 100 * 1024 * 1024) {
+            if (driveFile.size <= S3_UPLOAD_THRESHOLD) {
               // Small drive file
               fileOrder.push({
                 index: fileIndex++,
@@ -1605,6 +1605,8 @@ export default function AdCreationForm({
           // Add S3 URLs for large files
           [...s3Results, ...s3DriveResults].forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
+            formData.append("s3VideoName", s3File.name); // <<< ADD THIS LINE
+
           });
 
           if (selectedShopDestination && showShopDestinationSelector) {
@@ -1662,6 +1664,8 @@ export default function AdCreationForm({
           //add large file URLs
           [...s3Results, ...s3DriveResults].forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
+            formData.append("s3VideoName", s3File.name); // <<< ADD THIS LINE
+
           });
 
 
@@ -1771,6 +1775,7 @@ export default function AdCreationForm({
                 });
                 if (s3File) {
                   formData.append("s3VideoUrls", s3File.s3Url);
+                  formData.append("s3VideoName", s3File.name); // <<< ADD THIS LINE
                   if (s3File.mimeType?.startsWith("video/") || s3File.type?.startsWith("video/")) {
                     groupVideoMetadata.push({
                       s3Url: s3File.s3Url,
@@ -1892,6 +1897,7 @@ export default function AdCreationForm({
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
               formData.append("s3VideoUrl", s3File.s3Url);
+              formData.append("s3VideoName", s3File.name);
               formData.append("adAccountId", selectedAdAccount);
               formData.append("adSetId", adSetId);
               formData.append("pageId", pageId);
