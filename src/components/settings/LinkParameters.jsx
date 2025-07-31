@@ -514,7 +514,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 </div>
 
                                 <div>
-                                    {/* <TabsContent value="links">
+                                    <TabsContent value="links">
                                         <div>
                                             {isFetchingTags ? (
                                                 <div className="flex flex-col items-center justify-center py-10 space-y-4">
@@ -546,59 +546,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                                     <Button
                                                                         size="sm"
                                                                         className="rounded-xl"
-                                                                        variant={alreadyExists ? "outline" : "default"}
-                                                                        disabled={alreadyExists}
-                                                                        onClick={() => handleImportLink(linkUrl)}
-                                                                    >
-                                                                        {alreadyExists ? "Exists" : "Import"}
-                                                                    </Button>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </>
-                                            ) : (
-                                                <div className="py-10 text-center">
-                                                    <p className="text-sm text-gray-500">No recent links found in your ads.</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </TabsContent> */}
-
-                                    <TabsContent value="links">
-                                        <div>
-                                            {isFetchingTags ? (
-                                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                                                    <RotateLoader size={6} margin={-16} color="#adadad" />
-                                                    <span className="text-sm text-gray-600">Fetching links…</span>
-                                                </div>
-                                            ) : linkImportPreview.length > 0 ? (
-                                                <>
-                                                    <div className="flex items-center justify-between mb-4 mt-4">
-                                                        <p className="text-sm text-gray-500">
-                                                            Found {linkImportPreview.length} recent link{linkImportPreview.length > 1 ? 's' : ''} from your ads.
-                                                        </p>
-                                                        <Button
-                                                            className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
-                                                            onClick={handleImportAllLinks}
-                                                        >
-                                                            Import All
-                                                        </Button>
-                                                    </div>
-
-                                                    <div className="space-y-4 max-h-[300px] overflow-y-auto px-1">
-                                                        {linkImportPreview.map((linkUrl, idx) => {
-                                                            const alreadyExists = links.some(link => link.url === linkUrl);
-                                                            return (
-                                                                <div key={idx} className="flex gap-3 items-center p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                                                                    <div className={`flex-1 bg-gray-100 text-sm px-4 py-3 rounded-xl ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
-                                                                        <div className="truncate" title={linkUrl}>
-                                                                            {linkUrl}
-                                                                        </div>
-                                                                    </div>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        className="rounded-xl px-4"
                                                                         variant={alreadyExists ? "outline" : "default"}
                                                                         disabled={alreadyExists}
                                                                         onClick={() => handleImportLink(linkUrl)}
