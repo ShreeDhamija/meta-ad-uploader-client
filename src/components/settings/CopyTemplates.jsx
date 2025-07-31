@@ -704,7 +704,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={onClose}
+                        onClick={() => setShowImportPopup(false)}
                         className="rounded-xl"
                       >
                         <X className="w-4 h-4" />
