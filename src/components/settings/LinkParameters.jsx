@@ -171,7 +171,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     )
 
     return (
-        <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-4 w-full max-w-3xl">
+        <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
             {/* Section Header */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
@@ -193,10 +193,12 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
             {/* Link Selection and Management */}
             <div className="space-y-2">
-                <label className="text-sm font-semibold">Ad Landing Page Links</label>
-                <p className="text-xs text-gray-500">
-                    Add and set default links for your ads.
-                </p>
+                <div className="space-y-1">
+                    <label className="text-sm font-semibold">Ad Landing Page Links</label>
+                    <p className="text-xs text-gray-500">
+                        Add and set default links for your ads.
+                    </p>
+                </div>
 
                 {/* Link Dropdown */}
                 <div className="flex gap-2 items-center">

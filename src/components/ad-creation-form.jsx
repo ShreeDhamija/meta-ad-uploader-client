@@ -2606,7 +2606,7 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-3">
-              {/* <div className="space-y-2">
+              <div className="space-y-2">
                 <Label className="flex items-center justify-between">
                   <span className="flex items-center gap-2">
                     <LinkIcon className="w-4 h-4" />
@@ -2619,9 +2619,13 @@ export default function AdCreationForm({
                         checked={link.length === 1}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setLink([link[0] || ""]);
+                            // Apply current link to all cards
+                            const currentLink = customLink.trim() || link[0] || "";
+                            setLink([currentLink]);
                           } else {
-                            setLink([link[0] || "", ""]);
+                            // Create separate links for each card
+                            const currentLink = customLink.trim() || link[0] || "";
+                            setLink([currentLink, ""]);
                           }
                         }}
                         className="border-gray-300 w-4 h-4 rounded-md"
@@ -2636,152 +2640,109 @@ export default function AdCreationForm({
                   Your UTMs will be auto applied from Preferences
                 </p>
 
-                <div className="space-y-3">
-                  {link.map((value, index) => (
-                    <div key={index} className={`flex items-start gap-2 ${isCarouselAd && link.length === 1 && index > 0 ? 'hidden' : ''}`}>
+                {!isCarouselAd || link.length === 1 ? (
+                  // Single link mode (normal ads or carousel with "apply to all")
+                  <div className="space-y-3">
+                    <div>
+                      <Select
+                        value={customLink.trim() ? "" : (link[0] || "")}
+                        onValueChange={(value) => {
+                          setLink([value]);
+                          setCustomLink(""); // Clear custom link when dropdown is used
+                        }}
+                        disabled={!isLoggedIn || availableLinks.length === 0 || customLink.trim()}
+                      >
+                        <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
+                          <SelectValue placeholder={availableLinks.length === 0 ? "No links available - Add links in Settings" : "Select a link"} />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white shadow-lg rounded-xl">
+                          {availableLinks.map((linkObj, index) => (
+                            <SelectItem
+                              key={index}
+                              value={linkObj.url}
+                              className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl m-1"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className="truncate max-w-[300px]">{linkObj.url}</span>
+                                {linkObj.isDefault && (
+                                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                    Default
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs text-gray-500 mb-1 block">
+                        Custom link (takes precedence over dropdown selection)
+                      </Label>
                       <Input
                         type="url"
-                        value={value}
-                        className="border border-gray-400 rounded-xl bg-white shadow"
+                        value={customLink}
                         onChange={(e) => {
-                          if (isCarouselAd && link.length === 1) {
+                          setCustomLink(e.target.value);
+                          if (e.target.value.trim()) {
                             setLink([e.target.value]);
                           } else {
+                            const dropdownValue = defaultLink?.url || "";
+                            setLink([dropdownValue]);
+                          }
+                        }}
+                        className="border border-gray-400 rounded-xl bg-white shadow"
+                        placeholder="https://example.com (optional)"
+                        disabled={!isLoggedIn}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  // Multiple links mode (carousel with separate links per card)
+                  <div className="space-y-3">
+                    {link.map((value, index) => (
+                      <div key={index} className="flex items-start gap-2">
+                        <Input
+                          type="url"
+                          value={value}
+                          className="border border-gray-400 rounded-xl bg-white shadow"
+                          onChange={(e) => {
                             const newLinks = [...link];
                             newLinks[index] = e.target.value;
                             setLink(newLinks);
-                          }
-                        }}
-                        placeholder={isCarouselAd && link.length > 1 ? `Link for card ${index + 1}` : "https://example.com"}
-                        disabled={!isLoggedIn}
-                        required
-                      />
-                      {link.length > 1 && !(isCarouselAd && link.length === 1) && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                          size="icon"
-                          onClick={() => {
-                            const newLinks = link.filter((_, i) => i !== index);
-                            setLink(newLinks);
                           }}
-                        >
-                          <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                          <span className="sr-only">Remove</span>
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  {isCarouselAd && link.length < 10 && link.length > 1 && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                      onClick={() => setLink([...link, ""])}
-                    >
-                      <Plus className="mr-2 h-4 w-4 text-white" />
-                      Add link field
-                    </Button>
-                  )}
-                </div>
-              </div> */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <LinkIcon className="w-4 h-4" />
-                  Link (URL)
-                </Label>
-                <p className="text-gray-500 text-[12px] font-regular">
-                  Your UTMs will be auto applied from Preferences
-                </p>
-
-                {!useCustomLink ? (
-                  // Link Selector
-                  <div className="space-y-3">
-                    <Select
-                      value={link[0] || ""}
-                      onValueChange={(value) => setLink([value])}
-                      disabled={!isLoggedIn || availableLinks.length === 0}
-                    >
-                      <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
-                        <SelectValue placeholder={availableLinks.length === 0 ? "No links available - Add links in Settings" : "Select a link"} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white shadow-lg rounded-xl">
-                        {availableLinks.map((linkObj, index) => (
-                          <SelectItem key={index} value={linkObj.url}>
-                            <div className="flex items-center justify-between w-full">
-                              <span className="truncate max-w-[300px]">{linkObj.url}</span>
-                              {linkObj.isDefault && (
-                                <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
-                                  Default
-                                </span>
-                              )}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="w-full rounded-xl border-dashed"
-                      onClick={() => {
-                        setUseCustomLink(true);
-                        setCustomLink(link[0] || "");
-                      }}
-                    >
-                      Enter Custom Link
-                    </Button>
-                  </div>
-                ) : (
-                  // Custom Link Input
-                  <div className="space-y-3">
-                    <Input
-                      type="url"
-                      value={customLink}
-                      onChange={(e) => {
-                        setCustomLink(e.target.value);
-                        setLink([e.target.value]);
-                      }}
-                      className="border border-gray-400 rounded-xl bg-white shadow"
-                      placeholder="https://example.com"
-                      disabled={!isLoggedIn}
-                      required
-                    />
-
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="rounded-xl"
-                        onClick={() => {
-                          setUseCustomLink(false);
-                          setCustomLink("");
-                          // Reset to default link
-                          const resetLink = defaultLink?.url || "";
-                          setLink([resetLink]);
-                        }}
-                      >
-                        Cancel
-                      </Button>
-
+                          placeholder={`Link for card ${index + 1}`}
+                          disabled={!isLoggedIn}
+                          required
+                        />
+                        {link.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                            size="icon"
+                            onClick={() => {
+                              const newLinks = link.filter((_, i) => i !== index);
+                              setLink(newLinks);
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    {link.length < 10 && (
                       <Button
                         type="button"
                         size="sm"
-                        className="bg-blue-500 text-white rounded-xl hover:bg-blue-600"
-                        onClick={() => {
-                          if (customLink.trim()) {
-                            setLink([customLink.trim()]);
-                            setUseCustomLink(false);
-                          }
-                        }}
+                        className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                        onClick={() => setLink([...link, ""])}
                       >
-                        Use This Link
+                        <Plus className="mr-2 h-4 w-4 text-white" />
+                        Add link field
                       </Button>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
