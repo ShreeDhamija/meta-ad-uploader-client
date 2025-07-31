@@ -2137,13 +2137,33 @@ export default function AdCreationForm({
             <Checkbox
               id="carousel-ad"
               checked={isCarouselAd}
+              // onCheckedChange={(checked) => {
+              //   setIsCarouselAd(checked);
+              //   if (!checked && link.length > 1) {
+              //     setLink([link[0] || ""]);
+              //     // ADD these lines to reset my new states:
+              //     setLinkCustomStates({});
+              //     setShowCustomLink(false);
+              //   }
+              // }}
               onCheckedChange={(checked) => {
                 setIsCarouselAd(checked);
                 if (!checked && link.length > 1) {
                   setLink([link[0] || ""]);
-                  // ADD these lines to reset my new states:
                   setLinkCustomStates({});
                   setShowCustomLink(false);
+                }
+
+                // Reset the "apply to all" states and restore from template
+                if (!checked) {
+                  setApplyTextToAllCards(false);
+                  setApplyHeadlinesToAllCards(false);
+
+                  if (selectedTemplate && copyTemplates[selectedTemplate]) {
+                    const tpl = copyTemplates[selectedTemplate];
+                    setMessages(tpl.primaryTexts || [""]);
+                    setHeadlines(tpl.headlines || [""]);
+                  }
                 }
               }}
               disabled={!isLoggedIn}
@@ -2466,12 +2486,23 @@ export default function AdCreationForm({
                         <Checkbox
                           id="apply-text-all"
                           checked={applyTextToAllCards}
+                          // onCheckedChange={(checked) => {
+                          //   setApplyTextToAllCards(checked);
+                          //   if (checked && messages.length > 0) {
+                          //     // Fill all positions with the first message
+                          //     const firstMessage = messages[0];
+                          //     setMessages(new Array(messages.length).fill(firstMessage));
+                          //   }
+                          // }}
                           onCheckedChange={(checked) => {
                             setApplyTextToAllCards(checked);
                             if (checked && messages.length > 0) {
-                              // Fill all positions with the first message
                               const firstMessage = messages[0];
                               setMessages(new Array(messages.length).fill(firstMessage));
+                            } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
+                              // Restore from template instead of duplicating first field
+                              const tpl = copyTemplates[selectedTemplate];
+                              setMessages(tpl.primaryTexts || [""]);
                             }
                           }}
                           className="border-gray-300 w-4 h-4 rounded-md"
@@ -2547,12 +2578,23 @@ export default function AdCreationForm({
                       <Checkbox
                         id="apply-headlines-all"
                         checked={applyHeadlinesToAllCards}
+                        // onCheckedChange={(checked) => {
+                        //   setApplyHeadlinesToAllCards(checked);
+                        //   if (checked && headlines.length > 0) {
+                        //     // Fill all positions with the first headline
+                        //     const firstHeadline = headlines[0];
+                        //     setHeadlines(new Array(headlines.length).fill(firstHeadline));
+                        //   }
+                        // }}
                         onCheckedChange={(checked) => {
                           setApplyHeadlinesToAllCards(checked);
                           if (checked && headlines.length > 0) {
-                            // Fill all positions with the first headline
                             const firstHeadline = headlines[0];
                             setHeadlines(new Array(headlines.length).fill(firstHeadline));
+                          } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
+                            // Restore from template instead of duplicating first field
+                            const tpl = copyTemplates[selectedTemplate];
+                            setHeadlines(tpl.headlines || [""]);
                           }
                         }}
                         className="border-gray-300 w-4 h-4 rounded-md"
@@ -2665,7 +2707,7 @@ export default function AdCreationForm({
                               <div className="flex items-center justify-between w-full">
                                 <span className="truncate max-w-[300px]">{linkObj.url}</span>
                                 {linkObj.isDefault && (
-                                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
                                     Default
                                   </span>
                                 )}
