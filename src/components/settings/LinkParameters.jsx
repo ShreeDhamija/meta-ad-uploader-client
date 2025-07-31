@@ -455,7 +455,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     </TabsList>
 
                                     <Button
-                                        // className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
+                                        className="bg-white hover:bg-white"
                                         onClick={handleCloseImportPopup}
                                     >
                                         <CirclePlus className="w-4 h-4 rotate-45 text-red-600" />
