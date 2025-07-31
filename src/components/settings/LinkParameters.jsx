@@ -32,6 +32,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     const [inputValue, setInputValue] = useState("")
     const [openIndex, setOpenIndex] = useState(null)
     const [importPreview, setImportPreview] = useState(null)
+    const [linkImportPreview, setLinkImportPreview] = useState([])
     const [showImportPopup, setShowImportPopup] = useState(false)
     const [isFetchingTags, setIsFetchingTags] = useState(false)
 
@@ -84,6 +85,46 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         setLinkDropdownOpen(false);
     }, []);
 
+    // Add after handleImportConfirm
+    const handleImportLink = useCallback((linkUrl) => {
+        // Check if link already exists
+        if (links.some(link => link.url === linkUrl)) {
+            toast.error("This link already exists");
+            return;
+        }
+
+        const newLink = {
+            url: linkUrl,
+            isDefault: links.length === 0
+        };
+
+        setLinks(prev => [...prev, newLink]);
+        toast.success("Link imported successfully");
+    }, [links, setLinks]);
+
+    const handleImportAllLinks = useCallback(() => {
+        const newLinks = [];
+        let addedCount = 0;
+
+        for (const linkUrl of linkImportPreview) {
+            if (!links.some(link => link.url === linkUrl)) {
+                newLinks.push({
+                    url: linkUrl,
+                    isDefault: links.length === 0 && newLinks.length === 0
+                });
+                addedCount++;
+            }
+        }
+
+        if (newLinks.length > 0) {
+            setLinks(prev => [...prev, ...newLinks]);
+            toast.success(`Imported ${addedCount} link${addedCount > 1 ? 's' : ''}`);
+        } else {
+            toast.info("All links already exist");
+        }
+    }, [linkImportPreview, links, setLinks]);
+
+
     const handleAddNewLink = useCallback(() => {
         if (!newLinkUrl.trim()) {
             toast.error("Please enter a link URL");
@@ -122,6 +163,37 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         // toast.success("Default link updated");
     }, [selectedLink, selectedLinkIndex, setLinks]);
 
+    // const handleImportUTMs = useCallback(async () => {
+    //     if (!selectedAdAccount) {
+    //         toast.error("No ad account selected");
+    //         return;
+    //     }
+
+    //     setIsFetchingTags(true);
+    //     setShowImportPopup(true);
+
+    //     try {
+    //         const res = await fetch(
+    //             `${API_BASE_URL}/auth/fetch-recent-url-tags?adAccountId=${selectedAdAccount}`,
+    //             { credentials: "include" }
+    //         );
+    //         const data = await res.json();
+
+    //         if (data.pairs) {
+    //             setImportPreview(data.pairs);
+    //         } else {
+    //             toast.error("No UTM tags found in recent ad.");
+    //             setShowImportPopup(false);
+    //         }
+    //     } catch (err) {
+    //         toast.error("Failed to fetch UTM tags");
+    //         console.error("Import UTM error:", err);
+    //         setShowImportPopup(false);
+    //     } finally {
+    //         setIsFetchingTags(false);
+    //     }
+    // }, [selectedAdAccount])
+
     const handleImportUTMs = useCallback(async () => {
         if (!selectedAdAccount) {
             toast.error("No ad account selected");
@@ -140,13 +212,19 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
             if (data.pairs) {
                 setImportPreview(data.pairs);
-            } else {
-                toast.error("No UTM tags found in recent ad.");
+            }
+
+            if (data.links) {
+                setLinkImportPreview(data.links);
+            }
+
+            if (!data.pairs && !data.links) {
+                toast.error("No UTM tags or links found in recent ads.");
                 setShowImportPopup(false);
             }
         } catch (err) {
-            toast.error("Failed to fetch UTM tags");
-            console.error("Import UTM error:", err);
+            toast.error("Failed to fetch UTM tags and links");
+            console.error("Import error:", err);
             setShowImportPopup(false);
         } finally {
             setIsFetchingTags(false);
@@ -447,7 +525,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center" style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}>
                     <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200">
                         <div className="sticky top-0 bg-white z-10 px-6 py-6 border-b border-gray-200">
-                            <Tabs defaultValue="utms">
+                            <Tabs defaultValue="links">
                                 <div className="flex items-center justify-between">
                                     <TabsList className="grid w-fit grid-cols-2 rounded-full">
                                         <TabsTrigger value="links" className="rounded-full">Links</TabsTrigger>
@@ -465,11 +543,53 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
                                 <div>
                                     <TabsContent value="links">
-                                        {/* Links content - empty for now */}
-                                        <div> {/* Add padding here */}
-                                            <p className="text-sm text-gray-500 mb-4">
-                                                Links import coming soon...
-                                            </p>
+                                        <div>
+                                            {isFetchingTags ? (
+                                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                                    <RotateLoader size={6} margin={-16} color="#adadad" />
+                                                    <span className="text-sm text-gray-600">Fetching links…</span>
+                                                </div>
+                                            ) : linkImportPreview.length > 0 ? (
+                                                <>
+                                                    <div className="flex items-center justify-between mb-4 mt-4">
+                                                        <p className="text-sm text-gray-500">
+                                                            Found {linkImportPreview.length} recent link{linkImportPreview.length > 1 ? 's' : ''} from your ads.
+                                                        </p>
+                                                        <Button
+                                                            className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
+                                                            onClick={handleImportAllLinks}
+                                                        >
+                                                            Import All
+                                                        </Button>
+                                                    </div>
+
+                                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                                        {linkImportPreview.map((linkUrl, idx) => {
+                                                            const alreadyExists = links.some(link => link.url === linkUrl);
+                                                            return (
+                                                                <div key={idx} className="flex gap-3 items-center">
+                                                                    <div className={`flex-1 bg-gray-100 text-sm px-3 py-[10px] rounded-xl truncate ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
+                                                                        {linkUrl}
+                                                                    </div>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        className="rounded-xl"
+                                                                        variant={alreadyExists ? "outline" : "default"}
+                                                                        disabled={alreadyExists}
+                                                                        onClick={() => handleImportLink(linkUrl)}
+                                                                    >
+                                                                        {alreadyExists ? "Exists" : "Import"}
+                                                                    </Button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="py-10 text-center">
+                                                    <p className="text-sm text-gray-500">No recent links found in your ads.</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </TabsContent>
 
