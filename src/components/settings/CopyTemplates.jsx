@@ -34,9 +34,16 @@ const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) =
       className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg group cursor-pointer pr-8"
     >
       <div className="flex items-center justify-between w-full">
-        <span className="block truncate">
-          {name} {isDefault ? "(Default)" : ""}
-        </span>
+        <div className="flex items-center justify-between w-full">
+          <span className="text-sm truncate">
+            {name}
+          </span>
+          {isDefault && (
+            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
+              Default
+            </span>
+          )}
+        </div>
         <button
           type="button"
           className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0 data-[state=checked]:hidden"
@@ -518,7 +525,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </SelectContent>
         </Select>
 
-        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${editingTemplate ? 'w-[250px] opacity-100' : 'w-0 opacity-0'
+        {/* <div className={`transition-all duration-300 ease-in-out overflow-hidden ${editingTemplate ? 'w-[250px] opacity-100' : 'w-0 opacity-0'
           }`}>
           <Button
             className={`w-[250px] rounded-xl h-[35px] flex items-center gap-2 transition-colors whitespace-nowrap ${isEditingDefault
@@ -531,7 +538,16 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             <CircleCheck className="w-4 h-4" />
             {isEditingDefault ? "Default Template" : "Set as Default Template"}
           </Button>
-        </div>
+        </div> */}
+        <Button
+          variant="outline"
+          size="sm"
+          className="rounded-xl px-3 whitespace-nowrap"
+          disabled={!templateName.trim() || isEditingDefault || isProcessing}
+          onClick={handleSetAsDefault}
+        >
+          Set as Default
+        </Button>
       </div>
 
       <div className="space-y-1">

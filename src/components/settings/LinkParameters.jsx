@@ -232,7 +232,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             align="start"
                         >
                             <Command>
-                                <CommandList className="max-h-[200px] overflow-y-auto p-2">
+                                <CommandList className="max-h-[200px] overflow-y-auto p-1">
                                     {links.map((link, index) => (
                                         <CommandItem
                                             key={index}
@@ -245,7 +245,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                     {link.url}
                                                 </span>
                                                 {link.isDefault && (
-                                                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
                                                         Default
                                                     </span>
                                                 )}
