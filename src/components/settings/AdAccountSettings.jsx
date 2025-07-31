@@ -270,6 +270,23 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     }
   }, [hasChanges, mainButtonVisible, showFloatingButton]);
 
+  // Auto-save links with debounce
+  useEffect(() => {
+    if (hasChanges && selectedAdAccount && initialSettings && Object.keys(initialSettings).length > 0) {
+      const linksChanged = JSON.stringify(links) !== JSON.stringify(initialSettings.links);
+
+      if (linksChanged) {
+        const timeoutId = setTimeout(() => {
+          handleSave();
+          toast.success("Links auto-saved!");
+        }, 1000); // 1 second delay
+
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [links]);
+
+
   // Effect for intersection observer
   useEffect(() => {
     const observer = new IntersectionObserver(

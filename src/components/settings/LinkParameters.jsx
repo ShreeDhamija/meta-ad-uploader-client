@@ -172,10 +172,10 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
     // Add this function after handleSetAsDefault:
     const handleDeleteLink = useCallback((linkIndex) => {
-        if (links.length <= 1) {
-            toast.error("Cannot delete the last link");
-            return;
-        }
+        // if (links.length <= 1) {
+        //     toast.error("Cannot delete the last link");
+        //     return;
+        // }
 
         const linkToDelete = links[linkIndex];
         const updatedLinks = links.filter((_, index) => index !== linkIndex);
@@ -363,6 +363,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 <label className="text-sm font-semibold">UTM Parameters</label>
                 <p className="text-xs text-gray-500">
                     We have pre filled your link parameters with the most commonly used values. You can delete or change them.
+                    All links use the same parameters.
                 </p>
             </div>
 
