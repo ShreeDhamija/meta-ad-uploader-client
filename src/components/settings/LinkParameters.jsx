@@ -444,7 +444,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 </Button>
             </div>
             {showImportPopup && (
-                <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center pt-[10vh]" style={{ left: 0, right: 0, bottom: 0, position: 'fixed' }}>
+                <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center" style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}>
                     <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200">
                         <div className="sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200">
                             <Tabs defaultValue="utms">
@@ -466,7 +466,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 <div>
                                     <TabsContent value="links">
                                         {/* Links content - empty for now */}
-                                        <div className="px-6 py-6"> {/* Add padding here */}
+                                        <div> {/* Add padding here */}
                                             <p className="text-sm text-gray-500 mb-4">
                                                 Links import coming soon...
                                             </p>
@@ -474,7 +474,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     </TabsContent>
 
                                     <TabsContent value="utms">
-                                        <div className="px-6 py-6"> {/* Add padding here */}
+                                        <div> {/* Add padding here */}
                                             {isFetchingTags ? (
                                                 <div className="flex flex-col items-center justify-center py-10 space-y-4">
                                                     <RotateLoader size={6} margin={-16} color="#adadad" />
@@ -482,7 +482,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <div className="flex items-center justify-between mb-4"> {/* Add this div */}
+                                                    <div className="flex items-center justify-between mb-4 mt-4"> {/* Add this div */}
                                                         <p className="text-sm text-gray-500">
                                                             The following parameters were found in your most recent ad.
                                                         </p>
