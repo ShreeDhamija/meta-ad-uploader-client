@@ -2141,6 +2141,9 @@ export default function AdCreationForm({
                 setIsCarouselAd(checked);
                 if (!checked && link.length > 1) {
                   setLink([link[0] || ""]);
+                  // ADD these lines to reset my new states:
+                  setLinkCustomStates({});
+                  setShowCustomLink(false);
                 }
               }}
               disabled={!isLoggedIn}
@@ -2657,7 +2660,7 @@ export default function AdCreationForm({
                             <SelectItem
                               key={index}
                               value={linkObj.url}
-                              className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl mx-2 my-1"
+                              className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
                             >
                               <div className="flex items-center justify-between w-full">
                                 <span className="truncate max-w-[300px]">{linkObj.url}</span>
