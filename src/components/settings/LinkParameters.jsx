@@ -170,6 +170,34 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         [inputValue]
     )
 
+    // Add this function after handleSetAsDefault:
+    const handleDeleteLink = useCallback((linkIndex) => {
+        if (links.length <= 1) {
+            toast.error("Cannot delete the last link");
+            return;
+        }
+
+        const linkToDelete = links[linkIndex];
+        const updatedLinks = links.filter((_, index) => index !== linkIndex);
+
+        // If we're deleting the default link, make the first remaining link default
+        if (linkToDelete.isDefault && updatedLinks.length > 0) {
+            updatedLinks[0].isDefault = true;
+        }
+
+        setLinks(updatedLinks);
+
+        // Update selected index
+        if (selectedLinkIndex >= updatedLinks.length) {
+            setSelectedLinkIndex(updatedLinks.length - 1);
+        } else if (selectedLinkIndex > linkIndex) {
+            setSelectedLinkIndex(selectedLinkIndex - 1);
+        }
+
+        setLinkDropdownOpen(false);
+        toast.success("Link deleted");
+    }, [links, selectedLinkIndex, setLinks]);
+
     return (
         <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
             {/* Section Header */}
@@ -238,17 +266,35 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                             key={index}
                                             value={index.toString()}
                                             onSelect={() => handleLinkSelect(index)}
-                                            className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1"
+                                            className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1 group pr-8"
                                         >
                                             <div className="flex items-center justify-between w-full">
-                                                <span className="text-sm truncate">
-                                                    {link.url}
-                                                </span>
-                                                {link.isDefault && (
-                                                    <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
-                                                        Default
+                                                <div className="flex items-center">
+                                                    <span className="text-sm truncate">
+                                                        {link.url}
                                                     </span>
-                                                )}
+                                                    {link.isDefault && (
+                                                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
+                                                            Default
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0"
+                                                    onMouseDown={(e) => {
+                                                        e.stopPropagation();
+                                                        e.preventDefault();
+                                                        handleDeleteLink(index);
+                                                    }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        e.preventDefault();
+                                                        handleDeleteLink(index);
+                                                    }}
+                                                >
+                                                    <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                                                </button>
                                             </div>
                                         </CommandItem>
                                     ))}
