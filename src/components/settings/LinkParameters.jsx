@@ -443,62 +443,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     + Add New Pairing
                 </Button>
             </div>
-
-            {/* {showImportPopup && (
-                <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center" style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}>
-                    <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200">
-                        <div className="sticky top-0 bg-white z-10 px-6 py-3 border-b border-gray-200">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-lg font-medium text-zinc-900">Import UTM Parameters</h2>
-                                <Button
-                                    className="bg-red-600 text-white rounded-xl px-3 py-1 hover:bg-red-700 text-sm flex items-center gap-1"
-                                    onClick={handleCloseImportPopup}
-                                >
-                                    <CirclePlus className="w-4 h-4 rotate-45" />
-                                    Close
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className="px-6 py-6">
-                            {isFetchingTags ? (
-                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                                    <RotateLoader size={6} margin={-16} color="#adadad" />
-                                    <span className="text-sm text-gray-600">Fetching parameters…</span>
-                                </div>
-                            ) : (
-                                <>
-                                    <p className="text-sm text-gray-500 mb-4">
-                                        The following parameters were found in your most recent ad. Click "Import" to apply them.
-                                    </p>
-
-                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                                        {importPreview?.map(({ key, value }, idx) => (
-                                            <div key={idx} className="flex gap-3 items-center">
-                                                <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
-                                                    {key}
-                                                </div>
-                                                <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
-                                                    {value}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="flex justify-end mt-6">
-                                        <Button
-                                            className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
-                                            onClick={handleImportConfirm}
-                                        >
-                                            Import
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )} */}
             {showImportPopup && (
                 <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center" style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}>
                     <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200">
@@ -519,55 +463,53 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     </Button>
                                 </div>
 
-                                <div className="px-6 py-6">
+                                <div>
                                     <TabsContent value="links">
                                         {/* Links content - empty for now */}
-                                        <p className="text-sm text-gray-500 mb-4">
-                                            Links import coming soon...
-                                        </p>
+                                        <div className="px-6 py-6"> {/* Add padding here */}
+                                            <p className="text-sm text-gray-500 mb-4">
+                                                Links import coming soon...
+                                            </p>
+                                        </div>
                                     </TabsContent>
 
                                     <TabsContent value="utms">
-                                        {isFetchingTags ? (
-                                            <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                                                <RotateLoader size={6} margin={-16} color="#adadad" />
-                                                <span className="text-sm text-gray-600">Fetching parameters…</span>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <p className="text-sm text-gray-500 mb-4">
-                                                    The following parameters were found in your most recent ad.
-                                                </p>
-                                                <Button
-                                                    className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
-                                                    onClick={handleImportConfirm}
-                                                >
-                                                    Import
-                                                </Button>
-
-                                                <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                                                    {importPreview?.map(({ key, value }, idx) => (
-                                                        <div key={idx} className="flex gap-3 items-center">
-                                                            <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
-                                                                {key}
-                                                            </div>
-                                                            <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
-                                                                {value}
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                        <div className="px-6 py-6"> {/* Add padding here */}
+                                            {isFetchingTags ? (
+                                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                                    <RotateLoader size={6} margin={-16} color="#adadad" />
+                                                    <span className="text-sm text-gray-600">Fetching parameters…</span>
                                                 </div>
-
-                                                {/* <div className="flex justify-end mt-6">
+                                            ) : (
+                                                <>
+                                                    <div className="flex items-center justify-between mb-4"> {/* Add this div */}
+                                                        <p className="text-sm text-gray-500">
+                                                            The following parameters were found in your most recent ad.
+                                                        </p>
                                                         <Button
                                                             className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
                                                             onClick={handleImportConfirm}
                                                         >
                                                             Import
                                                         </Button>
-                                                    </div> */}
-                                            </>
-                                        )}
+                                                    </div>
+
+                                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                                        {importPreview?.map(({ key, value }, idx) => (
+                                                            <div key={idx} className="flex gap-3 items-center">
+                                                                <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
+                                                                    {key}
+                                                                </div>
+                                                                <div className="flex-1 bg-gray-100 text-sm text-zinc-800 px-3 py-[10px] rounded-xl truncate">
+                                                                    {value}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                </>
+                                            )}
+                                        </div>
                                     </TabsContent>
                                 </div>
                             </Tabs>

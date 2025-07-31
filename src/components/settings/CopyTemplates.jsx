@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { toast } from "sonner"
-import { CirclePlus, CircleCheck, Trash2, Download } from 'lucide-react'
+import { CirclePlus, CircleCheck, Trash2, Download, X } from 'lucide-react'
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import TextareaAutosize from 'react-textarea-autosize'
