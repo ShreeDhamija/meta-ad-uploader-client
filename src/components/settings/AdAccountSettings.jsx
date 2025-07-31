@@ -230,7 +230,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       });
 
       setAdNameFormula(reorganizedFormula);
-      toast.success("Ad account settings saved!");
+      toast.success("Updates saved!");
 
       const newInitialSettings = {
         defaultPage: selectedPage,
@@ -278,7 +278,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       if (linksChanged) {
         const timeoutId = setTimeout(() => {
           handleSave();
-          toast.success("Links auto-saved!");
+          // toast.success("Links auto-saved!");
         }, 1000); // 1 second delay
 
         return () => clearTimeout(timeoutId);

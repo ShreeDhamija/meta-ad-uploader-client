@@ -2732,25 +2732,28 @@ export default function AdCreationForm({
                         }}
                         className="border-gray-300 w-4 h-4 rounded-md"
                       />
+
+                      {showCustomLink && (
+                        <Input
+                          type="url"
+                          value={customLink}
+                          onChange={(e) => {
+                            setCustomLink(e.target.value);
+                            setLink([e.target.value]);
+                          }}
+                          className="border border-gray-400 rounded-xl bg-white shadow"
+                          placeholder="https://example.com"
+                          disabled={!isLoggedIn}
+                          required
+                        />
+                      )}
+
                       <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
                         Use custom link
                       </label>
                     </div>
 
-                    {showCustomLink && (
-                      <Input
-                        type="url"
-                        value={customLink}
-                        onChange={(e) => {
-                          setCustomLink(e.target.value);
-                          setLink([e.target.value]);
-                        }}
-                        className="border border-gray-400 rounded-xl bg-white shadow"
-                        placeholder="https://example.com"
-                        disabled={!isLoggedIn}
-                        required
-                      />
-                    )}
+
                   </div>
                 ) : (
                   // Multiple links mode (carousel with separate links per card)
