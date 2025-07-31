@@ -59,7 +59,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
 
   const { settings: adSettings, setSettings: setAdSettings, loading } = useAdAccountSettings(selectedAdAccount)
 
-  const [defaultLink, setDefaultLink] = useState("")
+  const [links, setLinks] = useState([]) // Array of {url, isDefault}
   const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
   const [defaultCTA, setDefaultCTA] = useState("Learn More")
   const [copyTemplates, setCopyTemplates] = useState({})
@@ -118,7 +118,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     return (
       selectedPage?.id !== initialSettings.defaultPage?.id ||
       selectedInstagram?.id !== initialSettings.defaultInstagram?.id ||
-      defaultLink !== initialSettings.defaultLink ||
+      JSON.stringify(links) !== JSON.stringify(initialSettings.links) ||
       defaultCTA !== initialSettings.defaultCTA ||
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
@@ -127,7 +127,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   }, [
     selectedPage,
     selectedInstagram,
-    defaultLink,
+    links,
     defaultCTA,
     utmPairs,
     enhancements,
@@ -148,7 +148,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     return {
       defaultPage: adSettings.defaultPage || null,
       defaultInstagram: adSettings.defaultInstagram || null,
-      defaultLink: adSettings.defaultLink || "",
+      links: adSettings.links || [],
       defaultCTA: adSettings.defaultCTA || "LEARN_MORE",
       defaultUTMs: utms,
       creativeEnhancements: adSettings.creativeEnhancements || DEFAULT_ENHANCEMENTS,
@@ -216,7 +216,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     const adAccountSettings = {
       defaultPage: selectedPage,
       defaultInstagram: selectedInstagram,
-      defaultLink,
+      links: links,
       defaultCTA,
       defaultUTMs: utmPairs,
       creativeEnhancements: enhancements,
@@ -235,7 +235,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       const newInitialSettings = {
         defaultPage: selectedPage,
         defaultInstagram: selectedInstagram,
-        defaultLink,
+        links: links,
         defaultCTA,
         defaultUTMs: utmPairs,
         creativeEnhancements: enhancements,
@@ -252,7 +252,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     adNameFormula,
     selectedPage,
     selectedInstagram,
-    defaultLink,
+    links,
     defaultCTA,
     utmPairs,
     enhancements
@@ -300,7 +300,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
 
     setSelectedPage(initial.defaultPage);
     setSelectedInstagram(initial.defaultInstagram);
-    setDefaultLink(initial.defaultLink);
+    setLinks(initial.links);
     setUtmPairs(initial.defaultUTMs);
     setDefaultCTA(initial.defaultCTA);
     setEnhancements(initial.creativeEnhancements);
@@ -451,8 +451,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           </div>
 
           <LinkParameters
-            defaultLink={defaultLink}
-            setDefaultLink={setDefaultLink}
+            links={links}
+            setLinks={setLinks}
             utmPairs={utmPairs}
             setUtmPairs={setUtmPairs}
             selectedAdAccount={selectedAdAccount}

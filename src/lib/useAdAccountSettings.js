@@ -28,23 +28,36 @@ export default function useAdAccountSettings(adAccountId) {
                         defaultPage: null,
                         defaultInstagram: null,
                         defaultAdName: "",
-                        defaultLink: "",
+                        defaultLinkName: "",
+                        links: [], // NEW: Array of {url, isDefault}
                         defaultCTA: "LEARN_MORE",
                         defaultUTMs: [],
                         copyTemplates: {},
                         defaultTemplateName: "",
                         creativeEnhancements: {},
-                        adNameFormula: null // <--- SET TO NULL INSTEAD OF A DEFAULT OBJECT
-
+                        adNameFormula: null
                     });
                 } else {
                     setDocumentExists(true);
                     const s = data.settings || {};
+                    // Migration logic: convert old defaultLink to new links array
+                    let links = [];
+
+                    if (s.links && Array.isArray(s.links)) {
+                        // New format exists
+                        links = s.links;
+                    } else if (s.defaultLink) {
+                        // Old format - migrate
+                        links = [{
+                            url: s.defaultLink,
+                            isDefault: true
+                        }];
+                    }
                     setSettings({
                         defaultPage: s.defaultPage || null,
                         defaultInstagram: s.defaultInstagram || null,
                         defaultAdName: s.defaultAdName || "",
-                        defaultLink: s.defaultLink || "",
+                        links: links, // NEW: Use migrated links
                         defaultCTA: s.defaultCTA || "LEARN_MORE",
                         defaultUTMs: Array.isArray(s.defaultUTMs) ? s.defaultUTMs : [], // ← store as array
                         copyTemplates: s.copyTemplates,
