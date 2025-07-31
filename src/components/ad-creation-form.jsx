@@ -1518,7 +1518,7 @@ export default function AdCreationForm({
           toast.error("Please select at least one ad set for carousel");
           return;
         }
-
+        console.log("making carousel ad");
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
           // console.log("🎠 Creating carousel for adSetId:", adSetId);
@@ -1704,7 +1704,7 @@ export default function AdCreationForm({
           // NEW: Check if placement customization is enabled
           if (enablePlacementCustomization && fileGroups.length > 0) {
             // Process ONLY grouped files
-
+            console.log("making enable ad");
             fileGroups.forEach((group, groupIndex) => {
               const firstFileId = group[0];
               let firstFileForNaming = null;
@@ -1809,7 +1809,7 @@ export default function AdCreationForm({
 
           if (hasUngroupedFiles) {
             // Regular processing - one ad per file
-
+            console.log("making regular ad");
             // Handle local files
             files.forEach((file, index) => {
               if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(file.name)) return; // Skip large files (already handled via S3)
