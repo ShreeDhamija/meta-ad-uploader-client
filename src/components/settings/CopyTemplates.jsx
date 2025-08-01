@@ -825,7 +825,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     </TabsContent>
                     <div className="text-center pt-4 mt-4">
                       <Button
-                        className="bg-gray-600 text-white hover:bg-gray-700 rounded-xl"
+                        className="bg-gray-600 text-white hover:bg-gray-700 rounded-xl w-full"
                         onClick={handleLoadMore}
                         disabled={isFetchingCopy || isLoadingMore}
                       >
