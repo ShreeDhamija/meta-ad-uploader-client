@@ -702,13 +702,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, primaryTexts)
-                                    ? 'bg-gray-40 text-black cursor-not-allowed'
+                                    ? 'bg-gray-50 text-black cursor-not-allowed border-gray-200 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                   onClick={textExistsInTemplate(text, primaryTexts) ? undefined : createPrimaryTextImportHandler(text)}
                                   disabled={textExistsInTemplate(text, primaryTexts)}
                                 >
-                                  <Download className="w-3 h-3" />
+                                  {/* <Download className="w-3 h-3" /> */}
                                   {textExistsInTemplate(text, primaryTexts) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
@@ -736,13 +736,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, headlines)
-                                    ? 'bg-gray-50 text-black cursor-not-allowed'
+                                    ? 'bg-gray-50 text-black cursor-not-allowed border-gray-200 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                   onClick={textExistsInTemplate(text, headlines) ? undefined : createHeadlineImportHandler(text)}
                                   disabled={textExistsInTemplate(text, headlines)}
                                 >
-                                  <Download className="w-3 h-3" />
+                                  {/* <Download className="w-3 h-3" /> */}
                                   {textExistsInTemplate(text, headlines) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
