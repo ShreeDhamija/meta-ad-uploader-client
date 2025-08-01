@@ -2747,36 +2747,38 @@ export default function AdCreationForm({
                     )}
 
                     <div className="flex items-center space-x-2">
-                      {showCustomLink && (
-                        <Input
-                          type="url"
-                          value={customLink}
-                          onChange={(e) => {
-                            setCustomLink(e.target.value);
-                            setLink([e.target.value]);
+                      <div className="space-y-1">
+                        {showCustomLink && (
+                          <Input
+                            type="url"
+                            value={customLink}
+                            onChange={(e) => {
+                              setCustomLink(e.target.value);
+                              setLink([e.target.value]);
+                            }}
+                            className="border border-gray-400 rounded-xl bg-white shadow"
+                            placeholder="https://example.com"
+                            disabled={!isLoggedIn}
+                            required
+                          />
+                        )}
+                        <Checkbox
+                          id="custom-link-toggle"
+                          checked={showCustomLink}
+                          onCheckedChange={(checked) => {
+                            setShowCustomLink(checked);
+                            if (!checked) {
+                              setCustomLink("");
+                              const dropdownValue = defaultLink?.url || "";
+                              setLink([dropdownValue]);
+                            }
                           }}
-                          className="border border-gray-400 rounded-xl bg-white shadow"
-                          placeholder="https://example.com"
-                          disabled={!isLoggedIn}
-                          required
+                          className="border-gray-300 w-4 h-4 rounded-md"
                         />
-                      )}
-                      <Checkbox
-                        id="custom-link-toggle"
-                        checked={showCustomLink}
-                        onCheckedChange={(checked) => {
-                          setShowCustomLink(checked);
-                          if (!checked) {
-                            setCustomLink("");
-                            const dropdownValue = defaultLink?.url || "";
-                            setLink([dropdownValue]);
-                          }
-                        }}
-                        className="border-gray-300 w-4 h-4 rounded-md"
-                      />
-                      <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
-                        Use custom link
-                      </label>
+                        <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
+                          Use custom link
+                        </label>
+                      </div>
                     </div>
 
 
