@@ -769,7 +769,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, primaryTexts)
-                                    ? 'bg-white text-black cursor-not-allowed border-gray-700 !shadow-none'
+                                    ? 'bg-white text-black cursor-not-allowed border border-gray-500 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                   onClick={textExistsInTemplate(text, primaryTexts) ? undefined : createPrimaryTextImportHandler(text)}
@@ -803,7 +803,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, headlines)
-                                    ? 'bg-white text-black cursor-not-allowed border-gray-700 !shadow-none'
+                                    ? 'bg-white text-black cursor-not-allowed border border-gray-500 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                   onClick={textExistsInTemplate(text, headlines) ? undefined : createHeadlineImportHandler(text)}
