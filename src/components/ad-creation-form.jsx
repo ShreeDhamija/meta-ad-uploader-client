@@ -2075,7 +2075,7 @@ export default function AdCreationForm({
                         <CheckIcon className="w-6 h-6" />
                       )}
                     </div>
-                    <p className={`flex-1 text-sm ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
+                    <p className={`flex-1 text-sm break-all ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
                       {job.message}
                     </p>
                     <button
@@ -2094,7 +2094,7 @@ export default function AdCreationForm({
                       <div className="flex-shrink-0">
                         <UploadIcon className="w-6 h-6" />
                       </div>
-                      <p className="flex-1 text-sm font-medium text-gray-700">
+                      <p className="flex-1 text-sm font-medium text-gray-700 break-alls">
                         Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
                       </p>
                       <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
@@ -2145,15 +2145,6 @@ export default function AdCreationForm({
             <Checkbox
               id="carousel-ad"
               checked={isCarouselAd}
-              // onCheckedChange={(checked) => {
-              //   setIsCarouselAd(checked);
-              //   if (!checked && link.length > 1) {
-              //     setLink([link[0] || ""]);
-              //     // ADD these lines to reset my new states:
-              //     setLinkCustomStates({});
-              //     setShowCustomLink(false);
-              //   }
-              // }}
               onCheckedChange={(checked) => {
                 setIsCarouselAd(checked);
                 if (!checked && link.length > 1) {
