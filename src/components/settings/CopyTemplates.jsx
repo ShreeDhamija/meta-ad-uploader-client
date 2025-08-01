@@ -825,7 +825,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </div>
                       )}
                     </TabsContent>
-                    {/* <div className="text-center pt-4 border-t border-gray-200 mt-4">
+                    <div className="text-center pt-4 border-t border-gray-200 mt-4">
                       <Button
                         className="bg-gray-800 text-white hover:bg-gray-900 rounded-xl w-full"
                         onClick={handleLoadMore}
@@ -833,7 +833,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       >
                         {isFetchingCopy || isLoadingMore ? 'Loading More Copy...' : 'Load More Copy'}
                       </Button>
-                    </div> */}
+                    </div>
                   </Tabs>
 
                 )}
