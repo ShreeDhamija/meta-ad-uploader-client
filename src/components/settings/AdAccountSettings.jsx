@@ -279,7 +279,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         const timeoutId = setTimeout(() => {
           handleSave();
           // toast.success("Links auto-saved!");
-        }, 100); // 1 second delay
+        }, 1); // 1 second delay
 
         return () => clearTimeout(timeoutId);
       }

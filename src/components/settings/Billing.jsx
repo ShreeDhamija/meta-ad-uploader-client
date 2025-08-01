@@ -152,7 +152,7 @@ export default function BillingSettings() {
                         <Button
                             onClick={handleUpgrade}
                             disabled={isLoading}
-                            className="w-full bg-gray-900 hover:bg-gray-800 text-white py-3 rounded-2xl text-base font-medium h-12"
+                            className="w-full bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-2xl text-base font-medium h-12"
                             size="lg"
                         >
                             <span className="mr-2">🚀</span>
@@ -196,8 +196,8 @@ export default function BillingSettings() {
                             <div className="flex items-center gap-2">
                                 <AlertCircle className="w-5 h-5 text-yellow-600" />
                                 <p className="text-sm font-medium text-yellow-800">
-                                    Your trial expires in {subscriptionData.trialDaysLeft} day
-                                    {subscriptionData.trialDaysLeft !== 1 ? "s" : ""}
+                                    {subscriptionData.trialDaysLeft == 0 ? "Your trial is expired" : `Your trial expires in ${subscriptionData.trialDaysLeft} day`}
+                                    {(subscriptionData.trialDaysLeft == 1 || subscriptionData.trialDaysLeft == 0) ? "" : "s"}
                                 </p>
                             </div>
                             <p className="text-sm text-yellow-700 mt-1">

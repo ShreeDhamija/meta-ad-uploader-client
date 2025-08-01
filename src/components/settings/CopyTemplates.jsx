@@ -474,6 +474,17 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     toast.success(`Imported text into Headline ${importedToIndex + 1}`);
   }, [headlines])
 
+  // Helper function to normalize text for comparison (removes extra whitespace, case insensitive)
+  const normalizeText = (text) => text.trim().toLowerCase().replace(/\s+/g, ' ');
+
+  // Check if text exists in current template
+  const textExistsInTemplate = (text, templateTexts) => {
+    const normalizedText = normalizeText(text);
+    return templateTexts.some(templateText =>
+      normalizeText(templateText) === normalizedText
+    );
+  };
+
   return (
     <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
       <div className="flex items-start justify-between mb-6">
@@ -497,7 +508,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             onClick={() => setShowImportPopup(true)}
           >
             <Download className="w-4 h-4" />
-            Import Copy
+            Import Recently Used Copy
           </Button>
         </div>
       </div>
@@ -524,21 +535,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             ))}
           </SelectContent>
         </Select>
-
-        {/* <div className={`transition-all duration-300 ease-in-out overflow-hidden ${editingTemplate ? 'w-[250px] opacity-100' : 'w-0 opacity-0'
-          }`}>
-          <Button
-            className={`w-[250px] rounded-xl h-[35px] flex items-center gap-2 transition-colors whitespace-nowrap ${isEditingDefault
-              ? "bg-green-600 text-white hover:bg-green-600 hover:text-white cursor-default"
-              : "bg-teal-600 text-white hover:bg-teal-700 hover:text-white cursor-pointer"
-              }`}
-            onClick={handleSetAsDefault}
-            disabled={!templateName.trim() || isEditingDefault || isProcessing}
-          >
-            <CircleCheck className="w-4 h-4" />
-            {isEditingDefault ? "Default Template" : "Set as Default Template"}
-          </Button>
-        </div> */}
         <Button
           variant="outline"
           size="sm"
@@ -705,11 +701,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   Primary Text {index + 1}
                                 </div>
                                 <Button
-                                  className="flex items-center text-xs rounded-xl px-2 py-1 bg-blue-600 text-white hover:bg-blue-700 shrink-0"
-                                  onClick={createPrimaryTextImportHandler(text)}
+                                  className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, primaryTexts)
+                                    ? 'bg-gray540 text-white cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                                  onClick={textExistsInTemplate(text, primaryTexts) ? undefined : createPrimaryTextImportHandler(text)}
+                                  disabled={textExistsInTemplate(text, primaryTexts)}
                                 >
                                   <Download className="w-3 h-3" />
-                                  Import
+                                  {textExistsInTemplate(text, primaryTexts) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
                               <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
@@ -735,11 +735,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   Headline {index + 1}
                                 </div>
                                 <Button
-                                  className="flex items-center text-xs rounded-xl px-2 py-1 bg-green-600 text-white hover:bg-green-700 shrink-0"
-                                  onClick={createHeadlineImportHandler(text)}
+                                  className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, headlines)
+                                    ? 'bg-gray-50 text-white cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                                  onClick={textExistsInTemplate(text, headlines) ? undefined : createHeadlineImportHandler(text)}
+                                  disabled={textExistsInTemplate(text, headlines)}
                                 >
                                   <Download className="w-3 h-3" />
-                                  Import
+                                  {textExistsInTemplate(text, headlines) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
                               <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">

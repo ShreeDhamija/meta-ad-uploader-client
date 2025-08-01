@@ -15,7 +15,7 @@ import BillingSettings from "@/components/settings/Billing"
 import ViewAds from "@/components/settings/view-ads"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 import HomeBtn from '@/assets/icons/home.svg?react';
-import Folder from '@/assets/icons/folder.svg?react';
+import Folder from '@/assets/icons/cog.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import ViewAdsIcon from '@/assets/icons/viewads.svg?react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';

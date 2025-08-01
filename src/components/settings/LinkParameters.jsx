@@ -579,7 +579,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                             The following parameters were found in your most recent ad.
                                                         </p>
                                                         <Button
-                                                            className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
+                                                            className=" bg-blue-600 text-white hover:bg-blue-700 rounded-xl hover:bg-zinc-800 px-4"
                                                             onClick={handleImportConfirm}
                                                         >
                                                             Import
