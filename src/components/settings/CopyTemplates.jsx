@@ -184,23 +184,83 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [showImportPopup, setShowImportPopup] = useState(false)
   const [recentAds, setRecentAds] = useState([])
   const [isFetchingCopy, setIsFetchingCopy] = useState(false)
+  const [previouslyFetched, setPreviouslyFetched] = useState({
+    primaryTexts: [],
+    headlines: []
+  });
 
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+
+
+
+  // useEffect(() => {
+  //   if (!showImportPopup || !selectedAdAccount) return;
+
+  //   setIsFetchingCopy(true)
+  //   fetch(`${API_BASE_URL}/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
+  //     credentials: "include"
+  //   })
+  //     .then(res => res.json())
+  //     .then(data => {
+  //       if (data.primaryTexts || data.headlines) {
+  //         setRecentAds({
+  //           primaryTexts: data.primaryTexts || [],
+  //           headlines: data.headlines || []
+  //         });
+  //       } else {
+  //         throw new Error("No data");
+  //       }
+  //     })
+  //     .catch(err => {
+  //       console.error("Error fetching ad copy:", err);
+  //       toast.error("Failed to load recent ad copy");
+  //     })
+  //     .finally(() => setIsFetchingCopy(false))
+  // }, [showImportPopup]);
 
 
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
 
-    setIsFetchingCopy(true)
-    fetch(`${API_BASE_URL}/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
+    const excludePrimaryTexts = isLoadingMore ?
+      [...previouslyFetched.primaryTexts, ...(recentAds.primaryTexts || [])] : [];
+    const excludeHeadlines = isLoadingMore ?
+      [...previouslyFetched.headlines, ...(recentAds.headlines || [])] : [];
+
+    const params = new URLSearchParams({
+      adAccountId: selectedAdAccount,
+      ...(excludePrimaryTexts.length > 0 && { excludePrimaryTexts: JSON.stringify(excludePrimaryTexts) }),
+      ...(excludeHeadlines.length > 0 && { excludeHeadlines: JSON.stringify(excludeHeadlines) })
+    });
+
+    setIsFetchingCopy(true);
+    fetch(`${API_BASE_URL}/auth/fetch-recent-copy?${params}`, {
       credentials: "include"
     })
       .then(res => res.json())
       .then(data => {
         if (data.primaryTexts || data.headlines) {
-          setRecentAds({
-            primaryTexts: data.primaryTexts || [],
-            headlines: data.headlines || []
-          });
+          if (isLoadingMore) {
+            // Append to existing results
+            setRecentAds(prev => ({
+              primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
+              headlines: [...(prev.headlines || []), ...(data.headlines || [])]
+            }));
+          } else {
+            // Replace results (initial load)
+            setRecentAds({
+              primaryTexts: data.primaryTexts || [],
+              headlines: data.headlines || []
+            });
+            setPreviouslyFetched({ primaryTexts: [], headlines: [] });
+          }
+
+          // Update previously fetched tracker
+          setPreviouslyFetched(prev => ({
+            primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
+            headlines: [...prev.headlines, ...(data.headlines || [])]
+          }));
         } else {
           throw new Error("No data");
         }
@@ -209,8 +269,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         console.error("Error fetching ad copy:", err);
         toast.error("Failed to load recent ad copy");
       })
-      .finally(() => setIsFetchingCopy(false))
-  }, [showImportPopup]);
+      .finally(() => {
+        setIsFetchingCopy(false);
+        setIsLoadingMore(false);
+      });
+  }, [showImportPopup, selectedAdAccount, isLoadingMore]);
 
 
   useEffect(() => {
@@ -258,6 +321,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       setHeadlines([""])
     }
   }, [selectedName, templates, editingTemplate])
+
+  const handleLoadMore = useCallback(() => {
+    setIsLoadingMore(true);
+  }, []);
 
 
   const handleAdd = useCallback((setter, state) => {
@@ -758,7 +825,17 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </div>
                       )}
                     </TabsContent>
+                    <div className="text-center pt-4 border-t border-gray-200 mt-4">
+                      <Button
+                        className="bg-gray-800 text-white hover:bg-gray-900 rounded-xl w-full"
+                        onClick={handleLoadMore}
+                        disabled={isFetchingCopy || isLoadingMore}
+                      >
+                        {isFetchingCopy || isLoadingMore ? 'Loading More Copy...' : 'Load More Copy'}
+                      </Button>
+                    </div>
                   </Tabs>
+
                 )}
               </div>
             </div>
