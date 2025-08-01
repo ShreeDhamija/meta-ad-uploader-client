@@ -1708,7 +1708,11 @@ export default function AdCreationForm({
           // NEW: Check if placement customization is enabled
           if (enablePlacementCustomization && fileGroups.length > 0) {
             // Process ONLY grouped files
-            console.log("making enable ad");
+            console.log("🎯 Starting placement customization with groups:", fileGroups);
+            console.log("📁 Available files:", files.map(f => ({ name: f.name, isDrive: f.isDrive, size: f.size })));
+            console.log("🌐 Available smallDriveFiles:", smallDriveFiles.map(f => ({ id: f.id, name: f.name })));
+            console.log("☁️ Available s3Results:", s3Results.map(f => ({ name: f.name, s3Url: f.s3Url })));
+
             fileGroups.forEach((group, groupIndex) => {
               const firstFileId = group[0];
               let firstFileForNaming = null;
@@ -1717,6 +1721,9 @@ export default function AdCreationForm({
               firstFileForNaming = files.find(f => (f.isDrive ? f.id : f.name) === firstFileId) ||
                 smallDriveFiles.find(f => f.id === firstFileId) ||
                 [...s3Results, ...s3DriveResults].find(f => f.name === firstFileId);
+
+              console.log("🏷️ First file for naming:", firstFileForNaming);
+
 
               const formData = new FormData();
               formData.append("adName", computeAdName(firstFileForNaming || files[0] || driveFiles[0], adValues.dateType, globalIterationIndex));
@@ -1738,7 +1745,18 @@ export default function AdCreationForm({
               group.forEach(fileId => {
                 const file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
                 if (file && !file.isDrive && file.size <= S3_UPLOAD_THRESHOLD) {
+
+                  console.log(`  ✅ Found local file:`, {
+                    name: file.name,
+                    originalname: file.originalname,
+                    type: file.type,
+                    size: file.size,
+                    hasName: !!file.name
+                  });
+
                   formData.append("mediaFiles", file);
+                  console.log(`  📤 Appended local file to formData: ${file.name}`);
+
                   if (file.type.startsWith("video/")) {
                     groupVideoMetadata.push({
                       fileName: file.name,
@@ -1752,6 +1770,12 @@ export default function AdCreationForm({
               group.forEach(fileId => {
                 const driveFile = smallDriveFiles.find(f => f.id === fileId);
                 if (driveFile) {
+                  console.log(`  ✅ Found drive file:`, {
+                    id: driveFile.id,
+                    name: driveFile.name,
+                    mimeType: driveFile.mimeType
+                  });
+
                   formData.append("driveFiles", JSON.stringify({
                     id: driveFile.id,
                     name: driveFile.name,
@@ -1774,8 +1798,13 @@ export default function AdCreationForm({
                   return (f.name && f.name === fileId) || (f.id && f.id === fileId);
                 });
                 if (s3File) {
+                  console.log(`  ✅ Found S3 file:`, {
+                    name: s3File.name,
+                    s3Url: s3File.s3Url,
+                    hasName: !!s3File.name
+                  });
                   formData.append("s3VideoUrls", s3File.s3Url);
-                  formData.append("s3VideoName", s3File.name); // <<< ADD THIS LINE
+                  formData.append("s3VideoNames", s3File.name); // <<< ADD THIS LINE
                   console.log("s3VideoNames", s3File.name);
                   if (s3File.mimeType?.startsWith("video/") || s3File.type?.startsWith("video/")) {
                     groupVideoMetadata.push({
