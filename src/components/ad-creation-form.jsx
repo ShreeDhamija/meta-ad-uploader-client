@@ -1664,8 +1664,8 @@ export default function AdCreationForm({
           //add large file URLs
           [...s3Results, ...s3DriveResults].forEach((s3File) => {
             formData.append("s3VideoUrls", s3File.s3Url);
-            formData.append("s3VideoName", s3File.name); // <<< ADD THIS LINE
-            console.log("s3VideoName", s3File.name);
+            formData.append("s3VideoNames", s3File.name); // <<< ADD THIS LINE
+
           });
 
 
@@ -1776,7 +1776,7 @@ export default function AdCreationForm({
                 if (s3File) {
                   formData.append("s3VideoUrls", s3File.s3Url);
                   formData.append("s3VideoName", s3File.name); // <<< ADD THIS LINE
-                  console.log("s3VideoName", s3File.name);
+                  console.log("s3VideoNames", s3File.name);
                   if (s3File.mimeType?.startsWith("video/") || s3File.type?.startsWith("video/")) {
                     groupVideoMetadata.push({
                       s3Url: s3File.s3Url,
