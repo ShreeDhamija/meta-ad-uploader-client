@@ -223,49 +223,24 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
 
-    const excludePrimaryTexts = isLoadingMore ?
-      [...previouslyFetched.primaryTexts, ...(recentAds.primaryTexts || [])] : [];
-    const excludeHeadlines = isLoadingMore ?
-      [...previouslyFetched.headlines, ...(recentAds.headlines || [])] : [];
-
-    const params = new URLSearchParams({
-      adAccountId: selectedAdAccount,
-      ...(excludePrimaryTexts.length > 0 && { excludePrimaryTexts: JSON.stringify(excludePrimaryTexts) }),
-      ...(excludeHeadlines.length > 0 && { excludeHeadlines: JSON.stringify(excludeHeadlines) })
-    });
-
     setIsFetchingCopy(true);
-    fetch(`${API_BASE_URL}/auth/fetch-recent-copy?${params}`, {
+    fetch(`${API_BASE_URL}/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
       credentials: "include"
     })
       .then(res => res.json())
       .then(data => {
-        console.log('=== FRONTEND RECEIVED ===');
-        console.log('New primary texts:', data.primaryTexts?.length || 0);
-        console.log('New headlines:', data.headlines?.length || 0);
-        console.log('IsLoadingMore:', isLoadingMore);
-
         if (data.primaryTexts || data.headlines) {
-          if (isLoadingMore) {
-            // Append to existing results
-            setRecentAds(prev => ({
-              primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
-              headlines: [...(prev.headlines || []), ...(data.headlines || [])]
-            }));
-          } else {
-            // Replace results (initial load)
-            setRecentAds({
-              primaryTexts: data.primaryTexts || [],
-              headlines: data.headlines || []
-            });
-            setPreviouslyFetched({ primaryTexts: [], headlines: [] });
-          }
+          // Initial load - replace results
+          setRecentAds({
+            primaryTexts: data.primaryTexts || [],
+            headlines: data.headlines || []
+          });
 
-          // Update previously fetched tracker
-          setPreviouslyFetched(prev => ({
-            primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
-            headlines: [...prev.headlines, ...(data.headlines || [])]
-          }));
+          // Reset previously fetched tracker
+          setPreviouslyFetched({
+            primaryTexts: data.primaryTexts || [],
+            headlines: data.headlines || []
+          });
         } else {
           throw new Error("No data");
         }
@@ -276,9 +251,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       })
       .finally(() => {
         setIsFetchingCopy(false);
-        setIsLoadingMore(false);
       });
-  }, [showImportPopup, selectedAdAccount, isLoadingMore]);
+  }, [showImportPopup, selectedAdAccount]); // ← Clean dependencies
 
 
   useEffect(() => {
@@ -327,9 +301,44 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     }
   }, [selectedName, templates, editingTemplate])
 
-  const handleLoadMore = useCallback(() => {
+  const handleLoadMore = useCallback(async () => {
+    const excludePrimaryTexts = [...previouslyFetched.primaryTexts, ...(recentAds.primaryTexts || [])];
+    const excludeHeadlines = [...previouslyFetched.headlines, ...(recentAds.headlines || [])];
+
+    const params = new URLSearchParams({
+      adAccountId: selectedAdAccount,
+      ...(excludePrimaryTexts.length > 0 && { excludePrimaryTexts: JSON.stringify(excludePrimaryTexts) }),
+      ...(excludeHeadlines.length > 0 && { excludeHeadlines: JSON.stringify(excludeHeadlines) })
+    });
+
     setIsLoadingMore(true);
-  }, []);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy?${params}`, {
+        credentials: "include"
+      });
+      const data = await response.json();
+
+      console.log('=== LOAD MORE RESULT ===', data);
+
+      // Append to existing results
+      setRecentAds(prev => ({
+        primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
+        headlines: [...(prev.headlines || []), ...(data.headlines || [])]
+      }));
+
+      // Update previously fetched tracker
+      setPreviouslyFetched(prev => ({
+        primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
+        headlines: [...prev.headlines, ...(data.headlines || [])]
+      }));
+
+    } catch (err) {
+      console.error("Error loading more:", err);
+      toast.error("Failed to load more copy");
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [selectedAdAccount, recentAds, previouslyFetched]);
 
 
   const handleAdd = useCallback((setter, state) => {
