@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { toast } from "sonner"
-import { CirclePlus, CircleCheck, Trash2, Download, X } from 'lucide-react'
+import { CirclePlus, CircleCheck, Trash2, Download, X, Loader } from 'lucide-react'
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import TextareaAutosize from 'react-textarea-autosize'
@@ -193,33 +193,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
 
 
-
-  // useEffect(() => {
-  //   if (!showImportPopup || !selectedAdAccount) return;
-
-  //   setIsFetchingCopy(true)
-  //   fetch(`${API_BASE_URL}/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
-  //     credentials: "include"
-  //   })
-  //     .then(res => res.json())
-  //     .then(data => {
-  //       if (data.primaryTexts || data.headlines) {
-  //         setRecentAds({
-  //           primaryTexts: data.primaryTexts || [],
-  //           headlines: data.headlines || []
-  //         });
-  //       } else {
-  //         throw new Error("No data");
-  //       }
-  //     })
-  //     .catch(err => {
-  //       console.error("Error fetching ad copy:", err);
-  //       toast.error("Failed to load recent ad copy");
-  //     })
-  //     .finally(() => setIsFetchingCopy(false))
-  // }, [showImportPopup]);
-
-
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
 
@@ -318,25 +291,36 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       });
       const data = await response.json();
 
-      console.log('=== LOAD MORE RESULT ===', data);
+      // Check if any new copy was found
+      const newPrimaryCount = data.primaryTexts?.length || 0;
+      const newHeadlineCount = data.headlines?.length || 0;
+      const hasNewCopy = newPrimaryCount > 0 || newHeadlineCount > 0;
 
-      // Append to existing results
-      setRecentAds(prev => ({
-        primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
-        headlines: [...(prev.headlines || []), ...(data.headlines || [])]
-      }));
+      if (hasNewCopy) {
+        // Append to existing results
+        setRecentAds(prev => ({
+          primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
+          headlines: [...(prev.headlines || []), ...(data.headlines || [])]
+        }));
 
-      // Update previously fetched tracker
-      setPreviouslyFetched(prev => ({
-        primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
-        headlines: [...prev.headlines, ...(data.headlines || [])]
-      }));
+        // Update previously fetched tracker
+        setPreviouslyFetched(prev => ({
+          primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
+          headlines: [...prev.headlines, ...(data.headlines || [])]
+        }));
+      } else {
+        // Add this single line
+        toast.info("No more unique copy found");
+      }
 
     } catch (err) {
       console.error("Error loading more:", err);
       toast.error("Failed to load more copy");
+
+
     } finally {
       setIsLoadingMore(false);
+
     }
   }, [selectedAdAccount, recentAds, previouslyFetched]);
 
@@ -841,11 +825,18 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     </TabsContent>
                     <div className="text-center pt-4 mt-4">
                       <Button
-                        className="bg-gray-800 text-white hover:bg-gray-900 rounded-xl w-full"
+                        className="bg-gray-600 text-white hover:bg-gray-700 rounded-xl"
                         onClick={handleLoadMore}
                         disabled={isFetchingCopy || isLoadingMore}
                       >
-                        {isFetchingCopy || isLoadingMore ? 'Loading More Copy...' : 'Load More Copy'}
+                        {isFetchingCopy || isLoadingMore ? (
+                          <>
+                            <Loader className="w-4 h-4 animate-spin mr-2" />
+                            Loading More Copy...
+                          </>
+                        ) : (
+                          'Load More Copy'
+                        )}
                       </Button>
                     </div>
                   </Tabs>
