@@ -240,6 +240,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     })
       .then(res => res.json())
       .then(data => {
+        console.log('=== FRONTEND RECEIVED ===');
+        console.log('New primary texts:', data.primaryTexts?.length || 0);
+        console.log('New headlines:', data.headlines?.length || 0);
+        console.log('IsLoadingMore:', isLoadingMore);
+
         if (data.primaryTexts || data.headlines) {
           if (isLoadingMore) {
             // Append to existing results
@@ -769,7 +774,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, primaryTexts)
-                                    ? 'bg-white text-black cursor-not-allowed border border-gray-500 !shadow-none'
+                                    ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                   onClick={textExistsInTemplate(text, primaryTexts) ? undefined : createPrimaryTextImportHandler(text)}
@@ -803,7 +808,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, headlines)
-                                    ? 'bg-white text-black cursor-not-allowed border border-gray-500 !shadow-none'
+                                    ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                   onClick={textExistsInTemplate(text, headlines) ? undefined : createHeadlineImportHandler(text)}
@@ -825,7 +830,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </div>
                       )}
                     </TabsContent>
-                    <div className="text-center pt-4 border-t border-gray-200 mt-4">
+                    <div className="text-center pt-4 mt-4">
                       <Button
                         className="bg-gray-800 text-white hover:bg-gray-900 rounded-xl w-full"
                         onClick={handleLoadMore}
