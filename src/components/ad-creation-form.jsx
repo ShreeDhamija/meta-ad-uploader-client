@@ -749,11 +749,6 @@ export default function AdCreationForm({
   //   setAdName(adName);
   // }, [adValues, adOrder, selectedItems]); // Remove customTextValue, add adValues
 
-  useEffect(() => {
-    const adName = computeAdNameFromFormula(null);
-    setAdName(adName);
-  }, [adNameFormulaV2, computeAdNameFromFormula]);
-
 
 
 
@@ -1233,6 +1228,11 @@ export default function AdCreationForm({
     return adName || "Ad Generated Through Blip";
   }, [adNameFormulaV2]);
 
+
+  useEffect(() => {
+    const adName = computeAdNameFromFormula(null);
+    setAdName(adName);
+  }, [adNameFormulaV2, computeAdNameFromFormula]);
 
 
 
