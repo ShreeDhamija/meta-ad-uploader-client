@@ -182,7 +182,7 @@ export default function ReorderAdNameParts({
           placeholder="Enter ad name formula."
           className={cn(
             "w-full bg-white rounded-xl",
-            variant === "home" && "border border-gray-500"
+            variant === "home" && "border border-gray-400"
           )}
         />
 
@@ -196,7 +196,7 @@ export default function ReorderAdNameParts({
           >
             <Command ref={commandInputRef} className="rounded-xl border shadow-md bg-white focus-visible:outline-none focus-visible:ring-0">
               <CommandList>
-                <CommandGroup heading="Insert Variable">
+                <CommandGroup heading="Pick Variable">
                   {AVAILABLE_VARIABLES.map((variable) => (
                     <CommandItem
                       key={variable.id}
