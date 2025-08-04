@@ -28,6 +28,36 @@ export default function ReorderAdNameParts({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 }) // Add this
   const inputRef = useRef(null)
 
+
+  const getCursorPosition = useCallback((input, cursorIndex) => {
+    // Create a temporary span to measure text width
+    const span = document.createElement('span')
+    span.style.font = window.getComputedStyle(input).font
+    span.style.visibility = 'hidden'
+    span.style.position = 'absolute'
+    span.style.whiteSpace = 'pre'
+
+    // Get text up to cursor position
+    const textBeforeCursor = inputValue.substring(0, cursorIndex)
+    span.textContent = textBeforeCursor
+
+    document.body.appendChild(span)
+    const textWidth = span.offsetWidth
+    document.body.removeChild(span)
+
+    // Get input's position and padding
+    const inputRect = input.getBoundingClientRect()
+    const inputStyles = window.getComputedStyle(input)
+    const paddingLeft = parseInt(inputStyles.paddingLeft)
+
+    return {
+      top: inputRect.bottom + window.scrollY + 4, // 4px gap
+      left: inputRect.left + window.scrollX + paddingLeft + textWidth
+    }
+  }, [inputValue])
+
+
+
   const handleInputChange = useCallback((e) => {
     const newValue = e.target.value
     const cursorPosition = e.target.selectionStart
@@ -101,32 +131,7 @@ export default function ReorderAdNameParts({
     setShowDropdown(false)
   }, [inputValue])
 
-  const getCursorPosition = useCallback((input, cursorIndex) => {
-    // Create a temporary span to measure text width
-    const span = document.createElement('span')
-    span.style.font = window.getComputedStyle(input).font
-    span.style.visibility = 'hidden'
-    span.style.position = 'absolute'
-    span.style.whiteSpace = 'pre'
 
-    // Get text up to cursor position
-    const textBeforeCursor = inputValue.substring(0, cursorIndex)
-    span.textContent = textBeforeCursor
-
-    document.body.appendChild(span)
-    const textWidth = span.offsetWidth
-    document.body.removeChild(span)
-
-    // Get input's position and padding
-    const inputRect = input.getBoundingClientRect()
-    const inputStyles = window.getComputedStyle(input)
-    const paddingLeft = parseInt(inputStyles.paddingLeft)
-
-    return {
-      top: inputRect.bottom + window.scrollY + 4, // 4px gap
-      left: inputRect.left + window.scrollX + paddingLeft + textWidth
-    }
-  }, [inputValue])
 
 
   return (
