@@ -389,9 +389,24 @@ export default function AdCreationForm({
   const captureFormDataAsJob = () => {
 
     let adCount = 0;
-    if (isCarouselAd) {
-      // Carousel is always 1 ad, regardless of files
-      adCount = selectedAdSets.length || 1; // 1 per selected adset
+
+    const isDynamicAdSet = () => {
+      if (duplicateAdSet) {
+        // For duplicated adset, check the original adset's dynamic flag
+        const originalAdset = adSets.find((a) => a.id === duplicateAdSet);
+        return originalAdset?.is_dynamic_creative || false;
+      } else {
+        // Check if any selected adsets are dynamic
+        return selectedAdSets.some((adsetId) => {
+          const adset = adSets.find((a) => a.id === adsetId);
+          return adset?.is_dynamic_creative || false;
+        });
+      }
+    };
+
+    if (isCarouselAd || isDynamicAdSet()) {
+      // Carousel and dynamic ads are always 1 ad per selected adset
+      adCount = selectedAdSets.length || 1;
     } else if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
       const groupedFileIds = new Set(fileGroups.flat());
       const ungroupedFiles = [...files, ...driveFiles].filter(f =>
