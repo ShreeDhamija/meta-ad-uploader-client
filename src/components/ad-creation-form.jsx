@@ -21,7 +21,7 @@ import ShopDestinationSelector from "@/components/shop-destination-selector"
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
-import InstagramIcon from '@/assets/icons/plus.svg?react';
+import InstagramIcon from '@/assets/icons/ig.svg?react';
 import LabelIcon from '@/assets/icons/label.svg?react';
 import TemplateIcon from '@/assets/icons/file.svg?react';
 import LinkIcon from '@/assets/icons/link.svg?react';
@@ -2188,7 +2188,7 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">
-                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || 'New Adset'}
+                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || ' A New Adset'}
                       </p>
                       <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
 
