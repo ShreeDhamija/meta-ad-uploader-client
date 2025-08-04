@@ -123,7 +123,10 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       defaultCTA !== initialSettings.defaultCTA ||
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
-      JSON.stringify(adNameFormula) !== JSON.stringify(initialSettings.adNameFormula)
+      // JSON.stringify(adNameFormula) !== JSON.stringify(initialSettings.adNameFormula)
+      JSON.stringify(adNameFormulaV2) !== JSON.stringify(initialSettings.adNameFormulaV2)  // Add this line
+
+
     );
   }, [
     selectedPage,
@@ -133,6 +136,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     utmPairs,
     enhancements,
     adNameFormula,
+    adNameFormulaV2,  // Add to dependencies
     initialSettings,
     selectedAdAccount,
     areUtmPairsEqual
@@ -229,7 +233,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       defaultCTA,
       defaultUTMs: utmPairs,
       creativeEnhancements: enhancements,
-      adNameFormula: reorganizedFormula
+      adNameFormula: reorganizedFormula,
+      adNameFormulaV2: adNameFormulaV2  // Add this line
+
     };
 
     try {
@@ -248,7 +254,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         defaultCTA,
         defaultUTMs: utmPairs,
         creativeEnhancements: enhancements,
-        adNameFormula: reorganizedFormula
+        adNameFormula: reorganizedFormula,
+        adNameFormulaV2: adNameFormulaV2  // Add this line too
+
       };
 
       setInitialSettings(newInitialSettings);
@@ -264,7 +272,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     links,
     defaultCTA,
     utmPairs,
-    enhancements
+    enhancements,
+    adNameFormulaV2  // Add to dependencies
+
   ]);
 
   // Effect for floating button animation

@@ -76,6 +76,20 @@ export default function ReorderAdNameParts({
 
   const handleKeyDown = useCallback((e) => {
     // Handle smart delete
+
+    if (showDropdown) {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault() // Prevent cursor movement in input
+        // Let Command component handle the navigation
+        return
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setShowDropdown(false)
+        return
+      }
+    }
+
     if (e.key === 'Delete' || e.key === 'Backspace') {
       const cursorPosition = e.target.selectionStart
       const textBeforeCursor = inputValue.substring(0, cursorPosition)
@@ -154,14 +168,14 @@ export default function ReorderAdNameParts({
               left: `${dropdownPosition.left}px`
             }}
           >
-            <Command className="rounded-lg border shadow-md bg-white">
+            <Command className="rounded-xl border shadow-md bg-white">
               <CommandList>
                 <CommandGroup heading="Insert Variable">
                   {AVAILABLE_VARIABLES.map((variable) => (
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer"
+                      className="cursor-pointer rounded-xl mx-1"
                     >
                       {variable.label}
                     </CommandItem>
