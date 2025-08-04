@@ -333,8 +333,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   // Effect for loading initial settings
   useEffect(() => {
     if (!selectedAdAccount || !adSettings) return;
-    console.log("adSettings received:", adSettings);
-    console.log("adSettings.adNameFormulaV2:", adSettings.adNameFormulaV2);
+
     const initial = calculateInitialSettings(adSettings);
     console.log("adSettings.adNameFormulaV2:", adSettings.adNameFormulaV2);
 

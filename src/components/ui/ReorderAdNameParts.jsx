@@ -28,6 +28,10 @@ export default function ReorderAdNameParts({
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 }) // Add this
   const inputRef = useRef(null)
 
+  // Sync with parent's formulaInput prop
+  useEffect(() => {
+    setInputValue(formulaInput)
+  }, [formulaInput])
 
   const getCursorPosition = useCallback((input, cursorIndex) => {
     // Create a temporary span to measure text width
