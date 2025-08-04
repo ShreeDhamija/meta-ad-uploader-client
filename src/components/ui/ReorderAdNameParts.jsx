@@ -182,7 +182,7 @@ export default function ReorderAdNameParts({
           placeholder="Enter ad name formula... Type / to add variables"
           className={cn(
             "w-full bg-white rounded-xl",
-            variant === "home" && "border border-gray-300"
+            variant === "home" && "border border-gray-500"
           )}
         />
 
@@ -201,7 +201,8 @@ export default function ReorderAdNameParts({
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer rounded-lg mx-1 focus:outline-none focus:ring-0 data-[selected=true]:outline-none data-[selected=true]:ring-0"
+                      className="cursor-pointer rounded-lg mx-1 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 aria-selected:outline-none aria-selected:ring-0"
+                      onMouseDown={(e) => e.preventDefault()} // Prevent focus on click
                     >
                       {variable.label}
                     </CommandItem>

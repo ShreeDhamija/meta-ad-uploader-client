@@ -2470,7 +2470,7 @@ export default function AdCreationForm({
                     Setup Ad Name Formula
                   </Button>
                 )} */}
-                {selectedAdAccount && !adNameFormulaV2?.rawInput && (
+                {selectedAdAccount && !adAccountSettings?.adNameFormulaV2?.rawInput && (
                   <Button
                     type="button"
                     size="sm"
@@ -2500,8 +2500,8 @@ export default function AdCreationForm({
                 formulaInput={adNameFormulaV2?.rawInput || ""}
                 onFormulaChange={(newRawInput) => {
                   setAdNameFormulaV2({ rawInput: newRawInput });
-                  variant = "home"
                 }}
+                variant="home"
               />
               <div className="mt-1">
                 <Label className="text-xs text-gray-500">
