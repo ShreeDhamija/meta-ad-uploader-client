@@ -27,6 +27,7 @@ export default function ReorderAdNameParts({
   const [showDropdown, setShowDropdown] = useState(false) // Add this
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 }) // Add this
   const inputRef = useRef(null)
+  const commandInputRef = useRef(null)
 
   // Sync with parent's formulaInput prop
   useEffect(() => {
@@ -55,8 +56,8 @@ export default function ReorderAdNameParts({
     const paddingLeft = parseInt(inputStyles.paddingLeft)
 
     return {
-      top: inputRect.bottom + window.scrollY + 4, // 4px gap
-      left: inputRect.left + window.scrollX + paddingLeft + textWidth
+      top: input.offsetHeight + 4, // Position below the input, plus 4px gap
+      left: paddingLeft + textWidth, // Position relative to the input's left edge
     }
   }, [inputValue])
 
@@ -77,6 +78,9 @@ export default function ReorderAdNameParts({
       const position = getCursorPosition(e.target, cursorPosition)
       setDropdownPosition(position)
       setShowDropdown(true)
+      setTimeout(() => {
+        commandInputRef.current?.focus()
+      }, 0)
     } else {
       setShowDropdown(false)
     }
@@ -92,6 +96,9 @@ export default function ReorderAdNameParts({
       if (e.key === 'Escape') {
         e.preventDefault()
         setShowDropdown(false)
+        setTimeout(() => {
+          inputRef.current?.focus()
+        }, 0)
         return
       }
     }
@@ -178,20 +185,20 @@ export default function ReorderAdNameParts({
 
         {showDropdown && (
           <div
-            className="fixed z-50 w-64"
+            className="absolute z-50 w-64"
             style={{
               top: `${dropdownPosition.top}px`,
               left: `${dropdownPosition.left}px`
             }}
           >
-            <Command className="rounded-xl border shadow-md bg-white">
+            <Command ref={commandInputRef} className="rounded-xl border shadow-md bg-white">
               <CommandList>
                 <CommandGroup heading="Insert Variable">
                   {AVAILABLE_VARIABLES.map((variable) => (
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer rounded-xl mx-1"
+                      className="cursor-pointer rounded-lg mx-1"
                     >
                       {variable.label}
                     </CommandItem>
