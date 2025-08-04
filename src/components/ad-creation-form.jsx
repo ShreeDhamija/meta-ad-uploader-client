@@ -1570,7 +1570,8 @@ export default function AdCreationForm({
         nonDynamicAdSetIds.forEach((adSetId) => {
           // console.log("🎠 Creating carousel for adSetId:", adSetId);
           const formData = new FormData();
-          formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
+          // formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0]));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -1676,7 +1677,8 @@ export default function AdCreationForm({
         // For each dynamic adset, create ONE request with ALL media files
         dynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
-          formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
+          // formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0]));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -1755,10 +1757,7 @@ export default function AdCreationForm({
           // NEW: Check if placement customization is enabled
           if (enablePlacementCustomization && fileGroups.length > 0) {
             // Process ONLY grouped files
-            console.log("🎯 Starting placement customization with groups:", fileGroups);
-            console.log("📁 Available files:", files.map(f => ({ name: f.name, isDrive: f.isDrive, size: f.size })));
-            console.log("🌐 Available smallDriveFiles:", smallDriveFiles.map(f => ({ id: f.id, name: f.name })));
-            console.log("☁️ Available s3Results:", s3Results.map(f => ({ name: f.name, s3Url: f.s3Url })));
+
 
             fileGroups.forEach((group, groupIndex) => {
               const firstFileId = group[0];
@@ -1769,11 +1768,10 @@ export default function AdCreationForm({
                 smallDriveFiles.find(f => f.id === firstFileId) ||
                 [...s3Results, ...s3DriveResults].find(f => f.name === firstFileId);
 
-              console.log("🏷️ First file for naming:", firstFileForNaming);
-
 
               const formData = new FormData();
-              formData.append("adName", computeAdName(firstFileForNaming || files[0] || driveFiles[0], adValues.dateType, globalIterationIndex));
+              // formData.append("adName", computeAdName(firstFileForNaming || files[0] || driveFiles[0], adValues.dateType, globalIterationIndex));
+              formData.append("adName", computeAdNameFromFormula(firstFileForNaming || files[0] || driveFiles[0], globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -1896,7 +1894,8 @@ export default function AdCreationForm({
             files.forEach((file, index) => {
               if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(file.name)) return; // Skip large files (already handled via S3)
               const formData = new FormData();
-              formData.append("adName", computeAdName(file, adValues.dateType, globalIterationIndex));
+              // formData.append("adName", computeAdName(file, adValues.dateType, globalIterationIndex));
+              formData.append("adName", computeAdNameFromFormula(file, globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -1931,7 +1930,8 @@ export default function AdCreationForm({
             smallDriveFiles.forEach((driveFile, index) => {
               if (groupedFileIds.has(driveFile.id)) return;
               const formData = new FormData();
-              formData.append("adName", computeAdName(driveFile, adValues.dateType, globalIterationIndex));
+              // formData.append("adName", computeAdName(driveFile, adValues.dateType, globalIterationIndex));
+              formData.append("adName", computeAdNameFromFormula(driveFile, globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -1970,7 +1970,8 @@ export default function AdCreationForm({
               }
               console.log("s3VideoName", s3File.name);
               const formData = new FormData();
-              formData.append("adName", computeAdName(s3File, adValues.dateType, globalIterationIndex));
+              // formData.append("adName", computeAdName(s3File, adValues.dateType, globalIterationIndex));
+              formData.append("adName", computeAdNameFromFormula(s3File, globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));

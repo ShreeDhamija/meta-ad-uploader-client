@@ -198,7 +198,7 @@ export default function ReorderAdNameParts({
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer rounded-lg mx-1 focus:outline-none focus:ring-0 focus:border focus:border-gray-300"
+                      className="cursor-pointer rounded-lg mx-1 !focus:outline-none !focus:ring-0"
                     >
                       {variable.label}
                     </CommandItem>
