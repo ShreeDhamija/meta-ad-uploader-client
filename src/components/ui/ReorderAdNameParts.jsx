@@ -40,6 +40,36 @@ export default function ReorderAdNameParts({
     }
   }, []) // No dependencies needed for this logic
 
+
+  const handleVariableSelect = useCallback((variable) => {
+    const input = document.querySelector('input') // We'll get ref in next step if needed
+    const cursorPosition = input.selectionStart
+
+    // Find the last "/" before cursor position
+    const textBeforeCursor = inputValue.substring(0, cursorPosition)
+    const lastSlashIndex = textBeforeCursor.lastIndexOf('/')
+
+    if (lastSlashIndex !== -1) {
+      // Replace "/" with the variable wrapped in {{}}
+      const beforeSlash = inputValue.substring(0, lastSlashIndex)
+      const afterCursor = inputValue.substring(cursorPosition)
+      const variableText = `{{${variable.label}}}`
+
+      const newValue = beforeSlash + variableText + afterCursor
+      setInputValue(newValue)
+
+      // Position cursor after the inserted variable
+      setTimeout(() => {
+        const newCursorPos = lastSlashIndex + variableText.length
+        input.setSelectionRange(newCursorPos, newCursorPos)
+        input.focus()
+      }, 0)
+    }
+
+    setShowDropdown(false)
+  }, [inputValue])
+
+
   return (
     <div className="space-y-3">
       <div className="relative">
@@ -47,7 +77,7 @@ export default function ReorderAdNameParts({
           value={inputValue}
           onChange={handleInputChange}
           placeholder="Enter ad name formula... Type / to add variables"
-          className="w-full"
+          className="w-full bg-white rounded-lg"
         />
 
         {showDropdown && (
@@ -58,11 +88,8 @@ export default function ReorderAdNameParts({
                 <button
                   key={variable.id}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-lg"
-                  onClick={() => {
-                    // We'll implement this in next chunk
-                    console.log('Selected:', variable.label)
-                    setShowDropdown(false)
-                  }}
+                  onClick={() => handleVariableSelect(variable)}
+
                 >
                   {variable.label}
                 </button>
