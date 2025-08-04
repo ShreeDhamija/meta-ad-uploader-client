@@ -194,14 +194,14 @@ export default function ReorderAdNameParts({
               left: `${dropdownPosition.left}px`
             }}
           >
-            <Command ref={commandInputRef} className="rounded-xl border shadow-md bg-white">
+            <Command ref={commandInputRef} className="rounded-xl border shadow-md bg-white focus-visible:outline-none focus-visible:ring-0">
               <CommandList>
                 <CommandGroup heading="Insert Variable">
                   {AVAILABLE_VARIABLES.map((variable) => (
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer rounded-lg mx-1 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 aria-selected:outline-none aria-selected:ring-0"
+                      className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
                       onMouseDown={(e) => e.preventDefault()} // Prevent focus on click
                     >
                       {variable.label}

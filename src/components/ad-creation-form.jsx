@@ -1772,6 +1772,7 @@ export default function AdCreationForm({
               const formData = new FormData();
               // formData.append("adName", computeAdName(firstFileForNaming || files[0] || driveFiles[0], adValues.dateType, globalIterationIndex));
               formData.append("adName", computeAdNameFromFormula(firstFileForNaming || files[0] || driveFiles[0], globalIterationIndex));
+              // console.log("video name sent", computeAdNameFromFormula(firstFileForNaming || files[0] || driveFiles[0], globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
