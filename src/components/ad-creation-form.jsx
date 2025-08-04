@@ -2458,7 +2458,19 @@ export default function AdCreationForm({
                   <LabelIcon className="w-4 h-4" />
                   Ad Name
                 </div>
-                {selectedAdAccount && (!adAccountSettings?.adNameFormula || Object.keys(adAccountSettings.adNameFormula).length === 0) && (
+                {/* {selectedAdAccount && (!adAccountSettings?.adNameFormula || Object.keys(adAccountSettings.adNameFormula).length === 0) && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
+                  >
+                    <CogIcon className="w-3 h-3 mr-1 text-white" />
+                    Setup Ad Name Formula
+                  </Button>
+                )} */}
+                {selectedAdAccount && !adNameFormulaV2?.rawInput && (
                   <Button
                     type="button"
                     size="sm"
@@ -2474,9 +2486,6 @@ export default function AdCreationForm({
               <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
                 Generate an ad name by selecting and re-ordering the properties below
               </Label>
-
-              <div className="flex flex-wrap items-center gap-2">
-              </div>
               {/* <ReorderAdNameParts
                 order={adOrder}
                 setOrder={setAdOrder}
@@ -2491,9 +2500,18 @@ export default function AdCreationForm({
                 formulaInput={adNameFormulaV2?.rawInput || ""}
                 onFormulaChange={(newRawInput) => {
                   setAdNameFormulaV2({ rawInput: newRawInput });
+                  variant = "home"
                 }}
-
               />
+              <div className="mt-1">
+                <Label className="text-xs text-gray-500">
+                  Ad Name Preview: {
+                    (files.length > 0 || driveFiles.length > 0)
+                      ? computeAdNameFromFormula(files[0] || driveFiles[0])
+                      : "Upload a file to see example"
+                  }
+                </Label>
+              </div>
             </div>
 
             <div className="space-y-3">

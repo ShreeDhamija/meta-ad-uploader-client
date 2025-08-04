@@ -180,7 +180,10 @@ export default function ReorderAdNameParts({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}  // This was missing!
           placeholder="Enter ad name formula... Type / to add variables"
-          className="w-full bg-white rounded-xl"
+          className={cn(
+            "w-full bg-white rounded-xl",
+            variant === "home" && "border border-gray-300"
+          )}
         />
 
         {showDropdown && (
@@ -198,7 +201,7 @@ export default function ReorderAdNameParts({
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer rounded-lg mx-1 !focus:outline-none !focus:ring-0"
+                      className="cursor-pointer rounded-lg mx-1 focus:outline-none focus:ring-0 data-[selected=true]:outline-none data-[selected=true]:ring-0"
                     >
                       {variable.label}
                     </CommandItem>
