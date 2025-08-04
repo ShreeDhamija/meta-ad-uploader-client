@@ -72,7 +72,8 @@ export default function ReorderAdNameParts({
     } else {
       setShowDropdown(false)
     }
-  }, [getCursorPosition])
+  }, [getCursorPosition, onFormulaChange]) // Add onFormulaChange to dependencies
+
 
   const handleKeyDown = useCallback((e) => {
     // Handle smart delete
@@ -143,7 +144,8 @@ export default function ReorderAdNameParts({
     }
 
     setShowDropdown(false)
-  }, [inputValue])
+  }, [inputValue, onFormulaChange]) // Add onFormulaChange to dependencies
+
 
 
 
