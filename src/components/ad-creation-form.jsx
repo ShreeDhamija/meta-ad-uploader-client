@@ -330,7 +330,9 @@ export default function AdCreationForm({
   fileGroups,
   setFileGroups,
   adAccountSettings,
-  refreshAdSets
+  refreshAdSets,
+  adNameFormulaV2,
+  setAdNameFormulaV2
 }) {
   // Local state
   const navigate = useNavigate()
@@ -742,10 +744,16 @@ export default function AdCreationForm({
   }, [status, isProcessingQueue, currentJob]);
 
 
+  // useEffect(() => {
+  //   const adName = computeAdName(null, adValues.dateType);
+  //   setAdName(adName);
+  // }, [adValues, adOrder, selectedItems]); // Remove customTextValue, add adValues
+
   useEffect(() => {
-    const adName = computeAdName(null, adValues.dateType);
+    const adName = computeAdNameFromFormula(null);
     setAdName(adName);
-  }, [adValues, adOrder, selectedItems]); // Remove customTextValue, add adValues
+  }, [adNameFormulaV2, computeAdNameFromFormula]);
+
 
 
 
@@ -1185,6 +1193,45 @@ export default function AdCreationForm({
     return adName || "Ad Generated Through Blip";
   }, [adOrder, selectedItems, adValues]);
 
+
+
+  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0) => {
+    if (!adNameFormulaV2?.rawInput) {
+      // Fallback to old computation if no V2 formula
+      return computeAdName(file, adValues.dateType, iterationIndex);
+    }
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const monthAbbrev = monthNames[now.getMonth()];
+    const date = String(now.getDate()).padStart(2, "0");
+    const year = now.getFullYear();
+    const monthYear = `${monthAbbrev}${year}`;
+    const monthDayYear = `${monthAbbrev}${date}${year}`;
+
+    let fileName = "file_name";
+    if (file && file.name) {
+      fileName = file.name.replace(/\.[^/.]+$/, "");
+    }
+
+    let fileType = "file_type";
+    if (file) {
+      const mimeType = file.type || file.mimeType || "";
+      if (mimeType.startsWith("image/")) fileType = "static";
+      else if (mimeType.startsWith("video/")) fileType = "video";
+    }
+
+    // Replace variables in the formula
+    let adName = adNameFormulaV2.rawInput
+      .replace(/\{\{File Name\}\}/g, fileName)
+      .replace(/\{\{File Type\}\}/g, fileType)
+      .replace(/\{\{Date \(MonthYYYY\)\}\}/g, monthYear)
+      .replace(/\{\{Date \(MonthDDYYYY\)\}\}/g, monthDayYear)
+      .replace(/\{\{Iteration\}\}/g, String(iterationIndex + 1).padStart(2, "0"));
+
+    return adName || "Ad Generated Through Blip";
+  }, [adNameFormulaV2]);
 
 
 
@@ -2429,7 +2476,7 @@ export default function AdCreationForm({
 
               <div className="flex flex-wrap items-center gap-2">
               </div>
-              <ReorderAdNameParts
+              {/* <ReorderAdNameParts
                 order={adOrder}
                 setOrder={setAdOrder}
                 selectedItems={selectedItems}
@@ -2438,6 +2485,13 @@ export default function AdCreationForm({
                 setValues={setAdValues}
                 onItemToggle={onItemToggle}
                 variant="home"
+              /> */}
+              <ReorderAdNameParts
+                formulaInput={adNameFormulaV2?.rawInput || ""}
+                onFormulaChange={(newRawInput) => {
+                  setAdNameFormulaV2({ rawInput: newRawInput });
+                }}
+
               />
             </div>
 

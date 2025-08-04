@@ -92,6 +92,7 @@ export default function Home() {
 
     // Ad creation form
     const [adName, setAdName] = useState("Default Ad Name With Blip")
+    const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" });
     const [headlines, setHeadlines] = useState([""])
     const [descriptions, setDescriptions] = useState([""])
     const [messages, setMessages] = useState([""])
@@ -167,6 +168,7 @@ export default function Home() {
             setAdOrder(["adType", "dateType", "fileName", "iteration"]);
             setSelectedItems([]); // Set to empty array to uncheck all.
             setAdValues({ dateType: "MonthYYYY", customTexts: {} });
+            setAdNameFormulaV2({ rawInput: "" }); // Reset V2 formula
             return; // Exit the hook early
         }
 
@@ -180,6 +182,7 @@ export default function Home() {
         setLink([linkToUse]);
 
         setCta(adAccountSettings.defaultCTA || "LEARN_MORE");
+        setAdNameFormulaV2(adAccountSettings.adNameFormulaV2 || { rawInput: "" });
 
         // --- Core logic for your request (Scenario 2) ---
         const formula = adAccountSettings.adNameFormula;
@@ -366,6 +369,8 @@ export default function Home() {
                         setFileGroups={setFileGroups}
                         adAccountSettings={adAccountSettings}
                         refreshAdSets={refreshAdSets}
+                        adNameFormulaV2={adNameFormulaV2}
+                        setAdNameFormulaV2={setAdNameFormulaV2}
                     />
                 </div>
 
