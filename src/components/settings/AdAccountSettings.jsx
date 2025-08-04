@@ -166,9 +166,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           customTexts: formula.values?.customTexts || DEFAULT_AD_NAME_FORMULA.values.customTexts
         }
       },
-      adNameFormulaV2: {
-        rawInput: adSettings.adNameFormulaV2?.rawInput || ""
-      }
+      adNameFormulaV2: adSettings.adNameFormulaV2 || { rawInput: "" }
     };
   }, []);
 
