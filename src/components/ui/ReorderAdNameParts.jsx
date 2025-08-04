@@ -10,6 +10,13 @@ import { ChevronsUpDown, GripVertical, Trash2 } from "lucide-react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
+const AVAILABLE_VARIABLES = [
+  { id: 'fileName', label: 'File Name' },
+  { id: 'adType', label: 'File Type' },
+  { id: 'dateMonthYYYY', label: 'Date (MonthYYYY)' },
+  { id: 'dateMonthDDYYYY', label: 'Date (MonthDDYYYY)' },
+  { id: 'iteration', label: 'Iteration' }
+]
 
 export default function ReorderAdNameParts({
   formulaInput = "",
@@ -17,19 +24,53 @@ export default function ReorderAdNameParts({
   variant = "default"
 }) {
   const [inputValue, setInputValue] = useState(formulaInput)
+  const [showDropdown, setShowDropdown] = useState(false) // Add this
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 }) // Add this
 
-  const handleInputChange = (e) => {
-    setInputValue(e.target.value)
-  }
+  const handleInputChange = useCallback((e) => {
+    const newValue = e.target.value
+    const cursorPosition = e.target.selectionStart
+
+    setInputValue(newValue)
+
+    if (newValue[cursorPosition - 1] === '/') {
+      setShowDropdown(true)
+    } else {
+      setShowDropdown(false)
+    }
+  }, []) // No dependencies needed for this logic
 
   return (
     <div className="space-y-3">
-      <Input
-        value={inputValue}
-        onChange={handleInputChange}
-        placeholder="Enter ad name formula... Type / to add variables"
-        className="w-full"
-      />
+      <div className="relative">
+        <Input
+          value={inputValue}
+          onChange={handleInputChange}
+          placeholder="Enter ad name formula... Type / to add variables"
+          className="w-full"
+        />
+
+        {showDropdown && (
+          <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg">
+            <div className="p-2">
+              <div className="text-xs text-gray-500 mb-2">Insert Variable:</div>
+              {AVAILABLE_VARIABLES.map((variable) => (
+                <button
+                  key={variable.id}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-lg"
+                  onClick={() => {
+                    // We'll implement this in next chunk
+                    console.log('Selected:', variable.label)
+                    setShowDropdown(false)
+                  }}
+                >
+                  {variable.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
