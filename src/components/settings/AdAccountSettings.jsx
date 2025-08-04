@@ -475,8 +475,12 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
               </h3>
             </div>
 
-            <p className="text-xs text-black text-gray-500">
-              You can generate an ad name formula by selecting and re-ordering the properties below.
+            <p className="text-xs text-gray-500">
+              Type
+              <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-sm text-black">
+                /
+              </span>
+              to see list of variables you can use. You can also save custom text.
             </p>
 
             {/* <ReorderAdNameParts

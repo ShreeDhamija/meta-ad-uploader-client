@@ -179,7 +179,7 @@ export default function ReorderAdNameParts({
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}  // This was missing!
-          placeholder="Enter ad name formula... Type / to add variables"
+          placeholder="Enter ad name formula."
           className={cn(
             "w-full bg-white rounded-xl",
             variant === "home" && "border border-gray-500"
