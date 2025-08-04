@@ -65,6 +65,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   const [copyTemplates, setCopyTemplates] = useState({})
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
   const [adNameFormula, setAdNameFormula] = useState(DEFAULT_AD_NAME_FORMULA)
+  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
   const [mainButtonVisible, setMainButtonVisible] = useState(false)
@@ -159,7 +160,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           dateType: formula.values?.dateType || DEFAULT_AD_NAME_FORMULA.values.dateType,
           customTexts: formula.values?.customTexts || DEFAULT_AD_NAME_FORMULA.values.customTexts
         }
-      }
+      },
+      adNameFormulaV2: adSettings.adNameFormulaV2 || { rawInput: "" } // Add this line
     };
   }, []);
 
@@ -196,6 +198,13 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         : [...prev.selected, item]
     }));
   }, []);
+
+  const handleFormulaInputChange = useCallback((newRawInput) => {
+    setAdNameFormulaV2(prev => ({
+      ...prev,
+      rawInput: newRawInput
+    }))
+  }, [])
 
   // Optimized save handler
   const handleSave = useCallback(async () => {
@@ -322,6 +331,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     setDefaultCTA(initial.defaultCTA);
     setEnhancements(initial.creativeEnhancements);
     setAdNameFormula(initial.adNameFormula);
+    setAdNameFormulaV2(initial.adNameFormulaV2); // Add this line
     setInitialSettings(initial);
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
 
@@ -456,13 +466,18 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
               You can generate an ad name formula by selecting and re-ordering the properties below.
             </p>
 
-            <ReorderAdNameParts
+            {/* <ReorderAdNameParts
               order={adNameFormula.order}
               setOrder={handleOrderUpdate}
               values={adNameFormula.values}
               setValues={handleValuesUpdate}
               selectedItems={adNameFormula.selected}
               onItemToggle={handleItemToggle}
+              variant="default"
+            /> */}
+            <ReorderAdNameParts
+              formulaInput={adNameFormulaV2?.rawInput || ""}
+              onFormulaChange={handleFormulaInputChange}
               variant="default"
             />
           </div>
