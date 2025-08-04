@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
 import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,7 @@ export default function ReorderAdNameParts({
   const [inputValue, setInputValue] = useState(formulaInput)
   const [showDropdown, setShowDropdown] = useState(false) // Add this
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 }) // Add this
+  const inputRef = useRef(null)
 
   const handleInputChange = useCallback((e) => {
     const newValue = e.target.value
@@ -40,9 +41,10 @@ export default function ReorderAdNameParts({
     }
   }, []) // No dependencies needed for this logic
 
-
   const handleVariableSelect = useCallback((variable) => {
-    const input = document.querySelector('input') // We'll get ref in next step if needed
+    const input = inputRef.current
+    if (!input) return
+
     const cursorPosition = input.selectionStart
 
     // Find the last "/" before cursor position
@@ -50,7 +52,6 @@ export default function ReorderAdNameParts({
     const lastSlashIndex = textBeforeCursor.lastIndexOf('/')
 
     if (lastSlashIndex !== -1) {
-      // Replace "/" with the variable wrapped in {{}}
       const beforeSlash = inputValue.substring(0, lastSlashIndex)
       const afterCursor = inputValue.substring(cursorPosition)
       const variableText = `{{${variable.label}}}`
@@ -74,10 +75,11 @@ export default function ReorderAdNameParts({
     <div className="space-y-3">
       <div className="relative">
         <Input
+          ref={inputRef}
           value={inputValue}
           onChange={handleInputChange}
           placeholder="Enter ad name formula... Type / to add variables"
-          className="w-full bg-white rounded-lg"
+          className="w-full bg-white rounded-xl"
         />
 
         {showDropdown && (
@@ -88,8 +90,8 @@ export default function ReorderAdNameParts({
                 <button
                   key={variable.id}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-lg"
+                  onMouseDown={(e) => e.preventDefault()} // Prevent focus loss
                   onClick={() => handleVariableSelect(variable)}
-
                 >
                   {variable.label}
                 </button>
