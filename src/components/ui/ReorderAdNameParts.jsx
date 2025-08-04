@@ -2,12 +2,12 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
-import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable"
+// import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
+// import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ChevronsUpDown, GripVertical, Trash2 } from "lucide-react"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+// import { ChevronsUpDown, GripVertical, Trash2 } from "lucide-react"
+import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 
 const AVAILABLE_VARIABLES = [
@@ -34,12 +34,43 @@ export default function ReorderAdNameParts({
 
     setInputValue(newValue)
 
+    // Check if user just typed '/'
     if (newValue[cursorPosition - 1] === '/') {
+      const position = getCursorPosition(e.target, cursorPosition)
+      setDropdownPosition(position)
       setShowDropdown(true)
     } else {
       setShowDropdown(false)
     }
-  }, []) // No dependencies needed for this logic
+  }, [getCursorPosition])
+
+  const handleKeyDown = useCallback((e) => {
+    // Handle smart delete
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      const cursorPosition = e.target.selectionStart
+      const textBeforeCursor = inputValue.substring(0, cursorPosition)
+
+      // Check if cursor is right after }}
+      if (textBeforeCursor.endsWith('}}')) {
+        // Find the matching {{ before it
+        const match = textBeforeCursor.match(/\{\{[^}]+\}\}$/);
+        if (match) {
+          e.preventDefault()
+          const beforeVariable = inputValue.substring(0, cursorPosition - match[0].length)
+          const afterCursor = inputValue.substring(cursorPosition)
+          const newValue = beforeVariable + afterCursor
+
+          setInputValue(newValue)
+
+          // Position cursor where variable was deleted
+          setTimeout(() => {
+            const newCursorPos = cursorPosition - match[0].length
+            inputRef.current?.setSelectionRange(newCursorPos, newCursorPos)
+          }, 0)
+        }
+      }
+    }
+  }, [inputValue])
 
   const handleVariableSelect = useCallback((variable) => {
     const input = inputRef.current
@@ -70,6 +101,33 @@ export default function ReorderAdNameParts({
     setShowDropdown(false)
   }, [inputValue])
 
+  const getCursorPosition = useCallback((input, cursorIndex) => {
+    // Create a temporary span to measure text width
+    const span = document.createElement('span')
+    span.style.font = window.getComputedStyle(input).font
+    span.style.visibility = 'hidden'
+    span.style.position = 'absolute'
+    span.style.whiteSpace = 'pre'
+
+    // Get text up to cursor position
+    const textBeforeCursor = inputValue.substring(0, cursorIndex)
+    span.textContent = textBeforeCursor
+
+    document.body.appendChild(span)
+    const textWidth = span.offsetWidth
+    document.body.removeChild(span)
+
+    // Get input's position and padding
+    const inputRect = input.getBoundingClientRect()
+    const inputStyles = window.getComputedStyle(input)
+    const paddingLeft = parseInt(inputStyles.paddingLeft)
+
+    return {
+      top: inputRect.bottom + window.scrollY + 4, // 4px gap
+      left: inputRect.left + window.scrollX + paddingLeft + textWidth
+    }
+  }, [inputValue])
+
 
   return (
     <div className="space-y-3">
@@ -78,25 +136,34 @@ export default function ReorderAdNameParts({
           ref={inputRef}
           value={inputValue}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}  // This was missing!
           placeholder="Enter ad name formula... Type / to add variables"
           className="w-full bg-white rounded-xl"
         />
 
         {showDropdown && (
-          <div className="absolute z-50 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg">
-            <div className="p-2">
-              <div className="text-xs text-gray-500 mb-2">Insert Variable:</div>
-              {AVAILABLE_VARIABLES.map((variable) => (
-                <button
-                  key={variable.id}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-lg"
-                  onMouseDown={(e) => e.preventDefault()} // Prevent focus loss
-                  onClick={() => handleVariableSelect(variable)}
-                >
-                  {variable.label}
-                </button>
-              ))}
-            </div>
+          <div
+            className="fixed z-50 w-64"
+            style={{
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`
+            }}
+          >
+            <Command className="rounded-lg border shadow-md bg-white">
+              <CommandList>
+                <CommandGroup heading="Insert Variable">
+                  {AVAILABLE_VARIABLES.map((variable) => (
+                    <CommandItem
+                      key={variable.id}
+                      onSelect={() => handleVariableSelect(variable)}
+                      className="cursor-pointer"
+                    >
+                      {variable.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
           </div>
         )}
       </div>
