@@ -19,7 +19,8 @@ export default function useAdAccountSettings(adAccountId) {
                     credentials: "include",
                 });
                 const data = await res.json();
-
+                console.log("Raw API response:", data);
+                console.log("adNameFormulaV2 from API:", data.settings?.adNameFormulaV2);
                 // Check if the document exists based on response
                 if (res.status === 404 || !data.settings || data.error === 'Document not found') {
                     setDocumentExists(false);
@@ -71,6 +72,12 @@ export default function useAdAccountSettings(adAccountId) {
 
 
                     });
+
+                    console.log("Settings being set in hook:", {
+                        adNameFormulaV2: s.adNameFormulaV2 || { rawInput: "" }
+                    });
+
+
                 }
             } catch (err) {
                 console.error("Failed to fetch ad account settings:", err);
