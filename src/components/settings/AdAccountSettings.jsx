@@ -124,7 +124,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
       // JSON.stringify(adNameFormula) !== JSON.stringify(initialSettings.adNameFormula)
-      JSON.stringify(adNameFormulaV2) !== JSON.stringify(initialSettings.adNameFormulaV2)  // Add this line
+      adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput
+
 
 
     );
@@ -165,7 +166,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           customTexts: formula.values?.customTexts || DEFAULT_AD_NAME_FORMULA.values.customTexts
         }
       },
-      adNameFormulaV2: adSettings.adNameFormulaV2 || { rawInput: "" } // Add this line
+      adNameFormulaV2: {
+        rawInput: adSettings.adNameFormulaV2?.rawInput || ""
+      }
     };
   }, []);
 
@@ -204,11 +207,10 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   }, []);
 
   const handleFormulaInputChange = useCallback((newRawInput) => {
-    setAdNameFormulaV2(prev => ({
-      ...prev,
+    setAdNameFormulaV2({
       rawInput: newRawInput
-    }))
-  }, [])
+    });
+  }, []);
 
   // Optimized save handler
   const handleSave = useCallback(async () => {
@@ -234,7 +236,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       defaultUTMs: utmPairs,
       creativeEnhancements: enhancements,
       adNameFormula: reorganizedFormula,
-      adNameFormulaV2: adNameFormulaV2  // Add this line
+      adNameFormulaV2: {
+        rawInput: adNameFormulaV2?.rawInput || ""
+      }
 
     };
 

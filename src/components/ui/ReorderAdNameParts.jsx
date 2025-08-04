@@ -64,6 +64,10 @@ export default function ReorderAdNameParts({
 
     setInputValue(newValue)
 
+    if (onFormulaChange) {
+      onFormulaChange(newValue)
+    }
+
     // Check if user just typed '/'
     if (newValue[cursorPosition - 1] === '/') {
       const position = getCursorPosition(e.target, cursorPosition)
@@ -76,12 +80,9 @@ export default function ReorderAdNameParts({
 
 
   const handleKeyDown = useCallback((e) => {
-    // Handle smart delete
-
     if (showDropdown) {
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        e.preventDefault() // Prevent cursor movement in input
-        // Let Command component handle the navigation
+        e.preventDefault()
         return
       }
       if (e.key === 'Escape') {
@@ -95,9 +96,7 @@ export default function ReorderAdNameParts({
       const cursorPosition = e.target.selectionStart
       const textBeforeCursor = inputValue.substring(0, cursorPosition)
 
-      // Check if cursor is right after }}
       if (textBeforeCursor.endsWith('}}')) {
-        // Find the matching {{ before it
         const match = textBeforeCursor.match(/\{\{[^}]+\}\}$/);
         if (match) {
           e.preventDefault()
@@ -107,7 +106,11 @@ export default function ReorderAdNameParts({
 
           setInputValue(newValue)
 
-          // Position cursor where variable was deleted
+          // Update parent state
+          if (onFormulaChange) {
+            onFormulaChange(newValue)
+          }
+
           setTimeout(() => {
             const newCursorPos = cursorPosition - match[0].length
             inputRef.current?.setSelectionRange(newCursorPos, newCursorPos)
@@ -115,7 +118,7 @@ export default function ReorderAdNameParts({
         }
       }
     }
-  }, [inputValue])
+  }, [inputValue, showDropdown, onFormulaChange])
 
   const handleVariableSelect = useCallback((variable) => {
     const input = inputRef.current
@@ -134,6 +137,13 @@ export default function ReorderAdNameParts({
 
       const newValue = beforeSlash + variableText + afterCursor
       setInputValue(newValue)
+
+
+      // Update parent state
+      if (onFormulaChange) {
+        onFormulaChange(newValue)
+      }
+
 
       // Position cursor after the inserted variable
       setTimeout(() => {
