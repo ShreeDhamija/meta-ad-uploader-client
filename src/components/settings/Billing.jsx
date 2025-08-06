@@ -3,8 +3,9 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, AlertCircle } from "lucide-react"
+import { CheckCircle, AlertCircle, Users, Copy, X, CreditCard } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -32,6 +33,11 @@ export default function BillingSettings() {
         isTrialExpired,
         isPaidSubscriber,
     } = useSubscription()
+
+    const [teamMode, setTeamMode] = useState(null) // null | 'joining' | 'creating' | 'member' | 'owner'
+    const [teamName, setTeamName] = useState("")
+    const [inviteCode, setInviteCode] = useState("")
+    const [teamData, setTeamData] = useState(null)
 
     // In Billing.jsx, update the API calls:
     const handleUpgrade = async () => {
@@ -127,6 +133,61 @@ export default function BillingSettings() {
         return <Badge variant="outline">Inactive</Badge>
     }
 
+
+    const handleCreateTeam = async () => {
+        setIsLoading(true)
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/teams/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ teamName })
+            })
+
+            if (response.ok) {
+                const data = await response.json()
+                toast.success("Team created successfully!")
+                setTeamData(data)
+                setTeamMode('owner')
+                setTeamName("")
+                // We'll handle the UI update in the next chunk
+            } else {
+                toast.error("Failed to create team")
+            }
+        } catch (error) {
+            toast.error("Failed to create team")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    const handleJoinTeam = async () => {
+        setIsLoading(true)
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/teams/join`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ inviteCode })
+            })
+
+            if (response.ok) {
+                const data = await response.json()
+                toast.success("Successfully joined team!")
+                setTeamData(data)
+                setTeamMode('member')
+                setInviteCode("")
+                refreshSubscriptionData()
+            } else {
+                toast.error("Invalid invite code")
+            }
+        } catch (error) {
+            toast.error("Failed to join team")
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
     return (
         <div className="space-y-6">
             {/* Merged Plan Status and Actions Card */}
@@ -152,7 +213,7 @@ export default function BillingSettings() {
                         <Button
                             onClick={handleUpgrade}
                             disabled={isLoading}
-                            className="w-full bg-gray-700 hover:bg-gray-800 text-white py-3 rounded-2xl text-base font-medium h-12"
+                            className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
                             size="lg"
                         >
                             <span className="mr-2">🚀</span>
@@ -255,6 +316,103 @@ export default function BillingSettings() {
                             <span>Priority support</span>
                         </div>
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Team Management Card */}
+            <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <Users className="w-5 h-5" />
+                        Team Management
+                    </CardTitle>
+                    <CardDescription className="text-gray-500" text-xs>{"Join or start a team"}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {/* Show buttons when teamMode is null */}
+                    {!teamMode && (
+                        <div className="flex flex-row gap-1">
+                            <Button
+                                onClick={() => setTeamMode('creating')}
+                                className="w-full rounded-xl h-12"
+                            // disabled={isOnTrial()}
+                            >
+                                <CreditCard className="w-4 h-4" />
+                                {isOnTrial() ? "Upgrade to Pro to Start a Team" : "Start a Team"}
+                            </Button>
+                            <Button
+                                onClick={() => setTeamMode('joining')}
+                                variant="outline"
+                                className="w-full rounded-xl h-12"
+                            >
+                                <Users className="w-4 h-4" />
+                                Join a Team
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Show join input when teamMode is 'joining' */}
+                    {teamMode === 'joining' && (
+                        <div className="space-y-3">
+                            <Input
+                                placeholder="Enter team invite code"
+                                className="rounded-xl"
+                                value={inviteCode}
+                                onChange={(e) => setInviteCode(e.target.value)}
+                            />
+                            <div className="flex flex-row gap-1">
+                                <Button
+                                    disabled={!inviteCode || isLoading}
+                                    onClick={handleJoinTeam}
+                                    className="rounded-xl">
+                                    Join Team
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="rounded-xl"
+                                    onClick={() => {
+                                        setTeamMode(null)
+                                        setInviteCode("")
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Show create input when teamMode is 'creating' */}
+                    {teamMode === 'creating' && (
+                        <div className="space-y-3">
+                            <Input
+                                placeholder="Enter team name"
+                                value={teamName}
+                                onChange={(e) => setTeamName(e.target.value)}
+                                className="rounded-xl"
+                            />
+                            <div className="flex flex-row gap-1">
+                                <Button
+                                    disabled={!teamName || isLoading}
+                                    onClick={handleCreateTeam}
+                                    className="rounded-xl"
+                                >
+
+                                    Create Team
+
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="rounded-xl"
+                                    onClick={() => {
+                                        setTeamMode(null)
+                                        setTeamName("")
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
             {/* Cancel Confirmation Dialog */}

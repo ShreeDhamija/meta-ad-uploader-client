@@ -75,14 +75,14 @@ export default function Settings() {
         document.activeElement.blur()
     }
 
-    useEffect(() => {
-        if (!loading && !hasSeenSettingsOnboarding) {
-            setShowSettingsPopup(true)
-        }
-    }, [loading, hasSeenSettingsOnboarding])
+    // useEffect(() => {
+    //     if (!loading && !hasSeenSettingsOnboarding) {
+    //         setShowSettingsPopup(true)
+    //     }
+    // }, [loading, hasSeenSettingsOnboarding])
 
-    if (authLoading) return null // or a loading spinner if you want
-    if (!isLoggedIn) return <Navigate to="/login" />
+    // if (authLoading) return null // or a loading spinner if you want
+    // if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <div className="flex bg-gray-100 min-h-screen">
