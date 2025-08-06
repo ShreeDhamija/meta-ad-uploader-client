@@ -431,6 +431,7 @@ export default function BillingSettings() {
                     )}
 
                     {/* Team created successfully - show invite code */}
+                    {/* Team owner view */}
                     {teamMode === 'owner' && teamData && (
                         <div className="space-y-3">
                             <div
@@ -447,8 +448,35 @@ export default function BillingSettings() {
                                 Team: {teamData.teamName || teamName}
                             </p>
                             <p className="text-sm text-gray-600">
-                                Total members: 1 (just you)
+                                Total members: {teamData.members ? teamData.members.length + 1 : 1}
                             </p>
+
+                            {/* Show member list if there are members */}
+                            {teamData.members && teamData.members.length > 0 && (
+                                <div className="mt-4 space-y-2">
+                                    <p className="text-xs font-medium text-gray-500">Team Members:</p>
+                                    {teamData.members.map((member) => (
+                                        <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-gray-50">
+                                            <div className="flex items-center gap-3">
+                                                <img
+                                                    src={member.picture || '/default-avatar.png'}
+                                                    alt={member.name}
+                                                    className="w-6 h-6 rounded-full"
+                                                />
+                                                <span className="text-sm">{member.name}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Team member view - joined a team */}
+                    {teamMode === 'member' && teamData && (
+                        <div className="space-y-2">
+                            <p className="text-sm text-gray-600">You're a member of:</p>
+                            <p className="text-lg font-semibold">{teamData.teamName || teamData.name}</p>
                         </div>
                     )}
                 </CardContent>
