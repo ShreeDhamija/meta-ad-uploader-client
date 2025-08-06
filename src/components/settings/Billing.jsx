@@ -39,6 +39,22 @@ export default function BillingSettings() {
     const [inviteCode, setInviteCode] = useState("")
     const [teamData, setTeamData] = useState(null)
 
+    // Fetch team info if user already has a team
+    useEffect(() => {
+        if (subscriptionData.teamId) {
+            // User has a team - fetch team details
+            fetch(`${API_BASE_URL}/api/teams/info`, {
+                credentials: 'include'
+            })
+                .then(res => res.json())
+                .then(data => {
+                    setTeamData(data)
+                    setTeamMode(subscriptionData.isTeamOwner ? 'owner' : 'member')
+                })
+                .catch(err => console.error('Failed to fetch team info:', err))
+        }
+    }, [subscriptionData.teamId, subscriptionData.isTeamOwner])
+
     // In Billing.jsx, update the API calls:
     const handleUpgrade = async () => {
         setIsLoading(true);
@@ -411,6 +427,28 @@ export default function BillingSettings() {
                                     Cancel
                                 </Button>
                             </div>
+                        </div>
+                    )}
+
+                    {/* Team created successfully - show invite code */}
+                    {teamMode === 'owner' && teamData && (
+                        <div className="space-y-3">
+                            <div
+                                className="bg-gray-50 p-3 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(teamData.inviteCode)
+                                    toast.success("Copied to clipboard!")
+                                }}
+                            >
+                                <p className="text-xs text-gray-500 mb-1">Team Invite Code (click to copy)</p>
+                                <p className="font-mono font-semibold text-lg">{teamData.inviteCode}</p>
+                            </div>
+                            <p className="text-sm text-gray-600">
+                                Team: {teamData.teamName || teamName}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                                Total members: 1 (just you)
+                            </p>
                         </div>
                     )}
                 </CardContent>
