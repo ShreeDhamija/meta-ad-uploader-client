@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, AlertCircle, Users, Copy, X, CreditCard } from "lucide-react"
+import { CheckCircle, AlertCircle, Users, Copy, X, CreditCard, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -201,6 +201,30 @@ export default function BillingSettings() {
             toast.error("Failed to join team")
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    const handleRemoveMember = async (memberId) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/teams/remove-member`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ memberId })
+            })
+
+            if (response.ok) {
+                toast.success("Member removed")
+                // Refresh team data
+                setTeamData(prev => ({
+                    ...prev,
+                    members: prev.members.filter(m => m.id !== memberId)
+                }))
+            } else {
+                toast.error("Failed to remove member")
+            }
+        } catch (error) {
+            toast.error("Failed to remove member")
         }
     }
 
@@ -465,6 +489,15 @@ export default function BillingSettings() {
                                                 />
                                                 <span className="text-sm">{member.name}</span>
                                             </div>
+                                            <Button
+                                                onClick={() => handleRemoveMember(member.id)}
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                            >
+                                                <Trash2 className="w-4 h-4 text-red-500" />
+                                            </Button>
+
                                         </div>
                                     ))}
                                 </div>
