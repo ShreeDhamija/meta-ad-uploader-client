@@ -38,6 +38,8 @@ export default function BillingSettings() {
     const [teamName, setTeamName] = useState("")
     const [inviteCode, setInviteCode] = useState("")
     const [teamData, setTeamData] = useState(null)
+    const [deletingMemberId, setDeletingMemberId] = useState(null)
+
 
     // Fetch team info if user already has a team
     useEffect(() => {
@@ -205,6 +207,7 @@ export default function BillingSettings() {
     }
 
     const handleRemoveMember = async (memberId) => {
+        setDeletingMemberId(memberId)  // Set the specific member being deleted
         try {
             const response = await fetch(`${API_BASE_URL}/api/teams/remove-member`, {
                 method: 'POST',
@@ -215,7 +218,6 @@ export default function BillingSettings() {
 
             if (response.ok) {
                 toast.success("Member removed")
-                // Refresh team data
                 setTeamData(prev => ({
                     ...prev,
                     members: prev.members.filter(m => m.id !== memberId)
@@ -225,8 +227,11 @@ export default function BillingSettings() {
             }
         } catch (error) {
             toast.error("Failed to remove member")
+        } finally {
+            setDeletingMemberId(null)  // Clear the deleting state
         }
     }
+
     const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
 
     return (
@@ -510,9 +515,13 @@ export default function BillingSettings() {
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-8 w-8"
+                                                disabled={deletingMemberId === member.id}
                                             >
-                                                {isLoading ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : null}
-                                                <Trash2 className="w-4 h-4 text-red-500" />
+                                                {deletingMemberId === member.id ? (
+                                                    <Loader className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                    <Trash2 className="w-4 h-4 text-red-500" />
+                                                )}
                                             </Button>
 
                                         </div>
