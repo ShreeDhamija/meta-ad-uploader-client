@@ -475,10 +475,14 @@ export default function BillingSettings() {
                                 Total members: {teamData.members ? teamData.members.length + 1 : 1}
                             </p>
 
+                            <p className="text-sm font-medium text-gray-900">
+                                Total cost: ${500 + ((teamData.members?.length || 0) * 20)}/month
+                            </p>
+
                             {/* Show member list if there are members */}
                             {teamData.members && teamData.members.length > 0 && (
                                 <div className="mt-4 space-y-2">
-                                    <p className="text-xs font-medium text-gray-500">Team Members:</p>
+
                                     {teamData.members.map((member) => (
                                         <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-gray-50">
                                             <div className="flex items-center gap-3">
