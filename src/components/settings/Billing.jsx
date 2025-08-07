@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Loader } from "@/components/ui/card"
 import { CheckCircle, AlertCircle, Users, Copy, X, CreditCard, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -227,137 +227,147 @@ export default function BillingSettings() {
             toast.error("Failed to remove member")
         }
     }
+    const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
 
     return (
         <div className="space-y-6">
             {/* Merged Plan Status and Actions Card */}
-            <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <CardIcon className="w-5 h-5" />
-                                Manage your billing
-                            </CardTitle>
-                            <CardDescription className="text-gray-500 text-xs">Upgrade, cancel or add team seats!</CardDescription>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-sm font-medium text-gray-600 mb-1 !shadow-none">Plan Type</p>
-                            {getStatusBadge()}
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {/* Upgrade Button */}
-                    {!isPaidSubscriber() && (
-                        <Button
-                            onClick={handleUpgrade}
-                            disabled={isLoading}
-                            className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
-                            size="lg"
-                        >
-                            <span className="mr-2">🚀</span>
-                            Upgrade To Pro | $500/mo
-                        </Button>
-                    )}
 
-                    {isPaidSubscriber() && (
-                        <div className="space-y-2">
-                            {subscriptionData.willCancelAt ? (
-                                <>
-                                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
-                                        <p className="text-sm text-orange-800">
-                                            Your subscription will continue until {new Date(subscriptionData.willCancelAt).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                    <Button
-                                        onClick={handleReactivate}
-                                        disabled={isLoading}
-                                        className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
-                                    >
-                                        Reactivate Subscription | $500/mo
-                                    </Button>
-                                </>
-                            ) : (
+            {!isTeamMember && (
+                <>
+
+                    <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <CardIcon className="w-5 h-5" />
+                                        Manage your billing
+                                    </CardTitle>
+                                    <CardDescription className="text-gray-500 text-xs">Upgrade, cancel or add team seats!</CardDescription>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm font-medium text-gray-600 mb-1 !shadow-none">Plan Type</p>
+                                    {getStatusBadge()}
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {/* Upgrade Button */}
+                            {!isPaidSubscriber() && (
                                 <Button
-                                    onClick={handleCancel}
-                                    variant="destructive"
+                                    onClick={handleUpgrade}
                                     disabled={isLoading}
-                                    className="w-full h-12 rounded-2xl"
+                                    className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
+                                    size="lg"
                                 >
-                                    Cancel Subscription
+                                    <span className="mr-2">🚀</span>
+                                    Upgrade To Pro | $500/mo
                                 </Button>
                             )}
-                        </div>
-                    )}
 
-                    {/* Trial Warning */}
-                    {isOnTrial() && subscriptionData.trialDaysLeft <= 3 && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                            <div className="flex items-center gap-2">
-                                <AlertCircle className="w-5 h-5 text-yellow-600" />
-                                <p className="text-sm font-medium text-yellow-800">
-                                    {subscriptionData.trialDaysLeft == 0 ? "Your trial is expired" : `Your trial expires in ${subscriptionData.trialDaysLeft} day`}
-                                    {(subscriptionData.trialDaysLeft == 1 || subscriptionData.trialDaysLeft == 0) ? "" : "s"}
-                                </p>
-                            </div>
-                            <p className="text-sm text-yellow-700 mt-1">
-                                Upgrade now to continue using all features without interruption.
-                            </p>
-                        </div>
-                    )}
+                            {isPaidSubscriber() && (
+                                <div className="space-y-2">
+                                    {subscriptionData.willCancelAt ? (
+                                        <>
+                                            <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
+                                                <p className="text-sm text-orange-800">
+                                                    Your subscription will continue until {new Date(subscriptionData.willCancelAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <Button
+                                                onClick={handleReactivate}
+                                                disabled={isLoading}
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
+                                            >
+                                                Reactivate Subscription | $500/mo
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <Button
+                                            onClick={handleCancel}
+                                            variant="destructive"
+                                            disabled={isLoading}
+                                            className="w-full h-12 rounded-2xl"
+                                        >
+                                            Cancel Subscription
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
 
-                    {/* Trial Expired Warning */}
-                    {isTrialExpired() && (
-                        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                            <div className="flex items-center gap-2">
-                                <AlertCircle className="w-5 h-5 text-red-600" />
-                                <p className="text-sm font-medium text-red-800">Your trial has expired</p>
-                            </div>
-                            <p className="text-sm text-red-700 mt-1">Upgrade to a paid plan to continue using the service.</p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                            {/* Trial Warning */}
+                            {isOnTrial() && subscriptionData.trialDaysLeft <= 3 && (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                                    <div className="flex items-center gap-2">
+                                        <AlertCircle className="w-5 h-5 text-yellow-600" />
+                                        <p className="text-sm font-medium text-yellow-800">
+                                            {subscriptionData.trialDaysLeft == 0 ? "Your trial is expired" : `Your trial expires in ${subscriptionData.trialDaysLeft} day`}
+                                            {(subscriptionData.trialDaysLeft == 1 || subscriptionData.trialDaysLeft == 0) ? "" : "s"}
+                                        </p>
+                                    </div>
+                                    <p className="text-sm text-yellow-700 mt-1">
+                                        Upgrade now to continue using all features without interruption.
+                                    </p>
+                                </div>
+                            )}
 
-            {/* Pro Plan Benefits */}
-            <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <img src="https://unpkg.com/@mynaui/icons/icons/rocket.svg" />
-                                Pro Plan Benefits
-                            </CardTitle>
-                            <CardDescription className="text-gray-500" text-xs>{"Here's everything you get by upgrading"}</CardDescription>
-                        </div>
-                        <div className="text-right items-center flex flex-row space-x-1">
-                            <div className="text-2xl font-bold text-gray-900">$500</div>
-                            <div className="text-sm text-gray-400">/month</div>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-3 text-sm">
-                            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                            <span>Unlimited Ad Creation</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm">
-                            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                            <span>Multiple ad account support</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm">
-                            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                            <span>Template management</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm">
-                            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                            <span>Priority support</span>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                            {/* Trial Expired Warning */}
+                            {isTrialExpired() && (
+                                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                    <div className="flex items-center gap-2">
+                                        <AlertCircle className="w-5 h-5 text-red-600" />
+                                        <p className="text-sm font-medium text-red-800">Your trial has expired</p>
+                                    </div>
+                                    <p className="text-sm text-red-700 mt-1">Upgrade to a paid plan to continue using the service.</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Pro Plan Benefits */}
+                    {!isPaidSubscriber() && (
+
+                        <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2 text-lg">
+                                            <img src="https://unpkg.com/@mynaui/icons/icons/rocket.svg" />
+                                            Pro Plan Benefits
+                                        </CardTitle>
+                                        <CardDescription className="text-gray-500" text-xs>{"Here's everything you get by upgrading"}</CardDescription>
+                                    </div>
+                                    <div className="text-right items-center flex flex-row space-x-1">
+                                        <div className="text-2xl font-bold text-gray-900">$500</div>
+                                        <div className="text-sm text-gray-400">/month</div>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                        <span>Unlimited Ad Creation</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                        <span>Multiple ad account support</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                        <span>Template management</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                        <span>Priority support</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+                </>
+            )}
 
             {/* Team Management Card */}
             <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
@@ -405,6 +415,7 @@ export default function BillingSettings() {
                                     disabled={!inviteCode || isLoading}
                                     onClick={handleJoinTeam}
                                     className="rounded-xl">
+                                    {isLoading ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : null}
                                     Join Team
                                 </Button>
                                 <Button
@@ -436,6 +447,7 @@ export default function BillingSettings() {
                                     onClick={handleCreateTeam}
                                     className="rounded-xl"
                                 >
+                                    {isLoading ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : null}
 
                                     Create Team
 
@@ -499,6 +511,7 @@ export default function BillingSettings() {
                                                 size="icon"
                                                 className="h-8 w-8"
                                             >
+                                                {isLoading ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : null}
                                                 <Trash2 className="w-4 h-4 text-red-500" />
                                             </Button>
 
