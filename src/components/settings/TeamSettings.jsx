@@ -239,14 +239,15 @@ export default function TeamSettings() {
                             {/* Team cost row */}
                             <div className="flex items-center justify-between border-t border-gray-200 pt-3">
                                 <span className="text-sm text-gray-600">Team cost</span>
-                                <span className="text-base font-bold text-black">
-                                    ${500 + ((teamData.members?.length || 0) * 20)}/month
+                                <span className="text-sm font-bold text-black">
+                                    <span className="text-sm text-gray-700">
+                                        (500 + {(teamData.members?.length || 0)} × 20 =)
+                                    </span>
+                                    ${500 + ((teamData.members?.length || 0) * 20)}/month{" "}
+
                                 </span>
                             </div>
-                            {/* Breakdown */}
-                            <p className="text-xs text-gray-500">
-                                500 + {(teamData.members?.length || 0)} × 20
-                            </p>
+
                         </div>
                     )}
 
