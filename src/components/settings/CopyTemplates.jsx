@@ -749,11 +749,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       </TabsList>
                       <Button
                         className="bg-red-600 hover:bg-white !shadow-none rounded-xl"
-                        onClick={handleCloseImportPopup}
+                        onClick={() => setShowImportPopup(false)}
                       >
-
                         <CirclePlus className="w-4 h-4 rotate-45 text-white" />
                         <p className="text-white">Close</p>
+
                       </Button>
                     </div>
 

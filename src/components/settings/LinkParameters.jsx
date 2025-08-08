@@ -20,23 +20,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 const VALUE_SUGGESTIONS = ["facebook", "paid", "{{campaign.id}}", "{{adset.id}}", "{{ad.id}}", "{{campaign.name}}", "{{adset.name}}", "{{ad.name}}", "{{placement}}", "{{site_source_name}}"];
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
-
-const MOCK_LINK_IMPORT_PREVIEW = [
-    "https://example.com/landing-page-1",
-    "https://mystore.com/product/amazing-widget",
-    "https://website.co/promo/summer-sale",
-    "https://app.example.com/signup?ref=facebook",
-    "https://landingpage.com/special-offer"
-];
-
-const MOCK_UTM_IMPORT_PREVIEW = [
-    { key: "utm_source", value: "facebook" },
-    { key: "utm_medium", value: "cpc" },
-    { key: "utm_campaign", value: "summer_sale_2024" },
-    { key: "utm_content", value: "carousel_ad_v2" },
-    { key: "utm_term", value: "targeted_audience" }
-];
-
 const DEFAULT_PREFILL_PAIRS = [
     { key: "utm_source", value: "facebook" },
     { key: "utm_medium", value: "paid" },
