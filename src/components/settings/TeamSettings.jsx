@@ -24,12 +24,12 @@ export default function TeamSettings() {
     const [inviteCode, setInviteCode] = useState("")
     const [teamData, setTeamData] = useState(null)
     const [isLoading, setIsLoading] = useState(false)
-    const [teamLoading, setTeamLoading] = useState(true)
+
     const [deletingMemberId, setDeletingMemberId] = useState(null)
 
     useEffect(() => {
         if (subscriptionData.teamId) {
-            setTeamLoading(true)
+
             fetch(`${API_BASE_URL}/api/teams/info`, { credentials: 'include' })
                 .then(res => res.json())
                 .then(data => {
@@ -38,11 +38,11 @@ export default function TeamSettings() {
                 })
                 .catch(err => console.error('Failed to fetch team info:', err))
         } else {
-            setTeamLoading(false)
+
         }
     }, [subscriptionData.teamId, subscriptionData.isTeamOwner])
 
-    if (loading || teamLoading) {
+    if (loading) {
         return (
             <div className="space-y-6">
                 <div className="animate-pulse">
