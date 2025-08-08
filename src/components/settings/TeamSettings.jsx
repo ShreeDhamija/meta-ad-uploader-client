@@ -16,6 +16,7 @@ export default function TeamSettings() {
         subscriptionData,
         refreshSubscriptionData,
         isOnTrial,
+        loading,
     } = useSubscription()
 
     const [teamMode, setTeamMode] = useState(null)
@@ -36,6 +37,16 @@ export default function TeamSettings() {
                 .catch(err => console.error('Failed to fetch team info:', err))
         }
     }, [subscriptionData.teamId, subscriptionData.isTeamOwner])
+
+    if (loading) {
+        return (
+            <div className="space-y-6">
+                <div className="animate-pulse">
+                    <div className="h-32 bg-gray-200 rounded-2xl mb-4"></div>
+                </div>
+            </div>
+        )
+    }
 
     const handleCreateTeam = async () => {
         setIsLoading(true)
@@ -114,12 +125,14 @@ export default function TeamSettings() {
     }
 
     return (
+
+
         <div className="space-y-6">
             <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                         <Users className="w-5 h-5" />
-                        Team Management
+                        Your Team
                     </CardTitle>
                     <CardDescription className="text-gray-500" text-xs>
                         Join or start a team
