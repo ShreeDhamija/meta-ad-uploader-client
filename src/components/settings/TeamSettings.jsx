@@ -141,13 +141,14 @@ export default function TeamSettings() {
                             ? teamData.teamName || "My Team"
                             : "Your Team"}
                     </CardTitle>
-                    <CardDescription className="text-gray-500" text-xs>
+                    <CardDescription className="text-gray-500 text-xs">
                         {teamMode === 'owner' && teamData
-                            ? `Total members: ${teamData.members ? teamData.members.length + 1 : 1}`
+                            ? `Total members: ${teamData.members?.length || 0}`
                             : teamMode === 'member' && teamData
                                 ? `Team: ${teamData.teamName || teamData.name}`
                                 : "Join or start a team"}
                     </CardDescription>
+
                 </CardHeader>
                 <CardContent>
                     {!teamMode && (
@@ -172,7 +173,7 @@ export default function TeamSettings() {
                                     {isLoading && <Loader className="w-4 h-4 mr-2 animate-spin" />}
                                     Join Team
                                 </Button>
-                                <Button variant="outline" className="rounded-xl bg-blue-600 w-24 text-white text-sm" onClick={() => { setTeamMode(null); setInviteCode("") }}>
+                                <Button variant="outline" className="rounded-xl bg-white w-24 text-gray-900 text-xs" onClick={() => { setTeamMode(null); setInviteCode("") }}>
                                     Cancel
                                 </Button>
                             </div>
@@ -188,7 +189,7 @@ export default function TeamSettings() {
                                     {isLoading && <Loader className="w-4 h-4 mr-2 animate-spin" />}
                                     Create Team
                                 </Button>
-                                <Button variant="outline" className="rounded-xl bg-blue-600 w-24 text-white text-sm " onClick={() => { setTeamMode(null); setTeamName("") }}>
+                                <Button variant="outline" className="rounded-xl bg-white w-24 text-gray-900 text-xs " onClick={() => { setTeamMode(null); setTeamName("") }}>
                                     Cancel
                                 </Button>
                             </div>
@@ -215,6 +216,9 @@ export default function TeamSettings() {
                                         {teamData.inviteCode}
                                     </span>
                                     <YourCopyIcon className="w-4 h-4 text-[#B71C1C]" />
+                                    <span className="text-sm font-semibold text-[#B71C1C]">
+                                        (Click to Copy)
+                                    </span>
                                 </div>
 
                                 <span className="text-sm font-medium text-[#B71C1C]">
@@ -256,23 +260,20 @@ export default function TeamSettings() {
                             <div className="flex items-center justify-between pt-3">
                                 <span className="text-sm text-gray-600">Team cost</span>
                                 <span className="text-sm font-bold text-black">
-                                    <span className="text-sm text-gray-700">
-                                        (500 + {(teamData.members?.length || 0)} × 20 =)
-                                    </span>
-                                    ${500 + ((teamData.members?.length || 0) * 20)}/month{" "}
-
+                                    {(teamData.members?.length || 0) > 0 && (
+                                        <span className="text-sm text-gray-700">
+                                            (500 + {(teamData.members?.length || 0)} × 20 =)&nbsp;
+                                        </span>
+                                    )}
+                                    ${500 + ((teamData.members?.length || 0) * 20)}/month
                                 </span>
                             </div>
+
 
                         </div>
                     )}
 
-                    {/* {teamMode === 'member' && teamData && (
-                        <div className="space-y-2">
-                            <p className="text-sm text-gray-600">You're a member of:</p>
-                            <p className="text-lg font-semibold">{teamData.teamName || teamData.name}</p>
-                        </div>
-                    )} */}
+
                 </CardContent>
             </Card>
         </div>
