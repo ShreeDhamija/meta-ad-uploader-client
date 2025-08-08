@@ -37,11 +37,7 @@ export default function BillingSettings() {
         isPaidSubscriber,
     } = useSubscription()
 
-    // const [teamMode, setTeamMode] = useState(null) // null | 'joining' | 'creating' | 'member' | 'owner'
-    // const [teamName, setTeamName] = useState("")
-    // const [inviteCode, setInviteCode] = useState("")
-    // const [teamData, setTeamData] = useState(null)
-    // const [deletingMemberId, setDeletingMemberId] = useState(null)
+
 
 
     // Fetch team info if user already has a team
@@ -153,87 +149,6 @@ export default function BillingSettings() {
             )
         return <Badge variant="outline">Inactive</Badge>
     }
-
-
-    // const handleCreateTeam = async () => {
-    //     setIsLoading(true)
-    //     try {
-    //         const response = await fetch(`${API_BASE_URL}/api/teams/create`, {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/json' },
-    //             credentials: 'include',
-    //             body: JSON.stringify({ teamName })
-    //         })
-
-    //         if (response.ok) {
-    //             const data = await response.json()
-    //             toast.success("Team created successfully!")
-    //             setTeamData(data)
-    //             setTeamMode('owner')
-    //             setTeamName("")
-    //             // We'll handle the UI update in the next chunk
-    //         } else {
-    //             toast.error("Failed to create team")
-    //         }
-    //     } catch (error) {
-    //         toast.error("Failed to create team")
-    //     } finally {
-    //         setIsLoading(false)
-    //     }
-    // }
-
-    // const handleJoinTeam = async () => {
-    //     setIsLoading(true)
-    //     try {
-    //         const response = await fetch(`${API_BASE_URL}/api/teams/join`, {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/json' },
-    //             credentials: 'include',
-    //             body: JSON.stringify({ inviteCode })
-    //         })
-
-    //         if (response.ok) {
-    //             const data = await response.json()
-    //             toast.success("Successfully joined team!")
-    //             setTeamData(data)
-    //             setTeamMode('member')
-    //             setInviteCode("")
-    //             refreshSubscriptionData()
-    //         } else {
-    //             toast.error("Invalid invite code")
-    //         }
-    //     } catch (error) {
-    //         toast.error("Failed to join team")
-    //     } finally {
-    //         setIsLoading(false)
-    //     }
-    // }
-
-    // const handleRemoveMember = async (memberId) => {
-    //     setDeletingMemberId(memberId)  // Set the specific member being deleted
-    //     try {
-    //         const response = await fetch(`${API_BASE_URL}/api/teams/remove-member`, {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/json' },
-    //             credentials: 'include',
-    //             body: JSON.stringify({ memberId })
-    //         })
-
-    //         if (response.ok) {
-    //             toast.success("Member removed")
-    //             setTeamData(prev => ({
-    //                 ...prev,
-    //                 members: prev.members.filter(m => m.id !== memberId)
-    //             }))
-    //         } else {
-    //             toast.error("Failed to remove member")
-    //         }
-    //     } catch (error) {
-    //         toast.error("Failed to remove member")
-    //     } finally {
-    //         setDeletingMemberId(null)  // Clear the deleting state
-    //     }
-    // }
 
     const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
 
