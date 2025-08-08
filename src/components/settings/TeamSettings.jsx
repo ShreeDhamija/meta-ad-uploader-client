@@ -168,11 +168,11 @@ export default function TeamSettings() {
                             <Input placeholder="Enter team invite code" className="rounded-xl"
                                 value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
                             <div className="flex flex-row gap-1">
-                                <Button disabled={!inviteCode || isLoading} onClick={handleJoinTeam} className="rounded-xl bg-blue-600 w-12">
+                                <Button disabled={!inviteCode || isLoading} onClick={handleJoinTeam} className="rounded-xl bg-blue-600 w-24">
                                     {isLoading && <Loader className="w-4 h-4 mr-2 animate-spin" />}
                                     Join Team
                                 </Button>
-                                <Button variant="outline" className="rounded-xl bg-blue-600 w-12" onClick={() => { setTeamMode(null); setInviteCode("") }}>
+                                <Button variant="outline" className="rounded-xl bg-blue-600 w-24" onClick={() => { setTeamMode(null); setInviteCode("") }}>
                                     Cancel
                                 </Button>
                             </div>
@@ -184,11 +184,11 @@ export default function TeamSettings() {
                             <Input placeholder="Enter team name" value={teamName}
                                 onChange={(e) => setTeamName(e.target.value)} className="rounded-xl" />
                             <div className="flex flex-row gap-1">
-                                <Button disabled={!teamName || isLoading} onClick={handleCreateTeam} className="rounded-x bg-blue-600 w-6">
+                                <Button disabled={!teamName || isLoading} onClick={handleCreateTeam} className="rounded-x bg-blue-600 w-24">
                                     {isLoading && <Loader className="w-4 h-4 mr-2 animate-spin" />}
                                     Create Team
                                 </Button>
-                                <Button variant="outline" className="rounded-xl bg-blue-600 w-6" onClick={() => { setTeamMode(null); setTeamName("") }}>
+                                <Button variant="outline" className="rounded-xl bg-blue-600 w-24" onClick={() => { setTeamMode(null); setTeamName("") }}>
                                     Cancel
                                 </Button>
                             </div>
@@ -198,7 +198,7 @@ export default function TeamSettings() {
                     {teamMode === 'owner' && teamData && (
                         <div className="space-y-3">
                             <div
-                                className="flex items-center justify-center gap-3 px-2 py-1 rounded-xl border border-[#FFD6C4] bg-[#FFF6EB]"
+                                className="flex items-center justify-start gap-3 px-2 py-1 rounded-2xl border border-[#FFD6C4] bg-[#FFF6EB]"
                             >
                                 <span className="text-sm font-medium text-[#B71C1C]">
                                     Here is your Team ID
