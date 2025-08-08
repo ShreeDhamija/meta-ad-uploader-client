@@ -376,172 +376,20 @@ export default function BillingSettings() {
                     )}
                 </>
             )}
-
-            {/* Team Management Card */}
-            {/* <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                        <Users className="w-5 h-5" />
-                        Team Management
-                    </CardTitle>
-                    <CardDescription className="text-gray-500" text-xs>{"Join or start a team"}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    
-                    {!teamMode && (
-                        <div className="flex flex-row gap-1">
-                            <Button
-                                onClick={() => setTeamMode('creating')}
-                                className="w-full rounded-xl h-12 bg-blue-600"
-                            // disabled={isOnTrial()}
-                            >
-                                <CreditCard className="w-4 h-4" />
-                                {isOnTrial() ? "Upgrade to Pro to Start a Team" : "Start a Team"}
-                            </Button>
-                            <Button
-                                onClick={() => setTeamMode('joining')}
-                                variant="outline"
-                                className="w-full rounded-xl h-12"
-                            >
-                                <Users className="w-4 h-4" />
-                                Join a Team
-                            </Button>
-                        </div>
-                    )}
-
-                    
-                    {teamMode === 'joining' && (
-                        <div className="space-y-3">
-                            <Input
-                                placeholder="Enter team invite code"
-                                className="rounded-xl"
-                                value={inviteCode}
-                                onChange={(e) => setInviteCode(e.target.value)}
-                            />
-                            <div className="flex flex-row gap-1">
-                                <Button
-                                    disabled={!inviteCode || isLoading}
-                                    onClick={handleJoinTeam}
-                                    className="rounded-xl">
-                                    {isLoading ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : null}
-                                    Join Team
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="rounded-xl"
-                                    onClick={() => {
-                                        setTeamMode(null)
-                                        setInviteCode("")
-                                    }}
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-
-                    
-                    {teamMode === 'creating' && (
-                        <div className="space-y-3">
-                            <Input
-                                placeholder="Enter team name"
-                                value={teamName}
-                                onChange={(e) => setTeamName(e.target.value)}
-                                className="rounded-xl"
-                            />
-                            <div className="flex flex-row gap-1">
-                                <Button
-                                    disabled={!teamName || isLoading}
-                                    onClick={handleCreateTeam}
-                                    className="rounded-xl"
-                                >
-                                    {isLoading ? <Loader className="w-4 h-4 mr-2 animate-spin" /> : null}
-
-                                    Create Team
-
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    className="rounded-xl"
-                                    onClick={() => {
-                                        setTeamMode(null)
-                                        setTeamName("")
-                                    }}
-                                >
-                                    Cancel
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-
-
-                    
-                    {teamMode === 'owner' && teamData && (
-                        <div className="space-y-3">
-                            <div
-                                className="bg-gray-50 p-3 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
-                                onClick={() => {
-                                    navigator.clipboard.writeText(teamData.inviteCode)
-                                    toast.success("Copied to clipboard!")
-                                }}
-                            >
-                                <p className="text-xs text-gray-500 mb-1">Team Invite Code (click to copy)</p>
-                                <p className="font-mono font-semibold text-lg">{teamData.inviteCode}</p>
-                            </div>
-                            <p className="text-sm text-gray-600">
-                                Team: {teamData.teamName || teamName}
+            {isTeamMember && (
+                <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
+                    <CardContent className="pt-6">
+                        <div className="text-center py-4">
+                            <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                            <p className="text-gray-600 font-medium">You're part of a team plan</p>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Billing is managed by your team owner
                             </p>
-                            <p className="text-sm text-gray-600">
-                                Total members: {teamData.members ? teamData.members.length + 1 : 1}
-                            </p>
-
-                            <p className="text-sm font-medium text-gray-900">
-                                Total cost: ${500 + ((teamData.members?.length || 0) * 20)}/month
-                            </p>
-
-                            
-                            {teamData.members && teamData.members.length > 0 && (
-                                <div className="mt-4 space-y-2">
-
-                                    {teamData.members.map((member) => (
-                                        <div key={member.id} className="flex items-center justify-between p-2 rounded-xl bg-gray-50">
-                                            <div className="flex items-center gap-3">
-                                                <img
-                                                    src={member.picture || '/default-avatar.png'}
-                                                    alt={member.name}
-                                                    className="w-6 h-6 rounded-full"
-                                                />
-                                                <span className="text-sm">{member.name}</span>
-                                            </div>
-                                            <Button
-                                                onClick={() => handleRemoveMember(member.id)}
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8"
-                                                disabled={deletingMemberId === member.id}
-                                            >
-                                                {deletingMemberId === member.id ? (
-                                                    <Loader className="w-4 h-4 animate-spin" />
-                                                ) : (
-                                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                                )}
-                                            </Button>
-
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                         </div>
-                    )}
-                    
-                    {teamMode === 'member' && teamData && (
-                        <div className="space-y-2">
-                            <p className="text-sm text-gray-600">You're a member of:</p>
-                            <p className="text-lg font-semibold">{teamData.teamName || teamData.name}</p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card> */}
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Cancel Confirmation Dialog */}
             <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" />

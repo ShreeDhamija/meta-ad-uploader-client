@@ -167,11 +167,11 @@ export default function TeamSettings() {
                             <Input placeholder="Enter team invite code" className="rounded-xl"
                                 value={inviteCode} onChange={(e) => setInviteCode(e.target.value)} />
                             <div className="flex flex-row gap-1">
-                                <Button disabled={!inviteCode || isLoading} onClick={handleJoinTeam} className="rounded-xl">
+                                <Button disabled={!inviteCode || isLoading} onClick={handleJoinTeam} className="rounded-xl bg-blue-600 w-6">
                                     {isLoading && <Loader className="w-4 h-4 mr-2 animate-spin" />}
                                     Join Team
                                 </Button>
-                                <Button variant="outline" className="rounded-xl" onClick={() => { setTeamMode(null); setInviteCode("") }}>
+                                <Button variant="outline" className="rounded-xl bg-blue-600 w-6" onClick={() => { setTeamMode(null); setInviteCode("") }}>
                                     Cancel
                                 </Button>
                             </div>
@@ -183,11 +183,11 @@ export default function TeamSettings() {
                             <Input placeholder="Enter team name" value={teamName}
                                 onChange={(e) => setTeamName(e.target.value)} className="rounded-xl" />
                             <div className="flex flex-row gap-1">
-                                <Button disabled={!teamName || isLoading} onClick={handleCreateTeam} className="rounded-xl">
+                                <Button disabled={!teamName || isLoading} onClick={handleCreateTeam} className="rounded-x bg-blue-600 w-6">
                                     {isLoading && <Loader className="w-4 h-4 mr-2 animate-spin" />}
                                     Create Team
                                 </Button>
-                                <Button variant="outline" className="rounded-xl" onClick={() => { setTeamMode(null); setTeamName("") }}>
+                                <Button variant="outline" className="rounded-xl bg-blue-600 w-6" onClick={() => { setTeamMode(null); setTeamName("") }}>
                                     Cancel
                                 </Button>
                             </div>
@@ -197,15 +197,30 @@ export default function TeamSettings() {
                     {teamMode === 'owner' && teamData && (
                         <div className="space-y-3">
                             <div
-                                className="bg-gray-50 p-3 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
-                                onClick={() => {
-                                    navigator.clipboard.writeText(teamData.inviteCode)
-                                    toast.success("Copied to clipboard!")
-                                }}
+                                className="flex items-center justify-center gap-3 px-4 py-3 rounded-full border border-[#FFD6C4] bg-[#FFF6EB]"
                             >
-                                <p className="text-xs text-gray-500 mb-1">Team Invite Code (click to copy)</p>
-                                <p className="font-mono font-semibold text-lg">{teamData.inviteCode}</p>
+                                <span className="text-base font-medium text-[#B71C1C]">
+                                    Here is your Team ID
+                                </span>
+
+                                <div
+                                    className="flex items-center gap-2 px-3 py-1 rounded-lg cursor-pointer bg-[#FFD1C4]"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(teamData.inviteCode)
+                                        toast.success("Copied to clipboard!")
+                                    }}
+                                >
+                                    <span className="font-semibold text-[#B71C1C]">
+                                        {teamData.inviteCode}
+                                    </span>
+                                    <YourCopyIcon className="w-4 h-4 text-[#B71C1C]" />
+                                </div>
+
+                                <span className="text-base font-medium text-[#B71C1C]">
+                                    Share it only with your team!
+                                </span>
                             </div>
+
                             {/* Member list */}
                             {teamData.members?.length > 0 && (
                                 <div className="mt-4 space-y-2">
@@ -215,9 +230,9 @@ export default function TeamSettings() {
                                                 <img
                                                     src={member.picture || '/default-avatar.png'}
                                                     alt={member.name}
-                                                    className="w-6 h-6 rounded-full"
+                                                    className="w-7 h-8 rounded-full"
                                                 />
-                                                <span className="text-sm">{member.name}</span>
+                                                <span className="text-sm font-medium">{member.name}</span>
                                             </div>
                                             <Button
                                                 onClick={() => handleRemoveMember(member.id)}
@@ -237,7 +252,7 @@ export default function TeamSettings() {
                                 </div>
                             )}
                             {/* Team cost row */}
-                            <div className="flex items-center justify-between border-t border-gray-200 pt-3">
+                            <div className="flex items-center justify-between pt-3">
                                 <span className="text-sm text-gray-600">Team cost</span>
                                 <span className="text-sm font-bold text-black">
                                     <span className="text-sm text-gray-700">
