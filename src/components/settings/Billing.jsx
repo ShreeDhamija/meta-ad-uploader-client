@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
+// import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle, AlertCircle, Users, Copy, X, CreditCard, Trash2, Loader } from "lucide-react"
 import { toast } from "sonner"
@@ -21,6 +21,9 @@ import useSubscription from "@/lib/useSubscriptionSettings"
 import CardIcon from '@/assets/icons/card.svg?react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
+
+
+
 export default function BillingSettings() {
     const [isLoading, setIsLoading] = useState(false)
     const [showCancelDialog, setShowCancelDialog] = useState(false)
@@ -34,11 +37,11 @@ export default function BillingSettings() {
         isPaidSubscriber,
     } = useSubscription()
 
-    const [teamMode, setTeamMode] = useState(null) // null | 'joining' | 'creating' | 'member' | 'owner'
-    const [teamName, setTeamName] = useState("")
-    const [inviteCode, setInviteCode] = useState("")
-    const [teamData, setTeamData] = useState(null)
-    const [deletingMemberId, setDeletingMemberId] = useState(null)
+    // const [teamMode, setTeamMode] = useState(null) // null | 'joining' | 'creating' | 'member' | 'owner'
+    // const [teamName, setTeamName] = useState("")
+    // const [inviteCode, setInviteCode] = useState("")
+    // const [teamData, setTeamData] = useState(null)
+    // const [deletingMemberId, setDeletingMemberId] = useState(null)
 
 
     // Fetch team info if user already has a team
@@ -152,85 +155,85 @@ export default function BillingSettings() {
     }
 
 
-    const handleCreateTeam = async () => {
-        setIsLoading(true)
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/teams/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ teamName })
-            })
+    // const handleCreateTeam = async () => {
+    //     setIsLoading(true)
+    //     try {
+    //         const response = await fetch(`${API_BASE_URL}/api/teams/create`, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             credentials: 'include',
+    //             body: JSON.stringify({ teamName })
+    //         })
 
-            if (response.ok) {
-                const data = await response.json()
-                toast.success("Team created successfully!")
-                setTeamData(data)
-                setTeamMode('owner')
-                setTeamName("")
-                // We'll handle the UI update in the next chunk
-            } else {
-                toast.error("Failed to create team")
-            }
-        } catch (error) {
-            toast.error("Failed to create team")
-        } finally {
-            setIsLoading(false)
-        }
-    }
+    //         if (response.ok) {
+    //             const data = await response.json()
+    //             toast.success("Team created successfully!")
+    //             setTeamData(data)
+    //             setTeamMode('owner')
+    //             setTeamName("")
+    //             // We'll handle the UI update in the next chunk
+    //         } else {
+    //             toast.error("Failed to create team")
+    //         }
+    //     } catch (error) {
+    //         toast.error("Failed to create team")
+    //     } finally {
+    //         setIsLoading(false)
+    //     }
+    // }
 
-    const handleJoinTeam = async () => {
-        setIsLoading(true)
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/teams/join`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ inviteCode })
-            })
+    // const handleJoinTeam = async () => {
+    //     setIsLoading(true)
+    //     try {
+    //         const response = await fetch(`${API_BASE_URL}/api/teams/join`, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             credentials: 'include',
+    //             body: JSON.stringify({ inviteCode })
+    //         })
 
-            if (response.ok) {
-                const data = await response.json()
-                toast.success("Successfully joined team!")
-                setTeamData(data)
-                setTeamMode('member')
-                setInviteCode("")
-                refreshSubscriptionData()
-            } else {
-                toast.error("Invalid invite code")
-            }
-        } catch (error) {
-            toast.error("Failed to join team")
-        } finally {
-            setIsLoading(false)
-        }
-    }
+    //         if (response.ok) {
+    //             const data = await response.json()
+    //             toast.success("Successfully joined team!")
+    //             setTeamData(data)
+    //             setTeamMode('member')
+    //             setInviteCode("")
+    //             refreshSubscriptionData()
+    //         } else {
+    //             toast.error("Invalid invite code")
+    //         }
+    //     } catch (error) {
+    //         toast.error("Failed to join team")
+    //     } finally {
+    //         setIsLoading(false)
+    //     }
+    // }
 
-    const handleRemoveMember = async (memberId) => {
-        setDeletingMemberId(memberId)  // Set the specific member being deleted
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/teams/remove-member`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ memberId })
-            })
+    // const handleRemoveMember = async (memberId) => {
+    //     setDeletingMemberId(memberId)  // Set the specific member being deleted
+    //     try {
+    //         const response = await fetch(`${API_BASE_URL}/api/teams/remove-member`, {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             credentials: 'include',
+    //             body: JSON.stringify({ memberId })
+    //         })
 
-            if (response.ok) {
-                toast.success("Member removed")
-                setTeamData(prev => ({
-                    ...prev,
-                    members: prev.members.filter(m => m.id !== memberId)
-                }))
-            } else {
-                toast.error("Failed to remove member")
-            }
-        } catch (error) {
-            toast.error("Failed to remove member")
-        } finally {
-            setDeletingMemberId(null)  // Clear the deleting state
-        }
-    }
+    //         if (response.ok) {
+    //             toast.success("Member removed")
+    //             setTeamData(prev => ({
+    //                 ...prev,
+    //                 members: prev.members.filter(m => m.id !== memberId)
+    //             }))
+    //         } else {
+    //             toast.error("Failed to remove member")
+    //         }
+    //     } catch (error) {
+    //         toast.error("Failed to remove member")
+    //     } finally {
+    //         setDeletingMemberId(null)  // Clear the deleting state
+    //     }
+    // }
 
     const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
 
@@ -375,7 +378,7 @@ export default function BillingSettings() {
             )}
 
             {/* Team Management Card */}
-            <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
+            {/* <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                         <Users className="w-5 h-5" />
@@ -384,12 +387,12 @@ export default function BillingSettings() {
                     <CardDescription className="text-gray-500" text-xs>{"Join or start a team"}</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {/* Show buttons when teamMode is null */}
+                    
                     {!teamMode && (
                         <div className="flex flex-row gap-1">
                             <Button
                                 onClick={() => setTeamMode('creating')}
-                                className="w-full rounded-xl h-12"
+                                className="w-full rounded-xl h-12 bg-blue-600"
                             // disabled={isOnTrial()}
                             >
                                 <CreditCard className="w-4 h-4" />
@@ -406,7 +409,7 @@ export default function BillingSettings() {
                         </div>
                     )}
 
-                    {/* Show join input when teamMode is 'joining' */}
+                    
                     {teamMode === 'joining' && (
                         <div className="space-y-3">
                             <Input
@@ -437,7 +440,7 @@ export default function BillingSettings() {
                         </div>
                     )}
 
-                    {/* Show create input when teamMode is 'creating' */}
+                    
                     {teamMode === 'creating' && (
                         <div className="space-y-3">
                             <Input
@@ -471,8 +474,8 @@ export default function BillingSettings() {
                         </div>
                     )}
 
-                    {/* Team created successfully - show invite code */}
-                    {/* Team owner view */}
+
+                    
                     {teamMode === 'owner' && teamData && (
                         <div className="space-y-3">
                             <div
@@ -496,7 +499,7 @@ export default function BillingSettings() {
                                 Total cost: ${500 + ((teamData.members?.length || 0) * 20)}/month
                             </p>
 
-                            {/* Show member list if there are members */}
+                            
                             {teamData.members && teamData.members.length > 0 && (
                                 <div className="mt-4 space-y-2">
 
@@ -530,8 +533,7 @@ export default function BillingSettings() {
                             )}
                         </div>
                     )}
-
-                    {/* Team member view - joined a team */}
+                    
                     {teamMode === 'member' && teamData && (
                         <div className="space-y-2">
                             <p className="text-sm text-gray-600">You're a member of:</p>
@@ -539,7 +541,7 @@ export default function BillingSettings() {
                         </div>
                     )}
                 </CardContent>
-            </Card>
+            </Card> */}
             {/* Cancel Confirmation Dialog */}
             <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" />
