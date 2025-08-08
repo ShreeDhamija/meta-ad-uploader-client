@@ -363,7 +363,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
                 className="text-sm text-white bg-blue-500 hover:bg-blue-600 hover:text-white rounded-xl"
               >
                 <CirclePlus className="w-4 h-4 mr-1" />
-                Add New Ad Accounts
+                Link New Ad Accounts
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md !rounded-xl">
@@ -374,7 +374,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
                     alt="Logo"
                     className="w-12 h-12 rounded-md mb-4"
                   />
-                  <h3 className="text-sm font-semibold">Add New Ad Accounts</h3>
+                  <h3 className="text-sm font-semibold">Link New Ad Accounts</h3>
                 </div>
 
                 <div className="space-y-3 text-sm text-gray-600">
@@ -483,15 +483,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
               to see list of variables you can use. You can also save custom text.
             </p>
 
-            {/* <ReorderAdNameParts
-              order={adNameFormula.order}
-              setOrder={handleOrderUpdate}
-              values={adNameFormula.values}
-              setValues={handleValuesUpdate}
-              selectedItems={adNameFormula.selected}
-              onItemToggle={handleItemToggle}
-              variant="default"
-            /> */}
             <ReorderAdNameParts
               formulaInput={adNameFormulaV2?.rawInput || ""}
               onFormulaChange={handleFormulaInputChange}

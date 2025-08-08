@@ -719,7 +719,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       {showImportPopup && (
         <div
-          className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-start pt-32"
+          className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-center"
           style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
         >
           <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out">
@@ -748,11 +748,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </TabsTrigger>
                       </TabsList>
                       <Button
-                        className="bg-white hover:bg-white !shadow-none"
-                        onClick={() => setShowImportPopup(false)}
+                        className="bg-red-600 hover:bg-white !shadow-none rounded-xl"
+                        onClick={handleCloseImportPopup}
                       >
-                        <CirclePlus className="w-4 h-4 rotate-45 text-red-600" />
 
+                        <CirclePlus className="w-4 h-4 rotate-45 text-white" />
+                        <p className="text-white">Close</p>
                       </Button>
                     </div>
 
