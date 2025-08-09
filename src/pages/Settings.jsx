@@ -7,7 +7,7 @@ import { LogOutIcon } from "lucide-react"
 import { Toaster } from "sonner"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import GlobalSettings from "@/components/settings/global-settings"
+// import GlobalSettings from "@/components/settings/global-settings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
@@ -19,6 +19,7 @@ import Card from '@/assets/icons/card.svg?react';
 import ViewAdsIcon from '@/assets/icons/viewads.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
 import UsersIcon from "@/assets/icons/users.svg?react"; // pick or create a suitable icon
+import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function Settings() {
@@ -85,14 +86,14 @@ export default function Settings() {
         document.activeElement.blur()
     }
 
-    useEffect(() => {
-        if (!loading && !hasSeenSettingsOnboarding) {
-            setShowSettingsPopup(true)
-        }
-    }, [loading, hasSeenSettingsOnboarding])
+    // useEffect(() => {
+    //     if (!loading && !hasSeenSettingsOnboarding) {
+    //         setShowSettingsPopup(true)
+    //     }
+    // }, [loading, hasSeenSettingsOnboarding])
 
-    if (authLoading) return null // or a loading spinner if you want
-    if (!isLoggedIn) return <Navigate to="/login" />
+    // if (authLoading) return null // or a loading spinner if you want
+    // if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <div className="flex bg-gray-100 min-h-screen">

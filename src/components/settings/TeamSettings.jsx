@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 // import { Badge } from "@/components/ui/badge"
-import YourCopyIcon from '@/assets/icons/copy.svg?react';
+import YourCopyIcon from '@/assets/icons/copy2.svg?react';
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, CreditCard, Loader, Trash2 } from "lucide-react"
@@ -199,24 +199,24 @@ export default function TeamSettings() {
                     {teamMode === 'owner' && teamData && (
                         <div className="space-y-3">
                             <div
-                                className="flex items-center justify-start gap-3 px-3 py-1 rounded-2xl border border-[#FFD6C4] bg-[#FFF6EB]"
+                                className="flex items-center justify-start gap-3 px-3 py-1 rounded-2xl border border-[#F3A9FF] bg-[#FFE0EF]"
                             >
                                 <span className="text-sm font-medium text-[#B71C1C]">
                                     Here is your Team ID
                                 </span>
 
                                 <div
-                                    className="flex items-center gap-2 px-3 py-1 rounded-lg cursor-pointer bg-[#FFD1C4]"
+                                    className="flex items-center gap-2 px-3 py-1 rounded-lg cursor-pointer bg-[#FFB2F6]"
                                     onClick={() => {
                                         navigator.clipboard.writeText(teamData.inviteCode)
                                         toast.success("Copied to clipboard!")
                                     }}
                                 >
-                                    <span className="text-sm font-semibold text-[#B71C1C]">
+                                    <span className="text-sm font-semibold text-[#67008F]">
                                         {teamData.inviteCode}
                                     </span>
-                                    <YourCopyIcon className="w-4 h-4 text-[#B71C1C]" />
-                                    <span className="text-sm font-semibold text-[#B71C1C]">
+                                    <YourCopyIcon className="w-4 h-4 text-[#67008F]" />
+                                    <span className="text-sm font-semibold text-[#67008F]">
 
                                     </span>
                                 </div>

@@ -19,6 +19,11 @@ import {
 } from "@/components/ui/dialog"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import CardIcon from '@/assets/icons/card.svg?react';
+import CheckIcon from '@/assets/icons/check.svg?react';
+import CheckIcon2 from '@/assets/icons/check2.svg?react';
+import MailIcon from '@/assets/icons/mail.svg?react';
+import RocketIcon from '@/assets/icons/rocket2.webp';
+import LightningIcon from '@/assets/icons/zap.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
@@ -250,47 +255,132 @@ export default function BillingSettings() {
 
                     {/* Pro Plan Benefits */}
                     {!isPaidSubscriber() && (
+                        < div className="flex flex-col md:flex-row gap-3">
+                            {/* Pro Plan */}
+                            <Card className="flex-1 rounded-[20px] ">
+                                <CardHeader className="p-1">
+                                    <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-6 shadow-[0_2px_10px_0px_rgba(34,197,94,0.15)] border border-2 border-green-100">
+                                        <div>
+                                            <CardTitle className="flex items-center text-lg">
+                                                <img src={RocketIcon} alt="Pro" className="w-10 h-10" />
+                                                <p className="text-[26px] font-bold">Pro</p>
+                                            </CardTitle>
+                                            <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
+                                        </div>
+                                        <>
+                                            {/* Google Font link */}
+                                            <link
+                                                rel="stylesheet"
+                                                href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&display=swap"
+                                            />
 
-                        <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
-                            <CardHeader>
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <CardTitle className="flex items-center gap-2 text-lg">
-                                            <img src="https://unpkg.com/@mynaui/icons/icons/rocket.svg" />
-                                            Pro Plan Benefits
-                                        </CardTitle>
-                                        <CardDescription className="text-gray-500" text-xs>{"Here's everything you get by upgrading"}</CardDescription>
+                                            <div>
+                                                <div
+                                                    className="text-4xl font-bold text-gray-900"
+                                                    style={{ fontFamily: "'DM Mono', monospace" }}
+                                                >
+                                                    $500
+                                                </div>
+                                                <div className="text-sm text-gray-400">/month</div>
+                                            </div>
+                                        </>
+
                                     </div>
-                                    <div className="text-right items-center flex flex-row space-x-1">
-                                        <div className="text-2xl font-bold text-gray-900">$500</div>
-                                        <div className="text-sm text-gray-400">/month</div>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-3">
+                                </CardHeader>
+                                <CardContent className="space-y-6 p-6 pb-8">
                                     <div className="flex items-center gap-3 text-sm">
-                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                        <span>Unlimited Ad Creation</span>
+                                        <CheckIcon className="w-6 h-6" />
+                                        <span className="text-[16px] text-gray-500">Unlimited Ad Accounts</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                        <span>Multiple ad account support</span>
+                                        <CheckIcon className="w-6 h-6" />
+                                        <span className="text-[16px] text-gray-500">Unlimited Ad Posting</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                        <span>Template management</span>
+                                        <CheckIcon className="w-6 h-6" />
+                                        <span className="text-[16px] text-gray-500">Instant Settings Sync</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                        <span>Priority support</span>
+                                        <CheckIcon className="w-6 h-6" />
+                                        <span className="text-[16px] text-gray-500">Invite your Team</span>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
+
+                            {/* Team Seats */}
+                            <Card className="flex-1 rounded-[20px]">
+                                <CardHeader className="p-1">
+                                    <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-6 shadow-[0_2px_10px_0px_rgba(255,215,0,0.15)] border border-2 border-yellow-200/50">
+                                        <div>
+                                            <CardTitle className="flex items-center text-lg">
+                                                <img src={LightningIcon} alt="Team Seats" className="w-10 h-10" />
+                                                <p className="text-[26px] font-bold">Team Seats</p>
+                                            </CardTitle>
+                                            <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
+                                        </div>
+                                        <div>
+                                            <>
+                                                {/* Google Font link */}
+                                                <link
+                                                    rel="stylesheet"
+                                                    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&display=swap"
+                                                />
+
+                                                <div>
+                                                    <div
+                                                        className="text-4xl font-bold text-gray-900"
+                                                        style={{ fontFamily: "'DM Mono', monospace" }}
+                                                    >
+                                                        $20
+                                                    </div>
+                                                    <div className="text-sm text-gray-400">/month</div>
+                                                </div>
+                                            </>
+
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="space-y-6 p-6 pb-8">
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <CheckIcon2 className="w-6 h-6 text-yellow-500" />
+                                        <span className="text-[16px] text-gray-500">Easily add & delete members</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <CheckIcon2 className="w-6 h-6 text-yellow-500" />
+                                        <span className="text-[16px] text-gray-500">No limit on their use</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <CheckIcon2 className="w-6 h-6 text-yellow-500" />
+                                        <span className="text-[16px] text-gray-500">Transparent pricing</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm">
+                                        <CheckIcon2 className="w-6 h-6 text-yellow-500" />
+                                        <span className="text-[16px] text-gray-500">Unique settings for everyone</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                        </div>
+
+
                     )}
                 </>
             )}
+            <Button
+                asChild
+                className="w-full flex items-center justify-center gap-2 bg-white rounded-2xl text-black border border-gray-200/90 h-12 hover:bg-gray-100/40"
+            >
+                <a
+                    href="mailto:shree@withblip.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    <MailIcon className="!w-6 !h-6" />
+                    Contact us For Help
+                </a>
+            </Button>
+
+
             {isTeamMember && (
                 <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
                     <CardContent className="pt-6">
