@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useReducer, useState, useRef, useCallback, useMemo } from "react"
+import { useBlocker } from "react-router";
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
@@ -12,6 +13,16 @@ import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 import TemplateIcon from '@/assets/icons/template.svg?react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogOverlay
+} from "@/components/ui/dialog";
+
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -174,12 +185,41 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
-  const templateChanged = useMemo(() =>
-    templateName !== currentTemplate.name ||
-    JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
-    JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []),
-    [templateName, currentTemplate.name, primaryTexts, currentTemplate.primaryTexts, headlines, currentTemplate.headlines]
-  )
+  const templateChanged = useMemo(() => {
+    // Brand new template → allow save logic to run
+    if (!currentTemplate?.id && !currentTemplate?.name) {
+      return !!templateName.trim() && primaryTexts.length > 0 && headlines.length > 0;
+    }
+
+    // Existing template → check for actual changes
+    return (
+      templateName !== currentTemplate.name ||
+      JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
+      JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
+    );
+  }, [
+    templateName,
+    currentTemplate,
+    primaryTexts,
+    headlines
+  ]);
+
+
+
+  const blocker = useBlocker(() => templateChanged);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (templateChanged) {
+        e.preventDefault();
+        e.returnValue = ''; // Chrome requires this
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [templateChanged]);
+
+
 
   const [showImportPopup, setShowImportPopup] = useState(false)
   const [recentAds, setRecentAds] = useState([])
@@ -616,7 +656,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Input
           value={templateName}
           onChange={(e) => setTemplateName(e.target.value)}
-          placeholder="Enter Template Name"
+          placeholder="Enter template name (e.g. Evergreen, Sale copy, etc.)"
           className="rounded-xl bg-white"
           disabled={isProcessing}
         />
@@ -700,6 +740,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               ? "Saving..."
               : "Save Template"}
         </Button>
+        {templateChanged && !nameAlreadyExists && templateName.trim() && (
+          <p className="text-xs text-red-500 bg-red-200 rounded-xl border border-bg-100 text-left mt-1 p-2">
+            *You have unsaved changes
+          </p>
+        )}
+
 
         {/* Bottom row with remaining two buttons split 50/50 */}
         <div className="flex gap-4">
@@ -719,10 +765,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       {showImportPopup && (
         <div
-          className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-start pt-32"
+          className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-start pt-48"
           style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+          onClick={() => setShowImportPopup(false)} // Add this line
         >
-          <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out">
+          <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
               <div className="px-6 pb-6 pt-4">
                 {isFetchingCopy ? (
@@ -748,10 +797,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </TabsTrigger>
                       </TabsList>
                       <Button
-                        className="bg-white hover:bg-white !shadow-none"
+                        className="bg-red-600 hover:bg-white !shadow-none rounded-xl"
                         onClick={() => setShowImportPopup(false)}
                       >
-                        <CirclePlus className="w-4 h-4 rotate-45 text-red-600" />
+                        <CirclePlus className="w-4 h-4 rotate-45 text-white" />
+                        <p className="text-white">Close</p>
 
                       </Button>
                     </div>
@@ -847,6 +897,42 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </div>
         </div>
       )}
+
+      {blocker.state === "blocked" && (
+        <Dialog className="rounded-xl" open onOpenChange={() => blocker.reset()}>
+          <DialogOverlay className="bg-black/20 fixed inset-[-20px]" />
+          <DialogContent className="rounded-[20px]">
+            <DialogHeader>
+              <DialogTitle>Unsaved Template Changes</DialogTitle>
+              <DialogDescription>
+                You have unsaved changes in your template. What would you like to do?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2">
+              <Button
+                className="bg-blue-500 text-white !rounded-xl"
+                onClick={async () => {
+                  await handleSaveTemplate();
+                  blocker.proceed();
+                }}
+              >
+                Save & Continue
+              </Button>
+              <Button
+                className="!rounded-xl"
+                variant="outline"
+                onClick={() => blocker.proceed()}
+              >
+                Continue Without Saving
+              </Button>
+              <Button variant="ghost" onClick={() => blocker.reset()}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
+

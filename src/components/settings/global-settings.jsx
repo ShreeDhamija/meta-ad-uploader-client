@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
-import "../../settings.css"
+// import "../../settings.css"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"

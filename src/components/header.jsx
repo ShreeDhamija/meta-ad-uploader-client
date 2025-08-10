@@ -10,6 +10,8 @@ export default function Header() {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
   const navigate = useNavigate()
   const { subscriptionData, isOnTrial, isTrialExpired, loading: subscriptionLoading } = useSubscription()
+  const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
+
 
   const handleUpgrade = () => {
     navigate('/settings?tab=billing')
@@ -48,7 +50,7 @@ export default function Header() {
       {/* Action Buttons (Right) */}
       <div className="flex items-center gap-2 bg-white shadow-md border border-gray-300 rounded-[40px] px-3 py-2 ml-2">
         {/* Trial Status Button - only show if on trial and not loading */}
-        {!subscriptionLoading && isOnTrial() && (
+        {!subscriptionLoading && isOnTrial() && !isTeamMember && (
           <>
             <button
               onClick={handleUpgrade}
@@ -71,7 +73,7 @@ export default function Header() {
         )}
 
         {/* Trial Expired Warning - only show if expired */}
-        {!subscriptionLoading && isTrialExpired() && (
+        {!subscriptionLoading && isTrialExpired() && !isTeamMember && (
           <>
             <button
               onClick={handleUpgrade}

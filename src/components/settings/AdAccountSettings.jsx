@@ -64,7 +64,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   const [defaultCTA, setDefaultCTA] = useState("Learn More")
   const [copyTemplates, setCopyTemplates] = useState({})
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
-  const [adNameFormula, setAdNameFormula] = useState(DEFAULT_AD_NAME_FORMULA)
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
@@ -123,7 +122,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       defaultCTA !== initialSettings.defaultCTA ||
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
-      // JSON.stringify(adNameFormula) !== JSON.stringify(initialSettings.adNameFormula)
       adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput
 
 
@@ -136,7 +134,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     defaultCTA,
     utmPairs,
     enhancements,
-    adNameFormula,
     adNameFormulaV2,  // Add to dependencies
     initialSettings,
     selectedAdAccount,
@@ -149,7 +146,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       ? adSettings.defaultUTMs
       : DEFAULT_UTM_PAIRS;
 
-    const formula = adSettings.adNameFormula || {};
+
 
     return {
       defaultPage: adSettings.defaultPage || null,
@@ -158,14 +155,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       defaultCTA: adSettings.defaultCTA || "LEARN_MORE",
       defaultUTMs: utms,
       creativeEnhancements: adSettings.creativeEnhancements || DEFAULT_ENHANCEMENTS,
-      adNameFormula: {
-        order: formula.order || DEFAULT_AD_NAME_FORMULA.order,
-        selected: formula.selected || DEFAULT_AD_NAME_FORMULA.selected,
-        values: {
-          dateType: formula.values?.dateType || DEFAULT_AD_NAME_FORMULA.values.dateType,
-          customTexts: formula.values?.customTexts || DEFAULT_AD_NAME_FORMULA.values.customTexts
-        }
-      },
       adNameFormulaV2: adSettings.adNameFormulaV2 || { rawInput: "" }
     };
   }, []);
@@ -177,32 +166,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   }, []);
 
   // Optimized ad name formula handlers
-  const handleOrderUpdate = useCallback((orderUpdater) => {
-    setAdNameFormula((currentFormula) => {
-      const newOrder = typeof orderUpdater === 'function'
-        ? orderUpdater(currentFormula.order)
-        : orderUpdater;
-      return { ...currentFormula, order: newOrder };
-    });
-  }, []);
 
-  const handleValuesUpdate = useCallback((valuesUpdater) => {
-    setAdNameFormula((currentFormula) => {
-      const newValues = typeof valuesUpdater === 'function'
-        ? valuesUpdater(currentFormula.values)
-        : valuesUpdater;
-      return { ...currentFormula, values: newValues };
-    });
-  }, []);
-
-  const handleItemToggle = useCallback((item) => {
-    setAdNameFormula(prev => ({
-      ...prev,
-      selected: prev.selected.includes(item)
-        ? prev.selected.filter(i => i !== item)
-        : [...prev.selected, item]
-    }));
-  }, []);
 
   const handleFormulaInputChange = useCallback((newRawInput) => {
     setAdNameFormulaV2({
@@ -217,14 +181,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       return;
     }
 
-    // Reorganize formula
-    const reorganizedFormula = {
-      ...adNameFormula,
-      order: [
-        ...adNameFormula.order.filter(item => adNameFormula.selected.includes(item)),
-        ...adNameFormula.order.filter(item => !adNameFormula.selected.includes(item))
-      ]
-    };
+
 
     const adAccountSettings = {
       defaultPage: selectedPage,
@@ -233,7 +190,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       defaultCTA,
       defaultUTMs: utmPairs,
       creativeEnhancements: enhancements,
-      adNameFormula: reorganizedFormula,
       adNameFormulaV2: {
         rawInput: adNameFormulaV2?.rawInput || ""
       }
@@ -246,7 +202,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         adAccountSettings,
       });
 
-      setAdNameFormula(reorganizedFormula);
+
       toast.success("Updates saved!");
 
       const newInitialSettings = {
@@ -256,7 +212,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         defaultCTA,
         defaultUTMs: utmPairs,
         creativeEnhancements: enhancements,
-        adNameFormula: reorganizedFormula,
         adNameFormulaV2: adNameFormulaV2  // Add this line too
 
       };
@@ -268,7 +223,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     }
   }, [
     selectedAdAccount,
-    adNameFormula,
     selectedPage,
     selectedInstagram,
     links,
@@ -343,7 +297,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     setUtmPairs(initial.defaultUTMs);
     setDefaultCTA(initial.defaultCTA);
     setEnhancements(initial.creativeEnhancements);
-    setAdNameFormula(initial.adNameFormula);
     setAdNameFormulaV2(initial.adNameFormulaV2); // Add this line
     setInitialSettings(initial);
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
@@ -363,7 +316,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
                 className="text-sm text-white bg-blue-500 hover:bg-blue-600 hover:text-white rounded-xl"
               >
                 <CirclePlus className="w-4 h-4 mr-1" />
-                Add New Ad Accounts
+                Link New Ad Accounts
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md !rounded-xl">
@@ -374,7 +327,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
                     alt="Logo"
                     className="w-12 h-12 rounded-md mb-4"
                   />
-                  <h3 className="text-sm font-semibold">Add New Ad Accounts</h3>
+                  <h3 className="text-sm font-semibold">Link New Ad Accounts</h3>
                 </div>
 
                 <div className="space-y-3 text-sm text-gray-600">
@@ -471,7 +424,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
             <div className="flex items-center gap-2">
               <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
               <h3 className="font-medium text-[14px] text-zinc-950">
-                Ad Name Formula
+                Ad Naming Convention
               </h3>
             </div>
 
@@ -483,15 +436,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
               to see list of variables you can use. You can also save custom text.
             </p>
 
-            {/* <ReorderAdNameParts
-              order={adNameFormula.order}
-              setOrder={handleOrderUpdate}
-              values={adNameFormula.values}
-              setValues={handleValuesUpdate}
-              selectedItems={adNameFormula.selected}
-              onItemToggle={handleItemToggle}
-              variant="default"
-            /> */}
             <ReorderAdNameParts
               formulaInput={adNameFormulaV2?.rawInput || ""}
               onFormulaChange={handleFormulaInputChange}
@@ -547,3 +491,4 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     </div>
   )
 }
+

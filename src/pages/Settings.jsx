@@ -4,11 +4,10 @@ import { useAuth } from "@/lib/AuthContext"
 import { Navigate, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { LogOutIcon } from "lucide-react"
-import { Home } from "lucide-react"
 import { Toaster } from "sonner"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import GlobalSettings from "@/components/settings/global-settings"
+// import GlobalSettings from "@/components/settings/global-settings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
@@ -18,13 +17,16 @@ import HomeBtn from '@/assets/icons/home.svg?react';
 import Folder from '@/assets/icons/cog.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import ViewAdsIcon from '@/assets/icons/viewads.svg?react';
+import TeamSettings from "@/components/settings/TeamSettings"
+import UsersIcon from "@/assets/icons/users.svg?react"; // pick or create a suitable icon
+import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const navigate = useNavigate()
-    // const [activeTab, setActiveTab] = useState("adaccount")
+
     const urlParams = new URLSearchParams(window.location.search)
     const initialTab = urlParams.get('tab') || 'adaccount'
     const preselectedAdAccount = urlParams.get('adAccount') // Add this line
@@ -33,26 +35,35 @@ export default function Settings() {
     const tabIconMap = {
         adaccount: Folder,
         billing: Card,
+        team: UsersIcon,
         viewads: ViewAdsIcon,
     }
-    // const Icon = tabIconMap[tab];
-
 
     const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading } = useGlobalSettings()
 
     const tabDescriptionMap = {
-        // global: "These preferences will apply to ALL ad accounts in your account.",
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
         billing: "Manage your subscription, billing methods, and view invoices.",
+        team: "Manage your team, invite members, or join an existing team.",
         viewads: "Preview all ads created in the last hour.",
     }
 
+    const tabTitleMap = {
+        adaccount: "Ad Account Settings",
+        billing: "Billing and Subscription",
+        team: "Team Management",
+        viewads: "Recently Created Ads",
+    };
+
+
+
     const tabLabelMap = {
-        // global: "Global",
         adaccount: "Ad Account",
         billing: "Billing",
+        team: "Team",
         viewads: "View Ads",
     }
+
 
     const handleCloseSettingsPopup = () => {
         setShowSettingsPopup(false)
@@ -104,7 +115,7 @@ export default function Settings() {
 
                         {/* Tab Buttons */}
                         <div className="space-y-2">
-                            {["adaccount", "billing", "viewads"].map((tab) => {
+                            {["adaccount", "billing", "team", "viewads"].map((tab) => {
                                 const Icon = tabIconMap[tab];
                                 return (
                                     <button
@@ -128,12 +139,9 @@ export default function Settings() {
                                             )}
                                         />
                                         <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
-                                            {tab === "adaccount"
-                                                ? "Ad Account Settings"
-                                                : tab === "viewads"
-                                                    ? "View Ads"
-                                                    : "Billing"}
+                                            {tabLabelMap[tab]}
                                         </span>
+
                                     </button>
                                 );
                             })}
@@ -173,12 +181,9 @@ export default function Settings() {
                         <div className="w-full max-w-3xl mx-auto p-16">
                             <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
                             <h1 className="text-xl font-semibold mb-1 text-left">
-                                {activeTab === "adaccount"
-                                    ? "Ad Account Settings"
-                                    : activeTab === "viewads"
-                                        ? "Recently Created Ads"
-                                        : "Billing and Subscription"}
+                                {tabTitleMap[activeTab]}
                             </h1>
+
                             <p className="text-gray-400 text-sm mb-6 text-left">{tabDescriptionMap[activeTab]}</p>
 
                             <div className="w-full">
@@ -186,6 +191,8 @@ export default function Settings() {
                                 {activeTab === "adaccount" && <AdAccountSettings preselectedAdAccount={preselectedAdAccount} />}
                                 {activeTab === "viewads" && <ViewAds />}
                                 {activeTab === "billing" && <BillingSettings />}
+                                {activeTab === "team" && <TeamSettings />}
+
                             </div>
                         </div>
                     </div>
