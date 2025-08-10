@@ -15,7 +15,7 @@ const AVAILABLE_VARIABLES = [
   { id: 'adType', label: 'File Type', note: '(Static/Video)' },
   { id: 'dateMonthYYYY', label: 'Date (MonthYYYY)' },
   { id: 'dateMonthDDYYYY', label: 'Date (MonthDDYYYY)' },
-  { id: 'iteration', label: 'Iteration (1/2/3)', note: '(1/2/3..)' },
+  { id: 'iteration', label: 'Iteration', note: '(1/2/3..)' },
 ]
 
 export default function ReorderAdNameParts({
