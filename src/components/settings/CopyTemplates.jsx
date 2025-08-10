@@ -13,6 +13,17 @@ import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 import TemplateIcon from '@/assets/icons/template.svg?react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -175,12 +186,24 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
-  const templateChanged = useMemo(() =>
-    templateName !== currentTemplate.name ||
-    JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
-    JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []),
-    [templateName, currentTemplate.name, primaryTexts, currentTemplate.primaryTexts, headlines, currentTemplate.headlines]
-  )
+  // const templateChanged = useMemo(() =>
+
+  //   templateName !== currentTemplate.name ||
+  //   JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
+  //   JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []),
+  //   [templateName, currentTemplate.name, primaryTexts, currentTemplate.primaryTexts, headlines, currentTemplate.headlines]
+  // )
+
+  const templateChanged = useMemo(() => {
+    if (!currentTemplate || !currentTemplate.name) return false; // not loaded yet
+    return (
+      templateName !== currentTemplate.name ||
+      JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
+      JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
+    );
+  }, [templateName, currentTemplate, primaryTexts, headlines]);
+
+
   const blocker = useBlocker(() => templateChanged);
 
   useEffect(() => {
@@ -195,21 +218,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }, [templateChanged]);
 
 
-
-  // --- 1C. React Router nav blocking ---
-  // useBlocker(
-  //   useCallback(
-  //     (tx) => {
-  //       if (templateChanged) {
-  //         setShowExitModal(true);
-  //         setProceedNav(() => tx.retry);
-  //       } else {
-  //         tx.retry();
-  //       }
-  //     },
-  //     [templateChanged]
-  //   )
-  // );
 
   const [showImportPopup, setShowImportPopup] = useState(false)
   const [recentAds, setRecentAds] = useState([])
@@ -730,11 +738,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               ? "Saving..."
               : "Save Template"}
         </Button>
-        {templateChanged && !nameAlreadyExists && templateName.trim() && (
-          <p className="text-xs text-red-500 bg-red-700 border border-red-800 p-2 text-center mt-1">
-            * You have unsaved changes
-          </p>
-        )}
+
 
 
         {/* Bottom row with remaining two buttons split 50/50 */}
@@ -889,32 +893,35 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       )}
 
       {blocker.state === "blocked" && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-[300px] space-y-4">
-            <p className="text-sm font-medium">You have unsaved template changes</p>
-            <div className="flex flex-col gap-2">
-              <Button
-                className="bg-blue-500 text-white rounded-lg"
+        <AlertDialog open onOpenChange={(open) => !open && blocker.reset()}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Unsaved Template Changes</AlertDialogTitle>
+              <AlertDialogDescription>
+                You have unsaved changes in your template.
+                What would you like to do?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="flex gap-2">
+              <AlertDialogCancel onClick={() => blocker.reset()}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
                 onClick={() => {
                   handleSaveTemplate();
                   blocker.proceed();
                 }}
               >
-                Save Template & Continue
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => blocker.proceed()}
-              >
+                Save and Continue
+              </AlertDialogAction>
+              <AlertDialogAction onClick={() => blocker.proceed()}>
                 Continue Without Saving
-              </Button>
-              <Button variant="ghost" onClick={() => blocker.reset()}>
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
+
 
 
 
