@@ -616,7 +616,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Input
           value={templateName}
           onChange={(e) => setTemplateName(e.target.value)}
-          placeholder="Enter Template Name"
+          placeholder="Enter template name (e.g. Evergreen, Sale copy, etc.)"
           className="rounded-xl bg-white"
           disabled={isProcessing}
         />

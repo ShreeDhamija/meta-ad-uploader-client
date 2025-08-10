@@ -21,7 +21,7 @@ import ShopDestinationSelector from "@/components/shop-destination-selector"
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
-import InstagramIcon from '@/assets/icons/plus.svg?react';
+import InstagramIcon from '@/assets/icons/ig.svg?react';
 import LabelIcon from '@/assets/icons/label.svg?react';
 import TemplateIcon from '@/assets/icons/file.svg?react';
 import LinkIcon from '@/assets/icons/link.svg?react';
