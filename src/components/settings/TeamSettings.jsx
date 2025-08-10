@@ -201,12 +201,12 @@ export default function TeamSettings() {
                             <div
                                 className="flex items-center justify-start gap-3 px-3 py-1 rounded-2xl border border-[#F3A9FF] bg-[#FFE0EF]"
                             >
-                                <span className="text-sm font-medium text-[#B71C1C]">
+                                <span className="text-sm font-medium text-[#B2038C]">
                                     Here is your Team ID
                                 </span>
 
                                 <div
-                                    className="flex items-center gap-2 px-3 py-1 rounded-lg cursor-pointer bg-[#FFB2F6]"
+                                    className="flex items-center gap-2 px-3 py-1 pr-2 rounded-lg cursor-pointer bg-[#FFB2F6]"
                                     onClick={() => {
                                         navigator.clipboard.writeText(teamData.inviteCode)
                                         toast.success("Copied to clipboard!")
@@ -221,7 +221,7 @@ export default function TeamSettings() {
                                     </span>
                                 </div>
 
-                                <span className="text-sm font-medium text-[#B71C1C]">
+                                <span className="text-sm font-medium text-[#B2038C]">
                                     Share it only with your team!
                                 </span>
                             </div>
