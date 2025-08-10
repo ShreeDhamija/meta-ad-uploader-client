@@ -197,20 +197,38 @@ export default function ReorderAdNameParts({
             <Command ref={commandInputRef} className="rounded-xl border shadow-md bg-white focus-visible:outline-none focus-visible:ring-0">
               <CommandList>
                 <CommandGroup heading="Insert Variable">
-                  {AVAILABLE_VARIABLES.map((variable) => (
+                  {AVAILABLE_VARIABLES.map((variable) => {
+                    const mainText = variable.main || variable.label || '';
+                    const noteText = variable.note || '';
+
+                    return (
+                      <CommandItem
+                        key={variable.id}
+                        onSelect={() => handleVariableSelect(variable)}
+                        className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
+                        onMouseDown={(e) => e.preventDefault()}
+                      >
+                        <span className="flex items-center">
+                          <span>{mainText}</span>
+                          {noteText && (
+                            <span className="text-gray-400 ml-2">{noteText}</span>
+                          )}
+                        </span>
+                      </CommandItem>
+                    );
+                  })}
+
+                  {/* {AVAILABLE_VARIABLES.map((variable) => (
+
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
                       className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
-                      onMouseDown={(e) => e.preventDefault()}
+                      onMouseDown={(e) => e.preventDefault()} // Prevent focus on click
                     >
-                      {variable.main}
-                      {variable.note && (
-                        <span className="text-gray-400 text-sm ml-1">{variable.note}</span>
-                      )}
+                      {variable.label}
                     </CommandItem>
-                  ))}
-
+                  ))} */}
                 </CommandGroup>
               </CommandList>
             </Command>
