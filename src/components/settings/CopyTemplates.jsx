@@ -1131,6 +1131,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   // In CopyTemplates.jsx, add this new useEffect
   useEffect(() => {
     // Do not run if there's no active ad account or if the template content hasn't changed.
+
+    if (templateName.trim() === '') {
+      return;
+    }
+
     if (!selectedAdAccount || !templateChanged) {
       return;
     }
