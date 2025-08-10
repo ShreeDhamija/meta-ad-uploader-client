@@ -181,7 +181,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []),
     [templateName, currentTemplate.name, primaryTexts, currentTemplate.primaryTexts, headlines, currentTemplate.headlines]
   )
-
+  const blocker = useBlocker(() => templateChanged);
 
   useEffect(() => {
     const handler = (e) => {
@@ -194,7 +194,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     return () => window.removeEventListener('beforeunload', handler);
   }, [templateChanged]);
 
-  const blocker = useBlocker(() => templateChanged);
+
 
   // --- 1C. React Router nav blocking ---
   // useBlocker(
@@ -889,18 +889,33 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       )}
 
       {blocker.state === "blocked" && (
-        <Modal>
-          <Button onClick={() => { handleSaveTemplate(); blocker.proceed(); }}>
-            Save Template & Continue
-          </Button>
-          <Button onClick={() => blocker.proceed()}>
-            Continue Without Saving
-          </Button>
-          <Button onClick={() => blocker.reset()}>
-            Cancel
-          </Button>
-        </Modal>
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-[300px] space-y-4">
+            <p className="text-sm font-medium">You have unsaved template changes</p>
+            <div className="flex flex-col gap-2">
+              <Button
+                className="bg-blue-500 text-white rounded-lg"
+                onClick={() => {
+                  handleSaveTemplate();
+                  blocker.proceed();
+                }}
+              >
+                Save Template & Continue
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => blocker.proceed()}
+              >
+                Continue Without Saving
+              </Button>
+              <Button variant="ghost" onClick={() => blocker.reset()}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
+
 
 
 
