@@ -748,7 +748,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               ? "Saving..."
               : "Save Template"}
         </Button>
-
+        {templateChanged && !nameAlreadyExists && templateName.trim() && (
+          <p className="text-xs text-red-500 text-left mt-1">
+            *You have unsaved changes
+          </p>
+        )}
 
 
         {/* Bottom row with remaining two buttons split 50/50 */}
@@ -904,7 +908,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       {blocker.state === "blocked" && (
         <Dialog open onOpenChange={() => blocker.reset()}>
-          <DialogOverlay className="bg-black/20 fixed inset-0" />
+          <DialogOverlay className="bg-black/20 fixed inset-[-20px]" />
           <DialogContent className="rounded-xl">
             <DialogHeader>
               <DialogTitle>Unsaved Template Changes</DialogTitle>
@@ -915,8 +919,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             <DialogFooter className="flex gap-2">
               <Button
                 className="bg-blue-500 text-white !rounded-xl"
-                onClick={() => {
-                  handleSaveTemplate();
+                onClick={async () => {
+                  await handleSaveTemplate();
                   blocker.proceed();
                 }}
               >
