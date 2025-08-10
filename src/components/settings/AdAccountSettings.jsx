@@ -604,10 +604,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
   const [defaultCTA, setDefaultCTA] = useState("Learn More")
   const [copyTemplates, setCopyTemplates] = useState({})
-  const [defaultTemplateName, setDefaultTemplateName] = useState("")
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
   const [adNameFormula, setAdNameFormula] = useState(DEFAULT_AD_NAME_FORMULA)
-  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
+  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
   const [mainButtonVisible, setMainButtonVisible] = useState(false)
@@ -615,6 +614,25 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   const [animateClass, setAnimateClass] = useState("")
   const [isReauthOpen, setIsReauthOpen] = useState(false)
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+  // Add this helper function inside AdAccountSettings component
+  const areCopyTemplatesEqual = useCallback((templates1, templates2) => {
+    const t1 = templates1 || {};
+    const t2 = templates2 || {};
+
+    const keys1 = Object.keys(t1);
+    const keys2 = Object.keys(t2);
+
+    if (keys1.length !== keys2.length) return false;
+
+    for (const key of keys1) {
+      if (!t2[key]) return false;
+      if (JSON.stringify(t1[key]) !== JSON.stringify(t2[key])) {
+        return false;
+      }
+    }
+    return true;
+  }, []);
 
   // Memoized Facebook reauth handler
   const handleFacebookReauth = useCallback(() => {
@@ -656,6 +674,12 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   const hasChanges = useMemo(() => {
     if (!selectedAdAccount || !Object.keys(initialSettings).length) return false;
 
+
+    const currentTemplates = adSettings.copyTemplates || {};
+    const initialTemplates = initialSettings.copyTemplates || {};
+    const currentDefaultTemplate = adSettings.defaultTemplateName || "";
+    const initialDefaultTemplate = initialSettings.defaultTemplateName || "";
+
     return (
       selectedPage?.id !== initialSettings.defaultPage?.id ||
       selectedInstagram?.id !== initialSettings.defaultInstagram?.id ||
@@ -663,9 +687,12 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       defaultCTA !== initialSettings.defaultCTA ||
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
+      // JSON.stringify(adNameFormula) !== JSON.stringify(initialSettings.adNameFormula)
       adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput ||
-      JSON.stringify(copyTemplates) !== JSON.stringify(initialSettings.copyTemplates) ||
-      defaultTemplateName !== initialSettings.defaultTemplateName
+      currentDefaultTemplate !== initialDefaultTemplate ||
+      !areCopyTemplatesEqual(currentTemplates, initialTemplates)
+
+
     );
   }, [
     selectedPage,
@@ -675,12 +702,12 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     utmPairs,
     enhancements,
     adNameFormula,
-    adNameFormulaV2,
-    copyTemplates,
-    defaultTemplateName,
+    adNameFormulaV2,  // Add to dependencies
     initialSettings,
     selectedAdAccount,
-    areUtmPairsEqual
+    areUtmPairsEqual,
+    adSettings,
+    areCopyTemplatesEqual
   ]);
 
   // Memoized initial settings calculation
@@ -779,8 +806,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       adNameFormulaV2: {
         rawInput: adNameFormulaV2?.rawInput || ""
       },
-      copyTemplates: copyTemplates,
-      defaultTemplateName: defaultTemplateName
+      copyTemplates: adSettings.copyTemplates,
+      defaultTemplateName: adSettings.defaultTemplateName,
+
     };
 
     try {
@@ -801,8 +829,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         creativeEnhancements: enhancements,
         adNameFormula: reorganizedFormula,
         adNameFormulaV2: adNameFormulaV2,
-        copyTemplates: copyTemplates,
-        defaultTemplateName: defaultTemplateName
+        copyTemplates: adSettings.copyTemplates,
+        defaultTemplateName: adSettings.defaultTemplateName,// Add this line too
+
       };
 
       setInitialSettings(newInitialSettings);
@@ -819,9 +848,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     defaultCTA,
     utmPairs,
     enhancements,
-    adNameFormulaV2,
-    copyTemplates,
-    defaultTemplateName
+    adNameFormulaV2  // Add to dependencies
+
   ]);
 
   // Effect for floating button animation
@@ -851,6 +879,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       }
     }
   }, [links]);
+
 
   // Effect for intersection observer
   useEffect(() => {
@@ -888,9 +917,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     setDefaultCTA(initial.defaultCTA);
     setEnhancements(initial.creativeEnhancements);
     setAdNameFormula(initial.adNameFormula);
-    setAdNameFormulaV2(initial.adNameFormulaV2);
-    setCopyTemplates(initial.copyTemplates);
-    setDefaultTemplateName(initial.defaultTemplateName);
+    setAdNameFormulaV2(initial.adNameFormulaV2); // Add this line
     setInitialSettings(initial);
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
 
@@ -1010,10 +1037,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
             selectedAdAccount={selectedAdAccount}
             adSettings={adSettings}
             setAdSettings={setAdSettings}
-            copyTemplates={copyTemplates}
-            setCopyTemplates={setCopyTemplates}
-            defaultTemplateName={defaultTemplateName}
-            setDefaultTemplateName={setDefaultTemplateName}
           />
 
           {/* Ad Naming Convention */}

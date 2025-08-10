@@ -872,6 +872,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
+
+
 // Custom SelectItem component with delete button
 const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) => {
   const handleDeleteClick = useCallback(
@@ -912,9 +914,12 @@ const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) =
   )
 })
 
+
 const initialState = {
+  templates: {},
+  defaultName: "",
   selectedName: "",
-  editingTemplate: null,
+  editingTemplate: null, // Track if we're editing an existing template
 }
 
 function reducer(state, action) {
@@ -930,16 +935,58 @@ function reducer(state, action) {
 
       return {
         ...state,
+        templates,
+        defaultName,
         selectedName: firstTemplate,
-        editingTemplate: firstTemplate,
+        editingTemplate: firstTemplate, // ✅ Corrected
       }
     }
 
+
     case "SAVE_TEMPLATE": {
+      // Create a new templates object with the updated template
+      const updatedTemplates = {
+        ...state.templates,
+        [action.payload.name]: action.payload.data,
+      }
+
+      // If we're renaming, remove the old template
+      if (action.payload.oldName && action.payload.oldName !== action.payload.name) {
+        delete updatedTemplates[action.payload.oldName]
+      }
+
+      // Update the default name if needed
+      const newDefaultName = state.defaultName === action.payload.oldName ? action.payload.name : state.defaultName
+
       return {
         ...state,
-        selectedName: action.payload.name,
-        editingTemplate: action.payload.name,
+        templates: updatedTemplates,
+        //selectedName: action.payload.name,
+        defaultName: newDefaultName,
+        editingTemplate: action.payload.name, // Update the editing template to the new name
+      }
+    }
+
+    case "SET_DEFAULT":
+      return {
+        ...state,
+        defaultName: action.payload,
+      }
+
+    case "DELETE_TEMPLATE": {
+      const updated = { ...state.templates }
+      delete updated[action.payload]
+
+      const keys = Object.keys(updated)
+
+      const fallback = state.defaultName && updated[state.defaultName] ? state.defaultName : keys[0] || ""
+
+      return {
+        ...state,
+        templates: updated,
+        selectedName: fallback,
+        defaultName: state.defaultName === action.payload ? keys[0] || "" : state.defaultName,
+        editingTemplate: null,
       }
     }
 
@@ -957,52 +1004,31 @@ function reducer(state, action) {
         editingTemplate: null,
       }
 
-    case "DELETE_TEMPLATE": {
-      const remainingKeys = Object.keys(action.payload.remainingTemplates)
-      const fallback = action.payload.newDefault || remainingKeys[0] || ""
-
-      return {
-        ...state,
-        selectedName: fallback,
-        editingTemplate: null,
-      }
-    }
-
     default:
       return state
   }
 }
 
-export default function CopyTemplates({
-  selectedAdAccount,
-  adSettings,
-  setAdSettings,
-  copyTemplates,
-  setCopyTemplates,
-  defaultTemplateName,
-  setDefaultTemplateName
-}) {
+export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSettings }) {
   const [state, dispatch] = useReducer(reducer, initialState)
-  const justSavedRef = useRef(false)
-  const { selectedName, editingTemplate } = state
+  // const justSavedRef = useRef(false)
+  const { templates, defaultName, selectedName, editingTemplate } = state
   const [templateName, setTemplateName] = useState("")
   const [primaryTexts, setPrimaryTexts] = useState([""])
   const [headlines, setHeadlines] = useState([""])
-  const [isProcessing, setIsProcessing] = useState(false)
-
+  // const [isProcessing, setIsProcessing] = useState(false)
   const isEditingDefault = useMemo(() =>
-    defaultTemplateName === editingTemplate, [defaultTemplateName, editingTemplate]
+    defaultName === editingTemplate, [defaultName, editingTemplate]
   )
-
   const nameAlreadyExists = useMemo(() =>
     templateName.trim() &&
     templateName !== editingTemplate &&
-    Object.keys(copyTemplates).includes(templateName),
-    [templateName, editingTemplate, copyTemplates]
+    Object.keys(templates).includes(templateName),
+    [templateName, editingTemplate, templates]
   )
 
   const currentTemplate = useMemo(() =>
-    copyTemplates[editingTemplate] || {}, [copyTemplates, editingTemplate]
+    templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
   const templateChanged = useMemo(() =>
@@ -1021,6 +1047,8 @@ export default function CopyTemplates({
   });
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+
 
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
@@ -1054,29 +1082,35 @@ export default function CopyTemplates({
       .finally(() => {
         setIsFetchingCopy(false);
       });
-  }, [showImportPopup, selectedAdAccount]);
+  }, [showImportPopup, selectedAdAccount]); // ← Clean dependencies
+
 
   useEffect(() => {
     if (!selectedAdAccount || !adSettings) return
 
+
+
+    const templates = adSettings.copyTemplates || {};
+    const defaultName = adSettings.defaultTemplateName || "";
+    const firstTemplate =
+      defaultName && templates[defaultName]
+        ? defaultName
+        : Object.keys(templates)[0] || "";
+
     dispatch({
       type: "SET_ALL",
       payload: {
-        templates: copyTemplates,
-        defaultName: defaultTemplateName,
+        templates: adSettings.copyTemplates || {},
+        defaultName: adSettings.defaultTemplateName || "",
       },
     });
-
-    const firstTemplate = defaultTemplateName && copyTemplates[defaultTemplateName]
-      ? defaultTemplateName
-      : Object.keys(copyTemplates)[0] || "";
 
     if (!firstTemplate) {
       setTemplateName("");
       setPrimaryTexts([""]);
       setHeadlines([""]);
     }
-  }, [selectedAdAccount, copyTemplates, defaultTemplateName])
+  }, [selectedAdAccount, adSettings])
 
   useEffect(() => {
     if (justSavedRef.current) {
@@ -1085,8 +1119,8 @@ export default function CopyTemplates({
       return
     }
 
-    if (selectedName && copyTemplates[selectedName]) {
-      const t = copyTemplates[selectedName]
+    if (selectedName && templates[selectedName]) {
+      const t = templates[selectedName]
       setTemplateName(t.name || "")
       setPrimaryTexts(t.primaryTexts || [""])
       setHeadlines(t.headlines || [""])
@@ -1095,7 +1129,63 @@ export default function CopyTemplates({
       setPrimaryTexts([""])
       setHeadlines([""])
     }
-  }, [selectedName, copyTemplates, editingTemplate])
+  }, [selectedName, templates, editingTemplate])
+
+  // In CopyTemplates.jsx, add this new useEffect
+  useEffect(() => {
+    // Do not run if there's no active ad account or if the template content hasn't changed.
+    if (!selectedAdAccount || !templateChanged) {
+      return;
+    }
+
+    const isNewTemplate = editingTemplate === null;
+    const isValid = templateName.trim() !== '' &&
+      primaryTexts.some(t => t.trim()) &&
+      headlines.some(h => h.trim());
+
+    // If it's a new template, only proceed if it's valid. This prevents
+    // the floating save button from appearing for an incomplete new template.
+    if (isNewTemplate && !isValid) {
+      return;
+    }
+
+    const updatedTemplateData = {
+      name: templateName,
+      primaryTexts,
+      headlines,
+    };
+
+    setAdSettings(prev => {
+      const newCopyTemplates = { ...(prev.copyTemplates || {}) };
+
+      // Handle renaming: if the key `editingTemplate` exists but `templateName` is different,
+      // we need to delete the old key before adding the new one.
+      if (editingTemplate && newCopyTemplates[editingTemplate] && editingTemplate !== templateName) {
+        delete newCopyTemplates[editingTemplate];
+      }
+
+      newCopyTemplates[templateName] = updatedTemplateData;
+
+      // Update the default name if the template being edited was the default and it got renamed.
+      const newDefaultName = (prev.defaultTemplateName === editingTemplate && editingTemplate !== templateName)
+        ? templateName
+        : prev.defaultTemplateName;
+
+      return {
+        ...prev,
+        copyTemplates: newCopyTemplates,
+        defaultTemplateName: newDefaultName,
+      };
+    });
+
+    // If a new template was just made valid and added, we need to switch
+    // the local state to "editing" that new template.
+    if (isNewTemplate && isValid) {
+      dispatch({ type: "SELECT_TEMPLATE", payload: templateName });
+    }
+
+  }, [templateName, primaryTexts, headlines, templateChanged, editingTemplate, selectedAdAccount, setAdSettings]);
+
 
   const handleLoadMore = useCallback(async () => {
     const excludePrimaryTexts = [...previouslyFetched.primaryTexts, ...(recentAds.primaryTexts || [])];
@@ -1140,10 +1230,13 @@ export default function CopyTemplates({
       console.error("Error loading more:", err);
       toast.error("Failed to load more copy");
 
+
     } finally {
       setIsLoadingMore(false);
+
     }
   }, [selectedAdAccount, recentAds, previouslyFetched]);
+
 
   const handleAdd = useCallback((setter, state) => {
     if (state.length < 5) setter([...state, ""])
@@ -1161,7 +1254,7 @@ export default function CopyTemplates({
     setter(updated)
   }, [])
 
-  // Memoize template operations
+  // 2. IMPORTANT: Memoize template operations
   const handleNewTemplate = useCallback(() => {
     dispatch({ type: "NEW_TEMPLATE" })
     setTemplateName("")
@@ -1169,91 +1262,83 @@ export default function CopyTemplates({
     setHeadlines([""])
   }, [])
 
-  const handleSaveTemplate = async () => {
-    if (!templateName.trim()) {
-      toast.error("Template name is required")
-      return
-    }
 
-    const newTemplate = {
-      name: templateName,
-      primaryTexts,
-      headlines,
-    }
+  // const handleSaveTemplate = async () => {
+  //   if (!templateName.trim()) {
+  //     toast.error("Template name is required")
+  //     return
+  //   }
 
-    setIsProcessing(true)
-    try {
-      // Check if we're editing an existing template
-      const isEditing = editingTemplate !== null && editingTemplate !== ""
-      const isRenaming = isEditing && editingTemplate !== templateName
+  //   const newTemplate = {
+  //     name: templateName,
+  //     primaryTexts,
+  //     headlines,
+  //   }
 
-      // Determine if this template should be the default
-      const shouldBeDefault = isRenaming && editingTemplate === defaultTemplateName
+  //   setIsProcessing(true)
+  //   try {
+  //     // Check if we're editing an existing template
+  //     const isEditing = editingTemplate !== null && editingTemplate !== ""
+  //     const isRenaming = isEditing && editingTemplate !== templateName
 
-      // Save the template with the new name
-      await saveCopyTemplate(selectedAdAccount, templateName, newTemplate, shouldBeDefault)
+  //     // Determine if this template should be the default
+  //     const shouldBeDefault = isRenaming && editingTemplate === defaultName
 
-      // If we're renaming, delete the old template
-      if (isRenaming) {
-        await deleteCopyTemplate(selectedAdAccount, editingTemplate)
-      }
+  //     // Save the template with the new name
+  //     await saveCopyTemplate(selectedAdAccount, templateName, newTemplate, shouldBeDefault)
 
-      // Update parent component state
-      setCopyTemplates(prev => {
-        const updated = { ...prev }
-        updated[templateName] = newTemplate
-        if (isRenaming) {
-          delete updated[editingTemplate]
-        }
-        return updated
-      })
+  //     // If we're renaming, delete the old template
+  //     if (isRenaming) {
+  //       await deleteCopyTemplate(selectedAdAccount, editingTemplate)
+  //     }
 
-      // Update default template name if needed
-      if (shouldBeDefault) {
-        setDefaultTemplateName(templateName)
-      }
+  //     // Update parent component state
+  //     setAdSettings((prev) => {
+  //       const updatedCopyTemplates = { ...prev.copyTemplates }
 
-      // Update adSettings for backward compatibility
-      setAdSettings((prev) => {
-        const updatedCopyTemplates = { ...prev.copyTemplates }
-        updatedCopyTemplates[templateName] = newTemplate
-        if (isRenaming) {
-          delete updatedCopyTemplates[editingTemplate]
-        }
+  //       // Add the new template
+  //       updatedCopyTemplates[templateName] = newTemplate
 
-        const updatedDefaultTemplateName = shouldBeDefault ? templateName : prev.defaultTemplateName
+  //       // Remove the old template if renaming
+  //       if (isRenaming) {
+  //         delete updatedCopyTemplates[editingTemplate]
+  //       }
 
-        return {
-          ...prev,
-          copyTemplates: updatedCopyTemplates,
-          defaultTemplateName: updatedDefaultTemplateName,
-        }
-      })
+  //       // Update default template name if needed
+  //       const updatedDefaultTemplateName = shouldBeDefault ? templateName : prev.defaultTemplateName
 
-      // Update local state
-      dispatch({
-        type: "SAVE_TEMPLATE",
-        payload: {
-          name: templateName,
-        },
-      })
+  //       return {
+  //         ...prev,
+  //         copyTemplates: updatedCopyTemplates,
+  //         defaultTemplateName: updatedDefaultTemplateName,
+  //       }
+  //     })
 
-      justSavedRef.current = true
-      setTimeout(() => {
-        dispatch({ type: "SELECT_TEMPLATE", payload: templateName })
-      }, 0)
+  //     // Update local state
+  //     dispatch({
+  //       type: "SAVE_TEMPLATE",
+  //       payload: {
+  //         name: templateName,
+  //         data: newTemplate,
+  //         oldName: isEditing ? editingTemplate : null,
+  //       },
+  //     })
+  //     justSavedRef.current = true
+  //     setTimeout(() => {
+  //       dispatch({ type: "SELECT_TEMPLATE", payload: templateName })
+  //     }, 0)
 
-      toast.success(isRenaming ? "Template renamed" : isEditing ? "Template updated" : "Template saved")
-    } catch (err) {
-      toast.error("Failed to save template")
-      console.error(err)
-    } finally {
-      setIsProcessing(false)
-    }
-  }
+  //     toast.success(isRenaming ? "Template renamed" : isEditing ? "Template updated" : "Template saved")
+  //   } catch (err) {
+  //     toast.error("Failed to save template")
+  //     console.error(err)
+  //   } finally {
+  //     setIsProcessing(false)
+  //   }
+  // }
 
   const handleSetAsDefault = async () => {
-    if (!templateName.trim() || defaultTemplateName === templateName) return
+    if (!templateName.trim() || defaultName === templateName) return
 
     const updatedTemplate = {
       name: templateName,
@@ -1261,18 +1346,11 @@ export default function CopyTemplates({
       headlines,
     }
 
-    setIsProcessing(true)
+    // setIsProcessing(true)
     try {
       await saveCopyTemplate(selectedAdAccount, templateName, updatedTemplate, true)
 
-      // Update parent state
-      setDefaultTemplateName(templateName)
-      setCopyTemplates(prev => ({
-        ...prev,
-        [templateName]: updatedTemplate,
-      }))
-
-      // Update adSettings for backward compatibility
+      // Update parent component state
       setAdSettings((prev) => ({
         ...prev,
         defaultTemplateName: templateName,
@@ -1282,62 +1360,56 @@ export default function CopyTemplates({
         },
       }))
 
+      // Update local state
+      dispatch({ type: "SET_DEFAULT", payload: templateName })
+
       toast.success("Set as default template")
     } catch (err) {
       toast.error("Failed to set default template")
     } finally {
-      setIsProcessing(false)
+      // setIsProcessing(false)
     }
   }
+
 
   const handleDeleteTemplate = useCallback(async (templateName) => {
     if (!templateName) return
 
-    setIsProcessing(true)
+    // setIsProcessing(true)
     try {
       await deleteCopyTemplate(selectedAdAccount, templateName)
 
-      const updatedTemplates = { ...copyTemplates }
-      delete updatedTemplates[templateName]
+      setAdSettings((prev) => {
+        const updatedCopyTemplates = { ...prev.copyTemplates }
+        delete updatedCopyTemplates[templateName]
 
-      const updatedDefaultTemplateName =
-        defaultTemplateName === templateName
-          ? Object.keys(updatedTemplates)[0] || ""
-          : defaultTemplateName
+        const updatedDefaultTemplateName =
+          prev.defaultTemplateName === templateName
+            ? Object.keys(updatedCopyTemplates)[0] || ""
+            : prev.defaultTemplateName
 
-      // Update parent state
-      setCopyTemplates(updatedTemplates)
-      setDefaultTemplateName(updatedDefaultTemplateName)
-
-      // Update adSettings for backward compatibility
-      setAdSettings((prev) => ({
-        ...prev,
-        copyTemplates: updatedTemplates,
-        defaultTemplateName: updatedDefaultTemplateName,
-      }))
-
-      dispatch({
-        type: "DELETE_TEMPLATE",
-        payload: {
-          remainingTemplates: updatedTemplates,
-          newDefault: updatedDefaultTemplateName
+        return {
+          ...prev,
+          copyTemplates: updatedCopyTemplates,
+          defaultTemplateName: updatedDefaultTemplateName,
         }
       })
 
+      dispatch({ type: "DELETE_TEMPLATE", payload: templateName })
       toast.success("Template deleted")
     } catch (err) {
       toast.error("Failed to delete template")
     } finally {
-      setIsProcessing(false)
+      // setIsProcessing(false)
     }
-  }, [selectedAdAccount, copyTemplates, defaultTemplateName, setCopyTemplates, setDefaultTemplateName, setAdSettings])
+  }, [selectedAdAccount, setAdSettings])
 
   const availableTemplates = useMemo(() =>
-    Object.entries(copyTemplates).sort(([a], [b]) => {
-      if (a === defaultTemplateName) return -1
-      if (b === defaultTemplateName) return 1
+    Object.entries(templates).sort(([a], [b]) => {
+      if (a === defaultName) return -1
+      if (b === defaultName) return 1
       return 0
-    }), [copyTemplates, defaultTemplateName]
+    }), [templates, defaultName]
   )
 
   const createPrimaryTextImportHandler = useCallback((text) => () => {
@@ -1435,7 +1507,7 @@ export default function CopyTemplates({
                 key={name}
                 value={name}
                 name={name}
-                isDefault={name === defaultTemplateName}
+                isDefault={name === defaultName}
                 onDelete={handleDeleteTemplate}
               />
             ))}
@@ -1445,7 +1517,7 @@ export default function CopyTemplates({
           variant="outline"
           size="sm"
           className="rounded-xl px-3 whitespace-nowrap"
-          disabled={!templateName.trim() || isEditingDefault || isProcessing}
+          disabled={!templateName.trim() || isEditingDefault}
           onClick={handleSetAsDefault}
         >
           Set as Default
@@ -1459,7 +1531,7 @@ export default function CopyTemplates({
           onChange={(e) => setTemplateName(e.target.value)}
           placeholder="Enter template name (e.g. Evergreen, Sale copy, etc.)"
           className="rounded-xl bg-white"
-          disabled={isProcessing}
+        // disabled={isProcessing}
         />
       </div>
 
@@ -1474,7 +1546,7 @@ export default function CopyTemplates({
               className="rounded-xl bg-white px-3 py-2 w-full text-sm resize-none focus:outline-none"
               minRows={2}
               maxRows={10}
-              disabled={isProcessing}
+            // disabled={isProcessing}
             />
 
             {primaryTexts.length > 1 && (
@@ -1490,7 +1562,7 @@ export default function CopyTemplates({
             variant="ghost"
             className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-black hover:text-white h-[40px]"
             onClick={() => handleAdd(setPrimaryTexts, primaryTexts)}
-            disabled={isProcessing}
+          // disabled={isProcessing}
           >
             + Add new primary text
           </Button>
@@ -1506,7 +1578,7 @@ export default function CopyTemplates({
               value={text}
               onChange={(e) => handleChange(i, setHeadlines, headlines, e.target.value)}
               className="rounded-xl bg-white"
-              disabled={isProcessing}
+            // disabled={isProcessing}
             />
             {headlines.length > 1 && (
               <Trash2
@@ -1521,7 +1593,7 @@ export default function CopyTemplates({
             variant="ghost"
             className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-black hover:text-white h-[40px]"
             onClick={() => handleAdd(setHeadlines, headlines)}
-            disabled={isProcessing}
+          // disabled={isProcessing}
           >
             + Add new headline
           </Button>
@@ -1529,17 +1601,18 @@ export default function CopyTemplates({
       </div>
 
       <div className="space-y-2 pt-2">
-        <Button
+        {/* <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
           disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
+
         >
           {nameAlreadyExists
             ? "This template name already exists"
             : isProcessing
               ? "Saving..."
               : "Save Template"}
-        </Button>
+        </Button> */}
 
         {/* Bottom row with remaining two buttons split 50/50 */}
         <div className="flex gap-4">
@@ -1548,7 +1621,7 @@ export default function CopyTemplates({
               variant="outline"
               className="w-full rounded-xl h-[40px] bg-zinc-800 hover:bg-black flex hover:text-white items-center gap-2 text-white transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-2"
               onClick={handleNewTemplate}
-              disabled={isProcessing}
+            // disabled={isProcessing}
             >
               <CirclePlus className="w-4 h-4 text-white" />
               Add New Template
@@ -1561,10 +1634,9 @@ export default function CopyTemplates({
         <div
           className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-start pt-48"
           style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
-          onClick={() => setShowImportPopup(false)}
+          onClick={() => setShowImportPopup(false)} // Add this line
         >
-          <div
-            className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out"
+          <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
@@ -1597,6 +1669,7 @@ export default function CopyTemplates({
                       >
                         <CirclePlus className="w-4 h-4 rotate-45 text-white" />
                         <p className="text-white">Close</p>
+
                       </Button>
                     </div>
 
@@ -1617,6 +1690,7 @@ export default function CopyTemplates({
                                   onClick={textExistsInTemplate(text, primaryTexts) ? undefined : createPrimaryTextImportHandler(text)}
                                   disabled={textExistsInTemplate(text, primaryTexts)}
                                 >
+                                  {/* <Download className="w-3 h-3" /> */}
                                   {textExistsInTemplate(text, primaryTexts) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
@@ -1650,6 +1724,7 @@ export default function CopyTemplates({
                                   onClick={textExistsInTemplate(text, headlines) ? undefined : createHeadlineImportHandler(text)}
                                   disabled={textExistsInTemplate(text, headlines)}
                                 >
+                                  {/* <Download className="w-3 h-3" /> */}
                                   {textExistsInTemplate(text, headlines) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
@@ -1682,6 +1757,7 @@ export default function CopyTemplates({
                       </Button>
                     </div>
                   </Tabs>
+
                 )}
               </div>
             </div>
