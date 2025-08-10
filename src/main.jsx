@@ -29,12 +29,12 @@ import {
 } from "react-router-dom";
 
 import App from "./App.jsx";
-import Home from "./Home.jsx";
-import Login from "./Login.jsx";
-import Landing from "./Landing.jsx";
-import Settings from "./Settings.jsx";
-import TermsOfService from "./TermsOfService.jsx";
-import PrivacyPolicy from "./PrivacyPolicy.jsx";
+import Home from "./pages/Home.jsx";
+import Login from "./pages/Login.jsx";
+import Landing from "./pages/Landing.jsx";
+import Settings from "./pages/Settings.jsx";
+import TermsOfService from "./pages/Landing/TermsOfService.jsx";
+import PrivacyPolicy from "./pages/Landing/PrivacyPolicy.jsx";
 
 const router = createBrowserRouter([
   {
