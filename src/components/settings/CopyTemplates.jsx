@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect, useReducer, useState, useRef, useCallback, useMemo } from "react"
+import { unstable_useBlocker as useBlocker } from "react-router-dom";
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
@@ -180,6 +181,32 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []),
     [templateName, currentTemplate.name, primaryTexts, currentTemplate.primaryTexts, headlines, currentTemplate.headlines]
   )
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (templateChanged) {
+        e.preventDefault();
+        e.returnValue = ''; // Chrome requires this
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [templateChanged]);
+
+  // --- 1C. React Router nav blocking ---
+  useBlocker(
+    useCallback(
+      (tx) => {
+        if (templateChanged) {
+          setShowExitModal(true);
+          setProceedNav(() => tx.retry);
+        } else {
+          tx.retry();
+        }
+      },
+      [templateChanged]
+    )
+  );
 
   const [showImportPopup, setShowImportPopup] = useState(false)
   const [recentAds, setRecentAds] = useState([])
@@ -700,6 +727,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               ? "Saving..."
               : "Save Template"}
         </Button>
+        {templateChanged && !nameAlreadyExists && templateName.trim() && (
+          <p className="text-xs text-red-500 bg-red-700 border border-red-800 p-2 text-center mt-1">
+            * You have unsaved changes
+          </p>
+        )}
+
 
         {/* Bottom row with remaining two buttons split 50/50 */}
         <div className="flex gap-4">
@@ -851,6 +884,40 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </div>
         </div>
       )}
+
+      {showExitModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-[300px] space-y-4">
+            <p className="text-sm font-medium">You have unsaved template changes</p>
+            <div className="flex flex-col gap-2">
+              <Button
+                className="bg-blue-500 text-white rounded-lg"
+                onClick={() => {
+                  handleSaveTemplate();
+                  setShowExitModal(false);
+                  if (proceedNav) proceedNav();
+                }}
+              >
+                Save Template & Continue
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowExitModal(false);
+                  if (proceedNav) proceedNav();
+                }}
+              >
+                Continue Without Saving
+              </Button>
+              <Button variant="ghost" onClick={() => setShowExitModal(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
     </div>
   )
 }
