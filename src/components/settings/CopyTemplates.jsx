@@ -14,16 +14,14 @@ import { RotateLoader } from "react-spinners"
 import TemplateIcon from '@/assets/icons/template.svg?react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from "@/components/ui/alert-dialog";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -893,39 +891,37 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       )}
 
       {blocker.state === "blocked" && (
-        <AlertDialog open onOpenChange={(open) => !open && blocker.reset()}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Unsaved Template Changes</AlertDialogTitle>
-              <AlertDialogDescription>
-                You have unsaved changes in your template.
-                What would you like to do?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="flex gap-2">
-              <AlertDialogCancel onClick={() => blocker.reset()}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
+        <Dialog open onOpenChange={() => blocker.reset()}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Unsaved Template Changes</DialogTitle>
+              <DialogDescription>
+                You have unsaved changes in your template. What would you like to do?
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="flex gap-2">
+              <Button
+                className="bg-blue-500 text-white rounded-lg"
                 onClick={() => {
                   handleSaveTemplate();
                   blocker.proceed();
                 }}
               >
-                Save and Continue
-              </AlertDialogAction>
-              <AlertDialogAction onClick={() => blocker.proceed()}>
+                Save & Continue
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => blocker.proceed()}
+              >
                 Continue Without Saving
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              </Button>
+              <Button variant="ghost" onClick={() => blocker.reset()}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
-
-
-
-
-
     </div>
   )
 }
