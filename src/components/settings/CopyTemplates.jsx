@@ -904,8 +904,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       {blocker.state === "blocked" && (
         <Dialog open onOpenChange={() => blocker.reset()}>
+          <DialogOverlay className="bg-black/20 fixed inset-0" />
           <DialogContent className="rounded-xl">
-            <DialogOverlay className="bg-black/20 fixed inset-0" />
             <DialogHeader>
               <DialogTitle>Unsaved Template Changes</DialogTitle>
               <DialogDescription>
