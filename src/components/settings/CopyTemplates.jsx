@@ -1113,23 +1113,20 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }, [selectedAdAccount, adSettings])
 
   useEffect(() => {
-    if (justSavedRef.current) {
-      // Skip this render cycle
-      justSavedRef.current = false
-      return
-    }
+    // The justSavedRef check has been removed.
 
     if (selectedName && templates[selectedName]) {
-      const t = templates[selectedName]
-      setTemplateName(t.name || "")
-      setPrimaryTexts(t.primaryTexts || [""])
-      setHeadlines(t.headlines || [""])
+      const t = templates[selectedName];
+      setTemplateName(t.name || "");
+      setPrimaryTexts(t.primaryTexts || [""]);
+      setHeadlines(t.headlines || [""]);
     } else if (editingTemplate === null) {
-      setTemplateName("")
-      setPrimaryTexts([""])
-      setHeadlines([""])
+      // This handles clearing the form when "Add New Template" is clicked.
+      setTemplateName("");
+      setPrimaryTexts([""]);
+      setHeadlines([""]);
     }
-  }, [selectedName, templates, editingTemplate])
+  }, [selectedName, templates, editingTemplate]);
 
   // In CopyTemplates.jsx, add this new useEffect
   useEffect(() => {
