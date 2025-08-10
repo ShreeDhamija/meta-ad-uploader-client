@@ -494,8 +494,12 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 </Button>
             </div>
             {showImportPopup && (
-                <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center" style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}>
-                    <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200">
+                <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center" style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                    onClick={handleCloseImportPopup} // Add this line
+                >
+                    <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="sticky top-0 bg-white z-10 px-6 py-6 border-b border-gray-200">
                             <Tabs defaultValue="links">
                                 <div className="flex items-center justify-between">
