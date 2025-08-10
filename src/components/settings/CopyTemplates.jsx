@@ -185,14 +185,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
-  // const templateChanged = useMemo(() =>
-
-  //   templateName !== currentTemplate.name ||
-  //   JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
-  //   JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []),
-  //   [templateName, currentTemplate.name, primaryTexts, currentTemplate.primaryTexts, headlines, currentTemplate.headlines]
-  // )
-
   const templateChanged = useMemo(() => {
     // Brand new template → allow save logic to run
     if (!currentTemplate?.id && !currentTemplate?.name) {

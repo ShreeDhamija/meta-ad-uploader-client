@@ -35,7 +35,6 @@ export default function useAdAccountSettings(adAccountId) {
                         copyTemplates: {},
                         defaultTemplateName: "",
                         creativeEnhancements: {},
-                        adNameFormula: null,
                         adNameFormulaV2: { rawInput: "" } // Add this line
 
                     });
@@ -65,7 +64,6 @@ export default function useAdAccountSettings(adAccountId) {
                         copyTemplates: s.copyTemplates,
                         defaultTemplateName: s.defaultTemplateName || "" || {},
                         creativeEnhancements: s.creativeEnhancements || {},
-                        adNameFormula: s.adNameFormula || null,
                         adNameFormulaV2: s.adNameFormulaV2 || { rawInput: "" } // Add this line
 
 

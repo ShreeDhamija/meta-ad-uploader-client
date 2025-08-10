@@ -199,7 +199,7 @@ export default function TeamSettings() {
                     {teamMode === 'owner' && teamData && (
                         <div className="space-y-3">
                             <div
-                                className="flex items-center justify-start gap-3 px-3 py-1 rounded-2xl border border-[#F3A9FF] bg-[#FFE0EF]"
+                                className="flex items-center justify-start gap-3 px-3 py-1 rounded-xl border border-[#F3A9FF] bg-[#FFE0EF]"
                             >
                                 <span className="text-sm font-medium text-[#B2038C]">
                                     Here is your Team ID
