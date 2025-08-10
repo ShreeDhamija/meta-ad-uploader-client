@@ -27,6 +27,7 @@ export default function ReorderAdNameParts({
   const [showDropdown, setShowDropdown] = useState(false) // Add this
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 }) // Add this
   const inputRef = useRef(null)
+  const dropdownRef = useRef(null)
   const commandInputRef = useRef(null)
 
   // Sync with parent's formulaInput prop
@@ -168,7 +169,22 @@ export default function ReorderAdNameParts({
   }, [inputValue, onFormulaChange]) // Add onFormulaChange to dependencies
 
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDropdown &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target) &&
+        dropdownRef.current &&  // Change from commandInputRef to dropdownRef
+        !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false)
+      }
+    }
 
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [showDropdown])
 
 
   return (
@@ -188,6 +204,7 @@ export default function ReorderAdNameParts({
 
         {showDropdown && (
           <div
+            ref={dropdownRef}  // Add this ref to the container
             className="absolute z-50 w-64"
             style={{
               top: `${dropdownPosition.top}px`,
