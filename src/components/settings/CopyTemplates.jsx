@@ -193,13 +193,24 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   // )
 
   const templateChanged = useMemo(() => {
-    if (!currentTemplate || !currentTemplate.name) return false; // not loaded yet
+    // Brand new template → allow save logic to run
+    if (!currentTemplate?.id && !currentTemplate?.name) {
+      return !!templateName.trim() && primaryTexts.length > 0 && headlines.length > 0;
+    }
+
+    // Existing template → check for actual changes
     return (
       templateName !== currentTemplate.name ||
       JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
       JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
     );
-  }, [templateName, currentTemplate, primaryTexts, headlines]);
+  }, [
+    templateName,
+    currentTemplate,
+    primaryTexts,
+    headlines
+  ]);
+
 
 
   const blocker = useBlocker(() => templateChanged);
@@ -727,7 +738,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
+          disabled={!templateName.trim() || isProcessing || nameAlreadyExists}
 
         >
           {nameAlreadyExists
@@ -892,7 +903,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       {blocker.state === "blocked" && (
         <Dialog open onOpenChange={() => blocker.reset()}>
-          <DialogContent>
+          <DialogContent className="rounded-xl">
+            <DialogOverlay className="bg-black/20 fixed inset-0" />
             <DialogHeader>
               <DialogTitle>Unsaved Template Changes</DialogTitle>
               <DialogDescription>
@@ -901,7 +913,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             </DialogHeader>
             <DialogFooter className="flex gap-2">
               <Button
-                className="bg-blue-500 text-white rounded-lg"
+                className="bg-blue-500 text-white !rounded-xl"
                 onClick={() => {
                   handleSaveTemplate();
                   blocker.proceed();
@@ -910,6 +922,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 Save & Continue
               </Button>
               <Button
+                className="!rounded-xl"
                 variant="outline"
                 onClick={() => blocker.proceed()}
               >
