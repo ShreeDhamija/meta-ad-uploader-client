@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 
 const AVAILABLE_VARIABLES = [
   { id: 'fileName', label: 'File Name' },
-  { id: 'adType', main: 'File Type', note: '(Static/Video)' },
+  { id: 'adType', label: 'File Type', note: '(Static/Video)' },
   { id: 'dateMonthYYYY', label: 'Date (MonthYYYY)' },
   { id: 'dateMonthDDYYYY', label: 'Date (MonthDDYYYY)' },
   { id: 'iteration', label: 'Iteration (1/2/3)', note: '(1/2/3..)' },
@@ -197,26 +197,22 @@ export default function ReorderAdNameParts({
             <Command ref={commandInputRef} className="rounded-xl border shadow-md bg-white focus-visible:outline-none focus-visible:ring-0">
               <CommandList>
                 <CommandGroup heading="Insert Variable">
-                  {AVAILABLE_VARIABLES.map((variable) => {
-                    const mainText = variable.main || variable.label || '';
-                    const noteText = variable.note || '';
+                  {AVAILABLE_VARIABLES.map((variable) => (
+                    <CommandItem
+                      key={variable.id}
+                      onSelect={() => handleVariableSelect(variable)}
+                      className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
+                      <span className="flex items-center">
+                        <span>{variable.label}</span>
+                        {variable.note && (
+                          <span className="text-gray-400 text-xs ml-1">{variable.note}</span>
+                        )}
+                      </span>
+                    </CommandItem>
+                  ))}
 
-                    return (
-                      <CommandItem
-                        key={variable.id}
-                        onSelect={() => handleVariableSelect(variable)}
-                        className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
-                        onMouseDown={(e) => e.preventDefault()}
-                      >
-                        <span className="flex items-center">
-                          <span>{mainText}</span>
-                          {noteText && (
-                            <span className="text-gray-400 ml-2">{noteText}</span>
-                          )}
-                        </span>
-                      </CommandItem>
-                    );
-                  })}
 
                   {/* {AVAILABLE_VARIABLES.map((variable) => (
 
