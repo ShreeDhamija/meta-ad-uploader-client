@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogOverlay
 } from "@/components/ui/dialog";
 
 
@@ -738,7 +739,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing || nameAlreadyExists}
+          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
 
         >
           {nameAlreadyExists
