@@ -509,7 +509,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     </TabsList>
 
                                     <Button
-                                        className="bg-red-600 hover:bg-white !shadow-none rounded-xl"
+                                        className="bg-red-600 !shadow-none rounded-xl"
                                         onClick={handleCloseImportPopup}
                                     >
 
