@@ -12,7 +12,6 @@ import {
 import App from "./App.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
-import Landing from "./pages/Landing.jsx";
 import Settings from "./pages/Settings.jsx";
 import TermsOfService from "./pages/Landing/TermsOfService.jsx";
 import PrivacyPolicy from "./pages/Landing/PrivacyPolicy.jsx";
@@ -24,7 +23,6 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: "login", element: <Login /> },
-      { path: "landing", element: <Landing /> },
       { path: "settings", element: <Settings /> },
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
