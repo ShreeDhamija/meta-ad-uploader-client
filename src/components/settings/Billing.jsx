@@ -172,7 +172,7 @@ export default function BillingSettings() {
                                         <CardIcon className="w-5 h-5" />
                                         Manage your billing
                                     </CardTitle>
-                                    <CardDescription className="text-gray-500 text-xs">Upgrade, cancel or add team seats!</CardDescription>
+                                    <CardDescription className="text-gray-500 text-xs">Upgrade or cancel your subscription</CardDescription>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-sm font-medium text-gray-600 mb-1 !shadow-none">Plan Type</p>
@@ -201,6 +201,7 @@ export default function BillingSettings() {
                                             <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
                                                 <p className="text-sm text-orange-800">
                                                     Your subscription will continue until {new Date(subscriptionData.willCancelAt).toLocaleDateString()}
+                                                    Your team members will lose access after this date as well.
                                                 </p>
                                             </div>
                                             <Button

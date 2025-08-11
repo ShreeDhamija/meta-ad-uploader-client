@@ -191,7 +191,7 @@ export default function TeamSettings() {
                         {teamMode === 'owner' && teamData
                             ? `Total members: ${teamData.members?.length || 0}`
                             : teamMode === 'member' && teamData
-                                ? `Owner: ${teamData.ownerName || 'Team Owner'}`
+                                ? `Team Created By: ${teamData.ownerName || 'Team Created By'}`
                                 : "Join or start a team"}
                     </CardDescription>
 
