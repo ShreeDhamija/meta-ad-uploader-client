@@ -183,15 +183,15 @@ export default function TeamSettings() {
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
                         <Users className="w-5 h-5" />
-                        {teamMode === 'owner' && teamData
-                            ? teamData.teamName || "My Team"
+                        {teamData
+                            ? teamData.teamName || teamData.name || "Your Team"
                             : "Your Team"}
                     </CardTitle>
                     <CardDescription className="text-gray-500 text-xs">
                         {teamMode === 'owner' && teamData
                             ? `Total members: ${teamData.members?.length || 0}`
                             : teamMode === 'member' && teamData
-                                ? `${teamData.teamName || teamData.name}`
+                                ? `Owner: ${teamData.ownerName || 'Team Owner'}`
                                 : "Join or start a team"}
                     </CardDescription>
 
@@ -319,7 +319,7 @@ export default function TeamSettings() {
                                 </div>
 
                                 {/* Delete Team Button */}
-                                <div className="pt-3 border-t">
+                                <div className="pt-3">
                                     <Button
                                         onClick={() => setShowDeleteTeamDialog(true)}
                                         variant="destructive"
@@ -333,7 +333,7 @@ export default function TeamSettings() {
                                 {/* Delete Team Confirmation Dialog */}
                                 <Dialog open={showDeleteTeamDialog} onOpenChange={setShowDeleteTeamDialog}>
                                     <DialogOverlay className="bg-black/50 !-mt-[20px]" />
-                                    <DialogContent className="sm:max-w-[425px] rounded-2xl">
+                                    <DialogContent className="sm:max-w-[425px] !rounded-[30px]">
                                         <DialogHeader>
                                             <DialogTitle className="flex items-center gap-2">
                                                 <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -359,7 +359,7 @@ export default function TeamSettings() {
                                                 variant="outline"
                                                 onClick={() => setShowDeleteTeamDialog(false)}
                                                 disabled={isDeletingTeam}
-                                                className="flex-1"
+                                                className="flex-1 rounded-xl"
                                             >
                                                 Cancel
                                             </Button>
@@ -367,7 +367,7 @@ export default function TeamSettings() {
                                                 variant="destructive"
                                                 onClick={handleDeleteTeam}
                                                 disabled={isDeletingTeam}
-                                                className="flex-1"
+                                                className="flex-1 rounded-xl"
                                             >
                                                 {isDeletingTeam ? (
                                                     <>
