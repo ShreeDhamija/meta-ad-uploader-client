@@ -2025,9 +2025,10 @@ export default function AdCreationForm({
 
       try {
         const responses = await Promise.all(promises);
-
+        console.log("job finished calling final endpoint");
         // Try to complete the job
         try {
+          console.log("job finished calling final endpoint try block");
           await axios.post(`${API_BASE_URL}/auth/complete-job`, {
             jobId: frontendJobId,
             message: 'All ads created successfully!'
@@ -2039,7 +2040,7 @@ export default function AdCreationForm({
           console.warn("Failed to update progress tracker, but ads were created successfully");
           // Still show the toast since ads actually succeeded
         }
-
+        console.log("job finished calling final endpoint try block ended");
         // toast.success("Ads created successfully!");
       } catch (error) {
         // Your existing error handling
