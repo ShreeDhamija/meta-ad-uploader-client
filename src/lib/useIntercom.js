@@ -18,7 +18,7 @@ export const useIntercom = () => {
                 name: userName,
                 email: userEmail,
                 // created_at: createdAtTimestamp,
-                hide_default_launcher: true,
+                // hide_default_launcher: true,
             });
         }
     }, [isLoggedIn, userName, userId, userEmail, userCreatedAt]);
