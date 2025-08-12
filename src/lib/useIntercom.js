@@ -1,39 +1,54 @@
 // src/lib/useIntercom.js
 import { useEffect, useCallback } from 'react';
-import { boot, show, hide, update } from '@intercom/messenger-js-sdk';
 import { useAuth } from './AuthContext';
 
 export const useIntercom = () => {
     const { isLoggedIn, userName, userId, userEmail, userCreatedAt } = useAuth();
 
     useEffect(() => {
-        console.log("[Intercom] useEffect ran", { isLoggedIn, userName, userId, userEmail, userCreatedAt });
-        if (isLoggedIn && userName && userId && userEmail) {
-            console.log("[Intercom] Booting...");
+        if (isLoggedIn && userName) {
+            // Load Intercom script if not already loaded
+            if (!window.Intercom) {
+                const script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.async = true;
+                script.src = 'https://widget.intercom.io/widget/zcgmjurf';
+                document.head.appendChild(script);
+            }
 
-
-            boot({
+            // Set up Intercom settings
+            window.intercomSettings = {
                 app_id: 'zcgmjurf',
-                user_id: userId,
                 name: userName,
-                email: userEmail,
-                // created_at: createdAtTimestamp,
-                // hide_default_launcher: true,
-            });
+                user_id: userId || undefined,
+                email: userEmail || undefined,
+                hide_default_launcher: true
+            };
+
+            // Initialize Intercom once script loads
+            const initIntercom = () => {
+                if (window.Intercom) {
+                    window.Intercom('boot', window.intercomSettings);
+                }
+            };
+
+            if (window.Intercom) {
+                initIntercom();
+            } else {
+                script.onload = initIntercom;
+            }
         }
-    }, [isLoggedIn, userName, userId, userEmail, userCreatedAt]);
+    }, [isLoggedIn, userName, userId, userEmail]);
 
-
-    // Methods to control the messenger
     const showMessenger = useCallback(() => {
-        if (isLoggedIn) {
-            show();
+        if (window.Intercom && isLoggedIn) {
+            window.Intercom('show');
         }
     }, [isLoggedIn]);
 
     const hideMessenger = useCallback(() => {
-        if (isLoggedIn) {
-            hide();
+        if (window.Intercom && isLoggedIn) {
+            window.Intercom('hide');
         }
     }, [isLoggedIn]);
 
