@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import Intercom from '@intercom/messenger-js-sdk';
 import { useAuth } from './AuthContext';
 
@@ -18,7 +18,33 @@ export const useIntercom = () => {
                 name: userName,
                 email: userEmail,
                 created_at: createdAtTimestamp,
+                hide_default_launcher: true, // Hide the default chat bubble
             });
         }
     }, [isLoggedIn, userName, userId, userEmail, userCreatedAt]);
+
+    // Methods to control the messenger
+    const showMessenger = useCallback(() => {
+        if (isLoggedIn) {
+            Intercom('show');
+        }
+    }, [isLoggedIn]);
+
+    const hideMessenger = useCallback(() => {
+        if (isLoggedIn) {
+            Intercom('hide');
+        }
+    }, [isLoggedIn]);
+
+    const updateMessenger = useCallback((settings) => {
+        if (isLoggedIn) {
+            Intercom('update', settings);
+        }
+    }, [isLoggedIn]);
+
+    return {
+        showMessenger,
+        hideMessenger,
+        updateMessenger,
+    };
 };

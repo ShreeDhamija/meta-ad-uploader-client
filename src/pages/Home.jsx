@@ -68,7 +68,7 @@ const sortAdSets = (adSets) => {
 
 export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
-    useIntercom(); // Add this line
+    const { showMessenger, hideMessenger } = useIntercom();
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = useState(false)
 
@@ -275,7 +275,7 @@ export default function Home() {
 
     return (
         <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
-            <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} />
+            <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
             <div className="flex flex-col xl:flex-row gap-6 min-w-0">
                 <div className="flex-1 xl:flex-[55] min-w-0 space-y-6">
                     <AdAccountSettings
