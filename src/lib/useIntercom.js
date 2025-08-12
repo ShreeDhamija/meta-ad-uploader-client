@@ -7,23 +7,22 @@ export const useIntercom = () => {
     const { isLoggedIn, userName, userId, userEmail, userCreatedAt } = useAuth();
 
     useEffect(() => {
-        if (isLoggedIn && userName) {
-            // Convert createdAt to Unix timestamp (seconds) if it exists
-            const createdAtTimestamp = userCreatedAt ?
-                Math.floor(new Date(userCreatedAt).getTime() / 1000) :
-                undefined;
+        if (isLoggedIn && userName && userId && userEmail) {
+            const createdAtTimestamp = userCreatedAt
+                ? Math.floor(new Date(userCreatedAt).getTime() / 1000)
+                : undefined;
 
-            // Boot Intercom with user data and hide default launcher
             boot({
                 app_id: 'zcgmjurf',
                 user_id: userId,
                 name: userName,
                 email: userEmail,
                 created_at: createdAtTimestamp,
-                hide_default_launcher: true, // Hide the default chat bubble
+                hide_default_launcher: true,
             });
         }
     }, [isLoggedIn, userName, userId, userEmail, userCreatedAt]);
+
 
     // Methods to control the messenger
     const showMessenger = useCallback(() => {
