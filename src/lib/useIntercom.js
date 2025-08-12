@@ -7,7 +7,9 @@ export const useIntercom = () => {
     const { isLoggedIn, userName, userId, userEmail, userCreatedAt } = useAuth();
 
     useEffect(() => {
+        console.log("[Intercom] useEffect ran", { isLoggedIn, userName, userId, userEmail, userCreatedAt });
         if (isLoggedIn && userName && userId && userEmail) {
+            console.log("[Intercom] Booting...");
             const createdAtTimestamp = userCreatedAt
                 ? Math.floor(new Date(userCreatedAt).getTime() / 1000)
                 : undefined;
@@ -18,7 +20,7 @@ export const useIntercom = () => {
                 name: userName,
                 email: userEmail,
                 created_at: createdAtTimestamp,
-                // hide_default_launcher: true,
+                hide_default_launcher: true,
             });
         }
     }, [isLoggedIn, userName, userId, userEmail, userCreatedAt]);
