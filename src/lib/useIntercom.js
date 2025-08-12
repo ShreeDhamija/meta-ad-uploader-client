@@ -1,5 +1,6 @@
+// src/lib/useIntercom.js
 import { useEffect, useCallback } from 'react';
-import Intercom from '@intercom/messenger-js-sdk';
+import { boot, show, hide, update } from '@intercom/messenger-js-sdk';
 import { useAuth } from './AuthContext';
 
 export const useIntercom = () => {
@@ -12,7 +13,8 @@ export const useIntercom = () => {
                 Math.floor(new Date(userCreatedAt).getTime() / 1000) :
                 undefined;
 
-            Intercom({
+            // Boot Intercom with user data and hide default launcher
+            boot({
                 app_id: 'zcgmjurf',
                 user_id: userId,
                 name: userName,
@@ -26,25 +28,18 @@ export const useIntercom = () => {
     // Methods to control the messenger
     const showMessenger = useCallback(() => {
         if (isLoggedIn) {
-            Intercom('show');
+            show();
         }
     }, [isLoggedIn]);
 
     const hideMessenger = useCallback(() => {
         if (isLoggedIn) {
-            Intercom('hide');
-        }
-    }, [isLoggedIn]);
-
-    const updateMessenger = useCallback((settings) => {
-        if (isLoggedIn) {
-            Intercom('update', settings);
+            hide();
         }
     }, [isLoggedIn]);
 
     return {
         showMessenger,
         hideMessenger,
-        updateMessenger,
     };
 };
