@@ -10,16 +10,14 @@ export const useIntercom = () => {
         console.log("[Intercom] useEffect ran", { isLoggedIn, userName, userId, userEmail, userCreatedAt });
         if (isLoggedIn && userName && userId && userEmail) {
             console.log("[Intercom] Booting...");
-            const createdAtTimestamp = userCreatedAt
-                ? Math.floor(new Date(userCreatedAt).getTime() / 1000)
-                : undefined;
+
 
             boot({
                 app_id: 'zcgmjurf',
                 user_id: userId,
                 name: userName,
                 email: userEmail,
-                created_at: createdAtTimestamp,
+                // created_at: createdAtTimestamp,
                 hide_default_launcher: true,
             });
         }
