@@ -7,35 +7,38 @@ export const useIntercom = () => {
 
     useEffect(() => {
         if (isLoggedIn && userName) {
-            // Load Intercom script if not already loaded
+            // Check if Intercom script is already loaded
             if (!window.Intercom) {
+                // Load Intercom script
                 const script = document.createElement('script');
                 script.type = 'text/javascript';
                 script.async = true;
                 script.src = 'https://widget.intercom.io/widget/zcgmjurf';
+
+                // Set up Intercom settings
+                window.intercomSettings = {
+                    app_id: 'zcgmjurf',
+                    name: userName,
+                    user_id: userId || undefined,
+                    email: userEmail || undefined,
+                    hide_default_launcher: true
+                };
+
+                // Initialize Intercom once script loads
+                script.onload = () => {
+                    if (window.Intercom) {
+                        window.Intercom('boot', window.intercomSettings);
+                    }
+                };
+
                 document.head.appendChild(script);
-            }
-
-            // Set up Intercom settings
-            window.intercomSettings = {
-                app_id: 'zcgmjurf',
-                name: userName,
-                user_id: userId || undefined,
-                email: userEmail || undefined,
-                hide_default_launcher: true
-            };
-
-            // Initialize Intercom once script loads
-            const initIntercom = () => {
-                if (window.Intercom) {
-                    window.Intercom('boot', window.intercomSettings);
-                }
-            };
-
-            if (window.Intercom) {
-                initIntercom();
             } else {
-                script.onload = initIntercom;
+                // Intercom already loaded, just update
+                window.Intercom('update', {
+                    name: userName,
+                    user_id: userId,
+                    email: userEmail,
+                });
             }
         }
     }, [isLoggedIn, userName, userId, userEmail]);
