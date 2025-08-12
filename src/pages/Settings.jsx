@@ -18,6 +18,7 @@ import Folder from '@/assets/icons/cog.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import ViewAdsIcon from '@/assets/icons/viewads.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
+import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react"; // pick or create a suitable icon
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -31,6 +32,7 @@ export default function Settings() {
     const initialTab = urlParams.get('tab') || 'adaccount'
     const preselectedAdAccount = urlParams.get('adAccount') // Add this line
     const [activeTab, setActiveTab] = useState(initialTab)
+    useIntercom(true);
 
     const tabIconMap = {
         adaccount: Folder,

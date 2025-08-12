@@ -2,7 +2,7 @@
 import { useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
-export const useIntercom = () => {
+export const useIntercom = (showDefaultLauncher = false) => {
     const { isLoggedIn, userName, userId, userEmail, userCreatedAt } = useAuth();
 
     useEffect(() => {
@@ -21,7 +21,7 @@ export const useIntercom = () => {
                     name: userName,
                     user_id: userId || undefined,
                     email: userEmail || undefined,
-                    hide_default_launcher: true
+                    hide_default_launcher: !showDefaultLauncher // Hide only if showDefaultLauncher is false
                 };
 
                 // Initialize Intercom once script loads
@@ -38,10 +38,11 @@ export const useIntercom = () => {
                     name: userName,
                     user_id: userId,
                     email: userEmail,
+                    hide_default_launcher: !showDefaultLauncher
                 });
             }
         }
-    }, [isLoggedIn, userName, userId, userEmail]);
+    }, [isLoggedIn, userName, userId, userEmail, showDefaultLauncher]);
 
     const showMessenger = useCallback(() => {
         if (window.Intercom && isLoggedIn) {
