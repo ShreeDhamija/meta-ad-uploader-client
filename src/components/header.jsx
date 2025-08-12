@@ -140,7 +140,7 @@ import useSubscription from "@/lib/useSubscriptionSettings"
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
-  console.log("Header auth data:", { isLoggedIn, userName, userId, userEmail });
+  console.log("Header auth data:", { isLoggedIn, userName, userEmail });
   const navigate = useNavigate()
   const { subscriptionData, isOnTrial, isTrialExpired, loading: subscriptionLoading } = useSubscription()
   const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
