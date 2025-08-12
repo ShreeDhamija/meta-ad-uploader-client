@@ -13,6 +13,7 @@ import App from "./App.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import Settings from "./pages/Settings.jsx";
+import NotFound from "./pages/NotFound.jsx";
 import TermsOfService from "./pages/Landing/TermsOfService.jsx";
 import PrivacyPolicy from "./pages/Landing/PrivacyPolicy.jsx";
 
@@ -26,6 +27,7 @@ const router = createBrowserRouter([
       { path: "settings", element: <Settings /> },
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
+      { path: "*", element: <NotFound /> },
     ],
   },
 ]);
