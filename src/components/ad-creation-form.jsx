@@ -759,10 +759,6 @@ export default function AdCreationForm({
   }, [status, isProcessingQueue, currentJob]);
 
 
-  // useEffect(() => {
-  //   const adName = computeAdName(null, adValues.dateType);
-  //   setAdName(adName);
-  // }, [adValues, adOrder, selectedItems]); // Remove customTextValue, add adValues
 
 
 

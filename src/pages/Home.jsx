@@ -15,6 +15,7 @@ import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useSubscription from "@/lib/useSubscriptionSettings"
+import { useIntercom } from "@/lib/useIntercom";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
@@ -67,6 +68,7 @@ const sortAdSets = (adSets) => {
 
 export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
+    useIntercom(); // Add this line
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = useState(false)
 

@@ -10,6 +10,9 @@ export const AuthProvider = ({ children }) => {
   const [userName, setUserName] = useState("")
   const [profilePicUrl, setProfilePicUrl] = useState("")
   const [authLoading, setAuthLoading] = useState(true);
+  const [userId, setUserId] = useState("") // Add this
+  const [userEmail, setUserEmail] = useState("") // Add this
+  const [userCreatedAt, setUserCreatedAt] = useState(null) // Add this
 
 
   useEffect(() => {
@@ -25,6 +28,9 @@ export const AuthProvider = ({ children }) => {
             setIsLoggedIn(true)
             setUserName(data.user.name)
             setProfilePicUrl(data.user.profilePicUrl || "")
+            setUserId(data.user.id) // Add this
+            setUserEmail(data.user.email) // Add this
+            setUserCreatedAt(data.user.createdAt) // Add this
 
           }
         }
@@ -50,6 +56,9 @@ export const AuthProvider = ({ children }) => {
         setIsLoggedIn(false)
         setUserName("")
         setProfilePicUrl("")
+        setUserId("") // Add this
+        setUserEmail("") // Add this
+        setUserCreatedAt(null) // Add this
       } else {
         toast.error("Failed to log out")
       }
