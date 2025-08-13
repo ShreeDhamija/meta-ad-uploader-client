@@ -226,6 +226,57 @@ export default function Home() {
     }, [selectedAdAccount, adAccountSettings]); // Keep dependencies the same
 
 
+    // Simple addition to Home.jsx - no new files needed!
+
+    // Add these three effects to your existing Home.jsx:
+
+    // 1. Load cached settings on mount
+    useEffect(() => {
+        if (!isLoggedIn) return;
+
+        try {
+            const cached = localStorage.getItem('blip_dropdown_settings');
+            if (cached) {
+                const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets } = JSON.parse(cached);
+
+                // Only restore if we don't already have selections
+                if (cachedAccount && !selectedAdAccount) setSelectedAdAccount(cachedAccount);
+                if (cachedCampaign && !selectedCampaign) setSelectedCampaign(cachedCampaign);
+                if (cachedAdSets?.length && !selectedAdSets.length) setSelectedAdSets(cachedAdSets);
+            }
+        } catch (error) {
+            console.error('Error loading cached settings:', error);
+        }
+    }, [isLoggedIn]);
+
+    // 2. Save selections to cache when they change
+    useEffect(() => {
+        if (!isLoggedIn || !selectedAdAccount) return;
+
+        try {
+            const settingsToCache = {
+                selectedAdAccount,
+                selectedCampaign,
+                selectedAdSets
+            };
+            localStorage.setItem('blip_dropdown_settings', JSON.stringify(settingsToCache));
+        } catch (error) {
+            console.error('Error saving cached settings:', error);
+        }
+    }, [selectedAdAccount, selectedCampaign, selectedAdSets, isLoggedIn]);
+
+    // 3. Optional: Clear cache on logout
+    useEffect(() => {
+        if (!isLoggedIn) {
+            try {
+                localStorage.removeItem('blip_dropdown_settings');
+            } catch (error) {
+                console.error('Error clearing cache:', error);
+            }
+        }
+    }, [isLoggedIn]);
+
+
 
     const handleCloseOnboarding = () => {
         setShowOnboardingPopup(false) // closes instantly
