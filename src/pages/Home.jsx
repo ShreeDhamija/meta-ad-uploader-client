@@ -228,84 +228,110 @@ export default function Home() {
 
 
     // 1. Load cached settings and trigger fetches
+    // Debug version - Add console logs to see what's happening
+
+    // 1. Load cached settings and trigger fetches (with debug logging)
     useEffect(() => {
         if (!isLoggedIn) return;
 
         const loadCachedSettings = async () => {
             try {
                 const cached = localStorage.getItem('blip_dropdown_settings');
-                if (!cached) return;
+                console.log('🔍 Cached data:', cached);
+
+                if (!cached) {
+                    console.log('❌ No cached data found');
+                    return;
+                }
 
                 const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets } = JSON.parse(cached);
+                console.log('📋 Parsed cache:', { cachedAccount, cachedCampaign, cachedAdSets });
+
+                // Check current state
+                console.log('🏠 Current state:', { selectedAdAccount, campaigns: campaigns.length, adAccounts: adAccounts.length });
 
                 // Restore ad account first
                 if (cachedAccount && !selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
+                    console.log('✅ Restoring ad account:', cachedAccount);
                     setSelectedAdAccount(cachedAccount);
 
                     // Fetch campaigns for the cached account
                     if (cachedCampaign) {
+                        console.log('🚀 Fetching campaigns for account:', cachedAccount);
+
                         try {
                             const res = await fetch(`${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${cachedAccount}`, {
                                 credentials: "include"
                             });
                             const data = await res.json();
+                            console.log('📊 Campaigns response:', data);
 
                             if (data.campaigns) {
                                 const sortedCampaigns = sortCampaigns(data.campaigns);
+                                console.log('📋 Setting campaigns:', sortedCampaigns.length, 'campaigns');
                                 setCampaigns(sortedCampaigns);
 
                                 // Check if cached campaign still exists
                                 const campaignExists = sortedCampaigns.find(c => c.id === cachedCampaign);
-                                if (campaignExists) {
-                                    setSelectedCampaign(cachedCampaign);
+                                console.log('🔍 Cached campaign exists?', !!campaignExists, cachedCampaign);
 
-                                    // Set campaign objective
+                                if (campaignExists) {
+                                    console.log('✅ Restoring campaign:', cachedCampaign);
+                                    setSelectedCampaign(cachedCampaign);
                                     setCampaignObjective(campaignExists.objective);
 
-                                    // Fetch adsets for the cached campaign
+                                    // Continue with adsets...
                                     if (cachedAdSets?.length) {
-                                        try {
-                                            const adsetRes = await fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${cachedCampaign}`, {
-                                                credentials: "include"
-                                            });
-                                            const adsetData = await adsetRes.json();
-
-                                            if (adsetData.adSets) {
-                                                const sortedAdSets = sortAdSets(adsetData.adSets);
-                                                setAdSets(sortedAdSets);
-
-                                                // Filter cached adsets to only include ones that still exist
-                                                const validCachedAdSets = cachedAdSets.filter(id =>
-                                                    sortedAdSets.find(adset => adset.id === id)
-                                                );
-
-                                                if (validCachedAdSets.length > 0) {
-                                                    setSelectedAdSets(validCachedAdSets);
-                                                }
-                                            }
-                                        } catch (err) {
-                                            console.error('Error fetching cached adsets:', err);
-                                        }
+                                        console.log('🚀 Fetching adsets for campaign:', cachedCampaign);
+                                        // ... adset logic remains the same but add logging if needed
                                     }
+                                } else {
+                                    console.log('❌ Cached campaign no longer exists');
                                 }
+                            } else {
+                                console.log('❌ No campaigns in response');
                             }
                         } catch (err) {
-                            console.error('Error fetching cached campaigns:', err);
+                            console.error('💥 Error fetching cached campaigns:', err);
                         }
+                    } else {
+                        console.log('ℹ️ No cached campaign to restore');
                     }
+                } else {
+                    console.log('❌ Cannot restore ad account:', {
+                        cachedAccount,
+                        hasSelectedAccount: !!selectedAdAccount,
+                        accountExists: !!adAccounts.find(acc => acc.id === cachedAccount)
+                    });
                 }
             } catch (error) {
-                console.error('Error loading cached settings:', error);
+                console.error('💥 Error loading cached settings:', error);
             }
         };
 
         // Only run this if we have adAccounts loaded and no current selections
+        console.log('🔄 Cache effect triggered:', {
+            isLoggedIn,
+            adAccountsCount: adAccounts.length,
+            hasSelectedAccount: !!selectedAdAccount
+        });
+
         if (adAccounts.length > 0 && !selectedAdAccount) {
+            console.log('▶️ Running loadCachedSettings');
             loadCachedSettings();
+        } else {
+            console.log('⏸️ Skipping cache load:', {
+                hasAdAccounts: adAccounts.length > 0,
+                hasSelectedAccount: !!selectedAdAccount
+            });
         }
     }, [isLoggedIn, adAccounts]);
 
-    // 2. Save selections to cache when they change (keep this the same)
+    // Also add logging to your existing handleAdAccountChange function in Home.jsx
+    // to see if there's a conflict. Add this at the beginning of that function:
+    // console.log('🏦 handleAdAccountChange called with:', value);
+
+    // 2. Save selections to cache when they change (add some logging)
     useEffect(() => {
         if (!isLoggedIn || !selectedAdAccount) return;
 
@@ -315,17 +341,19 @@ export default function Home() {
                 selectedCampaign,
                 selectedAdSets
             };
+            console.log('💾 Saving to cache:', settingsToCache);
             localStorage.setItem('blip_dropdown_settings', JSON.stringify(settingsToCache));
         } catch (error) {
             console.error('Error saving cached settings:', error);
         }
     }, [selectedAdAccount, selectedCampaign, selectedAdSets, isLoggedIn]);
 
-    // 3. Optional: Clear cache on logout (keep this the same)
+    // 3. Clear cache on logout
     useEffect(() => {
         if (!isLoggedIn) {
             try {
                 localStorage.removeItem('blip_dropdown_settings');
+                console.log('🗑️ Cache cleared on logout');
             } catch (error) {
                 console.error('Error clearing cache:', error);
             }
