@@ -65,6 +65,22 @@ const sortAdSets = (adSets) => {
     });
 };
 
+// Move these functions outside the component - around line 20, before the component
+const sortCampaigns = (campaigns) => {
+    const priority = { ACTIVE: 1, PAUSED: 2 };
+    return [...campaigns].sort((a, b) => {
+        const aPriority = priority[a.status] || 3;
+        const bPriority = priority[b.status] || 3;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        if (a.status === "ACTIVE" && b.status === "ACTIVE") {
+            const aSpend = parseFloat(a.spend) || 0;
+            const bSpend = parseFloat(b.spend) || 0;
+            return bSpend - aSpend;
+        }
+        return 0;
+    });
+};
+
 
 export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
@@ -444,6 +460,7 @@ export default function Home() {
                         documentExists={documentExists}
                         refreshAdSets={refreshAdSets}
                         sortAdSets={sortAdSets}
+                        sortCampaigns={sortCampaigns}
                     />
 
                     <AdCreationForm
