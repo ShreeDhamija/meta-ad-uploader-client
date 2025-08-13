@@ -226,30 +226,86 @@ export default function Home() {
     }, [selectedAdAccount, adAccountSettings]); // Keep dependencies the same
 
 
-    // Simple addition to Home.jsx - no new files needed!
 
-    // Add these three effects to your existing Home.jsx:
-
-    // 1. Load cached settings on mount
+    // 1. Load cached settings and trigger fetches
     useEffect(() => {
         if (!isLoggedIn) return;
 
-        try {
-            const cached = localStorage.getItem('blip_dropdown_settings');
-            if (cached) {
+        const loadCachedSettings = async () => {
+            try {
+                const cached = localStorage.getItem('blip_dropdown_settings');
+                if (!cached) return;
+
                 const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets } = JSON.parse(cached);
 
-                // Only restore if we don't already have selections
-                if (cachedAccount && !selectedAdAccount) setSelectedAdAccount(cachedAccount);
-                if (cachedCampaign && !selectedCampaign) setSelectedCampaign(cachedCampaign);
-                if (cachedAdSets?.length && !selectedAdSets.length) setSelectedAdSets(cachedAdSets);
-            }
-        } catch (error) {
-            console.error('Error loading cached settings:', error);
-        }
-    }, [isLoggedIn]);
+                // Restore ad account first
+                if (cachedAccount && !selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
+                    setSelectedAdAccount(cachedAccount);
 
-    // 2. Save selections to cache when they change
+                    // Fetch campaigns for the cached account
+                    if (cachedCampaign) {
+                        try {
+                            const res = await fetch(`${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${cachedAccount}`, {
+                                credentials: "include"
+                            });
+                            const data = await res.json();
+
+                            if (data.campaigns) {
+                                const sortedCampaigns = sortCampaigns(data.campaigns);
+                                setCampaigns(sortedCampaigns);
+
+                                // Check if cached campaign still exists
+                                const campaignExists = sortedCampaigns.find(c => c.id === cachedCampaign);
+                                if (campaignExists) {
+                                    setSelectedCampaign(cachedCampaign);
+
+                                    // Set campaign objective
+                                    setCampaignObjective(campaignExists.objective);
+
+                                    // Fetch adsets for the cached campaign
+                                    if (cachedAdSets?.length) {
+                                        try {
+                                            const adsetRes = await fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${cachedCampaign}`, {
+                                                credentials: "include"
+                                            });
+                                            const adsetData = await adsetRes.json();
+
+                                            if (adsetData.adSets) {
+                                                const sortedAdSets = sortAdSets(adsetData.adSets);
+                                                setAdSets(sortedAdSets);
+
+                                                // Filter cached adsets to only include ones that still exist
+                                                const validCachedAdSets = cachedAdSets.filter(id =>
+                                                    sortedAdSets.find(adset => adset.id === id)
+                                                );
+
+                                                if (validCachedAdSets.length > 0) {
+                                                    setSelectedAdSets(validCachedAdSets);
+                                                }
+                                            }
+                                        } catch (err) {
+                                            console.error('Error fetching cached adsets:', err);
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Error fetching cached campaigns:', err);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading cached settings:', error);
+            }
+        };
+
+        // Only run this if we have adAccounts loaded and no current selections
+        if (adAccounts.length > 0 && !selectedAdAccount) {
+            loadCachedSettings();
+        }
+    }, [isLoggedIn, adAccounts]);
+
+    // 2. Save selections to cache when they change (keep this the same)
     useEffect(() => {
         if (!isLoggedIn || !selectedAdAccount) return;
 
@@ -265,7 +321,7 @@ export default function Home() {
         }
     }, [selectedAdAccount, selectedCampaign, selectedAdSets, isLoggedIn]);
 
-    // 3. Optional: Clear cache on logout
+    // 3. Optional: Clear cache on logout (keep this the same)
     useEffect(() => {
         if (!isLoggedIn) {
             try {
