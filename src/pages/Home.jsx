@@ -242,10 +242,6 @@ export default function Home() {
     }, [selectedAdAccount, adAccountSettings]); // Keep dependencies the same
 
 
-
-    // 1. Load cached settings and trigger fetches
-    // Debug version - Add console logs to see what's happening
-
     // 1. Load cached settings and trigger fetches (with debug logging)
     useEffect(() => {
         if (!isLoggedIn) return;
@@ -296,10 +292,40 @@ export default function Home() {
                                     setSelectedCampaign(cachedCampaign);
                                     setCampaignObjective(campaignExists.objective);
 
-                                    // Continue with adsets...
+                                    // Fetch adsets for the cached campaign
                                     if (cachedAdSets?.length) {
                                         console.log('🚀 Fetching adsets for campaign:', cachedCampaign);
-                                        // ... adset logic remains the same but add logging if needed
+
+                                        try {
+                                            const adsetRes = await fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${cachedCampaign}`, {
+                                                credentials: "include"
+                                            });
+                                            const adsetData = await adsetRes.json();
+                                            console.log('📊 Adsets response:', adsetData);
+
+                                            if (adsetData.adSets) {
+                                                const sortedAdSets = sortAdSets(adsetData.adSets);
+                                                console.log('📋 Setting adsets:', sortedAdSets.length, 'adsets');
+                                                setAdSets(sortedAdSets);
+
+                                                // Filter cached adsets to only include ones that still exist
+                                                const validCachedAdSets = cachedAdSets.filter(id =>
+                                                    sortedAdSets.find(adset => adset.id === id)
+                                                );
+                                                console.log('✅ Valid cached adsets:', validCachedAdSets);
+
+                                                if (validCachedAdSets.length > 0) {
+                                                    console.log('✅ Restoring adsets:', validCachedAdSets);
+                                                    setSelectedAdSets(validCachedAdSets);
+                                                }
+                                            } else {
+                                                console.log('❌ No adsets in response');
+                                            }
+                                        } catch (err) {
+                                            console.error('💥 Error fetching cached adsets:', err);
+                                        }
+                                    } else {
+                                        console.log('ℹ️ No cached adsets to restore');
                                     }
                                 } else {
                                     console.log('❌ Cached campaign no longer exists');
@@ -342,10 +368,6 @@ export default function Home() {
             });
         }
     }, [isLoggedIn, adAccounts]);
-
-    // Also add logging to your existing handleAdAccountChange function in Home.jsx
-    // to see if there's a conflict. Add this at the beginning of that function:
-    // console.log('🏦 handleAdAccountChange called with:', value);
 
     // 2. Save selections to cache when they change (add some logging)
     useEffect(() => {
