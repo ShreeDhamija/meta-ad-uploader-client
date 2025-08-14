@@ -776,14 +776,18 @@ export default function AdCreationForm({
         // Fix: Handle multiple adsets properly
         const selectedAdSetIds = currentJob.formData.selectedAdSets;
         let adSetDisplayText;
-
-        if (selectedAdSetIds.length === 1) {
-          // Single adset - show the name
-          const adSet = adSets.find(a => a.id === selectedAdSetIds[0]);
-          adSetDisplayText = adSet?.name || (currentJob.formData.duplicateAdSet ? currentJob.formData.newAdSetName : 'selected adset');
+        if (currentJob.formData.duplicateAdSet) {
+          // New adset creation case
+          adSetDisplayText = currentJob.formData.newAdSetName || 'New Adset';
         } else {
-          // Multiple adsets - show count
-          adSetDisplayText = `${selectedAdSetIds.length} adsets`;
+          // Existing adsets case
+          const selectedAdSetIds = currentJob.formData.selectedAdSets;
+          if (selectedAdSetIds.length === 1) {
+            const adSet = adSets.find(a => a.id === selectedAdSetIds[0]);
+            adSetDisplayText = adSet?.name || 'selected adset';
+          } else {
+            adSetDisplayText = `${selectedAdSetIds.length} adsets`;
+          }
         }
 
         const completedJob = {
@@ -2241,7 +2245,20 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">
-                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || ' A New Adset'}
+                        {/* Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || ' a New Ad Set'} */}
+                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {(() => {
+                          if (currentJob.formData.duplicateAdSet) {
+                            return currentJob.formData.newAdSetName || 'New Adset';
+                          } else {
+                            const selectedAdSetIds = currentJob.formData.selectedAdSets;
+                            if (selectedAdSetIds.length === 1) {
+                              const adSet = adSets.find(a => a.id === selectedAdSetIds[0]);
+                              return adSet?.name || 'selected adset';
+                            } else {
+                              return `${selectedAdSetIds.length} adsets`;
+                            }
+                          }
+                        })()}
                       </p>
                       <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
 
