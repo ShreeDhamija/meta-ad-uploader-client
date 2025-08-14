@@ -85,8 +85,13 @@ export default function PrivacyPolicy() {
                 <section>
                     <h2 className="text-xl font-medium mb-2">8. Cookies</h2>
                     <p>
-                        We use cookies and similar technologies for functionality such as login persistence and security. You can disable cookies in your browser, though some features may be limited or unavailable.
+                        We also temporarily store certain form data in your browser (such as using cookies,
+                        sessionStorage, or localStorage) so you can navigate between pages without losing
+                        your progress. This storage is used only for functionality you have requested and
+                        is not used for advertising, analytics, or tracking purposes. You can clear this
+                        data at any time via your browser settings.
                     </p>
+
                 </section>
 
                 <section>

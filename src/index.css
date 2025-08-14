@@ -27,3 +27,20 @@
     background-color: transparent !important;
   }
 }
+
+/* Mobile desktop-only message */
+@media (max-width: 599px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .mobile-message {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 600px) {
+  .mobile-message {
+    display: none !important;
+  }
+}

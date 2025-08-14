@@ -16,6 +16,7 @@ import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import { useIntercom } from "@/lib/useIntercom";
+import DesktopIcon from '@/assets/Desktop.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
@@ -447,169 +448,184 @@ export default function Home() {
 
 
     return (
-        <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
-            <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
-            <div className="flex flex-col xl:flex-row gap-6 min-w-0">
-                <div className="flex-1 xl:flex-[55] min-w-0 space-y-6">
-                    <AdAccountSettings
-                        isLoading={isLoading}
-                        setIsLoading={setIsLoading}
-                        adAccounts={adAccounts}
-                        setAdAccounts={setAdAccounts}
-                        selectedAdAccount={selectedAdAccount}
-                        setSelectedAdAccount={setSelectedAdAccount}
-                        campaigns={campaigns}
-                        setCampaigns={setCampaigns}
-                        selectedCampaign={selectedCampaign}
-                        setSelectedCampaign={setSelectedCampaign}
-                        adSets={adSets}
-                        setAdSets={setAdSets}
-                        selectedAdSets={selectedAdSets}
-                        setSelectedAdSets={setSelectedAdSets}
-                        showDuplicateBlock={showDuplicateBlock}
-                        setShowDuplicateBlock={setShowDuplicateBlock}
-                        duplicateAdSet={duplicateAdSet}
-                        setDuplicateAdSet={setDuplicateAdSet}
-                        setCampaignObjective={setCampaignObjective}
-                        newAdSetName={newAdSetName}
-                        setNewAdSetName={setNewAdSetName}
-                        showDuplicateCampaignBlock={showDuplicateCampaignBlock}
-                        setShowDuplicateCampaignBlock={setShowDuplicateCampaignBlock}
-                        duplicateCampaign={duplicateCampaign}
-                        setDuplicateCampaign={setDuplicateCampaign}
-                        newCampaignName={newCampaignName}
-                        setNewCampaignName={setNewCampaignName}
-                        documentExists={documentExists}
-                        refreshAdSets={refreshAdSets}
-                        sortAdSets={sortAdSets}
-                        sortCampaigns={sortCampaigns}
-                    />
 
-                    <AdCreationForm
-                        isLoading={isLoading}
-                        setIsLoading={setIsLoading}
-                        pages={pages}
-                        setPages={setPages}
-                        pageId={pageId}
-                        setPageId={setPageId}
-                        instagramAccountId={instagramAccountId}
-                        setInstagramAccountId={setInstagramAccountId}
-                        adName={adName}
-                        setAdName={setAdName}
-                        adOrder={adOrder}
-                        setAdOrder={setAdOrder}
-                        selectedItems={selectedItems}
-                        setSelectedItems={setSelectedItems}
-                        onItemToggle={onItemToggle}
-                        adValues={adValues}
-                        setAdValues={setAdValues}
-                        messages={messages}
-                        setMessages={setMessages}
-                        headlines={headlines}
-                        setHeadlines={setHeadlines}
-                        descriptions={descriptions}
-                        setDescriptions={setDescriptions}
-                        link={link}
-                        setLink={setLink}
-                        cta={cta}
-                        setCta={setCta}
-                        thumbnail={thumbnail}
-                        setThumbnail={setThumbnail}
-                        files={files}
-                        setFiles={setFiles}
-                        videoThumbs={videoThumbs}
-                        setVideoThumbs={setVideoThumbs}
-                        selectedAdSets={selectedAdSets}
-                        duplicateAdSet={duplicateAdSet}
-                        selectedCampaign={selectedCampaign}
-                        selectedAdAccount={selectedAdAccount}
-                        adSets={adSets}
-                        copyTemplates={adAccountSettings.copyTemplates || {}}
-                        defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
-                        selectedTemplate={selectedTemplate}
-                        setSelectedTemplate={setSelectedTemplate}
-                        driveFiles={driveFiles}
-                        setDriveFiles={setDriveFiles}
-                        selectedShopDestination={selectedShopDestination}
-                        setSelectedShopDestination={setSelectedShopDestination}
-                        selectedShopDestinationType={selectedShopDestinationType}
-                        setSelectedShopDestinationType={setSelectedShopDestinationType}
-                        newAdSetName={newAdSetName}
-                        launchPaused={launchPaused}
-                        setLaunchPaused={setLaunchPaused}
-                        isCarouselAd={isCarouselAd}
-                        setIsCarouselAd={setIsCarouselAd}
-                        enablePlacementCustomization={enablePlacementCustomization}
-                        setEnablePlacementCustomization={setEnablePlacementCustomization}
-                        fileGroups={fileGroups}
-                        setFileGroups={setFileGroups}
-                        adAccountSettings={adAccountSettings}
-                        refreshAdSets={refreshAdSets}
-                        adNameFormulaV2={adNameFormulaV2}
-                        setAdNameFormulaV2={setAdNameFormulaV2}
-                    />
-                </div>
-
-                {/* <div className="flex-1 min-w-0"> */}
-                <div className="flex-1 xl:flex-[45] min-w-0" >
-                    <ErrorBoundary>
-                        <MediaPreview
-                            files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
-                            setFiles={setFiles}
-                            driveFiles={driveFiles}
-                            setDriveFiles={setDriveFiles}
-                            videoThumbs={videoThumbs}
-                            isCarouselAd={isCarouselAd}
-                            enablePlacementCustomization={enablePlacementCustomization}
-                            setEnablePlacementCustomization={setEnablePlacementCustomization}
-                            fileGroups={fileGroups}
-                            setFileGroups={setFileGroups}
-                            selectedAdSets={selectedAdSets}
-                            adSets={adSets}
-                            duplicateAdSet={duplicateAdSet}
-
-                        />
-                    </ErrorBoundary>
+        <>
+            {/* Mobile message - hidden on desktop */}
+            <div className="mobile-message fixed inset-0 bg-white flex-col items-center justify-center p-6 z-50 hidden">
+                <div className="text-center max-w-md">
+                    <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Required</h1>
+                    <p className="text-gray-600 mb-6">
+                        This application is optimized for desktop use. Please visit us on a desktop or laptop computer for the best experience.
+                    </p>
+                    <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
 
                 </div>
             </div>
 
-            {showOnboardingPopup && (
-                <OnboardingPopup
-                    userName={userName}
-                    hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
-                    onClose={handleCloseOnboarding}
-                    onGoToSettings={() => {
-                        console.log("onGoToSettings called")
-                        console.log("navigate function:", navigate)
-                        console.log("typeof navigate:", typeof navigate)
+            <div className=" desktop-only w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
+                <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
+                <div className="flex flex-col xl:flex-row gap-6 min-w-0">
+                    <div className="flex-1 xl:flex-[55] min-w-0 space-y-6">
+                        <AdAccountSettings
+                            isLoading={isLoading}
+                            setIsLoading={setIsLoading}
+                            adAccounts={adAccounts}
+                            setAdAccounts={setAdAccounts}
+                            selectedAdAccount={selectedAdAccount}
+                            setSelectedAdAccount={setSelectedAdAccount}
+                            campaigns={campaigns}
+                            setCampaigns={setCampaigns}
+                            selectedCampaign={selectedCampaign}
+                            setSelectedCampaign={setSelectedCampaign}
+                            adSets={adSets}
+                            setAdSets={setAdSets}
+                            selectedAdSets={selectedAdSets}
+                            setSelectedAdSets={setSelectedAdSets}
+                            showDuplicateBlock={showDuplicateBlock}
+                            setShowDuplicateBlock={setShowDuplicateBlock}
+                            duplicateAdSet={duplicateAdSet}
+                            setDuplicateAdSet={setDuplicateAdSet}
+                            setCampaignObjective={setCampaignObjective}
+                            newAdSetName={newAdSetName}
+                            setNewAdSetName={setNewAdSetName}
+                            showDuplicateCampaignBlock={showDuplicateCampaignBlock}
+                            setShowDuplicateCampaignBlock={setShowDuplicateCampaignBlock}
+                            duplicateCampaign={duplicateCampaign}
+                            setDuplicateCampaign={setDuplicateCampaign}
+                            newCampaignName={newCampaignName}
+                            setNewCampaignName={setNewCampaignName}
+                            documentExists={documentExists}
+                            refreshAdSets={refreshAdSets}
+                            sortAdSets={sortAdSets}
+                            sortCampaigns={sortCampaigns}
+                        />
 
-                        try {
-                            // Navigate FIRST, before unmounting the component
-                            console.log("About to call navigate")
-                            navigate("/settings")
-                            console.log("Navigate called successfully")
+                        <AdCreationForm
+                            isLoading={isLoading}
+                            setIsLoading={setIsLoading}
+                            pages={pages}
+                            setPages={setPages}
+                            pageId={pageId}
+                            setPageId={setPageId}
+                            instagramAccountId={instagramAccountId}
+                            setInstagramAccountId={setInstagramAccountId}
+                            adName={adName}
+                            setAdName={setAdName}
+                            adOrder={adOrder}
+                            setAdOrder={setAdOrder}
+                            selectedItems={selectedItems}
+                            setSelectedItems={setSelectedItems}
+                            onItemToggle={onItemToggle}
+                            adValues={adValues}
+                            setAdValues={setAdValues}
+                            messages={messages}
+                            setMessages={setMessages}
+                            headlines={headlines}
+                            setHeadlines={setHeadlines}
+                            descriptions={descriptions}
+                            setDescriptions={setDescriptions}
+                            link={link}
+                            setLink={setLink}
+                            cta={cta}
+                            setCta={setCta}
+                            thumbnail={thumbnail}
+                            setThumbnail={setThumbnail}
+                            files={files}
+                            setFiles={setFiles}
+                            videoThumbs={videoThumbs}
+                            setVideoThumbs={setVideoThumbs}
+                            selectedAdSets={selectedAdSets}
+                            duplicateAdSet={duplicateAdSet}
+                            selectedCampaign={selectedCampaign}
+                            selectedAdAccount={selectedAdAccount}
+                            adSets={adSets}
+                            copyTemplates={adAccountSettings.copyTemplates || {}}
+                            defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
+                            selectedTemplate={selectedTemplate}
+                            setSelectedTemplate={setSelectedTemplate}
+                            driveFiles={driveFiles}
+                            setDriveFiles={setDriveFiles}
+                            selectedShopDestination={selectedShopDestination}
+                            setSelectedShopDestination={setSelectedShopDestination}
+                            selectedShopDestinationType={selectedShopDestinationType}
+                            setSelectedShopDestinationType={setSelectedShopDestinationType}
+                            newAdSetName={newAdSetName}
+                            launchPaused={launchPaused}
+                            setLaunchPaused={setLaunchPaused}
+                            isCarouselAd={isCarouselAd}
+                            setIsCarouselAd={setIsCarouselAd}
+                            enablePlacementCustomization={enablePlacementCustomization}
+                            setEnablePlacementCustomization={setEnablePlacementCustomization}
+                            fileGroups={fileGroups}
+                            setFileGroups={setFileGroups}
+                            adAccountSettings={adAccountSettings}
+                            refreshAdSets={refreshAdSets}
+                            adNameFormulaV2={adNameFormulaV2}
+                            setAdNameFormulaV2={setAdNameFormulaV2}
+                        />
+                    </div>
 
-                            // Then update state and save settings
-                            setHasSeenOnboarding(true)
-                            setShowOnboardingPopup(false)
+                    {/* <div className="flex-1 min-w-0"> */}
+                    <div className="flex-1 xl:flex-[45] min-w-0" >
+                        <ErrorBoundary>
+                            <MediaPreview
+                                files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
+                                setFiles={setFiles}
+                                driveFiles={driveFiles}
+                                setDriveFiles={setDriveFiles}
+                                videoThumbs={videoThumbs}
+                                isCarouselAd={isCarouselAd}
+                                enablePlacementCustomization={enablePlacementCustomization}
+                                setEnablePlacementCustomization={setEnablePlacementCustomization}
+                                fileGroups={fileGroups}
+                                setFileGroups={setFileGroups}
+                                selectedAdSets={selectedAdSets}
+                                adSets={adSets}
+                                duplicateAdSet={duplicateAdSet}
 
-                            // Save settings after navigation
-                            fetch(`${API_BASE_URL}/settings/save`, {
-                                method: "POST",
-                                credentials: "include",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
-                            }).catch(error => console.error("Settings save error:", error))
+                            />
+                        </ErrorBoundary>
 
-                        } catch (error) {
-                            console.error("Error in onGoToSettings:", error)
-                        }
-                    }}
-                />
-            )}
+                    </div>
+                </div>
 
-            <Toaster richColors position="bottom-left" closeButton />
-        </div>
+                {showOnboardingPopup && (
+                    <OnboardingPopup
+                        userName={userName}
+                        hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
+                        onClose={handleCloseOnboarding}
+                        onGoToSettings={() => {
+                            console.log("onGoToSettings called")
+                            console.log("navigate function:", navigate)
+                            console.log("typeof navigate:", typeof navigate)
+
+                            try {
+                                // Navigate FIRST, before unmounting the component
+                                console.log("About to call navigate")
+                                navigate("/settings")
+                                console.log("Navigate called successfully")
+
+                                // Then update state and save settings
+                                setHasSeenOnboarding(true)
+                                setShowOnboardingPopup(false)
+
+                                // Save settings after navigation
+                                fetch(`${API_BASE_URL}/settings/save`, {
+                                    method: "POST",
+                                    credentials: "include",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
+                                }).catch(error => console.error("Settings save error:", error))
+
+                            } catch (error) {
+                                console.error("Error in onGoToSettings:", error)
+                            }
+                        }}
+                    />
+                )}
+
+                <Toaster richColors position="bottom-left" closeButton />
+            </div>
+        </>
     )
 }
