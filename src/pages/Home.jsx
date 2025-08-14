@@ -263,10 +263,18 @@ export default function Home() {
                 // Check current state
                 console.log('🏠 Current state:', { selectedAdAccount, campaigns: campaigns.length, adAccounts: adAccounts.length });
 
+
+                if (cachedAccount && !selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
+                    console.log('✅ Restoring ad account from cache:', cachedAccount);
+                    setSelectedAdAccount(cachedAccount);
+                    return; // Exit early, let the effect run again with the selected account
+                }
+
                 // Restore ad account first
                 if (cachedAccount && cachedAccount === selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
 
-                    console.log('✅ Restoring ad account:', cachedAccount);
+                    console.log('✅ Account matches cache, restoring campaigns/adsets for:', cachedAccount);
+
                     // setSelectedAdAccount(cachedAccount);
 
                     // Fetch campaigns for the cached account
