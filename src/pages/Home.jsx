@@ -264,9 +264,10 @@ export default function Home() {
                 console.log('🏠 Current state:', { selectedAdAccount, campaigns: campaigns.length, adAccounts: adAccounts.length });
 
                 // Restore ad account first
-                if (cachedAccount && !selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
+                if (cachedAccount && cachedAccount === selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
+
                     console.log('✅ Restoring ad account:', cachedAccount);
-                    setSelectedAdAccount(cachedAccount);
+                    // setSelectedAdAccount(cachedAccount);
 
                     // Fetch campaigns for the cached account
                     if (cachedCampaign) {
@@ -359,7 +360,7 @@ export default function Home() {
             hasSelectedAccount: !!selectedAdAccount
         });
 
-        if (adAccounts.length > 0 && !selectedAdAccount) {
+        if (adAccounts.length > 0 && selectedAdAccount) {
             console.log('▶️ Running loadCachedSettings');
             loadCachedSettings();
         } else {
@@ -368,7 +369,7 @@ export default function Home() {
                 hasSelectedAccount: !!selectedAdAccount
             });
         }
-    }, [isLoggedIn, adAccounts]);
+    }, [isLoggedIn, adAccounts, selectedAdAccount]);
 
     // 2. Save selections to cache when they change (add some logging)
     useEffect(() => {
