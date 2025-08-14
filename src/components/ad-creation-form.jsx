@@ -670,7 +670,7 @@ export default function AdCreationForm({
   }, [trackedProgress, trackedMessage, currentJob]);
 
   // This hook STARTS a new job from the queue.
-
+  // This hook STARTS a new job from the queue when ready.
   useEffect(() => {
     // Do nothing if the queue is empty or a job is already processing.
     if (jobQueue.length === 0 || isProcessingQueue) {
@@ -693,20 +693,12 @@ export default function AdCreationForm({
 
     handleCreateAd(jobToProcess).catch(err => {
       console.error("Critical error during job initialization:", err);
-      // const failedJob = {
-      //   id: jobToProcess.id,
-      //   message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
-      //   completedAt: Date.now(),
-      //   status: 'error'
-      // };
       const failedJob = {
-        id: jobToProcess.id,  // Use jobToProcess, not currentJob
+        id: jobToProcess.id,
         message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
         completedAt: Date.now(),
-        status: 'error',
-        retryData: jobToProcess.formData  // Use jobToProcess, not currentJob
+        status: 'error'
       };
-
       setCompletedJobs(prev => [...prev, failedJob]);
       setJobQueue(prev => prev.slice(1));
       setCurrentJob(null);
@@ -716,7 +708,6 @@ export default function AdCreationForm({
   }, [jobQueue, isProcessingQueue, resetProgress]);
 
 
-  // This hook watches the SSE status of the CURRENT job and handles its COMPLETION or ERROR.
 
   useEffect(() => {
     if (!isProcessingQueue || !currentJob) {
@@ -1291,29 +1282,6 @@ export default function AdCreationForm({
 
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
 
-
-  const handleRetryJob = (failedJob) => {
-    // Create new job with same data but new ID
-    const retryJob = {
-      id: uuidv4(),
-      createdAt: Date.now(),
-      status: 'queued',
-      adCount: failedJob.retryData ?
-        (failedJob.retryData.isCarouselAd ?
-          failedJob.retryData.selectedAdSets.length || 1 :
-          failedJob.retryData.files.length + failedJob.retryData.driveFiles.length) :
-        1,
-      formData: failedJob.retryData
-    };
-
-    // Add to queue
-    setJobQueue(prev => [...prev, retryJob]);
-
-    // Remove failed job from completed list
-    setCompletedJobs(prev => prev.filter(j => j.id !== failedJob.id));
-
-    toast.success('Job added to retry queue');
-  };
 
   const handleCreateAd = async (jobData) => {
     // e.preventDefault();
@@ -2197,7 +2165,7 @@ export default function AdCreationForm({
               <div className="flex-1 overflow-y-auto">
 
                 {/* Completed Jobs */}
-                {/* {completedJobs.map((job) => (
+                {completedJobs.map((job) => (
                   <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
                     <div className="flex-shrink-0">
                       {job.status === 'error' ? (
@@ -2215,39 +2183,6 @@ export default function AdCreationForm({
                     >
                       <CircleX className="h-4 w-4 text-gray-500" />
                     </button>
-                  </div>
-                ))} */}
-
-                {/* Completed Jobs */}
-                {completedJobs.map((job) => (
-                  <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      {job.status === 'error' ? (
-                        <CircleX className="w-6 h-6 text-red-500" />
-                      ) : (
-                        <CheckIcon className="w-6 h-6" />
-                      )}
-                    </div>
-                    <p className={`flex-1 text-sm break-all ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
-                      {job.message}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      {job.status === 'error' && job.retryData && (
-                        <button
-                          onClick={() => handleRetryJob(job)}
-                          className="text-blue-500 hover:text-blue-700"
-                          title="Retry Job"
-                        >
-                          <RefreshCcw className="h-4 w-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <CircleX className="h-4 w-4 text-gray-500" />
-                      </button>
-                    </div>
                   </div>
                 ))}
 
