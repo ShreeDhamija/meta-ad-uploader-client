@@ -709,28 +709,86 @@ export default function AdCreationForm({
 
 
   // This hook watches the SSE status of the CURRENT job and handles its COMPLETION or ERROR.
+  // useEffect(() => {
+  //   if (!isProcessingQueue || !currentJob) {
+  //     return; // Do nothing if a job isn't active
+  //   }
+
+
+  //   // ✅ Guard clause to ignore stale status after a reset.
+  //   if (status === 'idle') {
+  //     return;
+  //   }
+
+
+
+  //   // Only act on the final states reported by the SSE hook
+  //   if (status === 'complete' || status === 'error') {
+  //     if (status === 'complete') {
+  //       const adSet = adSets.find(a => a.id === currentJob.formData.selectedAdSets[0]);
+  //       const adSetName = adSet?.name || (currentJob.formData.duplicateAdSet ? currentJob.formData.newAdSetName : 'selected adset');
+
+  //       const completedJob = {
+  //         id: currentJob.id,
+  //         message: `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${adSetName}`,
+  //         completedAt: Date.now(),
+  //         status: 'success'
+  //       };
+  //       setCompletedJobs(prev => [...prev, completedJob]);
+
+  //       if (currentJob.formData.duplicateAdSet) {
+  //         refreshAdSets();
+  //       }
+  //     } else { // status === 'error'
+  //       const failedJob = {
+  //         id: currentJob.id,
+  //         message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
+  //         completedAt: Date.now(),
+  //         status: 'error'
+  //       };
+  //       setCompletedJobs(prev => [...prev, failedJob]);
+  //       toast.error(`Job failed: ${trackedMessage || 'An unknown error occurred.'}`);
+  //     }
+
+  //     // The job is finished. Clean up and advance to the next one.
+  //     setShowCompletedView(true);
+  //     setJobQueue(prev => prev.slice(1));
+  //     setCurrentJob(null);
+  //     setIsProcessingQueue(false);
+  //   }
+  // }, [status, isProcessingQueue, currentJob]);
+
+  // Replace this section in your useEffect that handles job completion:
+
   useEffect(() => {
     if (!isProcessingQueue || !currentJob) {
       return; // Do nothing if a job isn't active
     }
 
-
-    // ✅ Guard clause to ignore stale status after a reset.
+    // Guard clause to ignore stale status after a reset.
     if (status === 'idle') {
       return;
     }
 
-
-
     // Only act on the final states reported by the SSE hook
     if (status === 'complete' || status === 'error') {
       if (status === 'complete') {
-        const adSet = adSets.find(a => a.id === currentJob.formData.selectedAdSets[0]);
-        const adSetName = adSet?.name || (currentJob.formData.duplicateAdSet ? currentJob.formData.newAdSetName : 'selected adset');
+        // Fix: Handle multiple adsets properly
+        const selectedAdSetIds = currentJob.formData.selectedAdSets;
+        let adSetDisplayText;
+
+        if (selectedAdSetIds.length === 1) {
+          // Single adset - show the name
+          const adSet = adSets.find(a => a.id === selectedAdSetIds[0]);
+          adSetDisplayText = adSet?.name || (currentJob.formData.duplicateAdSet ? currentJob.formData.newAdSetName : 'selected adset');
+        } else {
+          // Multiple adsets - show count
+          adSetDisplayText = `${selectedAdSetIds.length} adsets`;
+        }
 
         const completedJob = {
           id: currentJob.id,
-          message: `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${adSetName}`,
+          message: `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${adSetDisplayText}`,
           completedAt: Date.now(),
           status: 'success'
         };
@@ -757,8 +815,6 @@ export default function AdCreationForm({
       setIsProcessingQueue(false);
     }
   }, [status, isProcessingQueue, currentJob]);
-
-
 
 
 
