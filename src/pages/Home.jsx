@@ -259,23 +259,13 @@ export default function Home() {
 
                 const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets } = JSON.parse(cached);
                 console.log('📋 Parsed cache:', { cachedAccount, cachedCampaign, cachedAdSets });
-
                 // Check current state
                 console.log('🏠 Current state:', { selectedAdAccount, campaigns: campaigns.length, adAccounts: adAccounts.length });
 
-
-                if (cachedAccount && !selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
-                    console.log('✅ Restoring ad account from cache:', cachedAccount);
-                    setSelectedAdAccount(cachedAccount);
-                    return; // Exit early, let the effect run again with the selected account
-                }
-
                 // Restore ad account first
-                if (cachedAccount && cachedAccount === selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
-
-                    console.log('✅ Account matches cache, restoring campaigns/adsets for:', cachedAccount);
-
-                    // setSelectedAdAccount(cachedAccount);
+                if (cachedAccount && !selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
+                    console.log('✅ Restoring ad account:', cachedAccount);
+                    setSelectedAdAccount(cachedAccount);
 
                     // Fetch campaigns for the cached account
                     if (cachedCampaign) {
@@ -368,7 +358,7 @@ export default function Home() {
             hasSelectedAccount: !!selectedAdAccount
         });
 
-        if (adAccounts.length > 0 && selectedAdAccount) {
+        if (adAccounts.length > 0 && !selectedAdAccount) {
             console.log('▶️ Running loadCachedSettings');
             loadCachedSettings();
         } else {
@@ -377,7 +367,18 @@ export default function Home() {
                 hasSelectedAccount: !!selectedAdAccount
             });
         }
-    }, [isLoggedIn, adAccounts, selectedAdAccount]);
+    }, [isLoggedIn, adAccounts]);
+
+    // Clear selections when ad account changes
+    useEffect(() => {
+        if (!selectedAdAccount) return;
+
+        setSelectedCampaign("");
+        setAdSets([]);
+        setSelectedAdSets([]);
+        localStorage.removeItem('blip_dropdown_settings');
+    }, [selectedAdAccount]);
+
 
     // 2. Save selections to cache when they change (add some logging)
     useEffect(() => {
