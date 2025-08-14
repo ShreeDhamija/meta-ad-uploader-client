@@ -670,7 +670,7 @@ export default function AdCreationForm({
   }, [trackedProgress, trackedMessage, currentJob]);
 
   // This hook STARTS a new job from the queue.
-  // This hook STARTS a new job from the queue when ready.
+
   useEffect(() => {
     // Do nothing if the queue is empty or a job is already processing.
     if (jobQueue.length === 0 || isProcessingQueue) {
@@ -699,13 +699,12 @@ export default function AdCreationForm({
       //   completedAt: Date.now(),
       //   status: 'error'
       // };
-
       const failedJob = {
-        id: currentJob.id,
-        message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
+        id: jobToProcess.id,  // Use jobToProcess, not currentJob
+        message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
         completedAt: Date.now(),
         status: 'error',
-        retryData: currentJob.formData  // Store original form data
+        retryData: jobToProcess.formData  // Use jobToProcess, not currentJob
       };
 
       setCompletedJobs(prev => [...prev, failedJob]);
@@ -718,56 +717,6 @@ export default function AdCreationForm({
 
 
   // This hook watches the SSE status of the CURRENT job and handles its COMPLETION or ERROR.
-  // useEffect(() => {
-  //   if (!isProcessingQueue || !currentJob) {
-  //     return; // Do nothing if a job isn't active
-  //   }
-
-
-  //   // ✅ Guard clause to ignore stale status after a reset.
-  //   if (status === 'idle') {
-  //     return;
-  //   }
-
-
-
-  //   // Only act on the final states reported by the SSE hook
-  //   if (status === 'complete' || status === 'error') {
-  //     if (status === 'complete') {
-  //       const adSet = adSets.find(a => a.id === currentJob.formData.selectedAdSets[0]);
-  //       const adSetName = adSet?.name || (currentJob.formData.duplicateAdSet ? currentJob.formData.newAdSetName : 'selected adset');
-
-  //       const completedJob = {
-  //         id: currentJob.id,
-  //         message: `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${adSetName}`,
-  //         completedAt: Date.now(),
-  //         status: 'success'
-  //       };
-  //       setCompletedJobs(prev => [...prev, completedJob]);
-
-  //       if (currentJob.formData.duplicateAdSet) {
-  //         refreshAdSets();
-  //       }
-  //     } else { // status === 'error'
-  //       const failedJob = {
-  //         id: currentJob.id,
-  //         message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
-  //         completedAt: Date.now(),
-  //         status: 'error'
-  //       };
-  //       setCompletedJobs(prev => [...prev, failedJob]);
-  //       toast.error(`Job failed: ${trackedMessage || 'An unknown error occurred.'}`);
-  //     }
-
-  //     // The job is finished. Clean up and advance to the next one.
-  //     setShowCompletedView(true);
-  //     setJobQueue(prev => prev.slice(1));
-  //     setCurrentJob(null);
-  //     setIsProcessingQueue(false);
-  //   }
-  // }, [status, isProcessingQueue, currentJob]);
-
-  // Replace this section in your useEffect that handles job completion:
 
   useEffect(() => {
     if (!isProcessingQueue || !currentJob) {
@@ -1365,7 +1314,6 @@ export default function AdCreationForm({
 
     toast.success('Job added to retry queue');
   };
-
 
   const handleCreateAd = async (jobData) => {
     // e.preventDefault();
@@ -2250,8 +2198,6 @@ export default function AdCreationForm({
 
                 {/* Completed Jobs */}
                 {/* {completedJobs.map((job) => (
-
-                
                   <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
                     <div className="flex-shrink-0">
                       {job.status === 'error' ? (
@@ -2271,7 +2217,6 @@ export default function AdCreationForm({
                     </button>
                   </div>
                 ))} */}
-
 
                 {/* Completed Jobs */}
                 {completedJobs.map((job) => (
