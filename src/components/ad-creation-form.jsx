@@ -1104,7 +1104,9 @@ export default function AdCreationForm({
   useEffect(() => {
     const processThumbnails = async () => {
       const videoFiles = files.filter(file =>
-        file.type.startsWith("video/") && !videoThumbs[file.name]
+        // file.type.startsWith("video/") && !videoThumbs[file.name]
+        (file.type || "").startsWith("video/") && !videoThumbs[file.name]
+
       );
 
       if (videoFiles.length === 0) return;
@@ -1408,7 +1410,7 @@ export default function AdCreationForm({
                 return null;
               } catch (error) {
                 console.error(`Failed to get aspect ratio for ${file.name}:`, error);
-                const key = file.id || file.name;
+                const key = getFileId(file);  // ← Use getFileId here too
                 return { key, aspectRatio: 16 / 9 }; // Default fallback
               }
             });
