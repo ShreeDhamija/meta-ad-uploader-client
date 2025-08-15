@@ -19,10 +19,8 @@ import { v4 as uuidv4 } from 'uuid';
 function withUniqueId(file) {
   if (file.isDrive) return file; // Drive already has unique id
   if (file.uniqueId) return file; // already tagged
-  return {
-    ...file,
-    uniqueId: `${file.name}-${file.lastModified || Date.now()}-${uuidv4()}`
-  };
+  file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${uuidv4()}`;
+  return file;
 }
 
 // Sortable item component
