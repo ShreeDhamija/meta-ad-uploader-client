@@ -23,6 +23,11 @@ function withUniqueId(file) {
   return file;
 }
 
+// Add this helper function at the top with your other helper functions
+const getFileId = (file) => {
+  return file.isDrive ? file.id : (file.uniqueId || file.name);
+};
+
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
   file, index, isCarouselAd, videoThumbs, onRemove, isSelected, onSelect, groupNumber, enablePlacementCustomization
@@ -108,7 +113,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             // Local video - use generated thumbnail
             videoThumbs[file.name] ? (
               <img
-                src={videoThumbs[file.name] || "https://api.withblip.com/thumbnail.jpg"}
+                src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
                 alt={file.name}
                 className="w-full h-auto object-cover"
                 onError={(e) => {

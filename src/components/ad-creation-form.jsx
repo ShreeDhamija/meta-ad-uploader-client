@@ -1103,7 +1103,8 @@ export default function AdCreationForm({
     const processThumbnails = async () => {
       const videoFiles = files.filter(file =>
         // file.type.startsWith("video/") && !videoThumbs[file.name]
-        (file.type || "").startsWith("video/") && !videoThumbs[file.name]
+        (file.type || "").startsWith("video/") && !videoThumbs[getFileId(file)]
+
 
       );
 
@@ -1122,14 +1123,26 @@ export default function AdCreationForm({
       for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
         const batch = videoFiles.slice(i, i + BATCH_SIZE);
 
+        // const thumbnailPromises = batch.map(file =>
+        //   generateThumbnail(file)
+        //     .then(thumb => ({ name: file.name, thumb }))
+        //     .catch(err => {
+        //       console.error(`Thumbnail error for ${file.name}:`, err);
+        //       // Change this line from returning null to returning fallback:
+        //       return {
+        //         name: file.name,
+        //         thumb: "https://api.withblip.com/thumbnail.jpg"
+        //       };
+        //     })
+        // );
+
         const thumbnailPromises = batch.map(file =>
           generateThumbnail(file)
-            .then(thumb => ({ name: file.name, thumb }))
+            .then(thumb => ({ id: getFileId(file), thumb }))
             .catch(err => {
               console.error(`Thumbnail error for ${file.name}:`, err);
-              // Change this line from returning null to returning fallback:
               return {
-                name: file.name,
+                id: getFileId(file),
                 thumb: "https://api.withblip.com/thumbnail.jpg"
               };
             })
@@ -1137,13 +1150,22 @@ export default function AdCreationForm({
 
         const results = await Promise.all(thumbnailPromises);
 
+        // setVideoThumbs(prev => {
+        //   const updates = {};
+        //   results.forEach(result => {
+        //     if (result) updates[result.name] = result.thumb;
+        //   });
+        //   return { ...prev, ...updates };
+        // });
+
         setVideoThumbs(prev => {
           const updates = {};
           results.forEach(result => {
-            if (result) updates[result.name] = result.thumb;
+            if (result) updates[result.id] = result.thumb;
           });
           return { ...prev, ...updates };
         });
+
 
         // Shorter pause for better UX
         if (i + BATCH_SIZE < videoFiles.length) {
