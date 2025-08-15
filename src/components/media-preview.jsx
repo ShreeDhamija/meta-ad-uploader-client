@@ -111,7 +111,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             />
           ) : (
             // Local video - use generated thumbnail
-            videoThumbs[file.name] ? (
+            videoThumbs[getFileId(file)] ? (
               <img
                 src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
                 alt={file.name}
