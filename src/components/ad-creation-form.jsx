@@ -271,6 +271,20 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 };
 
 
+function withUniqueId(file) {
+  if (file.isDrive) return file; // Drive already has unique id
+  if (file.uniqueId) return file; // already tagged
+  return {
+    ...file,
+    uniqueId: `${file.name}-${file.lastModified || Date.now()}-${uuidv4()}`
+  };
+}
+
+// ADD THIS NEW FUNCTION:
+const getFileId = (file) => {
+  return file.isDrive ? file.id : (file.uniqueId || file.name);
+};
+
 export default function AdCreationForm({
   isLoading,
   setIsLoading,
@@ -410,7 +424,7 @@ export default function AdCreationForm({
     } else if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
       const groupedFileIds = new Set(fileGroups.flat());
       const ungroupedFiles = [...files, ...driveFiles].filter(f =>
-        !groupedFileIds.has(f.isDrive ? f.id : f.name)
+        !groupedFileIds.has(getFileId(f))
       );
       adCount = fileGroups.length + ungroupedFiles.length;
     } else {
@@ -974,7 +988,12 @@ export default function AdCreationForm({
 
   // Dropzone logic
   const onDrop = useCallback((acceptedFiles) => {
-    setFiles((prev) => [...prev, ...acceptedFiles]);
+    // setFiles((prev) => [...prev, ...acceptedFiles]);
+    setFiles(prev => [
+      ...prev,
+      ...acceptedFiles.map(withUniqueId)
+    ]);
+
   }, []);
 
 
@@ -1182,8 +1201,8 @@ export default function AdCreationForm({
       if (key === "adType") {
         if (!file) return "file_type";
         const fileType = file.type || file.mimeType || "";
-        if (fileType.startsWith("image/")) return "static";
-        if (fileType.startsWith("video/")) return "video";
+        if (fileType.startsWith("image/")) return "Static";
+        if (fileType.startsWith("video/")) return "Video";
         return "file_type";
       }
       if (key === "dateType") {
@@ -1382,7 +1401,8 @@ export default function AdCreationForm({
               try {
                 const aspectRatio = await getVideoAspectRatio(file);
                 if (aspectRatio) {
-                  const key = file.id || file.name;
+                  // const key = file.id || file.name;
+                  const key = getFileId(file);
                   return { key, aspectRatio };
                 }
                 return null;
@@ -1467,8 +1487,8 @@ export default function AdCreationForm({
       results.forEach((result, index) => {
         if (result.status === 'fulfilled') {
           const uploadResult = result.value;
-          if (enablePlacementCustomization && aspectRatioMap[largeFiles[index].name]) {
-            uploadResult.aspectRatio = aspectRatioMap[largeFiles[index].name];
+          if (enablePlacementCustomization && aspectRatioMap[getFileId(largeFiles[index])]) {
+            uploadResult.aspectRatio = aspectRatioMap[getFileId(largeFiles[index])];
           }
           s3Results.push(uploadResult);
         } else {
@@ -1493,9 +1513,10 @@ export default function AdCreationForm({
             s3Url
           };
           // Include aspect ratio if we have it
-          if (enablePlacementCustomization && aspectRatioMap[largeDriveFiles[index].id]) {
-            uploadResult.aspectRatio = aspectRatioMap[largeDriveFiles[index].id];
+          if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDriveFiles[index])]) {
+            uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDriveFiles[index])];
           }
+
           s3DriveResults.push(uploadResult);
         } else {
           toast.error(`Failed to upload Drive video: ${largeDriveFiles[index].name}`);
@@ -1765,7 +1786,7 @@ export default function AdCreationForm({
 
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
           const hasUngroupedFiles = (
-            files.some(file => !groupedFileIds.has(file.name) && file.size <= S3_UPLOAD_THRESHOLD) ||
+            files.some(file => !groupedFileIds.has(getFileId(file)) && file.size <= S3_UPLOAD_THRESHOLD) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
             [...s3Results, ...s3DriveResults].some(s3File =>
               !groupedFileIds.has(s3File.name) && !groupedFileIds.has(s3File.id)
@@ -1784,7 +1805,7 @@ export default function AdCreationForm({
               let firstFileForNaming = null;
 
               // Find the actual file object for the first file in this group
-              firstFileForNaming = files.find(f => (f.isDrive ? f.id : f.name) === firstFileId) ||
+              firstFileForNaming = files.find(f => getFileId(f) === firstFileId) ||
                 smallDriveFiles.find(f => f.id === firstFileId) ||
                 [...s3Results, ...s3DriveResults].find(f => f.name === firstFileId);
 
@@ -1809,7 +1830,7 @@ export default function AdCreationForm({
               const groupVideoMetadata = [];
 
               group.forEach(fileId => {
-                const file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
+                const file = files.find(f => getFileId(f) === fileId);
                 if (file && !file.isDrive && file.size <= S3_UPLOAD_THRESHOLD) {
 
                   console.log(`  ✅ Found local file:`, {
@@ -1826,7 +1847,8 @@ export default function AdCreationForm({
                   if (file.type.startsWith("video/")) {
                     groupVideoMetadata.push({
                       fileName: file.name,
-                      aspectRatio: aspectRatioMap[file.name] || 16 / 9
+                      aspectRatio: aspectRatioMap[getFileId(file)] || 16 / 9
+
                     });
                   }
                 }
@@ -1851,7 +1873,7 @@ export default function AdCreationForm({
                   if (driveFile.mimeType.startsWith("video/")) {
                     groupVideoMetadata.push({
                       driveId: driveFile.id,
-                      aspectRatio: aspectRatioMap[driveFile.id] || 16 / 9
+                      aspectRatio: aspectRatioMap[getFileId(driveFile)] || 16 / 9
                     });
                   }
                 }
@@ -1913,7 +1935,7 @@ export default function AdCreationForm({
             console.log("making regular ad");
             // Handle local files
             files.forEach((file, index) => {
-              if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(file.name)) return; // Skip large files (already handled via S3)
+              if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(getFileId(file))) return;//skip files
               const formData = new FormData();
               // formData.append("adName", computeAdName(file, adValues.dateType, globalIterationIndex));
               formData.append("adName", computeAdNameFromFormula(file, globalIterationIndex));
@@ -1949,7 +1971,8 @@ export default function AdCreationForm({
 
             // Handle small drive files
             smallDriveFiles.forEach((driveFile, index) => {
-              if (groupedFileIds.has(driveFile.id)) return;
+              if (groupedFileIds.has(getFileId(driveFile))) return;
+
               const formData = new FormData();
               // formData.append("adName", computeAdName(driveFile, adValues.dateType, globalIterationIndex));
               formData.append("adName", computeAdNameFromFormula(driveFile, globalIterationIndex));
@@ -1986,7 +2009,7 @@ export default function AdCreationForm({
 
             // Handle S3 uploaded files
             [...s3Results, ...s3DriveResults].forEach((s3File, index) => {
-              if (groupedFileIds.has(s3File.name) || groupedFileIds.has(s3File.id)) {
+              if (groupedFileIds.has(s3File.name) || groupedFileIds.has(s3File.id) || groupedFileIds.has(getFileId(s3File))) {
                 return; // Skip grouped files
               }
               console.log("s3VideoName", s3File.name);

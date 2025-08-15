@@ -13,6 +13,17 @@ import RocketImg from '@/assets/rocketpreview.webp';
 import Uploadimg from '@/assets/upload.webp';
 import { Checkbox } from "@/components/ui/checkbox"
 import Groupads from '@/assets/icons/groupads.svg?react';
+import { v4 as uuidv4 } from 'uuid';
+
+
+function withUniqueId(file) {
+  if (file.isDrive) return file; // Drive already has unique id
+  if (file.uniqueId) return file; // already tagged
+  return {
+    ...file,
+    uniqueId: `${file.name}-${file.lastModified || Date.now()}-${uuidv4()}`
+  };
+}
 
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
@@ -26,7 +37,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: file.isDrive ? file.id : file.name });
+  } = useSortable({ id: file.isDrive ? file.id : file.uniqueId || file.name });
 
   const style = {
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
@@ -34,7 +45,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
     zIndex: isDragging ? 1000 : 'auto',
   };
 
-  const fileId = file.isDrive ? file.id : file.name;
+  const fileId = file.isDrive ? file.id : file.uniqueId || file.name;
 
   return (
     <div
@@ -207,7 +218,7 @@ export default function MediaPreview({
   const ungroupedFiles = useMemo(() =>
     files.filter(file =>
       !fileGroups.some(group =>
-        group.includes(file.isDrive ? file.id : file.name)
+        group.includes(file.isDrive ? file.id : file.uniqueId || file.name)
       )
     ),
     [files, fileGroups]
@@ -215,7 +226,7 @@ export default function MediaPreview({
 
   // Event handlers with useCallback
   const removeFile = useCallback((file) => {
-    const fileId = file.isDrive ? file.id : file.name;
+    const fileId = file.isDrive ? file.id : file.uniqueId || file.name;
 
     // Remove from selection
     setSelectedFiles(prev => {
@@ -233,7 +244,7 @@ export default function MediaPreview({
     if (file.isDrive) {
       setDriveFiles((prev) => prev.filter((f) => f.id !== file.id))
     } else {
-      setFiles((prev) => prev.filter((f) => f.name !== file.name))
+      setFiles((prev) => prev.filter((f) => (f.uniqueId || f.name) !== (file.uniqueId || file.name)))
     }
   }, [setSelectedFiles, setFileGroups, setDriveFiles, setFiles]);
 
@@ -268,7 +279,7 @@ export default function MediaPreview({
 
       // Get selected files from both arrays, but ensure no duplicates
       const selectedLocalFiles = files.filter(file => {
-        const fileId = file.isDrive ? file.id : file.name;
+        const fileId = file.isDrive ? file.id : (file.uniqueId || file.name);
         return selectedFileIds.includes(fileId);
       });
 
@@ -282,7 +293,7 @@ export default function MediaPreview({
 
       // Get unselected files, avoiding duplicates
       const unselectedLocalFiles = files.filter(file => {
-        const fileId = file.isDrive ? file.id : file.name;
+        const fileId = file.isDrive ? file.id : file.uniqueId || file.name;
         return !selectedFileIds.includes(fileId);
       });
 
@@ -308,7 +319,7 @@ export default function MediaPreview({
       const seenFiles = new Set();
 
       allFiles.forEach(file => {
-        const uniqueKey = file.isDrive ? file.id : file.name;
+        const uniqueKey = file.isDrive ? file.id : file.uniqueId || file.name;
 
         if (!seenFiles.has(uniqueKey)) {
           seenFiles.add(uniqueKey);
@@ -351,7 +362,7 @@ export default function MediaPreview({
       ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)),
     ];
 
-    const getFileKey = (file) => file.isDrive ? file.id : file.name;
+    const getFileKey = (file) => file.isDrive ? file.id : file.uniqueId || file.name;
     const oldIndex = allFiles.findIndex(file => getFileKey(file) === active.id);
     const newIndex = allFiles.findIndex(file => getFileKey(file) === over.id);
 
@@ -383,7 +394,8 @@ export default function MediaPreview({
           onDrop={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            const droppedFiles = Array.from(e.dataTransfer.files);
+            // const droppedFiles = Array.from(e.dataTransfer.files);
+            const droppedFiles = Array.from(e.dataTransfer.files).map(withUniqueId);
             setFiles(prev => [...prev, ...droppedFiles]);
           }}
         >
@@ -467,7 +479,7 @@ export default function MediaPreview({
               onDragEnd={isCarouselAd && !enablePlacementCustomization ? handleDragEnd : () => { }}
             >
               <SortableContext
-                items={files.map(file => file.isDrive ? file.id : file.name)}
+                items={files.map(file => file.isDrive ? file.id : file.uniqueId || file.name)}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-4">
@@ -501,7 +513,7 @@ export default function MediaPreview({
 
                       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
                         {group.map(fileId => {
-                          let file = files.find(f => (f.isDrive ? f.id : f.name) === fileId);
+                          let file = files.find(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
                           if (!file) {
                             file = driveFiles.find(f => f.id === fileId);
                             if (file) {
@@ -512,7 +524,7 @@ export default function MediaPreview({
                             console.warn(`File not found for ID: ${fileId}`);
                             return null;
                           }
-                          const index = files.findIndex(f => (f.isDrive ? f.id : f.name) === fileId);
+                          const index = files.findIndex(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
                           return file ? (
                             <SortableMediaItem
                               key={fileId}
@@ -535,7 +547,7 @@ export default function MediaPreview({
                   {/* Ungrouped files */}
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-6" style={{ padding: '6px', }}>
                     {ungroupedFiles.map((file, index) => {
-                      const fileId = file.isDrive ? file.id : file.name;
+                      const fileId = file.isDrive ? file.id : file.uniqueId || file.name;
                       return (
                         <SortableMediaItem
                           key={fileId}
@@ -585,7 +597,7 @@ export default function MediaPreview({
             onDrop={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              const droppedFiles = Array.from(e.dataTransfer.files);
+              const droppedFiles = Array.from(e.dataTransfer.files).map(withUniqueId);
               setFiles(prev => [...prev, ...droppedFiles]);
             }}
           >
