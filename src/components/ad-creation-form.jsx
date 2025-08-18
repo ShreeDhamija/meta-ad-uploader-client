@@ -74,7 +74,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     const baseRetryDelay = 500;
     const maxRetryDelay = 5000;
     const maxConnectionRetries = 10; // For connection errors
-    const maxJobNotFoundRetries = 30; // More patient for job not found (15 seconds total)
+    const maxJobNotFoundRetries = 3; // More patient for job not found (15 seconds total)
     const connectionTimeout = 10000;
 
     // Complete cleanup function
@@ -125,7 +125,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
       if (!isSubscribed || jobNotFoundCount >= maxJobNotFoundRetries) {
         if (jobNotFoundCount >= maxJobNotFoundRetries) {
           console.error('Job not found after maximum attempts - job may not exist');
-          setStatus('error');
+          setStatus('job-not-found'); // NEW: Specific status instead of 'error'
           setMessage('Job not found. The task may have expired or been cancelled.');
         }
         return;
@@ -397,6 +397,23 @@ export default function AdCreationForm({
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
   const S3_UPLOAD_THRESHOLD = 40 * 1024 * 1024; // 40 MB
+
+
+  const retryJob = useCallback((failedJob) => {
+    // Remove from completed jobs
+    setCompletedJobs(prev => prev.filter(j => j.id !== failedJob.id));
+
+    // Create new job with same data but new ID
+    const retryJobData = {
+      ...failedJob.jobData,
+      id: uuidv4(), // New job ID
+      createdAt: Date.now(),
+      status: 'queued'
+    };
+
+    // Add to front of queue for immediate processing
+    setJobQueue(prev => [retryJobData, ...prev]);
+  }, []);
 
   const captureFormDataAsJob = () => {
 
@@ -762,7 +779,17 @@ export default function AdCreationForm({
         if (currentJob.formData.duplicateAdSet) {
           refreshAdSets();
         }
-      } else { // status === 'error'
+      } else if (status === 'job-not-found') {
+        // Handle retry case
+        const failedJob = {
+          id: currentJob.id,
+          message: `Job not found on server - retry available`,
+          completedAt: Date.now(),
+          status: 'retry',
+          jobData: currentJob
+        };
+        setCompletedJobs(prev => [...prev, failedJob]);
+      } else {
         const failedJob = {
           id: currentJob.id,
           message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
@@ -2209,7 +2236,7 @@ export default function AdCreationForm({
               <div className="flex-1 overflow-y-auto">
 
                 {/* Completed Jobs */}
-                {completedJobs.map((job) => (
+                {/* {completedJobs.map((job) => (
                   <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
                     <div className="flex-shrink-0">
                       {job.status === 'error' ? (
@@ -2227,6 +2254,42 @@ export default function AdCreationForm({
                     >
                       <CircleX className="h-4 w-4 text-gray-500" />
                     </button>
+                  </div>
+                ))} */}
+
+                {completedJobs.map((job) => (
+                  <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      {job.status === 'error' ? (
+                        <CircleX className="w-6 h-6 text-red-500" />
+                      ) : (
+                        <CheckIcon className="w-6 h-6" />
+                      )}
+                    </div>
+                    <p className={`flex-1 text-sm break-all ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
+                      {job.message}
+                      {job.status === 'retry' && (
+                        <span className="block text-xs text-gray-500 mt-1">
+                          Click retry to attempt again
+                        </span>
+                      )}
+                    </p>
+                    <div className="flex gap-1">
+                      {job.status === 'retry' && (
+                        <button
+                          onClick={() => retryJob(job)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          Retry
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <CircleX className="h-4 w-4 text-gray-500" />
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -2557,16 +2620,7 @@ export default function AdCreationForm({
                 </span>
                 to see list of variables you can use. You can also save custom text.
               </Label>
-              {/* <ReorderAdNameParts
-                order={adOrder}
-                setOrder={setAdOrder}
-                selectedItems={selectedItems}
-                setSelectedItems={setSelectedItems}
-                values={adValues}
-                setValues={setAdValues}
-                onItemToggle={onItemToggle}
-                variant="home"
-              /> */}
+
               <ReorderAdNameParts
                 formulaInput={adNameFormulaV2?.rawInput || ""}
                 onFormulaChange={(newRawInput) => {
@@ -2658,14 +2712,6 @@ export default function AdCreationForm({
                         <Checkbox
                           id="apply-text-all"
                           checked={applyTextToAllCards}
-                          // onCheckedChange={(checked) => {
-                          //   setApplyTextToAllCards(checked);
-                          //   if (checked && messages.length > 0) {
-                          //     // Fill all positions with the first message
-                          //     const firstMessage = messages[0];
-                          //     setMessages(new Array(messages.length).fill(firstMessage));
-                          //   }
-                          // }}
                           onCheckedChange={(checked) => {
                             setApplyTextToAllCards(checked);
                             if (checked && messages.length > 0) {
@@ -2750,14 +2796,6 @@ export default function AdCreationForm({
                       <Checkbox
                         id="apply-headlines-all"
                         checked={applyHeadlinesToAllCards}
-                        // onCheckedChange={(checked) => {
-                        //   setApplyHeadlinesToAllCards(checked);
-                        //   if (checked && headlines.length > 0) {
-                        //     // Fill all positions with the first headline
-                        //     const firstHeadline = headlines[0];
-                        //     setHeadlines(new Array(headlines.length).fill(firstHeadline));
-                        //   }
-                        // }}
                         onCheckedChange={(checked) => {
                           setApplyHeadlinesToAllCards(checked);
                           if (checked && headlines.length > 0) {
