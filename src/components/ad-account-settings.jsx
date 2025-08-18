@@ -61,9 +61,7 @@ export default function AdAccountSettings({
   documentExists,
   refreshAdSets,
   sortAdSets,
-  sortCampaigns,
-  isRestoringCache
-
+  sortCampaigns
 
 }) {
   // Local state for comboboxes
@@ -162,12 +160,9 @@ export default function AdAccountSettings({
     setAdSets([])
     setSelectedAdSets([])
     setShowDuplicateBlock(false)
-    // Only reset duplicate block if this is a user-initiated change, not a cache restoration
-    if (!isRestoringCache) {
-      setShowDuplicateBlock(false)
-      setDuplicateAdSet("")
-      setNewAdSetName("")
-    }
+    setDuplicateAdSet("")
+    setNewAdSetName("") // Add this line
+    setShowDuplicateCampaignBlock(false)
     setDuplicateCampaign("")
     setNewCampaignName("")
     if (!campaignId) {
@@ -198,8 +193,7 @@ export default function AdAccountSettings({
     } finally {
       setIsLoading(false)
     }
-  }, [isRestoringCache]); // Add to dependencies
-
+  });
 
   const handleAdSetCheckboxChange = useCallback((adsetId, checked) => {
     if (checked) {

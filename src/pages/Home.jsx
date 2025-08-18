@@ -1,6 +1,6 @@
 // "use client"
 
-import React, { useState, useEffect, useCallback, useRef } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { toast, Toaster } from "sonner"
 import { useNavigate } from "react-router-dom"
 
@@ -18,7 +18,6 @@ import useSubscription from "@/lib/useSubscriptionSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import DesktopIcon from '@/assets/Desktop.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-// Add this near the top of your Home component
 
 
 class ErrorBoundary extends React.Component {
@@ -146,7 +145,7 @@ export default function Home() {
 
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
-    const isRestoringCache = useRef(false);
+
 
 
     if (authLoading) return null
@@ -249,7 +248,6 @@ export default function Home() {
         if (!isLoggedIn) return;
 
         const loadCachedSettings = async () => {
-            isRestoringCache.current = true;
             try {
                 const cached = localStorage.getItem('blip_dropdown_settings');
                 console.log('🔍 Cached data:', cached);
@@ -259,7 +257,7 @@ export default function Home() {
                     return;
                 }
 
-                const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets, showDuplicateBlock: cachedShowDuplicateBlock, duplicateAdSet: cachedDuplicateAdSet, newAdSetName: cachedNewAdSetName } = JSON.parse(cached);
+                const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets, showDuplicateBlock: cachedShowDuplicateBlock } = JSON.parse(cached);
                 console.log('📋 Parsed cache:', { cachedAccount, cachedCampaign, cachedAdSets });
                 // Check current state
                 console.log('🏠 Current state:', { selectedAdAccount, campaigns: campaigns.length, adAccounts: adAccounts.length });
@@ -294,56 +292,38 @@ export default function Home() {
                                     setSelectedCampaign(cachedCampaign);
                                     setCampaignObjective(campaignExists.objective);
 
-                                    // Fetch adsets for the cached campaign
-                                    if (cachedAdSets?.length) {
-                                        console.log('🚀 Fetching adsets for campaign:', cachedCampaign);
+                                    // Always fetch adsets for the cached campaign
+                                    console.log('🚀 Fetching adsets for campaign:', cachedCampaign);
 
-                                        try {
-                                            const adsetRes = await fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${cachedCampaign}`, {
-                                                credentials: "include"
-                                            });
-                                            const adsetData = await adsetRes.json();
-                                            console.log('📊 Adsets response:', adsetData);
+                                    try {
+                                        const adsetRes = await fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${cachedCampaign}`, {
+                                            credentials: "include"
+                                        });
+                                        const adsetData = await adsetRes.json();
+                                        console.log('📊 Adsets response:', adsetData);
 
-                                            if (adsetData.adSets) {
-                                                const sortedAdSets = sortAdSets(adsetData.adSets);
-                                                console.log('📋 Setting adsets:', sortedAdSets.length, 'adsets');
-                                                setAdSets(sortedAdSets);
+                                        if (adsetData.adSets) {
+                                            const sortedAdSets = sortAdSets(adsetData.adSets);
+                                            console.log('📋 Setting adsets:', sortedAdSets.length, 'adsets');
+                                            setAdSets(sortedAdSets);
 
-                                                // Filter cached adsets to only include ones that still exist
-                                                // Restore showDuplicateBlock state
-                                                if (cachedShowDuplicateBlock === true) {
-                                                    console.log('✅ Restoring showDuplicateBlock: true');
-                                                    setShowDuplicateBlock(true);
+                                            // Restore cached adsets if they exist
+                                            if (cachedAdSets?.length) {
+                                                const validCachedAdSets = cachedAdSets.filter(id =>
+                                                    sortedAdSets.find(adset => adset.id === id)
+                                                );
+                                                console.log('✅ Valid cached adsets:', validCachedAdSets);
 
-                                                    if (cachedDuplicateAdSet) {
-                                                        setDuplicateAdSet(cachedDuplicateAdSet);
-                                                    }
-                                                    if (cachedNewAdSetName) {
-                                                        setNewAdSetName(cachedNewAdSetName);
-                                                    }
-
-                                                    setSelectedAdSets([]); // Clear selected adsets when showing duplicate block
-                                                } else if (cachedAdSets?.length) {
-                                                    // Filter cached adsets to only include ones that still exist
-                                                    const validCachedAdSets = cachedAdSets.filter(id =>
-                                                        sortedAdSets.find(adset => adset.id === id)
-                                                    );
-                                                    console.log('✅ Valid cached adsets:', validCachedAdSets);
-
-                                                    if (validCachedAdSets.length > 0) {
-                                                        console.log('✅ Restoring adsets:', validCachedAdSets);
-                                                        setSelectedAdSets(validCachedAdSets);
-                                                    }
+                                                if (validCachedAdSets.length > 0) {
+                                                    console.log('✅ Restoring adsets:', validCachedAdSets);
+                                                    setSelectedAdSets(validCachedAdSets);
                                                 }
-                                            } else {
-                                                console.log('❌ No adsets in response');
                                             }
-                                        } catch (err) {
-                                            console.error('💥 Error fetching cached adsets:', err);
+                                        } else {
+                                            console.log('❌ No adsets in response');
                                         }
-                                    } else {
-                                        console.log('ℹ️ No cached adsets to restore');
+                                    } catch (err) {
+                                        console.error('💥 Error fetching cached adsets:', err);
                                     }
                                 } else {
                                     console.log('❌ Cached campaign no longer exists');
@@ -364,14 +344,8 @@ export default function Home() {
                         accountExists: !!adAccounts.find(acc => acc.id === cachedAccount)
                     });
                 }
-                setTimeout(() => {
-                    isRestoringCache.current = false;
-                }, 500);
-
             } catch (error) {
                 console.error('💥 Error loading cached settings:', error);
-                isRestoringCache.current = false;
-
             }
         };
 
@@ -400,9 +374,6 @@ export default function Home() {
         setSelectedCampaign("");
         setAdSets([]);
         setSelectedAdSets([]);
-        setShowDuplicateBlock(false);
-        setDuplicateAdSet("");
-        setNewAdSetName("");
         localStorage.removeItem('blip_dropdown_settings');
     }, [selectedAdAccount]);
 
@@ -416,16 +387,14 @@ export default function Home() {
                 selectedAdAccount,
                 selectedCampaign,
                 selectedAdSets,
-                showDuplicateBlock,
-                duplicateAdSet,
-                newAdSetName
+
             };
             console.log('💾 Saving to cache:', settingsToCache);
             localStorage.setItem('blip_dropdown_settings', JSON.stringify(settingsToCache));
         } catch (error) {
             console.error('Error saving cached settings:', error);
         }
-    }, [selectedAdAccount, selectedCampaign, selectedAdSets, showDuplicateBlock, duplicateAdSet, newAdSetName, isLoggedIn]);
+    }, [selectedAdAccount, selectedCampaign, selectedAdSets, isLoggedIn]);
 
     // 3. Clear cache on logout
     useEffect(() => {
@@ -538,8 +507,6 @@ export default function Home() {
                             refreshAdSets={refreshAdSets}
                             sortAdSets={sortAdSets}
                             sortCampaigns={sortCampaigns}
-                            isRestoringCache={isRestoringCache.current}
-
                         />
 
                         <AdCreationForm
