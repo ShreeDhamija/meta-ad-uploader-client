@@ -243,7 +243,7 @@ export default function Home() {
     }, [selectedAdAccount, adAccountSettings]); // Keep dependencies the same
 
 
-    // 1. Load cached settings and trigger fetches (with debug logging)
+    // 1. START CACHING
     useEffect(() => {
         if (!isLoggedIn) return;
 
@@ -408,7 +408,7 @@ export default function Home() {
             }
         }
     }, [isLoggedIn]);
-
+    //END CACHING
 
 
     const handleCloseOnboarding = () => {
