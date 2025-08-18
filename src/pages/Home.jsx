@@ -18,7 +18,8 @@ import useSubscription from "@/lib/useSubscriptionSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import DesktopIcon from '@/assets/Desktop.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-
+// Add this near the top of your Home component
+const isRestoringCache = useRef(false);
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -248,6 +249,7 @@ export default function Home() {
         if (!isLoggedIn) return;
 
         const loadCachedSettings = async () => {
+            isRestoringCache.current = true;
             try {
                 const cached = localStorage.getItem('blip_dropdown_settings');
                 console.log('🔍 Cached data:', cached);
@@ -257,7 +259,7 @@ export default function Home() {
                     return;
                 }
 
-                const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets, showDuplicateBlock: cachedShowDuplicateBlock } = JSON.parse(cached);
+                const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets, showDuplicateBlock: cachedShowDuplicateBlock, duplicateAdSet: cachedDuplicateAdSet, newAdSetName: cachedNewAdSetName } = JSON.parse(cached);
                 console.log('📋 Parsed cache:', { cachedAccount, cachedCampaign, cachedAdSets });
                 // Check current state
                 console.log('🏠 Current state:', { selectedAdAccount, campaigns: campaigns.length, adAccounts: adAccounts.length });
@@ -313,6 +315,14 @@ export default function Home() {
                                                 if (cachedShowDuplicateBlock === true) {
                                                     console.log('✅ Restoring showDuplicateBlock: true');
                                                     setShowDuplicateBlock(true);
+
+                                                    if (cachedDuplicateAdSet) {
+                                                        setDuplicateAdSet(cachedDuplicateAdSet);
+                                                    }
+                                                    if (cachedNewAdSetName) {
+                                                        setNewAdSetName(cachedNewAdSetName);
+                                                    }
+
                                                     setSelectedAdSets([]); // Clear selected adsets when showing duplicate block
                                                 } else if (cachedAdSets?.length) {
                                                     // Filter cached adsets to only include ones that still exist
@@ -354,8 +364,14 @@ export default function Home() {
                         accountExists: !!adAccounts.find(acc => acc.id === cachedAccount)
                     });
                 }
+                setTimeout(() => {
+                    isRestoringCache.current = false;
+                }, 500);
+
             } catch (error) {
                 console.error('💥 Error loading cached settings:', error);
+                isRestoringCache.current = false;
+
             }
         };
 
@@ -385,6 +401,8 @@ export default function Home() {
         setAdSets([]);
         setSelectedAdSets([]);
         setShowDuplicateBlock(false);
+        setDuplicateAdSet("");
+        setNewAdSetName("");
         localStorage.removeItem('blip_dropdown_settings');
     }, [selectedAdAccount]);
 
@@ -398,14 +416,16 @@ export default function Home() {
                 selectedAdAccount,
                 selectedCampaign,
                 selectedAdSets,
-                showDuplicateBlock
+                showDuplicateBlock,
+                duplicateAdSet,
+                newAdSetName
             };
             console.log('💾 Saving to cache:', settingsToCache);
             localStorage.setItem('blip_dropdown_settings', JSON.stringify(settingsToCache));
         } catch (error) {
             console.error('Error saving cached settings:', error);
         }
-    }, [selectedAdAccount, selectedCampaign, selectedAdSets, showDuplicateBlock, isLoggedIn]);
+    }, [selectedAdAccount, selectedCampaign, selectedAdSets, showDuplicateBlock, duplicateAdSet, newAdSetName, isLoggedIn]);
 
     // 3. Clear cache on logout
     useEffect(() => {
@@ -518,6 +538,8 @@ export default function Home() {
                             refreshAdSets={refreshAdSets}
                             sortAdSets={sortAdSets}
                             sortCampaigns={sortCampaigns}
+                            isRestoringCache={isRestoringCache.current}
+
                         />
 
                         <AdCreationForm
