@@ -1944,6 +1944,7 @@ export default function AdCreationForm({
                   if (file.type.startsWith("video/")) {
                     groupVideoMetadata.push({
                       fileName: file.name,
+                      uniqueId: getFileId(file),  // ← Add this
                       aspectRatio: aspectRatioMap[getFileId(file)] || 16 / 9
 
                     });
@@ -1969,11 +1970,17 @@ export default function AdCreationForm({
                     accessToken: driveFile.accessToken
                   }));
                   if (driveFile.mimeType.startsWith("video/")) {
+                    // After the group.forEach loops that build groupVideoMetadata
+                    console.log("Creating groupMetaData");
+
                     groupVideoMetadata.push({
                       driveId: driveFile.id,
                       aspectRatio: aspectRatioMap[getFileId(driveFile)] || 16 / 9
                     });
                   }
+                  // After the group.forEach loops that build groupVideoMetadata
+                  console.log(`🔍 Group ${groupIndex + 1} videoMetadata built:`, groupVideoMetadata);
+                  console.log(`🔍 Total metadata entries:`, groupVideoMetadata.length);
                 }
               });
 
@@ -1998,13 +2005,18 @@ export default function AdCreationForm({
                       aspectRatio: s3File.aspectRatio || 16 / 9
                     });
                   }
+
                 }
               });
 
               // Only add video metadata if we have any videos
               if (groupVideoMetadata.length > 0) {
+                console.log("sending group video metadata");
+
                 formData.append("videoMetadata", JSON.stringify(groupVideoMetadata));
               }
+              console.log(`📤 Sending videoMetadata to server:`, JSON.stringify(groupVideoMetadata, null, 2));
+
 
 
               if (selectedShopDestination && showShopDestinationSelector) {
