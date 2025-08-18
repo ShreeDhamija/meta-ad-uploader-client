@@ -497,7 +497,7 @@ export default function AdCreationForm({
     };
   };
 
-  const uploadToS3 = async (file, onChunkUploaded) => {
+  const uploadToS3 = async (file, onChunkUploaded, uniqueId) => { // <-- Add uniqueId parameter
     // S3 requires parts to be at least 5MB, except for the last part.
     // Choosing a larger chunk size (e.g., 10-25MB) can be more efficient.
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -576,7 +576,9 @@ export default function AdCreationForm({
         type: file.type,
         size: file.size,
         s3Url: completeResponse.data.publicUrl,
-        isS3Upload: true
+        isS3Upload: true,
+        uniqueId: uniqueId, // <-- Add this line to return the ID
+
       };
 
     } catch (error) {
@@ -617,8 +619,13 @@ export default function AdCreationForm({
 
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "S3 upload failed again");
-    return data.s3Url;
+    return {
+      ...file, // Spreads all original properties like id, name, etc.
+      s3Url: data.s3Url,
+      isS3Upload: true
+    };
   }
+
 
 
 
@@ -1574,7 +1581,8 @@ export default function AdCreationForm({
       };
 
       const uploadPromises = largeFiles.map(file =>
-        limit(() => uploadToS3(file, updateOverallProgress))
+        limit(() => uploadToS3(file, updateOverallProgress, getFileId(file))) // <-- Pass the ID here
+
       );
 
 
@@ -1605,11 +1613,8 @@ export default function AdCreationForm({
       // Process Drive file results
       driveResults.forEach((result, index) => {
         if (result.status === 'fulfilled') {
-          const s3Url = result.value;
-          const uploadResult = {
-            ...largeDriveFiles[index],
-            s3Url
-          };
+          const uploadResult = result.value; // The complete object is now the result
+
           // Include aspect ratio if we have it
           if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDriveFiles[index])]) {
             uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDriveFiles[index])];
@@ -1624,7 +1629,7 @@ export default function AdCreationForm({
 
       setProgress(100);
       setProgressMessage('File upload complete! Creating ads...');
-      toast.success("Video files uploaded!");
+      // toast.success("Video files uploaded!");
     }
 
     // 🔧 NOW start the actual job (50-100% progress)
@@ -1988,7 +1993,7 @@ export default function AdCreationForm({
               group.forEach(fileId => {
                 const s3File = [...s3Results, ...s3DriveResults].find(f => {
                   // Match by original file name or Drive ID
-                  return (f.name && f.name === fileId) || (f.id && f.id === fileId);
+                  f.uniqueId === fileId || f.id === fileId // <-- Use the correct IDs
                 });
                 if (s3File) {
                   console.log(`  ✅ Found S3 file:`, {
@@ -2119,7 +2124,7 @@ export default function AdCreationForm({
 
             // Handle S3 uploaded files
             [...s3Results, ...s3DriveResults].forEach((s3File, index) => {
-              if (groupedFileIds.has(s3File.name) || groupedFileIds.has(s3File.id) || groupedFileIds.has(getFileId(s3File))) {
+              if (groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id)) { // <-- Use the correct IDs
                 return; // Skip grouped files
               }
               console.log("s3VideoName", s3File.name);
