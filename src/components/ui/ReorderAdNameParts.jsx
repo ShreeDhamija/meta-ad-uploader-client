@@ -198,7 +198,7 @@ export default function ReorderAdNameParts({
           placeholder="Enter custom text or variables."
           className={cn(
             "w-full bg-white rounded-xl",
-            variant === "home" && "border border-gray-300"
+            variant === "home" && "border border-gray-300 shadow"
           )}
         />
 

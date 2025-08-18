@@ -257,7 +257,7 @@ export default function Home() {
                     return;
                 }
 
-                const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets } = JSON.parse(cached);
+                const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets, showDuplicateBlock: cachedShowDuplicateBlock } = JSON.parse(cached);
                 console.log('📋 Parsed cache:', { cachedAccount, cachedCampaign, cachedAdSets });
                 // Check current state
                 console.log('🏠 Current state:', { selectedAdAccount, campaigns: campaigns.length, adAccounts: adAccounts.length });
@@ -309,14 +309,22 @@ export default function Home() {
                                                 setAdSets(sortedAdSets);
 
                                                 // Filter cached adsets to only include ones that still exist
-                                                const validCachedAdSets = cachedAdSets.filter(id =>
-                                                    sortedAdSets.find(adset => adset.id === id)
-                                                );
-                                                console.log('✅ Valid cached adsets:', validCachedAdSets);
+                                                // Restore showDuplicateBlock state
+                                                if (cachedShowDuplicateBlock === true) {
+                                                    console.log('✅ Restoring showDuplicateBlock: true');
+                                                    setShowDuplicateBlock(true);
+                                                    setSelectedAdSets([]); // Clear selected adsets when showing duplicate block
+                                                } else if (cachedAdSets?.length) {
+                                                    // Filter cached adsets to only include ones that still exist
+                                                    const validCachedAdSets = cachedAdSets.filter(id =>
+                                                        sortedAdSets.find(adset => adset.id === id)
+                                                    );
+                                                    console.log('✅ Valid cached adsets:', validCachedAdSets);
 
-                                                if (validCachedAdSets.length > 0) {
-                                                    console.log('✅ Restoring adsets:', validCachedAdSets);
-                                                    setSelectedAdSets(validCachedAdSets);
+                                                    if (validCachedAdSets.length > 0) {
+                                                        console.log('✅ Restoring adsets:', validCachedAdSets);
+                                                        setSelectedAdSets(validCachedAdSets);
+                                                    }
                                                 }
                                             } else {
                                                 console.log('❌ No adsets in response');
@@ -376,6 +384,7 @@ export default function Home() {
         setSelectedCampaign("");
         setAdSets([]);
         setSelectedAdSets([]);
+        setShowDuplicateBlock(false);
         localStorage.removeItem('blip_dropdown_settings');
     }, [selectedAdAccount]);
 
@@ -388,14 +397,15 @@ export default function Home() {
             const settingsToCache = {
                 selectedAdAccount,
                 selectedCampaign,
-                selectedAdSets
+                selectedAdSets,
+                showDuplicateBlock
             };
             console.log('💾 Saving to cache:', settingsToCache);
             localStorage.setItem('blip_dropdown_settings', JSON.stringify(settingsToCache));
         } catch (error) {
             console.error('Error saving cached settings:', error);
         }
-    }, [selectedAdAccount, selectedCampaign, selectedAdSets, isLoggedIn]);
+    }, [selectedAdAccount, selectedCampaign, selectedAdSets, showDuplicateBlock, isLoggedIn]);
 
     // 3. Clear cache on logout
     useEffect(() => {
