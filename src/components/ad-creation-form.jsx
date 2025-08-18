@@ -411,6 +411,9 @@ export default function AdCreationForm({
       status: 'queued'
     };
 
+    console.log('🟠 NEW RETRY JOB CREATED:', JSON.stringify(retryJobData.formData, null, 2));
+
+
     // Add to front of queue for immediate processing
     setJobQueue(prev => [retryJobData, ...prev]);
   }, []);
@@ -2164,6 +2167,8 @@ export default function AdCreationForm({
 
     // Capture current form state as a job
     const newJob = captureFormDataAsJob();
+    console.log('🔵 ORIGINAL JOB DATA:', JSON.stringify(newJob.formData, null, 2));
+
 
     // Add to queue
     setJobQueue(prev => [...prev, newJob]);
