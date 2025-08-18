@@ -62,7 +62,7 @@ export default function AdAccountSettings({
   refreshAdSets,
   sortAdSets,
   sortCampaigns,
-  isRestoringCache
+  isRestoringFromCache
 
 
 }) {
