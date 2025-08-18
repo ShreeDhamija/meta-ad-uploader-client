@@ -1032,39 +1032,85 @@ export default function AdCreationForm({
   })
 
 
+  // const getVideoAspectRatio = async (file) => {
+  //   if (file.mimeType && file.mimeType.startsWith('video/')) {
+  //     // For Drive files
+  //     return new Promise((resolve) => {
+  //       const video = document.createElement('video');
+  //       video.preload = 'metadata';
+  //       video.src = `https://drive.google.com/uc?id=${file.id}&export=download`;
+
+  //       video.addEventListener('loadedmetadata', () => {
+  //         resolve(video.videoWidth / video.videoHeight);
+  //       });
+
+  //       video.addEventListener('error', () => {
+  //         resolve(16 / 9); // Default aspect ratio
+  //       });
+
+  //       // Timeout fallback
+  //       setTimeout(() => resolve(16 / 9), 5000);
+  //     });
+  //   } else if (file.type && file.type.startsWith('video/')) {
+  //     // For local files
+  //     return new Promise((resolve, reject) => {
+  //       const url = URL.createObjectURL(file);
+  //       const video = document.createElement('video');
+  //       video.preload = 'metadata';
+  //       video.src = url;
+
+  //       video.addEventListener('loadedmetadata', () => {
+  //         const aspectRatio = video.videoWidth / video.videoHeight;
+  //         URL.revokeObjectURL(url);
+  //         resolve(aspectRatio);
+  //       });
+
+  //       video.addEventListener('error', () => {
+  //         URL.revokeObjectURL(url);
+  //         resolve(16 / 9); // Default to 16:9 on error
+  //       });
+  //     });
+  //   }
+  //   return null; // Not a video file
+  // };
+
   const getVideoAspectRatio = async (file) => {
     if (file.mimeType && file.mimeType.startsWith('video/')) {
-      // For Drive files
-      return new Promise((resolve) => {
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        video.src = `https://drive.google.com/uc?id=${file.id}&export=download`;
-
-        video.addEventListener('loadedmetadata', () => {
-          resolve(video.videoWidth / video.videoHeight);
+      // For Drive files - NEW, RELIABLE METHOD
+      if (!file.accessToken) {
+        console.warn(`No access token for Drive file ${file.name}, falling back.`);
+        return 16 / 9;
+      }
+      try {
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?fields=videoMediaMetadata`, {
+          headers: { 'Authorization': `Bearer ${file.accessToken}` }
         });
-
-        video.addEventListener('error', () => {
-          resolve(16 / 9); // Default aspect ratio
-        });
-
-        // Timeout fallback
-        setTimeout(() => resolve(16 / 9), 5000);
-      });
+        if (!response.ok) {
+          console.error(`Failed to get Drive video metadata for ${file.name}.`);
+          return 16 / 9; // Default on API error
+        }
+        const data = await response.json();
+        const metadata = data.videoMediaMetadata;
+        if (metadata && metadata.width && metadata.height) {
+          return metadata.width / metadata.height;
+        }
+        return 16 / 9; // Default if metadata is missing
+      } catch (error) {
+        console.error(`Error fetching Drive video metadata for ${file.name}:`, error);
+        return 16 / 9; // Default on network error
+      }
     } else if (file.type && file.type.startsWith('video/')) {
-      // For local files
-      return new Promise((resolve, reject) => {
+      // For local files (This part is unchanged and correct)
+      return new Promise((resolve) => {
         const url = URL.createObjectURL(file);
         const video = document.createElement('video');
         video.preload = 'metadata';
         video.src = url;
-
         video.addEventListener('loadedmetadata', () => {
           const aspectRatio = video.videoWidth / video.videoHeight;
           URL.revokeObjectURL(url);
           resolve(aspectRatio);
         });
-
         video.addEventListener('error', () => {
           URL.revokeObjectURL(url);
           resolve(16 / 9); // Default to 16:9 on error
@@ -1073,7 +1119,6 @@ export default function AdCreationForm({
     }
     return null; // Not a video file
   };
-
 
 
   const generateThumbnail = useCallback((file) => {
