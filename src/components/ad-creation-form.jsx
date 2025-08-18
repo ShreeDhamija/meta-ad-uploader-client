@@ -1891,7 +1891,7 @@ export default function AdCreationForm({
             files.some(file => !groupedFileIds.has(getFileId(file)) && file.size <= S3_UPLOAD_THRESHOLD) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
             [...s3Results, ...s3DriveResults].some(s3File =>
-              !groupedFileIds.has(s3File.name) && !groupedFileIds.has(s3File.id)
+              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id)) // <-- Corrected logic
             )
           );
 
@@ -1901,7 +1901,7 @@ export default function AdCreationForm({
           if (enablePlacementCustomization && fileGroups.length > 0) {
             // Process ONLY grouped files
 
-
+            console.log("checking grouped files");
             fileGroups.forEach((group, groupIndex) => {
               const firstFileId = group[0];
               let firstFileForNaming = null;
@@ -1909,7 +1909,7 @@ export default function AdCreationForm({
               // Find the actual file object for the first file in this group
               firstFileForNaming = files.find(f => getFileId(f) === firstFileId) ||
                 smallDriveFiles.find(f => f.id === firstFileId) ||
-                [...s3Results, ...s3DriveResults].find(f => f.name === firstFileId);
+                [...s3Results, ...s3DriveResults].find(f => f.uniqueId === firstFileId || f.id === firstFileId);
 
 
               const formData = new FormData();
@@ -1991,10 +1991,9 @@ export default function AdCreationForm({
 
               // Add S3 files from this group
               group.forEach(fileId => {
-                const s3File = [...s3Results, ...s3DriveResults].find(f => {
-                  // Match by original file name or Drive ID
+                const s3File = [...s3Results, ...s3DriveResults].find(f =>
                   f.uniqueId === fileId || f.id === fileId // <-- Use the correct IDs
-                });
+                );
                 if (s3File) {
                   console.log(`  ✅ Found S3 file:`, {
                     name: s3File.name,
