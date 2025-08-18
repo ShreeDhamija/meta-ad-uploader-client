@@ -1569,8 +1569,9 @@ export default function AdCreationForm({
         const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetName.trim());
         finalAdSetIds = [newAdSetId];
       } catch (error) {
+        const errorMessage = error.response?.data?.error || error.message || "Unknown error";
         setIsLoading(false);
-        throw new Error("Error duplicating ad set: " + (error.message || "Unknown error"));
+        throw new Error("Error duplicating ad set: " + (errorMessage || "Unknown error"));
       }
     }
 
