@@ -19,7 +19,7 @@ import { useIntercom } from "@/lib/useIntercom";
 import DesktopIcon from '@/assets/Desktop.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 // Add this near the top of your Home component
-const isRestoringCache = useRef(false);
+
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -146,7 +146,7 @@ export default function Home() {
 
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
-
+    const isRestoringCache = useRef(false);
 
 
     if (authLoading) return null
