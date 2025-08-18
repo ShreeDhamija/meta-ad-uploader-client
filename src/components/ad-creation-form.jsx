@@ -749,7 +749,7 @@ export default function AdCreationForm({
     }
 
     // Only act on the final states reported by the SSE hook
-    if (status === 'complete' || status === 'error') {
+    if (status === 'complete' || status === 'error' || status === 'job-not-found') {
       if (status === 'complete') {
         // Fix: Handle multiple adsets properly
         const selectedAdSetIds = currentJob.formData.selectedAdSets;
