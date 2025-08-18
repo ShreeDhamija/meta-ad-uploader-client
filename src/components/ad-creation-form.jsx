@@ -1572,7 +1572,8 @@ export default function AdCreationForm({
       } catch (error) {
         toast.error("Error duplicating ad set: " + (error.message || "Unknown error"));
         setIsLoading(false);
-        return;
+        throw new Error("Error duplicating ad set: " + (error.message || "Unknown error"));
+        // return;
       }
     }
 
