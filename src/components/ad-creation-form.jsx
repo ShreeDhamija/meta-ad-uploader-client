@@ -1452,6 +1452,7 @@ export default function AdCreationForm({
             const batchPromises = batch.map(async (file) => {
               try {
                 const aspectRatio = await getVideoAspectRatio(file);
+                console.log("aspect ratio for video", aspectRatio);
                 if (aspectRatio) {
                   // const key = file.id || file.name;
                   const key = getFileId(file);
@@ -1902,6 +1903,7 @@ export default function AdCreationForm({
 
                     });
                   }
+                  console.log("group video metadata", groupVideoMetadata);
                 }
               });
 
