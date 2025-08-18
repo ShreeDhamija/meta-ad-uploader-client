@@ -62,7 +62,7 @@ export default function AdAccountSettings({
   refreshAdSets,
   sortAdSets,
   sortCampaigns,
-  isRestoringFromCache
+  isRestoringCache
 
 
 }) {
@@ -163,7 +163,7 @@ export default function AdAccountSettings({
     setSelectedAdSets([])
     setShowDuplicateBlock(false)
     // Only reset duplicate block if this is a user-initiated change, not a cache restoration
-    if (!isRestoringFromCache) {
+    if (!isRestoringCache) {
       setShowDuplicateBlock(false)
       setDuplicateAdSet("")
       setNewAdSetName("")
