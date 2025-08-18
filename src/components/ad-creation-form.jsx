@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader2, Plus, Trash2, Upload, CirclePlus, ChevronsUpDown, RefreshCcw, CircleX, Menu } from "lucide-react"
+import { ChevronDown, Loader2, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
@@ -783,7 +783,7 @@ export default function AdCreationForm({
         // Handle retry case
         const failedJob = {
           id: currentJob.id,
-          message: `Job not found on server - retry available`,
+          message: `Job timed out.`,
           completedAt: Date.now(),
           status: 'retry',
           jobData: currentJob
@@ -2262,14 +2262,19 @@ export default function AdCreationForm({
                     <div className="flex-shrink-0">
                       {job.status === 'error' ? (
                         <CircleX className="w-6 h-6 text-red-500" />
+                      ) : job.status === 'retry' ? (
+                        <AlertTriangle className="w-6 h-6 text-orange-500" />
                       ) : (
                         <CheckIcon className="w-6 h-6" />
                       )}
                     </div>
-                    <p className={`flex-1 text-sm break-all ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
+                    <p className={`flex-1 text-sm break-all ${job.status === 'error' ? 'text-red-600' :
+                      job.status === 'retry' ? 'text-orange-600' :
+                        'text-gray-700'
+                      }`}>
                       {job.message}
                       {job.status === 'retry' && (
-                        <span className="block text-xs text-gray-500 mt-1">
+                        <span className="block text-xs text-orange-500 mt-1">
                           Click retry to attempt again
                         </span>
                       )}
@@ -2278,14 +2283,16 @@ export default function AdCreationForm({
                       {job.status === 'retry' && (
                         <button
                           onClick={() => retryJob(job)}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          className="text-orange-600 hover:text-orange-800 p-1 rounded"
+                          title="Retry job"
                         >
-                          Retry
+                          <RotateCcw className="h-4 w-4" />
                         </button>
                       )}
                       <button
                         onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
                         className="text-gray-400 hover:text-gray-600"
+                        title="Remove job"
                       >
                         <CircleX className="h-4 w-4 text-gray-500" />
                       </button>
