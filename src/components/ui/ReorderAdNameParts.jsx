@@ -198,7 +198,7 @@ export default function ReorderAdNameParts({
           placeholder="Enter custom text or variables."
           className={cn(
             "w-full bg-white rounded-xl",
-            variant === "home" && "border border-gray-400"
+            variant === "home" && "border border-gray-300"
           )}
         />
 
@@ -229,19 +229,6 @@ export default function ReorderAdNameParts({
                       </span>
                     </CommandItem>
                   ))}
-
-
-                  {/* {AVAILABLE_VARIABLES.map((variable) => (
-
-                    <CommandItem
-                      key={variable.id}
-                      onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
-                      onMouseDown={(e) => e.preventDefault()} // Prevent focus on click
-                    >
-                      {variable.label}
-                    </CommandItem>
-                  ))} */}
                 </CommandGroup>
               </CommandList>
             </Command>
