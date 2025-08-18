@@ -74,7 +74,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     const baseRetryDelay = 500;
     const maxRetryDelay = 5000;
     const maxConnectionRetries = 10; // For connection errors
-    const maxJobNotFoundRetries = 1; // More patient for job not found (15 seconds total)
+    const maxJobNotFoundRetries = 30; // More patient for job not found (15 seconds total)
     const connectionTimeout = 10000;
 
     // Complete cleanup function
@@ -411,7 +411,7 @@ export default function AdCreationForm({
       status: 'queued'
     };
 
-    console.log('🟠 NEW RETRY JOB CREATED:', JSON.stringify(retryJobData.formData, null, 2));
+    // console.log('🟠 NEW RETRY JOB CREATED:', JSON.stringify(retryJobData.formData, null, 2));
 
 
     // Add to front of queue for immediate processing
@@ -2167,7 +2167,7 @@ export default function AdCreationForm({
 
     // Capture current form state as a job
     const newJob = captureFormDataAsJob();
-    console.log('🔵 ORIGINAL JOB DATA:', JSON.stringify(newJob.formData, null, 2));
+    // console.log('🔵 ORIGINAL JOB DATA:', JSON.stringify(newJob.formData, null, 2));
 
 
     // Add to queue
@@ -2760,7 +2760,7 @@ export default function AdCreationForm({
                           disabled={!isLoggedIn}
                           minRows={2}
                           maxRows={10}
-                          className="border border-gray-400 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                          className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
                           style={{
                             scrollbarWidth: 'thin',
                             scrollbarColor: '#c7c7c7 transparent'
@@ -2830,7 +2830,7 @@ export default function AdCreationForm({
                 <div className="space-y-3">
                   {headlines.map((value, index) => (
                     <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
-                      <Input
+                      <TextareaAutosize
                         value={value}
                         onChange={(e) => {
                           if (isCarouselAd && applyHeadlinesToAllCards) {
@@ -2840,7 +2840,13 @@ export default function AdCreationForm({
                             updateField(setHeadlines, headlines, index, e.target.value);
                           }
                         }}
-                        className="border border-gray-400 rounded-xl bg-white shadow"
+                        minRows={1}
+                        maxRows={10}
+                        className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                        style={{
+                          scrollbarWidth: 'thin',
+                          scrollbarColor: '#c7c7c7 transparent'
+                        }}
                         placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Enter headline"}
                         disabled={!isLoggedIn}
                       />
