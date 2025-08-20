@@ -497,106 +497,357 @@ export default function AdCreationForm({
     };
   };
 
-  const uploadToS3 = async (file, onChunkUploaded, uniqueId) => { // <-- Add uniqueId parameter
-    // S3 requires parts to be at least 5MB, except for the last part.
-    // Choosing a larger chunk size (e.g., 10-25MB) can be more efficient.
+  // const uploadToS3 = async (file, onChunkUploaded, uniqueId) => { // <-- Add uniqueId parameter
+  //   // S3 requires parts to be at least 5MB, except for the last part.
+  //   // Choosing a larger chunk size (e.g., 10-25MB) can be more efficient.
+  //   const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
+  //   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
+  //   // Concurrency limit for uploading chunks. 5 is a good starting point.
+  //   const limit = pLimit(5);
+
+  //   let uploadId = null;
+  //   let s3Key = null;
+
+  //   try {
+  //     // 1. Start multipart upload and get UploadId
+  //     const startResponse = await axios.post(
+  //       `${API_BASE_URL}/auth/s3/start-upload`,
+  //       {
+  //         fileName: file.name,
+  //         fileType: file.type
+  //       },
+  //       { withCredentials: true }
+  //     );
+
+  //     uploadId = startResponse.data.uploadId;
+  //     s3Key = startResponse.data.key;
+
+  //     // 2. Get presigned URLs for each part
+  //     const urlsResponse = await axios.post(
+  //       `${API_BASE_URL}/auth/s3/get-upload-urls`,
+  //       {
+  //         key: s3Key,
+  //         uploadId: uploadId,
+  //         parts: totalChunks
+  //       },
+  //       { withCredentials: true }
+  //     );
+  //     const presignedUrls = urlsResponse.data.parts;
+
+  //     // 3. Upload chunks in parallel
+  //     let uploadedChunks = 0;
+
+
+
+  //     const uploadPromises = presignedUrls.map(part => {
+  //       const { partNumber, url } = part;
+  //       const start = (partNumber - 1) * CHUNK_SIZE;
+  //       const end = start + CHUNK_SIZE;
+  //       const chunk = file.slice(start, end);
+
+  //       return limit(async () => {
+  //         const uploadResponse = await axios.put(url, chunk, {
+  //           headers: { 'Content-Type': file.type }
+  //         });
+  //         // Call the overall progress callback after each chunk
+  //         if (onChunkUploaded) onChunkUploaded();
+  //         const etag = uploadResponse.headers.etag;
+  //         return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') };
+  //       });
+  //     });
+
+
+  //     const completedParts = await Promise.all(uploadPromises);
+
+  //     // 4. Complete the upload
+  //     const completeResponse = await axios.post(
+  //       `${API_BASE_URL}/auth/s3/complete-upload`,
+  //       {
+  //         key: s3Key,
+  //         uploadId: uploadId,
+  //         parts: completedParts
+  //       },
+  //       { withCredentials: true }
+  //     );
+
+  //     return {
+  //       name: file.name,
+  //       type: file.type,
+  //       size: file.size,
+  //       s3Url: completeResponse.data.publicUrl,
+  //       isS3Upload: true,
+  //       uniqueId: uniqueId, // <-- Add this line to return the ID
+
+  //     };
+
+  //   } catch (error) {
+  //     if (uploadId && s3Key) {
+  //       await axios.post(
+  //         `${API_BASE_URL}/auth/s3/abort-upload`,
+  //         {
+  //           key: s3Key,
+  //           uploadId: uploadId
+  //         },
+  //         { withCredentials: true }
+  //       );
+  //     }
+  //     throw new Error(`Failed to upload ${file.name} to S3`);
+  //   }
+  // };
+
+  const uploadToS3 = async (file, onChunkUploaded, uniqueId) => {
+    console.log('🚀 === S3 UPLOAD START ===');
+    console.log('📋 Input parameters:', {
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      uniqueId: uniqueId,
+      hasFile: !!file,
+      hasOnChunkUploaded: typeof onChunkUploaded === 'function',
+      fileKeys: file ? Object.keys(file) : 'NO FILE'
+    });
+
+    // Validate inputs
+    if (!file) {
+      console.error('❌ FATAL: No file provided to uploadToS3');
+      throw new Error('No file provided for upload');
+    }
+
+    if (!file.name) {
+      console.error('❌ FATAL: File has no name property:', file);
+      throw new Error('File missing name property');
+    }
+
+    if (!file.type) {
+      console.error('❌ FATAL: File has no type property:', file);
+      throw new Error('File missing type property');
+    }
+
+    if (typeof file.size !== 'number') {
+      console.error('❌ FATAL: File has invalid size:', {
+        size: file.size,
+        sizeType: typeof file.size
+      });
+      throw new Error('File missing or invalid size property');
+    }
+
+    console.log('✅ Input validation passed');
+
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-
-    // Concurrency limit for uploading chunks. 5 is a good starting point.
     const limit = pLimit(5);
+
+    console.log('📊 Upload calculations:', {
+      chunkSize: CHUNK_SIZE,
+      totalChunks: totalChunks,
+      totalSizeMB: (file.size / 1024 / 1024).toFixed(2)
+    });
 
     let uploadId = null;
     let s3Key = null;
 
     try {
-      // 1. Start multipart upload and get UploadId
+      console.log('🔄 Step 1: Starting multipart upload...');
+
+      const startPayload = {
+        fileName: file.name,
+        fileType: file.type
+      };
+      console.log('📤 Sending start-upload request:', startPayload);
+
       const startResponse = await axios.post(
         `${API_BASE_URL}/auth/s3/start-upload`,
-        {
-          fileName: file.name,
-          fileType: file.type
-        },
+        startPayload,
         { withCredentials: true }
       );
+
+      console.log('📥 Start-upload response:', {
+        status: startResponse.status,
+        statusText: startResponse.statusText,
+        data: startResponse.data
+      });
 
       uploadId = startResponse.data.uploadId;
       s3Key = startResponse.data.key;
 
-      // 2. Get presigned URLs for each part
+      if (!uploadId || !s3Key) {
+        console.error('❌ Invalid start-upload response:', startResponse.data);
+        throw new Error('Invalid response from start-upload endpoint');
+      }
+
+      console.log('✅ Step 1 complete:', { uploadId, s3Key });
+
+      console.log('🔄 Step 2: Getting presigned URLs...');
+      const urlsPayload = {
+        key: s3Key,
+        uploadId: uploadId,
+        parts: totalChunks
+      };
+      console.log('📤 Sending get-upload-urls request:', urlsPayload);
+
       const urlsResponse = await axios.post(
         `${API_BASE_URL}/auth/s3/get-upload-urls`,
-        {
-          key: s3Key,
-          uploadId: uploadId,
-          parts: totalChunks
-        },
+        urlsPayload,
         { withCredentials: true }
       );
+
+      console.log('📥 Get-upload-urls response:', {
+        status: urlsResponse.status,
+        statusText: urlsResponse.statusText,
+        partsCount: urlsResponse.data?.parts?.length
+      });
+
       const presignedUrls = urlsResponse.data.parts;
 
-      // 3. Upload chunks in parallel
+      if (!presignedUrls || !Array.isArray(presignedUrls)) {
+        console.error('❌ Invalid presigned URLs response:', urlsResponse.data);
+        throw new Error('Invalid presigned URLs response');
+      }
+
+      console.log('✅ Step 2 complete - Got', presignedUrls.length, 'presigned URLs');
+
+      console.log('🔄 Step 3: Uploading chunks...');
       let uploadedChunks = 0;
 
-
-
-      const uploadPromises = presignedUrls.map(part => {
+      const uploadPromises = presignedUrls.map((part, index) => {
         const { partNumber, url } = part;
         const start = (partNumber - 1) * CHUNK_SIZE;
         const end = start + CHUNK_SIZE;
         const chunk = file.slice(start, end);
 
+        console.log(`📦 Preparing chunk ${partNumber}/${totalChunks}:`, {
+          partNumber,
+          chunkSize: chunk.size,
+          start,
+          end: Math.min(end, file.size)
+        });
+
         return limit(async () => {
-          const uploadResponse = await axios.put(url, chunk, {
-            headers: { 'Content-Type': file.type }
-          });
-          // Call the overall progress callback after each chunk
-          if (onChunkUploaded) onChunkUploaded();
-          const etag = uploadResponse.headers.etag;
-          return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') };
+          try {
+            console.log(`⬆️ Uploading chunk ${partNumber}...`);
+
+            const uploadResponse = await axios.put(url, chunk, {
+              headers: { 'Content-Type': file.type },
+              timeout: 60000
+            });
+
+            console.log(`✅ Chunk ${partNumber} uploaded:`, {
+              status: uploadResponse.status,
+              statusText: uploadResponse.statusText,
+              hasEtag: !!uploadResponse.headers.etag
+            });
+
+            if (onChunkUploaded) {
+              uploadedChunks++;
+              console.log(`📈 Progress: ${uploadedChunks}/${totalChunks} chunks uploaded`);
+              onChunkUploaded();
+            }
+
+            const etag = uploadResponse.headers.etag;
+            if (!etag) {
+              console.error(`❌ No ETag received for chunk ${partNumber}`);
+              throw new Error(`No ETag received for part ${partNumber}`);
+            }
+
+            const cleanEtag = etag.replace(/"/g, '');
+            console.log(`🏷️ Chunk ${partNumber} ETag:`, cleanEtag);
+
+            return { PartNumber: partNumber, ETag: cleanEtag };
+          } catch (chunkError) {
+            console.error(`❌ Error uploading chunk ${partNumber}:`, {
+              error: chunkError.message,
+              status: chunkError.response?.status,
+              statusText: chunkError.response?.statusText,
+              responseData: chunkError.response?.data
+            });
+            throw chunkError;
+          }
         });
       });
 
-
+      console.log('⏳ Waiting for all chunks to upload...');
       const completedParts = await Promise.all(uploadPromises);
 
-      // 4. Complete the upload
+      console.log('✅ Step 3 complete:', {
+        completedPartsCount: completedParts.length,
+        expectedCount: totalChunks,
+        allPartsValid: completedParts.every(p => p.PartNumber && p.ETag)
+      });
+
+      console.log('🔄 Step 4: Completing multipart upload...');
+      const completePayload = {
+        key: s3Key,
+        uploadId: uploadId,
+        parts: completedParts
+      };
+      console.log('📤 Sending complete-upload request:', {
+        key: s3Key,
+        uploadId: uploadId.substring(0, 20) + '...',
+        partsCount: completedParts.length
+      });
+
       const completeResponse = await axios.post(
         `${API_BASE_URL}/auth/s3/complete-upload`,
-        {
-          key: s3Key,
-          uploadId: uploadId,
-          parts: completedParts
-        },
+        completePayload,
         { withCredentials: true }
       );
 
-      return {
+      console.log('📥 Complete-upload response:', {
+        status: completeResponse.status,
+        statusText: completeResponse.statusText,
+        hasPublicUrl: !!completeResponse.data?.publicUrl
+      });
+
+      console.log('✅ Step 4 complete - Upload successful!');
+
+      const result = {
         name: file.name,
         type: file.type,
         size: file.size,
         s3Url: completeResponse.data.publicUrl,
         isS3Upload: true,
-        uniqueId: uniqueId, // <-- Add this line to return the ID
-
+        uniqueId: uniqueId
       };
 
+      console.log('🎉 Final result object:', result);
+      console.log('🚀 === S3 UPLOAD END ===');
+      return result;
+
     } catch (error) {
+      console.error('❌ === S3 UPLOAD FAILED ===');
+      console.error('❌ Error details:', {
+        fileName: file.name,
+        error: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        responseData: error.response?.data,
+        uploadId,
+        s3Key,
+        stack: error.stack
+      });
+
+      // Cleanup on error
       if (uploadId && s3Key) {
-        await axios.post(
-          `${API_BASE_URL}/auth/s3/abort-upload`,
-          {
-            key: s3Key,
-            uploadId: uploadId
-          },
-          { withCredentials: true }
-        );
+        console.log('🧹 Attempting to abort failed upload...');
+        try {
+          await axios.post(
+            `${API_BASE_URL}/auth/s3/abort-upload`,
+            {
+              key: s3Key,
+              uploadId: uploadId
+            },
+            { withCredentials: true }
+          );
+          console.log('✅ Failed upload aborted successfully');
+        } catch (abortError) {
+          console.error('❌ Failed to abort upload:', abortError.message);
+        }
       }
-      throw new Error(`Failed to upload ${file.name} to S3`);
+
+      throw new Error(`Failed to upload ${file.name} to S3: ${error.message}`);
     }
   };
-
-
 
   async function uploadDriveFileToS3(file) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
@@ -1579,6 +1830,17 @@ export default function AdCreationForm({
         setProgress(percent);
         setProgressMessage("Uploading files for processing...");
       };
+
+      console.log('🔍 Large files check before upload:', largeFiles.map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        hasUniqueId: !!file.uniqueId,
+        uniqueId: file.uniqueId,
+        getFileIdResult: getFileId(file),
+        allFileKeys: Object.keys(file)
+      })));
+
 
       const uploadPromises = largeFiles.map(file =>
         limit(() => uploadToS3(file, updateOverallProgress, getFileId(file))) // <-- Pass the ID here
