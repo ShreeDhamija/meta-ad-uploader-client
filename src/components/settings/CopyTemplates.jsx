@@ -185,10 +185,33 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
+  // const templateChanged = useMemo(() => {
+  //   // Brand new template → allow save logic to run
+  //   if (!currentTemplate?.id && !currentTemplate?.name) {
+  //     return !!templateName.trim() && primaryTexts.length > 0 && headlines.length > 0;
+  //   }
+
+  //   // Existing template → check for actual changes
+  //   return (
+  //     templateName !== currentTemplate.name ||
+  //     JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
+  //     JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
+  //   );
+  // }, [
+  //   templateName,
+  //   currentTemplate,
+  //   primaryTexts,
+  //   headlines
+  // ]);
+
   const templateChanged = useMemo(() => {
-    // Brand new template → allow save logic to run
+    // Brand new template → trigger warning as soon as any field has content
     if (!currentTemplate?.id && !currentTemplate?.name) {
-      return !!templateName.trim() && primaryTexts.length > 0 && headlines.length > 0;
+      return !!(
+        templateName.trim() ||
+        primaryTexts.some(text => text.trim()) ||
+        headlines.some(text => text.trim())
+      );
     }
 
     // Existing template → check for actual changes
@@ -203,8 +226,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     primaryTexts,
     headlines
   ]);
-
-
 
   const blocker = useBlocker(() => templateChanged);
 

@@ -88,6 +88,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     // Add after handleImportConfirm
     const handleImportLink = useCallback((linkUrl) => {
         // Check if link already exists
+
         if (links.some(link => link.url === linkUrl)) {
             toast.error("This link already exists");
             return;
@@ -102,7 +103,13 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         // toast.success("Link imported successfully");
     }, [links, setLinks]);
 
-    const handleImportAllLinks = useCallback(() => {
+    const handleImportAllLinks = useCallback((event) => {
+
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+
         const newLinks = [];
         let addedCount = 0;
 
@@ -207,7 +214,16 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         setImportPreview(null);
     }, [])
 
-    const handleImportConfirm = useCallback(() => {
+    const handleImportConfirm = useCallback((event) => {
+
+
+        if (event) {
+            event.stopPropagation();
+            event.preventDefault();
+        }
+
+
+
         setUtmPairs(importPreview);
         toast.success("Imported UTM parameters");
         setShowImportPopup(false);
