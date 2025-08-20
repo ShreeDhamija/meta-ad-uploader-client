@@ -117,11 +117,6 @@ export default function Login() {
                     </form>
 
 
-
-                    <p className="text-center text-sm text-muted-foreground">
-                        Don't have an account? <a href="/signup" className="underline text-zinc-700">Sign up</a>
-                    </p>
-
                     <p className="text-xs text-center text-muted-foreground mt-2">
                         By clicking continue, you agree to our{" "}
                         <br></br>
