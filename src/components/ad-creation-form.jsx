@@ -1607,8 +1607,8 @@ export default function AdCreationForm({
     let fileType = "file_type";
     if (file) {
       const mimeType = file.type || file.mimeType || "";
-      if (mimeType.startsWith("image/")) fileType = "static";
-      else if (mimeType.startsWith("video/")) fileType = "video";
+      if (mimeType.startsWith("image/")) fileType = "Static";
+      else if (mimeType.startsWith("video/")) fileType = "Video";
     }
 
     // Replace variables in the formula
