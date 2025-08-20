@@ -761,7 +761,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               ? "Saving..."
               : "Save Template"}
         </Button>
-        {templateChanged && !nameAlreadyExists && templateName.trim() && (
+        {templateChanged && !nameAlreadyExists && (
           <p className="text-xs text-red-500 bg-red-200 rounded-xl border border-bg-100 text-left mt-1 p-2">
             *You have unsaved changes
           </p>
