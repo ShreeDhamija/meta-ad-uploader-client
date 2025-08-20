@@ -226,7 +226,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
         setUtmPairs(importPreview);
         toast.success("Imported UTM parameters");
-        setShowImportPopup(false);
+        // setShowImportPopup(false);
     }, [importPreview, setUtmPairs])
 
     // Memoized filtered suggestions
@@ -550,7 +550,8 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                         </p>
                                                         <Button
                                                             className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
-                                                            onClick={handleImportAllLinks}
+                                                            onClick={(event) => handleImportAllLinks(event)}
+
                                                         >
                                                             Import All
                                                         </Button>
@@ -601,7 +602,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                         </p>
                                                         <Button
                                                             className=" bg-blue-600 text-white hover:bg-blue-700 rounded-xl px-4"
-                                                            onClick={handleImportConfirm}
+                                                            onClick={(event) => handleImportConfirm(event)}
                                                         >
                                                             Import
                                                         </Button>
