@@ -34,7 +34,7 @@ export default function Login() {
                             alt="Hero"
                             className=" shadom-sm w-[48px] h-[48px] mx-auto rounded-md mb-2"
                         />
-                        <h2 className="text-2xl font-bold tracking-tight">Welcome back</h2>
+                        <h2 className="text-2xl font-bold tracking-tight">Welcome To Blip</h2>
                         <p className="text-sm text-muted-foreground">Login with your facebook account</p>
                     </div>
                     <Button
@@ -111,6 +111,7 @@ export default function Login() {
                         <Button
                             type="submit"
                             className="text-gray-500 rounded-xl bg-zinc-700 shadow-sm border-gray-300 w-full text-white hover:!bg-black"
+                            disabled={true}
                         >
                             Login
                         </Button>
