@@ -46,20 +46,20 @@ export default function BillingSettings() {
 
 
     // Fetch team info if user already has a team
-    useEffect(() => {
-        if (subscriptionData.teamId) {
-            // User has a team - fetch team details
-            fetch(`${API_BASE_URL}/api/teams/info`, {
-                credentials: 'include'
-            })
-                .then(res => res.json())
-                .then(data => {
-                    setTeamData(data)
-                    setTeamMode(subscriptionData.isTeamOwner ? 'owner' : 'member')
-                })
-                .catch(err => console.error('Failed to fetch team info:', err))
-        }
-    }, [subscriptionData.teamId, subscriptionData.isTeamOwner])
+    // useEffect(() => {
+    //     if (subscriptionData.teamId) {
+    //         // User has a team - fetch team details
+    //         fetch(`${API_BASE_URL}/api/teams/info`, {
+    //             credentials: 'include'
+    //         })
+    //             .then(res => res.json())
+    //             .then(data => {
+    //                 setTeamData(data)
+    //                 setTeamMode(subscriptionData.isTeamOwner ? 'owner' : 'member')
+    //             })
+    //             .catch(err => console.error('Failed to fetch team info:', err))
+    //     }
+    // }, [subscriptionData.teamId, subscriptionData.isTeamOwner])
 
     // In Billing.jsx, update the API calls:
     const handleUpgrade = async () => {

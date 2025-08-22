@@ -5,7 +5,7 @@ export default function useSubscription() {
     const [loading, setLoading] = useState(true);
     const [subscriptionData, setSubscriptionData] = useState({
         subscriptionStatus: 'trial',
-        planType: 'free_trial',
+        // planType: 'free_trial',
         trialStartDate: null,
         trialEndDate: null,
         trialDaysLeft: 0,
