@@ -40,7 +40,21 @@ export default function useSubscription() {
         fetchSubscriptionData();
     };
 
+    // const hasActiveAccess = () => {
+    //     return subscriptionData.subscriptionStatus === 'active' ||
+    //         (subscriptionData.subscriptionStatus === 'trial' && !subscriptionData.isTrialExpired);
+    // };
+
+
     const hasActiveAccess = () => {
+        // Check if subscription was cancelled and cancel date has passed
+        if (subscriptionData.willCancelAt) {
+            const cancelDate = new Date(subscriptionData.willCancelAt);
+            const now = new Date();
+            if (now > cancelDate) return false;
+        }
+
+        // Existing logic
         return subscriptionData.subscriptionStatus === 'active' ||
             (subscriptionData.subscriptionStatus === 'trial' && !subscriptionData.isTrialExpired);
     };

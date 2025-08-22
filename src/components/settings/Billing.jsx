@@ -44,23 +44,6 @@ export default function BillingSettings() {
 
 
 
-
-    // Fetch team info if user already has a team
-    // useEffect(() => {
-    //     if (subscriptionData.teamId) {
-    //         // User has a team - fetch team details
-    //         fetch(`${API_BASE_URL}/api/teams/info`, {
-    //             credentials: 'include'
-    //         })
-    //             .then(res => res.json())
-    //             .then(data => {
-    //                 setTeamData(data)
-    //                 setTeamMode(subscriptionData.isTeamOwner ? 'owner' : 'member')
-    //             })
-    //             .catch(err => console.error('Failed to fetch team info:', err))
-    //     }
-    // }, [subscriptionData.teamId, subscriptionData.isTeamOwner])
-
     // In Billing.jsx, update the API calls:
     const handleUpgrade = async () => {
         setIsLoading(true);
@@ -138,13 +121,39 @@ export default function BillingSettings() {
         )
     }
 
+    // const getStatusBadge = () => {
+    //     if (isPaidSubscriber())
+    //         return (
+    //             <Badge variant="default" className="bg-green-100 text-green-800">
+    //                 Pro
+    //             </Badge>
+    //         )
+    //     if (isTrialExpired()) return <Badge variant="destructive">Trial Expired</Badge>
+    //     if (isOnTrial())
+    //         return (
+    //             <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+    //                 Free Trial
+    //             </Badge>
+    //         )
+    //     return <Badge variant="outline">Inactive</Badge>
+    // }
+
     const getStatusBadge = () => {
-        if (isPaidSubscriber())
+        if (isPaidSubscriber()) {
+            // Check if subscription was cancelled and date has passed
+            if (subscriptionData.willCancelAt) {
+                const cancelDate = new Date(subscriptionData.willCancelAt);
+                const now = new Date();
+                if (now > cancelDate) {
+                    return <Badge variant="destructive">Expired</Badge>
+                }
+            }
             return (
                 <Badge variant="default" className="bg-green-100 text-green-800">
                     Pro
                 </Badge>
             )
+        }
         if (isTrialExpired()) return <Badge variant="destructive">Trial Expired</Badge>
         if (isOnTrial())
             return (
@@ -200,17 +209,19 @@ export default function BillingSettings() {
                                         <>
                                             <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
                                                 <p className="text-sm text-orange-800">
-                                                    Your subscription will continue until {new Date(subscriptionData.willCancelAt).toLocaleDateString()}
-                                                    <br></br>
-                                                    Your team members will lose access after this date as well.
+                                                    {(() => {
+                                                        const cancelDate = new Date(subscriptionData.willCancelAt);
+                                                        const now = new Date();
+                                                        const hasExpired = now > cancelDate;
+
+                                                        return hasExpired
+                                                            ? `Your subscription expired on ${cancelDate.toLocaleDateString()}`
+                                                            : `Your subscription will continue until ${cancelDate.toLocaleDateString()}. Your team members will lose access after this date as well.`;
+                                                    })()}
                                                 </p>
                                             </div>
-                                            <Button
-                                                onClick={handleReactivate}
-                                                disabled={isLoading}
-                                                className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
-                                            >
-                                                Reactivate Subscription
+                                            <Button onClick={handleReactivate}>
+                                                Reactivate Subscription | $500/mo
                                             </Button>
                                         </>
                                     ) : (
