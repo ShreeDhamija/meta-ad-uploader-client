@@ -216,11 +216,15 @@ export default function BillingSettings() {
 
                                                         return hasExpired
                                                             ? `Your subscription expired on ${cancelDate.toLocaleDateString()}`
-                                                            : `Your subscription will continue until ${cancelDate.toLocaleDateString()}. Your team members will lose access after this date as well.`;
+                                                            : `Your subscription will continue until ${cancelDate.toLocaleDateString()}. 
+                                                            Your team members will lose access after this date as well.`;
                                                     })()}
                                                 </p>
                                             </div>
-                                            <Button onClick={handleReactivate}>
+                                            <Button onClick={handleReactivate}
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
+                                                disabled={isLoading}
+                                            >
                                                 Reactivate Subscription | $500/mo
                                             </Button>
                                         </>
