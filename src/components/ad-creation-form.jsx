@@ -497,116 +497,18 @@ export default function AdCreationForm({
     };
   };
 
-  // const uploadToS3 = async (file, onChunkUploaded, uniqueId) => { // <-- Add uniqueId parameter
-  //   // S3 requires parts to be at least 5MB, except for the last part.
-  //   // Choosing a larger chunk size (e.g., 10-25MB) can be more efficient.
-  //   const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
-  //   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-
-  //   // Concurrency limit for uploading chunks. 5 is a good starting point.
-  //   const limit = pLimit(5);
-
-  //   let uploadId = null;
-  //   let s3Key = null;
-
-  //   try {
-  //     // 1. Start multipart upload and get UploadId
-  //     const startResponse = await axios.post(
-  //       `${API_BASE_URL}/auth/s3/start-upload`,
-  //       {
-  //         fileName: file.name,
-  //         fileType: file.type
-  //       },
-  //       { withCredentials: true }
-  //     );
-
-  //     uploadId = startResponse.data.uploadId;
-  //     s3Key = startResponse.data.key;
-
-  //     // 2. Get presigned URLs for each part
-  //     const urlsResponse = await axios.post(
-  //       `${API_BASE_URL}/auth/s3/get-upload-urls`,
-  //       {
-  //         key: s3Key,
-  //         uploadId: uploadId,
-  //         parts: totalChunks
-  //       },
-  //       { withCredentials: true }
-  //     );
-  //     const presignedUrls = urlsResponse.data.parts;
-
-  //     // 3. Upload chunks in parallel
-  //     let uploadedChunks = 0;
-
-
-
-  //     const uploadPromises = presignedUrls.map(part => {
-  //       const { partNumber, url } = part;
-  //       const start = (partNumber - 1) * CHUNK_SIZE;
-  //       const end = start + CHUNK_SIZE;
-  //       const chunk = file.slice(start, end);
-
-  //       return limit(async () => {
-  //         const uploadResponse = await axios.put(url, chunk, {
-  //           headers: { 'Content-Type': file.type }
-  //         });
-  //         // Call the overall progress callback after each chunk
-  //         if (onChunkUploaded) onChunkUploaded();
-  //         const etag = uploadResponse.headers.etag;
-  //         return { PartNumber: partNumber, ETag: etag.replace(/"/g, '') };
-  //       });
-  //     });
-
-
-  //     const completedParts = await Promise.all(uploadPromises);
-
-  //     // 4. Complete the upload
-  //     const completeResponse = await axios.post(
-  //       `${API_BASE_URL}/auth/s3/complete-upload`,
-  //       {
-  //         key: s3Key,
-  //         uploadId: uploadId,
-  //         parts: completedParts
-  //       },
-  //       { withCredentials: true }
-  //     );
-
-  //     return {
-  //       name: file.name,
-  //       type: file.type,
-  //       size: file.size,
-  //       s3Url: completeResponse.data.publicUrl,
-  //       isS3Upload: true,
-  //       uniqueId: uniqueId, // <-- Add this line to return the ID
-
-  //     };
-
-  //   } catch (error) {
-  //     if (uploadId && s3Key) {
-  //       await axios.post(
-  //         `${API_BASE_URL}/auth/s3/abort-upload`,
-  //         {
-  //           key: s3Key,
-  //           uploadId: uploadId
-  //         },
-  //         { withCredentials: true }
-  //       );
-  //     }
-  //     throw new Error(`Failed to upload ${file.name} to S3`);
-  //   }
-  // };
 
   const uploadToS3 = async (file, onChunkUploaded, uniqueId) => {
-    console.log('🚀 === S3 UPLOAD START ===');
-    console.log('📋 Input parameters:', {
-      fileName: file?.name,
-      fileSize: file?.size,
-      fileType: file?.type,
-      uniqueId: uniqueId,
-      hasFile: !!file,
-      hasOnChunkUploaded: typeof onChunkUploaded === 'function',
-      fileKeys: file ? Object.keys(file) : 'NO FILE'
-    });
+    // console.log('🚀 === S3 UPLOAD START ===');
+    // console.log('📋 Input parameters:', {
+    //   fileName: file?.name,
+    //   fileSize: file?.size,
+    //   fileType: file?.type,
+    //   uniqueId: uniqueId,
+    //   hasFile: !!file,
+    //   hasOnChunkUploaded: typeof onChunkUploaded === 'function',
+    //   fileKeys: file ? Object.keys(file) : 'NO FILE'
+    // });
 
     // Validate inputs
     if (!file) {
@@ -632,29 +534,29 @@ export default function AdCreationForm({
       throw new Error('File missing or invalid size property');
     }
 
-    console.log('✅ Input validation passed');
+    // console.log('✅ Input validation passed');
 
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const limit = pLimit(5);
 
-    console.log('📊 Upload calculations:', {
-      chunkSize: CHUNK_SIZE,
-      totalChunks: totalChunks,
-      totalSizeMB: (file.size / 1024 / 1024).toFixed(2)
-    });
+    // console.log('📊 Upload calculations:', {
+    //   chunkSize: CHUNK_SIZE,
+    //   totalChunks: totalChunks,
+    //   totalSizeMB: (file.size / 1024 / 1024).toFixed(2)
+    // });
 
     let uploadId = null;
     let s3Key = null;
 
     try {
-      console.log('🔄 Step 1: Starting multipart upload...');
+      // console.log('🔄 Step 1: Starting multipart upload...');
 
       const startPayload = {
         fileName: file.name,
         fileType: file.type
       };
-      console.log('📤 Sending start-upload request:', startPayload);
+      // console.log('📤 Sending start-upload request:', startPayload);
 
       const startResponse = await axios.post(
         `${API_BASE_URL}/auth/s3/start-upload`,
@@ -662,11 +564,11 @@ export default function AdCreationForm({
         { withCredentials: true }
       );
 
-      console.log('📥 Start-upload response:', {
-        status: startResponse.status,
-        statusText: startResponse.statusText,
-        data: startResponse.data
-      });
+      // console.log('📥 Start-upload response:', {
+      //   status: startResponse.status,
+      //   statusText: startResponse.statusText,
+      //   data: startResponse.data
+      // });
 
       uploadId = startResponse.data.uploadId;
       s3Key = startResponse.data.key;
@@ -676,15 +578,15 @@ export default function AdCreationForm({
         throw new Error('Invalid response from start-upload endpoint');
       }
 
-      console.log('✅ Step 1 complete:', { uploadId, s3Key });
+      // console.log('✅ Step 1 complete:', { uploadId, s3Key });
 
-      console.log('🔄 Step 2: Getting presigned URLs...');
+      // console.log('🔄 Step 2: Getting presigned URLs...');
       const urlsPayload = {
         key: s3Key,
         uploadId: uploadId,
         parts: totalChunks
       };
-      console.log('📤 Sending get-upload-urls request:', urlsPayload);
+      // console.log('📤 Sending get-upload-urls request:', urlsPayload);
 
       const urlsResponse = await axios.post(
         `${API_BASE_URL}/auth/s3/get-upload-urls`,
@@ -692,11 +594,11 @@ export default function AdCreationForm({
         { withCredentials: true }
       );
 
-      console.log('📥 Get-upload-urls response:', {
-        status: urlsResponse.status,
-        statusText: urlsResponse.statusText,
-        partsCount: urlsResponse.data?.parts?.length
-      });
+      // console.log('📥 Get-upload-urls response:', {
+      //   status: urlsResponse.status,
+      //   statusText: urlsResponse.statusText,
+      //   partsCount: urlsResponse.data?.parts?.length
+      // });
 
       const presignedUrls = urlsResponse.data.parts;
 
@@ -705,9 +607,9 @@ export default function AdCreationForm({
         throw new Error('Invalid presigned URLs response');
       }
 
-      console.log('✅ Step 2 complete - Got', presignedUrls.length, 'presigned URLs');
+      // console.log('✅ Step 2 complete - Got', presignedUrls.length, 'presigned URLs');
 
-      console.log('🔄 Step 3: Uploading chunks...');
+      // console.log('🔄 Step 3: Uploading chunks...');
       let uploadedChunks = 0;
 
       const uploadPromises = presignedUrls.map((part, index) => {
@@ -725,18 +627,18 @@ export default function AdCreationForm({
 
         return limit(async () => {
           try {
-            console.log(`⬆️ Uploading chunk ${partNumber}...`);
+            // console.log(`⬆️ Uploading chunk ${partNumber}...`);
 
             const uploadResponse = await axios.put(url, chunk, {
               headers: { 'Content-Type': file.type },
               timeout: 60000
             });
 
-            console.log(`✅ Chunk ${partNumber} uploaded:`, {
-              status: uploadResponse.status,
-              statusText: uploadResponse.statusText,
-              hasEtag: !!uploadResponse.headers.etag
-            });
+            // console.log(`✅ Chunk ${partNumber} uploaded:`, {
+            //   status: uploadResponse.status,
+            //   statusText: uploadResponse.statusText,
+            //   hasEtag: !!uploadResponse.headers.etag
+            // });
 
             if (onChunkUploaded) {
               uploadedChunks++;
@@ -793,11 +695,11 @@ export default function AdCreationForm({
         { withCredentials: true }
       );
 
-      console.log('📥 Complete-upload response:', {
-        status: completeResponse.status,
-        statusText: completeResponse.statusText,
-        hasPublicUrl: !!completeResponse.data?.publicUrl
-      });
+      // console.log('📥 Complete-upload response:', {
+      //   status: completeResponse.status,
+      //   statusText: completeResponse.statusText,
+      //   hasPublicUrl: !!completeResponse.data?.publicUrl
+      // });
 
       console.log('✅ Step 4 complete - Upload successful!');
 
@@ -810,8 +712,8 @@ export default function AdCreationForm({
         uniqueId: uniqueId
       };
 
-      console.log('🎉 Final result object:', result);
-      console.log('🚀 === S3 UPLOAD END ===');
+      // console.log('🎉 Final result object:', result);
+      // console.log('🚀 === S3 UPLOAD END ===');
       return result;
 
     } catch (error) {
@@ -1290,48 +1192,6 @@ export default function AdCreationForm({
   })
 
 
-  // const getVideoAspectRatio = async (file) => {
-  //   if (file.mimeType && file.mimeType.startsWith('video/')) {
-  //     // For Drive files
-  //     return new Promise((resolve) => {
-  //       const video = document.createElement('video');
-  //       video.preload = 'metadata';
-  //       video.src = `https://drive.google.com/uc?id=${file.id}&export=download`;
-
-  //       video.addEventListener('loadedmetadata', () => {
-  //         resolve(video.videoWidth / video.videoHeight);
-  //       });
-
-  //       video.addEventListener('error', () => {
-  //         resolve(16 / 9); // Default aspect ratio
-  //       });
-
-  //       // Timeout fallback
-  //       setTimeout(() => resolve(16 / 9), 5000);
-  //     });
-  //   } else if (file.type && file.type.startsWith('video/')) {
-  //     // For local files
-  //     return new Promise((resolve, reject) => {
-  //       const url = URL.createObjectURL(file);
-  //       const video = document.createElement('video');
-  //       video.preload = 'metadata';
-  //       video.src = url;
-
-  //       video.addEventListener('loadedmetadata', () => {
-  //         const aspectRatio = video.videoWidth / video.videoHeight;
-  //         URL.revokeObjectURL(url);
-  //         resolve(aspectRatio);
-  //       });
-
-  //       video.addEventListener('error', () => {
-  //         URL.revokeObjectURL(url);
-  //         resolve(16 / 9); // Default to 16:9 on error
-  //       });
-  //     });
-  //   }
-  //   return null; // Not a video file
-  // };
-
   const getVideoAspectRatio = async (file) => {
     if (file.mimeType && file.mimeType.startsWith('video/')) {
       // For Drive files - NEW, RELIABLE METHOD
@@ -1456,18 +1316,7 @@ export default function AdCreationForm({
       for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
         const batch = videoFiles.slice(i, i + BATCH_SIZE);
 
-        // const thumbnailPromises = batch.map(file =>
-        //   generateThumbnail(file)
-        //     .then(thumb => ({ name: file.name, thumb }))
-        //     .catch(err => {
-        //       console.error(`Thumbnail error for ${file.name}:`, err);
-        //       // Change this line from returning null to returning fallback:
-        //       return {
-        //         name: file.name,
-        //         thumb: "https://api.withblip.com/thumbnail.jpg"
-        //       };
-        //     })
-        // );
+
 
         const thumbnailPromises = batch.map(file =>
           generateThumbnail(file)
@@ -1483,13 +1332,6 @@ export default function AdCreationForm({
 
         const results = await Promise.all(thumbnailPromises);
 
-        // setVideoThumbs(prev => {
-        //   const updates = {};
-        //   results.forEach(result => {
-        //     if (result) updates[result.name] = result.thumb;
-        //   });
-        //   return { ...prev, ...updates };
-        // });
 
         setVideoThumbs(prev => {
           const updates = {};
@@ -1896,9 +1738,6 @@ export default function AdCreationForm({
 
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
-    // console.log(frontendJobId);
-    // setJobId(frontendJobId); // This triggers SSE
-
 
     const smallDriveFiles = driveFiles.filter(file =>
       !(file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD)
@@ -2427,25 +2266,57 @@ export default function AdCreationForm({
 
 
 
+      // try {
+      //   const responses = await Promise.all(promises);
+      //   console.log("job finished calling final endpoint");
+      //   // Try to complete the job
+      //   try {
+      //     console.log("job finished calling final endpoint try block");
+      //     await axios.post(`${API_BASE_URL}/auth/complete-job`, {
+      //       jobId: frontendJobId,
+      //       message: 'All ads created successfully!'
+      //     }, {
+      //       withCredentials: true,
+      //       timeout: 5000 // Don't wait forever
+      //     });
+      //   } catch (completeError) {
+      //     console.warn("Failed to update progress tracker, but ads were created successfully");
+      //     // Still show the toast since ads actually succeeded
+      //   }
+      //   console.log("job finished calling final endpoint try block ended");
+      //   // toast.success("Ads created successfully!");
       try {
-        const responses = await Promise.all(promises);
-        console.log("job finished calling final endpoint");
-        // Try to complete the job
-        try {
-          console.log("job finished calling final endpoint try block");
+        const responses = await Promise.allSettled(promises);
+
+        const results = {
+          successful: responses.filter(r => r.status === 'fulfilled').length,
+          failed: responses.filter(r => r.status === 'rejected').length,
+          errors: responses
+            .filter(r => r.status === 'rejected')
+            .map((r, i) => ({
+              file: files[i]?.name || `File ${i + 1}`,
+              error: r.reason?.response?.data || r.reason?.message || 'Unknown error'
+            }))
+        };
+
+        // Update the job completion logic
+        if (results.successful > 0 && results.failed === 0) {
           await axios.post(`${API_BASE_URL}/auth/complete-job`, {
             jobId: frontendJobId,
-            message: 'All ads created successfully!'
-          }, {
-            withCredentials: true,
-            timeout: 5000 // Don't wait forever
+            message: 'All ads created successfully!',
+            status: 'complete'
           });
-        } catch (completeError) {
-          console.warn("Failed to update progress tracker, but ads were created successfully");
-          // Still show the toast since ads actually succeeded
+        } else if (results.successful > 0 && results.failed > 0) {
+          await axios.post(`${API_BASE_URL}/auth/complete-job`, {
+            jobId: frontendJobId,
+            message: `Partial: ${results.successful} created, ${results.failed} failed`,
+            status: 'partial',
+            details: results.errors
+          });
+        } else {
+          throw new Error(`All ads failed: ${results.errors[0]?.error}`);
         }
-        console.log("job finished calling final endpoint try block ended");
-        // toast.success("Ads created successfully!");
+
       } catch (error) {
         // Your existing error handling
       }
