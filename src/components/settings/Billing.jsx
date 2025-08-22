@@ -201,6 +201,7 @@ export default function BillingSettings() {
                                             <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
                                                 <p className="text-sm text-orange-800">
                                                     Your subscription will continue until {new Date(subscriptionData.willCancelAt).toLocaleDateString()}
+                                                    <br></br>
                                                     Your team members will lose access after this date as well.
                                                 </p>
                                             </div>
@@ -209,7 +210,7 @@ export default function BillingSettings() {
                                                 disabled={isLoading}
                                                 className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
                                             >
-                                                Reactivate Subscription | $500/mo
+                                                Reactivate Subscription
                                             </Button>
                                         </>
                                     ) : (
