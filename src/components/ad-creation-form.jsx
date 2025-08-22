@@ -2266,57 +2266,25 @@ export default function AdCreationForm({
 
 
 
-      // try {
-      //   const responses = await Promise.all(promises);
-      //   console.log("job finished calling final endpoint");
-      //   // Try to complete the job
-      //   try {
-      //     console.log("job finished calling final endpoint try block");
-      //     await axios.post(`${API_BASE_URL}/auth/complete-job`, {
-      //       jobId: frontendJobId,
-      //       message: 'All ads created successfully!'
-      //     }, {
-      //       withCredentials: true,
-      //       timeout: 5000 // Don't wait forever
-      //     });
-      //   } catch (completeError) {
-      //     console.warn("Failed to update progress tracker, but ads were created successfully");
-      //     // Still show the toast since ads actually succeeded
-      //   }
-      //   console.log("job finished calling final endpoint try block ended");
-      //   // toast.success("Ads created successfully!");
       try {
-        const responses = await Promise.allSettled(promises);
-
-        const results = {
-          successful: responses.filter(r => r.status === 'fulfilled').length,
-          failed: responses.filter(r => r.status === 'rejected').length,
-          errors: responses
-            .filter(r => r.status === 'rejected')
-            .map((r, i) => ({
-              file: files[i]?.name || `File ${i + 1}`,
-              error: r.reason?.response?.data || r.reason?.message || 'Unknown error'
-            }))
-        };
-
-        // Update the job completion logic
-        if (results.successful > 0 && results.failed === 0) {
+        const responses = await Promise.all(promises);
+        console.log("job finished calling final endpoint");
+        // Try to complete the job
+        try {
+          console.log("job finished calling final endpoint try block");
           await axios.post(`${API_BASE_URL}/auth/complete-job`, {
             jobId: frontendJobId,
-            message: 'All ads created successfully!',
-            status: 'complete'
+            message: 'All ads created successfully!'
+          }, {
+            withCredentials: true,
+            timeout: 5000 // Don't wait forever
           });
-        } else if (results.successful > 0 && results.failed > 0) {
-          await axios.post(`${API_BASE_URL}/auth/complete-job`, {
-            jobId: frontendJobId,
-            message: `Partial: ${results.successful} created, ${results.failed} failed`,
-            status: 'partial',
-            details: results.errors
-          });
-        } else {
-          throw new Error(`All ads failed: ${results.errors[0]?.error}`);
+        } catch (completeError) {
+          console.warn("Failed to update progress tracker, but ads were created successfully");
+          // Still show the toast since ads actually succeeded
         }
-
+        console.log("job finished calling final endpoint try block ended");
+        // toast.success("Ads created successfully!");
       } catch (error) {
         // Your existing error handling
       }
