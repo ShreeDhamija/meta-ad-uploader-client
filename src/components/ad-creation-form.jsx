@@ -912,7 +912,8 @@ export default function AdCreationForm({
     }
 
     // Only act on the final states reported by the SSE hook
-    if (status === 'complete' || status === 'error' || status === 'job-not-found') {
+    // if (status === 'complete' || status === 'error' || status === 'job-not-found') {
+    if (status === 'complete' || status === 'partial' || status === 'error' || status === 'job-not-found') {
       if (status === 'complete') {
         // Fix: Handle multiple adsets properly
         const selectedAdSetIds = currentJob.formData.selectedAdSets;
@@ -952,6 +953,18 @@ export default function AdCreationForm({
           jobData: currentJob
         };
         setCompletedJobs(prev => [...prev, failedJob]);
+      } else if (status === 'partial') {
+        // Partial success
+        const completedJob = {
+          id: currentJob.id,
+          message: trackedMessage,
+          completedAt: Date.now(),
+          status: 'warning'
+        };
+        setCompletedJobs(prev => [...prev, completedJob]);
+        if (currentJob.formData.duplicateAdSet) refreshAdSets();
+        toast.warning("Some ads failed to create");
+
       } else {
         const failedJob = {
           id: currentJob.id,
@@ -2267,26 +2280,37 @@ export default function AdCreationForm({
 
 
       try {
-        const responses = await Promise.all(promises);
+        // const responses = await Promise.all(promises);
+        const responses = await Promise.allSettled(promises);
         console.log("job finished calling final endpoint");
         // Try to complete the job
         try {
           console.log("job finished calling final endpoint try block");
+          // await axios.post(`${API_BASE_URL}/auth/complete-job`, {
+          //   jobId: frontendJobId,
+          //   message: 'All ads created successfully!'
+          // }, {
+          //   withCredentials: true,
+          //   timeout: 5000 // Don't wait forever
+          // });
+
           await axios.post(`${API_BASE_URL}/auth/complete-job`, {
             jobId: frontendJobId,
-            message: 'All ads created successfully!'
-          }, {
-            withCredentials: true,
-            timeout: 5000 // Don't wait forever
-          });
+            message: failureCount === 0
+              ? 'All ads created successfully!'
+              : `${successCount}/${successCount + failureCount} ads created successfully`
+          }, { withCredentials: true, timeout: 5000 });
+
+
         } catch (completeError) {
           console.warn("Failed to update progress tracker, but ads were created successfully");
           // Still show the toast since ads actually succeeded
         }
         console.log("job finished calling final endpoint try block ended");
         // toast.success("Ads created successfully!");
-      } catch (error) {
-        // Your existing error handling
+      }
+      catch (error) {
+        // error handling here
       }
 
     } catch (error) {
@@ -2405,26 +2429,7 @@ export default function AdCreationForm({
               <div className="flex-1 overflow-y-auto">
 
                 {/* Completed Jobs */}
-                {/* {completedJobs.map((job) => (
-                  <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      {job.status === 'error' ? (
-                        <CircleX className="w-6 h-6 text-red-500" />
-                      ) : (
-                        <CheckIcon className="w-6 h-6" />
-                      )}
-                    </div>
-                    <p className={`flex-1 text-sm break-all ${job.status === 'error' ? 'text-red-600' : 'text-gray-700'}`}>
-                      {job.message}
-                    </p>
-                    <button
-                      onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <CircleX className="h-4 w-4 text-gray-500" />
-                    </button>
-                  </div>
-                ))} */}
+
 
                 {completedJobs.map((job) => (
                   <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
@@ -2433,13 +2438,16 @@ export default function AdCreationForm({
                         <CircleX className="w-6 h-6 text-red-500" />
                       ) : job.status === 'retry' ? (
                         <AlertTriangle className="w-6 h-6 text-orange-500" />
+                      ) : job.status === 'warning' ? (
+                        <AlertTriangle className="w-6 h-6 text-yellow-500" />
                       ) : (
-                        <CheckIcon className="w-6 h-6" />
+                        <CheckIcon className="w-6 h-6 text-green-500" />
                       )}
                     </div>
                     <p className={`flex-1 text-sm break-all ${job.status === 'error' ? 'text-red-600' :
                       job.status === 'retry' ? 'text-orange-600' :
-                        'text-gray-700'
+                        job.status === 'warning' ? 'text-yellow-600' :
+                          'text-gray-700'
                       }`}>
                       {job.message}
                       {job.status === 'retry' && (
