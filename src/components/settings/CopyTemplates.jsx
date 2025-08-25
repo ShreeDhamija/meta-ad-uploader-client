@@ -163,7 +163,7 @@ function reducer(state, action) {
   }
 }
 
-export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSettings }) {
+export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSettings, onTemplateUpdate }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const justSavedRef = useRef(false)
   const { templates, defaultName, selectedName, editingTemplate } = state
@@ -185,24 +185,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
-  // const templateChanged = useMemo(() => {
-  //   // Brand new template → allow save logic to run
-  //   if (!currentTemplate?.id && !currentTemplate?.name) {
-  //     return !!templateName.trim() && primaryTexts.length > 0 && headlines.length > 0;
-  //   }
-
-  //   // Existing template → check for actual changes
-  //   return (
-  //     templateName !== currentTemplate.name ||
-  //     JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
-  //     JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
-  //   );
-  // }, [
-  //   templateName,
-  //   currentTemplate,
-  //   primaryTexts,
-  //   headlines
-  // ]);
 
   const templateChanged = useMemo(() => {
     // Brand new template → trigger warning as soon as any field has content
@@ -440,6 +422,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         await deleteCopyTemplate(selectedAdAccount, editingTemplate)
       }
 
+      onTemplateUpdate();
       // Update parent component state
       setAdSettings((prev) => {
         const updatedCopyTemplates = { ...prev.copyTemplates }
@@ -497,7 +480,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     setIsProcessing(true)
     try {
       await saveCopyTemplate(selectedAdAccount, templateName, updatedTemplate, true)
-
+      onTemplateUpdate();
       // Update parent component state
       setAdSettings((prev) => ({
         ...prev,
@@ -527,6 +510,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     try {
       await deleteCopyTemplate(selectedAdAccount, templateName)
 
+      onTemplateUpdate();
       setAdSettings((prev) => {
         const updatedCopyTemplates = { ...prev.copyTemplates }
         delete updatedCopyTemplates[templateName]

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
@@ -72,7 +72,14 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   const [animateClass, setAnimateClass] = useState("")
   const [isReauthOpen, setIsReauthOpen] = useState(false)
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+  // Add a ref to track template-only updates
+  const skipFormResetRef = useRef(false);
 
+
+  // Create callback to pass to CopyTemplates
+  const handleTemplateUpdate = useCallback(() => {
+    skipFormResetRef.current = true;
+  }, []);
 
 
   // Memoized Facebook reauth handler
@@ -291,6 +298,13 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     const initial = calculateInitialSettings(adSettings);
     console.log("adSettings.adNameFormulaV2:", adSettings.adNameFormulaV2);
 
+    if (skipFormResetRef.current) {
+      skipFormResetRef.current = false;
+      setInitialSettings(initial);
+      return;
+    }
+
+
     setSelectedPage(initial.defaultPage);
     setSelectedInstagram(initial.defaultInstagram);
     setLinks(initial.links);
@@ -417,6 +431,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
             selectedAdAccount={selectedAdAccount}
             adSettings={adSettings}
             setAdSettings={setAdSettings}
+            onTemplateUpdate={handleTemplateUpdate}
+
           />
 
           {/* Ad Naming Convention */}
