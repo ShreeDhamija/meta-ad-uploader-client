@@ -2282,6 +2282,19 @@ export default function AdCreationForm({
       try {
         // const responses = await Promise.all(promises);
         const responses = await Promise.allSettled(promises);
+        let successCount = 0;
+        let failureCount = 0;
+
+        responses.forEach((response) => {
+          if (response.status === 'fulfilled') {
+            successCount++;
+          } else {
+            failureCount++;
+            console.error('Ad creation failed:', response.reason);
+          }
+        });
+
+
         console.log("job finished calling final endpoint");
         // Try to complete the job
         try {
