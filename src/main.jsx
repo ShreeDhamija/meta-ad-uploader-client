@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import { AuthProvider } from "./lib/AuthContext";
 import { AppProvider } from "./lib/AppContext";
+import { PostHogProvider } from 'posthog-js/react'
 
 import {
   createBrowserRouter,
@@ -32,11 +33,20 @@ const router = createBrowserRouter([
   },
 ]);
 
+
+const options = {
+  api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+  defaults: '2025-05-24',
+}
+
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <AuthProvider>
       <AppProvider>
-        <RouterProvider router={router} />
+        <PostHogProvider apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY} options={options}>
+          <RouterProvider router={router} />
+        </PostHogProvider>
       </AppProvider>
     </AuthProvider>
   </StrictMode>
