@@ -743,7 +743,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             ? "This template name already exists"
             : isProcessing
               ? "Saving..."
-              : (!editingTemplate || editingTemplate === null) && (primaryTexts.some(text => text.trim()) || headlines.some(text => text.trim())) && !templateName.trim()
+              : editingTemplate === null && (primaryTexts.some(text => text.trim()) || headlines.some(text => text.trim())) && !templateName.trim()
                 ? "Enter Template Name to Save"
                 : "Save Template"}
         </Button>
