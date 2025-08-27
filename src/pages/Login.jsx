@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import SignUpImg from "../assets/signup.webp?url"
+import { ShineBorder } from "@/components/magicui/shine-border";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
@@ -26,8 +27,12 @@ export default function Login() {
 
     return (
         <div className="flex justify-center align-center items-center h-screen px-4 overflow-visible">
+
+
             <div className="flex rounded-xl overflow-hidden p-6 overflow-visible">
+
                 <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-3xl shadow-lg min-w-[420px] min-h-[650px] flex flex-col justify-center">
+
                     <div className="text-center space-y-1">
                         <img
                             src="https://api.withblip.com/logo.webp"
@@ -51,72 +56,6 @@ export default function Login() {
                     </Button>
 
 
-                    {/* <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <span className="w-full border-t"></span>
-                        </div>
-                        <div className="relative flex justify-center text-sm text-gray-500">
-                            <span className="bg-white px-2 text-muted-foreground">Or continue with</span>
-                        </div>
-                    </div> */}
-
-                    {/* <form
-                        className="space-y-4"
-                        onSubmit={async (e) => {
-                            e.preventDefault();
-                            const username = e.target.username.value;
-                            const password = e.target.password.value;
-
-                            const res = await fetch("https://api.withblip.com/auth/manual-login", {
-                                method: "POST",
-                                credentials: "include",
-                                headers: {
-                                    "Content-Type": "application/json"
-                                },
-                                body: JSON.stringify({ username, password })
-                            });
-
-                            const data = await res.json();
-                            if (data.success) {
-                                window.location.href = "/";
-                            } else {
-                                alert(data.error || "Login failed");
-                            }
-                        }}
-                    >
-                        <div className="space-y-1">
-                            <Label htmlFor="username" className="text-gray-500">Username</Label>
-                            <Input
-                                id="username"
-                                name="username"
-                                type="text"
-                                placeholder="Enter Username here"
-                                className="text-gray-800 rounded-xl bg-white shadow-sm border-gray-300"
-                                required
-                            />
-                        </div>
-
-                        <div className="space-y-1">
-                            <Label htmlFor="password" className="text-gray-500">Password</Label>
-                            <Input
-                                id="password"
-                                name="password"
-                                type="password"
-                                placeholder="Enter Password here"
-                                className="text-gray-500 rounded-xl bg-white shadow-sm border-gray-300"
-                                required
-                            />
-                        </div>
-
-                        <Button
-                            type="submit"
-                            className="text-gray-500 rounded-xl bg-zinc-700 shadow-sm border-gray-300 w-full text-white hover:!bg-black"
-                            disabled={true}
-                        >
-                            Login
-                        </Button>
-                    </form> */}
-
 
                     <p className="text-xs text-center text-muted-foreground mt-2">
                         By clicking continue, you agree to our{" "}
@@ -124,8 +63,13 @@ export default function Login() {
                         <a href="https://app.withblip.com/terms-of-service" className="underline text-zinc-600">Terms of Service</a> and{" "}
                         <a href="https://app.withblip.com/privacy-policy" className="underline text-zinc-600">Privacy Policy</a>.
                     </p>
+
                 </div>
+
+
             </div >
+
+
             <div className="w-[490px] h-[700px] overflow-visible">
                 <img src={SignUpImg}
                     alt="Login Visual"
@@ -133,6 +77,6 @@ export default function Login() {
 
                 />
             </div>
-        </div>
+        </div >
     )
 }
