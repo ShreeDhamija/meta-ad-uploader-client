@@ -245,168 +245,168 @@ export default function Home() {
 
     // 1. START CACHING
 
-    useEffect(() => {
-        if (!isLoggedIn) return;
+    // useEffect(() => {
+    //     if (!isLoggedIn) return;
 
-        const loadCachedSettings = async () => {
-            try {
-                const cached = localStorage.getItem('blip_dropdown_settings');
-                console.log('🔍 Cached data:', cached);
+    //     const loadCachedSettings = async () => {
+    //         try {
+    //             const cached = localStorage.getItem('blip_dropdown_settings');
+    //             console.log('🔍 Cached data:', cached);
 
-                if (!cached) {
-                    console.log('❌ No cached data found');
-                    return;
-                }
+    //             if (!cached) {
+    //                 console.log('❌ No cached data found');
+    //                 return;
+    //             }
 
-                const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets, showDuplicateBlock: cachedShowDuplicateBlock } = JSON.parse(cached);
-                console.log('📋 Parsed cache:', { cachedAccount, cachedCampaign, cachedAdSets });
-                // Check current state
-                console.log('🏠 Current state:', { selectedAdAccount, campaigns: campaigns.length, adAccounts: adAccounts.length });
+    //             const { selectedAdAccount: cachedAccount, selectedCampaign: cachedCampaign, selectedAdSets: cachedAdSets, showDuplicateBlock: cachedShowDuplicateBlock } = JSON.parse(cached);
+    //             console.log('📋 Parsed cache:', { cachedAccount, cachedCampaign, cachedAdSets });
+    //             // Check current state
+    //             console.log('🏠 Current state:', { selectedAdAccount, campaigns: campaigns.length, adAccounts: adAccounts.length });
 
-                // Restore ad account first
-                if (cachedAccount && !selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
-                    console.log('✅ Restoring ad account:', cachedAccount);
-                    setSelectedAdAccount(cachedAccount);
+    //             // Restore ad account first
+    //             if (cachedAccount && !selectedAdAccount && adAccounts.find(acc => acc.id === cachedAccount)) {
+    //                 console.log('✅ Restoring ad account:', cachedAccount);
+    //                 setSelectedAdAccount(cachedAccount);
 
-                    // Always fetch campaigns for the cached account
-                    console.log('🚀 Fetching campaigns for account:', cachedAccount);
+    //                 // Always fetch campaigns for the cached account
+    //                 console.log('🚀 Fetching campaigns for account:', cachedAccount);
 
-                    try {
-                        const res = await fetch(`${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${cachedAccount}`, {
-                            credentials: "include"
-                        });
-                        const data = await res.json();
-                        console.log('📊 Campaigns response:', data);
+    //                 try {
+    //                     const res = await fetch(`${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${cachedAccount}`, {
+    //                         credentials: "include"
+    //                     });
+    //                     const data = await res.json();
+    //                     console.log('📊 Campaigns response:', data);
 
-                        if (data.campaigns) {
-                            const sortedCampaigns = sortCampaigns(data.campaigns);
-                            console.log('📋 Setting campaigns:', sortedCampaigns.length, 'campaigns');
-                            setCampaigns(sortedCampaigns);
+    //                     if (data.campaigns) {
+    //                         const sortedCampaigns = sortCampaigns(data.campaigns);
+    //                         console.log('📋 Setting campaigns:', sortedCampaigns.length, 'campaigns');
+    //                         setCampaigns(sortedCampaigns);
 
-                            // Only restore campaign and fetch adsets if we have a cached campaign
-                            if (cachedCampaign) {
-                                const campaignExists = sortedCampaigns.find(c => c.id === cachedCampaign);
-                                console.log('🔍 Cached campaign exists?', !!campaignExists, cachedCampaign);
+    //                         // Only restore campaign and fetch adsets if we have a cached campaign
+    //                         if (cachedCampaign) {
+    //                             const campaignExists = sortedCampaigns.find(c => c.id === cachedCampaign);
+    //                             console.log('🔍 Cached campaign exists?', !!campaignExists, cachedCampaign);
 
-                                if (campaignExists) {
-                                    console.log('✅ Restoring campaign:', cachedCampaign);
-                                    setSelectedCampaign(cachedCampaign);
-                                    setCampaignObjective(campaignExists.objective);
+    //                             if (campaignExists) {
+    //                                 console.log('✅ Restoring campaign:', cachedCampaign);
+    //                                 setSelectedCampaign(cachedCampaign);
+    //                                 setCampaignObjective(campaignExists.objective);
 
-                                    // Fetch adsets for the cached campaign
-                                    console.log('🚀 Fetching adsets for campaign:', cachedCampaign);
+    //                                 // Fetch adsets for the cached campaign
+    //                                 console.log('🚀 Fetching adsets for campaign:', cachedCampaign);
 
-                                    try {
-                                        const adsetRes = await fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${cachedCampaign}`, {
-                                            credentials: "include"
-                                        });
-                                        const adsetData = await adsetRes.json();
-                                        console.log('📊 Adsets response:', adsetData);
+    //                                 try {
+    //                                     const adsetRes = await fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${cachedCampaign}`, {
+    //                                         credentials: "include"
+    //                                     });
+    //                                     const adsetData = await adsetRes.json();
+    //                                     console.log('📊 Adsets response:', adsetData);
 
-                                        if (adsetData.adSets) {
-                                            const sortedAdSets = sortAdSets(adsetData.adSets);
-                                            console.log('📋 Setting adsets:', sortedAdSets.length, 'adsets');
-                                            setAdSets(sortedAdSets);
+    //                                     if (adsetData.adSets) {
+    //                                         const sortedAdSets = sortAdSets(adsetData.adSets);
+    //                                         console.log('📋 Setting adsets:', sortedAdSets.length, 'adsets');
+    //                                         setAdSets(sortedAdSets);
 
-                                            // Restore cached adsets if they exist
-                                            if (cachedAdSets?.length) {
-                                                const validCachedAdSets = cachedAdSets.filter(id =>
-                                                    sortedAdSets.find(adset => adset.id === id)
-                                                );
-                                                console.log('✅ Valid cached adsets:', validCachedAdSets);
+    //                                         // Restore cached adsets if they exist
+    //                                         if (cachedAdSets?.length) {
+    //                                             const validCachedAdSets = cachedAdSets.filter(id =>
+    //                                                 sortedAdSets.find(adset => adset.id === id)
+    //                                             );
+    //                                             console.log('✅ Valid cached adsets:', validCachedAdSets);
 
-                                                if (validCachedAdSets.length > 0) {
-                                                    console.log('✅ Restoring adsets:', validCachedAdSets);
-                                                    setSelectedAdSets(validCachedAdSets);
-                                                }
-                                            }
-                                        } else {
-                                            console.log('❌ No adsets in response');
-                                        }
-                                    } catch (err) {
-                                        console.error('💥 Error fetching cached adsets:', err);
-                                    }
-                                } else {
-                                    console.log('❌ Cached campaign no longer exists');
-                                }
-                            }
-                        } else {
-                            console.log('❌ No campaigns in response');
-                        }
-                    } catch (err) {
-                        console.error('💥 Error fetching cached campaigns:', err);
-                    }
-                } else {
-                    console.log('❌ Cannot restore ad account:', {
-                        cachedAccount,
-                        hasSelectedAccount: !!selectedAdAccount,
-                        accountExists: !!adAccounts.find(acc => acc.id === cachedAccount)
-                    });
-                }
-            } catch (error) {
-                console.error('💥 Error loading cached settings:', error);
-            }
-        };
+    //                                             if (validCachedAdSets.length > 0) {
+    //                                                 console.log('✅ Restoring adsets:', validCachedAdSets);
+    //                                                 setSelectedAdSets(validCachedAdSets);
+    //                                             }
+    //                                         }
+    //                                     } else {
+    //                                         console.log('❌ No adsets in response');
+    //                                     }
+    //                                 } catch (err) {
+    //                                     console.error('💥 Error fetching cached adsets:', err);
+    //                                 }
+    //                             } else {
+    //                                 console.log('❌ Cached campaign no longer exists');
+    //                             }
+    //                         }
+    //                     } else {
+    //                         console.log('❌ No campaigns in response');
+    //                     }
+    //                 } catch (err) {
+    //                     console.error('💥 Error fetching cached campaigns:', err);
+    //                 }
+    //             } else {
+    //                 console.log('❌ Cannot restore ad account:', {
+    //                     cachedAccount,
+    //                     hasSelectedAccount: !!selectedAdAccount,
+    //                     accountExists: !!adAccounts.find(acc => acc.id === cachedAccount)
+    //                 });
+    //             }
+    //         } catch (error) {
+    //             console.error('💥 Error loading cached settings:', error);
+    //         }
+    //     };
 
-        // Only run this if we have adAccounts loaded and no current selections
-        console.log('🔄 Cache effect triggered:', {
-            isLoggedIn,
-            adAccountsCount: adAccounts.length,
-            hasSelectedAccount: !!selectedAdAccount
-        });
+    //     // Only run this if we have adAccounts loaded and no current selections
+    //     console.log('🔄 Cache effect triggered:', {
+    //         isLoggedIn,
+    //         adAccountsCount: adAccounts.length,
+    //         hasSelectedAccount: !!selectedAdAccount
+    //     });
 
-        if (adAccounts.length > 0 && !selectedAdAccount) {
-            console.log('▶️ Running loadCachedSettings');
-            loadCachedSettings();
-        } else {
-            console.log('⏸️ Skipping cache load:', {
-                hasAdAccounts: adAccounts.length > 0,
-                hasSelectedAccount: !!selectedAdAccount
-            });
-        }
-    }, [isLoggedIn, adAccounts]);
-
-
-    // Clear selections when ad account changes
-    useEffect(() => {
-        if (!selectedAdAccount) return;
-
-        setSelectedCampaign("");
-        setAdSets([]);
-        setSelectedAdSets([]);
-        localStorage.removeItem('blip_dropdown_settings');
-    }, [selectedAdAccount]);
+    //     if (adAccounts.length > 0 && !selectedAdAccount) {
+    //         console.log('▶️ Running loadCachedSettings');
+    //         loadCachedSettings();
+    //     } else {
+    //         console.log('⏸️ Skipping cache load:', {
+    //             hasAdAccounts: adAccounts.length > 0,
+    //             hasSelectedAccount: !!selectedAdAccount
+    //         });
+    //     }
+    // }, [isLoggedIn, adAccounts]);
 
 
-    // 2. Save selections to cache when they change (add some logging)
-    useEffect(() => {
-        if (!isLoggedIn || !selectedAdAccount) return;
+    // // Clear selections when ad account changes
+    // useEffect(() => {
+    //     if (!selectedAdAccount) return;
 
-        try {
-            const settingsToCache = {
-                selectedAdAccount,
-                selectedCampaign,
-                selectedAdSets,
+    //     setSelectedCampaign("");
+    //     setAdSets([]);
+    //     setSelectedAdSets([]);
+    //     localStorage.removeItem('blip_dropdown_settings');
+    // }, [selectedAdAccount]);
 
-            };
-            console.log('💾 Saving to cache:', settingsToCache);
-            localStorage.setItem('blip_dropdown_settings', JSON.stringify(settingsToCache));
-        } catch (error) {
-            console.error('Error saving cached settings:', error);
-        }
-    }, [selectedAdAccount, selectedCampaign, selectedAdSets, isLoggedIn]);
 
-    // 3. Clear cache on logout
-    useEffect(() => {
-        if (!isLoggedIn) {
-            try {
-                localStorage.removeItem('blip_dropdown_settings');
-                console.log('🗑️ Cache cleared on logout');
-            } catch (error) {
-                console.error('Error clearing cache:', error);
-            }
-        }
-    }, [isLoggedIn]);
+    // // 2. Save selections to cache when they change (add some logging)
+    // useEffect(() => {
+    //     if (!isLoggedIn || !selectedAdAccount) return;
+
+    //     try {
+    //         const settingsToCache = {
+    //             selectedAdAccount,
+    //             selectedCampaign,
+    //             selectedAdSets,
+
+    //         };
+    //         console.log('💾 Saving to cache:', settingsToCache);
+    //         localStorage.setItem('blip_dropdown_settings', JSON.stringify(settingsToCache));
+    //     } catch (error) {
+    //         console.error('Error saving cached settings:', error);
+    //     }
+    // }, [selectedAdAccount, selectedCampaign, selectedAdSets, isLoggedIn]);
+
+    // // 3. Clear cache on logout
+    // useEffect(() => {
+    //     if (!isLoggedIn) {
+    //         try {
+    //             localStorage.removeItem('blip_dropdown_settings');
+    //             console.log('🗑️ Cache cleared on logout');
+    //         } catch (error) {
+    //             console.error('Error clearing cache:', error);
+    //         }
+    //     }
+    // }, [isLoggedIn]);
     //END CACHING
 
 
