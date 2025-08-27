@@ -288,6 +288,29 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   // }, [links]);
 
 
+  // Auto-save only when setting default link
+  useEffect(() => {
+    if (hasChanges && selectedAdAccount && initialSettings && Object.keys(initialSettings).length > 0) {
+      const linksChanged = JSON.stringify(links) !== JSON.stringify(initialSettings.links);
+
+      if (linksChanged) {
+        // Check if this was just a default change (same URLs, different default flags)
+        const currentUrls = links.map(l => l.url).sort();
+        const initialUrls = initialSettings.links.map(l => l.url).sort();
+        const sameUrls = JSON.stringify(currentUrls) === JSON.stringify(initialUrls);
+
+        // Only auto-save if URLs are the same (meaning only default changed)
+        if (sameUrls && links.length === initialSettings.links.length) {
+          const timeoutId = setTimeout(() => {
+            handleSave();
+          }, 1);
+
+          return () => clearTimeout(timeoutId);
+        }
+      }
+    }
+  }, [links]);
+
   // Effect for intersection observer
   useEffect(() => {
     const observer = new IntersectionObserver(
