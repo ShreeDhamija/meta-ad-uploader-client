@@ -216,7 +216,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       toast.success("Updates saved!");
 
       if (isFirstEverSave) {
-        console.log("🎉 Triggering confetti!");
+        // console.log("🎉 Triggering confetti!");
         confetti({
           particleCount: 150,
           spread: 70,
@@ -224,7 +224,7 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
           colors: ['#3b82f6', '#10b981', '#f59e0b']
         });
       } else {
-        console.log("❌ Not triggering confetti, isFirstEverSave is false");
+        // console.log("❌ Not triggering confetti, isFirstEverSave is false");
       }
 
 
