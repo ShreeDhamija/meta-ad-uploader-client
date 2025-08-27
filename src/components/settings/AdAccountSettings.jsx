@@ -17,7 +17,6 @@ import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import CreativeEnhancements from "./CreativeEnhancements"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import LabelIcon from '@/assets/icons/label.svg?react';
-import { ConfettiButton } from "@/components/magicui/confetti";
 
 // Constants moved outside component to prevent recreation
 const DEFAULT_UTM_PAIRS = [
@@ -419,98 +418,93 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
         )}
       </div>
 
-      {/* <fieldset disabled={!selectedAdAccount || loading}> */}
-      <div className={!selectedAdAccount || loading ? "opacity-70 cursor-not-allowed space-y-6" : "space-y-6"}>
-        <PageSelectors
-          selectedPage={selectedPage}
-          setSelectedPage={setSelectedPage}
-          selectedInstagram={selectedInstagram}
-          setSelectedInstagram={setSelectedInstagram}
-        />
+      <fieldset disabled={!selectedAdAccount || loading}>
+        <div className={!selectedAdAccount || loading ? "opacity-70 cursor-not-allowed space-y-6" : "space-y-6"}>
+          <PageSelectors
+            selectedPage={selectedPage}
+            setSelectedPage={setSelectedPage}
+            selectedInstagram={selectedInstagram}
+            setSelectedInstagram={setSelectedInstagram}
+          />
 
-        <CopyTemplates
-          selectedAdAccount={selectedAdAccount}
-          adSettings={adSettings}
-          setAdSettings={setAdSettings}
-          onTemplateUpdate={handleTemplateUpdate}
+          <CopyTemplates
+            selectedAdAccount={selectedAdAccount}
+            adSettings={adSettings}
+            setAdSettings={setAdSettings}
+            onTemplateUpdate={handleTemplateUpdate}
 
-        />
+          />
 
-        {/* Ad Naming Convention */}
-        <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
-            <h3 className="font-medium text-[14px] text-zinc-950">
-              Ad Naming Convention
-            </h3>
+          {/* Ad Naming Convention */}
+          <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+              <h3 className="font-medium text-[14px] text-zinc-950">
+                Ad Naming Convention
+              </h3>
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Type
+              <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-sm text-black">
+                /
+              </span>
+              to see list of variables you can use. You can also save custom text.
+            </p>
+
+            <ReorderAdNameParts
+              formulaInput={adNameFormulaV2?.rawInput || ""}
+              onFormulaChange={handleFormulaInputChange}
+              variant="default"
+            />
           </div>
 
-          <p className="text-xs text-gray-500">
-            Type
-            <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-sm text-black">
-              /
-            </span>
-            to see list of variables you can use. You can also save custom text.
-          </p>
-
-          <ReorderAdNameParts
-            formulaInput={adNameFormulaV2?.rawInput || ""}
-            onFormulaChange={handleFormulaInputChange}
-            variant="default"
+          <LinkParameters
+            links={links}
+            setLinks={setLinks}
+            utmPairs={utmPairs}
+            setUtmPairs={setUtmPairs}
+            selectedAdAccount={selectedAdAccount}
           />
-        </div>
 
-        <LinkParameters
-          links={links}
-          setLinks={setLinks}
-          utmPairs={utmPairs}
-          setUtmPairs={setUtmPairs}
-          selectedAdAccount={selectedAdAccount}
-        />
+          <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
 
-        <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
+          <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
 
-        <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
-
-        <div className="pt-2">
-          <ConfettiButton
-            id="main-save-button"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[45px]"
-            onClick={handleSave}
-          >
-            Save Settings
-          </ConfettiButton>
-
-        </div>
-      </div>
-      {/* </fieldset> */}
-
-      {
-        showFloatingButton && (
-          <div
-            className={`fixed bottom-6 right-6 z-50 ${animateClass}`}
-            style={{
-              width: "300px",
-              height: "50px",
-              display: showFloatingButton || animateClass === "floating-save-button-exit" ? "block" : "none",
-              backgroundColor: "white",
-              borderRadius: "12px",
-              boxShadow: "0px 4px 14px rgba(0,0,0,0.15)",
-              padding: "4px",
-            }}
-          >
+          <div className="pt-2">
             <Button
-              className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg rounded-xl"
+              id="main-save-button"
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[45px]"
               onClick={handleSave}
             >
               Save Settings
             </Button>
-
           </div>
+        </div>
+      </fieldset>
 
-        )
-      }
-    </div >
+      {showFloatingButton && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 ${animateClass}`}
+          style={{
+            width: "300px",
+            height: "50px",
+            display: showFloatingButton || animateClass === "floating-save-button-exit" ? "block" : "none",
+            backgroundColor: "white",
+            borderRadius: "12px",
+            boxShadow: "0px 4px 14px rgba(0,0,0,0.15)",
+            padding: "4px",
+          }}
+        >
+          <Button
+            className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg rounded-xl"
+            onClick={handleSave}
+          >
+            Save Settings
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }
 
