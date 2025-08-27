@@ -17,6 +17,7 @@ import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import CreativeEnhancements from "./CreativeEnhancements"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import LabelIcon from '@/assets/icons/label.svg?react';
+import confetti from 'canvas-confetti'
 
 // Constants moved outside component to prevent recreation
 const DEFAULT_UTM_PAIRS = [
@@ -211,6 +212,12 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
 
 
       toast.success("Updates saved!");
+
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
 
       const newInitialSettings = {
         defaultPage: selectedPage,
