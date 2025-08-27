@@ -58,7 +58,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
   const [selectedPage, setSelectedPage] = useState(null)
   const [selectedInstagram, setSelectedInstagram] = useState(null)
 
-  const { settings: adSettings, setSettings: setAdSettings, loading } = useAdAccountSettings(selectedAdAccount)
+  const { settings: adSettings, setSettings: setAdSettings, loading, isFirstEverSave } = useAdAccountSettings(selectedAdAccount)
+
 
   const [links, setLinks] = useState([]) // Array of {url, isDefault}
   const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
@@ -213,11 +214,14 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
 
       toast.success("Updates saved!");
 
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
+      if (isFirstEverSave) {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#3b82f6', '#10b981', '#f59e0b']
+        });
+      }
 
       const newInitialSettings = {
         defaultPage: selectedPage,
@@ -243,7 +247,9 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
     defaultCTA,
     utmPairs,
     enhancements,
-    adNameFormulaV2  // Add to dependencies
+    adNameFormulaV2,
+    isFirstEverSave  // Add this to dependencies
+    // Add to dependencies
 
   ]);
 

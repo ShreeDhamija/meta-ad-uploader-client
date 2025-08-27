@@ -4,6 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 export default function useAdAccountSettings(adAccountId) {
     const [loading, setLoading] = useState(true);
     const [documentExists, setDocumentExists] = useState(true); // Track if document exists
+    const [isFirstEverSave, setIsFirstEverSave] = useState(false); // Add this line
     const [settings, setSettings] = useState({
         defaultPage: null,
         defaultInstagram: null,
@@ -23,6 +24,8 @@ export default function useAdAccountSettings(adAccountId) {
                 // Check if the document exists based on response
                 if (res.status === 404 || !data.settings || data.error === 'Document not found') {
                     setDocumentExists(false);
+                    setIsFirstEverSave(data.isFirstEverSave || false); // Add this line
+
                     // Set default empty settings when document doesn't exist
                     setSettings({
                         defaultPage: null,
@@ -40,6 +43,8 @@ export default function useAdAccountSettings(adAccountId) {
                     });
                 } else {
                     setDocumentExists(true);
+                    setIsFirstEverSave(false); // Add this line
+
                     const s = data.settings || {};
                     // Migration logic: convert old defaultLink to new links array
                     let links = [];
@@ -76,6 +81,8 @@ export default function useAdAccountSettings(adAccountId) {
             } catch (err) {
                 console.error("Failed to fetch ad account settings:", err);
                 setDocumentExists(false);
+                setIsFirstEverSave(false); // Add this line
+
             } finally {
                 setLoading(false);
             }
@@ -89,6 +96,8 @@ export default function useAdAccountSettings(adAccountId) {
         settings,
         setSettings,
         documentExists,
+        isFirstEverSave, // Add this to the return
+
 
     };
 }
