@@ -20,6 +20,11 @@ export default function useAdAccountSettings(adAccountId) {
                     credentials: "include",
                 });
                 const data = await res.json();
+                // In the fetch function, after getting data:
+                console.log("🔍 Frontend Debug:");
+                console.log("- API response data:", data);
+                console.log("- data.isFirstEverSave:", data.isFirstEverSave);
+                console.log("- About to set isFirstEverSave to:", data.isFirstEverSave || false);
 
                 // Check if the document exists based on response
                 if (res.status === 404 || !data.settings || data.error === 'Document not found') {
@@ -97,7 +102,6 @@ export default function useAdAccountSettings(adAccountId) {
         setSettings,
         documentExists,
         isFirstEverSave, // Add this to the return
-
 
     };
 }

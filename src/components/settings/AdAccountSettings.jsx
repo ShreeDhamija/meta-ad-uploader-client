@@ -189,7 +189,8 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       alert("Select an Ad Account first");
       return;
     }
-
+    console.log("🔍 HandleSave Debug:");
+    console.log("- isFirstEverSave value:", isFirstEverSave);
 
 
     const adAccountSettings = {
@@ -215,13 +216,17 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       toast.success("Updates saved!");
 
       if (isFirstEverSave) {
+        console.log("🎉 Triggering confetti!");
         confetti({
           particleCount: 150,
           spread: 70,
           origin: { y: 0.6 },
           colors: ['#3b82f6', '#10b981', '#f59e0b']
         });
+      } else {
+        console.log("❌ Not triggering confetti, isFirstEverSave is false");
       }
+
 
       const newInitialSettings = {
         defaultPage: selectedPage,
