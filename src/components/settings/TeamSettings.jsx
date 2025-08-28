@@ -39,6 +39,10 @@ export default function TeamSettings() {
     const [showDeleteTeamDialog, setShowDeleteTeamDialog] = useState(false)
     const [isDeletingTeam, setIsDeletingTeam] = useState(false)
 
+    const [inviteEmails, setInviteEmails] = useState([])
+    const [currentEmail, setCurrentEmail] = useState("")
+    const [isSendingInvites, setIsSendingInvites] = useState(false)
+
 
     const [deletingMemberId, setDeletingMemberId] = useState(null)
 
@@ -89,6 +93,62 @@ export default function TeamSettings() {
             toast.error("Failed to create team")
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    const handleAddEmail = () => {
+        const email = currentEmail.trim();
+        if (!email) return;
+
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            toast.error("Please enter a valid email address");
+            return;
+        }
+
+        // Check for duplicates
+        if (inviteEmails.includes(email)) {
+            toast.error("Email already added");
+            return;
+        }
+
+        setInviteEmails(prev => [...prev, email]);
+        setCurrentEmail("");
+        toast.success("Email added");
+    }
+
+    const handleRemoveEmail = (emailToRemove) => {
+        setInviteEmails(prev => prev.filter(email => email !== emailToRemove));
+    }
+
+    const handleSendInvites = async () => {
+        if (inviteEmails.length === 0) {
+            toast.error("Please add at least one email");
+            return;
+        }
+
+        setIsSendingInvites(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/teams/send-invites`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ emails: inviteEmails })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                toast.success(data.message);
+                setInviteEmails([]); // Clear the list after sending
+            } else {
+                toast.error(data.error || "Failed to send invites");
+            }
+        } catch {
+            toast.error("Failed to send invites");
+        } finally {
+            setIsSendingInvites(false);
         }
     }
 
@@ -274,6 +334,68 @@ export default function TeamSettings() {
                                         Share it only with your team!
                                     </span>
                                 </div>
+
+
+                                {/* NEW: Email invite section */}
+                                <div className="space-y-3 p-4 rounded-xl bg-gray-50 border">
+                                    <h4 className="text-sm font-medium text-gray-900">Send Email Invites</h4>
+
+                                    <div className="flex gap-2">
+                                        <Input
+                                            placeholder="Enter email address"
+                                            value={currentEmail}
+                                            onChange={(e) => setCurrentEmail(e.target.value)}
+                                            onKeyPress={(e) => e.key === 'Enter' && handleAddEmail()}
+                                            className="rounded-xl"
+                                        />
+                                        <Button
+                                            onClick={handleAddEmail}
+                                            variant="outline"
+                                            className="rounded-xl px-4"
+                                        >
+                                            Add
+                                        </Button>
+                                    </div>
+
+                                    {/* Email list */}
+                                    {inviteEmails.length > 0 && (
+                                        <div className="space-y-2">
+                                            {inviteEmails.map((email, index) => (
+                                                <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-white border">
+                                                    <span className="text-sm">{email}</span>
+                                                    <Button
+                                                        onClick={() => handleRemoveEmail(email)}
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-6 w-6"
+                                                    >
+                                                        <Trash2 className="w-3 h-3 text-red-500" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        onClick={handleSendInvites}
+                                        disabled={inviteEmails.length === 0 || isSendingInvites}
+                                        className="w-full rounded-xl bg-blue-600"
+                                    >
+                                        {isSendingInvites ? (
+                                            <>
+                                                <Loader className="w-4 h-4 mr-2 animate-spin" />
+                                                Sending Invites...
+                                            </>
+                                        ) : (
+                                            `Send Invites (${inviteEmails.length})`
+                                        )}
+                                    </Button>
+
+                                    <p className="text-xs text-gray-500 text-center">
+                                        Invited members will receive an email with your team code and instructions to join.
+                                    </p>
+                                </div>
+
 
                                 {/* Member list */}
                                 {teamData.members?.length > 0 && (
