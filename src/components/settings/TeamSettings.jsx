@@ -61,12 +61,37 @@ export default function TeamSettings() {
         }
     }, [subscriptionData.teamId, subscriptionData.isTeamOwner])
 
-    if (loading) {
+    // if (loading) {
+    //     return (
+    //         <div className="space-y-6">
+    //             <div className="animate-pulse">
+    //                 <div className="h-32 bg-gray-200 rounded-2xl mb-4"></div>
+    //             </div>
+    //         </div>
+    //     )
+    // }
+
+    if (loading || (subscriptionData.teamId && !teamData)) {
         return (
             <div className="space-y-6">
-                <div className="animate-pulse">
-                    <div className="h-32 bg-gray-200 rounded-2xl mb-4"></div>
-                </div>
+                <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
+                    <CardHeader>
+                        <div className="animate-pulse space-y-2">
+                            <div className="h-6 bg-gray-200 rounded w-32"></div>
+                            <div className="h-4 bg-gray-200 rounded w-48"></div>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="animate-pulse space-y-3">
+                            <div className="flex gap-1">
+                                <div className="h-12 bg-gray-200 rounded-xl flex-1"></div>
+                                <div className="h-12 bg-gray-200 rounded-xl flex-1"></div>
+                            </div>
+                            <div className="h-12 bg-gray-200 rounded-xl"></div>
+                            <div className="h-20 bg-gray-200 rounded-xl"></div>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         )
     }
