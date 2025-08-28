@@ -115,7 +115,7 @@ export default function TeamSettings() {
 
         setInviteEmails(prev => [...prev, email]);
         setCurrentEmail("");
-        toast.success("Email added");
+
     }
 
     const handleRemoveEmail = (emailToRemove) => {
@@ -142,6 +142,8 @@ export default function TeamSettings() {
             if (res.ok) {
                 toast.success(data.message);
                 setInviteEmails([]); // Clear the list after sending
+                setCurrentEmail(""); // Clear current input
+
             } else {
                 toast.error(data.error || "Failed to send invites");
             }
@@ -337,7 +339,7 @@ export default function TeamSettings() {
 
 
                                 {/* NEW: Email invite section */}
-                                <div className="space-y-3 p-4 rounded-xl bg-gray-50 border">
+                                <div className="space-y-3 p-4 rounded-xl bg-white border">
                                     <h4 className="text-sm font-medium text-gray-900">Send Email Invites</h4>
 
                                     <div className="flex gap-2">
@@ -346,12 +348,12 @@ export default function TeamSettings() {
                                             value={currentEmail}
                                             onChange={(e) => setCurrentEmail(e.target.value)}
                                             onKeyPress={(e) => e.key === 'Enter' && handleAddEmail()}
-                                            className="rounded-xl"
+                                            className="rounded-xl bg-white"
                                         />
                                         <Button
                                             onClick={handleAddEmail}
                                             variant="outline"
-                                            className="rounded-xl px-4"
+                                            className="rounded-xl px-4 hover:bg-white"
                                         >
                                             Add
                                         </Button>
@@ -361,7 +363,7 @@ export default function TeamSettings() {
                                     {inviteEmails.length > 0 && (
                                         <div className="space-y-2">
                                             {inviteEmails.map((email, index) => (
-                                                <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-white border">
+                                                <div key={index} className="flex items-center justify-between p-2 rounded-xl bg-white border">
                                                     <span className="text-sm">{email}</span>
                                                     <Button
                                                         onClick={() => handleRemoveEmail(email)}
