@@ -240,8 +240,18 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     if (!showImportPopup || !selectedAdAccount) return;
 
     setIsFetchingCopy(true);
-    fetch(`${API_BASE_URL}/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
-      credentials: "include"
+    // fetch(`${API_BASE_URL}/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
+    //   credentials: "include"
+    // })
+    fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        adAccountId: selectedAdAccount
+      })
     })
       .then(res => res.json())
       .then(data => {
@@ -317,20 +327,74 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     }
   }, [selectedName, templates, editingTemplate])
 
+  // const handleLoadMore = useCallback(async () => {
+  //   const excludePrimaryTexts = [...previouslyFetched.primaryTexts, ...(recentAds.primaryTexts || [])];
+  //   const excludeHeadlines = [...previouslyFetched.headlines, ...(recentAds.headlines || [])];
+
+  //   const params = new URLSearchParams({
+  //     adAccountId: selectedAdAccount,
+  //     ...(excludePrimaryTexts.length > 0 && { excludePrimaryTexts: JSON.stringify(excludePrimaryTexts) }),
+  //     ...(excludeHeadlines.length > 0 && { excludeHeadlines: JSON.stringify(excludeHeadlines) })
+  //   });
+
+  //   setIsLoadingMore(true);
+  //   try {
+  //     const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy?${params}`, {
+  //       credentials: "include"
+  //     });
+  //     const data = await response.json();
+
+  //     // Check if any new copy was found
+  //     const newPrimaryCount = data.primaryTexts?.length || 0;
+  //     const newHeadlineCount = data.headlines?.length || 0;
+  //     const hasNewCopy = newPrimaryCount > 0 || newHeadlineCount > 0;
+
+  //     if (hasNewCopy) {
+  //       // Append to existing results
+  //       setRecentAds(prev => ({
+  //         primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
+  //         headlines: [...(prev.headlines || []), ...(data.headlines || [])]
+  //       }));
+
+  //       // Update previously fetched tracker
+  //       setPreviouslyFetched(prev => ({
+  //         primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
+  //         headlines: [...prev.headlines, ...(data.headlines || [])]
+  //       }));
+  //     } else {
+  //       // Add this single line
+  //       toast.info("No more unique copy found");
+  //     }
+
+  //   } catch (err) {
+  //     console.error("Error loading more:", err);
+  //     toast.error("Failed to load more copy");
+
+
+  //   } finally {
+  //     setIsLoadingMore(false);
+
+  //   }
+  // }, [selectedAdAccount, recentAds, previouslyFetched]);
+
+  // Replace the entire handleLoadMore function with:
   const handleLoadMore = useCallback(async () => {
     const excludePrimaryTexts = [...previouslyFetched.primaryTexts, ...(recentAds.primaryTexts || [])];
     const excludeHeadlines = [...previouslyFetched.headlines, ...(recentAds.headlines || [])];
 
-    const params = new URLSearchParams({
-      adAccountId: selectedAdAccount,
-      ...(excludePrimaryTexts.length > 0 && { excludePrimaryTexts: JSON.stringify(excludePrimaryTexts) }),
-      ...(excludeHeadlines.length > 0 && { excludeHeadlines: JSON.stringify(excludeHeadlines) })
-    });
-
     setIsLoadingMore(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy?${params}`, {
-        credentials: "include"
+      const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          adAccountId: selectedAdAccount,
+          excludePrimaryTexts,
+          excludeHeadlines
+        })
       });
       const data = await response.json();
 
@@ -352,21 +416,16 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           headlines: [...prev.headlines, ...(data.headlines || [])]
         }));
       } else {
-        // Add this single line
         toast.info("No more unique copy found");
       }
 
     } catch (err) {
       console.error("Error loading more:", err);
       toast.error("Failed to load more copy");
-
-
     } finally {
       setIsLoadingMore(false);
-
     }
   }, [selectedAdAccount, recentAds, previouslyFetched]);
-
 
   const handleAdd = useCallback((setter, state) => {
     if (state.length < 5) setter([...state, ""])
