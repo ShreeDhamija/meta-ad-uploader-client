@@ -202,7 +202,54 @@ export default function MediaPreview({
   const [isAIGrouping, setIsAIGrouping] = useState(false);
 
   // Add these before your component or import from a utils file
-  const compressAndConvertToBase64 = async (file) => {
+  // const compressAndConvertToBase64 = async (file) => {
+  //   return new Promise((resolve) => {
+  //     const reader = new FileReader();
+  //     const img = new Image();
+
+  //     reader.onload = (e) => {
+  //       img.onload = () => {
+  //         const canvas = document.createElement('canvas');
+  //         const ctx = canvas.getContext('2d');
+
+  //         // Calculate new dimensions (max 768px)
+  //         const maxDim = 768;
+  //         let width = img.width;
+  //         let height = img.height;
+
+  //         if (width > height && width > maxDim) {
+  //           height = (height * maxDim) / width;
+  //           width = maxDim;
+  //         } else if (height > maxDim) {
+  //           width = (width * maxDim) / height;
+  //           height = maxDim;
+  //         }
+
+  //         canvas.width = width;
+  //         canvas.height = height;
+  //         ctx.drawImage(img, 0, 0, width, height);
+
+  //         // Convert to base64 (remove data URL prefix)
+  //         const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+  //         resolve(base64);
+  //       };
+  //       img.src = e.target.result;
+  //     };
+
+  //     if (file.isDrive) {
+  //       // For Drive files, fetch the thumbnail
+  //       fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w768`)
+  //         .then(res => res.blob())
+  //         .then(blob => reader.readAsDataURL(blob));
+  //     } else {
+  //       reader.readAsDataURL(file);
+  //     }
+  //   });
+  // };
+
+
+  // utils.js
+  const compressAndConvertToBlob = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       const img = new Image();
@@ -212,11 +259,9 @@ export default function MediaPreview({
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
-          // Calculate new dimensions (max 768px)
-          const maxDim = 768;
-          let width = img.width;
-          let height = img.height;
-
+          // Shrink more aggressively
+          const maxDim = 512;
+          let { width, height } = img;
           if (width > height && width > maxDim) {
             height = (height * maxDim) / width;
             width = maxDim;
@@ -229,23 +274,26 @@ export default function MediaPreview({
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Convert to base64 (remove data URL prefix)
-          const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-          resolve(base64);
+          canvas.toBlob(
+            (blob) => resolve({ blob, mimeType: file.type || 'image/jpeg' }),
+            'image/jpeg',
+            0.7 // lower quality
+          );
         };
         img.src = e.target.result;
       };
 
       if (file.isDrive) {
-        // For Drive files, fetch the thumbnail
-        fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w768`)
-          .then(res => res.blob())
-          .then(blob => reader.readAsDataURL(blob));
+        fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w512`)
+          .then((res) => res.blob())
+          .then((blob) => reader.readAsDataURL(blob));
       } else {
         reader.readAsDataURL(file);
       }
     });
   };
+
+
 
   const getAspectRatio = async (file) => {
     return new Promise((resolve) => {
@@ -412,40 +460,65 @@ export default function MediaPreview({
       console.log('Starting AI grouping with', files.length, 'files');
 
       // Prepare images with compression
-      const processedImages = await Promise.all(
+      // const processedImages = await Promise.all(
+      //   files.map(async (file, index) => {
+      //     console.log(`Processing file ${index}:`, file.name);
+      //     const base64 = await compressAndConvertToBase64(file);
+      //     const aspectRatio = await getAspectRatio(file);
+
+      //     console.log(`File ${index} processed:`, {
+      //       name: file.name,
+      //       base64Length: base64.length,
+      //       aspectRatio
+      //     });
+
+      //     return {
+      //       base64,
+      //       mimeType: file.type || 'image/jpeg',
+      //       aspectRatio,
+      //       index,
+      //       fileId: file.isDrive ? file.id : (file.uniqueId || file.name)
+      //     };
+      //   })
+      // );
+      const processed = await Promise.all(
         files.map(async (file, index) => {
-          console.log(`Processing file ${index}:`, file.name);
-          const base64 = await compressAndConvertToBase64(file);
-          const aspectRatio = await getAspectRatio(file);
-
-          console.log(`File ${index} processed:`, {
-            name: file.name,
-            base64Length: base64.length,
-            aspectRatio
-          });
-
-          return {
-            base64,
-            mimeType: file.type || 'image/jpeg',
-            aspectRatio,
-            index,
-            fileId: file.isDrive ? file.id : (file.uniqueId || file.name)
-          };
+          const { blob, mimeType } = await compressAndConvertToBlob(file);
+          return { blob, mimeType, index, name: file.name };
         })
       );
-
       console.log('All images processed, calling backend...');
 
-      // Call backend
-      const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add credentials if needed
-        },
-        credentials: 'include', // Important for cookies
-        body: JSON.stringify({ images: processedImages })
+
+      const formData = new FormData();
+      processed.forEach((item, idx) => {
+        formData.append("images", item.blob, `file-${idx}.jpg`);
+        formData.append(`meta-${idx}`, JSON.stringify({
+          index: idx,
+          mimeType: item.mimeType,
+          name: item.name
+        }));
       });
+
+
+      // Call backend
+      // const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //     // Add credentials if needed
+      //   },
+      //   credentials: 'include', // Important for cookies
+      //   body: JSON.stringify({ images: processedImages })
+      // });
+
+
+      const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+
 
       console.log('Response status:', response.status);
       const responseText = await response.text();
