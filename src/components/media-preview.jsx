@@ -545,6 +545,84 @@ export default function MediaPreview({
   }, [files, setFileGroups, setSelectedFiles]);
 
 
+
+  const handleAIGroupAlt = useCallback(async () => {
+    try {
+      setIsAIGrouping(true);
+      console.log('Starting AI grouping with', files.length, 'files');
+
+
+      const processedImages = await Promise.all(
+        files.map(async (file, index) => {
+          console.log(`Processing file ${index}:`, file.name);
+          const base64 = await compressAndConvertToBase64(file);
+          const aspectRatio = await getAspectRatio(file);
+
+          console.log(`File ${index} processed:`, {
+            name: file.name,
+            base64Length: base64.length,
+            aspectRatio
+          });
+
+          return {
+            base64,
+            mimeType: file.type || 'image/jpeg',
+            aspectRatio,
+            index,
+            fileId: file.isDrive ? file.id : (file.uniqueId || file.name)
+          };
+        })
+      );
+
+
+
+      const response = await fetch(`${API_BASE_URL}/api/grouping/group-images-base64`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add credentials if needed
+        },
+        credentials: 'include', // Important for cookies
+        body: JSON.stringify({ images: processedImages })
+      });
+
+
+
+
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+
+      if (!response.ok) {
+        throw new Error(`Grouping failed: ${responseText}`);
+      }
+
+      const result = JSON.parse(responseText);
+      console.log('Parsed result:', result);
+
+      // Convert AI indices to actual fileIds
+      const newGroups = result.groups.map(indexGroup =>
+        indexGroup.map(idx => {
+          const file = files[idx];
+          return file.isDrive ? file.id : file.uniqueId || file.name;
+        })
+      );
+
+      // Apply to UI
+      setFileGroups(newGroups);
+      setSelectedFiles(new Set()); // clear any manual selection
+
+
+      // Rest of your code...
+    } catch (error) {
+      console.error('AI grouping error:', error);
+      alert(`Failed to group images: ${error.message}`);
+    } finally {
+      setIsAIGrouping(false);
+    }
+  }, [files, setFileGroups, setSelectedFiles]);
+
+
   const handleUngroup = useCallback((groupIndex) => {
     setFileGroups(prev => prev.filter((_, index) => index !== groupIndex));
   }, [setFileGroups]);
@@ -656,6 +734,26 @@ export default function MediaPreview({
                       <>
                         <Rocket className="h-4 w-4 mr-2" />
                         AI Group
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAIGroupAlt}
+                    disabled={files.length < 2 || isAIGrouping}
+                    className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-oeange-200 rounded-xl"
+                  >
+                    {isAIGrouping ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Grouping...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="h-4 w-4 mr-2" />
+                        AI Group 64
                       </>
                     )}
                   </Button>
