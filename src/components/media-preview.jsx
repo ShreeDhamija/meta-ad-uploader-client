@@ -409,12 +409,20 @@ export default function MediaPreview({
   const handleAIGroup = useCallback(async () => {
     try {
       setIsAIGrouping(true);
+      console.log('Starting AI grouping with', files.length, 'files');
 
       // Prepare images with compression
       const processedImages = await Promise.all(
         files.map(async (file, index) => {
+          console.log(`Processing file ${index}:`, file.name);
           const base64 = await compressAndConvertToBase64(file);
           const aspectRatio = await getAspectRatio(file);
+
+          console.log(`File ${index} processed:`, {
+            name: file.name,
+            base64Length: base64.length,
+            aspectRatio
+          });
 
           return {
             base64,
@@ -426,35 +434,38 @@ export default function MediaPreview({
         })
       );
 
+      console.log('All images processed, calling backend...');
+
       // Call backend
       const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // Add credentials if needed
+        },
+        credentials: 'include', // Important for cookies
         body: JSON.stringify({ images: processedImages })
       });
 
-      if (!response.ok) throw new Error('Grouping failed');
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
 
-      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(`Grouping failed: ${responseText}`);
+      }
 
-      // Apply groups to state
-      const newGroups = result.groups.map(group => {
-        // Map indices back to file IDs
-        return group.map(imageIndex => processedImages[imageIndex].fileId);
-      });
+      const result = JSON.parse(responseText);
+      console.log('Parsed result:', result);
 
-      setFileGroups(newGroups);
-      setSelectedFiles(new Set()); // Clear manual selections
-
+      // Rest of your code...
     } catch (error) {
       console.error('AI grouping error:', error);
-      // Show error to user (you might want to add a toast notification)
-      alert('Failed to group images. Please try again.');
+      alert(`Failed to group images: ${error.message}`);
     } finally {
       setIsAIGrouping(false);
     }
   }, [files, setFileGroups, setSelectedFiles]);
-
 
 
   const handleUngroup = useCallback((groupIndex) => {
