@@ -202,54 +202,7 @@ export default function MediaPreview({
   const [isAIGrouping, setIsAIGrouping] = useState(false);
 
   // Add these before your component or import from a utils file
-  // const compressAndConvertToBase64 = async (file) => {
-  //   return new Promise((resolve) => {
-  //     const reader = new FileReader();
-  //     const img = new Image();
-
-  //     reader.onload = (e) => {
-  //       img.onload = () => {
-  //         const canvas = document.createElement('canvas');
-  //         const ctx = canvas.getContext('2d');
-
-  //         // Calculate new dimensions (max 768px)
-  //         const maxDim = 768;
-  //         let width = img.width;
-  //         let height = img.height;
-
-  //         if (width > height && width > maxDim) {
-  //           height = (height * maxDim) / width;
-  //           width = maxDim;
-  //         } else if (height > maxDim) {
-  //           width = (width * maxDim) / height;
-  //           height = maxDim;
-  //         }
-
-  //         canvas.width = width;
-  //         canvas.height = height;
-  //         ctx.drawImage(img, 0, 0, width, height);
-
-  //         // Convert to base64 (remove data URL prefix)
-  //         const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-  //         resolve(base64);
-  //       };
-  //       img.src = e.target.result;
-  //     };
-
-  //     if (file.isDrive) {
-  //       // For Drive files, fetch the thumbnail
-  //       fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w768`)
-  //         .then(res => res.blob())
-  //         .then(blob => reader.readAsDataURL(blob));
-  //     } else {
-  //       reader.readAsDataURL(file);
-  //     }
-  //   });
-  // };
-
-
-  // utils.js
-  const compressAndConvertToBlob = (file) => {
+  const compressAndConvertToBase64 = async (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
       const img = new Image();
@@ -259,9 +212,11 @@ export default function MediaPreview({
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
-          // Shrink more aggressively
-          const maxDim = 512;
-          let { width, height } = img;
+          // Calculate new dimensions (max 768px)
+          const maxDim = 768;
+          let width = img.width;
+          let height = img.height;
+
           if (width > height && width > maxDim) {
             height = (height * maxDim) / width;
             width = maxDim;
@@ -274,24 +229,26 @@ export default function MediaPreview({
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
 
-          canvas.toBlob(
-            (blob) => resolve({ blob, mimeType: file.type || 'image/jpeg' }),
-            'image/jpeg',
-            0.7 // lower quality
-          );
+          // Convert to base64 (remove data URL prefix)
+          const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+          resolve(base64);
         };
         img.src = e.target.result;
       };
 
       if (file.isDrive) {
-        fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w512`)
-          .then((res) => res.blob())
-          .then((blob) => reader.readAsDataURL(blob));
+        // For Drive files, fetch the thumbnail
+        fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w768`)
+          .then(res => res.blob())
+          .then(blob => reader.readAsDataURL(blob));
       } else {
         reader.readAsDataURL(file);
       }
     });
   };
+
+
+
 
 
 
