@@ -14,7 +14,7 @@ import Uploadimg from '@/assets/upload.webp';
 import { Checkbox } from "@/components/ui/checkbox"
 import Groupads from '@/assets/icons/groupads.svg?react';
 import { v4 as uuidv4 } from 'uuid';
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
 
 function withUniqueId(file) {
   if (file.isDrive) return file; // Drive already has unique id
@@ -439,7 +439,7 @@ export default function MediaPreview({
                 </Button>
               )} */}
 
-              // Add this button next to the existing "Group Ads" button
+
               {enablePlacementCustomization && (
                 <>
                   <Button
