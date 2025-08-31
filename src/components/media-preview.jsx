@@ -481,24 +481,20 @@ export default function MediaPreview({
       //     };
       //   })
       // );
-      const processed = await Promise.all(
-        files.map(async (file, index) => {
-          const { blob, mimeType } = await compressAndConvertToBlob(file);
-          return { blob, mimeType, index, name: file.name };
-        })
-      );
-      console.log('All images processed, calling backend...');
+
 
 
       const formData = new FormData();
-      processed.forEach((item, idx) => {
-        formData.append("images", item.blob, `file-${idx}.jpg`);
-        formData.append(`meta-${idx}`, JSON.stringify({
-          index: idx,
-          mimeType: item.mimeType,
-          name: item.name
-        }));
+      files.forEach((file) => {
+        formData.append("images", file); // raw File object
       });
+
+      const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+
 
 
       // Call backend
@@ -513,11 +509,6 @@ export default function MediaPreview({
       // });
 
 
-      const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
-        method: "POST",
-        body: formData,
-        credentials: "include"
-      });
 
 
       console.log('Response status:', response.status);
