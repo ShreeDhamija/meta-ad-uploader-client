@@ -458,6 +458,19 @@ export default function MediaPreview({
       const result = JSON.parse(responseText);
       console.log('Parsed result:', result);
 
+      // Convert AI indices to actual fileIds
+      const newGroups = result.groups.map(indexGroup =>
+        indexGroup.map(idx => {
+          const file = files[idx];
+          return file.isDrive ? file.id : file.uniqueId || file.name;
+        })
+      );
+
+      // Apply to UI
+      setFileGroups(newGroups);
+      setSelectedFiles(new Set()); // clear any manual selection
+
+
       // Rest of your code...
     } catch (error) {
       console.error('AI grouping error:', error);
