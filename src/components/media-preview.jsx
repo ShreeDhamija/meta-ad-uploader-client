@@ -14,7 +14,7 @@ import Uploadimg from '@/assets/upload.webp';
 import { Checkbox } from "@/components/ui/checkbox"
 import Groupads from '@/assets/icons/groupads.svg?react';
 import { v4 as uuidv4 } from 'uuid';
-
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 function withUniqueId(file) {
   if (file.isDrive) return file; // Drive already has unique id
@@ -199,7 +199,71 @@ export default function MediaPreview({
     [selectedFiles.size]
   );
 
+  const [isAIGrouping, setIsAIGrouping] = useState(false);
 
+  // Add these before your component or import from a utils file
+  const compressAndConvertToBase64 = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      const img = new Image();
+
+      reader.onload = (e) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          // Calculate new dimensions (max 768px)
+          const maxDim = 768;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height && width > maxDim) {
+            height = (height * maxDim) / width;
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = (width * maxDim) / height;
+            height = maxDim;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to base64 (remove data URL prefix)
+          const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+          resolve(base64);
+        };
+        img.src = e.target.result;
+      };
+
+      if (file.isDrive) {
+        // For Drive files, fetch the thumbnail
+        fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w768`)
+          .then(res => res.blob())
+          .then(blob => reader.readAsDataURL(blob));
+      } else {
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+
+  const getAspectRatio = async (file) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = img.width / img.height;
+        if (Math.abs(ratio - 1) < 0.1) resolve('square');
+        else if (ratio < 0.7) resolve('vertical');
+        else resolve('other');
+      };
+
+      if (file.isDrive) {
+        img.src = `https://drive.google.com/thumbnail?id=${file.id}&sz=w400`;
+      } else {
+        img.src = URL.createObjectURL(file);
+      }
+    });
+  };
 
   const hasOnlyNonDynamicCreativeAdSets = useMemo(() => {
     // Check if we have selected non-dynamic adsets
@@ -342,7 +406,54 @@ export default function MediaPreview({
   }, [selectedFiles, setFileGroups, files, driveFiles, setFiles, setDriveFiles, setSelectedFiles]);
 
 
+  const handleAIGroup = useCallback(async () => {
+    try {
+      setIsAIGrouping(true);
 
+      // Prepare images with compression
+      const processedImages = await Promise.all(
+        files.map(async (file, index) => {
+          const base64 = await compressAndConvertToBase64(file);
+          const aspectRatio = await getAspectRatio(file);
+
+          return {
+            base64,
+            mimeType: file.type || 'image/jpeg',
+            aspectRatio,
+            index,
+            fileId: file.isDrive ? file.id : (file.uniqueId || file.name)
+          };
+        })
+      );
+
+      // Call backend
+      const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: processedImages })
+      });
+
+      if (!response.ok) throw new Error('Grouping failed');
+
+      const result = await response.json();
+
+      // Apply groups to state
+      const newGroups = result.groups.map(group => {
+        // Map indices back to file IDs
+        return group.map(imageIndex => processedImages[imageIndex].fileId);
+      });
+
+      setFileGroups(newGroups);
+      setSelectedFiles(new Set()); // Clear manual selections
+
+    } catch (error) {
+      console.error('AI grouping error:', error);
+      // Show error to user (you might want to add a toast notification)
+      alert('Failed to group images. Please try again.');
+    } finally {
+      setIsAIGrouping(false);
+    }
+  }, [files, setFileGroups, setSelectedFiles]);
 
 
 
@@ -426,19 +537,6 @@ export default function MediaPreview({
             </div>
 
             <div className="flex gap-2">
-              {/* {enablePlacementCustomization && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleGroupAds}
-                  disabled={!canGroupFiles}
-                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
-                >
-                  <Groupads />
-                  Group Ads
-                </Button>
-              )} */}
-
 
               {enablePlacementCustomization && (
                 <>
@@ -451,6 +549,27 @@ export default function MediaPreview({
                   >
                     <Groupads />
                     Group Ads
+                  </Button>
+
+                  {/* NEW AI GROUP BUTTON */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAIGroup}
+                    disabled={files.length < 2 || isAIGrouping}
+                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl"
+                  >
+                    {isAIGrouping ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Grouping...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="h-4 w-4 mr-2" />
+                        AI Group
+                      </>
+                    )}
                   </Button>
                 </>
               )}
