@@ -399,24 +399,10 @@ export default function AdCreationForm({
   const S3_UPLOAD_THRESHOLD = 40 * 1024 * 1024; // 40 MB
 
 
-  const retryJob = useCallback((failedJob) => {
-    // Remove from completed jobs
-    setCompletedJobs(prev => prev.filter(j => j.id !== failedJob.id));
-
-    // Create new job with same data but new ID
-    const retryJobData = {
-      ...failedJob.jobData,
-      id: uuidv4(), // New job ID
-      createdAt: Date.now(),
-      status: 'queued'
-    };
-
-    // console.log('🟠 NEW RETRY JOB CREATED:', JSON.stringify(retryJobData.formData, null, 2));
-
-
-    // Add to front of queue for immediate processing
-    setJobQueue(prev => [retryJobData, ...prev]);
+  const refreshPage = useCallback(() => {
+    window.location.reload();
   }, []);
+
 
   const captureFormDataAsJob = () => {
 
@@ -946,7 +932,7 @@ export default function AdCreationForm({
         // Handle retry case
         const failedJob = {
           id: currentJob.id,
-          message: `Job timed out.`,
+          message: `Job timed out. Refresh page to try again`,
           completedAt: Date.now(),
           status: 'retry',
           jobData: currentJob
@@ -2426,14 +2412,14 @@ export default function AdCreationForm({
                       {job.message}
                       {job.status === 'retry' && (
                         <span className="block text-xs text-orange-500 mt-1">
-                          Click retry to attempt again
+                          Reload page to try again.
                         </span>
                       )}
                     </p>
                     <div className="flex gap-1">
                       {job.status === 'retry' && (
                         <button
-                          onClick={() => retryJob(job)}
+                          onClick={refreshPage} // Changed from retryJob(job) to refreshPage
                           className="text-orange-600 hover:text-orange-800 p-1 rounded"
                           title="Retry job"
                         >
