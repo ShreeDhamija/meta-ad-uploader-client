@@ -563,7 +563,7 @@ export default function MediaPreview({
                 )}
                 {enablePlacementCustomization && (
                   <span className="block text-xs text-gray-500 mt-1">
-                    AI Grouping only works for images and is in Beta.
+                    AI Grouping only works for images
                   </span>
                 )}
               </CardDescription>
