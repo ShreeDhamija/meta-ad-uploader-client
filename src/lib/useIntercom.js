@@ -2,11 +2,12 @@
 import { useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
-export const useIntercom = (showDefaultLauncher = false) => {
+export const useIntercom = (showDefaultLauncher = false, allowUnauthenticated = false) => {
+
     const { isLoggedIn, userName, userId, userEmail, userCreatedAt } = useAuth();
 
     useEffect(() => {
-        if (isLoggedIn && userName) {
+        if ((isLoggedIn && userName) || allowUnauthenticated) {
             // Check if Intercom script is already loaded
             if (!window.Intercom) {
                 // Load Intercom script
@@ -18,10 +19,13 @@ export const useIntercom = (showDefaultLauncher = false) => {
                 // Set up Intercom settings
                 window.intercomSettings = {
                     app_id: 'zcgmjurf',
-                    name: userName,
-                    user_id: userId || undefined,
-                    email: userEmail || undefined,
-                    hide_default_launcher: !showDefaultLauncher // Hide only if showDefaultLauncher is false
+                    // Only include user data if logged in
+                    ...(isLoggedIn && userName && {
+                        name: userName,
+                        user_id: userId || undefined,
+                        email: userEmail || undefined,
+                    }),
+                    hide_default_launcher: !showDefaultLauncher
                 };
 
                 // Initialize Intercom once script loads

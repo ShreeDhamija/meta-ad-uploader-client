@@ -10,7 +10,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 export default function Login() {
     const { isLoggedIn } = useAuth()
     const navigate = useNavigate()
-    useIntercom(true);
+    useIntercom(true, true);
+
 
     useEffect(() => {
         if (isLoggedIn) {
