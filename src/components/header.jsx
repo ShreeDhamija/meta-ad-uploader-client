@@ -51,7 +51,7 @@ export default function Header({ showMessenger, hideMessenger }) {
 
 
   const getTrialButtonStyle = () => {
-    if (!hasActiveAccess) {
+    if (!hasActiveAccess()) {
       return "text-red-600 hover:text-red-700"
     }
     if (subscriptionData.trialDaysLeft <= 3) {
@@ -109,7 +109,7 @@ export default function Header({ showMessenger, hideMessenger }) {
         )} */}
 
         {/* Trial/Subscription Status Button - show if on trial OR if access expired */}
-        {!subscriptionLoading && (isOnTrial() || !hasActiveAccess) && !isTeamMember && (
+        {!subscriptionLoading && (isOnTrial() || !hasActiveAccess()) && !isTeamMember && (
           <>
             <button
               onClick={handleUpgrade}
@@ -126,11 +126,11 @@ export default function Header({ showMessenger, hideMessenger }) {
             <Button
               onClick={handleUpgrade}
               size="sm"
-              className={`h-7 px-3 text-xs text-white rounded-full ${!hasActiveAccess ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+              className={`h-7 px-3 text-xs text-white rounded-full ${!hasActiveAccess() ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
             >
               <CreditCard className="w-3 h-3 mr-1" />
-              {!hasActiveAccess ? 'Subscribe' : 'Upgrade'}
+              {!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}
             </Button>
             <div className="h-8 w-px bg-gray-300" />
           </>
