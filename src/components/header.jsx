@@ -21,6 +21,17 @@ export default function Header({ showMessenger, hideMessenger }) {
 
   const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
 
+  // In your Header component, add this temporarily:
+  console.log('Debug subscription:', {
+    subscriptionStatus: subscriptionData.subscriptionStatus,
+    isTrialExpired: subscriptionData.isTrialExpired,
+    willCancelAt: subscriptionData.willCancelAt,
+    hasActiveAccess: hasActiveAccess(),
+    isOnTrial: isOnTrial(),
+    showCondition: (isOnTrial() || !hasActiveAccess())
+  });
+
+
   const handleChatToggle = () => {
     if (showMessenger) {
       showMessenger()
