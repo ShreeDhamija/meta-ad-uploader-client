@@ -199,6 +199,15 @@ export default function MediaPreview({
     [selectedFiles.size]
   );
 
+  const canAIGroup = useMemo(() => {
+    const imageFiles = files.filter(file => {
+      const mimeType = file.type || file.mimeType || "";
+      return !mimeType.startsWith("video/");
+    });
+    return imageFiles.length >= 2;
+  }, [files]);
+
+
   const [isAIGrouping, setIsAIGrouping] = useState(false);
 
   // Add these before your component or import from a utils file
@@ -584,7 +593,7 @@ export default function MediaPreview({
                     variant="outline"
                     size="sm"
                     onClick={handleAIGroup}
-                    disabled={files.length < 2 || isAIGrouping}
+                    disabled={!canAIGroup || isAIGrouping}
                     className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
                   >
                     {isAIGrouping ? (

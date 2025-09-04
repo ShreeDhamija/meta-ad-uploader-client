@@ -1688,7 +1688,7 @@ export default function AdCreationForm({
           }
           s3Results.push(uploadResult);
         } else {
-          toast.error(`Failed to upload ${largeFiles[index].name}`);
+          toast.error(`Failed to upload ${largeFiles[index].name} due to weak network connection. Reload page to try again`);
           console.error(`❌ Failed to upload ${largeFiles[index].name}:`, result.reason);
         }
       });
