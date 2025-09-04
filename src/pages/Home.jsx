@@ -20,6 +20,9 @@ import DesktopIcon from '@/assets/Desktop.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
+// Check if user has active access
+
+
 class ErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
@@ -92,7 +95,14 @@ export default function Home() {
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
     const { hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, } = useGlobalSettings();
-    const { subscriptionData, hasActiveAccess, isTrialExpired, loading: subscriptionLoading } = useSubscription();
+    const {
+        subscriptionData,
+        isOnTrial,
+        isTrialExpired,
+        hasActiveAccess,
+        isPaidSubscriber,
+        loading: subscriptionLoading
+    } = useSubscription()
 
     // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
@@ -146,7 +156,7 @@ export default function Home() {
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
 
-
+    const userHasActiveAccess = hasActiveAccess();
 
     if (authLoading) return null
 
@@ -308,7 +318,7 @@ export default function Home() {
             <div className=" desktop-only w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
                 <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
                 <div className="flex flex-col xl:flex-row gap-6 min-w-0">
-                    <div className="flex-1 xl:flex-[55] min-w-0 space-y-6">
+                    <div className={`flex-1 xl:flex-[55] min-w-0 space-y-6 ${!userHasActiveAccess ? 'pointer-events-none cursor-not-allowed' : ''}`}>
                         <AdAccountSettings
                             isLoading={isLoading}
                             setIsLoading={setIsLoading}
@@ -409,7 +419,7 @@ export default function Home() {
                     </div>
 
                     {/* <div className="flex-1 min-w-0"> */}
-                    <div className="flex-1 xl:flex-[45] min-w-0" >
+                    <div className={`flex-1 xl:flex-[45] min-w-0 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
                         <ErrorBoundary>
                             <MediaPreview
                                 files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}

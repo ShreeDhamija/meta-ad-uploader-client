@@ -10,7 +10,15 @@ export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
 
   const navigate = useNavigate()
-  const { subscriptionData, isOnTrial, isTrialExpired, loading: subscriptionLoading } = useSubscription()
+  const {
+    subscriptionData,
+    isOnTrial,
+    isTrialExpired,
+    hasActiveAccess,
+    isPaidSubscriber,
+    loading: subscriptionLoading
+  } = useSubscription()
+
   const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
 
   const handleChatToggle = () => {
@@ -23,8 +31,16 @@ export default function Header({ showMessenger, hideMessenger }) {
     navigate('/settings?tab=billing')
   }
 
+  const isSubscriptionExpired = () => {
+    if (!subscriptionData.willCancelAt) return false;
+    const cancelDate = new Date(subscriptionData.willCancelAt);
+    const now = new Date();
+    return now > cancelDate;
+  }
+
+
   const getTrialButtonStyle = () => {
-    if (isTrialExpired()) {
+    if (!hasActiveAccess) {
       return "text-red-600 hover:text-red-700"
     }
     if (subscriptionData.trialDaysLeft <= 3) {
@@ -34,6 +50,9 @@ export default function Header({ showMessenger, hideMessenger }) {
   }
 
   const getTrialText = () => {
+    if (isSubscriptionExpired()) {
+      return "Subscription Expired"
+    }
     if (isTrialExpired()) {
       return "Trial Expired"
     }
@@ -56,7 +75,7 @@ export default function Header({ showMessenger, hideMessenger }) {
       {/* Action Buttons (Right) */}
       <div className="flex items-center gap-2 bg-white shadow-md border border-gray-300 rounded-[40px] px-3 py-2 ml-2">
         {/* Trial Status Button - only show if on trial and not loading */}
-        {!subscriptionLoading && isOnTrial() && !isTeamMember && (
+        {/* {!subscriptionLoading && isOnTrial() && !isTeamMember && (
           <>
             <button
               onClick={handleUpgrade}
@@ -76,7 +95,36 @@ export default function Header({ showMessenger, hideMessenger }) {
             </Button>
             <div className="h-8 w-px bg-gray-300" />
           </>
+        )} */}
+
+        {/* Trial/Subscription Status Button - show if on trial OR if access expired */}
+        {!subscriptionLoading && (isOnTrial() || hasNoAccess) && !isTeamMember && (
+          <>
+            <button
+              onClick={handleUpgrade}
+              className={`flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium ${getTrialButtonStyle()}`}
+              title={
+                isSubscriptionExpired() ? "Your subscription has expired" :
+                  isTrialExpired() ? "Your trial has expired" :
+                    `${subscriptionData.trialDaysLeft} days remaining in trial`
+              }
+            >
+              <Clock className="w-4 h-4" />
+              <span>{getTrialText()}</span>
+            </button>
+            <Button
+              onClick={handleUpgrade}
+              size="sm"
+              className={`h-7 px-3 text-xs text-white rounded-full ${hasNoAccess ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+            >
+              <CreditCard className="w-3 h-3 mr-1" />
+              {hasNoAccess ? 'Subscribe' : 'Upgrade'}
+            </Button>
+            <div className="h-8 w-px bg-gray-300" />
+          </>
         )}
+
 
         {/* Trial Expired Warning - only show if expired */}
         {!subscriptionLoading && isTrialExpired() && !isTeamMember && (
