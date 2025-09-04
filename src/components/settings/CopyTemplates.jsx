@@ -376,54 +376,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     }
   }, [selectedName, templates, editingTemplate])
 
-  // const handleLoadMore = useCallback(async () => {
-  //   const excludePrimaryTexts = [...previouslyFetched.primaryTexts, ...(recentAds.primaryTexts || [])];
-  //   const excludeHeadlines = [...previouslyFetched.headlines, ...(recentAds.headlines || [])];
-
-  //   setIsLoadingMore(true);
-  //   try {
-  //     const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
-  //       method: "POST",
-  //       credentials: "include",
-  //       headers: {
-  //         "Content-Type": "application/json"
-  //       },
-  //       body: JSON.stringify({
-  //         adAccountId: selectedAdAccount,
-  //         excludePrimaryTexts,
-  //         excludeHeadlines
-  //       })
-  //     });
-  //     const data = await response.json();
-
-  //     // Check if any new copy was found
-  //     const newPrimaryCount = data.primaryTexts?.length || 0;
-  //     const newHeadlineCount = data.headlines?.length || 0;
-  //     const hasNewCopy = newPrimaryCount > 0 || newHeadlineCount > 0;
-
-  //     if (hasNewCopy) {
-  //       // Append to existing results
-  //       setRecentAds(prev => ({
-  //         primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
-  //         headlines: [...(prev.headlines || []), ...(data.headlines || [])]
-  //       }));
-
-  //       // Update previously fetched tracker
-  //       setPreviouslyFetched(prev => ({
-  //         primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
-  //         headlines: [...prev.headlines, ...(data.headlines || [])]
-  //       }));
-  //     } else {
-  //       toast.info("No more unique copy found");
-  //     }
-
-  //   } catch (err) {
-  //     console.error("Error loading more:", err);
-  //     toast.error("Failed to load more copy");
-  //   } finally {
-  //     setIsLoadingMore(false);
-  //   }
-  // }, [selectedAdAccount, recentAds, previouslyFetched]);
 
 
   const handleLoadMore = useCallback(async () => {

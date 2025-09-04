@@ -272,20 +272,6 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
 
   // Auto-save links with debounce
 
-  // useEffect(() => {
-  //   if (hasChanges && selectedAdAccount && initialSettings && Object.keys(initialSettings).length > 0) {
-  //     const linksChanged = JSON.stringify(links) !== JSON.stringify(initialSettings.links);
-
-  //     if (linksChanged) {
-  //       const timeoutId = setTimeout(() => {
-  //         handleSave();
-  //         // toast.success("Links auto-saved!");
-  //       }, 1); // 1 second delay
-
-  //       return () => clearTimeout(timeoutId);
-  //     }
-  //   }
-  // }, [links]);
 
 
   // Auto-save only when setting default link

@@ -2,16 +2,15 @@ import { useAuth } from "@/lib/AuthContext"
 import { useNavigate } from "react-router-dom"
 import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { useIntercom } from "@/lib/useIntercom";
 import SignUpImg from "../assets/signup.webp?url"
-import { ShineBorder } from "@/components/magicui/shine-border";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 export default function Login() {
     const { isLoggedIn } = useAuth()
     const navigate = useNavigate()
+    useIntercom(true);
 
     useEffect(() => {
         if (isLoggedIn) {
