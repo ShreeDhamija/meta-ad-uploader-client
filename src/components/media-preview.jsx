@@ -561,11 +561,6 @@ export default function MediaPreview({
                     Drag to change order of carousel cards
                   </span>
                 )}
-                {enablePlacementCustomization && (
-                  <span className="block text-xs text-gray-500 mt-1">
-                    AI Grouping only works for images
-                  </span>
-                )}
               </CardDescription>
             </div>
 
@@ -640,6 +635,11 @@ export default function MediaPreview({
                   Group different aspect ratio media for placement customized ad.
                 </label>
               </div>
+              {enablePlacementCustomization && (
+                <span className="block text-xs text-gray-500 mt-1">
+                  AI Grouping only works for images
+                </span>
+              )}
             </div>
           )}
 
