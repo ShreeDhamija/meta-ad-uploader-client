@@ -125,30 +125,6 @@ export default function Header({ showMessenger, hideMessenger }) {
           </>
         )}
 
-
-        {/* Trial Expired Warning - only show if expired */}
-        {!subscriptionLoading && isTrialExpired() && !isTeamMember && (
-          <>
-            <button
-              onClick={handleUpgrade}
-              className="flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium text-red-600 hover:text-red-700 bg-red-50"
-              title="Your trial has expired - upgrade to continue"
-            >
-              <Clock className="w-4 h-4" />
-              <span>Trial Expired</span>
-            </button>
-            <Button
-              onClick={handleUpgrade}
-              size="sm"
-              className="h-7 px-3 text-xs bg-red-600 hover:bg-red-700 text-white rounded-full"
-            >
-              <CreditCard className="w-3 h-3 mr-1" />
-              Subscribe
-            </Button>
-            <div className="h-8 w-px bg-gray-300" />
-          </>
-        )}
-
         <button
           onClick={() => navigate("/settings")}
           title="Settings"
