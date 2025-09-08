@@ -382,7 +382,7 @@ export default function AdAccountSettings({
                 className={cn(
                   "h-4 w-4 cursor-pointer transition-all duration-200",
                   isLoadingAdAccounts
-                    ? "h-3 w-3 text-gray-300 animate-spin"
+                    ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
                     : "text-gray-500 hover:text-gray-700"
                 )}
                 onClick={refreshAdAccounts}
@@ -496,7 +496,7 @@ export default function AdAccountSettings({
                 className={cn(
                   "h-4 w-4 cursor-pointer transition-all duration-200",
                   isLoadingCampaigns
-                    ? "h-3 w-3 text-gray-300 animate-spin"
+                    ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
                     : "text-gray-500 hover:text-gray-700"
                 )}
                 onClick={refreshCampaigns}
@@ -740,7 +740,7 @@ export default function AdAccountSettings({
                 className={cn(
                   "h-4 w-4 cursor-pointer transition-all duration-200",
                   isLoadingAdSets
-                    ? "h-3 w-3 text-gray-300 animate-spin"
+                    ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
                     : "text-gray-500 hover:text-gray-700"
                 )}
                 onClick={refreshAdSets}
