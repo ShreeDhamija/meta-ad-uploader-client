@@ -369,7 +369,7 @@ export default function AdCreationForm({
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
-  // const [useCustomLink, setUseCustomLink] = useState(false)
+  const [isPagesLoading, setIsPagesLoading] = useState(false);
   const [customLink, setCustomLink] = useState("")
   const [showCustomLink, setShowCustomLink] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
@@ -807,6 +807,7 @@ export default function AdCreationForm({
 
   const refreshPages = async () => {
     setIsLoading(true);
+    setIsPagesLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, {
         credentials: "include"
@@ -834,6 +835,7 @@ export default function AdCreationForm({
       console.error("Failed to fetch pages:", err);
     } finally {
       setIsLoading(false);
+      setIsPagesLoading(false);
     }
   };
 
@@ -2552,7 +2554,12 @@ export default function AdCreationForm({
                     Select a Page
                   </Label>
                   <RefreshCcw
-                    className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
+                    className={cn(
+                      "h-4 w-4 cursor-pointer transition-all duration-200",
+                      isPagesLoading
+                        ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
+                        : "text-gray-500 hover:text-gray-700"
+                    )}
                     onClick={refreshPages}
                   />
 

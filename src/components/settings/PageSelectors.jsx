@@ -29,6 +29,7 @@ function PageSelectors({
   const [openInstagramDropdown, setOpenInstagramDropdown] = useState(false)
   const [pageSearch, setPageSearch] = useState("")
   const [instagramSearch, setInstagramSearch] = useState("")
+  const [isPagesLoading, setIsPagesLoading] = useState(false);
 
   // Memoized filtered pages
   const filteredPages = useMemo(() =>
@@ -50,6 +51,7 @@ function PageSelectors({
 
   // Memoized refresh function
   const refreshPages = useCallback(async () => {
+    setIsPagesLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, {
         credentials: "include"
@@ -78,6 +80,8 @@ function PageSelectors({
     } catch (err) {
       toast.error(`Failed to fetch pages: ${err.message || "Unknown error"}`);
       console.error("Failed to fetch pages:", err);
+    } finally {
+      setIsPagesLoading(false);
     }
   }, [selectedPage?.id, selectedInstagram?.id, setPages, setSelectedPage, setSelectedInstagram]);
 
@@ -111,7 +115,12 @@ function PageSelectors({
           </label>
         </div>
         <RefreshCcw
-          className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
+          className={cn(
+            "h-4 w-4 cursor-pointer transition-all duration-200",
+            isPagesLoading
+              ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
+              : "text-gray-500 hover:text-gray-700"
+          )}
           onClick={refreshPages}
         />
       </div>
