@@ -138,25 +138,20 @@ export default function Home() {
         dateType: "MonthYYYY",
         customTexts: {} // Add this for consistency
     });
-    // const [customTextValue, setCustomTextValue] = useState("");
-
     const [driveFiles, setDriveFiles] = useState([])
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
     const [fileGroups, setFileGroups] = useState([]);
-
-
     const [files, setFiles] = useState([])
     const [videoThumbs, setVideoThumbs] = useState({})
-
     const { adAccounts, setAdAccounts, pages, setPages } = useAppData()
     const { settings: adAccountSettings, documentExists } = useAdAccountSettings(selectedAdAccount)
-
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
-
     const userHasActiveAccess = hasActiveAccess();
+    const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
+
 
     if (authLoading) return null
 
@@ -281,6 +276,8 @@ export default function Home() {
     const refreshAdSets = useCallback(async () => {
         if (!selectedCampaign) return
         setIsLoading(true)
+        setIsLoadingAdSets(true);
+
         try {
             const res = await fetch(
                 `${API_BASE_URL}/auth/fetch-adsets?campaignId=${selectedCampaign}`,
@@ -296,6 +293,8 @@ export default function Home() {
             console.error("Failed to fetch ad sets:", err)
         } finally {
             setIsLoading(false)
+            setIsLoadingAdSets(false);
+
         }
     });
 
@@ -322,6 +321,7 @@ export default function Home() {
                         <AdAccountSettings
                             isLoading={isLoading}
                             setIsLoading={setIsLoading}
+                            isLoadingAdSets={isLoadingAdSets}
                             adAccounts={adAccounts}
                             setAdAccounts={setAdAccounts}
                             selectedAdAccount={selectedAdAccount}

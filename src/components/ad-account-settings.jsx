@@ -21,10 +21,6 @@ import { useNavigate } from "react-router-dom"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
-
-
-
-
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
 
@@ -32,6 +28,7 @@ export default function AdAccountSettings({
   //isLoggedIn,
   isLoading,
   setIsLoading,
+  isLoadingAdSets,
   adAccounts,
   setAdAccounts,
   selectedAdAccount,
@@ -76,9 +73,11 @@ export default function AdAccountSettings({
   const [duplicateAdSetSearchValue, setDuplicateAdSetSearchValue] = useState("")
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState("")
-  // const selectedCampaignData = campaigns.find(c => c.id === selectedCampaign);
   const [isAdAccountChanging, setIsAdAccountChanging] = useState(false);
   const navigate = useNavigate()
+  const [isLoadingAdAccounts, setIsLoadingAdAccounts] = useState(false);
+  const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
+
 
 
 
@@ -212,6 +211,7 @@ export default function AdAccountSettings({
   // Refresh functions
   const refreshAdAccounts = useCallback(async () => {
     setIsLoading(true)
+    setIsLoadingAdAccounts(true)
     try {
       const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, {
         credentials: "include",
@@ -226,12 +226,14 @@ export default function AdAccountSettings({
       console.error("Failed to fetch ad accounts:", err)
     } finally {
       setIsLoading(false)
+      setIsLoadingAdAccounts(false)
     }
   });
 
   const refreshCampaigns = useCallback(async () => {
     if (!selectedAdAccount) return;
     setIsLoading(true);
+    setIsLoadingCampaigns(true);
 
     try {
       const res = await fetch(
@@ -252,6 +254,8 @@ export default function AdAccountSettings({
       console.error("Failed to fetch campaigns:", err);
     } finally {
       setIsLoading(false);
+      setIsLoadingCampaigns(false);
+
     }
   });
 
@@ -375,7 +379,12 @@ export default function AdAccountSettings({
                 <AdAccountIcon className="w-4 h-4" />
                 Ad Account</Label>
               <RefreshCcw
-                className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
+                className={cn(
+                  "h-4 w-4 cursor-pointer transition-all duration-200",
+                  isLoadingAdAccounts
+                    ? "h-3 w-3 text-gray-300 animate-spin"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
                 onClick={refreshAdAccounts}
               />
             </div>
@@ -484,7 +493,12 @@ export default function AdAccountSettings({
                 Select a Campaign to launch Ads in
               </Label>
               <RefreshCcw
-                className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
+                className={cn(
+                  "h-4 w-4 cursor-pointer transition-all duration-200",
+                  isLoadingCampaigns
+                    ? "h-3 w-3 text-gray-300 animate-spin"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
                 onClick={refreshCampaigns}
               />
             </div>
@@ -723,9 +737,15 @@ export default function AdAccountSettings({
                 Launch in a new or existing ad set
               </Label>
               <RefreshCcw
-                className="h-4 w-4 cursor-pointer text-gray-500 hover:text-gray-700"
+                className={cn(
+                  "h-4 w-4 cursor-pointer transition-all duration-200",
+                  isLoadingAdSets
+                    ? "h-3 w-3 text-gray-300 animate-spin"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
                 onClick={refreshAdSets}
               />
+
             </div>
             <Popover open={openAdSet} onOpenChange={setOpenAdSet}>
               <PopoverTrigger asChild>
