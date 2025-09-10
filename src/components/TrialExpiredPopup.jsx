@@ -18,7 +18,7 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, onChatWithUs }) => {
                 {/* Close Button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 size-6 border border-2 border-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-red-500  transition-colors"
+                    className="absolute top-4 right-4 size-6 border border-2 border-red-500 rounded-full flex items-center justify-center text-red-500  transition-colors"
                 >
                     <X size={15} />
                 </button>

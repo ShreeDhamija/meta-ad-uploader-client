@@ -105,6 +105,7 @@ export default function Home() {
         loading: subscriptionLoading
     } = useSubscription()
     const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
+    const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false);
 
     // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
@@ -172,12 +173,16 @@ export default function Home() {
             setShowOnboardingPopup(true)
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
-
     useEffect(() => {
-        if (!subscriptionLoading && isTrialExpired && !userHasActiveAccess) {
+        if (
+            !subscriptionLoading &&
+            isTrialExpired &&
+            !userHasActiveAccess &&
+            !hasDismissedTrialPopup
+        ) {
             setShowTrialExpiredPopup(true);
         }
-    }, [subscriptionLoading, isTrialExpired, userHasActiveAccess]);
+    }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
 
     // --- NEW, CORRECTED CODE ---
     useEffect(() => {
@@ -485,18 +490,24 @@ export default function Home() {
 
                 {showTrialExpiredPopup && (
                     <TrialExpiredPopup
-                        onClose={() => setShowTrialExpiredPopup(false)}
-                        onUpgrade={() => {
-                            // Add your upgrade logic here - maybe navigate to pricing page
-                            console.log('Upgrade clicked');
+                        onClose={() => {
                             setShowTrialExpiredPopup(false);
+                            setHasDismissedTrialPopup(true);
+                        }}
+                        onUpgrade={() => {
+                            // Navigate to billing tab in settings
+                            navigate("/settings?tab=billing");
+                            setShowTrialExpiredPopup(false);
+                            setHasDismissedTrialPopup(true);
                         }}
                         onChatWithUs={() => {
                             showMessenger();
                             setShowTrialExpiredPopup(false);
+                            setHasDismissedTrialPopup(true);
                         }}
                     />
                 )}
+
                 <Toaster richColors position="bottom-left" closeButton />
 
 
