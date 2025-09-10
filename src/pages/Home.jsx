@@ -104,7 +104,7 @@ export default function Home() {
         isPaidSubscriber,
         loading: subscriptionLoading
     } = useSubscription()
-    const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(true);
+    const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
 
     // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
