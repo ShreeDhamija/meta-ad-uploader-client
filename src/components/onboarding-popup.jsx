@@ -1,8 +1,11 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import HomePopup from '@/assets/HomePopup.webp';
+import Rocket from '@/assets/rocket.webp';
 
 export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding }) {
     const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
+
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -15,8 +18,8 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             <h2 className="text-2xl font-semibold text-[#415363] mb-1">
                                 Welcome to Blip, {userName}!
                             </h2>
-                            <p className="text-gray-500 mb-2">Start launching ads in 2 minutes</p>
-                            <p className="text-gray-400 mb-10 text-sm">Lets configure your ad accounts with your <br></br>preferred values and settings to pre-fill into ads.</p>
+                            <p className="text-gray-500 mb-2 text-sm">Lets configure your ad accounts with <br></br> existing data  and preferred settings</p>
+                            <p className="text-gray-400 text-sm mb-10">It will take just a minute but save you hours. I promise.</p>
                             <div className="flex justify-center">
                                 <button
                                     onClick={() => {
@@ -28,11 +31,12 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                     className="group flex flex-col items-center space-y-3 focus:outline-none"
                                 >
                                     <img
-                                        src="https://api.withblip.com/settings.webp"
+                                        src={Rocket}
                                         alt="Settings Icon"
-                                        className="w-[120px] h-[120px] object-contain transition-transform duration-200 group-hover:scale-105"
+                                        className="w-[120px] h-[120px] object-contain transition-transform duration-200 group-hover:scale-105 mb-4 animate-bounce"
+                                        style={{ animationDuration: '2s' }}
                                     />
-                                    <div className="bg-[#F72585] hover:bg-[#e11d74] text-white text-sm rounded-full px-5 py-2">
+                                    <div className="bg-gradient-to-b from-[#FF609F] to-[#F72585] text-white text-md font-medium rounded-full px-5 py-3.5 w-[200px] flex items-center justify-center">
                                         Get Started
                                     </div>
                                 </button>
@@ -68,7 +72,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                             Step 2
                                         </div>
                                         <p className="text-gray-700 text-sm">
-                                            Enter your ad info and click Publish Ads!
+                                            Enter your ad info and queue as many ads as you want without waiting for a job to finish!
                                         </p>
                                     </div>
                                 </div>
@@ -76,7 +80,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                 {/* Bottom aligned button */}
                                 <Button
                                     onClick={onClose}
-                                    className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full mt-4"
+                                    className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full mt-4 w-[160px]"
                                 >
                                     Start Posting
                                 </Button>
@@ -84,9 +88,9 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
 
 
                             {/* Right image */}
-                            <div className="flex-1 bg-[#FDCEDF] rounded-lg overflow-hidden flex items-center justify-center">
+                            <div className="flex-1 bg-[#FDCEDF] rounded-2xl overflow-hidden flex items-center justify-center">
                                 <img
-                                    src="https://api.withblip.com/Home-Popup-Image.webp"
+                                    src={HomePopup}
                                     alt="Preview UI"
                                     className="w-full h-full object-cover "
                                 />

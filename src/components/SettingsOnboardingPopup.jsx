@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button"
+import Settings from '@/assets/settings.png';
+import SettingsPopup from '@/assets/SettingsPopup.webp';
 
 export default function SettingsOnboardingPopup({ onClose }) {
     return (
@@ -8,7 +10,7 @@ export default function SettingsOnboardingPopup({ onClose }) {
                     {/* Left content */}
                     <div className="flex-1">
                         <img
-                            src="https://api.withblip.com/settings.png"
+                            src={Settings}
                             alt="Settings Icon"
                             className="w-14 mb-4"
                         />
@@ -24,7 +26,7 @@ export default function SettingsOnboardingPopup({ onClose }) {
                         </div>
 
                         <div className="mb-8">
-                            <div className="bg-[#FBB03B] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
+                            <div className="bg-[#FFA500] text-white text-sm font-semibold rounded-full inline-block px-9 py-1 mb-2">
                                 Import Copy
                             </div>
                             <p className="text-gray-700 text-sm">
@@ -43,7 +45,7 @@ export default function SettingsOnboardingPopup({ onClose }) {
                     {/* Right image */}
                     <div className="flex-1 bg-[#FDCEDF] rounded-[22px] overflow-hidden flex items-center justify-center">
                         <img
-                            src="https://api.withblip.com/settings-popup-image.webp"
+                            src={SettingsPopup}
                             alt="Preview UI"
                             className="w-full h-full object-cover"
                         />
