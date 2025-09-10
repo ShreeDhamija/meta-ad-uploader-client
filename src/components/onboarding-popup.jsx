@@ -19,7 +19,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                 Welcome to Blip, {userName}!
                             </h2>
                             <p className="text-gray-500 mb-2 text-sm">Lets configure your ad accounts with <br></br> existing data  and preferred settings</p>
-                            <p className="text-gray-400 text-sm mb-10">It will take just a minute but save you hours. I promise.</p>
+                            <p className="text-gray-400 text-sm mb-10">It will take just a minute <br></br> but save you hours. I promise.</p>
                             <div className="flex justify-center">
                                 <button
                                     onClick={() => {
