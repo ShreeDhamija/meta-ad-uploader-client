@@ -85,28 +85,6 @@ export default function Header({ showMessenger, hideMessenger }) {
 
       {/* Action Buttons (Right) */}
       <div className="flex items-center gap-2 bg-white shadow-md border border-gray-300 rounded-[40px] px-3 py-2 ml-2">
-        {/* Trial Status Button - only show if on trial and not loading */}
-        {/* {!subscriptionLoading && isOnTrial() && !isTeamMember && (
-          <>
-            <button
-              onClick={handleUpgrade}
-              className={`flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium ${getTrialButtonStyle()}`}
-              title={isTrialExpired() ? "Your trial has expired" : `${subscriptionData.trialDaysLeft} days remaining in trial`}
-            >
-              <Clock className="w-4 h-4" />
-              <span>{getTrialText()}</span>
-            </button>
-            <Button
-              onClick={handleUpgrade}
-              size="sm"
-              className="h-7 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-full"
-            >
-              <CreditCard className="w-3 h-3 mr-1" />
-              Upgrade
-            </Button>
-            <div className="h-8 w-px bg-gray-300" />
-          </>
-        )} */}
 
         {/* Trial/Subscription Status Button - show if on trial OR if access expired */}
         {!subscriptionLoading && (isOnTrial() || !hasActiveAccess()) && !isTeamMember && (

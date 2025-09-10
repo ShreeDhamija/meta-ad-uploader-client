@@ -17,6 +17,7 @@ import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import DesktopIcon from '@/assets/Desktop.webp';
+import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
@@ -103,6 +104,7 @@ export default function Home() {
         isPaidSubscriber,
         loading: subscriptionLoading
     } = useSubscription()
+    const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(true);
 
     // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
@@ -163,7 +165,7 @@ export default function Home() {
     }, [authLoading, isLoggedIn]);
 
 
-    //  Show onboarding popup once settings are loaded
+
     useEffect(() => {
         if (!isLoggedIn || loading) return
         if (!hasSeenOnboarding) {
@@ -171,7 +173,11 @@ export default function Home() {
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
-
+    useEffect(() => {
+        if (!subscriptionLoading && isTrialExpired && !userHasActiveAccess) {
+            setShowTrialExpiredPopup(true);
+        }
+    }, [subscriptionLoading, isTrialExpired, userHasActiveAccess]);
 
     // --- NEW, CORRECTED CODE ---
     useEffect(() => {
@@ -477,7 +483,23 @@ export default function Home() {
                     />
                 )}
 
+                {showTrialExpiredPopup && (
+                    <TrialExpiredPopup
+                        onClose={() => setShowTrialExpiredPopup(false)}
+                        onUpgrade={() => {
+                            // Add your upgrade logic here - maybe navigate to pricing page
+                            console.log('Upgrade clicked');
+                            setShowTrialExpiredPopup(false);
+                        }}
+                        onChatWithUs={() => {
+                            showMessenger();
+                            setShowTrialExpiredPopup(false);
+                        }}
+                    />
+                )}
                 <Toaster richColors position="bottom-left" closeButton />
+
+
             </div>
         </>
     )
