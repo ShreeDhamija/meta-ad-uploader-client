@@ -21,7 +21,7 @@ export default function SettingsOnboardingPopup({ onClose }) {
                                 Configure Presets
                             </div>
                             <p className="text-gray-700 text-sm">
-                                Save all your creative enhancements, UTM's and pages once and forget about it.
+                                Save all your creative enhancements, UTMs and default pages once then forget about it.
                             </p>
                         </div>
 
@@ -38,7 +38,7 @@ export default function SettingsOnboardingPopup({ onClose }) {
                             onClick={onClose}
                             className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full"
                         >
-                            Configure Settings
+                            Configure Preferences
                         </Button>
                     </div>
 

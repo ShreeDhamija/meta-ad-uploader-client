@@ -5,7 +5,7 @@ import Rocket from '@/assets/rocket.webp';
 
 export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding }) {
     const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
-
+    // 
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -18,8 +18,8 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             <h2 className="text-2xl font-semibold text-[#415363] mb-1">
                                 Welcome to Blip, {userName}!
                             </h2>
-                            <p className="text-gray-500 mb-2 text-sm">Lets configure your ad accounts with <br></br> existing data  and preferred settings</p>
-                            <p className="text-gray-400 text-sm mb-10">It will take just a minute <br></br> but save you hours. I promise.</p>
+                            <p className="text-gray-500 mb-2 text-sm">Let’s save your ad account’s preferred settings</p>
+                            <p className="text-gray-400 text-sm mb-10">It will take 1 minute and save you hours. We promise.</p>
                             <div className="flex justify-center">
                                 <button
                                     onClick={() => {
@@ -36,8 +36,8 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                         className="w-[120px] h-[120px] object-contain transition-transform duration-200 group-hover:scale-105 mb-4 animate-bounce"
                                         style={{ animationDuration: '2s' }}
                                     />
-                                    <div className="bg-gradient-to-b from-[#FF609F] to-[#F72585] text-white text-md font-medium rounded-full px-5 py-3.5 w-[200px] flex items-center justify-center">
-                                        Get Started
+                                    <div className="bg-gradient-to-b from-[#FF609F] to-[#F72585] text-white text-md font-medium rounded-full px-5 py-3.5 w-[220px] flex items-center justify-center">
+                                        Configure Preferences
                                     </div>
                                 </button>
                             </div>

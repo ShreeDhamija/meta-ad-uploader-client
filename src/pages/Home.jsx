@@ -173,6 +173,8 @@ export default function Home() {
             setShowOnboardingPopup(true)
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
+
+
     useEffect(() => {
         if (
             !subscriptionLoading &&

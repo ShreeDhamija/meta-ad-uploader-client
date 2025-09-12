@@ -60,7 +60,7 @@ export default function Settings() {
 
 
     const tabLabelMap = {
-        adaccount: "Ad Account",
+        adaccount: "Preferences",
         billing: "Billing",
         team: "Team",
         viewads: "View Ads",
