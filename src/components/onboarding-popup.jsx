@@ -5,8 +5,6 @@ import Rocket from '@/assets/rocket.webp';
 
 export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding }) {
     const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
-    // 
-
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-8 py-10 w-[520px] relative overflow-hidden text-center">
@@ -80,9 +78,9 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                 {/* Bottom aligned button */}
                                 <Button
                                     onClick={onClose}
-                                    className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full mt-4 w-[160px]"
+                                    className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full mt-4 w-[180px]"
                                 >
-                                    Start Posting
+                                    Start Launching Ads
                                 </Button>
                             </div>
 
