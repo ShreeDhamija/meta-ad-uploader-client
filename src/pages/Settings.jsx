@@ -11,12 +11,10 @@ import { cn } from "@/lib/utils"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
-import ViewAds from "@/components/settings/view-ads"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 import HomeBtn from '@/assets/icons/home.svg?react';
 import Folder from '@/assets/icons/cog.svg?react';
 import Card from '@/assets/icons/card.svg?react';
-import ViewAdsIcon from '@/assets/icons/viewads.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react"; // pick or create a suitable icon
@@ -38,7 +36,7 @@ export default function Settings() {
         adaccount: Folder,
         billing: Card,
         team: UsersIcon,
-        viewads: ViewAdsIcon,
+
     }
 
     const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading } = useGlobalSettings()
@@ -47,14 +45,14 @@ export default function Settings() {
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
         billing: "Manage your subscription, billing methods, and view invoices.",
         team: "Manage your team, invite members, or join an existing team.",
-        viewads: "Preview all ads created in the last hour.",
+
     }
 
     const tabTitleMap = {
         adaccount: "Ad Account Settings",
         billing: "Billing and Subscription",
         team: "Team Management",
-        viewads: "Recently Created Ads",
+
     };
 
 
@@ -63,7 +61,7 @@ export default function Settings() {
         adaccount: "Preferences",
         billing: "Billing",
         team: "Team",
-        viewads: "View Ads",
+
     }
 
 
@@ -117,7 +115,7 @@ export default function Settings() {
 
                         {/* Tab Buttons */}
                         <div className="space-y-2">
-                            {["adaccount", "billing", "team", "viewads"].map((tab) => {
+                            {["adaccount", "billing", "team"].map((tab) => {
                                 const Icon = tabIconMap[tab];
                                 return (
                                     <button
@@ -191,7 +189,6 @@ export default function Settings() {
                             <div className="w-full">
                                 {/* {activeTab === "global" && <GlobalSettings />} */}
                                 {activeTab === "adaccount" && <AdAccountSettings preselectedAdAccount={preselectedAdAccount} />}
-                                {activeTab === "viewads" && <ViewAds />}
                                 {activeTab === "billing" && <BillingSettings />}
                                 {activeTab === "team" && <TeamSettings />}
 
