@@ -44,7 +44,8 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
 
             if (response.ok) {
                 toast.success("Ad account selected successfully!")
-                onSave(selectedAccountId)
+                // onSave(selectedAccountId)
+                window.dispatchEvent(new Event('globalSettingsUpdated'))
                 onClose()
             } else {
                 toast.error("Failed to save ad account selection")
