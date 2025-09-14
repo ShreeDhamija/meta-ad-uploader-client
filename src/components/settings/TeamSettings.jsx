@@ -61,15 +61,7 @@ export default function TeamSettings() {
         }
     }, [subscriptionData.teamId, subscriptionData.isTeamOwner])
 
-    // if (loading) {
-    //     return (
-    //         <div className="space-y-6">
-    //             <div className="animate-pulse">
-    //                 <div className="h-32 bg-gray-200 rounded-2xl mb-4"></div>
-    //             </div>
-    //         </div>
-    //     )
-    // }
+
 
     if (loading || (subscriptionData.teamId && !teamData)) {
         return (
@@ -288,7 +280,7 @@ export default function TeamSettings() {
                         <div className="flex flex-row gap-1">
                             <Button disabled={isOnTrial()} onClick={() => setTeamMode('creating')} className="w-full rounded-xl h-12 bg-blue-600">
                                 <CreditCard className="w-4 h-4" />
-                                {isOnTrial() ? "Upgrade to Pro to Start a Team" : "Start a Team"}
+                                {isOnTrial() ? "Subscribe to Start a Team" : "Start a Team"}
                             </Button>
                             <Button onClick={() => setTeamMode('joining')} variant="outline" className="w-full rounded-xl h-12">
                                 <Users className="w-4 h-4" />
@@ -455,7 +447,7 @@ export default function TeamSettings() {
                                     </div>
                                 )}
                                 {/* Team cost row */}
-                                <div className="flex items-center justify-between pt-3">
+                                {/* <div className="flex items-center justify-between pt-3">
                                     <span className="text-sm text-gray-600">Team cost</span>
                                     <span className="text-sm font-bold text-black">
                                         {(teamData.members?.length || 0) > 0 && (
@@ -465,7 +457,7 @@ export default function TeamSettings() {
                                         )}
                                         ${500 + ((teamData.members?.length || 0) * 20)}/month
                                     </span>
-                                </div>
+                                </div> */}
 
                                 {/* Delete Team Button */}
                                 <div className="pt-3">

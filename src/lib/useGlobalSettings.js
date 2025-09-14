@@ -5,6 +5,7 @@ export default function useGlobalSettings() {
     const [loading, setLoading] = useState(true);
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
     const [hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding] = useState(false);
+    const [selectedAdAccountId, setSelectedAdAccountId] = useState(null);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -18,11 +19,14 @@ export default function useGlobalSettings() {
                 // Safely get settings, defaulting to false if they don't exist.
                 setHasSeenOnboarding(data?.settings?.hasSeenOnboarding || false);
                 setHasSeenSettingsOnboarding(data?.settings?.hasSeenSettingsOnboarding || false);
+                setSelectedAdAccountId(data?.settings?.selectedAdAccountId || null);
+
 
             } catch (err) {
                 console.error("Failed to fetch global settings:", err);
                 // On error, assume they haven't seen popups.
                 setHasSeenOnboarding(false);
+                setSelectedAdAccountId(null);
                 setHasSeenSettingsOnboarding(false);
             } finally {
                 setLoading(false);
@@ -38,5 +42,7 @@ export default function useGlobalSettings() {
         hasSeenOnboarding,
         hasSeenSettingsOnboarding,
         setHasSeenSettingsOnboarding,
+        selectedAdAccountId,
+
     };
 }

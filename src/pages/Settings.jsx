@@ -11,7 +11,9 @@ import { cn } from "@/lib/utils"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
+import useSubscription from "@/lib/useSubscriptionSettings"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
+import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
 import HomeBtn from '@/assets/icons/home.svg?react';
 import Folder from '@/assets/icons/cog.svg?react';
 import Card from '@/assets/icons/card.svg?react';
@@ -39,7 +41,7 @@ export default function Settings() {
 
     }
 
-    const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading } = useGlobalSettings()
+    const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading, selectedAdAccountId } = useGlobalSettings()
 
     const tabDescriptionMap = {
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
@@ -91,6 +93,12 @@ export default function Settings() {
             setShowSettingsPopup(true)
         }
     }, [loading, hasSeenSettingsOnboarding])
+
+    useEffect(() => {
+        if (subscriptionData.planType === 'brand' && !selectedAdAccountId) {
+            setShowAdAccountPopup(true)
+        }
+    }, [subscriptionData.planType, selectedAdAccountId])
 
     if (authLoading) return null // or a loading spinner if you want
     if (!isLoggedIn) return <Navigate to="/login" />
@@ -202,6 +210,10 @@ export default function Settings() {
                 <Toaster richColors position="bottom-left" closeButton />
             </div>
             {showSettingsPopup && <SettingsOnboardingPopup onClose={handleCloseSettingsPopup} />}
+            <AdAccountSelectionPopup
+                isOpen={showAdAccountPopup}
+                onClose={() => setShowAdAccountPopup(false)}
+            />
         </div>
     )
 }

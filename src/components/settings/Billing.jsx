@@ -45,12 +45,14 @@ export default function BillingSettings() {
 
 
     // In Billing.jsx, update the API calls:
-    const handleUpgrade = async () => {
+    const handleUpgrade = async (planType = 'agency') => {
         setIsLoading(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/stripe/create-checkout-session`, {
                 method: 'POST',
                 credentials: 'include',
+                body: JSON.stringify({ planType }),
+
             });
 
             const { url } = await response.json();
@@ -121,22 +123,6 @@ export default function BillingSettings() {
         )
     }
 
-    // const getStatusBadge = () => {
-    //     if (isPaidSubscriber())
-    //         return (
-    //             <Badge variant="default" className="bg-green-100 text-green-800">
-    //                 Pro
-    //             </Badge>
-    //         )
-    //     if (isTrialExpired()) return <Badge variant="destructive">Trial Expired</Badge>
-    //     if (isOnTrial())
-    //         return (
-    //             <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-    //                 Free Trial
-    //             </Badge>
-    //         )
-    //     return <Badge variant="outline">Inactive</Badge>
-    // }
 
     const getStatusBadge = () => {
         if (isPaidSubscriber()) {
@@ -191,7 +177,7 @@ export default function BillingSettings() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {/* Upgrade Button */}
-                            {!isPaidSubscriber() && (
+                            {/* {!isPaidSubscriber() && (
                                 <Button
                                     onClick={handleUpgrade}
                                     disabled={isLoading}
@@ -201,7 +187,7 @@ export default function BillingSettings() {
                                     <span className="mr-2">🚀</span>
                                     Upgrade To Pro | $500/mo
                                 </Button>
-                            )}
+                            )} */}
 
                             {isPaidSubscriber() && (
                                 <div className="space-y-2">
@@ -225,7 +211,7 @@ export default function BillingSettings() {
                                                 className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
                                                 disabled={isLoading}
                                             >
-                                                Reactivate Subscription | $500/mo
+                                                Reactivate Subscription
                                             </Button>
                                         </>
                                     ) : (
@@ -280,7 +266,7 @@ export default function BillingSettings() {
                                         <div>
                                             <CardTitle className="flex items-center text-lg">
                                                 <img src={RocketIcon} alt="Pro" className="w-10 h-10" />
-                                                <p className="text-[26px] font-bold">Pro</p>
+                                                <p className="text-[26px] font-bold">For Agencies</p>
                                             </CardTitle>
                                             <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
                                         </div>
@@ -319,19 +305,30 @@ export default function BillingSettings() {
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
                                         <CheckIcon className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">Invite your Team</span>
+                                        <span className="text-[16px] text-gray-500">Unlimited Team Seats</span>
                                     </div>
+                                    <Button
+                                        onClick={() => handleUpgrade('agency')}
+                                        disabled={isLoading}
+                                        className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
+                                        size="lg"
+                                    >
+                                        Upgrade
+                                    </Button>
+
                                 </CardContent>
+
+
                             </Card>
 
-                            {/* Team Seats */}
+
                             <Card className="flex-1 rounded-[20px]">
                                 <CardHeader className="p-1">
                                     <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-6 shadow-[0_2px_10px_0px_rgba(255,215,0,0.15)] border border-2 border-yellow-200/50">
                                         <div>
                                             <CardTitle className="flex items-center text-lg">
                                                 <img src={LightningIcon} alt="Team Seats" className="w-10 h-10" />
-                                                <p className="text-[26px] font-bold">Team Seats</p>
+                                                <p className="text-[26px] font-bold">For Brands</p>
                                             </CardTitle>
                                             <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
                                         </div>
@@ -348,7 +345,7 @@ export default function BillingSettings() {
                                                         className="text-4xl font-bold text-gray-900"
                                                         style={{ fontFamily: "'DM Mono', monospace" }}
                                                     >
-                                                        $20
+                                                        $199
                                                     </div>
                                                     <div className="text-sm text-gray-400">/month</div>
                                                 </div>
@@ -359,21 +356,30 @@ export default function BillingSettings() {
                                 </CardHeader>
                                 <CardContent className="space-y-6 p-6 pb-8">
                                     <div className="flex items-center gap-3 text-sm">
-                                        <CheckIcon2 className="w-6 h-6 text-yellow-500" />
-                                        <span className="text-[16px] text-gray-500">Easily add & delete members</span>
+                                        <CheckIcon2 className="w-6 h-6" />
+                                        <span className="text-[16px] text-gray-500">1 Ad Account Limit</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <CheckIcon2 className="w-6 h-6 text-yellow-500" />
-                                        <span className="text-[16px] text-gray-500">No limit on their use</span>
+                                        <CheckIcon2 className="w-6 h-6" />
+                                        <span className="text-[16px] text-gray-500">Unlimited Ad Posting</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <CheckIcon2 className="w-6 h-6 text-yellow-500" />
-                                        <span className="text-[16px] text-gray-500">Transparent pricing</span>
+                                        <CheckIcon2 className="w-6 h-6" />
+                                        <span className="text-[16px] text-gray-500">Instant Settings Sync</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
-                                        <CheckIcon2 className="w-6 h-6 text-yellow-500" />
-                                        <span className="text-[16px] text-gray-500">Unique settings for everyone</span>
+                                        <CheckIcon2 className="w-6 h-6" />
+                                        <span className="text-[16px] text-gray-500">Unlimited Team Seats</span>
                                     </div>
+                                    <Button
+                                        onClick={() => handleUpgrade('brand')}
+                                        disabled={isLoading}
+                                        className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
+                                        size="lg"
+                                    >
+                                        Upgrade
+                                    </Button>
+
                                 </CardContent>
                             </Card>
 
