@@ -15,6 +15,7 @@ import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useSubscription from "@/lib/useSubscriptionSettings"
+import AdAccountSelectionPopup from "../components/AdAccountSelectionPopup"
 import { useIntercom } from "@/lib/useIntercom";
 import DesktopIcon from '@/assets/Desktop.webp';
 import TrialExpiredPopup from '../components/TrialExpiredPopup';
@@ -95,7 +96,7 @@ export default function Home() {
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
-    const { hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, } = useGlobalSettings();
+    const { hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, selectedAdAccountId } = useGlobalSettings();
     const {
         subscriptionData,
         isOnTrial,
@@ -106,6 +107,7 @@ export default function Home() {
     } = useSubscription()
     const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
     const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false);
+    const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
 
     // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
@@ -174,6 +176,11 @@ export default function Home() {
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
+    useEffect(() => {
+        if (subscriptionData.planType === 'brand' && !selectedAdAccountId) {
+            setShowAdAccountPopup(true)
+        }
+    }, [subscriptionData.planType, selectedAdAccountId])
 
     useEffect(() => {
         if (
@@ -509,6 +516,11 @@ export default function Home() {
                         }}
                     />
                 )}
+
+                <AdAccountSelectionPopup
+                    isOpen={showAdAccountPopup}
+                    onClose={() => setShowAdAccountPopup(false)}
+                />
 
                 <Toaster richColors position="bottom-left" closeButton />
 

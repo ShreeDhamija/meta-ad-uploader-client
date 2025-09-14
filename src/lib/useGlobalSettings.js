@@ -13,8 +13,6 @@ export default function useGlobalSettings() {
                 credentials: "include",
             });
             const data = await res.json();
-            console.log("Raw API response:", data); // Debug log
-            console.log("selectedAdAccountId from API:", data?.settings?.selectedAdAccountId); // Debug log
 
             setHasSeenOnboarding(data?.settings?.hasSeenOnboarding || false);
             setHasSeenSettingsOnboarding(data?.settings?.hasSeenSettingsOnboarding || false);

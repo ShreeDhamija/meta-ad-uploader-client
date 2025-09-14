@@ -59,8 +59,14 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px] !rounded-[30px] p-8">
+        <Dialog open={isOpen} onOpenChange={() => { }} > {/* Empty function prevents closing */}
+            <DialogContent
+                className="sm:max-w-[500px] !rounded-[30px] p-8 [&>button[data-dialog-close]]:hidden"
+                onEscapeKeyDown={(e) => e.preventDefault()} // Prevent ESC key
+                onPointerDownOutside={(e) => e.preventDefault()} // Prevent click outside
+                onInteractOutside={(e) => e.preventDefault()} // Additional protection
+
+            >
                 <DialogHeader className="space-y-4">
                     <DialogTitle className="text-xl">Select Your Ad Account</DialogTitle>
                     <DialogDescription className="text-base leading-relaxed">
@@ -89,9 +95,6 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
                 </div>
 
                 <DialogFooter className="flex flex-col sm:flex-row gap-3">
-                    <Button variant="outline" onClick={onClose} className="rounded-2xl flex-1">
-                        Cancel
-                    </Button>
                     <Button
                         onClick={handleSave}
                         disabled={!selectedAccountId || isLoading}

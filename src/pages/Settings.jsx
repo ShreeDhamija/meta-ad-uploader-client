@@ -98,10 +98,6 @@ export default function Settings() {
     }, [loading, hasSeenSettingsOnboarding])
 
     useEffect(() => {
-        console.log("Checking popup condition:");
-        console.log("planType:", subscriptionData.planType);
-        console.log("selectedAdAccountId:", selectedAdAccountId);
-        console.log("Should show popup:", subscriptionData.planType === 'brand' && !selectedAdAccountId);
 
         if (subscriptionData.planType === 'brand' && !selectedAdAccountId) {
             setShowAdAccountPopup(true)
