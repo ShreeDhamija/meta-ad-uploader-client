@@ -136,7 +136,7 @@ export default function BillingSettings() {
             }
             return (
                 <Badge variant="default" className="bg-green-100 text-green-800">
-                    Pro
+                    {subscriptionData.planType}
                 </Badge>
             )
         }

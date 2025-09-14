@@ -19,7 +19,6 @@ export default function Header({ showMessenger, hideMessenger }) {
     loading: subscriptionLoading
   } = useSubscription()
 
-  const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
 
   // In your Header component, add this temporarily:
   console.log('Debug subscription:', {
@@ -87,7 +86,7 @@ export default function Header({ showMessenger, hideMessenger }) {
       <div className="flex items-center gap-2 bg-white shadow-md border border-gray-300 rounded-[40px] px-3 py-2 ml-2">
 
         {/* Trial/Subscription Status Button - show if on trial OR if access expired */}
-        {!subscriptionLoading && (isOnTrial() || !hasActiveAccess()) && !isTeamMember && (
+        {!subscriptionLoading && (isOnTrial() || !hasActiveAccess()) && (
           <>
             <button
               onClick={handleUpgrade}
