@@ -177,6 +177,9 @@ export default function Home() {
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
+
+        if (loading || subscriptionLoading) return;
+
         if (subscriptionData.planType === 'brand' && !selectedAdAccountId) {
             setShowAdAccountPopup(true)
         }

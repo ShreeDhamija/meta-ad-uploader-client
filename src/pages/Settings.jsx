@@ -28,7 +28,8 @@ export default function Settings() {
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
     const navigate = useNavigate()
-    const { subscriptionData } = useSubscription()
+    const { subscriptionData, loading: subscriptionLoading } = useSubscription()
+
 
     const urlParams = new URLSearchParams(window.location.search)
     const initialTab = urlParams.get('tab') || 'adaccount'
@@ -102,6 +103,8 @@ export default function Settings() {
         console.log("planType:", subscriptionData.planType);
         console.log("selectedAdAccountId:", selectedAdAccountId);
         console.log("Should show popup:", subscriptionData.planType === 'brand' && !selectedAdAccountId);
+
+        if (loading || subscriptionLoading) return;
 
         if (subscriptionData.planType === 'brand' && !selectedAdAccountId) {
             setShowAdAccountPopup(true)

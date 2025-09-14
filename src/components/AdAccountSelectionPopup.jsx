@@ -10,6 +10,7 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
+    DialogOverlay
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
@@ -60,6 +61,7 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
 
     return (
         <Dialog open={isOpen} onOpenChange={() => { }} > {/* Empty function prevents closing */}
+            <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
             <DialogContent
                 className="sm:max-w-[500px] !rounded-[30px] p-8 [&>button[data-dialog-close]]:hidden"
                 onEscapeKeyDown={(e) => e.preventDefault()} // Prevent ESC key
