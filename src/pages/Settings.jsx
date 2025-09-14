@@ -26,7 +26,9 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
+    const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
     const navigate = useNavigate()
+    const { subscriptionData } = useSubscription()
 
     const urlParams = new URLSearchParams(window.location.search)
     const initialTab = urlParams.get('tab') || 'adaccount'
