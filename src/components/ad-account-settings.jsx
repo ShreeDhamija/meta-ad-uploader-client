@@ -359,7 +359,15 @@ export default function AdAccountSettings({
     [selectedAdSets, adSets]
   );
 
+  // Add this useEffect hook after your existing useEffect hooks
 
+  useEffect(() => {
+    // Auto-select ad account if only one exists and none is currently selected
+    if (adAccounts.length === 1 && !selectedAdAccount && !isLoading) {
+      const singleAdAccount = adAccounts[0];
+      handleAdAccountChange(singleAdAccount.id);
+    }
+  }, [adAccounts, selectedAdAccount, isLoading, handleAdAccountChange]);
 
 
   return (
