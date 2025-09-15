@@ -51,6 +51,9 @@ export default function BillingSettings() {
             const response = await fetch(`${API_BASE_URL}/api/stripe/create-checkout-session`, {
                 method: 'POST',
                 credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({ planType }),
 
             });
