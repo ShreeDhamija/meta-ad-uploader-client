@@ -283,7 +283,7 @@ export default function TeamSettings() {
                         <div className="flex flex-row gap-1">
                             <Button disabled={!hasActiveAccess()} onClick={() => setTeamMode('creating')} className="w-full rounded-xl h-12 bg-blue-600">
                                 <CreditCard className="w-4 h-4" />
-                                {hasActiveAccess() ? "Subscribe to Start a Team" : "Start a Team"}
+                                {!hasActiveAccess() ? "Subscribe to Start a Team" : "Start a Team"}
                             </Button>
                             <Button onClick={() => setTeamMode('joining')} variant="outline" className="w-full rounded-xl h-12">
                                 <Users className="w-4 h-4" />
