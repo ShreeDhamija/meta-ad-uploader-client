@@ -22,9 +22,10 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
-export default function TeamSettings() {
+export default function TeamSettings({ onTriggerAdAccountPopup }) {
     const {
         subscriptionData,
+        hasActiveAccess,
         refreshSubscriptionData,
         isOnTrial,
         loading,
@@ -191,6 +192,12 @@ export default function TeamSettings() {
 
                 // Refresh subscription data to update UI
                 refreshSubscriptionData()
+
+                setTimeout(() => {
+                    onTriggerAdAccountPopup?.()
+                }, 100) // Small delay to ensure subscription data is updated
+
+
             } else {
                 const error = await res.json()
                 toast.error(error.error || "Failed to delete team")

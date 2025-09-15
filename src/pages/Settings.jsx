@@ -99,10 +99,7 @@ export default function Settings() {
     }, [loading, hasSeenSettingsOnboarding])
 
     useEffect(() => {
-        console.log("Checking popup condition:");
-        console.log("planType:", subscriptionData.planType);
-        console.log("selectedAdAccountId:", selectedAdAccountId);
-        console.log("Should show popup:", subscriptionData.planType === 'brand' && !selectedAdAccountId);
+
 
         if (loading || subscriptionLoading) return;
 
@@ -209,7 +206,9 @@ export default function Settings() {
                                 {/* {activeTab === "global" && <GlobalSettings />} */}
                                 {activeTab === "adaccount" && <AdAccountSettings preselectedAdAccount={preselectedAdAccount} />}
                                 {activeTab === "billing" && <BillingSettings />}
-                                {activeTab === "team" && <TeamSettings />}
+                                {activeTab === "team" && <TeamSettings
+                                    onTriggerAdAccountPopup={() => setShowAdAccountPopup(true)}
+                                />}
 
                             </div>
                         </div>
