@@ -22,7 +22,7 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
-export default function TeamSettings({ onTriggerAdAccountPopup }) {
+export default function TeamSettings() {
     const {
         subscriptionData,
         hasActiveAccess,
@@ -192,12 +192,6 @@ export default function TeamSettings({ onTriggerAdAccountPopup }) {
 
                 // Refresh subscription data to update UI
                 refreshSubscriptionData()
-
-                setTimeout(() => {
-                    onTriggerAdAccountPopup?.()
-                }, 100) // Small delay to ensure subscription data is updated
-
-
             } else {
                 const error = await res.json()
                 toast.error(error.error || "Failed to delete team")
@@ -226,6 +220,8 @@ export default function TeamSettings({ onTriggerAdAccountPopup }) {
                 setTeamMode('member')
                 setInviteCode("")
                 refreshSubscriptionData()
+                window.location.reload()
+
             } else {
                 toast.error("Invalid invite code")
             }

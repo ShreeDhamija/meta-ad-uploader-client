@@ -206,9 +206,7 @@ export default function Settings() {
                                 {/* {activeTab === "global" && <GlobalSettings />} */}
                                 {activeTab === "adaccount" && <AdAccountSettings preselectedAdAccount={preselectedAdAccount} />}
                                 {activeTab === "billing" && <BillingSettings />}
-                                {activeTab === "team" && <TeamSettings
-                                    onTriggerAdAccountPopup={() => setShowAdAccountPopup(true)}
-                                />}
+                                {activeTab === "team" && <TeamSettings />}
 
                             </div>
                         </div>
