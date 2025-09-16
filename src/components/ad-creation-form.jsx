@@ -1304,8 +1304,6 @@ export default function AdCreationForm({
       for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
         const batch = videoFiles.slice(i, i + BATCH_SIZE);
 
-
-
         const thumbnailPromises = batch.map(file =>
           generateThumbnail(file)
             .then(thumb => ({ id: getFileId(file), thumb }))
@@ -1577,6 +1575,8 @@ export default function AdCreationForm({
 
           for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
             const batch = videoFiles.slice(i, i + BATCH_SIZE);
+
+
 
             // Update progress message
             setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
