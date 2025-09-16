@@ -179,19 +179,6 @@ export default function BillingSettings() {
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {/* Upgrade Button */}
-                            {/* {!isPaidSubscriber() && (
-                                <Button
-                                    onClick={handleUpgrade}
-                                    disabled={isLoading}
-                                    className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
-                                    size="lg"
-                                >
-                                    <span className="mr-2">🚀</span>
-                                    Upgrade To Pro | $500/mo
-                                </Button>
-                            )} */}
-
                             {isPaidSubscriber() && (
                                 <div className="space-y-2">
                                     {subscriptionData.willCancelAt ? (
@@ -285,7 +272,7 @@ export default function BillingSettings() {
                                                     className="text-4xl font-bold text-gray-900"
                                                     style={{ fontFamily: "'DM Mono', monospace" }}
                                                 >
-                                                    $500
+                                                    $370
                                                 </div>
                                                 <div className="text-sm text-gray-400">/month</div>
                                             </div>

@@ -92,24 +92,24 @@ export default function Settings() {
     }
 
 
-    useEffect(() => {
-        if (!loading && !hasSeenSettingsOnboarding) {
-            setShowSettingsPopup(true)
-        }
-    }, [loading, hasSeenSettingsOnboarding])
+    // useEffect(() => {
+    //     if (!loading && !hasSeenSettingsOnboarding) {
+    //         setShowSettingsPopup(true)
+    //     }
+    // }, [loading, hasSeenSettingsOnboarding])
 
-    useEffect(() => {
+    // useEffect(() => {
 
 
-        if (loading || subscriptionLoading) return;
+    //     if (loading || subscriptionLoading) return;
 
-        if (subscriptionData.planType === 'brand' && !selectedAdAccountId) {
-            setShowAdAccountPopup(true)
-        }
-    }, [subscriptionData.planType, selectedAdAccountId])
+    //     if (subscriptionData.planType === 'brand' && !selectedAdAccountId) {
+    //         setShowAdAccountPopup(true)
+    //     }
+    // }, [subscriptionData.planType, selectedAdAccountId])
 
-    if (authLoading) return null // or a loading spinner if you want
-    if (!isLoggedIn) return <Navigate to="/login" />
+    // if (authLoading) return null // or a loading spinner if you want
+    // if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <div className="flex bg-gray-100 min-h-screen">
