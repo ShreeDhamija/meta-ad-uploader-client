@@ -281,9 +281,9 @@ export default function TeamSettings() {
                 <CardContent>
                     {!teamMode && (
                         <div className="flex flex-row gap-1">
-                            <Button disabled={!hasActiveAccess()} onClick={() => setTeamMode('creating')} className="w-full rounded-xl h-12 bg-blue-600">
+                            <Button onClick={() => setTeamMode('creating')} className="w-full rounded-xl h-12 bg-blue-600">
                                 <CreditCard className="w-4 h-4" />
-                                {!hasActiveAccess() ? "Subscribe to Start a Team" : "Start a Team"}
+                                Start a Team
                             </Button>
                             <Button onClick={() => setTeamMode('joining')} variant="outline" className="w-full rounded-xl h-12">
                                 <Users className="w-4 h-4" />
@@ -353,7 +353,7 @@ export default function TeamSettings() {
                                     </div>
 
                                     <span className="text-sm font-medium text-[#B2038C]">
-                                        Share it only with your team!
+                                        Your team will need this to join.
                                     </span>
                                 </div>
 
