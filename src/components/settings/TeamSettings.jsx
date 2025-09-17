@@ -490,11 +490,10 @@ export default function TeamSettings() {
                                                     <ul className="text-sm text-red-700 ml-4 list-disc">
                                                         <li>Remove all {teamData?.members?.length || 0} team members</li>
                                                         <li>Cancel their access immediately</li>
-                                                        <li>Remove ${(teamData?.members?.length || 0) * 20}/month in seat charges</li>
                                                     </ul>
                                                 </div>
                                                 <p className="text-sm text-gray-600">
-                                                    Your personal subscription will remain active at $500/month.
+                                                    Your personal subscription will remain active
                                                 </p>
                                             </DialogDescription>
                                         </DialogHeader>
