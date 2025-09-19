@@ -5,7 +5,7 @@ export default function useGlobalSettings() {
     const [loading, setLoading] = useState(true);
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
     const [hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding] = useState(false);
-    const [selectedAdAccountId, setSelectedAdAccountId] = useState(null);
+    const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
 
     const fetchSettings = async () => {
         try {
@@ -14,16 +14,17 @@ export default function useGlobalSettings() {
             });
             const data = await res.json();
             console.log("Raw API response:", data); // Debug log
-            console.log("selectedAdAccountId from API:", data?.settings?.selectedAdAccountId); // Debug log
+            console.log("selectedAdAccountIds from API:", data?.settings?.selectedAdAccountIds)
+
 
             setHasSeenOnboarding(data?.settings?.hasSeenOnboarding || false);
             setHasSeenSettingsOnboarding(data?.settings?.hasSeenSettingsOnboarding || false);
-            setSelectedAdAccountId(data?.settings?.selectedAdAccountId || null);
+            setSelectedAdAccountIds(data?.settings?.selectedAdAccountIds || [])
 
         } catch (err) {
             console.error("Failed to fetch global settings:", err);
             setHasSeenOnboarding(false);
-            setSelectedAdAccountId(null);
+            setSelectedAdAccountIds([]);
             setHasSeenSettingsOnboarding(false);
         } finally {
             setLoading(false);
@@ -48,7 +49,7 @@ export default function useGlobalSettings() {
         hasSeenOnboarding,
         hasSeenSettingsOnboarding,
         setHasSeenSettingsOnboarding,
-        selectedAdAccountId,
+        selectedAdAccountIds, // Changed from selectedAdAccountId
 
 
     };

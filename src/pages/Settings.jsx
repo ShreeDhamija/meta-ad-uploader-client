@@ -44,7 +44,7 @@ export default function Settings() {
 
     }
 
-    const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading, selectedAdAccountId } = useGlobalSettings()
+    const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading, selectedAdAccountIds } = useGlobalSettings()
 
     const tabDescriptionMap = {
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
@@ -99,14 +99,12 @@ export default function Settings() {
     }, [loading, hasSeenSettingsOnboarding])
 
     useEffect(() => {
-
-
         if (loading || subscriptionLoading) return;
 
-        if (subscriptionData.planType === 'brand' && !selectedAdAccountId) {
+        if (subscriptionData.planType === 'brand' && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
             setShowAdAccountPopup(true)
         }
-    }, [subscriptionData.planType, selectedAdAccountId])
+    }, [subscriptionData.planType, selectedAdAccountIds])
 
     if (authLoading) return null // or a loading spinner if you want
     if (!isLoggedIn) return <Navigate to="/login" />

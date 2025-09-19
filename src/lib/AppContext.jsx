@@ -12,16 +12,16 @@ export const AppProvider = ({ children }) => {
   const [allAdAccounts, setAllAdAccounts] = useState([]);
 
   const { subscriptionData } = useSubscription()
-  const { selectedAdAccountId } = useGlobalSettings()
+  const { selectedAdAccountIds } = useGlobalSettings() // Changed from selectedAdAccountId
 
 
   // Filter ad accounts based on plan type
   const filteredAdAccounts = useMemo(() => {
-    if (subscriptionData.planType === 'brand' && selectedAdAccountId) {
-      return allAdAccounts.filter(account => account.id === selectedAdAccountId)
+    if (subscriptionData.planType === 'brand' && selectedAdAccountIds.length > 0) {
+      return allAdAccounts.filter(account => selectedAdAccountIds.includes(account.id))
     }
     return allAdAccounts
-  }, [allAdAccounts, subscriptionData.planType, selectedAdAccountId])
+  }, [allAdAccounts, subscriptionData.planType, selectedAdAccountIds])
 
 
 

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import {
     Dialog,
@@ -19,11 +19,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
     const { adAccounts } = useAppData()
-    const [selectedAccountId, setSelectedAccountId] = useState("")
+    const [selectedAccountIds, setSelectedAccountIds] = useState([])
     const [isLoading, setIsLoading] = useState(false)
 
     const handleSave = async () => {
-        if (!selectedAccountId) {
+        if (selectedAccountIds.length === 0) {
             toast.error("Please select an ad account")
             return
         }
@@ -38,7 +38,7 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
                 credentials: 'include',
                 body: JSON.stringify({
                     globalSettings: {
-                        selectedAdAccountId: selectedAccountId
+                        selectedAdAccountIds: selectedAccountIds // Changed from selectedAdAccountId
                     }
                 })
             })
@@ -72,7 +72,7 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
                 <DialogHeader className="space-y-4">
                     <DialogTitle className="text-xl">Select Your Ad Account</DialogTitle>
                     <DialogDescription className="text-base leading-relaxed">
-                        As a Brand plan subscriber, you can use one ad account. Please select which account you'd like to use.
+                        As a Light plan subscriber, you can use up to 3 ad accounts. Please select which accounts you'd like to use.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -80,26 +80,35 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
                     {adAccounts.length === 0 ? (
                         <p className="text-gray-500 text-center py-8">No ad accounts found</p>
                     ) : (
-                        <RadioGroup value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                            <div className="space-y-2 max-h-60 overflow-y-auto">
-                                {adAccounts.map((account) => (
-                                    <div key={account.id} className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50">
-                                        <RadioGroupItem value={account.id} id={account.id} />
-                                        <Label htmlFor={account.id} className="flex-1 cursor-pointer">
-                                            <div className="font-medium">{account.name}</div>
-                                            <div className="text-sm text-gray-500">ID: {account.id}</div>
-                                        </Label>
-                                    </div>
-                                ))}
-                            </div>
-                        </RadioGroup>
+                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                            {adAccounts.map((account) => (
+                                <div key={account.id} className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50">
+                                    <Checkbox
+                                        id={account.id}
+                                        checked={selectedAccountIds.includes(account.id)}
+                                        disabled={selectedAccountIds.length >= 3 && !selectedAccountIds.includes(account.id)}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                setSelectedAccountIds(prev => [...prev, account.id])
+                                            } else {
+                                                setSelectedAccountIds(prev => prev.filter(id => id !== account.id))
+                                            }
+                                        }}
+                                    />
+                                    <Label htmlFor={account.id} className="flex-1 cursor-pointer">
+                                        <div className="font-medium">{account.name}</div>
+                                        <div className="text-sm text-gray-500">ID: {account.id}</div>
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
 
                 <DialogFooter className="flex flex-col sm:flex-row gap-3">
                     <Button
                         onClick={handleSave}
-                        disabled={!selectedAccountId || isLoading}
+                        disabled={selectedAccountIds.length === 0 || isLoading}
                         className="rounded-2xl flex-1"
                     >
                         {isLoading ? "Saving..." : "Save Selection"}
