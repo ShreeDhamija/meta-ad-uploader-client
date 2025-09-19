@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
+import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -82,7 +83,12 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
                     ) : (
                         <div className="space-y-2 max-h-60 overflow-y-auto">
                             {adAccounts.map((account) => (
-                                <div key={account.id} className="flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50">
+                                <div key={account.id} className={cn(
+                                    "flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50",
+                                    selectedAccountIds.length >= 3 && !selectedAccountIds.includes(account.id)
+                                        ? "opacity-50 cursor-not-allowed bg-gray-50"
+                                        : ""
+                                )}>
                                     <Checkbox
                                         id={account.id}
                                         checked={selectedAccountIds.includes(account.id)}
@@ -95,7 +101,15 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
                                             }
                                         }}
                                     />
-                                    <Label htmlFor={account.id} className="flex-1 cursor-pointer">
+                                    <Label
+                                        htmlFor={account.id}
+                                        className={cn(
+                                            "flex-1 cursor-pointer",
+                                            selectedAccountIds.length >= 3 && !selectedAccountIds.includes(account.id)
+                                                ? "cursor-not-allowed text-gray-400"
+                                                : ""
+                                        )}
+                                    >
                                         <div className="font-medium">{account.name}</div>
                                         <div className="text-sm text-gray-500">ID: {account.id}</div>
                                     </Label>

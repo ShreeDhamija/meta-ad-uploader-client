@@ -96,7 +96,7 @@ export default function Home() {
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
-    const { hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, selectedAdAccountId } = useGlobalSettings();
+    const { hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, selectedAdAccountIds } = useGlobalSettings();
     const {
         subscriptionData,
         isOnTrial,
@@ -177,13 +177,12 @@ export default function Home() {
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
-
         if (loading || subscriptionLoading) return;
 
-        if (subscriptionData.planType === 'brand' && !selectedAdAccountId) {
+        if (subscriptionData.planType === 'brand' && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
             setShowAdAccountPopup(true)
         }
-    }, [subscriptionData.planType, selectedAdAccountId])
+    }, [subscriptionData.planType, selectedAdAccountIds])
 
     useEffect(() => {
         if (
