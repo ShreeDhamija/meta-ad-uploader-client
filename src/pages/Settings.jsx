@@ -202,7 +202,13 @@ export default function Settings() {
 
                             <div className="w-full">
                                 {/* {activeTab === "global" && <GlobalSettings />} */}
-                                {activeTab === "adaccount" && <AdAccountSettings preselectedAdAccount={preselectedAdAccount} />}
+                                {activeTab === "adaccount" && (
+                                    <AdAccountSettings
+                                        preselectedAdAccount={preselectedAdAccount}
+                                        onTriggerAdAccountPopup={() => setShowAdAccountPopup(true)}
+                                        subscriptionData={subscriptionData}
+                                    />
+                                )}
                                 {activeTab === "billing" && <BillingSettings />}
                                 {activeTab === "team" && <TeamSettings />}
 

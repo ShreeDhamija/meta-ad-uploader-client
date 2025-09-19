@@ -50,7 +50,7 @@ const DEFAULT_AD_NAME_FORMULA = {
   }
 };
 
-export default function AdAccountSettings({ preselectedAdAccount }) {
+export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAccountPopup, subscriptionData }) {
   const { adAccounts, pages } = useAppData()
   const [selectedAdAccount, setSelectedAdAccount] = useState(preselectedAdAccount || null)
   const [openAdAccount, setOpenAdAccount] = useState(false)
@@ -349,50 +349,62 @@ export default function AdAccountSettings({ preselectedAdAccount }) {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-md font-medium text-gray-800">Select Ad Account</label>
+          <div className="flex items-center gap-2">
 
-          {/* Inline Add Ad Accounts Button with Dialog */}
-          <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
-            <DialogTrigger asChild>
+            {subscriptionData.planType === 'brand' && (
               <Button
                 size="sm"
-                className="text-sm text-white bg-blue-500 hover:bg-blue-600 hover:text-white rounded-xl"
+                variant="outline"
+                onClick={onTriggerAdAccountPopup}
+                className="text-sm rounded-xl border-gray-300 hover:bg-gray-50"
               >
-                <CirclePlus className="w-4 h-4 mr-1" />
-                Link New Ad Accounts
+                Change Selection
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md !rounded-xl">
-              <div className="text-left space-y-4 p-6 !rounded-xl">
-                <div className="space-y-2">
-                  <img
-                    src="https://api.withblip.com/logo.webp"
-                    alt="Logo"
-                    className="w-12 h-12 rounded-md mb-4"
-                  />
-                  <h3 className="text-sm font-semibold">Link New Ad Accounts</h3>
-                </div>
+            )}
 
-                <div className="space-y-3 text-sm text-gray-600">
-                  <p>1. You will have to reauthenticate to add new ad accounts</p>
-                  <p>2. Click on "Edit previous settings" in the Login dialog to add new business portfolios</p>
-                </div>
-
+            {/* Inline Add Ad Accounts Button with Dialog */}
+            <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
+              <DialogTrigger asChild>
                 <Button
-                  onClick={handleFacebookReauth}
-                  className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
+                  size="sm"
+                  className="text-sm text-white bg-blue-500 hover:bg-blue-600 hover:text-white rounded-xl"
                 >
-                  <img
-                    src="https://api.withblip.com/facebooklogo.png"
-                    alt="Facebook"
-                    className="w-5 h-5"
-                  />
-                  Login with Facebook
+                  <CirclePlus className="w-4 h-4 mr-1" />
+                  Link New Ad Accounts
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md !rounded-xl">
+                <div className="text-left space-y-4 p-6 !rounded-xl">
+                  <div className="space-y-2">
+                    <img
+                      src="https://api.withblip.com/logo.webp"
+                      alt="Logo"
+                      className="w-12 h-12 rounded-md mb-4"
+                    />
+                    <h3 className="text-sm font-semibold">Link New Ad Accounts</h3>
+                  </div>
 
+                  <div className="space-y-3 text-sm text-gray-600">
+                    <p>1. You will have to reauthenticate to add new ad accounts</p>
+                    <p>2. Click on "Edit previous settings" in the Login dialog to add new business portfolios</p>
+                  </div>
+
+                  <Button
+                    onClick={handleFacebookReauth}
+                    className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
+                  >
+                    <img
+                      src="https://api.withblip.com/facebooklogo.png"
+                      alt="Facebook"
+                      className="w-5 h-5"
+                    />
+                    Login with Facebook
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
         <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
           <PopoverTrigger asChild>
             <Button
