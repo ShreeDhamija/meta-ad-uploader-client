@@ -318,7 +318,7 @@ export default function BillingSettings() {
                                         <div>
                                             <CardTitle className="flex items-center text-lg">
                                                 <img src={LightningIcon} alt="Team Seats" className="w-10 h-10" />
-                                                <p className="text-[26px] font-bold">For Brands</p>
+                                                <p className="text-[26px] font-bold">Light</p>
                                             </CardTitle>
                                             <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
                                         </div>
@@ -347,7 +347,7 @@ export default function BillingSettings() {
                                 <CardContent className="space-y-6 p-6 pb-8">
                                     <div className="flex items-center gap-3 text-sm">
                                         <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">1 Ad Account Limit</span>
+                                        <span className="text-[16px] text-gray-500">Up to 3 Ad Accounts</span>
                                     </div>
                                     <div className="flex items-center gap-3 text-sm">
                                         <CheckIcon2 className="w-6 h-6" />
