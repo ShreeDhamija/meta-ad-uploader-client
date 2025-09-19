@@ -7,7 +7,6 @@ import { LogOutIcon } from "lucide-react"
 import { Toaster } from "sonner"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
-// import GlobalSettings from "@/components/settings/global-settings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
@@ -225,6 +224,7 @@ export default function Settings() {
             <AdAccountSelectionPopup
                 isOpen={showAdAccountPopup}
                 onClose={() => setShowAdAccountPopup(false)}
+                selectedAdAccountIds={selectedAdAccountIds}
 
             />
         </div>

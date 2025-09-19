@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -18,10 +18,17 @@ import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
-export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
+export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selectedAdAccountIds }) {
     const { allAdAccounts } = useAppData()
     const [selectedAccountIds, setSelectedAccountIds] = useState([])
     const [isLoading, setIsLoading] = useState(false)
+
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedAccountIds(selectedAdAccountIds || [])
+        }
+    }, [isOpen, selectedAdAccountIds])
+
 
     const handleSave = async () => {
         if (selectedAccountIds.length === 0) {
