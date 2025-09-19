@@ -343,6 +343,20 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setInitialSettings(initial);
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
 
+
+  // Add this effect after the existing useEffect hooks
+
+  useEffect(() => {
+    // Only check if we have a selected account and the adAccounts array has been populated
+    if (selectedAdAccount && adAccounts.length > 0) {
+      const accountStillExists = adAccounts.some(acc => acc.id === selectedAdAccount);
+      if (!accountStillExists) {
+        setSelectedAdAccount(null);
+      }
+    }
+  }, [adAccounts]); // Only depend on adAccounts, not selectedAdAccount
+
+
   return (
     <div className="space-y-6 w-full max-w-3xl">
       {/* Ad Account Dropdown */}
@@ -356,9 +370,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                 size="sm"
                 variant="outline"
                 onClick={onTriggerAdAccountPopup}
-                className="text-sm rounded-xl border-gray-300 hover:bg-gray-50"
+                className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
               >
-                Change Selection
+                Change Selected Accounts
               </Button>
             )}
 
