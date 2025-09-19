@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
-    const { adAccounts } = useAppData()
+    const { allAdAccounts } = useAppData()
     const [selectedAccountIds, setSelectedAccountIds] = useState([])
     const [isLoading, setIsLoading] = useState(false)
 
@@ -64,10 +64,10 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
         <Dialog open={isOpen} onOpenChange={() => { }} > {/* Empty function prevents closing */}
             <DialogOverlay className="bg-black/80 backdrop-blur-sm" />
             <DialogContent
-                className="sm:max-w-[500px] !rounded-[30px] p-8 [&>button[data-dialog-close]]:hidden"
-                onEscapeKeyDown={(e) => e.preventDefault()} // Prevent ESC key
-                onPointerDownOutside={(e) => e.preventDefault()} // Prevent click outside
-                onInteractOutside={(e) => e.preventDefault()} // Additional protection
+                className="sm:max-w-[500px] !rounded-[30px] p-8"
+            // onEscapeKeyDown={(e) => e.preventDefault()} // Prevent ESC key
+            // onPointerDownOutside={(e) => e.preventDefault()} // Prevent click outside
+            // onInteractOutside={(e) => e.preventDefault()} // Additional protection
 
             >
                 <DialogHeader className="space-y-4">
@@ -78,11 +78,11 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave }) {
                 </DialogHeader>
 
                 <div className="py-4">
-                    {adAccounts.length === 0 ? (
+                    {allAdAccounts.length === 0 ? (
                         <p className="text-gray-500 text-center py-8">No ad accounts found</p>
                     ) : (
                         <div className="space-y-2 max-h-60 overflow-y-auto">
-                            {adAccounts.map((account) => (
+                            {allAdAccounts.map((account) => (
                                 <div key={account.id} className={cn(
                                     "flex items-center space-x-2 p-3 rounded-lg border hover:bg-gray-50",
                                     selectedAccountIds.length >= 3 && !selectedAccountIds.includes(account.id)
