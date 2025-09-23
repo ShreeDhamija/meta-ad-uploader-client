@@ -3337,7 +3337,9 @@ export default function AdCreationForm({
                 (files.length === 0 && driveFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
                 (isCarouselAd && (files.length + driveFiles.length) < 2) ||
-                (showShopDestinationSelector && !selectedShopDestination)
+                (showShopDestinationSelector && !selectedShopDestination) ||
+                (!showCustomLink && !link[0]) ||
+                (showCustomLink && !customLink.trim())
               }
             >
               Publish Ads
@@ -3355,6 +3357,14 @@ export default function AdCreationForm({
                 Carousel ads require at least 2 files. You have {files.length + driveFiles.length}.
               </div>
             )}
+
+            {/* Validation message for missing link */}
+            {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please provide a link URL
+              </div>
+            )}
+
           </div>
           <div
             className={cn(
