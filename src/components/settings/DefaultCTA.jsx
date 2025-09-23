@@ -21,7 +21,8 @@ const CTA_OPTIONS = [
     { label: "Contact Us", value: "CONTACT_US" },
     { label: "Book Now", value: "BOOK_NOW" },
     { label: "Subscribe", value: "SUBSCRIBE" },
-    { label: "See More", value: "SEE_MORE" }
+    { label: "See More", value: "SEE_MORE" },
+    { value: "INSTALL_APP", label: "Install Now" }
 ];
 
 function DefaultCTA({ defaultCTA, setDefaultCTA }) {
