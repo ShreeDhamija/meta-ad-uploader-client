@@ -782,7 +782,7 @@ export default function AdCreationForm({
     { value: "BOOK_NOW", label: "Book Now" },
     { value: "SEE_MORE", label: "See More" },
     { value: "APPLY_NOW", label: "Apply Now" },
-    { value: "INSTALL_APP", label: "Install Now" },
+    { value: "INSTALL_MOBILE_APP", label: "Install Now" },
   ]
 
   const availableLinks = adAccountSettings?.links || [];
