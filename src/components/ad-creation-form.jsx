@@ -1684,7 +1684,7 @@ export default function AdCreationForm({
 
     const totalLargeFiles = largeFiles.length + largeDriveFiles.length;
     if (totalLargeFiles > 0) {
-      setProgressMessage(`Uploading ${totalLargeFiles} videos...`);
+      setProgressMessage(`Uploading videos...`);
 
       // Set up concurrency limiter
       const limit = pLimit(3)
