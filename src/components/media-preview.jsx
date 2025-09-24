@@ -28,6 +28,15 @@ const getFileId = (file) => {
   return file.isDrive ? file.id : (file.uniqueId || file.name);
 };
 
+const isVideoFile = (file) => {
+  if (!file) return false;
+  const type = file.type || file.mimeType || "";
+  if (type.startsWith("video/") || type === "video/quicktime") return true;
+
+  const name = file.name || file.originalname || "";
+  return /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(name);
+};
+
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
   file, index, isCarouselAd, videoThumbs, onRemove, isSelected, onSelect, groupNumber, enablePlacementCustomization
@@ -97,7 +106,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       )}
 
       <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
-        {(file.type || file.mimeType || "").startsWith("video/") ? (
+        {isVideoFile(file) ? (
           file.isDrive ? (
             // Google Drive video - use Drive's thumbnail API
             <img
@@ -190,6 +199,7 @@ export default function MediaPreview({
   duplicateAdSet
 }) {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
+  const [isAIGrouping, setIsAIGrouping] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -199,16 +209,20 @@ export default function MediaPreview({
     [selectedFiles.size]
   );
 
+  // const canAIGroup = useMemo(() => {
+  //   const imageFiles = files.filter(file => {
+  //     const mimeType = file.type || file.mimeType || "";
+  //     return !mimeType.startsWith("video/");
+  //   });
+  //   return imageFiles.length >= 2;
+  // }, [files]);
+
   const canAIGroup = useMemo(() => {
-    const imageFiles = files.filter(file => {
-      const mimeType = file.type || file.mimeType || "";
-      return !mimeType.startsWith("video/");
-    });
+    const imageFiles = files.filter(file => !isVideoFile(file));
     return imageFiles.length >= 2;
   }, [files]);
 
 
-  const [isAIGrouping, setIsAIGrouping] = useState(false);
 
   // Add these before your component or import from a utils file
   const compressAndConvertToBase64 = async (file) => {
