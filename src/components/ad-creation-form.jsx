@@ -74,7 +74,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     const baseRetryDelay = 500;
     const maxRetryDelay = 5000;
     const maxConnectionRetries = 10; // For connection errors
-    const maxJobNotFoundRetries = 30; // More patient for job not found (15 seconds total)
+    const maxJobNotFoundRetries = 50; // More patient for job not found (15 seconds total)
     const connectionTimeout = 10000;
 
     // Complete cleanup function
