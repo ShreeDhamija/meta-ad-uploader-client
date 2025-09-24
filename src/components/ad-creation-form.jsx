@@ -283,6 +283,23 @@ const getFileId = (file) => {
   return file.isDrive ? file.id : (file.uniqueId || file.name);
 };
 
+const isVideoFile = (file) => {
+  if (!file) return false;
+  const type = file.type || file.mimeType || "";
+  if (type.startsWith("video/") || type === "video/quicktime") return true;
+
+  const name = file.name || file.originalname || "";
+  return /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(name);
+};
+
+const getExtensionFromMime = (mime = "") => {
+  if (mime === "video/quicktime") return ".mov";
+  if (mime.startsWith("video/")) return ".mp4";
+  if (mime.startsWith("image/")) return ".jpg";
+  return "";
+};
+
+
 export default function AdCreationForm({
   isLoading,
   setIsLoading,
@@ -1182,7 +1199,12 @@ export default function AdCreationForm({
 
 
   const getVideoAspectRatio = async (file) => {
-    if (file.mimeType && file.mimeType.startsWith('video/')) {
+
+    if (!isVideoFile(file)) {
+      return null; // Not a video file
+    }
+
+    if (file.mimeType) {
       // For Drive files - NEW, RELIABLE METHOD
       if (!file.accessToken) {
         console.warn(`No access token for Drive file ${file.name}, falling back.`);
@@ -1206,7 +1228,7 @@ export default function AdCreationForm({
         console.error(`Error fetching Drive video metadata for ${file.name}:`, error);
         return 16 / 9; // Default on network error
       }
-    } else if (file.type && file.type.startsWith('video/')) {
+    } else if (file.type) {
       // For local files (This part is unchanged and correct)
       return new Promise((resolve) => {
         const url = URL.createObjectURL(file);
@@ -1274,7 +1296,8 @@ export default function AdCreationForm({
 
 
   const getDriveVideoThumbnail = (driveFile) => {
-    if (!driveFile.mimeType.startsWith('video/')) return null;
+    // if (!driveFile.mimeType.startsWith('video/')) return null;
+    if (!isVideoFile(driveFile)) return null;
 
     // Google Drive provides thumbnails for videos via this URL
     return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
@@ -1283,12 +1306,13 @@ export default function AdCreationForm({
 
   useEffect(() => {
     const processThumbnails = async () => {
+      // const videoFiles = files.filter(file =>
+      //   (file.type || "").startsWith("video/") && !videoThumbs[getFileId(file)]
+      // );
       const videoFiles = files.filter(file =>
-        // file.type.startsWith("video/") && !videoThumbs[file.name]
-        (file.type || "").startsWith("video/") && !videoThumbs[getFileId(file)]
-
-
+        isVideoFile(file) && !videoThumbs[getFileId(file)]
       );
+
 
       if (videoFiles.length === 0) return;
 
@@ -1434,11 +1458,20 @@ export default function AdCreationForm({
     }
 
     let fileType = "file_type";
+    // if (file) {
+    //   const mimeType = file.type || file.mimeType || "";
+    //   if (mimeType.startsWith("image/")) fileType = "Static";
+    //   else if (mimeType.startsWith("video/")) fileType = "Video";
+    // }
+
     if (file) {
-      const mimeType = file.type || file.mimeType || "";
-      if (mimeType.startsWith("image/")) fileType = "Static";
-      else if (mimeType.startsWith("video/")) fileType = "Video";
+      if (isVideoFile(file)) {
+        fileType = "Video";
+      } else {
+        fileType = "Static";
+      }
     }
+
 
     // Replace variables in the formula
     let adName = adNameFormulaV2.rawInput
@@ -1567,9 +1600,12 @@ export default function AdCreationForm({
 
       try {
         const allFiles = [...files, ...driveFiles];
-        const videoFiles = allFiles.filter(file =>
-          file.type?.startsWith('video/') || file.mimeType?.startsWith('video/')
-        );
+        // const videoFiles = allFiles.filter(file =>
+        //   file.type?.startsWith('video/') || file.mimeType?.startsWith('video/')
+        // );
+
+        const videoFiles = allFiles.filter(isVideoFile);
+
 
         if (videoFiles.length > 0) {
           const BATCH_SIZE = 3;
@@ -1626,14 +1662,22 @@ export default function AdCreationForm({
 
     // setIsLoading(true);
     // ✅ Step: Upload large local video files to S3 before creating ads
-    const largeFiles = files.filter((file) =>
-      file.type.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
+    // const largeFiles = files.filter((file) =>
+    //   file.type.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
+    // );
+
+    // // Step: Upload large Drive videos to S3
+    // const largeDriveFiles = driveFiles.filter(file =>
+    //   file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
+    // );
+
+    const largeFiles = files.filter(file =>
+      isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
+    );
+    const largeDriveFiles = driveFiles.filter(file =>
+      isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
     );
 
-    // Step: Upload large Drive videos to S3
-    const largeDriveFiles = driveFiles.filter(file =>
-      file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
-    );
 
     let s3Results = [];
     const s3DriveResults = [];
@@ -1728,8 +1772,11 @@ export default function AdCreationForm({
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
 
+    // const smallDriveFiles = driveFiles.filter(file =>
+    //   !(file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD)
+    // );
     const smallDriveFiles = driveFiles.filter(file =>
-      !(file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD)
+      !(isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD)
     );
 
 
@@ -2036,7 +2083,7 @@ export default function AdCreationForm({
                   formData.append("mediaFiles", file);
                   console.log(`  📤 Appended local file to formData: ${file.name}`);
 
-                  if (file.type.startsWith("video/")) {
+                  if (isVideoFile(file)) {
                     groupVideoMetadata.push({
                       fileName: file.name,
                       uniqueId: getFileId(file),  // ← Add this
@@ -2064,7 +2111,7 @@ export default function AdCreationForm({
                     mimeType: driveFile.mimeType,
                     accessToken: driveFile.accessToken
                   }));
-                  if (driveFile.mimeType.startsWith("video/")) {
+                  if (isVideoFile(driveFile)) {
                     // After the group.forEach loops that build groupVideoMetadata
                     console.log("Creating groupMetaData");
 
@@ -2093,7 +2140,7 @@ export default function AdCreationForm({
                   formData.append("s3VideoUrls", s3File.s3Url);
                   formData.append("s3VideoNames", s3File.name); // <<< ADD THIS LINE
                   console.log("s3VideoNames", s3File.name);
-                  if (s3File.mimeType?.startsWith("video/") || s3File.type?.startsWith("video/")) {
+                  if (isVideoFile(s3File)) {
                     groupVideoMetadata.push({
                       s3Url: s3File.s3Url,
                       aspectRatio: s3File.aspectRatio || 16 / 9
