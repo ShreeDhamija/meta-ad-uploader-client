@@ -748,7 +748,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               placeholder={`Enter Primary Text ${i + 1}`}
               value={text}
               onChange={(e) => handleChange(i, setPrimaryTexts, primaryTexts, e.target.value)}
-              className="rounded-xl bg-white"
+              className="rounded-xl bg-white px-3 py-2 w-full text-sm resize-none focus:outline-none"
               minRows={2}
               maxRows={10}
               disabled={isProcessing}
