@@ -168,8 +168,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const justSavedRef = useRef(false)
   const { templates, defaultName, selectedName, editingTemplate } = state
   const [templateName, setTemplateName] = useState("")
-  const [primaryTexts, setPrimaryTexts] = useState([""])
-  const [headlines, setHeadlines] = useState([""])
+  const [primaryTexts, setPrimaryTexts] = useState(["", "", "", "", ""])
+  const [headlines, setHeadlines] = useState(["", "", "", "", ""])
   const [isProcessing, setIsProcessing] = useState(false)
   const isEditingDefault = useMemo(() =>
     defaultName === editingTemplate, [defaultName, editingTemplate]
@@ -352,8 +352,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
     if (!firstTemplate) {
       setTemplateName("");
-      setPrimaryTexts([""]);
-      setHeadlines([""]);
+      setPrimaryTexts(["", "", "", "", ""]);  // Changed from [""]
+      setHeadlines(["", "", "", "", ""]);      // Changed from [""]
     }
   }, [selectedAdAccount, adSettings])
 
@@ -371,8 +371,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       setHeadlines(t.headlines || [""])
     } else if (editingTemplate === null) {
       setTemplateName("")
-      setPrimaryTexts([""])
-      setHeadlines([""])
+      setPrimaryTexts(["", "", "", "", ""])  // Changed from [""]
+      setHeadlines(["", "", "", "", ""])      // Changed from [""]
     }
   }, [selectedName, templates, editingTemplate])
 
@@ -452,8 +452,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const handleNewTemplate = useCallback(() => {
     dispatch({ type: "NEW_TEMPLATE" })
     setTemplateName("")
-    setPrimaryTexts([""])
-    setHeadlines([""])
+    setPrimaryTexts(["", "", "", "", ""])  // Changed from [""]
+    setHeadlines(["", "", "", "", ""])      // Changed from [""]
   }, [])
 
 
@@ -463,11 +463,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       return
     }
 
+    const filteredPrimaryTexts = primaryTexts.filter(text => text.trim() !== "");
+    const filteredHeadlines = headlines.filter(text => text.trim() !== "");
+
     const newTemplate = {
       name: templateName,
-      primaryTexts,
-      headlines,
+      primaryTexts: filteredPrimaryTexts,  // Changed from primaryTexts
+      headlines: filteredHeadlines,        // Changed from headlines
     }
+
 
     setIsProcessing(true)
     try {
@@ -535,11 +539,16 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const handleSetAsDefault = async () => {
     if (!templateName.trim() || defaultName === templateName) return
 
+    const filteredPrimaryTexts = primaryTexts.filter(text => text.trim() !== "");
+    const filteredHeadlines = headlines.filter(text => text.trim() !== "");
+
+
     const updatedTemplate = {
       name: templateName,
-      primaryTexts,
-      headlines,
+      primaryTexts: filteredPrimaryTexts,  // Changed from primaryTexts
+      headlines: filteredHeadlines,        // Changed from headlines
     }
+
 
     setIsProcessing(true)
     try {
@@ -739,7 +748,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               placeholder={`Enter Primary Text ${i + 1}`}
               value={text}
               onChange={(e) => handleChange(i, setPrimaryTexts, primaryTexts, e.target.value)}
-              className="rounded-xl bg-white px-3 py-2 w-full text-sm resize-none focus:outline-none"
+              className="rounded-xl bg-white"
               minRows={2}
               maxRows={10}
               disabled={isProcessing}
