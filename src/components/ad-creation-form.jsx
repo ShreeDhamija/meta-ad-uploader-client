@@ -116,6 +116,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
       console.log(`⏳ ${reason} - Retrying connection in ${delay}ms... (attempt ${retryCount})`);
 
+
       retryTimeoutId = setTimeout(() => {
         if (isSubscribed) connectSSE();
       }, delay);
@@ -2184,6 +2185,7 @@ export default function AdCreationForm({
           if (hasUngroupedFiles) {
             // Regular processing - one ad per file
             console.log("making regular ad");
+
             // Handle local files
             files.forEach((file, index) => {
               if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(getFileId(file))) return;//skip files
@@ -2498,7 +2500,7 @@ export default function AdCreationForm({
                         {/* Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || ' a New Ad Set'} */}
                         Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {(() => {
                           if (currentJob.formData.duplicateAdSet) {
-                            return currentJob.formData.newAdSetName || 'New Adset';
+                            return currentJob.formData.newAdSetName || 'New Ad Set';
                           } else {
                             const selectedAdSetIds = currentJob.formData.selectedAdSets;
                             if (selectedAdSetIds.length === 1) {
