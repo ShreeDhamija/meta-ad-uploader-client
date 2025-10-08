@@ -2190,7 +2190,7 @@ export default function AdCreationForm({
             files.forEach((file, index) => {
               if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(getFileId(file))) return;//skip files
               const formData = new FormData();
-              formData.append("adName", computeAdNameFromFormula(file, globalIterationIndex, JSON.stringify(link)));
+              formData.append("adName", computeAdNameFromFormula(file, globalIterationIndex, link[0]));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
