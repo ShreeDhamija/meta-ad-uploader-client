@@ -503,17 +503,6 @@ export default function AdCreationForm({
 
 
   const uploadToS3 = async (file, onChunkUploaded, uniqueId) => {
-    // console.log('🚀 === S3 UPLOAD START ===');
-    // console.log('📋 Input parameters:', {
-    //   fileName: file?.name,
-    //   fileSize: file?.size,
-    //   fileType: file?.type,
-    //   uniqueId: uniqueId,
-    //   hasFile: !!file,
-    //   hasOnChunkUploaded: typeof onChunkUploaded === 'function',
-    //   fileKeys: file ? Object.keys(file) : 'NO FILE'
-    // });
-
     // Validate inputs
     if (!file) {
       console.error('❌ FATAL: No file provided to uploadToS3');
@@ -782,7 +771,6 @@ export default function AdCreationForm({
       isS3Upload: true
     };
   }
-
 
 
 
@@ -1438,11 +1426,13 @@ export default function AdCreationForm({
 
 
 
-  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0) => {
+  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "") => {
     if (!adNameFormulaV2?.rawInput) {
       // Fallback to old computation if no V2 formula
       return computeAdName(file, adValues.dateType, iterationIndex);
     }
+
+    console.log("link in ad name formula passed", link);
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1459,11 +1449,6 @@ export default function AdCreationForm({
     }
 
     let fileType = "file_type";
-    // if (file) {
-    //   const mimeType = file.type || file.mimeType || "";
-    //   if (mimeType.startsWith("image/")) fileType = "Static";
-    //   else if (mimeType.startsWith("video/")) fileType = "Video";
-    // }
 
     if (file) {
       if (isVideoFile(file)) {
@@ -1474,13 +1459,32 @@ export default function AdCreationForm({
     }
 
 
+    // Extract URL slug
+    let urlSlug = "";
+    if (link) {
+      try {
+        // Remove protocol and get the path
+        const urlWithoutProtocol = link.replace(/^https?:\/\//, "");
+        const lastSlashIndex = urlWithoutProtocol.lastIndexOf("/");
+
+        // If there's a slash and something after it
+        if (lastSlashIndex > 0 && lastSlashIndex < urlWithoutProtocol.length - 1) {
+          urlSlug = urlWithoutProtocol.substring(lastSlashIndex + 1);
+        }
+      } catch (e) {
+        // If URL parsing fails, keep urlSlug as empty string
+        urlSlug = "";
+      }
+    }
+
     // Replace variables in the formula
     let adName = adNameFormulaV2.rawInput
       .replace(/\{\{File Name\}\}/g, fileName)
       .replace(/\{\{File Type\}\}/g, fileType)
       .replace(/\{\{Date \(MonthYYYY\)\}\}/g, monthYear)
       .replace(/\{\{Date \(MonthDDYYYY\)\}\}/g, monthDayYear)
-      .replace(/\{\{Iteration\}\}/g, String(iterationIndex + 1).padStart(2, "0"));
+      .replace(/\{\{Iteration\}\}/g, String(iterationIndex + 1).padStart(2, "0"))
+      .replace(/\{\{URL Slug\}\}/g, urlSlug);
 
     return adName || "Ad Generated Through Blip";
   }, [adNameFormulaV2]);
@@ -1849,9 +1853,7 @@ export default function AdCreationForm({
         console.log("making carousel ad");
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
-          // console.log("🎠 Creating carousel for adSetId:", adSetId);
           const formData = new FormData();
-          // formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
           formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0]));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
@@ -2051,9 +2053,7 @@ export default function AdCreationForm({
 
 
               const formData = new FormData();
-              // formData.append("adName", computeAdName(firstFileForNaming || files[0] || driveFiles[0], adValues.dateType, globalIterationIndex));
               formData.append("adName", computeAdNameFromFormula(firstFileForNaming || files[0] || driveFiles[0], globalIterationIndex));
-              // console.log("video name sent", computeAdNameFromFormula(firstFileForNaming || files[0] || driveFiles[0], globalIterationIndex));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -2184,14 +2184,13 @@ export default function AdCreationForm({
 
           if (hasUngroupedFiles) {
             // Regular processing - one ad per file
-            console.log("making regular ad");
+
 
             // Handle local files
             files.forEach((file, index) => {
               if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(getFileId(file))) return;//skip files
               const formData = new FormData();
-              // formData.append("adName", computeAdName(file, adValues.dateType, globalIterationIndex));
-              formData.append("adName", computeAdNameFromFormula(file, globalIterationIndex));
+              formData.append("adName", computeAdNameFromFormula(file, globalIterationIndex, JSON.stringify(link)));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));

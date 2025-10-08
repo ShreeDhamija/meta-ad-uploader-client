@@ -16,6 +16,7 @@ const AVAILABLE_VARIABLES = [
   { id: 'dateMonthYYYY', label: 'Date (MonthYYYY)' },
   { id: 'dateMonthDDYYYY', label: 'Date (MonthDDYYYY)' },
   { id: 'iteration', label: 'Iteration', note: '(1/2/3..)' },
+  { id: 'slug', label: 'URL Slug', note: '(Text after last / )' },
 ]
 
 export default function ReorderAdNameParts({
