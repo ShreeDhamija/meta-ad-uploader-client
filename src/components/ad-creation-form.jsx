@@ -1854,7 +1854,7 @@ export default function AdCreationForm({
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0]));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], link[0]));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -1961,7 +1961,7 @@ export default function AdCreationForm({
         dynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
           // formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0]));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], link[0]));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -2053,7 +2053,7 @@ export default function AdCreationForm({
 
 
               const formData = new FormData();
-              formData.append("adName", computeAdNameFromFormula(firstFileForNaming || files[0] || driveFiles[0], globalIterationIndex));
+              formData.append("adName", computeAdNameFromFormula(firstFileForNaming || files[0] || driveFiles[0], globalIterationIndex, link[0]));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -2227,7 +2227,7 @@ export default function AdCreationForm({
 
               const formData = new FormData();
               // formData.append("adName", computeAdName(driveFile, adValues.dateType, globalIterationIndex));
-              formData.append("adName", computeAdNameFromFormula(driveFile, globalIterationIndex));
+              formData.append("adName", computeAdNameFromFormula(driveFile, globalIterationIndex, link[0]));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -2267,7 +2267,7 @@ export default function AdCreationForm({
               console.log("s3VideoName", s3File.name);
               const formData = new FormData();
               // formData.append("adName", computeAdName(s3File, adValues.dateType, globalIterationIndex));
-              formData.append("adName", computeAdNameFromFormula(s3File, globalIterationIndex));
+              formData.append("adName", computeAdNameFromFormula(s3File, globalIterationIndex, link[0]));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
