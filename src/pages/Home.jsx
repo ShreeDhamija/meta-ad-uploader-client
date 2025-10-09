@@ -170,7 +170,7 @@ export default function Home() {
 
 
     useEffect(() => {
-        // if (!isLoggedIn || loading) return
+        if (!isLoggedIn || loading) return
         if (!hasSeenOnboarding) {
             setShowOnboardingPopup(true)
         }
