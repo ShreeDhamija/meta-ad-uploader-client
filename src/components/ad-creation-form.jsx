@@ -2264,7 +2264,7 @@ export default function AdCreationForm({
               if (groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id)) { // <-- Use the correct IDs
                 return; // Skip grouped files
               }
-              console.log("s3VideoName", s3File.name);
+              
               const formData = new FormData();
               // formData.append("adName", computeAdName(s3File, adValues.dateType, globalIterationIndex));
               formData.append("adName", computeAdNameFromFormula(s3File, globalIterationIndex, link[0]));
