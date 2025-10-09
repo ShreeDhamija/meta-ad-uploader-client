@@ -2832,7 +2832,7 @@ export default function AdCreationForm({
                 <Label className="text-xs text-gray-500">
                   Ad Name Preview: {
                     (files.length > 0 || driveFiles.length > 0)
-                      ? computeAdNameFromFormula(files[0] || driveFiles[0])
+                      ? computeAdNameFromFormula(files[0] || driveFiles[0], link[0])
                       : "Upload a file to see example"
                   }
                 </Label>
