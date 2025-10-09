@@ -1854,7 +1854,7 @@ export default function AdCreationForm({
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], link[0]));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0,link[0]));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -1961,7 +1961,7 @@ export default function AdCreationForm({
         dynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
           // formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], link[0]));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0],0,link[0]));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
