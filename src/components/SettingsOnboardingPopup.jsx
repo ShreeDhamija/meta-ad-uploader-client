@@ -14,11 +14,11 @@ export default function SettingsOnboardingPopup({ onClose }) {
                             alt="Settings Icon"
                             className="w-14 mb-4"
                         />
-                        <h2 className="text-[24px] font-semibold text-[#415363] mb-6">Settings Page</h2>
+                        <h2 className="text-[24px] font-semibold text-[#415363] mb-6">Settings</h2>
 
                         <div className="mb-6">
-                            <div className="bg-[#FFA500] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
-                                Configure Presets
+                            <div className="text-[#ED9C07] text-sm font-semibold rounded-full inline-block py-1">
+                                1. Configure Presets
                             </div>
                             <p className="text-gray-700 text-sm">
                                 Save all your creative enhancements, UTMs and default pages once then forget about it.
@@ -26,8 +26,8 @@ export default function SettingsOnboardingPopup({ onClose }) {
                         </div>
 
                         <div className="mb-8">
-                            <div className="bg-[#FFA500] text-white text-sm font-semibold rounded-full inline-block px-9 py-1 mb-2">
-                                Import Copy
+                            <div className="text-[#ED9C07] text-sm font-semibold rounded-full inline-block py-1">
+                                2. Import Copy
                             </div>
                             <p className="text-gray-700 text-sm">
                                 No need to copy paste text everytime. Import your most used best converting copy and save them as templates.

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import HomePopup from '@/assets/HomePopup.webp';
+import Home from '@/assets/Home.webp';
 import Rocket from '@/assets/rocket.webp';
 
 export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding }) {
@@ -16,9 +17,25 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             <h2 className="text-2xl font-semibold text-[#415363] mb-1">
                                 Welcome to Blip, {userName}!
                             </h2>
-                            <p className="text-gray-500 mb-2 text-sm">Let’s save your ad account’s preferred settings</p>
-                            <p className="text-gray-400 text-sm mb-10">It will take 1 minute and save you hours. We promise.</p>
-                            <div className="flex justify-center">
+                            <p className="text-gray-500 mb-2 text-sm">We highly suggest configuring preferences before launching ads</p>
+                            <p className="text-gray-400 text-sm mb-10">It will take a minute and save you hours. We promise.</p>
+                            <div className="flex justify-center gap-6">
+
+
+                                <button
+                                    onClick={() => setStep("home")}
+                                    className="group flex flex-col items-center space-y-3 focus:outline-none"
+                                >
+                                    <img
+                                        src={Home}
+                                        alt="Home Icon"
+                                        className="w-[100px] h-[100px] object-contain transition-transform duration-200 group-hover:scale-105 mb-3"
+                                    />
+                                    <div className="bg-gradient-to-b from-[#FFC979] to-[#FFA500] text-white text-sm font-medium rounded-full px-4 py-2.5 w-[180px] flex items-center justify-center">
+                                        Go to Home
+                                    </div>
+                                </button>
+
                                 <button
                                     onClick={() => {
                                         console.log("Settings button clicked")
@@ -31,13 +48,17 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                     <img
                                         src={Rocket}
                                         alt="Settings Icon"
-                                        className="w-[120px] h-[120px] object-contain transition-transform duration-200 group-hover:scale-105 mb-4 animate-bounce"
-                                        style={{ animationDuration: '2s' }}
+                                        className="w-[100px] h-[100px] object-contain transition-transform duration-200 group-hover:scale-105 mb-3"
                                     />
-                                    <div className="bg-gradient-to-b from-[#FF609F] to-[#F72585] text-white text-md font-medium rounded-full px-5 py-3.5 w-[220px] flex items-center justify-center">
+                                    <div className="bg-gradient-to-b from-[#FF609F] to-[#F72585] text-white text-sm font-medium rounded-full px-4 py-2.5 w-[200px] flex items-center justify-center">
                                         Configure Preferences
                                     </div>
+                                    <div className="text-[#FF609F] text-xs font-medium flex items-center justify-center">
+                                        (Recommended)
+                                    </div>
                                 </button>
+
+
                             </div>
                         </div>
                     )}
@@ -57,7 +78,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                     <h2 className="text-[24px] font-semibold text-[#415363] mb-6">Home Page</h2>
 
                                     <div className="mb-6">
-                                        <div className="bg-[#FFA500] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
+                                        <div className="text-[#ED9C07] text-sm font-semibold rounded-full inline-block py-1">
                                             Step 1
                                         </div>
                                         <p className="text-gray-700 text-sm">
@@ -66,7 +87,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                     </div>
 
                                     <div className="mb-8">
-                                        <div className="bg-[#FBB03B] text-white text-sm font-semibold rounded-full inline-block px-4 py-1 mb-2">
+                                        <div className="text-[#ED9C07] text-sm font-semibold rounded-full inline-block py-1">
                                             Step 2
                                         </div>
                                         <p className="text-gray-700 text-sm">

@@ -256,7 +256,7 @@ export default function BillingSettings() {
                                         <div>
                                             <CardTitle className="flex items-center text-lg">
                                                 <img src={RocketIcon} alt="Pro" className="w-10 h-10" />
-                                                <p className="text-[26px] font-bold">For Agencies</p>
+                                                <p className="text-[26px] font-bold">Pro</p>
                                             </CardTitle>
                                             <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
                                         </div>
