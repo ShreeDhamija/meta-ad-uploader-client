@@ -21,9 +21,11 @@ import useSubscription from "@/lib/useSubscriptionSettings"
 import CardIcon from '@/assets/icons/card.svg?react';
 import CheckIcon from '@/assets/icons/check.svg?react';
 import CheckIcon2 from '@/assets/icons/check2.svg?react';
+import CheckIcon3 from '@/assets/icons/check3.svg?react';
 import MailIcon from '@/assets/icons/mail.svg?react';
 import RocketIcon from '@/assets/icons/rocket2.webp';
 import LightningIcon from '@/assets/icons/zap.webp';
+import StarIcon from '@/assets/icons/star.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
@@ -281,21 +283,21 @@ export default function BillingSettings() {
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-6 p-6 pb-8">
-                                    <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">Unlimited Ad Accounts</span>
+                                        <span className="text-[14px] text-gray-500">Unlimited Ad Accounts</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">Unlimited Ad Posting</span>
+                                        <span className="text-[14px] text-gray-500">Unlimited Ad Posting</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">Instant Settings Sync</span>
+                                        <span className="text-[14px] text-gray-500">Instant Settings Sync</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">Unlimited Team Seats</span>
+                                        <span className="text-[14px] text-gray-500">Unlimited Team Seats</span>
                                     </div>
                                     <Button
                                         onClick={() => handleUpgrade('agency')}
@@ -345,21 +347,21 @@ export default function BillingSettings() {
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-6 p-6 pb-8">
-                                    <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">Up to 3 Ad Accounts</span>
+                                        <span className="text-[14px] text-gray-500">Up to 3 Ad Accounts</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">Unlimited Ad Posting</span>
+                                        <span className="text-[14px] text-gray-500">Unlimited Ad Posting</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">Instant Settings Sync</span>
+                                        <span className="text-[14px] text-gray-500">Instant Settings Sync</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
+                                    <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[16px] text-gray-500">Unlimited Team Seats</span>
+                                        <span className="text-[14px] text-gray-500">Unlimited Team Seats</span>
                                     </div>
                                     <Button
                                         onClick={() => handleUpgrade('brand')}
@@ -378,7 +380,7 @@ export default function BillingSettings() {
                                     <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-6 shadow-[0_2px_10px_0px_rgba(147,51,234,0.15)] border border-2 border-purple-100">
                                     <div>
                                         <CardTitle className="flex items-center text-lg">
-                                        <span className="text-2xl mr-2">⭐</span>
+                                        <img src={StarIcon} className="w-10 h-10" />
                                         <p className="text-[26px] font-bold">Starter</p>
                                         </CardTitle>
                                         <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
@@ -401,21 +403,21 @@ export default function BillingSettings() {
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-6 p-6 pb-8">
-                                    <div className="flex items-center gap-3 text-sm">
-                                    <CheckIcon2 className="w-6 h-6" />
-                                    <span className="text-[16px] text-gray-500">1 Ad Account</span>
+                                    <div className="flex items-top gap-3 text-sm">
+                                    <CheckIcon3 className="w-6 h-6" />
+                                    <span className="text-[14px] text-gray-500">1 Ad Account Limit</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
-                                    <CheckIcon2 className="w-6 h-6" />
-                                    <span className="text-[16px] text-gray-500">Unlimited Ad Posting</span>
+                                    <div className="flex items-top gap-3 text-sm">
+                                    <CheckIcon3 className="w-6 h-6" />
+                                    <span className="text-[14px] text-gray-500">Unlimited Ad Posting</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
-                                    <CheckIcon2 className="w-6 h-6" />
-                                    <span className="text-[16px] text-gray-500">Instant Settings Sync</span>
+                                    <div className="flex items-top gap-3 text-sm">
+                                    <CheckIcon3 className="w-6 h-6" />
+                                    <span className="text-[14px] text-gray-500">Instant Settings Sync</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-sm">
-                                    <CheckIcon2 className="w-6 h-6" />
-                                    <span className="text-[16px] text-gray-500">Up to 3 Team Seats</span>
+                                    <div className="flex items-top gap-3 text-sm">
+                                    <CheckIcon3 className="w-6 h-6" />
+                                    <span className="text-[14px] text-gray-500">Up to 3 Team Seats</span>
                                     </div>
                                     <Button
                                     onClick={() => handleUpgrade('starter')}
