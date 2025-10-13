@@ -179,7 +179,7 @@ export default function Home() {
     useEffect(() => {
         if (loading || subscriptionLoading) return;
 
-        if (subscriptionData.planType === 'brand' && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
+        if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
             setShowAdAccountPopup(true)
         }
     }, [subscriptionData.planType, selectedAdAccountIds])
