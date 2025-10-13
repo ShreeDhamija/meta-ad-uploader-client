@@ -365,7 +365,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           <label className="text-md font-medium text-gray-800">Select Ad Account</label>
           <div className="flex items-center gap-2">
 
-            {subscriptionData.planType === 'brand' && (
+            {(subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter'  ) && (
               <Button
                 size="sm"
                 variant="outline"
