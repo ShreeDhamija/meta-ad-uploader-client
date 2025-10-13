@@ -180,7 +180,7 @@ export default function BillingSettings() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {isPaidSubscriber() && (
-                                <div className="space-y-2">
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                     {subscriptionData.willCancelAt ? (
                                         <>
                                             <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
@@ -372,6 +372,62 @@ export default function BillingSettings() {
 
                                 </CardContent>
                             </Card>
+
+                            {/* Starter Plan - NEW */}
+<Card className="flex-1 rounded-[20px]">
+  <CardHeader className="p-1">
+    <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-6 shadow-[0_2px_10px_0px_rgba(147,51,234,0.15)] border border-2 border-purple-100">
+      <div>
+        <CardTitle className="flex items-center text-lg">
+          <span className="text-2xl mr-2">⭐</span>
+          <p className="text-[26px] font-bold">Starter</p>
+        </CardTitle>
+        <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
+      </div>
+      <>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&display=swap"
+        />
+        <div>
+          <div
+            className="text-4xl font-bold text-gray-900"
+            style={{ fontFamily: "'DM Mono', monospace" }}
+          >
+            $99
+          </div>
+          <div className="text-sm text-gray-400">/month</div>
+        </div>
+      </>
+    </div>
+  </CardHeader>
+  <CardContent className="space-y-6 p-6 pb-8">
+    <div className="flex items-center gap-3 text-sm">
+      <CheckIcon2 className="w-6 h-6" />
+      <span className="text-[16px] text-gray-500">1 Ad Account</span>
+    </div>
+    <div className="flex items-center gap-3 text-sm">
+      <CheckIcon2 className="w-6 h-6" />
+      <span className="text-[16px] text-gray-500">Unlimited Ad Posting</span>
+    </div>
+    <div className="flex items-center gap-3 text-sm">
+      <CheckIcon2 className="w-6 h-6" />
+      <span className="text-[16px] text-gray-500">Instant Settings Sync</span>
+    </div>
+    <div className="flex items-center gap-3 text-sm">
+      <CheckIcon2 className="w-6 h-6" />
+      <span className="text-[16px] text-gray-500">Up to 3 Team Seats</span>
+    </div>
+    <Button
+      onClick={() => handleUpgrade('starter')}
+      disabled={isLoading}
+      className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
+      size="lg"
+    >
+      Upgrade
+    </Button>
+  </CardContent>
+</Card>
 
                         </div>
 
