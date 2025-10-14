@@ -433,7 +433,7 @@ export default function AdCreationForm({
     applyTextToAllCards
   });
 
-  
+
     let adCount = 0;
 
     const isDynamicAdSet = () => {
@@ -1505,6 +1505,24 @@ export default function AdCreationForm({
     setAdName(adName);
   }, [adNameFormulaV2, computeAdNameFromFormula]);
 
+
+useEffect(() => {
+  if (isCarouselAd) {
+    const fileCount = files.length + driveFiles.length;
+    
+    // Sync messages when apply-to-all is checked
+    if (applyTextToAllCards && fileCount > 0 && messages.length !== fileCount) {
+      const firstMessage = messages[0] || "";
+      setMessages(new Array(fileCount).fill(firstMessage));
+    }
+    
+    // Sync headlines when apply-to-all is checked
+    if (applyHeadlinesToAllCards && fileCount > 0 && headlines.length !== fileCount) {
+      const firstHeadline = headlines[0] || "";
+      setHeadlines(new Array(fileCount).fill(firstHeadline));
+    }
+  }
+}, [files.length, driveFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
 
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
@@ -2931,22 +2949,22 @@ export default function AdCreationForm({
                     </span>
                     {isCarouselAd && (
                       <div className="flex items-center space-x-1 ">
-                        <Checkbox
-                          id="apply-text-all"
-                          checked={applyTextToAllCards}
-                          onCheckedChange={(checked) => {
-                            setApplyTextToAllCards(checked);
-                            if (checked && messages.length > 0) {
-                              const firstMessage = messages[0];
-                              setMessages(new Array(messages.length).fill(firstMessage));
-                            } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
-                              // Restore from template instead of duplicating first field
-                              const tpl = copyTemplates[selectedTemplate];
-                              setMessages(tpl.primaryTexts || [""]);
-                            }
-                          }}
-                          className="border-gray-300 w-4 h-4 rounded-md"
-                        />
+                      <Checkbox
+                        id="apply-text-all"
+                        checked={applyTextToAllCards}
+                        onCheckedChange={(checked) => {
+                          setApplyTextToAllCards(checked);
+                          if (checked && messages.length > 0) {
+                            const firstMessage = messages[0];
+                            const fileCount = files.length + driveFiles.length; // ← Use file count!
+                            setMessages(new Array(fileCount).fill(firstMessage));
+                          } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
+                            const tpl = copyTemplates[selectedTemplate];
+                            setMessages(tpl.primaryTexts || [""]);
+                          }
+                        }}
+                        className="border-gray-300 w-4 h-4 rounded-md"
+                      />
                         <label htmlFor="apply-text-all" className="text-xs font-medium">
                           Apply To All Cards
                         </label>
@@ -3022,11 +3040,9 @@ export default function AdCreationForm({
                           setApplyHeadlinesToAllCards(checked);
                           if (checked && headlines.length > 0) {
                             const firstHeadline = headlines[0];
-                              const newHeadlines = new Array(headlines.length).fill(firstHeadline);
-                              console.log('🟢 Setting headlines to:', newHeadlines);
-                              setHeadlines(newHeadlines);
+                            const fileCount = files.length + driveFiles.length; // ← Use file count!
+                            setHeadlines(new Array(fileCount).fill(firstHeadline));
                           } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
-                            // Restore from template instead of duplicating first field
                             const tpl = copyTemplates[selectedTemplate];
                             setHeadlines(tpl.headlines || [""]);
                           }
