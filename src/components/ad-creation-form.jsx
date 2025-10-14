@@ -2633,7 +2633,14 @@ useEffect(() => {
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleQueueJob} className="space-y-6">
+        <form onSubmit={handleQueueJob} 
+        onKeyDown={(e) => {
+          // Prevent Enter from submitting unless it's in a textarea (for line breaks)
+          if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+          }
+        }}
+          className="space-y-6">
           <div className="space-y-10">
             <div className="space-y-4">
               <div className="space-y-2">
@@ -2956,8 +2963,11 @@ useEffect(() => {
                           setApplyTextToAllCards(checked);
                           if (checked && messages.length > 0) {
                             const firstMessage = messages[0];
-                            const fileCount = files.length + driveFiles.length; // ← Use file count!
-                            setMessages(new Array(fileCount).fill(firstMessage));
+                            const fileCount = files.length + driveFiles.length; 
+                            if (fileCount > 0){
+                              setMessages(new Array(fileCount).fill(firstMessage));
+                            }
+                            
                           } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
                             const tpl = copyTemplates[selectedTemplate];
                             setMessages(tpl.primaryTexts || [""]);
@@ -3041,7 +3051,10 @@ useEffect(() => {
                           if (checked && headlines.length > 0) {
                             const firstHeadline = headlines[0];
                             const fileCount = files.length + driveFiles.length; // ← Use file count!
-                            setHeadlines(new Array(fileCount).fill(firstHeadline));
+                            if ( fileCount > 0)
+                            {
+                              setHeadlines(new Array(fileCount).fill(firstHeadline));
+                            }
                           } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
                             const tpl = copyTemplates[selectedTemplate];
                             setHeadlines(tpl.headlines || [""]);
