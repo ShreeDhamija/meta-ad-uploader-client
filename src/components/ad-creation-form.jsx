@@ -424,6 +424,16 @@ export default function AdCreationForm({
 
   const captureFormDataAsJob = () => {
 
+
+    console.log('📸 Capturing form data as job:', {
+    headlines,
+    messages,
+    filesCount: files.length + driveFiles.length,
+    applyHeadlinesToAllCards,
+    applyTextToAllCards
+  });
+
+  
     let adCount = 0;
 
     const isDynamicAdSet = () => {
@@ -1525,9 +1535,13 @@ export default function AdCreationForm({
 
 
   const handleCreateAd = async (jobData) => {
-    // e.preventDefault();
-    console.log("setting last job failed to false");
-    // setLastJobFailed(false);
+    
+    console.log('🚀 handleCreateAd called with jobData:', {
+    headlines: jobData.formData.headlines,
+    messages: jobData.formData.messages,
+    filesCount: jobData.formData.files.length + jobData.formData.driveFiles.length,
+    isCarouselAd: jobData.formData.isCarouselAd
+  });
 
     const {
       // Form content
@@ -1850,7 +1864,15 @@ export default function AdCreationForm({
           toast.error("Please select at least one ad set for carousel");
           return;
         }
-        console.log("making carousel ad");
+
+     
+        console.log("🎠 Creating carousel ad with:", {
+    headlines,
+    messages,
+    filesCount: files.length + driveFiles.length,
+    applyHeadlinesToAllCards,
+    applyTextToAllCards
+  });
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
@@ -3000,7 +3022,9 @@ export default function AdCreationForm({
                           setApplyHeadlinesToAllCards(checked);
                           if (checked && headlines.length > 0) {
                             const firstHeadline = headlines[0];
-                            setHeadlines(new Array(headlines.length).fill(firstHeadline));
+                              const newHeadlines = new Array(headlines.length).fill(firstHeadline);
+                              console.log('🟢 Setting headlines to:', newHeadlines);
+                              setHeadlines(newHeadlines);
                           } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
                             // Restore from template instead of duplicating first field
                             const tpl = copyTemplates[selectedTemplate];
@@ -3022,8 +3046,9 @@ export default function AdCreationForm({
                         value={value}
                         onChange={(e) => {
                           if (isCarouselAd && applyHeadlinesToAllCards) {
-                            // Update all positions with the same value
-                            setHeadlines(new Array(headlines.length).fill(e.target.value));
+                            const newHeadlines = new Array(headlines.length).fill(e.target.value);
+                            console.log('📝 Updating all headlines to:', newHeadlines);
+                            setHeadlines(newHeadlines);
                           } else {
                             updateField(setHeadlines, headlines, index, e.target.value);
                           }
