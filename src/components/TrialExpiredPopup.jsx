@@ -34,7 +34,7 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, onChatWithUs }) => {
                     <p className="text-gray-500 text-center text-sm">
                         We hope you've found using Blip helpful!
                     </p>
-
+                   
                     {/* Heading */}
                     <p className="text-3xl font-bold text-gray-800 text-center mb-4 leading-tight">
                         Your Trial Has Expired
@@ -64,7 +64,11 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, onChatWithUs }) => {
                         <MessageCircle size={16} />
                         Chat With Us
                     </button>
+                    
                 </div>
+                 <p className="text-gray-400 text-center text-xs mt-4">
+                        If you're part of a team, ask your team lead to subscribe. <br></br>It will grant access to the whole team
+                    </p>
             </div>
         </div >
     );
