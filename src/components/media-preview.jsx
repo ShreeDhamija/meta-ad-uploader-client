@@ -112,6 +112,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             <img
               src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`}
               alt={file.name}
+                title={file.name} // 👈 Add this line
               className="w-full h-auto object-cover"
               onError={(e) => {
                 e.target.onerror = null;
@@ -124,6 +125,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
               <img
                 src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
                 alt={file.name}
+                title={file.name} // 👈 Add this line
                 className="w-full h-auto object-cover"
                 onError={(e) => {
                   e.target.onerror = null;
@@ -152,6 +154,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                 : URL.createObjectURL(file)
             }
             alt={file.name}
+            title={file.name} // 👈 Add this line
             className="w-full h-auto object-cover"
             onError={(e) => {
               e.target.onerror = null;
@@ -173,7 +176,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           <span className="sr-only">Remove</span>
         </Button>
       </div>
-      <p className="mt-1 ml-1 text-sm truncate">{file.name}</p>
+      <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
+
       {isCarouselAd && !enablePlacementCustomization && (
         <span className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
           Card {index + 1}

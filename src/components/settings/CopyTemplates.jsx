@@ -233,53 +233,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   });
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  // Add this to your existing state declarations
   const [paginationCursor, setPaginationCursor] = useState(null);
 
-
-  // useEffect(() => {
-  //   if (!showImportPopup || !selectedAdAccount) return;
-
-  //   setIsFetchingCopy(true);
-  //   // fetch(`${API_BASE_URL}/auth/fetch-recent-copy?adAccountId=${selectedAdAccount}`, {
-  //   //   credentials: "include"
-  //   // })
-  //   fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
-  //     method: "POST",
-  //     credentials: "include",
-  //     headers: {
-  //       "Content-Type": "application/json"
-  //     },
-  //     body: JSON.stringify({
-  //       adAccountId: selectedAdAccount
-  //     })
-  //   })
-  //     .then(res => res.json())
-  //     .then(data => {
-  //       if (data.primaryTexts || data.headlines) {
-  //         // Initial load - replace results
-  //         setRecentAds({
-  //           primaryTexts: data.primaryTexts || [],
-  //           headlines: data.headlines || []
-  //         });
-
-  //         // Reset previously fetched tracker
-  //         setPreviouslyFetched({
-  //           primaryTexts: data.primaryTexts || [],
-  //           headlines: data.headlines || []
-  //         });
-  //       } else {
-  //         throw new Error("No data");
-  //       }
-  //     })
-  //     .catch(err => {
-  //       console.error("Error fetching ad copy:", err);
-  //       toast.error("Failed to load recent ad copy");
-  //     })
-  //     .finally(() => {
-  //       setIsFetchingCopy(false);
-  //     });
-  // }, [showImportPopup, selectedAdAccount]); // ← Clean dependencies
 
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
@@ -860,6 +815,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   <div className="flex flex-col items-center justify-center py-10 space-y-4">
                     <RotateLoader size={6} margin={-16} color="#adadad" />
                     <span className="text-sm text-gray-600">Loading text copy...</span>
+                    <span className="text-sm text-gray-600">This can take a few seconds depending on Facebooks Mood.</span>
                   </div>
                 ) : (
                   <Tabs defaultValue="primary-texts" className="w-full">
