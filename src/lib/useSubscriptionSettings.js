@@ -60,10 +60,13 @@ export default function useSubscription() {
     };
 
     const isOnTrial = () => {
+        
         return subscriptionData.subscriptionStatus === 'trial' && !subscriptionData.isTrialExpired;
     };
 
     const isTrialExpired = () => {
+        console.log("Lib File Is trial Expired", subscriptionData.isTrialExpired);
+
         return subscriptionData.subscriptionStatus === 'trial' && subscriptionData.isTrialExpired;
     };
 

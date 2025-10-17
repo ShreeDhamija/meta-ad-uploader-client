@@ -71,6 +71,7 @@ export default function Header({ showMessenger, hideMessenger }) {
   }
 
   return (
+    
     <header className="flex justify-between items-center py-3 mb-4">
       {/* Profile Section (Left) */}
       <div className="flex items-center gap-3 bg-white shadow-md border border-gray-300 rounded-[40px] px-3 py-2">
@@ -88,6 +89,7 @@ export default function Header({ showMessenger, hideMessenger }) {
         {/* Trial/Subscription Status Button - show if on trial OR if access expired */}
         {!subscriptionLoading && (isOnTrial() || !hasActiveAccess()) && (
           <>
+            
             <button
               onClick={handleUpgrade}
               className={`flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium ${getTrialButtonStyle()}`}

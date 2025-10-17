@@ -185,6 +185,8 @@ export default function Home() {
     }, [subscriptionData.planType, selectedAdAccountIds])
 
     useEffect(() => {
+        console.log("Istrialexpired home", isTrialExpired);
+        console.log("userhasactiveaccess home", userHasActiveAccess);
         if (
             !subscriptionLoading &&
             isTrialExpired &&
