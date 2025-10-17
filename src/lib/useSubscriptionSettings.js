@@ -49,9 +49,9 @@ export default function useSubscription() {
             if (now > cancelDate) return false;
         }
 
-        if (subscriptionData.teamId && !subscriptionData.isTeamOwner) {
-            return true;
-        }
+        // if (subscriptionData.teamId && !subscriptionData.isTeamOwner) {
+        //     return true;
+        // }
 
 
         // Existing logic
