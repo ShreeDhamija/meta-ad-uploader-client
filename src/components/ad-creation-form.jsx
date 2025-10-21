@@ -300,6 +300,12 @@ const getExtensionFromMime = (mime = "") => {
   return "";
 };
 
+// Outside AdCreationForm component
+const extractFolderId = (url) => {
+  const match = url.match(/folders\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : null;
+};
+
 
 export default function AdCreationForm({
   isLoading,
@@ -373,13 +379,13 @@ export default function AdCreationForm({
     accessToken: null
   });
 
+  const [showFolderInput, setShowFolderInput] = useState(false);
+  const [folderLinkValue, setFolderLinkValue] = useState("");
+  const [isImportingFolder, setIsImportingFolder] = useState(false);
   //gogle drive pickers
   const [accessToken, setAccessToken] = useState(null)
-
   //S3 States
   const [uploadingToS3, setUploadingToS3] = useState(false)
-
-
 
   const [pageSearchValue, setPageSearchValue] = useState("")
   // const [isDuplicating, setIsDuplicating] = useState(false)
@@ -1018,8 +1024,94 @@ export default function AdCreationForm({
   }, []);
 
 
+  const importFilesFromFolder = useCallback(async (folderId, token) => {
+    setIsImportingFolder(true);
+    try {
+      const mediaTypes = [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'video/mp4', 'video/webm', 'video/quicktime'
+      ];
+
+      // Fetch files from the folder
+      const query = `'${folderId}' in parents and trashed=false`;
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size)`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 404 || response.status === 403) {
+          toast.error('Cannot access this folder. Make sure it\'s shared with you or you have access.');
+          return;
+        }
+        throw new Error('Failed to fetch folder contents');
+      }
+
+      const data = await response.json();
+
+      // Filter for media files only
+      const mediaFiles = data.files.filter(file =>
+        mediaTypes.includes(file.mimeType)
+      );
+
+      if (mediaFiles.length === 0) {
+        toast.info('No media files found in this folder');
+        return;
+      }
+
+      // Add files to driveFiles state with access token
+      const formattedFiles = mediaFiles.map(file => ({
+        id: file.id,
+        name: file.name,
+        mimeType: file.mimeType,
+        size: file.size,
+        accessToken: token
+      }));
+
+      setDriveFiles((prev) => [...prev, ...formattedFiles]);
+      toast.success(`Imported ${mediaFiles.length} file(s) from folder`);
+
+      // Clear the input and hide the UI
+      setFolderLinkValue("");
+      setShowFolderInput(false);
+
+    } catch (error) {
+      console.error('Error importing folder:', error);
+      toast.error('Failed to import folder. Please try again.');
+    } finally {
+      setIsImportingFolder(false);
+    }
+  }, [setDriveFiles]);
+
+  // Add this function to handle the import button click
+  // Inside AdCreationForm
+  const handleImportFromFolder = useCallback(() => {
+    const folderId = extractFolderId(folderLinkValue);
+
+    if (!folderId) {
+      toast.error('Invalid Google Drive folder link');
+      return;
+    }
+
+    if (!googleAuthStatus.accessToken) {
+      toast.error('Not authenticated with Google Drive');
+      return;
+    }
+
+    importFilesFromFolder(folderId, googleAuthStatus.accessToken);
+  }, [folderLinkValue, googleAuthStatus.accessToken, importFilesFromFolder]);
+
+
 
   const createPicker = useCallback((token) => {
+
+    setShowFolderInput(true);
+
+
     const mimeTypes = [
       "application/vnd.google-apps.folder",
       "image/jpeg",
@@ -1078,6 +1170,8 @@ export default function AdCreationForm({
 
         setDriveFiles((prev) => [...prev, ...selected]);
         if (data.action === "picked" || data.action === "cancel") {
+          setShowFolderInput(false);
+          setFolderLinkValue(""); // Clear the input value
           picker.setVisible(false);
         }
       })
@@ -1428,17 +1522,17 @@ export default function AdCreationForm({
 
 
   const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null) => {
-    
+
     if (!adNameFormulaV2?.rawInput) {
       // Fallback to old computation if no V2 formula
       return computeAdName(file, adValues.dateType, iterationIndex);
     }
 
-  const formulaToUse = formula || adNameFormulaV2;
-  if (!formulaToUse?.rawInput) {
-    // Fallback to old computation if no V2 formula
-    return computeAdName(file, adValues.dateType, iterationIndex);
-  }
+    const formulaToUse = formula || adNameFormulaV2;
+    if (!formulaToUse?.rawInput) {
+      // Fallback to old computation if no V2 formula
+      return computeAdName(file, adValues.dateType, iterationIndex);
+    }
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1502,23 +1596,23 @@ export default function AdCreationForm({
   }, [adNameFormulaV2, computeAdNameFromFormula]);
 
 
-useEffect(() => {
-  if (isCarouselAd) {
-    const fileCount = files.length + driveFiles.length;
-    
-    // Sync messages when apply-to-all is checked
-    if (applyTextToAllCards && fileCount > 0 && messages.length !== fileCount) {
-      const firstMessage = messages[0] || "";
-      setMessages(new Array(fileCount).fill(firstMessage));
+  useEffect(() => {
+    if (isCarouselAd) {
+      const fileCount = files.length + driveFiles.length;
+
+      // Sync messages when apply-to-all is checked
+      if (applyTextToAllCards && fileCount > 0 && messages.length !== fileCount) {
+        const firstMessage = messages[0] || "";
+        setMessages(new Array(fileCount).fill(firstMessage));
+      }
+
+      // Sync headlines when apply-to-all is checked
+      if (applyHeadlinesToAllCards && fileCount > 0 && headlines.length !== fileCount) {
+        const firstHeadline = headlines[0] || "";
+        setHeadlines(new Array(fileCount).fill(firstHeadline));
+      }
     }
-    
-    // Sync headlines when apply-to-all is checked
-    if (applyHeadlinesToAllCards && fileCount > 0 && headlines.length !== fileCount) {
-      const firstHeadline = headlines[0] || "";
-      setHeadlines(new Array(fileCount).fill(firstHeadline));
-    }
-  }
-}, [files.length, driveFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
+  }, [files.length, driveFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
 
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
@@ -1549,13 +1643,13 @@ useEffect(() => {
 
 
   const handleCreateAd = async (jobData) => {
-    
+
     console.log('🚀 handleCreateAd called with jobData:', {
-    headlines: jobData.formData.headlines,
-    messages: jobData.formData.messages,
-    filesCount: jobData.formData.files.length + jobData.formData.driveFiles.length,
-    isCarouselAd: jobData.formData.isCarouselAd
-  });
+      headlines: jobData.formData.headlines,
+      messages: jobData.formData.messages,
+      filesCount: jobData.formData.files.length + jobData.formData.driveFiles.length,
+      isCarouselAd: jobData.formData.isCarouselAd
+    });
 
     const {
       // Form content
@@ -1879,18 +1973,18 @@ useEffect(() => {
           return;
         }
 
-     
+
         console.log("🎠 Creating carousel ad with:", {
-    headlines,
-    messages,
-    filesCount: files.length + driveFiles.length,
-    applyHeadlinesToAllCards,
-    applyTextToAllCards
-  });
+          headlines,
+          messages,
+          filesCount: files.length + driveFiles.length,
+          applyHeadlinesToAllCards,
+          applyTextToAllCards
+        });
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0,link[0], jobData.formData.adNameFormulaV2));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -1997,7 +2091,7 @@ useEffect(() => {
         dynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
           // formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0],0,link[0], jobData.formData.adNameFormulaV2));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -2300,7 +2394,7 @@ useEffect(() => {
               if (groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id)) { // <-- Use the correct IDs
                 return; // Skip grouped files
               }
-              
+
               const formData = new FormData();
               // formData.append("adName", computeAdName(s3File, adValues.dateType, globalIterationIndex));
               formData.append("adName", computeAdNameFromFormula(s3File, globalIterationIndex, link[0], jobData.formData.adNameFormulaV2));
@@ -2629,13 +2723,13 @@ useEffect(() => {
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleQueueJob} 
-        onKeyDown={(e) => {
-          // Prevent Enter from submitting unless it's in a textarea (for line breaks)
-          if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-            e.preventDefault();
-          }
-        }}
+        <form onSubmit={handleQueueJob}
+          onKeyDown={(e) => {
+            // Prevent Enter from submitting unless it's in a textarea (for line breaks)
+            if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+              e.preventDefault();
+            }
+          }}
           className="space-y-6">
           <div className="space-y-10">
             <div className="space-y-4">
@@ -2952,25 +3046,25 @@ useEffect(() => {
                     </span>
                     {isCarouselAd && (
                       <div className="flex items-center space-x-1 ">
-                      <Checkbox
-                        id="apply-text-all"
-                        checked={applyTextToAllCards}
-                        onCheckedChange={(checked) => {
-                          setApplyTextToAllCards(checked);
-                          if (checked && messages.length > 0) {
-                            const firstMessage = messages[0];
-                            const fileCount = files.length + driveFiles.length; 
-                            if (fileCount > 0){
-                              setMessages(new Array(fileCount).fill(firstMessage));
+                        <Checkbox
+                          id="apply-text-all"
+                          checked={applyTextToAllCards}
+                          onCheckedChange={(checked) => {
+                            setApplyTextToAllCards(checked);
+                            if (checked && messages.length > 0) {
+                              const firstMessage = messages[0];
+                              const fileCount = files.length + driveFiles.length;
+                              if (fileCount > 0) {
+                                setMessages(new Array(fileCount).fill(firstMessage));
+                              }
+
+                            } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
+                              const tpl = copyTemplates[selectedTemplate];
+                              setMessages(tpl.primaryTexts || [""]);
                             }
-                            
-                          } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
-                            const tpl = copyTemplates[selectedTemplate];
-                            setMessages(tpl.primaryTexts || [""]);
-                          }
-                        }}
-                        className="border-gray-300 w-4 h-4 rounded-md"
-                      />
+                          }}
+                          className="border-gray-300 w-4 h-4 rounded-md"
+                        />
                         <label htmlFor="apply-text-all" className="text-xs font-medium">
                           Apply To All Cards
                         </label>
@@ -3047,8 +3141,7 @@ useEffect(() => {
                           if (checked && headlines.length > 0) {
                             const firstHeadline = headlines[0];
                             const fileCount = files.length + driveFiles.length; // ← Use file count!
-                            if ( fileCount > 0)
-                            {
+                            if (fileCount > 0) {
                               setHeadlines(new Array(fileCount).fill(firstHeadline));
                             }
                           } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
@@ -3424,6 +3517,65 @@ useEffect(() => {
               Drive files upload 5X faster
             </div>
           </div>
+
+          {showFolderInput && (
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Quick Import from Folder</h3>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowFolderInput(false);
+                      setFolderLinkValue("");
+                    }}
+                    className="h-6 w-6 p-0"
+                  >
+                    <CircleX className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="Paste Google Drive folder link here"
+                    value={folderLinkValue}
+                    onChange={(e) => setFolderLinkValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleImportFromFolder();
+                      }
+                    }}
+                    className="flex-1"
+                    disabled={isImportingFolder}
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleImportFromFolder}
+                    disabled={!folderLinkValue || isImportingFolder}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isImportingFolder ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      "Import"
+                    )}
+                  </Button>
+                </div>
+
+                <div className="text-xs text-gray-500">
+                  Or browse files below ↓
+                </div>
+              </div>
+            </div>
+          )}
+
+
           <div className="space-y-1">
             <Button
               type="submit"
