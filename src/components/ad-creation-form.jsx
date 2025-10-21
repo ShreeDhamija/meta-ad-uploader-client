@@ -1030,19 +1030,36 @@ export default function AdCreationForm({
 
 
   const importFilesFromFolder = useCallback(async (folderId, token) => {
+    console.log('🚀 ========== IMPORT STARTED ==========');
+    console.log('📁 Folder ID:', folderId);
+    console.log('🔑 Token (first 20 chars):', token?.substring(0, 20) + '...');
+
+    if (!folderId) {
+      toast.error('Invalid folder link');
+      console.error('❌ Missing folder ID');
+      return;
+    }
+
     setIsImportingFolder(true);
     try {
-      const mediaTypes = [
+      const explicitMediaTypes = [
         'image/jpeg', 'image/png', 'image/gif', 'image/webp',
         'video/mp4', 'video/webm', 'video/quicktime'
       ];
+
+      console.log('✅ Explicit media types we are looking for:', explicitMediaTypes);
+
       const allFiles = [];
       let pageToken = null;
+      let pageCount = 0;
 
       do {
+        pageCount++;
+        console.log(`\n📄 Fetching page ${pageCount}...`);
+
         const params = new URLSearchParams({
           q: `'${folderId}' in parents and trashed=false`,
-          fields: 'nextPageToken, files(id,name,mimeType,size)',
+          fields: 'nextPageToken, files(id,name,mimeType,size,shortcutDetails)',
           supportsAllDrives: 'true',
           includeItemsFromAllDrives: 'true',
           corpora: 'allDrives',
@@ -1050,47 +1067,146 @@ export default function AdCreationForm({
         });
         if (pageToken) params.append('pageToken', pageToken);
 
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+        const url = `https://www.googleapis.com/drive/v3/files?${params}`;
+        console.log('🌐 Request URL:', url);
+
+        const res = await fetch(url, {
           headers: { Authorization: `Bearer ${token}` }
         });
+
+        console.log('📡 Response status:', res.status, res.statusText);
+
         if (!res.ok) {
+          console.error('❌ Response not OK!');
+          const errorBody = await res.text();
+          console.error('❌ Error body:', errorBody);
+
           if (res.status === 403 || res.status === 404) {
-            toast.error('Cannot access this folder. Make sure it’s shared with you.');
+            toast.error('Cannot access this folder. Make sure it\'s shared with you.');
             return;
           }
           throw new Error(`Drive fetch failed: ${res.statusText}`);
         }
 
         const data = await res.json();
+        console.log('📦 Raw API response:', data);
+        console.log(`📊 Files in page ${pageCount}:`, data.files?.length || 0);
+
+        if (data.files && data.files.length > 0) {
+          console.log('📋 Files in this page:');
+          data.files.forEach((file, idx) => {
+            console.log(`  ${idx + 1}. Name: "${file.name}"`);
+            console.log(`     MIME: ${file.mimeType}`);
+            console.log(`     Size: ${file.size} bytes`);
+            console.log(`     ID: ${file.id}`);
+          });
+        } else {
+          console.log('⚠️ No files in this page!');
+        }
+
         allFiles.push(...(data.files || []));
         pageToken = data.nextPageToken;
+        console.log('🔄 Next page token:', pageToken ? 'exists' : 'none (last page)');
       } while (pageToken);
 
-      const mediaFiles = allFiles.filter(f => mediaTypes.includes(f.mimeType));
+      console.log('\n📊 ========== FETCH COMPLETE ==========');
+      console.log('📦 Total files fetched across all pages:', allFiles.length);
+      console.log('📋 All file names:', allFiles.map(f => f.name));
+      console.log('🏷️ All MIME types:', allFiles.map(f => f.mimeType));
+      console.log('📐 Unique MIME types:', [...new Set(allFiles.map(f => f.mimeType))]);
+
+      console.log('\n🔍 ========== RESOLVING SHORTCUTS ==========');
+
+      const resolvedFiles = allFiles.map(f => {
+        if (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails?.targetId) {
+          console.log(`🔗 Resolving shortcut: ${f.name} → ${f.shortcutDetails.targetId}`);
+          return {
+            ...f,
+            id: f.shortcutDetails.targetId,
+            mimeType: f.shortcutDetails.targetMimeType || f.mimeType,
+          };
+        }
+        return f;
+      });
+
+      console.log('\n🔍 ========== FILTERING MEDIA FILES ==========');
+
+      const mediaFiles = resolvedFiles.filter((f, idx) => {
+        const mime = f.mimeType || '';
+        const name = f.name || '';
+
+        console.log(`\n🔎 Checking file ${idx + 1}/${resolvedFiles.length}: "${name}"`);
+        console.log(`   MIME type: ${mime}`);
+
+        if (explicitMediaTypes.includes(mime)) {
+          console.log(`   ✅ MATCH: Found in explicit media types list`);
+          return true;
+        }
+        if (mime.startsWith('image/')) {
+          console.log(`   ✅ MATCH: Starts with "image/"`);
+          return true;
+        }
+        if (mime.startsWith('video/')) {
+          console.log(`   ✅ MATCH: Starts with "video/"`);
+          return true;
+        }
+
+        const extensionMatch = /\.(jpe?g|png|gif|webp|bmp|heic|mov|mp4|avi|webm|mkv)$/i.test(name);
+        if (extensionMatch) {
+          console.log(`   ✅ MATCH: File extension indicates media file`);
+          return true;
+        }
+
+        console.log(`   ❌ SKIP: Not a media file`);
+        return false;
+      });
+
+      console.log('\n🎬 ========== FILTERING RESULTS ==========');
+      console.log('✅ Media files found:', mediaFiles.length);
+      console.log('📋 Media file names:', mediaFiles.map(f => f.name));
+      console.log('🏷️ Media file MIME types:', mediaFiles.map(f => f.mimeType));
+
       if (mediaFiles.length === 0) {
+        console.log('⚠️ No media files found after filtering!');
         toast.info('No media files found in this folder');
         return;
       }
 
-      const formatted = mediaFiles.map(f => ({
-        id: f.id,
-        name: f.name,
-        mimeType: f.mimeType,
-        size: f.size,
-        accessToken: token
-      }));
+      console.log('\n📝 ========== FORMATTING FILES ==========');
+      const formatted = mediaFiles.map((f, idx) => {
+        const obj = {
+          id: f.id,
+          name: f.name,
+          mimeType: f.mimeType,
+          size: f.size,
+          accessToken: token,
+          isDrive: true,
+        };
+        console.log(`${idx + 1}. Formatted:`, obj);
+        return obj;
+      });
 
-      setDriveFiles(prev => [...prev, ...formatted]);
-      toast.success(`Imported ${mediaFiles.length} file(s) from folder`);
+      console.log('\n💾 ========== SAVING TO STATE ==========');
+      console.log('Adding files to driveFiles state...');
+      setDriveFiles(prev => {
+        console.log('Previous driveFiles count:', prev.length);
+        console.log('New driveFiles count will be:', prev.length + formatted.length);
+        return [...prev, ...formatted];
+      });
+
+      toast.success(`Imported ${formatted.length} file(s) from folder`);
       setFolderLinkValue('');
       setShowFolderInput(false);
-    } catch (err) {
-      console.error('Error importing folder:', err);
-      toast.error('Failed to import folder. Please try again.');
+
+      console.log('✅ ========== IMPORT COMPLETE ==========');
+    } catch (error) {
+      console.error('Error importing folder:', error);
+      toast.error('Failed to import folder. Please try again. Check console for details.');
     } finally {
       setIsImportingFolder(false);
     }
   }, [setDriveFiles]);
+
 
 
   // Add this function to handle the import button click
