@@ -301,9 +301,14 @@ const getExtensionFromMime = (mime = "") => {
 };
 
 // Outside AdCreationForm component
+// const extractFolderId = (url) => {
+//   const match = url.match(/folders\/([a-zA-Z0-9-_]+)/);
+//   return match ? match[1] : null;
+// };
+
 const extractFolderId = (url) => {
-  const match = url.match(/folders\/([a-zA-Z0-9-_]+)/);
-  return match ? match[1] : null;
+  const idMatch = url.match(/[-\w]{25,}/);
+  return idMatch ? idMatch[0] : null;
 };
 
 
@@ -1031,61 +1036,62 @@ export default function AdCreationForm({
         'image/jpeg', 'image/png', 'image/gif', 'image/webp',
         'video/mp4', 'video/webm', 'video/quicktime'
       ];
+      const allFiles = [];
+      let pageToken = null;
 
-      // Fetch files from the folder
-      const query = `'${folderId}' in parents and trashed=false`;
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,size)`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
+      do {
+        const params = new URLSearchParams({
+          q: `'${folderId}' in parents and trashed=false`,
+          fields: 'nextPageToken, files(id,name,mimeType,size)',
+          supportsAllDrives: 'true',
+          includeItemsFromAllDrives: 'true',
+          corpora: 'allDrives',
+          pageSize: '1000'
+        });
+        if (pageToken) params.append('pageToken', pageToken);
+
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?${params}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          if (res.status === 403 || res.status === 404) {
+            toast.error('Cannot access this folder. Make sure it’s shared with you.');
+            return;
           }
+          throw new Error(`Drive fetch failed: ${res.statusText}`);
         }
-      );
 
-      if (!response.ok) {
-        if (response.status === 404 || response.status === 403) {
-          toast.error('Cannot access this folder. Make sure it\'s shared with you or you have access.');
-          return;
-        }
-        throw new Error('Failed to fetch folder contents');
-      }
+        const data = await res.json();
+        allFiles.push(...(data.files || []));
+        pageToken = data.nextPageToken;
+      } while (pageToken);
 
-      const data = await response.json();
-
-      // Filter for media files only
-      const mediaFiles = data.files.filter(file =>
-        mediaTypes.includes(file.mimeType)
-      );
-
+      const mediaFiles = allFiles.filter(f => mediaTypes.includes(f.mimeType));
       if (mediaFiles.length === 0) {
         toast.info('No media files found in this folder');
         return;
       }
 
-      // Add files to driveFiles state with access token
-      const formattedFiles = mediaFiles.map(file => ({
-        id: file.id,
-        name: file.name,
-        mimeType: file.mimeType,
-        size: file.size,
+      const formatted = mediaFiles.map(f => ({
+        id: f.id,
+        name: f.name,
+        mimeType: f.mimeType,
+        size: f.size,
         accessToken: token
       }));
 
-      setDriveFiles((prev) => [...prev, ...formattedFiles]);
+      setDriveFiles(prev => [...prev, ...formatted]);
       toast.success(`Imported ${mediaFiles.length} file(s) from folder`);
-
-      // Clear the input and hide the UI
-      setFolderLinkValue("");
+      setFolderLinkValue('');
       setShowFolderInput(false);
-
-    } catch (error) {
-      console.error('Error importing folder:', error);
+    } catch (err) {
+      console.error('Error importing folder:', err);
       toast.error('Failed to import folder. Please try again.');
     } finally {
       setIsImportingFolder(false);
     }
   }, [setDriveFiles]);
+
 
   // Add this function to handle the import button click
   // Inside AdCreationForm
