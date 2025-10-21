@@ -424,16 +424,6 @@ export default function AdCreationForm({
 
   const captureFormDataAsJob = () => {
 
-
-    console.log('📸 Capturing form data as job:', {
-    headlines,
-    messages,
-    filesCount: files.length + driveFiles.length,
-    applyHeadlinesToAllCards,
-    applyTextToAllCards
-  });
-
-
     let adCount = 0;
 
     const isDynamicAdSet = () => {
@@ -503,6 +493,7 @@ export default function AdCreationForm({
         selectedShopDestinationType,
 
         // For computing adName
+        adNameFormulaV2: adNameFormulaV2 ? { ...adNameFormulaV2 } : null,
         adValues,
 
         // Reference data needed for processing
@@ -1436,13 +1427,18 @@ export default function AdCreationForm({
 
 
 
-  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "") => {
+  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null) => {
+    
     if (!adNameFormulaV2?.rawInput) {
       // Fallback to old computation if no V2 formula
       return computeAdName(file, adValues.dateType, iterationIndex);
     }
 
-    console.log("link in ad name formula passed", link);
+  const formulaToUse = formula || adNameFormulaV2;
+  if (!formulaToUse?.rawInput) {
+    // Fallback to old computation if no V2 formula
+    return computeAdName(file, adValues.dateType, iterationIndex);
+  }
 
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
       "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1488,7 +1484,7 @@ export default function AdCreationForm({
     }
 
     // Replace variables in the formula
-    let adName = adNameFormulaV2.rawInput
+    let adName = formulaToUse.rawInput
       .replace(/\{\{File Name\}\}/g, fileName)
       .replace(/\{\{File Type\}\}/g, fileType)
       .replace(/\{\{Date \(MonthYYYY\)\}\}/g, monthYear)
@@ -1894,7 +1890,7 @@ useEffect(() => {
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0,link[0]));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0,link[0], jobData.formData.adNameFormulaV2));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -2001,7 +1997,7 @@ useEffect(() => {
         dynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
           // formData.append("adName", computeAdName(files[0] || driveFiles[0], adValues.dateType));
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0],0,link[0]));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0],0,link[0], jobData.formData.adNameFormulaV2));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -2093,7 +2089,7 @@ useEffect(() => {
 
 
               const formData = new FormData();
-              formData.append("adName", computeAdNameFromFormula(firstFileForNaming || files[0] || driveFiles[0], globalIterationIndex, link[0]));
+              formData.append("adName", computeAdNameFromFormula(firstFileForNaming || files[0] || driveFiles[0], globalIterationIndex, link[0], jobData.formData.adNameFormulaV2));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -2230,7 +2226,7 @@ useEffect(() => {
             files.forEach((file, index) => {
               if (file.size > S3_UPLOAD_THRESHOLD || groupedFileIds.has(getFileId(file))) return;//skip files
               const formData = new FormData();
-              formData.append("adName", computeAdNameFromFormula(file, globalIterationIndex, link[0]));
+              formData.append("adName", computeAdNameFromFormula(file, globalIterationIndex, link[0], jobData.formData.adNameFormulaV2));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -2267,7 +2263,7 @@ useEffect(() => {
 
               const formData = new FormData();
               // formData.append("adName", computeAdName(driveFile, adValues.dateType, globalIterationIndex));
-              formData.append("adName", computeAdNameFromFormula(driveFile, globalIterationIndex, link[0]));
+              formData.append("adName", computeAdNameFromFormula(driveFile, globalIterationIndex, link[0], jobData.formData.adNameFormulaV2));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
@@ -2307,7 +2303,7 @@ useEffect(() => {
               
               const formData = new FormData();
               // formData.append("adName", computeAdName(s3File, adValues.dateType, globalIterationIndex));
-              formData.append("adName", computeAdNameFromFormula(s3File, globalIterationIndex, link[0]));
+              formData.append("adName", computeAdNameFromFormula(s3File, globalIterationIndex, link[0], jobData.formData.adNameFormulaV2));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
               formData.append("messages", JSON.stringify(messages));
