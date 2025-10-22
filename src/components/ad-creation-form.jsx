@@ -2681,7 +2681,10 @@ export default function AdCreationForm({
 
       <CardHeader>
         <CardTitle className="flex items-center justify-between w-full">
-
+          <div className="flex items-center gap-2">
+            <ConfigIcon className="w-5 h-5" />
+            Select ad preferences
+          </div>
           <div className="flex items-center space-x-2">
             <Label htmlFor="ad-type" className="text-sm font-medium whitespace-nowrap">
               Ad Type:
@@ -2712,10 +2715,10 @@ export default function AdCreationForm({
               }}
               disabled={!isLoggedIn}
             >
-              <SelectTrigger className="w-[180px] border-gray-400">
+              <SelectTrigger className="w-[180px] bg-white border-gray-400 rounded-xl">
                 <SelectValue placeholder="Select ad type" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 <SelectItem value="regular">Image/Video</SelectItem>
                 <SelectItem value="carousel">Carousel</SelectItem>
                 <SelectItem value="flexible">Flexible Ads</SelectItem>
