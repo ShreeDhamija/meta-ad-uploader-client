@@ -1420,7 +1420,6 @@ export default function AdCreationForm({
       return;
     }
 
-    toast.info('Opening folder in picker...');
     createPicker(googleAuthStatus.accessToken, folderId);
   }, [folderLinkValue, googleAuthStatus.accessToken, createPicker]);
 
@@ -3778,7 +3777,7 @@ export default function AdCreationForm({
                     }}
                     className="h-6 w-6 p-0"
                   >
-                    {/* <CircleX className="h-4 w-4" /> */}
+
                   </Button>
                 </div>
 
@@ -3808,7 +3807,7 @@ export default function AdCreationForm({
                         Opening...
                       </>
                     ) : (
-                      "Import"
+                      "Open"
                     )}
                   </Button>
                 </div>
