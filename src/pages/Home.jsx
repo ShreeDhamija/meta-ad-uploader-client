@@ -146,6 +146,7 @@ export default function Home() {
     const [driveFiles, setDriveFiles] = useState([])
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [isCarouselAd, setIsCarouselAd] = useState(false);
+    const [adType, setAdType] = useState('regular'); // 'regular' | 'carousel' | 'flexible'
     const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
     const [fileGroups, setFileGroups] = useState([]);
     const [files, setFiles] = useState([])
@@ -195,7 +196,7 @@ export default function Home() {
         ) {
             setShowTrialExpiredPopup(true);
         }
-        
+
     }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
 
     // --- NEW, CORRECTED CODE ---
@@ -432,6 +433,8 @@ export default function Home() {
                             setLaunchPaused={setLaunchPaused}
                             isCarouselAd={isCarouselAd}
                             setIsCarouselAd={setIsCarouselAd}
+                            adType={adType}
+                            setAdType={setAdType}
                             enablePlacementCustomization={enablePlacementCustomization}
                             setEnablePlacementCustomization={setEnablePlacementCustomization}
                             fileGroups={fileGroups}

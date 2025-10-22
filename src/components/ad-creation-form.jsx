@@ -366,6 +366,8 @@ export default function AdCreationForm({
   setLaunchPaused,
   isCarouselAd,
   setIsCarouselAd,
+  adType,
+  setAdType,
   enablePlacementCustomization,
   setEnablePlacementCustomization,
   fileGroups,
@@ -546,13 +548,6 @@ export default function AdCreationForm({
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const limit = pLimit(5);
-
-    // console.log('📊 Upload calculations:', {
-    //   chunkSize: CHUNK_SIZE,
-    //   totalChunks: totalChunks,
-    //   totalSizeMB: (file.size / 1024 / 1024).toFixed(2)
-    // });
-
     let uploadId = null;
     let s3Key = null;
 
@@ -571,12 +566,6 @@ export default function AdCreationForm({
         { withCredentials: true }
       );
 
-      // console.log('📥 Start-upload response:', {
-      //   status: startResponse.status,
-      //   statusText: startResponse.statusText,
-      //   data: startResponse.data
-      // });
-
       uploadId = startResponse.data.uploadId;
       s3Key = startResponse.data.key;
 
@@ -585,15 +574,12 @@ export default function AdCreationForm({
         throw new Error('Invalid response from start-upload endpoint');
       }
 
-      // console.log('✅ Step 1 complete:', { uploadId, s3Key });
-
-      // console.log('🔄 Step 2: Getting presigned URLs...');
       const urlsPayload = {
         key: s3Key,
         uploadId: uploadId,
         parts: totalChunks
       };
-      // console.log('📤 Sending get-upload-urls request:', urlsPayload);
+
 
       const urlsResponse = await axios.post(
         `${API_BASE_URL}/auth/s3/get-upload-urls`,
@@ -601,22 +587,12 @@ export default function AdCreationForm({
         { withCredentials: true }
       );
 
-      // console.log('📥 Get-upload-urls response:', {
-      //   status: urlsResponse.status,
-      //   statusText: urlsResponse.statusText,
-      //   partsCount: urlsResponse.data?.parts?.length
-      // });
-
       const presignedUrls = urlsResponse.data.parts;
 
       if (!presignedUrls || !Array.isArray(presignedUrls)) {
         console.error('❌ Invalid presigned URLs response:', urlsResponse.data);
         throw new Error('Invalid presigned URLs response');
       }
-
-      // console.log('✅ Step 2 complete - Got', presignedUrls.length, 'presigned URLs');
-
-      // console.log('🔄 Step 3: Uploading chunks...');
       let uploadedChunks = 0;
 
       const uploadPromises = presignedUrls.map((part, index) => {
@@ -634,18 +610,11 @@ export default function AdCreationForm({
 
         return limit(async () => {
           try {
-            // console.log(`⬆️ Uploading chunk ${partNumber}...`);
 
             const uploadResponse = await axios.put(url, chunk, {
               headers: { 'Content-Type': file.type },
               timeout: 60000
             });
-
-            // console.log(`✅ Chunk ${partNumber} uploaded:`, {
-            //   status: uploadResponse.status,
-            //   statusText: uploadResponse.statusText,
-            //   hasEtag: !!uploadResponse.headers.etag
-            // });
 
             if (onChunkUploaded) {
               uploadedChunks++;
@@ -702,11 +671,7 @@ export default function AdCreationForm({
         { withCredentials: true }
       );
 
-      // console.log('📥 Complete-upload response:', {
-      //   status: completeResponse.status,
-      //   statusText: completeResponse.statusText,
-      //   hasPublicUrl: !!completeResponse.data?.publicUrl
-      // });
+
 
       console.log('✅ Step 4 complete - Upload successful!');
 
@@ -719,8 +684,7 @@ export default function AdCreationForm({
         uniqueId: uniqueId
       };
 
-      // console.log('🎉 Final result object:', result);
-      // console.log('🚀 === S3 UPLOAD END ===');
+
       return result;
 
     } catch (error) {
@@ -870,7 +834,6 @@ export default function AdCreationForm({
     }
   }, [trackedProgress, trackedMessage, currentJob]);
 
-  // This hook STARTS a new job from the queue.
   // This hook STARTS a new job from the queue when ready.
   useEffect(() => {
     // Do nothing if the queue is empty or a job is already processing.
@@ -1030,277 +993,6 @@ export default function AdCreationForm({
     checkGoogleAuth();
   }, []);
 
-
-  // const importFilesFromFolder = useCallback(async (folderId, token) => {
-  //   console.log('🚀 ========== IMPORT STARTED ==========');
-  //   console.log('📁 Folder ID:', folderId);
-  //   console.log('🔑 Token (first 20 chars):', token?.substring(0, 20) + '...');
-
-  //   if (!folderId) {
-  //     toast.error('Invalid folder link');
-  //     console.error('❌ Missing folder ID');
-  //     return;
-  //   }
-
-  //   setIsImportingFolder(true);
-  //   try {
-  //     const explicitMediaTypes = [
-  //       'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-  //       'video/mp4', 'video/webm', 'video/quicktime'
-  //     ];
-
-  //     console.log('✅ Explicit media types we are looking for:', explicitMediaTypes);
-
-  //     const allFiles = [];
-  //     let pageToken = null;
-  //     let pageCount = 0;
-
-  //     do {
-  //       pageCount++;
-  //       console.log(`\n📄 Fetching page ${pageCount}...`);
-
-  //       const params = new URLSearchParams({
-  //         q: `'${folderId}' in parents and trashed=false`,
-  //         fields: 'nextPageToken, files(id,name,mimeType,size,shortcutDetails)',
-  //         supportsAllDrives: 'true',
-  //         includeItemsFromAllDrives: 'true',
-  //         corpora: 'allDrives',
-  //         pageSize: '1000'
-  //       });
-  //       if (pageToken) params.append('pageToken', pageToken);
-
-  //       const url = `https://www.googleapis.com/drive/v3/files?${params}`;
-  //       console.log('🌐 Request URL:', url);
-
-  //       const res = await fetch(url, {
-  //         headers: { Authorization: `Bearer ${token}` }
-  //       });
-
-  //       console.log('📡 Response status:', res.status, res.statusText);
-
-  //       if (!res.ok) {
-  //         console.error('❌ Response not OK!');
-  //         const errorBody = await res.text();
-  //         console.error('❌ Error body:', errorBody);
-
-  //         if (res.status === 403 || res.status === 404) {
-  //           toast.error('Cannot access this folder. Make sure it\'s shared with you.');
-  //           return;
-  //         }
-  //         throw new Error(`Drive fetch failed: ${res.statusText}`);
-  //       }
-
-  //       const data = await res.json();
-  //       console.log('📦 Raw API response:', data);
-  //       console.log(`📊 Files in page ${pageCount}:`, data.files?.length || 0);
-
-  //       if (data.files && data.files.length > 0) {
-  //         console.log('📋 Files in this page:');
-  //         data.files.forEach((file, idx) => {
-  //           console.log(`  ${idx + 1}. Name: "${file.name}"`);
-  //           console.log(`     MIME: ${file.mimeType}`);
-  //           console.log(`     Size: ${file.size} bytes`);
-  //           console.log(`     ID: ${file.id}`);
-  //         });
-  //       } else {
-  //         console.log('⚠️ No files in this page!');
-  //       }
-
-  //       allFiles.push(...(data.files || []));
-  //       pageToken = data.nextPageToken;
-  //       console.log('🔄 Next page token:', pageToken ? 'exists' : 'none (last page)');
-  //     } while (pageToken);
-
-  //     console.log('\n📊 ========== FETCH COMPLETE ==========');
-  //     console.log('📦 Total files fetched across all pages:', allFiles.length);
-  //     console.log('📋 All file names:', allFiles.map(f => f.name));
-  //     console.log('🏷️ All MIME types:', allFiles.map(f => f.mimeType));
-  //     console.log('📐 Unique MIME types:', [...new Set(allFiles.map(f => f.mimeType))]);
-
-  //     console.log('\n🔍 ========== RESOLVING SHORTCUTS ==========');
-
-  //     const resolvedFiles = allFiles.map(f => {
-  //       if (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails?.targetId) {
-  //         console.log(`🔗 Resolving shortcut: ${f.name} → ${f.shortcutDetails.targetId}`);
-  //         return {
-  //           ...f,
-  //           id: f.shortcutDetails.targetId,
-  //           mimeType: f.shortcutDetails.targetMimeType || f.mimeType,
-  //         };
-  //       }
-  //       return f;
-  //     });
-
-  //     console.log('\n🔍 ========== FILTERING MEDIA FILES ==========');
-
-  //     const mediaFiles = resolvedFiles.filter((f, idx) => {
-  //       const mime = f.mimeType || '';
-  //       const name = f.name || '';
-
-  //       console.log(`\n🔎 Checking file ${idx + 1}/${resolvedFiles.length}: "${name}"`);
-  //       console.log(`   MIME type: ${mime}`);
-
-  //       if (explicitMediaTypes.includes(mime)) {
-  //         console.log(`   ✅ MATCH: Found in explicit media types list`);
-  //         return true;
-  //       }
-  //       if (mime.startsWith('image/')) {
-  //         console.log(`   ✅ MATCH: Starts with "image/"`);
-  //         return true;
-  //       }
-  //       if (mime.startsWith('video/')) {
-  //         console.log(`   ✅ MATCH: Starts with "video/"`);
-  //         return true;
-  //       }
-
-  //       const extensionMatch = /\.(jpe?g|png|gif|webp|bmp|heic|mov|mp4|avi|webm|mkv)$/i.test(name);
-  //       if (extensionMatch) {
-  //         console.log(`   ✅ MATCH: File extension indicates media file`);
-  //         return true;
-  //       }
-
-  //       console.log(`   ❌ SKIP: Not a media file`);
-  //       return false;
-  //     });
-
-  //     console.log('\n🎬 ========== FILTERING RESULTS ==========');
-  //     console.log('✅ Media files found:', mediaFiles.length);
-  //     console.log('📋 Media file names:', mediaFiles.map(f => f.name));
-  //     console.log('🏷️ Media file MIME types:', mediaFiles.map(f => f.mimeType));
-
-  //     if (mediaFiles.length === 0) {
-  //       console.log('⚠️ No media files found after filtering!');
-  //       toast.info('No media files found in this folder');
-  //       return;
-  //     }
-
-  //     console.log('\n📝 ========== FORMATTING FILES ==========');
-  //     const formatted = mediaFiles.map((f, idx) => {
-  //       const obj = {
-  //         id: f.id,
-  //         name: f.name,
-  //         mimeType: f.mimeType,
-  //         size: f.size,
-  //         accessToken: token,
-  //         isDrive: true,
-  //       };
-  //       console.log(`${idx + 1}. Formatted:`, obj);
-  //       return obj;
-  //     });
-
-  //     console.log('\n💾 ========== SAVING TO STATE ==========');
-  //     console.log('Adding files to driveFiles state...');
-  //     setDriveFiles(prev => {
-  //       console.log('Previous driveFiles count:', prev.length);
-  //       console.log('New driveFiles count will be:', prev.length + formatted.length);
-  //       return [...prev, ...formatted];
-  //     });
-
-  //     toast.success(`Imported ${formatted.length} file(s) from folder`);
-  //     setFolderLinkValue('');
-  //     setShowFolderInput(false);
-
-  //     console.log('✅ ========== IMPORT COMPLETE ==========');
-  //   } catch (error) {
-  //     console.error('Error importing folder:', error);
-  //     toast.error('Failed to import folder. Please try again. Check console for details.');
-  //   } finally {
-  //     setIsImportingFolder(false);
-  //   }
-  // }, [setDriveFiles]);
-
-
-
-  // const handleImportFromFolder = useCallback(() => {
-  //   const folderId = extractFolderId(folderLinkValue);
-
-  //   if (!folderId) {
-  //     toast.error('Invalid Google Drive folder link');
-  //     return;
-  //   }
-
-  //   if (!googleAuthStatus.accessToken) {
-  //     toast.error('Not authenticated with Google Drive');
-  //     return;
-  //   }
-
-  //   importFilesFromFolder(folderId, googleAuthStatus.accessToken);
-  // }, [folderLinkValue, googleAuthStatus.accessToken, importFilesFromFolder]);
-
-
-
-  // const createPicker = useCallback((token) => {
-
-  //   setShowFolderInput(true);
-
-
-  //   const mimeTypes = [
-  //     "application/vnd.google-apps.folder",
-  //     "image/jpeg",
-  //     "image/png",
-  //     "image/gif",
-  //     "image/webp",
-  //     "video/mp4",
-  //     "video/webm",
-  //     "video/quicktime"
-  //   ].join(",");
-
-  //   const allFolders = new google.picker.DocsView()
-  //     .setIncludeFolders(true)
-  //     .setMimeTypes(mimeTypes)
-  //     .setSelectFolderEnabled(false);
-
-  //   const myFolders = new google.picker.DocsView()
-  //     .setOwnedByMe(true)
-  //     .setIncludeFolders(true)
-  //     .setMimeTypes(mimeTypes)
-  //     .setSelectFolderEnabled(false);
-
-  //   const sharedDriveFolders = new google.picker.DocsView()
-  //     .setOwnedByMe(true)
-  //     .setIncludeFolders(true)
-  //     .setMimeTypes(mimeTypes)
-  //     .setSelectFolderEnabled(false)
-  //     .setEnableDrives(true);
-
-  //   const onlySharedFolders = new google.picker.DocsView()
-  //     .setOwnedByMe(false)
-  //     .setIncludeFolders(true)
-  //     .setMimeTypes(mimeTypes)
-  //     .setSelectFolderEnabled(false);
-
-  //   const picker = new google.picker.PickerBuilder()
-  //     .addView(myFolders)
-  //     .addView(allFolders)
-  //     .addView(sharedDriveFolders)
-  //     .addView(onlySharedFolders)
-  //     .setOAuthToken(token)
-  //     .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-  //     .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
-  //     .hideTitleBar()
-  //     .setAppId(102886794705)
-  //     .setCallback((data) => {
-  //       if (data.action !== "picked") return;
-
-  //       const selected = data.docs.map((doc) => ({
-  //         id: doc.id,
-  //         name: doc.name,
-  //         mimeType: doc.mimeType,
-  //         size: doc.sizeBytes,
-  //         accessToken: token
-  //       }));
-
-  //       setDriveFiles((prev) => [...prev, ...selected]);
-  //       if (data.action === "picked" || data.action === "cancel") {
-  //         setShowFolderInput(false);
-  //         setFolderLinkValue(""); // Clear the input value
-  //         picker.setVisible(false);
-  //       }
-  //     })
-  //     .build();
-
-  //   picker.setVisible(true);
-  // }, [setDriveFiles]);
 
 
 
@@ -1711,6 +1403,10 @@ export default function AdCreationForm({
     setter(newValues)
   }
 
+  // Keep isCarouselAd in sync with adType for backward compatibility
+  useEffect(() => {
+    setIsCarouselAd(adType === 'carousel');
+  }, [adType, setIsCarouselAd]);
 
 
   // Replace the existing function with this
@@ -2027,19 +1723,6 @@ export default function AdCreationForm({
       }
     }
 
-
-
-    // setIsLoading(true);
-    // ✅ Step: Upload large local video files to S3 before creating ads
-    // const largeFiles = files.filter((file) =>
-    //   file.type.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
-    // );
-
-    // // Step: Upload large Drive videos to S3
-    // const largeDriveFiles = driveFiles.filter(file =>
-    //   file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD
-    // );
-
     const largeFiles = files.filter(file =>
       isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
     );
@@ -2187,9 +1870,7 @@ export default function AdCreationForm({
 
     // Add carousel validation
     if (isCarouselAd) {
-      // console.log("reached validation check");
       const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
-      // console.log("totalFiles", totalFiles);
       if (totalFiles < 2) {
         toast.error("Carousel ads require at least 2 files");
         setIsLoading(false);
@@ -2201,6 +1882,21 @@ export default function AdCreationForm({
         return;
       }
       // console.log("passed validation check");
+    }
+
+    // Add flexible ads validation
+    if (adType === 'flexible') {
+      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
+      if (totalFiles > 10) {
+        toast.error("Flexible ads can have maximum 10 files");
+        setIsLoading(false);
+        return;
+      }
+      if (totalFiles < 1) {
+        toast.error("Flexible ads require at least 1 file");
+        setIsLoading(false);
+        return;
+      }
     }
 
     setJobId(frontendJobId); // This triggers SSE
@@ -2215,14 +1911,6 @@ export default function AdCreationForm({
           return;
         }
 
-
-        console.log("🎠 Creating carousel ad with:", {
-          headlines,
-          messages,
-          filesCount: files.length + driveFiles.length,
-          applyHeadlinesToAllCards,
-          applyTextToAllCards
-        });
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
@@ -2327,6 +2015,76 @@ export default function AdCreationForm({
         });
       }
 
+
+      // FLEXIBLE ADS: Handle flexible ads to non-dynamic ad sets
+      if (adType === 'flexible' && nonDynamicAdSetIds.length > 0) {
+        console.log("🎨 Creating flexible ad with:", {
+          filesCount: files.length + driveFiles.length + s3Results.length + s3DriveResults.length,
+          nonDynamicAdSetIds
+        });
+
+        // For flexible ads, send ALL files to each non-dynamic ad set (one request per ad set)
+        nonDynamicAdSetIds.forEach((adSetId) => {
+          const formData = new FormData();
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2));
+          formData.append("headlines", JSON.stringify(headlines));
+          formData.append("descriptions", JSON.stringify(descriptions));
+          formData.append("messages", JSON.stringify(messages));
+          formData.append("adAccountId", selectedAdAccount);
+          formData.append("adSetId", adSetId);
+          formData.append("pageId", pageId);
+          formData.append("instagramAccountId", instagramAccountId);
+          formData.append("link", JSON.stringify(link));
+          formData.append("cta", cta);
+          formData.append("isCarouselAd", false);
+          formData.append("adType", "flexible"); // Send adType for flexible
+          formData.append("launchPaused", launchPaused);
+          formData.append("enablePlacementCustomization", false);
+          formData.append("jobId", frontendJobId);
+
+          // Add all small local files
+          files.forEach((file) => {
+            if (file.size <= S3_UPLOAD_THRESHOLD) {
+              formData.append("mediaFiles", file);
+            }
+          });
+
+          // Add all small drive files
+          smallDriveFiles.forEach((driveFile) => {
+            formData.append("driveFiles", JSON.stringify({
+              id: driveFile.id,
+              name: driveFile.name,
+              mimeType: driveFile.mimeType,
+              accessToken: driveFile.accessToken
+            }));
+          });
+
+          // Add all large file URLs (S3)
+          [...s3Results, ...s3DriveResults].forEach((s3File) => {
+            formData.append("s3VideoUrls", s3File.s3Url);
+            formData.append("s3VideoNames", s3File.name);
+          });
+
+          // Add video thumbnail if provided
+          if (thumbnail) {
+            formData.append("thumbnail", thumbnail);
+          }
+
+          // Add shop destination if needed
+          if (selectedShopDestination && showShopDestinationSelector) {
+            formData.append("shopDestination", selectedShopDestination);
+            formData.append("shopDestinationType", selectedShopDestinationType);
+          }
+
+          promises.push(
+            axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
+              withCredentials: true,
+              headers: { "Content-Type": "multipart/form-data" },
+            })
+          );
+        });
+      }
+
       // Process dynamic adsets
       if (dynamicAdSetIds.length > 0) {
         // For each dynamic adset, create ONE request with ALL media files
@@ -2394,8 +2152,8 @@ export default function AdCreationForm({
         });
       }
 
-
-      if (nonDynamicAdSetIds.length > 0 && !isCarouselAd) {
+      if (nonDynamicAdSetIds.length > 0 && !isCarouselAd && adType !== 'flexible') {
+        // if (nonDynamicAdSetIds.length > 0 && !isCarouselAd) {
         nonDynamicAdSetIds.forEach((adSetId) => {
 
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
@@ -2923,7 +2681,49 @@ export default function AdCreationForm({
 
       <CardHeader>
         <CardTitle className="flex items-center justify-between w-full">
-          <div className="flex items-center gap-2">
+
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="ad-type" className="text-sm font-medium whitespace-nowrap">
+              Ad Type:
+            </Label>
+            <Select
+              value={adType}
+              onValueChange={(value) => {
+                setAdType(value);
+
+                // Reset link states when switching away from carousel
+                if (value !== 'carousel' && link.length > 1) {
+                  setLink([link[0] || ""]);
+                  setLinkCustomStates({});
+                  setShowCustomLink(false);
+                }
+
+                // Reset the "apply to all" states and restore from template
+                if (value !== 'carousel') {
+                  setApplyTextToAllCards(false);
+                  setApplyHeadlinesToAllCards(false);
+
+                  if (selectedTemplate && copyTemplates[selectedTemplate]) {
+                    const tpl = copyTemplates[selectedTemplate];
+                    setMessages(tpl.primaryTexts || [""]);
+                    setHeadlines(tpl.headlines || [""]);
+                  }
+                }
+              }}
+              disabled={!isLoggedIn}
+            >
+              <SelectTrigger className="w-[180px] border-gray-400">
+                <SelectValue placeholder="Select ad type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="regular">Image/Video</SelectItem>
+                <SelectItem value="carousel">Carousel</SelectItem>
+                <SelectItem value="flexible">Flexible Ads</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* <div className="flex items-center gap-2">
             <ConfigIcon className="w-5 h-5" />
             Select ad preferences
           </div>
@@ -2960,7 +2760,7 @@ export default function AdCreationForm({
             >
               Create Carousel Ad
             </label>
-          </div>
+          </div> */}
         </CardTitle>
       </CardHeader>
 
@@ -3829,7 +3629,8 @@ export default function AdCreationForm({
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
                 (files.length === 0 && driveFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-                (isCarouselAd && (files.length + driveFiles.length) < 2) ||
+                (adType === 'carousel' && (files.length + driveFiles.length) < 2) ||
+                (adType === 'flexible' && (files.length + driveFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 (!showCustomLink && !link[0]) ||
                 (showCustomLink && !customLink.trim())
