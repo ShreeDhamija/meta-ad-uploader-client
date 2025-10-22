@@ -1315,6 +1315,9 @@ export default function AdCreationForm({
       }
     }
 
+    setShowFolderInput(true);
+
+
     const mimeTypes = [
       "application/vnd.google-apps.folder",
       "image/jpeg",
@@ -3789,12 +3792,12 @@ export default function AdCreationForm({
                       }
                     }}
                     className="flex-1"
-                    disabled={isImportingFolder}
+                  // disabled={isImportingFolder}
                   />
                   <Button
                     type="button"
                     onClick={handleImportFromFolder}
-                    disabled={!folderLinkValue || isImportingFolder}
+                    disabled={!folderLinkValue}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     {isImportingFolder ? (
