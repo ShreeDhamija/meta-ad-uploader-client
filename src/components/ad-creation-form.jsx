@@ -1303,22 +1303,6 @@ export default function AdCreationForm({
   // }, [setDriveFiles]);
 
 
-  const handleImportFromFolder = useCallback(() => {
-    const folderId = extractFolderId(folderLinkValue);
-
-    if (!folderId) {
-      toast.error('Invalid Google Drive folder link');
-      return;
-    }
-
-    if (!googleAuthStatus.accessToken) {
-      toast.error('Not authenticated with Google Drive');
-      return;
-    }
-
-    toast.info('Opening folder in picker...');
-    createPicker(googleAuthStatus.accessToken, folderId);
-  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker]);
 
   // 4. Updated createPicker with folder navigation support
   const createPicker = useCallback((token, initialFolderId = null) => {
@@ -1417,6 +1401,25 @@ export default function AdCreationForm({
     pickerInstanceRef.current = picker;
     picker.setVisible(true);
   }, [setDriveFiles, setShowFolderInput, setFolderLinkValue]);
+
+
+
+  const handleImportFromFolder = useCallback(() => {
+    const folderId = extractFolderId(folderLinkValue);
+
+    if (!folderId) {
+      toast.error('Invalid Google Drive folder link');
+      return;
+    }
+
+    if (!googleAuthStatus.accessToken) {
+      toast.error('Not authenticated with Google Drive');
+      return;
+    }
+
+    toast.info('Opening folder in picker...');
+    createPicker(googleAuthStatus.accessToken, folderId);
+  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker]);
 
   const openPicker = useCallback((token) => {
     if (!window.google || !window.google.picker) {
