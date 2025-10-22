@@ -3762,10 +3762,12 @@ export default function AdCreationForm({
           </div>
 
           {showFolderInput && (
-            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]">
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]" style={{
+              top: 'calc(50vh - 200px)' // Positions it above center where picker usually appears
+            }} >
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">Quick Import from Folder</h3>
+                  <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
                   <Button
                     type="button"
                     variant="ghost"
@@ -3776,7 +3778,7 @@ export default function AdCreationForm({
                     }}
                     className="h-6 w-6 p-0"
                   >
-                    <CircleX className="h-4 w-4" />
+                    {/* <CircleX className="h-4 w-4" /> */}
                   </Button>
                 </div>
 
@@ -3792,7 +3794,7 @@ export default function AdCreationForm({
                       }
                     }}
                     className="flex-1"
-                  // disabled={isImportingFolder}
+
                   />
                   <Button
                     type="button"
@@ -3803,7 +3805,7 @@ export default function AdCreationForm({
                     {isImportingFolder ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Importing...
+                        Opening...
                       </>
                     ) : (
                       "Import"
