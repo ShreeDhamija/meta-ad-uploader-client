@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, useMemo } from "react"
+import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import axios from "axios"
 import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
@@ -387,6 +387,8 @@ export default function AdCreationForm({
   const [showFolderInput, setShowFolderInput] = useState(false);
   const [folderLinkValue, setFolderLinkValue] = useState("");
   const [isImportingFolder, setIsImportingFolder] = useState(false);
+  const pickerInstanceRef = useRef(null);
+
   //gogle drive pickers
   const [accessToken, setAccessToken] = useState(null)
   //S3 States
@@ -1029,188 +1031,278 @@ export default function AdCreationForm({
   }, []);
 
 
-  const importFilesFromFolder = useCallback(async (folderId, token) => {
-    console.log('🚀 ========== IMPORT STARTED ==========');
-    console.log('📁 Folder ID:', folderId);
-    console.log('🔑 Token (first 20 chars):', token?.substring(0, 20) + '...');
+  // const importFilesFromFolder = useCallback(async (folderId, token) => {
+  //   console.log('🚀 ========== IMPORT STARTED ==========');
+  //   console.log('📁 Folder ID:', folderId);
+  //   console.log('🔑 Token (first 20 chars):', token?.substring(0, 20) + '...');
 
-    if (!folderId) {
-      toast.error('Invalid folder link');
-      console.error('❌ Missing folder ID');
-      return;
-    }
+  //   if (!folderId) {
+  //     toast.error('Invalid folder link');
+  //     console.error('❌ Missing folder ID');
+  //     return;
+  //   }
 
-    setIsImportingFolder(true);
-    try {
-      const explicitMediaTypes = [
-        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-        'video/mp4', 'video/webm', 'video/quicktime'
-      ];
+  //   setIsImportingFolder(true);
+  //   try {
+  //     const explicitMediaTypes = [
+  //       'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  //       'video/mp4', 'video/webm', 'video/quicktime'
+  //     ];
 
-      console.log('✅ Explicit media types we are looking for:', explicitMediaTypes);
+  //     console.log('✅ Explicit media types we are looking for:', explicitMediaTypes);
 
-      const allFiles = [];
-      let pageToken = null;
-      let pageCount = 0;
+  //     const allFiles = [];
+  //     let pageToken = null;
+  //     let pageCount = 0;
 
-      do {
-        pageCount++;
-        console.log(`\n📄 Fetching page ${pageCount}...`);
+  //     do {
+  //       pageCount++;
+  //       console.log(`\n📄 Fetching page ${pageCount}...`);
 
-        const params = new URLSearchParams({
-          q: `'${folderId}' in parents and trashed=false`,
-          fields: 'nextPageToken, files(id,name,mimeType,size,shortcutDetails)',
-          supportsAllDrives: 'true',
-          includeItemsFromAllDrives: 'true',
-          corpora: 'allDrives',
-          pageSize: '1000'
-        });
-        if (pageToken) params.append('pageToken', pageToken);
+  //       const params = new URLSearchParams({
+  //         q: `'${folderId}' in parents and trashed=false`,
+  //         fields: 'nextPageToken, files(id,name,mimeType,size,shortcutDetails)',
+  //         supportsAllDrives: 'true',
+  //         includeItemsFromAllDrives: 'true',
+  //         corpora: 'allDrives',
+  //         pageSize: '1000'
+  //       });
+  //       if (pageToken) params.append('pageToken', pageToken);
 
-        const url = `https://www.googleapis.com/drive/v3/files?${params}`;
-        console.log('🌐 Request URL:', url);
+  //       const url = `https://www.googleapis.com/drive/v3/files?${params}`;
+  //       console.log('🌐 Request URL:', url);
 
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+  //       const res = await fetch(url, {
+  //         headers: { Authorization: `Bearer ${token}` }
+  //       });
 
-        console.log('📡 Response status:', res.status, res.statusText);
+  //       console.log('📡 Response status:', res.status, res.statusText);
 
-        if (!res.ok) {
-          console.error('❌ Response not OK!');
-          const errorBody = await res.text();
-          console.error('❌ Error body:', errorBody);
+  //       if (!res.ok) {
+  //         console.error('❌ Response not OK!');
+  //         const errorBody = await res.text();
+  //         console.error('❌ Error body:', errorBody);
 
-          if (res.status === 403 || res.status === 404) {
-            toast.error('Cannot access this folder. Make sure it\'s shared with you.');
-            return;
-          }
-          throw new Error(`Drive fetch failed: ${res.statusText}`);
-        }
+  //         if (res.status === 403 || res.status === 404) {
+  //           toast.error('Cannot access this folder. Make sure it\'s shared with you.');
+  //           return;
+  //         }
+  //         throw new Error(`Drive fetch failed: ${res.statusText}`);
+  //       }
 
-        const data = await res.json();
-        console.log('📦 Raw API response:', data);
-        console.log(`📊 Files in page ${pageCount}:`, data.files?.length || 0);
+  //       const data = await res.json();
+  //       console.log('📦 Raw API response:', data);
+  //       console.log(`📊 Files in page ${pageCount}:`, data.files?.length || 0);
 
-        if (data.files && data.files.length > 0) {
-          console.log('📋 Files in this page:');
-          data.files.forEach((file, idx) => {
-            console.log(`  ${idx + 1}. Name: "${file.name}"`);
-            console.log(`     MIME: ${file.mimeType}`);
-            console.log(`     Size: ${file.size} bytes`);
-            console.log(`     ID: ${file.id}`);
-          });
-        } else {
-          console.log('⚠️ No files in this page!');
-        }
+  //       if (data.files && data.files.length > 0) {
+  //         console.log('📋 Files in this page:');
+  //         data.files.forEach((file, idx) => {
+  //           console.log(`  ${idx + 1}. Name: "${file.name}"`);
+  //           console.log(`     MIME: ${file.mimeType}`);
+  //           console.log(`     Size: ${file.size} bytes`);
+  //           console.log(`     ID: ${file.id}`);
+  //         });
+  //       } else {
+  //         console.log('⚠️ No files in this page!');
+  //       }
 
-        allFiles.push(...(data.files || []));
-        pageToken = data.nextPageToken;
-        console.log('🔄 Next page token:', pageToken ? 'exists' : 'none (last page)');
-      } while (pageToken);
+  //       allFiles.push(...(data.files || []));
+  //       pageToken = data.nextPageToken;
+  //       console.log('🔄 Next page token:', pageToken ? 'exists' : 'none (last page)');
+  //     } while (pageToken);
 
-      console.log('\n📊 ========== FETCH COMPLETE ==========');
-      console.log('📦 Total files fetched across all pages:', allFiles.length);
-      console.log('📋 All file names:', allFiles.map(f => f.name));
-      console.log('🏷️ All MIME types:', allFiles.map(f => f.mimeType));
-      console.log('📐 Unique MIME types:', [...new Set(allFiles.map(f => f.mimeType))]);
+  //     console.log('\n📊 ========== FETCH COMPLETE ==========');
+  //     console.log('📦 Total files fetched across all pages:', allFiles.length);
+  //     console.log('📋 All file names:', allFiles.map(f => f.name));
+  //     console.log('🏷️ All MIME types:', allFiles.map(f => f.mimeType));
+  //     console.log('📐 Unique MIME types:', [...new Set(allFiles.map(f => f.mimeType))]);
 
-      console.log('\n🔍 ========== RESOLVING SHORTCUTS ==========');
+  //     console.log('\n🔍 ========== RESOLVING SHORTCUTS ==========');
 
-      const resolvedFiles = allFiles.map(f => {
-        if (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails?.targetId) {
-          console.log(`🔗 Resolving shortcut: ${f.name} → ${f.shortcutDetails.targetId}`);
-          return {
-            ...f,
-            id: f.shortcutDetails.targetId,
-            mimeType: f.shortcutDetails.targetMimeType || f.mimeType,
-          };
-        }
-        return f;
-      });
+  //     const resolvedFiles = allFiles.map(f => {
+  //       if (f.mimeType === 'application/vnd.google-apps.shortcut' && f.shortcutDetails?.targetId) {
+  //         console.log(`🔗 Resolving shortcut: ${f.name} → ${f.shortcutDetails.targetId}`);
+  //         return {
+  //           ...f,
+  //           id: f.shortcutDetails.targetId,
+  //           mimeType: f.shortcutDetails.targetMimeType || f.mimeType,
+  //         };
+  //       }
+  //       return f;
+  //     });
 
-      console.log('\n🔍 ========== FILTERING MEDIA FILES ==========');
+  //     console.log('\n🔍 ========== FILTERING MEDIA FILES ==========');
 
-      const mediaFiles = resolvedFiles.filter((f, idx) => {
-        const mime = f.mimeType || '';
-        const name = f.name || '';
+  //     const mediaFiles = resolvedFiles.filter((f, idx) => {
+  //       const mime = f.mimeType || '';
+  //       const name = f.name || '';
 
-        console.log(`\n🔎 Checking file ${idx + 1}/${resolvedFiles.length}: "${name}"`);
-        console.log(`   MIME type: ${mime}`);
+  //       console.log(`\n🔎 Checking file ${idx + 1}/${resolvedFiles.length}: "${name}"`);
+  //       console.log(`   MIME type: ${mime}`);
 
-        if (explicitMediaTypes.includes(mime)) {
-          console.log(`   ✅ MATCH: Found in explicit media types list`);
-          return true;
-        }
-        if (mime.startsWith('image/')) {
-          console.log(`   ✅ MATCH: Starts with "image/"`);
-          return true;
-        }
-        if (mime.startsWith('video/')) {
-          console.log(`   ✅ MATCH: Starts with "video/"`);
-          return true;
-        }
+  //       if (explicitMediaTypes.includes(mime)) {
+  //         console.log(`   ✅ MATCH: Found in explicit media types list`);
+  //         return true;
+  //       }
+  //       if (mime.startsWith('image/')) {
+  //         console.log(`   ✅ MATCH: Starts with "image/"`);
+  //         return true;
+  //       }
+  //       if (mime.startsWith('video/')) {
+  //         console.log(`   ✅ MATCH: Starts with "video/"`);
+  //         return true;
+  //       }
 
-        const extensionMatch = /\.(jpe?g|png|gif|webp|bmp|heic|mov|mp4|avi|webm|mkv)$/i.test(name);
-        if (extensionMatch) {
-          console.log(`   ✅ MATCH: File extension indicates media file`);
-          return true;
-        }
+  //       const extensionMatch = /\.(jpe?g|png|gif|webp|bmp|heic|mov|mp4|avi|webm|mkv)$/i.test(name);
+  //       if (extensionMatch) {
+  //         console.log(`   ✅ MATCH: File extension indicates media file`);
+  //         return true;
+  //       }
 
-        console.log(`   ❌ SKIP: Not a media file`);
-        return false;
-      });
+  //       console.log(`   ❌ SKIP: Not a media file`);
+  //       return false;
+  //     });
 
-      console.log('\n🎬 ========== FILTERING RESULTS ==========');
-      console.log('✅ Media files found:', mediaFiles.length);
-      console.log('📋 Media file names:', mediaFiles.map(f => f.name));
-      console.log('🏷️ Media file MIME types:', mediaFiles.map(f => f.mimeType));
+  //     console.log('\n🎬 ========== FILTERING RESULTS ==========');
+  //     console.log('✅ Media files found:', mediaFiles.length);
+  //     console.log('📋 Media file names:', mediaFiles.map(f => f.name));
+  //     console.log('🏷️ Media file MIME types:', mediaFiles.map(f => f.mimeType));
 
-      if (mediaFiles.length === 0) {
-        console.log('⚠️ No media files found after filtering!');
-        toast.info('No media files found in this folder');
-        return;
-      }
+  //     if (mediaFiles.length === 0) {
+  //       console.log('⚠️ No media files found after filtering!');
+  //       toast.info('No media files found in this folder');
+  //       return;
+  //     }
 
-      console.log('\n📝 ========== FORMATTING FILES ==========');
-      const formatted = mediaFiles.map((f, idx) => {
-        const obj = {
-          id: f.id,
-          name: f.name,
-          mimeType: f.mimeType,
-          size: f.size,
-          accessToken: token,
-          isDrive: true,
-        };
-        console.log(`${idx + 1}. Formatted:`, obj);
-        return obj;
-      });
+  //     console.log('\n📝 ========== FORMATTING FILES ==========');
+  //     const formatted = mediaFiles.map((f, idx) => {
+  //       const obj = {
+  //         id: f.id,
+  //         name: f.name,
+  //         mimeType: f.mimeType,
+  //         size: f.size,
+  //         accessToken: token,
+  //         isDrive: true,
+  //       };
+  //       console.log(`${idx + 1}. Formatted:`, obj);
+  //       return obj;
+  //     });
 
-      console.log('\n💾 ========== SAVING TO STATE ==========');
-      console.log('Adding files to driveFiles state...');
-      setDriveFiles(prev => {
-        console.log('Previous driveFiles count:', prev.length);
-        console.log('New driveFiles count will be:', prev.length + formatted.length);
-        return [...prev, ...formatted];
-      });
+  //     console.log('\n💾 ========== SAVING TO STATE ==========');
+  //     console.log('Adding files to driveFiles state...');
+  //     setDriveFiles(prev => {
+  //       console.log('Previous driveFiles count:', prev.length);
+  //       console.log('New driveFiles count will be:', prev.length + formatted.length);
+  //       return [...prev, ...formatted];
+  //     });
 
-      toast.success(`Imported ${formatted.length} file(s) from folder`);
-      setFolderLinkValue('');
-      setShowFolderInput(false);
+  //     toast.success(`Imported ${formatted.length} file(s) from folder`);
+  //     setFolderLinkValue('');
+  //     setShowFolderInput(false);
 
-      console.log('✅ ========== IMPORT COMPLETE ==========');
-    } catch (error) {
-      console.error('Error importing folder:', error);
-      toast.error('Failed to import folder. Please try again. Check console for details.');
-    } finally {
-      setIsImportingFolder(false);
-    }
-  }, [setDriveFiles]);
+  //     console.log('✅ ========== IMPORT COMPLETE ==========');
+  //   } catch (error) {
+  //     console.error('Error importing folder:', error);
+  //     toast.error('Failed to import folder. Please try again. Check console for details.');
+  //   } finally {
+  //     setIsImportingFolder(false);
+  //   }
+  // }, [setDriveFiles]);
 
 
 
-  // Add this function to handle the import button click
-  // Inside AdCreationForm
+  // const handleImportFromFolder = useCallback(() => {
+  //   const folderId = extractFolderId(folderLinkValue);
+
+  //   if (!folderId) {
+  //     toast.error('Invalid Google Drive folder link');
+  //     return;
+  //   }
+
+  //   if (!googleAuthStatus.accessToken) {
+  //     toast.error('Not authenticated with Google Drive');
+  //     return;
+  //   }
+
+  //   importFilesFromFolder(folderId, googleAuthStatus.accessToken);
+  // }, [folderLinkValue, googleAuthStatus.accessToken, importFilesFromFolder]);
+
+
+
+  // const createPicker = useCallback((token) => {
+
+  //   setShowFolderInput(true);
+
+
+  //   const mimeTypes = [
+  //     "application/vnd.google-apps.folder",
+  //     "image/jpeg",
+  //     "image/png",
+  //     "image/gif",
+  //     "image/webp",
+  //     "video/mp4",
+  //     "video/webm",
+  //     "video/quicktime"
+  //   ].join(",");
+
+  //   const allFolders = new google.picker.DocsView()
+  //     .setIncludeFolders(true)
+  //     .setMimeTypes(mimeTypes)
+  //     .setSelectFolderEnabled(false);
+
+  //   const myFolders = new google.picker.DocsView()
+  //     .setOwnedByMe(true)
+  //     .setIncludeFolders(true)
+  //     .setMimeTypes(mimeTypes)
+  //     .setSelectFolderEnabled(false);
+
+  //   const sharedDriveFolders = new google.picker.DocsView()
+  //     .setOwnedByMe(true)
+  //     .setIncludeFolders(true)
+  //     .setMimeTypes(mimeTypes)
+  //     .setSelectFolderEnabled(false)
+  //     .setEnableDrives(true);
+
+  //   const onlySharedFolders = new google.picker.DocsView()
+  //     .setOwnedByMe(false)
+  //     .setIncludeFolders(true)
+  //     .setMimeTypes(mimeTypes)
+  //     .setSelectFolderEnabled(false);
+
+  //   const picker = new google.picker.PickerBuilder()
+  //     .addView(myFolders)
+  //     .addView(allFolders)
+  //     .addView(sharedDriveFolders)
+  //     .addView(onlySharedFolders)
+  //     .setOAuthToken(token)
+  //     .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+  //     .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+  //     .hideTitleBar()
+  //     .setAppId(102886794705)
+  //     .setCallback((data) => {
+  //       if (data.action !== "picked") return;
+
+  //       const selected = data.docs.map((doc) => ({
+  //         id: doc.id,
+  //         name: doc.name,
+  //         mimeType: doc.mimeType,
+  //         size: doc.sizeBytes,
+  //         accessToken: token
+  //       }));
+
+  //       setDriveFiles((prev) => [...prev, ...selected]);
+  //       if (data.action === "picked" || data.action === "cancel") {
+  //         setShowFolderInput(false);
+  //         setFolderLinkValue(""); // Clear the input value
+  //         picker.setVisible(false);
+  //       }
+  //     })
+  //     .build();
+
+  //   picker.setVisible(true);
+  // }, [setDriveFiles]);
+
+
   const handleImportFromFolder = useCallback(() => {
     const folderId = extractFolderId(folderLinkValue);
 
@@ -1224,15 +1316,20 @@ export default function AdCreationForm({
       return;
     }
 
-    importFilesFromFolder(folderId, googleAuthStatus.accessToken);
-  }, [folderLinkValue, googleAuthStatus.accessToken, importFilesFromFolder]);
+    toast.info('Opening folder in picker...');
+    createPicker(googleAuthStatus.accessToken, folderId);
+  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker]);
 
-
-
-  const createPicker = useCallback((token) => {
-
-    setShowFolderInput(true);
-
+  // 4. Updated createPicker with folder navigation support
+  const createPicker = useCallback((token, initialFolderId = null) => {
+    // Close existing picker if open
+    if (pickerInstanceRef.current) {
+      try {
+        pickerInstanceRef.current.setVisible(false);
+      } catch (e) {
+        // Picker might already be closed
+      }
+    }
 
     const mimeTypes = [
       "application/vnd.google-apps.folder",
@@ -1245,10 +1342,20 @@ export default function AdCreationForm({
       "video/quicktime"
     ].join(",");
 
-    const allFolders = new google.picker.DocsView()
-      .setIncludeFolders(true)
-      .setMimeTypes(mimeTypes)
-      .setSelectFolderEnabled(false);
+    // Create view with optional folder parent
+    let mainView;
+    if (initialFolderId) {
+      mainView = new google.picker.DocsView()
+        .setIncludeFolders(true)
+        .setMimeTypes(mimeTypes)
+        .setSelectFolderEnabled(false)
+        .setParent(initialFolderId); // Navigate to specific folder
+    } else {
+      mainView = new google.picker.DocsView()
+        .setIncludeFolders(true)
+        .setMimeTypes(mimeTypes)
+        .setSelectFolderEnabled(false);
+    }
 
     const myFolders = new google.picker.DocsView()
       .setOwnedByMe(true)
@@ -1269,39 +1376,47 @@ export default function AdCreationForm({
       .setMimeTypes(mimeTypes)
       .setSelectFolderEnabled(false);
 
-    const picker = new google.picker.PickerBuilder()
-      .addView(myFolders)
-      .addView(allFolders)
-      .addView(sharedDriveFolders)
-      .addView(onlySharedFolders)
+    const pickerBuilder = new google.picker.PickerBuilder()
       .setOAuthToken(token)
       .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
       .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
       .hideTitleBar()
       .setAppId(102886794705)
       .setCallback((data) => {
-        if (data.action !== "picked") return;
+        if (data.action === "picked") {
+          const selected = data.docs.map((doc) => ({
+            id: doc.id,
+            name: doc.name,
+            mimeType: doc.mimeType,
+            size: doc.sizeBytes,
+            accessToken: token
+          }));
 
-        const selected = data.docs.map((doc) => ({
-          id: doc.id,
-          name: doc.name,
-          mimeType: doc.mimeType,
-          size: doc.sizeBytes,
-          accessToken: token
-        }));
+          setDriveFiles((prev) => [...prev, ...selected]);
+        }
 
-        setDriveFiles((prev) => [...prev, ...selected]);
         if (data.action === "picked" || data.action === "cancel") {
           setShowFolderInput(false);
-          setFolderLinkValue(""); // Clear the input value
-          picker.setVisible(false);
+          setFolderLinkValue("");
+          pickerInstanceRef.current = null;
         }
-      })
-      .build();
+      });
 
+    // Add main view first if navigating to folder
+    if (initialFolderId) {
+      pickerBuilder.addView(mainView);
+    }
+
+    // Add other views
+    pickerBuilder
+      .addView(myFolders)
+      .addView(sharedDriveFolders)
+      .addView(onlySharedFolders);
+
+    const picker = pickerBuilder.build();
+    pickerInstanceRef.current = picker;
     picker.setVisible(true);
-  }, [setDriveFiles]);
-
+  }, [setDriveFiles, setShowFolderInput, setFolderLinkValue]);
 
   const openPicker = useCallback((token) => {
     if (!window.google || !window.google.picker) {
