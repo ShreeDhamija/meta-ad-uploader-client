@@ -3763,7 +3763,7 @@ export default function AdCreationForm({
 
           {showFolderInput && (
             <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]" style={{
-              top: 'calc(50vh - 200px)' // Positions it above center where picker usually appears
+              top: 'calc(50vh - 500px)' // Positions it above center where picker usually appears
             }} >
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
