@@ -576,7 +576,7 @@ export default function MediaPreview({
               <CardTitle className="text-left">Uploads Preview</CardTitle>
               <CardDescription className="text-left">
                 {`${files.length} file${files.length > 1 ? "s" : ""} selected`}
-                {isCarouselAd && !enablePlacementCustomization && (adType === flexible)(
+                {isCarouselAd && !enablePlacementCustomization && (
                   <span className="block text-xs text-gray-500 mt-1">
                     Drag to change order of carousel cards
                   </span>
@@ -639,7 +639,7 @@ export default function MediaPreview({
           </CardHeader>
 
           {/* Placement Customization Checkbox - only show when carousel is disabled */}
-          {!isCarouselAd && hasOnlyNonDynamicCreativeAdSets && (
+          {!isCarouselAd && hasOnlyNonDynamicCreativeAdSets && (adType !== 'flexible')(
             <div className="px-6 pb-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
