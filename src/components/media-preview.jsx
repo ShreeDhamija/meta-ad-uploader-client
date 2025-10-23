@@ -659,10 +659,12 @@ export default function MediaPreview({
 
               {adType === 'flexible' && (
                 <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleFlexibleAutoGroup}
-                  className="bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
+                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
                 >
-                  <Users className="w-4 h-4 mr-2" />
+                  <Rocket className="h-4 w-4 mr-2" />
                   Auto Group
                 </Button>
               )}
@@ -708,27 +710,6 @@ export default function MediaPreview({
               )}
             </div>
           )}
-
-          {/* Flexible Ad Grouping Info - show when flexible ad is selected */}
-          {adType === 'flexible' && (
-            <div className="px-6 pb-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <p className="text-sm font-medium text-blue-900">
-                  Flexible Ad Grouping Enabled
-                </p>
-                <p className="text-xs text-blue-700 mt-1">
-                  Select files and click "Group Ads" to create groups (max 10 files per ad).
-                  Or use "Auto Group" to automatically group files in sets of 10.
-                </p>
-                {fileGroups.length > 0 && (
-                  <p className="text-xs text-blue-700 mt-1 font-semibold">
-                    {fileGroups.length} flexible ad group{fileGroups.length !== 1 ? 's' : ''} created
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
 
           <CardContent
             className="flex-1 overflow-y-auto min-h-0 pr-2"

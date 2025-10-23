@@ -466,7 +466,15 @@ export default function AdCreationForm({
         !groupedFileIds.has(getFileId(f))
       );
       adCount = fileGroups.length + ungroupedFiles.length;
-    } else {
+    }
+    else if (adType === 'flexible') {
+      if (fileGroups.length > 0) {
+        adCount = fileGroups.length * (selectedAdSets.length || 1);
+      } else {
+        adCount = selectedAdSets.length || 1;
+      }
+    }
+    else {
       adCount = files.length + driveFiles.length;
     }
 
@@ -3787,7 +3795,7 @@ export default function AdCreationForm({
                 (files.length === 0 && driveFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
                 (adType === 'carousel' && (files.length + driveFiles.length) < 2) ||
-                // (adType === 'flexible' && (files.length + driveFiles.length) > 10) ||
+                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 (!showCustomLink && !link[0]) ||
                 (showCustomLink && !customLink.trim())
