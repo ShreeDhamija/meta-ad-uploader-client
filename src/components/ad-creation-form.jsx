@@ -376,7 +376,8 @@ export default function AdCreationForm({
   adAccountSettings,
   refreshAdSets,
   adNameFormulaV2,
-  setAdNameFormulaV2
+  setAdNameFormulaV2,
+  campaignObjective
 }) {
   // Local state
   const navigate = useNavigate()
