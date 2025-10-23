@@ -151,7 +151,7 @@ export default function Home() {
     const [fileGroups, setFileGroups] = useState([]);
     const [files, setFiles] = useState([])
     const [videoThumbs, setVideoThumbs] = useState({})
-    const { adAccounts, setAdAccounts, pages, setPages } = useAppData()
+    const { adAccounts, setAdAccounts, pages, setPages, pagesLoading } = useAppData()
     const { settings: adAccountSettings, documentExists } = useAdAccountSettings(selectedAdAccount)
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
@@ -384,6 +384,7 @@ export default function Home() {
                             setIsLoading={setIsLoading}
                             pages={pages}
                             setPages={setPages}
+                            pagesLoading={pagesLoading}
                             pageId={pageId}
                             setPageId={setPageId}
                             instagramAccountId={instagramAccountId}

@@ -317,6 +317,7 @@ export default function AdCreationForm({
   setIsLoading,
   pages,
   setPages,
+  pagesLoading,
   pageId,
   setPageId,
   instagramAccountId,
@@ -2626,7 +2627,6 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">
-                        {/* Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === currentJob.formData.selectedAdSets[0])?.name || ' a New Ad Set'} */}
                         Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {(() => {
                           if (currentJob.formData.duplicateAdSet) {
                             return currentJob.formData.newAdSetName || 'New Ad Set';
@@ -2718,52 +2718,13 @@ export default function AdCreationForm({
               <SelectTrigger className="w-[180px] bg-white border-gray-400 rounded-xl">
                 <SelectValue placeholder="Select ad type" />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent className="bg-white rounded-xl" >
                 <SelectItem value="regular">Image/Video</SelectItem>
                 <SelectItem value="carousel">Carousel</SelectItem>
                 <SelectItem value="flexible">Flexible Ads</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          {/* <div className="flex items-center gap-2">
-            <ConfigIcon className="w-5 h-5" />
-            Select ad preferences
-          </div>
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="carousel-ad"
-              checked={isCarouselAd}
-              onCheckedChange={(checked) => {
-                setIsCarouselAd(checked);
-                if (!checked && link.length > 1) {
-                  setLink([link[0] || ""]);
-                  setLinkCustomStates({});
-                  setShowCustomLink(false);
-                }
-
-                // Reset the "apply to all" states and restore from template
-                if (!checked) {
-                  setApplyTextToAllCards(false);
-                  setApplyHeadlinesToAllCards(false);
-
-                  if (selectedTemplate && copyTemplates[selectedTemplate]) {
-                    const tpl = copyTemplates[selectedTemplate];
-                    setMessages(tpl.primaryTexts || [""]);
-                    setHeadlines(tpl.headlines || [""]);
-                  }
-                }
-              }}
-              disabled={!isLoggedIn}
-              className="border-gray-400 rounded-md"
-            />
-            <label
-              htmlFor="carousel-ad"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Create Carousel Ad
-            </label>
-          </div> */}
         </CardTitle>
       </CardHeader>
 
@@ -2801,17 +2762,22 @@ export default function AdCreationForm({
                       variant="outline"
                       role="combobox"
                       aria-expanded={openPage}
-                      disabled={!isLoggedIn}
+                      disabled={!isLoggedIn || isPagesLoading} // 👈 Disable while loading
                       id="page"
                       className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
                     >
-                      {pageId ? (
+                      {isPagesLoading ? ( // 👈 Show loading state in button
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span>Loading pages...</span>
+                        </div>
+                      ) : pageId ? (
                         <div className="flex items-center gap-2">
                           <img
                             src={
                               pages.find((page) => page.id === pageId)?.profilePicture ||
                               "https://api.withblip.com/backup_page_image.png"
-                              || "/placeholder.svg"}
+                            }
                             alt="Page"
                             className="w-5 h-5 rounded-full object-cover"
                           />
@@ -2875,6 +2841,8 @@ export default function AdCreationForm({
                                   className="w-6 h-6 rounded-full object-cover border border-gray-300"
                                 />
                                 <span className="truncate">{page.name}</span>
+                                <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
+
                               </CommandItem>
 
                             ))
