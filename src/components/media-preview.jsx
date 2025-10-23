@@ -639,7 +639,7 @@ export default function MediaPreview({
           </CardHeader>
 
           {/* Placement Customization Checkbox - only show when carousel is disabled */}
-          {!isCarouselAd && hasOnlyNonDynamicCreativeAdSets && (adType !== 'flexible')(
+          {!isCarouselAd && hasOnlyNonDynamicCreativeAdSets && (adType !== 'flexible') && (
             <div className="px-6 pb-4">
               <div className="flex items-center space-x-2">
                 <Checkbox
