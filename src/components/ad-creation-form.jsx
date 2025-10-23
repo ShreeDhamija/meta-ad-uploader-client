@@ -2865,8 +2865,18 @@ export default function AdCreationForm({
               Ad Type:
             </Label>
             <Select
-              value={adType}
+              value={
+                adType === 'flexible' && !["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(campaignObjective)
+                  ? 'regular'
+                  : adType
+              }
               onValueChange={(value) => {
+
+                if (value === 'flexible' && !["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(campaignObjective)) {
+                  setAdType('regular');
+                  return;
+                }
+
                 setAdType(value);
 
                 // Reset link states when switching away from carousel
