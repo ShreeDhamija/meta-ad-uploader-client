@@ -2687,7 +2687,7 @@ export default function AdCreationForm({
             Select ad preferences
           </div>
           <div className="flex items-center space-x-2">
-            <Label htmlFor="ad-type" className="text-sm font-regular whitespace-nowrap">
+            <Label htmlFor="ad-type" className="text-sm whitespace-nowrap">
               Ad Type:
             </Label>
             <Select
@@ -2716,20 +2716,20 @@ export default function AdCreationForm({
               }}
               disabled={!isLoggedIn}
             >
-              <SelectTrigger className="w-[180px] bg-white border-gray-400 rounded-xl">
+              <SelectTrigger className="w-[180px] bg-white border-gray-400 rounded-xl font-normal">
                 <SelectValue placeholder="Select ad type" />
               </SelectTrigger>
-              <SelectContent className="bg-white rounded-xl space-y-2" >
+              <SelectContent className="bg-white rounded-lg space-y-1" >
                 <SelectItem
                   value="regular"
-                  className="rounded-xl data-[highlighted]:bg-gray-50 data-[state=checked]:bg-gray-100 transition-all font-regular"
+                  className="rounded-lg data-[highlighted]:bg-gray-50 data-[state=checked]:bg-gray-100 transition-all"
                 >
                   Image / Video
                 </SelectItem>
 
                 <SelectItem
                   value="carousel"
-                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all font-regular"
+                  className="rounded-lg data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all"
                 >
                   Carousel
                 </SelectItem>
@@ -2737,7 +2737,7 @@ export default function AdCreationForm({
                 {["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(campaignObjective) && (
                   <SelectItem
                     value="flexible"
-                    className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all font-regular"
+                    className="rounded-lg data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all"
                   >
                     Flexible Ads
                   </SelectItem>
