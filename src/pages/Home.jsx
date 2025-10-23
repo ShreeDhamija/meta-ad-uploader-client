@@ -459,6 +459,7 @@ export default function Home() {
                                 setDriveFiles={setDriveFiles}
                                 videoThumbs={videoThumbs}
                                 isCarouselAd={isCarouselAd}
+                                adType={adType}
                                 enablePlacementCustomization={enablePlacementCustomization}
                                 setEnablePlacementCustomization={setEnablePlacementCustomization}
                                 fileGroups={fileGroups}

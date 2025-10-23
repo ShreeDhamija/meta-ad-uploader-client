@@ -112,7 +112,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             <img
               src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`}
               alt={file.name}
-                title={file.name} // 👈 Add this line
+              title={file.name} // 👈 Add this line
               className="w-full h-auto object-cover"
               onError={(e) => {
                 e.target.onerror = null;
@@ -194,6 +194,7 @@ export default function MediaPreview({
   setDriveFiles,
   videoThumbs,
   isCarouselAd,
+  adType,
   enablePlacementCustomization,
   setEnablePlacementCustomization,
   fileGroups,
@@ -212,14 +213,6 @@ export default function MediaPreview({
     selectedFiles.size >= 2 && selectedFiles.size <= 3,
     [selectedFiles.size]
   );
-
-  // const canAIGroup = useMemo(() => {
-  //   const imageFiles = files.filter(file => {
-  //     const mimeType = file.type || file.mimeType || "";
-  //     return !mimeType.startsWith("video/");
-  //   });
-  //   return imageFiles.length >= 2;
-  // }, [files]);
 
   const canAIGroup = useMemo(() => {
     const imageFiles = files.filter(file => !isVideoFile(file));
@@ -583,7 +576,7 @@ export default function MediaPreview({
               <CardTitle className="text-left">Uploads Preview</CardTitle>
               <CardDescription className="text-left">
                 {`${files.length} file${files.length > 1 ? "s" : ""} selected`}
-                {isCarouselAd && !enablePlacementCustomization && (
+                {isCarouselAd && !enablePlacementCustomization && (adType === flexible)(
                   <span className="block text-xs text-gray-500 mt-1">
                     Drag to change order of carousel cards
                   </span>
