@@ -444,6 +444,7 @@ export default function Home() {
                             refreshAdSets={refreshAdSets}
                             adNameFormulaV2={adNameFormulaV2}
                             setAdNameFormulaV2={setAdNameFormulaV2}
+                            campaignObjective={campaignObjective}
                         />
                     </div>
 

@@ -2686,7 +2686,7 @@ export default function AdCreationForm({
             Select ad preferences
           </div>
           <div className="flex items-center space-x-2">
-            <Label htmlFor="ad-type" className="text-sm font-medium whitespace-nowrap">
+            <Label htmlFor="ad-type" className="text-sm font-regular whitespace-nowrap">
               Ad Type:
             </Label>
             <Select
@@ -2719,9 +2719,28 @@ export default function AdCreationForm({
                 <SelectValue placeholder="Select ad type" />
               </SelectTrigger>
               <SelectContent className="bg-white rounded-xl" >
-                <SelectItem value="regular">Image/Video</SelectItem>
-                <SelectItem value="carousel">Carousel</SelectItem>
-                <SelectItem value="flexible">Flexible Ads</SelectItem>
+                <SelectItem
+                  value="regular"
+                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-200 transition-all"
+                >
+                  Image / Video
+                </SelectItem>
+
+                <SelectItem
+                  value="carousel"
+                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-200 transition-all"
+                >
+                  Carousel
+                </SelectItem>
+
+                {["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(campaignObjective) && (
+                  <SelectItem
+                    value="flexible"
+                    className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-200 transition-all"
+                  >
+                    Flexible Ads
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
