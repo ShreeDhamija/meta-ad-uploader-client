@@ -11,7 +11,7 @@ import {
   CommandItem,
 } from "@/components/ui/command"
 import { Button } from "@/components/ui/button"
-import { ChevronsUpDown, RefreshCcw } from "lucide-react"
+import { ChevronsUpDown, RefreshCcw, Loader } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
 import { toast } from "sonner";
 import { cn } from "@/lib/utils"
@@ -24,7 +24,7 @@ function PageSelectors({
   selectedInstagram,
   setSelectedInstagram,
 }) {
-  const { pages, setPages } = useAppData()
+  const { pages, setPages, pagesLoading } = useAppData()
 
   const [openPageDropdown, setOpenPageDropdown] = useState(false)
   const [openInstagramDropdown, setOpenInstagramDropdown] = useState(false)
@@ -134,21 +134,29 @@ function PageSelectors({
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
+                disabled={pagesLoading || isPagesLoading} // 👈 Disable while loading
                 className="w-full justify-between border border-gray-300 rounded-xl bg-white shadow-sm flex items-center hover:bg-white pl-3"
               >
-                <div className="flex items-center gap-2">
-                  {selectedPage?.name && (
-                    <img
-                      src={
-                        selectedPage.profilePicture ||
-                        "https://api.withblip.com/backup_page_image.png"
-                      }
-                      alt="Page"
-                      className="w-5 h-5 rounded-full object-cover border border-gray-300"
-                    />
-                  )}
-                  <span>{selectedPage?.name || "Select Facebook Page"}</span>
-                </div>
+                {(pagesLoading || isPagesLoading) ? ( // 👈 Show loading state
+                  <div className="flex items-center gap-2">
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span>Loading pages...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    {selectedPage?.name && (
+                      <img
+                        src={
+                          selectedPage.profilePicture ||
+                          "https://api.withblip.com/backup_page_image.png"
+                        }
+                        alt="Page"
+                        className="w-5 h-5 rounded-full object-cover border border-gray-300"
+                      />
+                    )}
+                    <span>{selectedPage?.name || "Select Facebook Page"}</span>
+                  </div>
+                )}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -175,6 +183,8 @@ function PageSelectors({
                           className="w-5 h-5 rounded-full object-cover"
                         />
                         <span>{page.name}</span>
+                        <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
+
                       </div>
                     </CommandItem>
                   ))}

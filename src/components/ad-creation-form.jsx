@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader2, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw } from "lucide-react"
+import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
@@ -2762,13 +2762,13 @@ export default function AdCreationForm({
                       variant="outline"
                       role="combobox"
                       aria-expanded={openPage}
-                      disabled={!isLoggedIn || isPagesLoading} // 👈 Disable while loading
+                      disabled={!isLoggedIn || pagesLoading || isPagesLoading} // 👈 Disable while loading
                       id="page"
                       className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
                     >
-                      {isPagesLoading ? ( // 👈 Show loading state in button
+                      {(pagesLoading || isPagesLoading) ? ( // 👈 Show loading state in button
                         <div className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <Loader className="h-4 w-4 animate-spin" />
                           <span>Loading pages...</span>
                         </div>
                       ) : pageId ? (
@@ -3574,7 +3574,7 @@ export default function AdCreationForm({
                   >
                     {isImportingFolder ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader className="h-4 w-4 mr-2 animate-spin" />
                         Opening...
                       </>
                     ) : (
