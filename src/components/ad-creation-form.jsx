@@ -1887,20 +1887,32 @@ export default function AdCreationForm({
     }
 
     // Add flexible ads validation
+
     if (adType === 'flexible') {
       const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
-      if (totalFiles > 10) {
-        toast.error("Flexible ads can have maximum 10 files");
-        setIsLoading(false);
-        return;
-      }
-      if (totalFiles < 1) {
-        toast.error("Flexible ads require at least 1 file");
-        setIsLoading(false);
-        return;
+
+      // If no groups, validate single ad
+      if (fileGroups.length === 0) {
+        if (totalFiles > 10) {
+          toast.error("Flexible ads can have maximum 10 files per ad. Use grouping to create multiple ads.");
+          setIsLoading(false);
+          return;
+        }
+        if (totalFiles < 1) {
+          toast.error("Flexible ads require at least 1 file");
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        // Validate groups
+        const hasInvalidGroup = fileGroups.some(group => group.length > 10);
+        if (hasInvalidGroup) {
+          toast.error("Each flexible ad group can have maximum 10 files");
+          setIsLoading(false);
+          return;
+        }
       }
     }
-
     setJobId(frontendJobId); // This triggers SSE
 
     try {
@@ -2019,73 +2031,227 @@ export default function AdCreationForm({
 
 
       // FLEXIBLE ADS: Handle flexible ads to non-dynamic ad sets
+      // if (adType === 'flexible' && nonDynamicAdSetIds.length > 0) {
+      //   console.log("🎨 Creating flexible ad with:", {
+      //     filesCount: files.length + driveFiles.length + s3Results.length + s3DriveResults.length,
+      //     nonDynamicAdSetIds
+      //   });
+
+      //   // For flexible ads, send ALL files to each non-dynamic ad set (one request per ad set)
+      //   nonDynamicAdSetIds.forEach((adSetId) => {
+      //     const formData = new FormData();
+      //     formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2));
+      //     formData.append("headlines", JSON.stringify(headlines));
+      //     formData.append("descriptions", JSON.stringify(descriptions));
+      //     formData.append("messages", JSON.stringify(messages));
+      //     formData.append("adAccountId", selectedAdAccount);
+      //     formData.append("adSetId", adSetId);
+      //     formData.append("pageId", pageId);
+      //     formData.append("instagramAccountId", instagramAccountId);
+      //     formData.append("link", JSON.stringify(link));
+      //     formData.append("cta", cta);
+      //     formData.append("isCarouselAd", false);
+      //     formData.append("adType", "flexible"); // Send adType for flexible
+      //     formData.append("launchPaused", launchPaused);
+      //     formData.append("enablePlacementCustomization", false);
+      //     formData.append("jobId", frontendJobId);
+
+      //     // Add all small local files
+      //     files.forEach((file) => {
+      //       if (file.size <= S3_UPLOAD_THRESHOLD) {
+      //         formData.append("mediaFiles", file);
+      //       }
+      //     });
+
+      //     // Add all small drive files
+      //     smallDriveFiles.forEach((driveFile) => {
+      //       formData.append("driveFiles", JSON.stringify({
+      //         id: driveFile.id,
+      //         name: driveFile.name,
+      //         mimeType: driveFile.mimeType,
+      //         accessToken: driveFile.accessToken
+      //       }));
+      //     });
+
+      //     // Add all large file URLs (S3)
+      //     [...s3Results, ...s3DriveResults].forEach((s3File) => {
+      //       formData.append("s3VideoUrls", s3File.s3Url);
+      //       formData.append("s3VideoNames", s3File.name);
+      //     });
+
+      //     // Add video thumbnail if provided
+      //     if (thumbnail) {
+      //       formData.append("thumbnail", thumbnail);
+      //     }
+
+      //     // Add shop destination if needed
+      //     if (selectedShopDestination && showShopDestinationSelector) {
+      //       formData.append("shopDestination", selectedShopDestination);
+      //       formData.append("shopDestinationType", selectedShopDestinationType);
+      //     }
+
+      //     promises.push(
+      //       axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
+      //         withCredentials: true,
+      //         headers: { "Content-Type": "multipart/form-data" },
+      //       })
+      //     );
+      //   });
+      // }
+
+      // FLEXIBLE ADS: Handle flexible ads to non-dynamic ad sets
       if (adType === 'flexible' && nonDynamicAdSetIds.length > 0) {
         console.log("🎨 Creating flexible ad with:", {
           filesCount: files.length + driveFiles.length + s3Results.length + s3DriveResults.length,
+          groupCount: fileGroups.length,
           nonDynamicAdSetIds
         });
 
-        // For flexible ads, send ALL files to each non-dynamic ad set (one request per ad set)
-        nonDynamicAdSetIds.forEach((adSetId) => {
-          const formData = new FormData();
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2));
-          formData.append("headlines", JSON.stringify(headlines));
-          formData.append("descriptions", JSON.stringify(descriptions));
-          formData.append("messages", JSON.stringify(messages));
-          formData.append("adAccountId", selectedAdAccount);
-          formData.append("adSetId", adSetId);
-          formData.append("pageId", pageId);
-          formData.append("instagramAccountId", instagramAccountId);
-          formData.append("link", JSON.stringify(link));
-          formData.append("cta", cta);
-          formData.append("isCarouselAd", false);
-          formData.append("adType", "flexible"); // Send adType for flexible
-          formData.append("launchPaused", launchPaused);
-          formData.append("enablePlacementCustomization", false);
-          formData.append("jobId", frontendJobId);
+        // Check if we have groups
+        if (fileGroups.length > 0) {
+          // GROUPED FLEXIBLE ADS: Create one ad per group per ad set
+          console.log(`📦 Creating ${fileGroups.length} grouped flexible ads`);
 
-          // Add all small local files
-          files.forEach((file) => {
-            if (file.size <= S3_UPLOAD_THRESHOLD) {
-              formData.append("mediaFiles", file);
+          fileGroups.forEach((group, groupIndex) => {
+            nonDynamicAdSetIds.forEach((adSetId) => {
+              const formData = new FormData();
+
+              // Find the first file in this group for naming
+              const firstFileId = group[0];
+              const firstFile = files.find(f => getFileId(f) === firstFileId) ||
+                driveFiles.find(f => f.id === firstFileId);
+
+              formData.append("adName", computeAdNameFromFormula(
+                firstFile || files[0] || driveFiles[0],
+                groupIndex,
+                link[0],
+                jobData.formData.adNameFormulaV2
+              ));
+              formData.append("headlines", JSON.stringify(headlines));
+              formData.append("descriptions", JSON.stringify(descriptions));
+              formData.append("messages", JSON.stringify(messages));
+              formData.append("adAccountId", selectedAdAccount);
+              formData.append("adSetId", adSetId);
+              formData.append("pageId", pageId);
+              formData.append("instagramAccountId", instagramAccountId);
+              formData.append("link", JSON.stringify(link));
+              formData.append("cta", cta);
+              formData.append("isCarouselAd", false);
+              formData.append("adType", "flexible");
+              formData.append("launchPaused", launchPaused);
+              formData.append("enablePlacementCustomization", false);
+              formData.append("jobId", frontendJobId);
+              formData.append("totalGroups", fileGroups.length);
+              formData.append("currentGroupIndex", groupIndex + 1);
+
+              // Add only files from this group
+              group.forEach(fileId => {
+                // Check in local files
+                const file = files.find(f => getFileId(f) === fileId);
+                if (file && file.size <= S3_UPLOAD_THRESHOLD) {
+                  formData.append("mediaFiles", file);
+                }
+
+                // Check in drive files
+                const driveFile = smallDriveFiles.find(f => f.id === fileId);
+                if (driveFile) {
+                  formData.append("driveFiles", JSON.stringify({
+                    id: driveFile.id,
+                    name: driveFile.name,
+                    mimeType: driveFile.mimeType,
+                    accessToken: driveFile.accessToken
+                  }));
+                }
+
+                // Check in S3 files
+                const s3File = [...s3Results, ...s3DriveResults].find(
+                  s3f => s3f.uniqueId === fileId || s3f.id === fileId
+                );
+                if (s3File) {
+                  formData.append("s3VideoUrls", s3File.s3Url);
+                  formData.append("s3VideoNames", s3File.name);
+                }
+              });
+
+              // Add shop destination if needed
+              if (selectedShopDestination && showShopDestinationSelector) {
+                formData.append("shopDestination", selectedShopDestination);
+                formData.append("shopDestinationType", selectedShopDestinationType);
+              }
+
+              promises.push(
+                axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
+                  withCredentials: true,
+                  headers: { "Content-Type": "multipart/form-data" },
+                })
+              );
+            });
+          });
+
+        } else {
+          // UNGROUPED FLEXIBLE ADS: Send ALL files (existing logic)
+          nonDynamicAdSetIds.forEach((adSetId) => {
+            const formData = new FormData();
+            formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2));
+            formData.append("headlines", JSON.stringify(headlines));
+            formData.append("descriptions", JSON.stringify(descriptions));
+            formData.append("messages", JSON.stringify(messages));
+            formData.append("adAccountId", selectedAdAccount);
+            formData.append("adSetId", adSetId);
+            formData.append("pageId", pageId);
+            formData.append("instagramAccountId", instagramAccountId);
+            formData.append("link", JSON.stringify(link));
+            formData.append("cta", cta);
+            formData.append("isCarouselAd", false);
+            formData.append("adType", "flexible");
+            formData.append("launchPaused", launchPaused);
+            formData.append("enablePlacementCustomization", false);
+            formData.append("jobId", frontendJobId);
+
+            // Add all small local files
+            files.forEach((file) => {
+              if (file.size <= S3_UPLOAD_THRESHOLD) {
+                formData.append("mediaFiles", file);
+              }
+            });
+
+            // Add all small drive files
+            smallDriveFiles.forEach((driveFile) => {
+              formData.append("driveFiles", JSON.stringify({
+                id: driveFile.id,
+                name: driveFile.name,
+                mimeType: driveFile.mimeType,
+                accessToken: driveFile.accessToken
+              }));
+            });
+
+            // Add all large file URLs (S3)
+            [...s3Results, ...s3DriveResults].forEach((s3File) => {
+              formData.append("s3VideoUrls", s3File.s3Url);
+              formData.append("s3VideoNames", s3File.name);
+            });
+
+            // Add video thumbnail if provided
+            if (thumbnail) {
+              formData.append("thumbnail", thumbnail);
             }
+
+            // Add shop destination if needed
+            if (selectedShopDestination && showShopDestinationSelector) {
+              formData.append("shopDestination", selectedShopDestination);
+              formData.append("shopDestinationType", selectedShopDestinationType);
+            }
+
+            promises.push(
+              axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
+                withCredentials: true,
+                headers: { "Content-Type": "multipart/form-data" },
+              })
+            );
           });
-
-          // Add all small drive files
-          smallDriveFiles.forEach((driveFile) => {
-            formData.append("driveFiles", JSON.stringify({
-              id: driveFile.id,
-              name: driveFile.name,
-              mimeType: driveFile.mimeType,
-              accessToken: driveFile.accessToken
-            }));
-          });
-
-          // Add all large file URLs (S3)
-          [...s3Results, ...s3DriveResults].forEach((s3File) => {
-            formData.append("s3VideoUrls", s3File.s3Url);
-            formData.append("s3VideoNames", s3File.name);
-          });
-
-          // Add video thumbnail if provided
-          if (thumbnail) {
-            formData.append("thumbnail", thumbnail);
-          }
-
-          // Add shop destination if needed
-          if (selectedShopDestination && showShopDestinationSelector) {
-            formData.append("shopDestination", selectedShopDestination);
-            formData.append("shopDestinationType", selectedShopDestinationType);
-          }
-
-          promises.push(
-            axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
-              withCredentials: true,
-              headers: { "Content-Type": "multipart/form-data" },
-            })
-          );
-        });
+        }
       }
+
 
       // Process dynamic adsets
       if (dynamicAdSetIds.length > 0) {

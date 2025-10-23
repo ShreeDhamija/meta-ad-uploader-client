@@ -39,7 +39,7 @@ const isVideoFile = (file) => {
 
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
-  file, index, isCarouselAd, videoThumbs, onRemove, isSelected, onSelect, groupNumber, enablePlacementCustomization
+  file, index, isCarouselAd, videoThumbs, onRemove, isSelected, onSelect, groupNumber, enablePlacementCustomization, adType
 }) {
   const {
     attributes,
@@ -66,7 +66,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       className={`relative group ${isDragging ? 'opacity-50' : ''}`}
     >
       {/* Selection overlay for placement customization - only show when NOT grouped */}
-      {enablePlacementCustomization && !groupNumber && (
+      {(enablePlacementCustomization || adType === 'flexible') && (
         <div
           className={`absolute rounded-2xl cursor-pointer transition-all ${isSelected ? 'bg-blue-200 bg-opacity-20 border-2 border-blue-300' : ' '
             }`}
@@ -82,7 +82,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       )}
 
       {/* Selection checkbox for placement customization - only show when NOT grouped */}
-      {enablePlacementCustomization && !groupNumber && (
+      {(enablePlacementCustomization || adType === 'flexible') && (
         <div className="absolute top-2 left-2 z-20">
           <Checkbox
             checked={isSelected}
@@ -362,6 +362,20 @@ export default function MediaPreview({
   }, [setSelectedFiles]);
 
   const handleGroupAds = useCallback(() => {
+    //new flex grouping
+    if (adType === 'flexible') {
+      if (selectedFiles.size > 10) {
+        alert("Flexible ad groups can contain maximum 10 files");
+        return;
+      }
+
+      const newGroup = Array.from(selectedFiles);
+      setFileGroups(prev => [...prev, newGroup]);
+      setSelectedFiles(new Set());
+      return;
+    }
+
+
     if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
       const newGroup = Array.from(selectedFiles);
       setFileGroups(prev => [...prev, newGroup]);
@@ -509,10 +523,30 @@ export default function MediaPreview({
     }
   }, [files, setFileGroups, setSelectedFiles]);
 
+  // Auto group for flexible ads - groups 10 files at a time in upload order
+  const handleFlexibleAutoGroup = useCallback(() => {
+    const allFiles = [...files, ...driveFiles];
+    const newGroups = [];
+
+    // Group files in sets of 10
+    for (let i = 0; i < allFiles.length; i += 10) {
+      const group = allFiles
+        .slice(i, i + 10)
+        .map(file => getFileId(file));
+      newGroups.push(group);
+    }
+
+    setFileGroups(newGroups);
+    setSelectedFiles(new Set());
+
+    console.log(`🎨 Created ${newGroups.length} flexible ad groups:`, newGroups);
+  }, [files, driveFiles, setFileGroups]);
+
 
   const handleUngroup = useCallback((groupIndex) => {
     setFileGroups(prev => prev.filter((_, index) => index !== groupIndex));
   }, [setFileGroups]);
+
 
   const getFileGroupNumber = useCallback((fileId) => {
     for (let i = 0; i < fileGroups.length; i++) {
@@ -586,7 +620,7 @@ export default function MediaPreview({
 
             <div className="flex gap-2">
 
-              {enablePlacementCustomization && (
+              {(enablePlacementCustomization || adType === 'flexible') && (
                 <>
                   <Button
                     variant="outline"
@@ -599,28 +633,40 @@ export default function MediaPreview({
                     Group Ads
                   </Button>
 
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleAIGroup}
-                    disabled={!canAIGroup || isAIGrouping}
-                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
-                  >
-                    {isAIGrouping ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Grouping...
-                      </>
-                    ) : (
-                      <>
-                        <Rocket className="h-4 w-4 mr-2" />
-                        AI Auto Group
-                      </>
-                    )}
-                  </Button>
+                  {adType !== 'flexible' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAIGroup}
+                      disabled={!canAIGroup || isAIGrouping}
+                      className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                    >
+                      {isAIGrouping ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Grouping...
+                        </>
+                      ) : (
+                        <>
+                          <Rocket className="h-4 w-4 mr-2" />
+                          AI Auto Group
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </>
               )}
+
+              {adType === 'flexible' && (
+                <Button
+                  onClick={handleFlexibleAutoGroup}
+                  className="bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Auto Group
+                </Button>
+              )}
+
 
               <Button
                 variant="destructive"
@@ -652,16 +698,37 @@ export default function MediaPreview({
                   htmlFor="placementCustomization"
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  Group different aspect ratio media for placement customized ad.
+                  Group media for placement customized ad.
                 </label>
               </div>
               {enablePlacementCustomization && (
                 <span className="block text-xs text-gray-500 mt-1">
-                  AI Grouping only works for images
+                  AI Auto Group only works for images
                 </span>
               )}
             </div>
           )}
+
+          {/* Flexible Ad Grouping Info - show when flexible ad is selected */}
+          {adType === 'flexible' && (
+            <div className="px-6 pb-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <p className="text-sm font-medium text-blue-900">
+                  Flexible Ad Grouping Enabled
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Select files and click "Group Ads" to create groups (max 10 files per ad).
+                  Or use "Auto Group" to automatically group files in sets of 10.
+                </p>
+                {fileGroups.length > 0 && (
+                  <p className="text-xs text-blue-700 mt-1 font-semibold">
+                    {fileGroups.length} flexible ad group{fileGroups.length !== 1 ? 's' : ''} created
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
 
           <CardContent
             className="flex-1 overflow-y-auto min-h-0 pr-2"
@@ -734,6 +801,8 @@ export default function MediaPreview({
                               onSelect={handleFileSelect}
                               groupNumber={groupIndex + 1}
                               enablePlacementCustomization={enablePlacementCustomization}
+                              adType={adType}  // ✅ ADD THIS
+
                             />
                           ) : null;
                         })}
@@ -757,6 +826,8 @@ export default function MediaPreview({
                           onSelect={handleFileSelect}
                           groupNumber={null}
                           enablePlacementCustomization={enablePlacementCustomization}
+                          adType={adType}  // ✅ ADD THIS
+
                         />
                       );
                     })}
