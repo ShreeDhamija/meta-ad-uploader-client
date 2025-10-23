@@ -364,6 +364,7 @@ export default function Home() {
                             setShowDuplicateBlock={setShowDuplicateBlock}
                             duplicateAdSet={duplicateAdSet}
                             setDuplicateAdSet={setDuplicateAdSet}
+                            campaignObjective={campaignObjective}
                             setCampaignObjective={setCampaignObjective}
                             newAdSetName={newAdSetName}
                             setNewAdSetName={setNewAdSetName}

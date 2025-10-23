@@ -2719,17 +2719,17 @@ export default function AdCreationForm({
               <SelectTrigger className="w-[180px] bg-white border-gray-400 rounded-xl">
                 <SelectValue placeholder="Select ad type" />
               </SelectTrigger>
-              <SelectContent className="bg-white rounded-xl" >
+              <SelectContent className="bg-white rounded-xl space-y-1" >
                 <SelectItem
                   value="regular"
-                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-200 transition-all"
+                  className="rounded-xl data-[highlighted]:bg-gray-50 data-[state=checked]:bg-gray-100 transition-all"
                 >
                   Image / Video
                 </SelectItem>
 
                 <SelectItem
                   value="carousel"
-                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-200 transition-all"
+                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all"
                 >
                   Carousel
                 </SelectItem>
@@ -2737,7 +2737,7 @@ export default function AdCreationForm({
                 {["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(campaignObjective) && (
                   <SelectItem
                     value="flexible"
-                    className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-200 transition-all"
+                    className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all"
                   >
                     Flexible Ads
                   </SelectItem>

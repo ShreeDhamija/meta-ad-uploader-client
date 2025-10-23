@@ -46,6 +46,7 @@ export default function AdAccountSettings({
   setShowDuplicateBlock,
   duplicateAdSet,
   setDuplicateAdSet,
+  campaignObjective,
   setCampaignObjective,
   newAdSetName,
   setNewAdSetName,
@@ -172,6 +173,7 @@ export default function AdAccountSettings({
     const selectedCampaignObj = campaigns.find((camp) => camp.id === campaignId)
     if (selectedCampaignObj) {
       setCampaignObjective(selectedCampaignObj.objective)
+      console.log(campaignObjective);
     } else {
       setCampaignObjective("")
     }
