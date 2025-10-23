@@ -3787,7 +3787,7 @@ export default function AdCreationForm({
                 (files.length === 0 && driveFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
                 (adType === 'carousel' && (files.length + driveFiles.length) < 2) ||
-                (adType === 'flexible' && (files.length + driveFiles.length) > 10) ||
+                // (adType === 'flexible' && (files.length + driveFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 (!showCustomLink && !link[0]) ||
                 (showCustomLink && !customLink.trim())
