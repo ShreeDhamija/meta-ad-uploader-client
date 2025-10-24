@@ -1568,8 +1568,7 @@ export default function AdAccountSettings({
         await refreshCampaigns();
 
         // Select the newly created campaign
-        setSelectedCampaign(data.copied_campaign_id);
-
+        setSelectedCampaign([data.copied_campaign_id]);
         // Clear ad sets since we're switching to a new campaign
         setAdSets([]);
         setSelectedAdSets([]);
