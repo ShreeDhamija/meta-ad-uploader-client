@@ -1400,48 +1400,6 @@ export default function AdAccountSettings({
     }
   });
 
-  // const handleCampaignChange = useCallback(async (value) => {
-  //   const campaignId = value
-  //   setSelectedCampaign(campaignId)
-  //   setAdSets([])
-  //   setSelectedAdSets([])
-  //   setShowDuplicateBlock(false)
-  //   setDuplicateAdSet("")
-  //   setNewAdSetName("") // Add this line
-  //   setShowDuplicateCampaignBlock(false)
-  //   setDuplicateCampaign("")
-  //   setNewCampaignName("")
-  //   if (!campaignId) {
-  //     setCampaignObjective("")
-  //     return
-  //   }
-
-  //   const selectedCampaignObj = campaigns.find((camp) => camp.id === campaignId)
-  //   if (selectedCampaignObj) {
-  //     setCampaignObjective(selectedCampaignObj.objective)
-  //     console.log(campaignObjective);
-  //   } else {
-  //     setCampaignObjective("")
-  //   }
-
-  //   setIsLoading(true)
-  //   try {
-  //     const res = await fetch(
-  //       `${API_BASE_URL}/auth/fetch-adsets?campaignId=${campaignId}`,
-  //       { credentials: "include" },
-  //     )
-  //     const data = await res.json()
-  //     if (data.adSets) {
-  //       setAdSets(sortAdSets(data.adSets))
-  //     }
-  //   } catch (err) {
-  //     toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error occurred"}`)
-  //     console.error("Failed to fetch ad sets:", err)
-  //   } finally {
-  //     setIsLoading(false)
-  //   }
-  // });
-
 
   const handleCampaignChange = useCallback(async (campaignId) => {
     // Toggle campaign selection
@@ -1824,102 +1782,6 @@ export default function AdAccountSettings({
                 onClick={refreshCampaigns}
               />
             </div>
-            {/* <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openCampaign}
-                  disabled={!isLoggedIn || !selectedAdAccount || isLoading}
-                  id="campaign"
-                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white "
-                >
-                  {selectedCampaign
-                    ? campaigns.find((camp) => camp.id === selectedCampaign)?.name || selectedCampaign
-                    : "Select a Campaign"}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
-                align="start"
-                sideOffset={4}
-                side="bottom"
-                avoidCollisions={false}
-                style={{
-                  minWidth: "var(--radix-popover-trigger-width)",
-                  width: "auto",
-                  maxWidth: "none",
-                }}
-              >
-                <Command filter={() => 1} loop={false} defaultValue={selectedCampaign}>
-                  <CommandInput
-                    placeholder="Search campaigns..."
-                    value={campaignSearchValue}
-                    onValueChange={setCampaignSearchValue}
-                  />
-                  <CommandEmpty>No campaign found.</CommandEmpty>
-                  <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar pb-1" selectOnFocus={false}>
-                    <CommandGroup>
-                      <CommandItem
-                        key="duplicate-campaign"
-                        value="duplicate-campaign"
-                        onSelect={() => {
-                          setShowDuplicateCampaignBlock(true)
-                          setSelectedCampaign("") // Clear any selected campaign
-                          setAdSets([]) // Clear adsets when duplicating campaign
-                          setSelectedAdSets([]) // Clear selected adsets
-                          setOpenCampaign(false)
-                        }}
-                        className={`
-        h-10 w-full px-4 py-3 m-1 rounded-xl 
-        !bg-zinc-700 !text-white shadow-md 
-        flex items-center justify-center 
-        text-sm font-semibold cursor-pointer 
-        transition-all duration-150 hover:!bg-black
-      `}
-                      >
-                        📋 Launch in a new Campaign
-                      </CommandItem>
-                    </CommandGroup>
-                    <CommandGroup heading="Select existing campaign">
-                      {filteredCampaigns.length > 0 ? (
-                        filteredCampaigns.map((camp) => (
-                          <CommandItem
-                            key={camp.id}
-                            value={camp.id}
-                            onSelect={() => {
-                              handleCampaignChange(camp.id)
-                              setOpenCampaign(false)
-                            }}
-                            className={cn(
-                              "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                              "data-[selected=true]:bg-gray-100",
-                              selectedCampaign === camp.id && "bg-gray-100 rounded-xl font-semibold",
-                              "hover:bg-gray-100",
-                              "flex justify-between items-center"
-                            )}
-                            data-selected={camp.id === selectedCampaign}
-                          >
-                            <span className={camp.status !== "ACTIVE" ? "text-gray-400" : ""}>
-                              {camp.name || camp.id}
-                            </span>
-                            {camp.status === "ACTIVE" && (
-                              <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
-                            )}
-                          </CommandItem>
-                        ))
-                      ) : (
-                        <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                          No campaign found.
-                        </CommandItem>
-                      )}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover> */}
-
 
             {/* Campaign Dropdown - REPLACE THE ENTIRE POPOVER SECTION */}
             <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
@@ -2002,7 +1864,14 @@ export default function AdAccountSettings({
                         setShowDuplicateCampaignBlock(true);
                         setOpenCampaign(false);
                       }}
-                      className="w-full justify-start text-left font-normal bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-xl"
+                      // className="w-full justify-start text-left font-normal bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-xl"
+                      className={`
+h-10 w-full px-4 py-3 m-1 rounded-xl 
+!bg-zinc-700 !text-white shadow-md 
+flex items-center justify-center 
+text-sm font-semibold cursor-pointer 
+transition-all duration-150 hover:!bg-black
+       `}
                       variant="outline"
                     >
                       <CampaignIcon className="mr-2 h-4 w-4" />
@@ -2242,10 +2111,11 @@ export default function AdAccountSettings({
                             return (
                               <div key={campaignId}>
                                 {/* Campaign separator */}
-                                <div className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-sm rounded-lg pointer-events-none">
-                                  {campaignName}: Adsets
-                                </div>
-
+                                {selectedCampaign.length >= 2 && (
+                                  <div className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none">
+                                    {campaignName} Ad Sets
+                                  </div>
+                                )}
                                 {/* Adsets for this campaign */}
                                 {campaignAdSets.map((adset) => {
                                   const isSelected = selectedAdSets.includes(adset.id);
@@ -2367,35 +2237,6 @@ export default function AdAccountSettings({
                           onValueChange={setDuplicateAdSetSearchValue}
                         />
                         <CommandEmpty>No ad sets found.</CommandEmpty>
-                        {/* <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                          <CommandGroup>
-                            {adSets
-                              .filter((adset) =>
-                                (adset.name || adset.id).toLowerCase().includes(duplicateAdSetSearchValue.toLowerCase())
-                              )
-                              .map((adset) => (
-                                <CommandItem
-                                  key={adset.id}
-                                  value={adset.name || adset.id}
-                                  onSelect={() => {
-                                    setDuplicateAdSet(adset.id)
-                                    setOpenDuplicateAdSet(false)
-                                  }}
-                                  className={cn(
-                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                                    adset.status !== "ACTIVE" && "text-gray-400"
-                                  )}
-                                >
-                                  <div className="flex justify-between items-center w-full truncate">
-                                    <span className="truncate">{adset.name || adset.id}</span>
-                                    {adset.status === "ACTIVE" && (
-                                      <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                                    )}
-                                  </div>
-                                </CommandItem>
-                              ))}
-                          </CommandGroup>
-                        </CommandList> */}
                         <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                           <CommandGroup>
                             {filteredAdSets.length > 0 ? (
@@ -2416,36 +2257,32 @@ export default function AdAccountSettings({
                                   return (
                                     <div key={campaignId}>
                                       {/* Campaign separator */}
-                                      <div className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-sm rounded-lg pointer-events-none">
-                                        {campaignName}: Adsets
-                                      </div>
-
+                                      {selectedCampaign.length >= 2 && (
+                                        <div className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none">
+                                          {campaignName} Ad Sets
+                                        </div>
+                                      )}
                                       {/* Adsets for this campaign */}
                                       {campaignAdSets.map((adset) => {
-                                        const isSelected = selectedAdSets.includes(adset.id);
+                                        // const isSelected = selectedAdSets.includes(adset.id);
                                         return (
                                           <CommandItem
                                             key={adset.id}
                                             value={adset.name || adset.id}
-                                            onSelect={() => handleAdSetCheckboxChange(adset.id, !isSelected)}
-                                            className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150"
+                                            onSelect={() => {
+                                              setDuplicateAdSet(adset.id)
+                                              setOpenDuplicateAdSet(false)
+                                            }}
+                                            className={cn(
+                                              "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                              adset.status !== "ACTIVE" && "text-gray-400"
+                                            )}
                                           >
-                                            <div className="flex items-center gap-2 w-full">
-                                              <Checkbox
-                                                id={`adset-${adset.id}`}
-                                                checked={isSelected}
-                                                className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
-                                              >
-                                                <Checkbox.Indicator>
-                                                  <Check className="w-3 h-3 text-green-500" />
-                                                </Checkbox.Indicator>
-                                              </Checkbox>
-                                              <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
-                                                <span className="truncate leading-[1.25]">{adset.name || adset.id}</span>
-                                                {adset.status === "ACTIVE" && (
-                                                  <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
-                                                )}
-                                              </Label>
+                                            <div className="flex justify-between items-center w-full truncate">
+                                              <span className="truncate">{adset.name || adset.id}</span>
+                                              {adset.status === "ACTIVE" && (
+                                                <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                              )}
                                             </div>
                                           </CommandItem>
                                         );
