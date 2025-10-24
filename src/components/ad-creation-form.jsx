@@ -1842,7 +1842,7 @@ export default function AdCreationForm({
     let finalAdSetIds = [...selectedAdSets];
     if (duplicateAdSet) {
       try {
-        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign, selectedAdAccount, newAdSetName.trim());
+        const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim());
         finalAdSetIds = [newAdSetId];
       } catch (error) {
         const errorMessage = error.response?.data?.error || error.message || "Unknown error";
@@ -2860,7 +2860,7 @@ export default function AdCreationForm({
             <Label htmlFor="ad-type" className="text-sm whitespace-nowrap">
               Ad Type:
             </Label>
-            <Select
+            {/* <Select
               value={
                 adType === 'flexible' && !["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(campaignObjective)
                   ? 'regular'
@@ -2915,6 +2915,69 @@ export default function AdCreationForm({
                 </SelectItem>
 
                 {["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(campaignObjective) && (
+                  <SelectItem
+                    value="flexible"
+                    className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                  >
+                    Flexible Ads
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select> */}
+            <Select
+              value={
+                adType === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))
+                  ? 'regular'
+                  : adType
+              }
+              onValueChange={(value) => {
+                if (value === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))) {
+                  setAdType('regular');
+                  return;
+                }
+
+                setAdType(value);
+
+                // Reset link states when switching away from carousel
+                if (value !== 'carousel' && link.length > 1) {
+                  setLink([link[0] || ""]);
+                  setLinkCustomStates({});
+                  setShowCustomLink(false);
+                }
+
+                // Reset the "apply to all" states and restore from template
+                if (value !== 'carousel') {
+                  setApplyTextToAllCards(false);
+                  setApplyHeadlinesToAllCards(false);
+
+                  if (selectedTemplate && copyTemplates[selectedTemplate]) {
+                    const tpl = copyTemplates[selectedTemplate];
+                    setMessages(tpl.primaryTexts || [""]);
+                    setHeadlines(tpl.headlines || [""]);
+                  }
+                }
+              }}
+              disabled={!isLoggedIn}
+            >
+              <SelectTrigger className="w-[180px] bg-white border-gray-400 rounded-xl font-medium">
+                <SelectValue placeholder="Select ad type" />
+              </SelectTrigger>
+              <SelectContent className="bg-white rounded-xl gap-4" >
+                <SelectItem
+                  value="regular"
+                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                >
+                  Image / Video
+                </SelectItem>
+
+                <SelectItem
+                  value="carousel"
+                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                >
+                  Carousel
+                </SelectItem>
+
+                {campaignObjective.length > 0 && campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)) && (
                   <SelectItem
                     value="flexible"
                     className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
