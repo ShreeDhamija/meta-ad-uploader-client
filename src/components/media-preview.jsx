@@ -524,14 +524,15 @@ export default function MediaPreview({
     }
   }, [files, setFileGroups, setSelectedFiles]);
 
-  // Auto group for flexible ads - groups 10 files at a time in upload order
-  const handleFlexibleAutoGroup = useCallback(() => {
 
+  // Auto group for flexible ads - groups 10 files at a time in upload order
+  const handleFlexibleAutoGroup = useCallback(async () => {
     setIsFlexAutoGrouping(true);
+    await new Promise(resolve => setTimeout(resolve, 50)); // tiny delay to allow re-render
+
     const allFiles = [...files, ...driveFiles];
     const newGroups = [];
 
-    // Group files in sets of 10
     for (let i = 0; i < allFiles.length; i += 10) {
       const group = allFiles
         .slice(i, i + 10)
@@ -542,8 +543,8 @@ export default function MediaPreview({
     setFileGroups(newGroups);
     setSelectedFiles(new Set());
     setIsFlexAutoGrouping(false);
-
   }, [files, driveFiles, setFileGroups]);
+
 
 
   const handleUngroup = useCallback((groupIndex) => {
@@ -551,14 +552,14 @@ export default function MediaPreview({
   }, [setFileGroups]);
 
 
-  const getFileGroupNumber = useCallback((fileId) => {
-    for (let i = 0; i < fileGroups.length; i++) {
-      if (fileGroups[i].includes(fileId)) {
-        return i + 1;
-      }
-    }
-    return null;
-  }, [fileGroups]);
+  // const getFileGroupNumber = useCallback((fileId) => {
+  //   for (let i = 0; i < fileGroups.length; i++) {
+  //     if (fileGroups[i].includes(fileId)) {
+  //       return i + 1;
+  //     }
+  //   }
+  //   return null;
+  // }, [fileGroups]);
 
 
   const handleDragEnd = useCallback((event) => {
