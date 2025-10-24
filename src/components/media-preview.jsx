@@ -205,6 +205,7 @@ export default function MediaPreview({
 }) {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isAIGrouping, setIsAIGrouping] = useState(false);
+  const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor));
 
@@ -525,6 +526,8 @@ export default function MediaPreview({
 
   // Auto group for flexible ads - groups 10 files at a time in upload order
   const handleFlexibleAutoGroup = useCallback(() => {
+
+    setIsFlexAutoGrouping(true);
     const allFiles = [...files, ...driveFiles];
     const newGroups = [];
 
@@ -538,8 +541,8 @@ export default function MediaPreview({
 
     setFileGroups(newGroups);
     setSelectedFiles(new Set());
+    setIsFlexAutoGrouping(false);
 
-    console.log(`🎨 Created ${newGroups.length} flexible ad groups:`, newGroups);
   }, [files, driveFiles, setFileGroups]);
 
 
@@ -659,13 +662,21 @@ export default function MediaPreview({
 
               {adType === 'flexible' && (
                 <Button
-                  variant="outline"
-                  size="sm"
                   onClick={handleFlexibleAutoGroup}
-                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                  disabled={isFlexAutoGrouping}
+                  className="bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
                 >
-                  <Rocket className="h-4 w-4 mr-2" />
-                  Auto Group
+                  {isFlexAutoGrouping ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Grouping...
+                    </>
+                  ) : (
+                    <>
+                      <Users className="w-4 h-4 mr-2" />
+                      Auto Group
+                    </>
+                  )}
                 </Button>
               )}
 
