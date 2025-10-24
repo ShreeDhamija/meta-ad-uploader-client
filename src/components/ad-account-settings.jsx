@@ -693,10 +693,10 @@ export default function AdAccountSettings({
                   <div className="w-full overflow-hidden">
                     <span className="block truncate flex-1 text-left">
                       {selectedCampaign.length === 0
-                        ? "Select campaign(s)"
-                        : selectedCampaigns.length === 1
-                          ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaigns[0]
-                          : `${selectedCampaigns.length} campaigns selected`}
+                        ? "Select campaigns"
+                        : selectedCampaign.length === 1
+                          ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaign[0]
+                          : `${selectedCampaign.length} campaigns selected`}
                     </span>
                   </div>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
