@@ -662,6 +662,8 @@ export default function MediaPreview({
 
               {adType === 'flexible' && (
                 <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleFlexibleAutoGroup}
                   disabled={isFlexAutoGrouping}
                   className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
