@@ -1833,10 +1833,6 @@ export default function AdCreationForm({
 
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
-
-    // const smallDriveFiles = driveFiles.filter(file =>
-    //   !(file.mimeType.startsWith("video/") && file.size > S3_UPLOAD_THRESHOLD)
-    // );
     const smallDriveFiles = driveFiles.filter(file =>
       !(isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD)
     );

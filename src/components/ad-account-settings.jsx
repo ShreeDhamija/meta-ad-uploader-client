@@ -82,8 +82,13 @@ export default function AdAccountSettings({
 
 
 
+  // const selectedCampaignData = useMemo(() =>
+  //   campaigns.find(c => c.id === selectedCampaign),
+  //   [campaigns, selectedCampaign]
+  // );
+
   const selectedCampaignData = useMemo(() =>
-    campaigns.find(c => c.id === selectedCampaign),
+    campaigns.filter(c => selectedCampaign.includes(c.id)),
     [campaigns, selectedCampaign]
   );
 
@@ -120,7 +125,8 @@ export default function AdAccountSettings({
     setSelectedAdAccount(adAccountId)
     setCampaigns([])
     setAdSets([])
-    setSelectedCampaign("")
+    // setSelectedCampaign("")
+    setSelectedCampaign([])
     setSelectedAdSets([])
     if (!adAccountId) return
 
@@ -139,9 +145,8 @@ export default function AdAccountSettings({
         }
 
         const sortedCampaigns = sortCampaigns(data.campaigns);
-        //console.log("📦 Fetched campaigns from server:", data.campaigns);
         setCampaigns(sortedCampaigns);
-        //console.log("🧠 setCampaigns with:", sortedCampaigns);
+
 
 
       }
@@ -154,47 +159,113 @@ export default function AdAccountSettings({
     }
   });
 
-  const handleCampaignChange = useCallback(async (value) => {
-    const campaignId = value
-    setSelectedCampaign(campaignId)
-    setAdSets([])
-    setSelectedAdSets([])
-    setShowDuplicateBlock(false)
-    setDuplicateAdSet("")
-    setNewAdSetName("") // Add this line
-    setShowDuplicateCampaignBlock(false)
-    setDuplicateCampaign("")
-    setNewCampaignName("")
-    if (!campaignId) {
-      setCampaignObjective("")
-      return
-    }
+  // const handleCampaignChange = useCallback(async (value) => {
+  //   const campaignId = value
+  //   setSelectedCampaign(campaignId)
+  //   setAdSets([])
+  //   setSelectedAdSets([])
+  //   setShowDuplicateBlock(false)
+  //   setDuplicateAdSet("")
+  //   setNewAdSetName("") // Add this line
+  //   setShowDuplicateCampaignBlock(false)
+  //   setDuplicateCampaign("")
+  //   setNewCampaignName("")
+  //   if (!campaignId) {
+  //     setCampaignObjective("")
+  //     return
+  //   }
 
-    const selectedCampaignObj = campaigns.find((camp) => camp.id === campaignId)
-    if (selectedCampaignObj) {
-      setCampaignObjective(selectedCampaignObj.objective)
-      console.log(campaignObjective);
+  //   const selectedCampaignObj = campaigns.find((camp) => camp.id === campaignId)
+  //   if (selectedCampaignObj) {
+  //     setCampaignObjective(selectedCampaignObj.objective)
+  //     console.log(campaignObjective);
+  //   } else {
+  //     setCampaignObjective("")
+  //   }
+
+  //   setIsLoading(true)
+  //   try {
+  //     const res = await fetch(
+  //       `${API_BASE_URL}/auth/fetch-adsets?campaignId=${campaignId}`,
+  //       { credentials: "include" },
+  //     )
+  //     const data = await res.json()
+  //     if (data.adSets) {
+  //       setAdSets(sortAdSets(data.adSets))
+  //     }
+  //   } catch (err) {
+  //     toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error occurred"}`)
+  //     console.error("Failed to fetch ad sets:", err)
+  //   } finally {
+  //     setIsLoading(false)
+  //   }
+  // });
+
+
+  const handleCampaignChange = useCallback(async (campaignId) => {
+    // Toggle campaign selection
+    const isSelected = selectedCampaign.includes(campaignId);
+    let newSelectedCampaigns;
+
+    if (isSelected) {
+      newSelectedCampaigns = selectedCampaign.filter(id => id !== campaignId);
     } else {
-      setCampaignObjective("")
+      newSelectedCampaigns = [...selectedCampaign, campaignId];
     }
 
-    setIsLoading(true)
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/auth/fetch-adsets?campaignId=${campaignId}`,
-        { credentials: "include" },
-      )
-      const data = await res.json()
-      if (data.adSets) {
-        setAdSets(sortAdSets(data.adSets))
-      }
-    } catch (err) {
-      toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error occurred"}`)
-      console.error("Failed to fetch ad sets:", err)
-    } finally {
-      setIsLoading(false)
+    setSelectedCampaign(newSelectedCampaigns);
+    setSelectedAdSets([]);
+    setShowDuplicateBlock(false);
+    setDuplicateAdSet("");
+    setNewAdSetName("");
+    setShowDuplicateCampaignBlock(false);
+    setDuplicateCampaign("");
+    setNewCampaignName("");
+
+    if (newSelectedCampaigns.length === 0) {
+      setCampaignObjective([]);
+      setAdSets([]);
+      return;
     }
-  });
+
+    // Update campaign objectives
+    const objectives = newSelectedCampaigns.map(id => {
+      const campaign = campaigns.find(c => c.id === id);
+      return campaign?.objective || "";
+    }).filter(Boolean);
+    setCampaignObjective(objectives);
+
+    // Fetch adsets from all selected campaigns
+    setIsLoading(true);
+    try {
+      const adSetPromises = newSelectedCampaigns.map(id =>
+        fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${id}`, {
+          credentials: "include"
+        }).then(res => res.json())
+      );
+
+      const results = await Promise.all(adSetPromises);
+
+      // Combine adsets from all campaigns with campaign info
+      const allAdSets = results.flatMap((data, index) => {
+        if (data.adSets) {
+          return data.adSets.map(adset => ({
+            ...adset,
+            campaignId: newSelectedCampaigns[index],
+            campaignName: campaigns.find(c => c.id === newSelectedCampaigns[index])?.name
+          }));
+        }
+        return [];
+      });
+
+      setAdSets(sortAdSets(allAdSets));
+    } catch (err) {
+      toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error occurred"}`);
+      console.error("Failed to fetch ad sets:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedCampaign, campaigns, sortAdSets]);
 
   const handleAdSetCheckboxChange = useCallback((adsetId, checked) => {
     if (checked) {
@@ -512,7 +583,7 @@ export default function AdAccountSettings({
                 onClick={refreshCampaigns}
               />
             </div>
-            <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
+            {/* <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -606,7 +677,87 @@ export default function AdAccountSettings({
                   </CommandList>
                 </Command>
               </PopoverContent>
+            </Popover> */}
+
+
+            {/* Campaign Dropdown - REPLACE THE ENTIRE POPOVER SECTION */}
+            <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openCampaign}
+                  disabled={!isLoggedIn || campaigns.length === 0 || isLoadingCampaigns}
+                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
+                >
+                  <div className="w-full overflow-hidden">
+                    <span className="block truncate flex-1 text-left">
+                      {selectedCampaign.length === 0
+                        ? "Select campaign(s)"
+                        : selectedCampaigns.length === 1
+                          ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaigns[0]
+                          : `${selectedCampaigns.length} campaigns selected`}
+                    </span>
+                  </div>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                align="start"
+                sideOffset={4}
+                side="bottom"
+                avoidCollisions={false}
+                style={{
+                  minWidth: "var(--radix-popover-trigger-width)",
+                  width: "auto",
+                  maxWidth: "none",
+                }}
+              >
+                <Command loop={false}>
+                  <CommandInput
+                    placeholder="Search campaigns..."
+                    value={campaignSearchValue}
+                    onValueChange={setCampaignSearchValue}
+                  />
+                  <CommandEmpty>No campaigns found.</CommandEmpty>
+                  <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                    <CommandGroup>
+                      {filteredCampaigns.map((camp) => {
+                        const isSelected = selectedCampaign.includes(camp.id);
+                        return (
+                          <CommandItem
+                            key={camp.id}
+                            value={camp.name || camp.id}
+                            onSelect={() => handleCampaignChange(camp.id)}
+                            className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150"
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <Checkbox
+                                id={`campaign-${camp.id}`}
+                                checked={isSelected}
+                                className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
+                              >
+                                <Checkbox.Indicator>
+                                  <Check className="w-3 h-3 text-green-500" />
+                                </Checkbox.Indicator>
+                              </Checkbox>
+                              <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", camp.status !== "ACTIVE" && "text-gray-400")}>
+                                <span className="truncate leading-[1.25]">{camp.name || camp.id}</span>
+                                {camp.status === "ACTIVE" && (
+                                  <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                                )}
+                              </Label>
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
             </Popover>
+
             {showDuplicateCampaignBlock && (
               <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 relative mt-2">
                 <button
@@ -939,7 +1090,7 @@ export default function AdAccountSettings({
                           onValueChange={setDuplicateAdSetSearchValue}
                         />
                         <CommandEmpty>No ad sets found.</CommandEmpty>
-                        <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                        {/* <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                           <CommandGroup>
                             {adSets
                               .filter((adset) =>
@@ -967,7 +1118,71 @@ export default function AdAccountSettings({
                                 </CommandItem>
                               ))}
                           </CommandGroup>
+                        </CommandList> */}
+                        <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                          <CommandGroup>
+                            {filteredAdSets.length > 0 ? (
+                              (() => {
+                                // Group adsets by campaign
+                                const groupedByCampaign = filteredAdSets.reduce((acc, adset) => {
+                                  const campaignId = adset.campaignId || 'unknown';
+                                  if (!acc[campaignId]) {
+                                    acc[campaignId] = [];
+                                  }
+                                  acc[campaignId].push(adset);
+                                  return acc;
+                                }, {});
 
+                                return Object.entries(groupedByCampaign).map(([campaignId, campaignAdSets]) => {
+                                  const campaignName = campaignAdSets[0]?.campaignName || campaignId;
+
+                                  return (
+                                    <div key={campaignId}>
+                                      {/* Campaign separator */}
+                                      <div className="px-4 py-2 bg-gray-100 text-gray-700 font-semibold text-sm sticky top-0 z-10">
+                                        {campaignName}: Adsets
+                                      </div>
+
+                                      {/* Adsets for this campaign */}
+                                      {campaignAdSets.map((adset) => {
+                                        const isSelected = selectedAdSets.includes(adset.id);
+                                        return (
+                                          <CommandItem
+                                            key={adset.id}
+                                            value={adset.name || adset.id}
+                                            onSelect={() => handleAdSetCheckboxChange(adset.id, !isSelected)}
+                                            className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150"
+                                          >
+                                            <div className="flex items-center gap-2 w-full">
+                                              <Checkbox
+                                                id={`adset-${adset.id}`}
+                                                checked={isSelected}
+                                                className="p-0 w-4 h-4 aspect-square bg-white border border-gray-300 rounded-[6px]"
+                                              >
+                                                <Checkbox.Indicator>
+                                                  <Check className="w-3 h-3 text-green-500" />
+                                                </Checkbox.Indicator>
+                                              </Checkbox>
+                                              <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
+                                                <span className="truncate leading-[1.25]">{adset.name || adset.id}</span>
+                                                {adset.status === "ACTIVE" && (
+                                                  <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
+                                                )}
+                                              </Label>
+                                            </div>
+                                          </CommandItem>
+                                        );
+                                      })}
+                                    </div>
+                                  );
+                                });
+                              })()
+                            ) : (
+                              <CommandItem disabled className="opacity-50 cursor-not-allowed">
+                                No AdSets found.
+                              </CommandItem>
+                            )}
+                          </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
