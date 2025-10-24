@@ -12,11 +12,12 @@ import { cn } from "@/lib/utils"
 
 const AVAILABLE_VARIABLES = [
   { id: 'fileName', label: 'File Name' },
-  { id: 'adType', label: 'File Type', note: '(Static/Video)' },
+  { id: 'fileType', label: 'File Type', note: '(Static/Video)' },
   { id: 'dateMonthYYYY', label: 'Date (MonthYYYY)' },
   { id: 'dateMonthDDYYYY', label: 'Date (MonthDDYYYY)' },
   { id: 'iteration', label: 'Iteration', note: '(1/2/3..)' },
   { id: 'slug', label: 'URL Slug', note: '(Text after last / )' },
+  { id: 'adType', label: 'Ad Type', note: 'CAR/FLEX' },
 ]
 
 export default function ReorderAdNameParts({

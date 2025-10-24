@@ -1469,7 +1469,7 @@ export default function AdCreationForm({
 
 
 
-  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null) => {
+  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "") => {
 
     if (!adNameFormulaV2?.rawInput) {
       // Fallback to old computation if no V2 formula
@@ -1525,6 +1525,20 @@ export default function AdCreationForm({
       }
     }
 
+    let adTypeLabel = "";
+    if (adType) {
+      try {
+        if (adType === 'flexible')
+          adTypeLabel = 'FLEX';
+        else if (adType === 'carousel')
+          adTypeLabel = 'CAR';
+        else adTypeLabel = "";
+      }
+      catch (e) {
+        adTypeLabel = "";
+      }
+    }
+
     // Replace variables in the formula
     let adName = formulaToUse.rawInput
       .replace(/\{\{File Name\}\}/g, fileName)
@@ -1532,7 +1546,8 @@ export default function AdCreationForm({
       .replace(/\{\{Date \(MonthYYYY\)\}\}/g, monthYear)
       .replace(/\{\{Date \(MonthDDYYYY\)\}\}/g, monthDayYear)
       .replace(/\{\{Iteration\}\}/g, String(iterationIndex + 1).padStart(2, "0"))
-      .replace(/\{\{URL Slug\}\}/g, urlSlug);
+      .replace(/\{\{URL Slug\}\}/g, urlSlug)
+      .replace(/\{\{Ad Type\}\}/g, adTypeLabel);
 
     return adName || "Ad Generated Through Blip";
   }, [adNameFormulaV2]);
@@ -1891,7 +1906,6 @@ export default function AdCreationForm({
     }
 
     // Add flexible ads validation
-
     if (adType === 'flexible') {
       const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
 
@@ -1917,6 +1931,7 @@ export default function AdCreationForm({
         }
       }
     }
+
     setJobId(frontendJobId); // This triggers SSE
 
     try {
@@ -1932,7 +1947,7 @@ export default function AdCreationForm({
         // For carousel, process each selected ad set separately (one call per ad set)
         nonDynamicAdSetIds.forEach((adSetId) => {
           const formData = new FormData();
-          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2));
+          formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2, adType));
           formData.append("headlines", JSON.stringify(headlines));
           formData.append("descriptions", JSON.stringify(descriptions));
           formData.append("messages", JSON.stringify(messages));
@@ -2033,76 +2048,6 @@ export default function AdCreationForm({
         });
       }
 
-
-      // FLEXIBLE ADS: Handle flexible ads to non-dynamic ad sets
-      // if (adType === 'flexible' && nonDynamicAdSetIds.length > 0) {
-      //   console.log("🎨 Creating flexible ad with:", {
-      //     filesCount: files.length + driveFiles.length + s3Results.length + s3DriveResults.length,
-      //     nonDynamicAdSetIds
-      //   });
-
-      //   // For flexible ads, send ALL files to each non-dynamic ad set (one request per ad set)
-      //   nonDynamicAdSetIds.forEach((adSetId) => {
-      //     const formData = new FormData();
-      //     formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2));
-      //     formData.append("headlines", JSON.stringify(headlines));
-      //     formData.append("descriptions", JSON.stringify(descriptions));
-      //     formData.append("messages", JSON.stringify(messages));
-      //     formData.append("adAccountId", selectedAdAccount);
-      //     formData.append("adSetId", adSetId);
-      //     formData.append("pageId", pageId);
-      //     formData.append("instagramAccountId", instagramAccountId);
-      //     formData.append("link", JSON.stringify(link));
-      //     formData.append("cta", cta);
-      //     formData.append("isCarouselAd", false);
-      //     formData.append("adType", "flexible"); // Send adType for flexible
-      //     formData.append("launchPaused", launchPaused);
-      //     formData.append("enablePlacementCustomization", false);
-      //     formData.append("jobId", frontendJobId);
-
-      //     // Add all small local files
-      //     files.forEach((file) => {
-      //       if (file.size <= S3_UPLOAD_THRESHOLD) {
-      //         formData.append("mediaFiles", file);
-      //       }
-      //     });
-
-      //     // Add all small drive files
-      //     smallDriveFiles.forEach((driveFile) => {
-      //       formData.append("driveFiles", JSON.stringify({
-      //         id: driveFile.id,
-      //         name: driveFile.name,
-      //         mimeType: driveFile.mimeType,
-      //         accessToken: driveFile.accessToken
-      //       }));
-      //     });
-
-      //     // Add all large file URLs (S3)
-      //     [...s3Results, ...s3DriveResults].forEach((s3File) => {
-      //       formData.append("s3VideoUrls", s3File.s3Url);
-      //       formData.append("s3VideoNames", s3File.name);
-      //     });
-
-      //     // Add video thumbnail if provided
-      //     if (thumbnail) {
-      //       formData.append("thumbnail", thumbnail);
-      //     }
-
-      //     // Add shop destination if needed
-      //     if (selectedShopDestination && showShopDestinationSelector) {
-      //       formData.append("shopDestination", selectedShopDestination);
-      //       formData.append("shopDestinationType", selectedShopDestinationType);
-      //     }
-
-      //     promises.push(
-      //       axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
-      //         withCredentials: true,
-      //         headers: { "Content-Type": "multipart/form-data" },
-      //       })
-      //     );
-      //   });
-      // }
-
       // FLEXIBLE ADS: Handle flexible ads to non-dynamic ad sets
       if (adType === 'flexible' && nonDynamicAdSetIds.length > 0) {
         console.log("🎨 Creating flexible ad with:", {
@@ -2129,7 +2074,8 @@ export default function AdCreationForm({
                 firstFile || files[0] || driveFiles[0],
                 groupIndex,
                 link[0],
-                jobData.formData.adNameFormulaV2
+                jobData.formData.adNameFormulaV2,
+                adType
               ));
               formData.append("headlines", JSON.stringify(headlines));
               formData.append("descriptions", JSON.stringify(descriptions));
@@ -2196,7 +2142,7 @@ export default function AdCreationForm({
           // UNGROUPED FLEXIBLE ADS: Send ALL files (existing logic)
           nonDynamicAdSetIds.forEach((adSetId) => {
             const formData = new FormData();
-            formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2));
+            formData.append("adName", computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], jobData.formData.adNameFormulaV2, adType));
             formData.append("headlines", JSON.stringify(headlines));
             formData.append("descriptions", JSON.stringify(descriptions));
             formData.append("messages", JSON.stringify(messages));
