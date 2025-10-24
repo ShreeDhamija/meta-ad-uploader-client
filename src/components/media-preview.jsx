@@ -664,7 +664,7 @@ export default function MediaPreview({
                 <Button
                   onClick={handleFlexibleAutoGroup}
                   disabled={isFlexAutoGrouping}
-                  className="bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
+                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
                 >
                   {isFlexAutoGrouping ? (
                     <>
@@ -673,7 +673,7 @@ export default function MediaPreview({
                     </>
                   ) : (
                     <>
-                      <Users className="w-4 h-4 mr-2" />
+                      <Rocket className="h-4 w-4 mr-2" />
                       Auto Group
                     </>
                   )}
