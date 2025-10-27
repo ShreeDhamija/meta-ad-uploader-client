@@ -525,25 +525,6 @@ export default function MediaPreview({
   }, [files, setFileGroups, setSelectedFiles]);
 
 
-  // Auto group for flexible ads - groups 10 files at a time in upload order
-  // const handleFlexibleAutoGroup = useCallback(async () => {
-  //   setIsFlexAutoGrouping(true);
-  //   await new Promise(resolve => setTimeout(resolve, 50)); // tiny delay to allow re-render
-
-  //   const allFiles = [...files, ...driveFiles];
-  //   const newGroups = [];
-
-  //   for (let i = 0; i < allFiles.length; i += 10) {
-  //     const group = allFiles
-  //       .slice(i, i + 10)
-  //       .map(file => getFileId(file));
-  //     newGroups.push(group);
-  //   }
-
-  //   setFileGroups(newGroups);
-  //   setSelectedFiles(new Set());
-  //   setIsFlexAutoGrouping(false);
-  // }, [files, driveFiles, setFileGroups]);
   const handleFlexibleAutoGroup = useCallback(async () => {
     setIsFlexAutoGrouping(true);
     await new Promise(resolve => setTimeout(resolve, 50)); // tiny delay to allow re-render
