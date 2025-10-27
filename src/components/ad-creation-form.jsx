@@ -399,7 +399,6 @@ export default function AdCreationForm({
   const [uploadingToS3, setUploadingToS3] = useState(false)
 
   const [pageSearchValue, setPageSearchValue] = useState("")
-  // const [isDuplicating, setIsDuplicating] = useState(false)
   const { isLoggedIn } = useAuth()
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
@@ -423,7 +422,7 @@ export default function AdCreationForm({
   const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
-  // const [lastJobFailed, setLastJobFailed] = useState(false);
+  const [preserveMedia, setPreserveMedia] = useState(false);
 
 
 
@@ -2624,15 +2623,22 @@ export default function AdCreationForm({
     setJobQueue(prev => [...prev, newJob]);
 
     // Clear form immediately
-    setFiles([]);
-    setDriveFiles([]);
-    setVideoThumbs({});
-    setThumbnail(null);
+    // setFiles([]);
+    // setDriveFiles([]);
+    // setVideoThumbs({});
+    // setThumbnail(null);
 
-    setFileGroups([]);
-    setEnablePlacementCustomization(false);
+    // setFileGroups([]);
+    // setEnablePlacementCustomization(false);
+    if (!preserveMedia) {
+      setFiles([]);
+      setDriveFiles([]);
+      setVideoThumbs({});
+      setThumbnail(null);
+      setFileGroups([]);
+      setEnablePlacementCustomization(false);
+    }
 
-    // toast.success(`Job added to queue (Position: ${jobQueue.length + 1})`);
 
   };
 
@@ -3804,6 +3810,34 @@ export default function AdCreationForm({
               )}
             >
               Publish ads TURNED OFF
+            </Label>
+          </div>
+
+          <div
+            className={cn(
+              "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
+              launchPaused
+                ? "bg-red-50 border border-red-300" // Conditional: light red background and border if PAUSED
+                : "border border-transparent" // Default: transparent border (or can be themed)
+            )}
+          >
+            <Checkbox
+              id="preserveMedia"
+              checked={preserveMedia}
+              onCheckedChange={setPreserveMedia}
+              disabled={!isLoggedIn}
+              className={cn(
+                "rounded-md", // Or "rounded-lg", "rounded-full"
+                "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0", // Remove focus ring
+              )} // Optional: style checkbox itself when checked & paused
+            />
+            <Label
+              htmlFor="preserveMedia"
+              className={cn(
+                "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+              )}
+            >
+              Preserve Media on Upload
             </Label>
           </div>
 
