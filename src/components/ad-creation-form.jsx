@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
@@ -3816,68 +3817,73 @@ export default function AdCreationForm({
           <div className="flex items-center space-x-2">
             <Label className="text-sm font-medium">Ad Status:</Label>
 
-            {/* Active Radio Button */}
-            <div
-              className={cn(
-                "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                !launchPaused
-                  ? "bg-green-50 border border-green-300"
-                  : "border border-transparent"
-              )}
+            <RadioGroup
+              value={launchPaused ? "paused" : "active"}
+              onValueChange={(value) => setLaunchPaused(value === "paused")}
+              disabled={!isLoggedIn}
+              className="flex items-center space-x-2"
             >
-              <input
-                type="radio"
-                id="statusActive"
-                name="adStatus"
-                checked={!launchPaused}
-                onChange={() => setLaunchPaused(false)}
-                disabled={!isLoggedIn}
-                className="w-4 h-4 text-green-600 focus:ring-0 focus:ring-offset-0"
-              />
-              <Label
-                htmlFor="statusActive"
+              {/* Active Radio Button */}
+              <div
                 className={cn(
-                  "text-sm font-medium leading-none cursor-pointer",
-                  !launchPaused ? "text-green-600" : "text-gray-600"
+                  "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                  !launchPaused
+                    ? "bg-green-50 border border-green-300"
+                    : "border border-transparent"
                 )}
               >
-                Active
-              </Label>
-            </div>
+                <RadioGroupItem
+                  value="active"
+                  id="statusActive"
+                  className={cn(
+                    "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                    !launchPaused ? "border-green-500 text-green-500" : ""
+                  )}
+                />
+                <Label
+                  htmlFor="statusActive"
+                  className={cn(
+                    "text-sm font-medium leading-none cursor-pointer",
+                    !launchPaused ? "text-green-600" : "text-gray-600"
+                  )}
+                >
+                  Active
+                </Label>
+              </div>
 
-            {/* Paused Radio Button */}
-            <div
-              className={cn(
-                "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                launchPaused
-                  ? "bg-red-50 border border-red-300"
-                  : "border border-transparent"
-              )}
-            >
-              <input
-                type="radio"
-                id="statusPaused"
-                name="adStatus"
-                checked={launchPaused}
-                onChange={() => setLaunchPaused(true)}
-                disabled={!isLoggedIn}
-                className="w-4 h-4 text-red-600 focus:ring-0 focus:ring-offset-0"
-              />
-              <Label
-                htmlFor="statusPaused"
+              {/* Paused Radio Button */}
+              <div
                 className={cn(
-                  "text-sm font-medium leading-none cursor-pointer",
-                  launchPaused ? "text-red-600" : "text-gray-600"
+                  "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                  launchPaused
+                    ? "bg-red-50 border border-red-300"
+                    : "border border-transparent"
                 )}
               >
-                Paused
-              </Label>
-            </div>
+                <RadioGroupItem
+                  value="paused"
+                  id="statusPaused"
+                  className={cn(
+                    "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0",
+                    launchPaused ? "border-red-500 text-red-500" : ""
+                  )}
+                />
+                <Label
+                  htmlFor="statusPaused"
+                  className={cn(
+                    "text-sm font-medium leading-none cursor-pointer",
+                    launchPaused ? "text-red-600" : "text-gray-600"
+                  )}
+                >
+                  Paused
+                </Label>
+              </div>
+            </RadioGroup>
           </div>
 
           <div
             className={cn(
-              "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
+              "flex items-center space-x-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
             )}
           >
             <Checkbox
