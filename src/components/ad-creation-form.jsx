@@ -3783,7 +3783,7 @@ export default function AdCreationForm({
             )}
 
           </div>
-          <div
+          {/* <div
             className={cn(
               "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
               launchPaused
@@ -3811,14 +3811,73 @@ export default function AdCreationForm({
             >
               Publish ads TURNED OFF
             </Label>
+          </div> */}
+
+          <div className="flex items-center space-x-2">
+            <Label className="text-sm font-medium">Ad Status:</Label>
+
+            {/* Active Radio Button */}
+            <div
+              className={cn(
+                "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                !launchPaused
+                  ? "bg-green-50 border border-green-300"
+                  : "border border-transparent"
+              )}
+            >
+              <input
+                type="radio"
+                id="statusActive"
+                name="adStatus"
+                checked={!launchPaused}
+                onChange={() => setLaunchPaused(false)}
+                disabled={!isLoggedIn}
+                className="w-4 h-4 text-green-600 focus:ring-0 focus:ring-offset-0"
+              />
+              <Label
+                htmlFor="statusActive"
+                className={cn(
+                  "text-sm font-medium leading-none cursor-pointer",
+                  !launchPaused ? "text-green-600" : "text-gray-600"
+                )}
+              >
+                Active
+              </Label>
+            </div>
+
+            {/* Paused Radio Button */}
+            <div
+              className={cn(
+                "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                launchPaused
+                  ? "bg-red-50 border border-red-300"
+                  : "border border-transparent"
+              )}
+            >
+              <input
+                type="radio"
+                id="statusPaused"
+                name="adStatus"
+                checked={launchPaused}
+                onChange={() => setLaunchPaused(true)}
+                disabled={!isLoggedIn}
+                className="w-4 h-4 text-red-600 focus:ring-0 focus:ring-offset-0"
+              />
+              <Label
+                htmlFor="statusPaused"
+                className={cn(
+                  "text-sm font-medium leading-none cursor-pointer",
+                  launchPaused ? "text-red-600" : "text-gray-600"
+                )}
+              >
+                Paused
+              </Label>
+            </div>
           </div>
 
           <div
             className={cn(
               "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
-              launchPaused
-                ? "bg-red-50 border border-red-300" // Conditional: light red background and border if PAUSED
-                : "border border-transparent" // Default: transparent border (or can be themed)
             )}
           >
             <Checkbox
