@@ -2864,8 +2864,8 @@ export default function AdCreationForm({
                     value="flexible"
                     className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
                   >
-                    Flexible Ads
-                    <span className="text-orange">(Beta)</span>
+                    Flexible
+                    <span className="text-orange-700">(Beta)</span>
                   </SelectItem>
                 )}
               </SelectContent>
