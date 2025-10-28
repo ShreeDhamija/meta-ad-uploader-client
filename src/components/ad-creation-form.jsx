@@ -219,7 +219,9 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
               setMetadata({
                 successCount: data.successCount,
                 failureCount: data.failureCount,
-                totalCount: data.totalCount
+                totalCount: data.totalCount,
+                errorMessages: data.errorMessages // NEW
+
               });
 
               // Auto-cleanup on job completion
@@ -898,7 +900,7 @@ export default function AdCreationForm({
     }
 
     // Only act on the final states reported by the SSE hook
-    if (status === 'complete' || status === 'error' || status === 'job-not-found') {
+    if (status === 'complete' || status === 'partial-success' || status === 'error' || status === 'job-not-found') {
       if (status === 'complete') {
         // Fix: Handle multiple adsets properly
         const selectedAdSetIds = currentJob.formData.selectedAdSets;
@@ -936,7 +938,9 @@ export default function AdCreationForm({
           status: 'partial-success',
           successCount: metaData.successCount,
           failureCount: metaData.failureCount,
-          totalCount: metaData.totalCount
+          totalCount: metaData.totalCount,
+          errorMessages: metadata.errorMessages // NEW
+
         };
         setCompletedJobs(prev => [...prev, completedJob]);
         toast.warning(trackedMessage);
@@ -3492,6 +3496,22 @@ export default function AdCreationForm({
         const failureCount = responses.filter(r => r.status === 'rejected').length;
         const totalCount = responses.length;
 
+        const errorMessages = responses
+          .filter(r => r.status === 'rejected')
+          .map((r, index) => {
+            let errorMsg = 'Unknown error';
+            if (r.reason?.response?.data?.error) {
+              errorMsg = r.reason.response.data.error;
+            } else if (r.reason?.response?.data) {
+              errorMsg = r.reason.response.data;
+            } else if (r.reason?.message) {
+              errorMsg = r.reason.message;
+            }
+            return errorMsg;
+          });
+
+
+
         let jobStatus = 'complete';
         let jobMessage = 'All ads created successfully!';
 
@@ -3523,7 +3543,9 @@ export default function AdCreationForm({
             message: jobMessage,
             successCount,      // ADD
             failureCount,      // ADD
-            totalCount
+            totalCount,
+            errorMessages // NEW: Send error messages
+
           }, {
             withCredentials: true,
             timeout: 5000
@@ -3697,8 +3719,8 @@ export default function AdCreationForm({
                 ))} */}
 
                 {completedJobs.map((job) => (
-                  <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
-                    <div className="flex-shrink-0">
+                  <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
                       {job.status === 'error' ? (
                         <CircleX className="w-6 h-6 text-red-500" />
                       ) : job.status === 'partial-success' ? (
@@ -3709,8 +3731,8 @@ export default function AdCreationForm({
                         <CheckIcon className="w-6 h-6" />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <p className={`text-sm break-all ${job.status === 'error' ? 'text-red-600' :
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm break-words ${job.status === 'error' ? 'text-red-600' :
                           job.status === 'partial-success' ? 'text-yellow-600' :
                             job.status === 'retry' ? 'text-orange-600' :
                               'text-gray-700'
@@ -3723,12 +3745,26 @@ export default function AdCreationForm({
                         )}
                       </p>
                       {job.status === 'partial-success' && job.successCount !== undefined && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          ✓ {job.successCount} succeeded · ✗ {job.failureCount} failed
+                        <div className="mt-2 space-y-1">
+                          <div className="text-xs text-gray-600">
+                            ✓ {job.successCount} succeeded · ✗ {job.failureCount} failed
+                          </div>
+                          {job.errorMessages && job.errorMessages.length > 0 && (
+                            <details className="text-xs">
+                              <summary className="cursor-pointer text-red-600 hover:text-red-700">
+                                View error details
+                              </summary>
+                              <ul className="mt-1 ml-4 list-disc space-y-0.5 text-red-600">
+                                {job.errorMessages.map((err, idx) => (
+                                  <li key={idx} className="break-words">{err}</li>
+                                ))}
+                              </ul>
+                            </details>
+                          )}
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-shrink-0">
                       {job.status === 'retry' && (
                         <button
                           onClick={refreshPage}
