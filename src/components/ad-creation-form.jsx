@@ -41,6 +41,8 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState('idle');
+  const [metaData, setMetadata] = useState({});
+
 
 
   const resetProgress = useCallback(() => {
@@ -213,9 +215,15 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
               setProgress(data.progress);
               setMessage(data.message);
               setStatus(data.status);
+              // ADD: Store metadata
+              setMetadata({
+                successCount: data.successCount,
+                failureCount: data.failureCount,
+                totalCount: data.totalCount
+              });
 
               // Auto-cleanup on job completion
-              if (data.status === 'complete' || data.status === 'error') {
+              if (data.status === 'complete' || data.status === 'error' || data.status === 'partial-success') {
                 console.log('🏁 Job finished, closing SSE');
                 cleanup();
               }
@@ -269,7 +277,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
 
 
-  return { progress, message, status, resetProgress };
+  return { progress, message, status, metaData, resetProgress };
 };
 
 
@@ -301,11 +309,7 @@ const getExtensionFromMime = (mime = "") => {
   return "";
 };
 
-// Outside AdCreationForm component
-// const extractFolderId = (url) => {
-//   const match = url.match(/folders\/([a-zA-Z0-9-_]+)/);
-//   return match ? match[1] : null;
-// };
+
 
 const extractFolderId = (url) => {
   const idMatch = url.match(/[-\w]{25,}/);
@@ -414,7 +418,7 @@ export default function AdCreationForm({
   const [jobId, setJobId] = useState(null);
   const [progress, setProgress] = useState(0);
   const [progressMessage, setProgressMessage] = useState('');
-  const { progress: trackedProgress, message: trackedMessage, status, resetProgress } = useAdCreationProgress(jobId, isCreatingAds);
+  const { progress: trackedProgress, message: trackedMessage, status, metaData, resetProgress } = useAdCreationProgress(jobId, isCreatingAds);
   const [showCompletedView, setShowCompletedView] = useState(false);
   // Add these new states at the top of AdCreationForm
   const [jobQueue, setJobQueue] = useState([]);
@@ -921,6 +925,21 @@ export default function AdCreationForm({
         };
         setCompletedJobs(prev => [...prev, completedJob]);
 
+        if (currentJob.formData.duplicateAdSet) {
+          refreshAdSets();
+        }
+      } else if (status === 'partial-success') {
+        const completedJob = {
+          id: currentJob.id,
+          message: trackedMessage,
+          completedAt: Date.now(),
+          status: 'partial-success',
+          successCount: metaData.successCount,
+          failureCount: metaData.failureCount,
+          totalCount: metaData.totalCount
+        };
+        setCompletedJobs(prev => [...prev, completedJob]);
+        toast.warning(trackedMessage);
         if (currentJob.formData.duplicateAdSet) {
           refreshAdSets();
         }
@@ -2599,6 +2618,8 @@ export default function AdCreationForm({
     //   setIsLoading(false);
 
     // }
+
+
     // ============================================================================
     // HELPER FUNCTIONS - Abstract formData operations
     // ============================================================================
@@ -3463,27 +3484,56 @@ export default function AdCreationForm({
       // ============================================================================
       // EXECUTE ALL API CALLS
       // ============================================================================
+      // Replace the existing Promise.all block with:
       try {
-        const responses = await Promise.all(promises);
-        console.log("job finished calling final endpoint");
+        const responses = await Promise.allSettled(promises);
 
-        // Try to complete the job
+        const successCount = responses.filter(r => r.status === 'fulfilled').length;
+        const failureCount = responses.filter(r => r.status === 'rejected').length;
+        const totalCount = responses.length;
+
+        let jobStatus = 'complete';
+        let jobMessage = 'All ads created successfully!';
+
+        if (failureCount > 0 && successCount > 0) {
+          jobStatus = 'partial-success';
+          jobMessage = `${successCount} of ${totalCount} ads created. ${failureCount} failed.`;
+        }
+        else if (failureCount === totalCount) {
+          jobStatus = 'error';
+          const firstError = responses.find(r => r.status === 'rejected');
+
+          // Extract fbErrorMsg from response
+          let errorMsg = 'Unknown error';
+          if (firstError?.reason?.response?.data?.error) {
+            errorMsg = firstError.reason.response.data.error; // This is fbErrorMsg
+          } else if (firstError?.reason?.response?.data) {
+            errorMsg = firstError.reason.response.data;
+          } else if (firstError?.reason?.message) {
+            errorMsg = firstError.reason.message;
+          }
+
+          jobMessage = `All ads failed: ${errorMsg}`;
+        }
+
         try {
-          console.log("job finished calling final endpoint try block");
           await axios.post(`${API_BASE_URL}/auth/complete-job`, {
             jobId: frontendJobId,
-            message: 'All ads created successfully!'
+            status: jobStatus,
+            message: jobMessage,
+            successCount,      // ADD
+            failureCount,      // ADD
+            totalCount
           }, {
             withCredentials: true,
             timeout: 5000
           });
         } catch (completeError) {
-          console.warn("Failed to update progress tracker, but ads were created successfully");
+          console.warn("Failed to update progress tracker");
         }
-        console.log("job finished calling final endpoint try block ended");
-      }
-      catch (error) {
-        // error handling here
+
+      } catch (error) {
+        console.error("Unexpected error:", error);
       }
 
     } catch (error) {
@@ -3523,28 +3573,25 @@ export default function AdCreationForm({
 
     // Capture current form state as a job
     const newJob = captureFormDataAsJob();
-    // console.log('🔵 ORIGINAL JOB DATA:', JSON.stringify(newJob.formData, null, 2));
-
-
     // Add to queue
     setJobQueue(prev => [...prev, newJob]);
 
     // Clear form immediately
-    // setFiles([]);
-    // setDriveFiles([]);
-    // setVideoThumbs({});
-    // setThumbnail(null);
+    setFiles([]);
+    setDriveFiles([]);
+    setVideoThumbs({});
+    setThumbnail(null);
 
-    // setFileGroups([]);
-    // setEnablePlacementCustomization(false);
-    if (!preserveMedia) {
-      setFiles([]);
-      setDriveFiles([]);
-      setVideoThumbs({});
-      setThumbnail(null);
-      setFileGroups([]);
-      setEnablePlacementCustomization(false);
-    }
+    setFileGroups([]);
+    setEnablePlacementCustomization(false);
+    // if (!preserveMedia) {
+    //   setFiles([]);
+    //   setDriveFiles([]);
+    //   setVideoThumbs({});
+    //   setThumbnail(null);
+    //   setFileGroups([]);
+    //   setEnablePlacementCustomization(false);
+    // }
 
 
   };
@@ -3606,7 +3653,7 @@ export default function AdCreationForm({
                 {/* Completed Jobs */}
 
 
-                {completedJobs.map((job) => (
+                {/* {completedJobs.map((job) => (
                   <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
                     <div className="flex-shrink-0">
                       {job.status === 'error' ? (
@@ -3632,6 +3679,59 @@ export default function AdCreationForm({
                       {job.status === 'retry' && (
                         <button
                           onClick={refreshPage} // Changed from retryJob(job) to refreshPage
+                          className="text-orange-600 hover:text-orange-800 p-1 rounded"
+                          title="Retry job"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setCompletedJobs(prev => prev.filter(j => j.id !== job.id))}
+                        className="text-gray-400 hover:text-gray-600"
+                        title="Remove job"
+                      >
+                        <CircleX className="h-4 w-4 text-gray-500" />
+                      </button>
+                    </div>
+                  </div>
+                ))} */}
+
+                {completedJobs.map((job) => (
+                  <div key={job.id} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      {job.status === 'error' ? (
+                        <CircleX className="w-6 h-6 text-red-500" />
+                      ) : job.status === 'partial-success' ? (
+                        <AlertTriangle className="w-6 h-6 text-yellow-500" />
+                      ) : job.status === 'retry' ? (
+                        <AlertTriangle className="w-6 h-6 text-orange-500" />
+                      ) : (
+                        <CheckIcon className="w-6 h-6" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`text-sm break-all ${job.status === 'error' ? 'text-red-600' :
+                          job.status === 'partial-success' ? 'text-yellow-600' :
+                            job.status === 'retry' ? 'text-orange-600' :
+                              'text-gray-700'
+                        }`}>
+                        {job.message}
+                        {job.status === 'retry' && (
+                          <span className="block text-xs text-orange-500 mt-1">
+                            Reload page to try again.
+                          </span>
+                        )}
+                      </p>
+                      {job.status === 'partial-success' && job.successCount !== undefined && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          ✓ {job.successCount} succeeded · ✗ {job.failureCount} failed
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-1">
+                      {job.status === 'retry' && (
+                        <button
+                          onClick={refreshPage}
                           className="text-orange-600 hover:text-orange-800 p-1 rounded"
                           title="Retry job"
                         >
