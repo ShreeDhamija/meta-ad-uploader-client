@@ -939,7 +939,7 @@ export default function AdCreationForm({
           successCount: metaData.successCount,
           failureCount: metaData.failureCount,
           totalCount: metaData.totalCount,
-          errorMessages: metadata.errorMessages // NEW
+          errorMessages: metaData.errorMessages // NEW
 
         };
         setCompletedJobs(prev => [...prev, completedJob]);
@@ -3733,9 +3733,9 @@ export default function AdCreationForm({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm break-words ${job.status === 'error' ? 'text-red-600' :
-                          job.status === 'partial-success' ? 'text-yellow-600' :
-                            job.status === 'retry' ? 'text-orange-600' :
-                              'text-gray-700'
+                        job.status === 'partial-success' ? 'text-yellow-600' :
+                          job.status === 'retry' ? 'text-orange-600' :
+                            'text-gray-700'
                         }`}>
                         {job.message}
                         {job.status === 'retry' && (
