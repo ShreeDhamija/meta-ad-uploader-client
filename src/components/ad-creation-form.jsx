@@ -3901,47 +3901,42 @@ export default function AdCreationForm({
                             'text-gray-700'
                         }`}>
                         {job.message}
-                        {job.status === 'retry' && (
-                          <span className="block text-xs text-orange-500 mt-1">
-                            Reload page to try again.
-                          </span>
-                        )}
                       </p>
-                      {job.status === 'partial-success' && job.successCount !== undefined && (
-                        <div className="mt-1 space-y-1">
-                          {/* <div className="text-xs text-gray-600">
-                            {job.successCount} succeeded, {job.failureCount} failed
-                          </div> */}
-                          {job.errorMessages?.length > 0 && (
-                            <details className="text-xs">
-                              <summary className="cursor-pointer text-[#FF0000]">
-                                View error details
-                              </summary>
-                              <ul className="mt-1 ml-4 list-disc space-y-0.5 text-[#FF0000]">
-                                {(() => {
-                                  // Count occurrences of each error message
-                                  const errorCounts = job.errorMessages.reduce((acc, errorMsg) => {
-                                    acc[errorMsg] = (acc[errorMsg] || 0) + 1;
-                                    return acc;
-                                  }, {});
+                      {job.status === 'retry' && (
+                        <span className="block text-xs text-orange-500 mt-1">
+                          Reload page to try again.
+                        </span>
+                      )}
+                      {job.status === 'partial-success' && job.errorMessages?.length > 0 && (
+                        <div className="mt-1">
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-[#FF0000]">
+                              View error details
+                            </summary>
+                            <ul className="mt-1 ml-4 list-disc space-y-0.5 text-[#FF0000]">
+                              {(() => {
+                                // Count occurrences of each error message
+                                const errorCounts = job.errorMessages.reduce((acc, errorMsg) => {
+                                  acc[errorMsg] = (acc[errorMsg] || 0) + 1;
+                                  return acc;
+                                }, {});
 
-                                  // Render unique errors with counts
-                                  return Object.entries(errorCounts).map(([errorMsg, count], idx) => (
-                                    <li key={idx} className="break-words">
-                                      {errorMsg}
-                                      {count > 1 && (
-                                        <span className="ml-1 text-red-500 font-medium">(×{count})</span>
-                                      )}
-                                    </li>
-                                  ));
-                                })()}
-                              </ul>
-                            </details>
-                          )}
+                                // Render unique errors with counts
+                                return Object.entries(errorCounts).map(([errorMsg, count], idx) => (
+                                  <li key={idx} className="break-words">
+                                    {errorMsg}
+                                    {count > 1 && (
+                                      <span className="ml-1 text-red-500 font-medium">(×{count})</span>
+                                    )}
+                                  </li>
+                                ));
+                              })()}
+                            </ul>
+                          </details>
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
+                    <div className="flex gap-1 flex-shrink-0 mt-0.5">
                       {job.status === 'retry' && (
                         <button
                           onClick={refreshPage}
@@ -3970,7 +3965,19 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">
-                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {/* ... adset name logic ... */}
+                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {(() => {
+                          if (currentJob.formData.duplicateAdSet) {
+                            return currentJob.formData.newAdSetName || 'New Ad Set';
+                          } else {
+                            const selectedAdSetIds = currentJob.formData.selectedAdSets;
+                            if (selectedAdSetIds.length === 1) {
+                              const adSet = adSets.find(a => a.id === selectedAdSetIds[0]);
+                              return adSet?.name || 'selected adset';
+                            } else {
+                              return `${selectedAdSetIds.length} adsets`;
+                            }
+                          }
+                        })()}
                       </p>
                       <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
                     </div>
@@ -3982,16 +3989,23 @@ export default function AdCreationForm({
                     </div>
                     <div className="flex justify-between items-center mt-2">
                       <p className="text-xs text-gray-500">{progressMessage || trackedMessage}</p>
-                      {liveProgress.total > 0 && (
-                        <p className="text-xs font-medium text-gray-600">
-                          {liveProgress.completed}/{liveProgress.total}
-                          {liveProgress.succeeded > 0 && (
-                            <span className="text-green-600 ml-1">✓{liveProgress.succeeded}</span>
-                          )}
+                      {(progressMessage || trackedMessage) && liveProgress.total > 0 && (
+                        <div className="flex gap-2">
+                          <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded">
+                            <CheckIcon className="w-4 h-4 text-green-600" />
+                            <span className="text-xs font-medium text-green-700">
+                              {liveProgress.succeeded}/{liveProgress.total}
+                            </span>
+                          </div>
                           {liveProgress.failed > 0 && (
-                            <span className="text-red-600 ml-1">✗{liveProgress.failed}</span>
+                            <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded">
+                              <CircleX className="w-4 h-4 text-red-500" />
+                              <span className="text-xs font-medium text-red-600">
+                                {liveProgress.failed}/{liveProgress.total}
+                              </span>
+                            </div>
                           )}
-                        </p>
+                        </div>
                       )}
                     </div>
                   </div>
