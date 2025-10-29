@@ -33,6 +33,7 @@ import RocketIcon2 from '@/assets/icons/rocket.svg?react';
 import CheckIcon from '@/assets/icons/check.svg?react';
 import UploadIcon from '@/assets/icons/upload.svg?react';
 import QueueIcon from '@/assets/icons/queue.svg?react';
+import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -3533,7 +3534,7 @@ export default function AdCreationForm({
             errorMsg = firstError.reason.message;
           }
 
-          jobMessage = `All ads failed: ${errorMsg}`;
+          jobMessage = `${errorMsg}`;
         }
 
         try {
@@ -3724,7 +3725,7 @@ export default function AdCreationForm({
                       {job.status === 'error' ? (
                         <CircleX className="w-6 h-6 text-red-500" />
                       ) : job.status === 'partial-success' ? (
-                        <AlertTriangle className="w-6 h-6 text-yellow-500" />
+                        <PartialSuccess className="w-6 h-6" />
                       ) : job.status === 'retry' ? (
                         <AlertTriangle className="w-6 h-6 text-orange-500" />
                       ) : (
@@ -3733,7 +3734,7 @@ export default function AdCreationForm({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm break-words ${job.status === 'error' ? 'text-red-600' :
-                        job.status === 'partial-success' ? 'text-yellow-600' :
+                        job.status === 'partial-success' ? 'text-[#F0A000]' :
                           job.status === 'retry' ? 'text-orange-600' :
                             'text-gray-700'
                         }`}>
@@ -3746,18 +3747,32 @@ export default function AdCreationForm({
                       </p>
                       {job.status === 'partial-success' && job.successCount !== undefined && (
                         <div className="mt-2 space-y-1">
-                          <div className="text-xs text-gray-600">
-                            ✓ {job.successCount} succeeded · ✗ {job.failureCount} failed
-                          </div>
-                          {job.errorMessages && job.errorMessages.length > 0 && (
+                          {/* <div className="text-xs text-gray-600">
+                            {job.successCount} succeeded, {job.failureCount} failed
+                          </div> */}
+                          {job.errorMessages?.length > 0 && (
                             <details className="text-xs">
                               <summary className="cursor-pointer text-red-600 hover:text-red-700">
                                 View error details
                               </summary>
                               <ul className="mt-1 ml-4 list-disc space-y-0.5 text-red-600">
-                                {job.errorMessages.map((err, idx) => (
-                                  <li key={idx} className="break-words">{err}</li>
-                                ))}
+                                {(() => {
+                                  // Count occurrences of each error message
+                                  const errorCounts = job.errorMessages.reduce((acc, errorMsg) => {
+                                    acc[errorMsg] = (acc[errorMsg] || 0) + 1;
+                                    return acc;
+                                  }, {});
+
+                                  // Render unique errors with counts
+                                  return Object.entries(errorCounts).map(([errorMsg, count], idx) => (
+                                    <li key={idx} className="break-words">
+                                      {errorMsg}
+                                      {count > 1 && (
+                                        <span className="ml-1 text-red-500 font-medium">(×{count})</span>
+                                      )}
+                                    </li>
+                                  ));
+                                })()}
                               </ul>
                             </details>
                           )}
