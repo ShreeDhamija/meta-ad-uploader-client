@@ -1421,97 +1421,45 @@ export default function AdCreationForm({
       const url = URL.createObjectURL(file);
       const video = document.createElement("video");
 
-      const cleanup = () => {
-        try {
-          video.pause();
-          video.removeAttribute("src");
-          video.load();
-          URL.revokeObjectURL(url);
-          video.remove();
-        } catch (err) {
-          console.warn("Cleanup error:", err);
-        }
-      };
-
       const timeout = setTimeout(() => {
-        cleanup();
+        URL.revokeObjectURL(url);
+        video.remove(); // Add cleanup
         reject(new Error("Timeout"));
-      }, 20000); // Increased timeout to 20s
+      }, 8000);
 
       video.preload = "metadata";
       video.src = url;
       video.muted = true;
       video.playsInline = true;
+      video.currentTime = 0.1; // Keep your original approach
 
-      // Draw frame once ready
-      const captureFrame = () => {
+      video.addEventListener("loadeddata", () => { // Keep loadeddata - it worked!
+        clearTimeout(timeout);
         try {
           const canvas = document.createElement("canvas");
-          const MAX_SIZE = 400;
-          const scale = Math.min(
-            MAX_SIZE / video.videoWidth,
-            MAX_SIZE / video.videoHeight,
-            1
-          );
-
-          canvas.width = video.videoWidth * scale;
-          canvas.height = video.videoHeight * scale;
-
-          const ctx = canvas.getContext("2d", { alpha: false });
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext("2d");
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const dataURL = canvas.toDataURL("image/jpeg", 0.7);
-
-          clearTimeout(timeout);
-          cleanup();
+          const dataURL = canvas.toDataURL();
+          URL.revokeObjectURL(url);
+          video.remove(); // Add cleanup
           resolve(dataURL);
         } catch (err) {
-          cleanup();
+          URL.revokeObjectURL(url);
+          video.remove(); // Add cleanup
           reject(err);
         }
-      };
+      });
 
-      // Wait for metadata before setting currentTime
-      video.addEventListener(
-        "loadedmetadata",
-        () => {
-          try {
-            // Jump to small offset or midpoint
-            const seekTime = Math.min(0.1, video.duration / 2 || 0.1);
-            video.currentTime = seekTime;
-          } catch {
-            video.currentTime = 0;
-          }
-        },
-        { once: true }
-      );
-
-      // Capture when the frame seek completes
-      video.addEventListener("seeked", captureFrame, { once: true });
-
-      // Handle fatal load error
-      video.addEventListener(
-        "error",
-        (err) => {
-          clearTimeout(timeout);
-          cleanup();
-          reject(err || new Error("Error generating thumbnail"));
-        },
-        { once: true }
-      );
+      video.addEventListener("error", () => {
+        clearTimeout(timeout);
+        URL.revokeObjectURL(url);
+        video.remove(); // Add cleanup
+        reject(new Error("Error generating thumbnail"));
+      });
     });
   }, []);
-
-  // Retry wrapper — helps with transient decoding errors
-  const generateThumbnailWithRetry = async (file, retries = 1) => {
-    for (let i = 0; i <= retries; i++) {
-      try {
-        return await generateThumbnail(file);
-      } catch (err) {
-        if (i === retries) throw err;
-        await new Promise((r) => setTimeout(r, 300)); // brief pause
-      }
-    }
-  };
 
   const getDriveVideoThumbnail = useCallback((driveFile) => {
     if (!isVideoFile(driveFile)) return null;
@@ -1524,13 +1472,11 @@ export default function AdCreationForm({
   useEffect(() => {
     if (processingRef.current) return;
 
-    const videoFiles = files.filter((file) => {
+    const videoFiles = files.filter(file => {
       const fileId = getFileId(file);
-      return (
-        isVideoFile(file) &&
+      return isVideoFile(file) &&
         !videoThumbs[fileId] &&
-        !processedFilesRef.current.has(fileId)
-      );
+        !processedFilesRef.current.has(fileId);
     });
 
     if (videoFiles.length === 0) return;
@@ -1538,13 +1484,13 @@ export default function AdCreationForm({
     processingRef.current = true;
 
     const processThumbnails = async () => {
-      const CONCURRENCY = 3;
+      const CONCURRENCY = 3; // Back to 3 like your original
       let completed = 0;
 
       if (videoFiles.length > 5) {
         toast.info(`Generating thumbnails for ${videoFiles.length} videos...`, {
           autoClose: false,
-          toastId: "thumbnail-progress",
+          toastId: 'thumbnail-progress'
         });
       }
 
@@ -1555,39 +1501,34 @@ export default function AdCreationForm({
         for (const file of files) {
           const fileId = getFileId(file);
 
-          const promise = generateThumbnailWithRetry(file)
-            .then((thumb) => {
+          const promise = generateThumbnail(file)
+            .then(thumb => {
               completed++;
               if (videoFiles.length > 5 && completed % 3 === 0) {
-                toast.update("thumbnail-progress", {
-                  render: `Generated ${completed}/${videoFiles.length} thumbnails...`,
+                toast.update('thumbnail-progress', {
+                  render: `Generated ${completed}/${videoFiles.length} thumbnails...`
                 });
               }
               processedFilesRef.current.add(fileId);
               return { id: fileId, thumb };
             })
-            .catch((err) => {
+            .catch(err => {
               completed++;
               console.error(`Thumbnail error for ${file.name}:`, err);
               processedFilesRef.current.add(fileId);
               return {
                 id: fileId,
-                thumb: "https://api.withblip.com/thumbnail.jpg",
+                thumb: "https://api.withblip.com/thumbnail.jpg"
               };
             });
 
           results.push(promise);
           executing.push(promise);
 
-          // Remove finished promises
-          promise.finally(() => {
+          promise.then(() => {
             executing.splice(executing.indexOf(promise), 1);
           });
 
-          // Small stagger before next video to prevent decoder overload
-          await new Promise((r) => setTimeout(r, 20));
-
-          // Wait if we've hit the concurrency limit
           if (executing.length >= limit) {
             await Promise.race(executing);
           }
@@ -1598,18 +1539,16 @@ export default function AdCreationForm({
 
       const results = await processWithConcurrency(videoFiles, CONCURRENCY);
 
-      // Batch update once
-      setVideoThumbs((prev) => {
+      // Single state update - THIS was the real fix
+      setVideoThumbs(prev => {
         const updates = {};
-        results.forEach((result) => {
+        results.forEach(result => {
           if (result) updates[result.id] = result.thumb;
         });
         return { ...prev, ...updates };
       });
 
-      if (toast.isActive("thumbnail-progress"))
-        toast.dismiss("thumbnail-progress");
-
+      toast.dismiss('thumbnail-progress');
       processingRef.current = false;
     };
 
@@ -1618,7 +1557,34 @@ export default function AdCreationForm({
     return () => {
       processingRef.current = false;
     };
-  }, [files, generateThumbnail]);
+  }, [files, generateThumbnail]); // Removed videoThumbs - THIS was the main bug!
+
+  // Drive files effect
+  useEffect(() => {
+    const driveVideoFiles = driveFiles?.filter(file => {
+      const fileId = getFileId(file);
+      return isVideoFile(file) && !videoThumbs[fileId];
+    }) || [];
+
+    if (driveVideoFiles.length === 0) return;
+
+    const driveResults = driveVideoFiles
+      .map(file => ({
+        id: getFileId(file),
+        thumb: getDriveVideoThumbnail(file)
+      }))
+      .filter(result => result.thumb);
+
+    if (driveResults.length > 0) {
+      setVideoThumbs(prev => {
+        const updates = {};
+        driveResults.forEach(result => {
+          updates[result.id] = result.thumb;
+        });
+        return { ...prev, ...updates };
+      });
+    }
+  }, [driveFiles, videoThumbs, getDriveVideoThumbnail]);
 
 
 
