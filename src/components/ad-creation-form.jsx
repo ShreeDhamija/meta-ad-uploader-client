@@ -1473,29 +1473,31 @@ export default function AdCreationForm({
     return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
   };
 
-  // Add this ref to track which files have been processed
-  const processedFilesRef = useRef(new Set());
+  // Track processing state, not processed files
+  const processingRef = useRef(new Set());
 
   useEffect(() => {
     // Use AbortController for cleanup
     const abortController = new AbortController();
 
     const processThumbnails = async () => {
-      // Filter only unprocessed video files
-      const videoFiles = files.filter(file =>
-        isVideoFile(file) && !processedFilesRef.current.has(getFileId(file))
-      );
+      // Filter only unprocessed video files - check both videoThumbs and processing
+      const videoFiles = files.filter(file => {
+        const fileId = getFileId(file);
+        return isVideoFile(file) &&
+          !videoThumbs[fileId] && // Check actual thumbnails
+          !processingRef.current.has(fileId); // Not currently processing
+      });
 
       if (videoFiles.length === 0) {
         // Handle Drive files only if there are no local files to process
         const driveThumbs = {};
         driveFiles.forEach(file => {
           const fileId = getFileId(file);
-          if (isVideoFile(file) && !processedFilesRef.current.has(fileId)) {
+          if (isVideoFile(file) && !videoThumbs[fileId]) {
             const thumb = getDriveVideoThumbnail(file);
             if (thumb) {
               driveThumbs[fileId] = thumb;
-              processedFilesRef.current.add(fileId);
             }
           }
         });
@@ -1506,18 +1508,20 @@ export default function AdCreationForm({
         return;
       }
 
-      // Mark files as being processed immediately
+      // Show toast ONLY for files that actually need processing
+      if (videoFiles.length > 5) {
+        toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
+      }
+
+      // Mark files as being processed
       videoFiles.forEach(file => {
-        processedFilesRef.current.add(getFileId(file));
+        processingRef.current.add(getFileId(file));
       });
 
       // Process with limited concurrency instead of batches
       const MAX_CONCURRENT = 2; // Process only 2 at a time
       const queue = [...videoFiles];
-
-      if (videoFiles.length > 5) {
-        toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
-      }
+      let completed = 0;
 
       const processNext = async () => {
         if (queue.length === 0 || abortController.signal.aborted) return;
@@ -1530,6 +1534,7 @@ export default function AdCreationForm({
 
           if (!abortController.signal.aborted) {
             setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
+            completed++;
           }
         } catch (err) {
           console.error(`Thumbnail error for ${file.name}:`, err);
@@ -1538,8 +1543,17 @@ export default function AdCreationForm({
               ...prev,
               [fileId]: "https://api.withblip.com/thumbnail.jpg"
             }));
+            completed++;
           }
         } finally {
+          // Remove from processing set once done
+          processingRef.current.delete(fileId);
+
+          // Show progress if many files
+          if (videoFiles.length > 10 && completed % 5 === 0) {
+            toast.info(`Generated ${completed}/${videoFiles.length} thumbnails...`);
+          }
+
           // Use requestIdleCallback for better performance
           if (queue.length > 0 && !abortController.signal.aborted) {
             if ('requestIdleCallback' in window) {
@@ -1562,11 +1576,10 @@ export default function AdCreationForm({
       const driveThumbs = {};
       driveFiles.forEach(file => {
         const fileId = getFileId(file);
-        if (isVideoFile(file) && !processedFilesRef.current.has(fileId)) {
+        if (isVideoFile(file) && !videoThumbs[fileId]) {
           const thumb = getDriveVideoThumbnail(file);
           if (thumb) {
             driveThumbs[fileId] = thumb;
-            processedFilesRef.current.add(fileId);
           }
         }
       });
@@ -1578,12 +1591,13 @@ export default function AdCreationForm({
 
     processThumbnails();
 
-    // Cleanup on unmount
+    // Cleanup on unmount or dependency change
     return () => {
       abortController.abort();
+      // Clear processing set on cleanup
+      processingRef.current.clear();
     };
-  }, [files, driveFiles, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
-  // Removed videoThumbs from dependencies
+  }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
   const addField = (setter, values, ma) => {
