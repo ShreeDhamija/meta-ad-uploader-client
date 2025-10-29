@@ -3991,14 +3991,14 @@ export default function AdCreationForm({
                       <p className="text-xs text-gray-500">{progressMessage || trackedMessage}</p>
                       {(progressMessage || trackedMessage) && liveProgress.total > 0 && (
                         <div className="flex gap-2">
-                          <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded">
+                          <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded-lg">
                             <CheckIcon className="w-4 h-4 text-green-600" />
                             <span className="text-xs font-medium text-green-700">
                               {liveProgress.succeeded}/{liveProgress.total}
                             </span>
                           </div>
                           {liveProgress.failed > 0 && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded">
+                            <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-lg">
                               <CircleX className="w-4 h-4 text-red-500" />
                               <span className="text-xs font-medium text-red-600">
                                 {liveProgress.failed}/{liveProgress.total}
