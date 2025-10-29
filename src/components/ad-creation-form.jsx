@@ -1302,328 +1302,119 @@ export default function AdCreationForm({
   };
 
 
-  // const generateThumbnail = useCallback((file) => {
-  //   return new Promise((resolve, reject) => {
-  //     const url = URL.createObjectURL(file)
-  //     const video = document.createElement("video")
+  const generateThumbnail = useCallback((file) => {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file)
+      const video = document.createElement("video")
 
-  //     // CRITICAL: Add timeout
-  //     const timeout = setTimeout(() => {
-  //       URL.revokeObjectURL(url)
-  //       reject("Timeout")
-  //     }, 8000)
+      // CRITICAL: Add timeout
+      const timeout = setTimeout(() => {
+        URL.revokeObjectURL(url)
+        reject("Timeout")
+      }, 8000)
 
-  //     video.preload = "metadata"
-  //     video.src = url
-  //     video.muted = true
-  //     video.playsInline = true
-  //     video.currentTime = 0.1
+      video.preload = "metadata"
+      video.src = url
+      video.muted = true
+      video.playsInline = true
+      video.currentTime = 0.1
 
-  //     video.addEventListener("loadeddata", () => {
-  //       clearTimeout(timeout) // Clear timeout on success
-  //       try {
-  //         const canvas = document.createElement("canvas")
-  //         canvas.width = video.videoWidth
-  //         canvas.height = video.videoHeight
-  //         const ctx = canvas.getContext("2d")
-  //         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-  //         const dataURL = canvas.toDataURL()
-  //         URL.revokeObjectURL(url)
-  //         resolve(dataURL)
-  //       } catch (err) {
-  //         reject(err)
-  //       }
-  //     })
+      video.addEventListener("loadeddata", () => {
+        clearTimeout(timeout) // Clear timeout on success
+        try {
+          const canvas = document.createElement("canvas")
+          canvas.width = video.videoWidth
+          canvas.height = video.videoHeight
+          const ctx = canvas.getContext("2d")
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+          const dataURL = canvas.toDataURL()
+          URL.revokeObjectURL(url)
+          resolve(dataURL)
+        } catch (err) {
+          reject(err)
+        }
+      })
 
-  //     video.addEventListener("error", () => {
-  //       clearTimeout(timeout)
-  //       URL.revokeObjectURL(url)
-  //       reject("Error generating thumbnail")
-  //     })
-  //   })
-  // }, [])
-
-
-
-  // const getDriveVideoThumbnail = (driveFile) => {
-  //   // if (!driveFile.mimeType.startsWith('video/')) return null;
-  //   if (!isVideoFile(driveFile)) return null;
-
-  //   // Google Drive provides thumbnails for videos via this URL
-  //   return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
-  // };
+      video.addEventListener("error", () => {
+        clearTimeout(timeout)
+        URL.revokeObjectURL(url)
+        reject("Error generating thumbnail")
+      })
+    })
+  }, [])
 
 
-  // useEffect(() => {
-  //   const processThumbnails = async () => {
-  //     const videoFiles = files.filter(file =>
-  //       isVideoFile(file) && !videoThumbs[getFileId(file)]
-  //     );
+
+  const getDriveVideoThumbnail = (driveFile) => {
+    // if (!driveFile.mimeType.startsWith('video/')) return null;
+    if (!isVideoFile(driveFile)) return null;
+
+    // Google Drive provides thumbnails for videos via this URL
+    return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
+  };
 
 
-  //     if (videoFiles.length === 0) return;
-
-  //     // Adaptive batch size
-  //     const BATCH_SIZE = videoFiles.length <= 3 ? videoFiles.length
-  //       : videoFiles.length <= 10 ? 3
-  //         : 4; // Slightly larger batches for many files
-
-  //     // Show initial progress if many files
-  //     if (videoFiles.length > 5) {
-  //       toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
-  //     }
-
-  //     for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
-  //       const batch = videoFiles.slice(i, i + BATCH_SIZE);
-
-  //       const thumbnailPromises = batch.map(file =>
-  //         generateThumbnail(file)
-  //           .then(thumb => ({ id: getFileId(file), thumb }))
-  //           .catch(err => {
-  //             console.error(`Thumbnail error for ${file.name}:`, err);
-  //             return {
-  //               id: getFileId(file),
-  //               thumb: "https://api.withblip.com/thumbnail.jpg"
-  //             };
-  //           })
-  //       );
-
-  //       const results = await Promise.all(thumbnailPromises);
+  useEffect(() => {
+    const processThumbnails = async () => {
+      const videoFiles = files.filter(file =>
+        isVideoFile(file) && !videoThumbs[getFileId(file)]
+      );
 
 
-  //       setVideoThumbs(prev => {
-  //         const updates = {};
-  //         results.forEach(result => {
-  //           if (result) updates[result.id] = result.thumb;
-  //         });
-  //         return { ...prev, ...updates };
-  //       });
+      if (videoFiles.length === 0) return;
+
+      // Adaptive batch size
+      const BATCH_SIZE = videoFiles.length <= 3 ? videoFiles.length
+        : videoFiles.length <= 10 ? 3
+          : 4; // Slightly larger batches for many files
+
+      // Show initial progress if many files
+      if (videoFiles.length > 5) {
+        toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
+      }
+
+      for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
+        const batch = videoFiles.slice(i, i + BATCH_SIZE);
+
+        const thumbnailPromises = batch.map(file =>
+          generateThumbnail(file)
+            .then(thumb => ({ id: getFileId(file), thumb }))
+            .catch(err => {
+              console.error(`Thumbnail error for ${file.name}:`, err);
+              return {
+                id: getFileId(file),
+                thumb: "https://api.withblip.com/thumbnail.jpg"
+              };
+            })
+        );
+
+        const results = await Promise.all(thumbnailPromises);
 
 
-  //       // Shorter pause for better UX
-  //       if (i + BATCH_SIZE < videoFiles.length) {
-  //         await new Promise(resolve => setTimeout(resolve, 10));
-  //       }
-  //     }
+        setVideoThumbs(prev => {
+          const updates = {};
+          results.forEach(result => {
+            if (result) updates[result.id] = result.thumb;
+          });
+          return { ...prev, ...updates };
+        });
 
-  //     // Handle Drive files...
-  //   };
 
-  //   processThumbnails();
-  // }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+        // Shorter pause for better UX
+        if (i + BATCH_SIZE < videoFiles.length) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      }
+
+      // Handle Drive files...
+    };
+
+    processThumbnails();
+  }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
   // Functions for managing dynamic input fields
 
-  // --- Reliable thumbnail generator ---
-  const generateThumbnail = useCallback((file) => {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const video = document.createElement("video");
-
-      const cleanup = () => {
-        try {
-          video.pause();
-          video.removeAttribute("src");
-          video.load();
-          URL.revokeObjectURL(url);
-          video.remove();
-        } catch (err) {
-          console.warn("Cleanup error:", err);
-        }
-      };
-
-      const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error("Timeout"));
-      }, 20000); // 20-second timeout
-
-      const captureFrame = () => {
-        try {
-          const canvas = document.createElement("canvas");
-          const MAX_SIZE = 400;
-          const scale = Math.min(
-            MAX_SIZE / video.videoWidth,
-            MAX_SIZE / video.videoHeight,
-            1
-          );
-          canvas.width = video.videoWidth * scale;
-          canvas.height = video.videoHeight * scale;
-          const ctx = canvas.getContext("2d", { alpha: false });
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const dataURL = canvas.toDataURL("image/jpeg", 0.7);
-          clearTimeout(timeout);
-          cleanup();
-          resolve(dataURL);
-        } catch (err) {
-          cleanup();
-          reject(err);
-        }
-      };
-
-      const onMetadata = () => {
-        try {
-          const seekTime = Math.min(0.1, video.duration / 2 || 0.1);
-          video.currentTime = seekTime;
-        } catch {
-          video.currentTime = 0;
-        }
-      };
-
-      const onError = (err) => {
-        clearTimeout(timeout);
-        cleanup();
-        reject(err || new Error("Error generating thumbnail"));
-      };
-
-      video.addEventListener("loadedmetadata", onMetadata, { once: true });
-      video.addEventListener("seeked", captureFrame, { once: true });
-      video.addEventListener("error", onError, { once: true });
-
-      video.preload = "metadata";
-      video.muted = true;
-      video.playsInline = true;
-      video.src = url;
-    });
-  }, []);
-
-  // --- Simple retry wrapper ---
-  const generateThumbnailWithRetry = async (file, retries = 1) => {
-    for (let i = 0; i <= retries; i++) {
-      try {
-        return await generateThumbnail(file);
-      } catch (err) {
-        if (i === retries) throw err;
-        await new Promise((r) => setTimeout(r, 300));
-      }
-    }
-  };
-
-  // --- Drive helper ---
-  const getDriveVideoThumbnail = useCallback((driveFile) => {
-    if (!isVideoFile(driveFile)) return null;
-    return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
-  }, []);
-
-  // --- Processing state ---
-  const processingRef = useRef(false);
-  const processedFilesRef = useRef(new Set());
-
-  // --- Main effect ---
-  useEffect(() => {
-    if (processingRef.current) return;
-
-    const videoFiles = files.filter((file) => {
-      const fileId = getFileId(file);
-      return (
-        isVideoFile(file) &&
-        !videoThumbs[fileId] &&
-        !processedFilesRef.current.has(fileId)
-      );
-    });
-
-    if (videoFiles.length === 0) return;
-
-    processingRef.current = true;
-
-    const processThumbnails = async () => {
-      const CONCURRENCY = 3; // true concurrent workers
-      let completed = 0;
-      const total = videoFiles.length;
-
-      if (total > 5) {
-        toast.info(`Generating thumbnails for ${total} videos...`, {
-          autoClose: false,
-          toastId: "thumbnail-progress",
-        });
-      }
-
-      const results = [];
-      const queue = [...videoFiles]; // clone array
-
-      // Worker function
-      const worker = async () => {
-        while (queue.length > 0) {
-          const file = queue.shift();
-          const fileId = getFileId(file);
-
-          try {
-            const thumb = await generateThumbnailWithRetry(file);
-            results.push({ id: fileId, thumb });
-          } catch (err) {
-            console.error(`Thumbnail error for ${file.name}:`, err);
-            results.push({
-              id: fileId,
-              thumb: "https://api.withblip.com/thumbnail.jpg",
-            });
-          } finally {
-            processedFilesRef.current.add(fileId);
-            completed++;
-
-            // update progress every few thumbnails
-            if (total > 5 && completed % 3 === 0) {
-              toast.update("thumbnail-progress", {
-                render: `Generated ${completed}/${total} thumbnails...`,
-              });
-            }
-
-            // short delay for UI breathing
-            await new Promise((r) => setTimeout(r, 25));
-          }
-        }
-      };
-
-      // Launch N workers
-      const workers = Array.from({ length: CONCURRENCY }, worker);
-      await Promise.all(workers);
-
-      // Batch state update once
-      setVideoThumbs((prev) => {
-        const updates = {};
-        results.forEach(({ id, thumb }) => (updates[id] = thumb));
-        return { ...prev, ...updates };
-      });
-
-      if (toast.isActive("thumbnail-progress"))
-        toast.dismiss("thumbnail-progress");
-
-      processingRef.current = false;
-    };
-
-    processThumbnails();
-
-    return () => {
-      processingRef.current = false;
-    };
-  }, [files, generateThumbnail]);
-
-  // --- Drive files (instant) ---
-  useEffect(() => {
-    const driveVideoFiles =
-      driveFiles?.filter((file) => {
-        const fileId = getFileId(file);
-        return isVideoFile(file) && !videoThumbs[fileId];
-      }) || [];
-
-    if (driveVideoFiles.length === 0) return;
-
-    const driveResults = driveVideoFiles
-      .map((file) => ({
-        id: getFileId(file),
-        thumb: getDriveVideoThumbnail(file),
-      }))
-      .filter((result) => result.thumb);
-
-    if (driveResults.length > 0) {
-      setVideoThumbs((prev) => {
-        const updates = {};
-        driveResults.forEach((result) => {
-          updates[result.id] = result.thumb;
-        });
-        return { ...prev, ...updates };
-      });
-    }
-  }, [driveFiles, getDriveVideoThumbnail]); // Remove videoThumbs!
 
 
 
