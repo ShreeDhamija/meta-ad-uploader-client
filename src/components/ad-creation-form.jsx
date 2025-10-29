@@ -1302,121 +1302,288 @@ export default function AdCreationForm({
   };
 
 
-  const generateThumbnail = useCallback((file) => {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file)
-      const video = document.createElement("video")
+  // const generateThumbnail = useCallback((file) => {
+  //   return new Promise((resolve, reject) => {
+  //     const url = URL.createObjectURL(file)
+  //     const video = document.createElement("video")
 
-      // CRITICAL: Add timeout
-      const timeout = setTimeout(() => {
-        URL.revokeObjectURL(url)
-        reject("Timeout")
-      }, 8000)
+  //     // CRITICAL: Add timeout
+  //     const timeout = setTimeout(() => {
+  //       URL.revokeObjectURL(url)
+  //       reject("Timeout")
+  //     }, 8000)
 
-      video.preload = "metadata"
-      video.src = url
-      video.muted = true
-      video.playsInline = true
-      video.currentTime = 0.1
+  //     video.preload = "metadata"
+  //     video.src = url
+  //     video.muted = true
+  //     video.playsInline = true
+  //     video.currentTime = 0.1
 
-      video.addEventListener("loadeddata", () => {
-        clearTimeout(timeout) // Clear timeout on success
-        try {
-          const canvas = document.createElement("canvas")
-          canvas.width = video.videoWidth
-          canvas.height = video.videoHeight
-          const ctx = canvas.getContext("2d")
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-          const dataURL = canvas.toDataURL()
-          URL.revokeObjectURL(url)
-          resolve(dataURL)
-        } catch (err) {
-          reject(err)
-        }
-      })
+  //     video.addEventListener("loadeddata", () => {
+  //       clearTimeout(timeout) // Clear timeout on success
+  //       try {
+  //         const canvas = document.createElement("canvas")
+  //         canvas.width = video.videoWidth
+  //         canvas.height = video.videoHeight
+  //         const ctx = canvas.getContext("2d")
+  //         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+  //         const dataURL = canvas.toDataURL()
+  //         URL.revokeObjectURL(url)
+  //         resolve(dataURL)
+  //       } catch (err) {
+  //         reject(err)
+  //       }
+  //     })
 
-      video.addEventListener("error", () => {
-        clearTimeout(timeout)
-        URL.revokeObjectURL(url)
-        reject("Error generating thumbnail")
-      })
-    })
-  }, [])
-
-
-
-  const getDriveVideoThumbnail = (driveFile) => {
-    // if (!driveFile.mimeType.startsWith('video/')) return null;
-    if (!isVideoFile(driveFile)) return null;
-
-    // Google Drive provides thumbnails for videos via this URL
-    return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
-  };
+  //     video.addEventListener("error", () => {
+  //       clearTimeout(timeout)
+  //       URL.revokeObjectURL(url)
+  //       reject("Error generating thumbnail")
+  //     })
+  //   })
+  // }, [])
 
 
-  useEffect(() => {
-    const processThumbnails = async () => {
-      const videoFiles = files.filter(file =>
-        isVideoFile(file) && !videoThumbs[getFileId(file)]
-      );
+
+  // const getDriveVideoThumbnail = (driveFile) => {
+  //   // if (!driveFile.mimeType.startsWith('video/')) return null;
+  //   if (!isVideoFile(driveFile)) return null;
+
+  //   // Google Drive provides thumbnails for videos via this URL
+  //   return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
+  // };
 
 
-      if (videoFiles.length === 0) return;
-
-      // Adaptive batch size
-      const BATCH_SIZE = videoFiles.length <= 3 ? videoFiles.length
-        : videoFiles.length <= 10 ? 3
-          : 4; // Slightly larger batches for many files
-
-      // Show initial progress if many files
-      if (videoFiles.length > 5) {
-        toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
-      }
-
-      for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
-        const batch = videoFiles.slice(i, i + BATCH_SIZE);
-
-        const thumbnailPromises = batch.map(file =>
-          generateThumbnail(file)
-            .then(thumb => ({ id: getFileId(file), thumb }))
-            .catch(err => {
-              console.error(`Thumbnail error for ${file.name}:`, err);
-              return {
-                id: getFileId(file),
-                thumb: "https://api.withblip.com/thumbnail.jpg"
-              };
-            })
-        );
-
-        const results = await Promise.all(thumbnailPromises);
+  // useEffect(() => {
+  //   const processThumbnails = async () => {
+  //     const videoFiles = files.filter(file =>
+  //       isVideoFile(file) && !videoThumbs[getFileId(file)]
+  //     );
 
 
-        setVideoThumbs(prev => {
-          const updates = {};
-          results.forEach(result => {
-            if (result) updates[result.id] = result.thumb;
-          });
-          return { ...prev, ...updates };
-        });
+  //     if (videoFiles.length === 0) return;
+
+  //     // Adaptive batch size
+  //     const BATCH_SIZE = videoFiles.length <= 3 ? videoFiles.length
+  //       : videoFiles.length <= 10 ? 3
+  //         : 4; // Slightly larger batches for many files
+
+  //     // Show initial progress if many files
+  //     if (videoFiles.length > 5) {
+  //       toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
+  //     }
+
+  //     for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
+  //       const batch = videoFiles.slice(i, i + BATCH_SIZE);
+
+  //       const thumbnailPromises = batch.map(file =>
+  //         generateThumbnail(file)
+  //           .then(thumb => ({ id: getFileId(file), thumb }))
+  //           .catch(err => {
+  //             console.error(`Thumbnail error for ${file.name}:`, err);
+  //             return {
+  //               id: getFileId(file),
+  //               thumb: "https://api.withblip.com/thumbnail.jpg"
+  //             };
+  //           })
+  //       );
+
+  //       const results = await Promise.all(thumbnailPromises);
 
 
-        // Shorter pause for better UX
-        if (i + BATCH_SIZE < videoFiles.length) {
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
-      }
+  //       setVideoThumbs(prev => {
+  //         const updates = {};
+  //         results.forEach(result => {
+  //           if (result) updates[result.id] = result.thumb;
+  //         });
+  //         return { ...prev, ...updates };
+  //       });
 
-      // Handle Drive files...
-    };
 
-    processThumbnails();
-  }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+  //       // Shorter pause for better UX
+  //       if (i + BATCH_SIZE < videoFiles.length) {
+  //         await new Promise(resolve => setTimeout(resolve, 10));
+  //       }
+  //     }
+
+  //     // Handle Drive files...
+  //   };
+
+  //   processThumbnails();
+  // }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
   // Functions for managing dynamic input fields
 
 
+  const generateThumbnail = useCallback((file) => {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement("video");
 
+      const cleanup = () => {
+        URL.revokeObjectURL(url);
+        video.remove(); // Clean up video element
+        clearTimeout(timeout);
+      };
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject("Timeout");
+      }, 8000);
+
+      video.preload = "metadata";
+      video.src = url;
+      video.muted = true;
+      video.playsInline = true;
+      video.currentTime = 0.1;
+
+      video.addEventListener("loadeddata", () => {
+        clearTimeout(timeout);
+        try {
+          const canvas = document.createElement("canvas");
+          // Limit thumbnail size to reduce memory usage
+          const MAX_THUMB_SIZE = 320;
+          const scale = Math.min(1, MAX_THUMB_SIZE / Math.max(video.videoWidth, video.videoHeight));
+
+          canvas.width = video.videoWidth * scale;
+          canvas.height = video.videoHeight * scale;
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataURL = canvas.toDataURL("image/jpeg", 0.7); // Use JPEG with compression
+
+          cleanup();
+          resolve(dataURL);
+        } catch (err) {
+          cleanup();
+          reject(err);
+        }
+      });
+
+      video.addEventListener("error", () => {
+        cleanup();
+        reject("Error generating thumbnail");
+      });
+    });
+  }, []);
+
+  const getDriveVideoThumbnail = (driveFile) => {
+    if (!isVideoFile(driveFile)) return null;
+    return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
+  };
+
+  // Add this ref to track which files have been processed
+  const processedFilesRef = useRef(new Set());
+
+  useEffect(() => {
+    // Use AbortController for cleanup
+    const abortController = new AbortController();
+
+    const processThumbnails = async () => {
+      // Filter only unprocessed video files
+      const videoFiles = files.filter(file =>
+        isVideoFile(file) && !processedFilesRef.current.has(getFileId(file))
+      );
+
+      if (videoFiles.length === 0) {
+        // Handle Drive files only if there are no local files to process
+        const driveThumbs = {};
+        driveFiles.forEach(file => {
+          const fileId = getFileId(file);
+          if (isVideoFile(file) && !processedFilesRef.current.has(fileId)) {
+            const thumb = getDriveVideoThumbnail(file);
+            if (thumb) {
+              driveThumbs[fileId] = thumb;
+              processedFilesRef.current.add(fileId);
+            }
+          }
+        });
+
+        if (Object.keys(driveThumbs).length > 0) {
+          setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
+        }
+        return;
+      }
+
+      // Mark files as being processed immediately
+      videoFiles.forEach(file => {
+        processedFilesRef.current.add(getFileId(file));
+      });
+
+      // Process with limited concurrency instead of batches
+      const MAX_CONCURRENT = 2; // Process only 2 at a time
+      const queue = [...videoFiles];
+
+      if (videoFiles.length > 5) {
+        toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
+      }
+
+      const processNext = async () => {
+        if (queue.length === 0 || abortController.signal.aborted) return;
+
+        const file = queue.shift();
+        const fileId = getFileId(file);
+
+        try {
+          const thumb = await generateThumbnail(file);
+
+          if (!abortController.signal.aborted) {
+            setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
+          }
+        } catch (err) {
+          console.error(`Thumbnail error for ${file.name}:`, err);
+          if (!abortController.signal.aborted) {
+            setVideoThumbs(prev => ({
+              ...prev,
+              [fileId]: "https://api.withblip.com/thumbnail.jpg"
+            }));
+          }
+        } finally {
+          // Use requestIdleCallback for better performance
+          if (queue.length > 0 && !abortController.signal.aborted) {
+            if ('requestIdleCallback' in window) {
+              requestIdleCallback(() => processNext(), { timeout: 100 });
+            } else {
+              setTimeout(processNext, 0);
+            }
+          }
+        }
+      };
+
+      // Start initial concurrent processes
+      const initialPromises = [];
+      for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
+        initialPromises.push(processNext());
+      }
+      await Promise.all(initialPromises);
+
+      // Handle Drive files after local files are done
+      const driveThumbs = {};
+      driveFiles.forEach(file => {
+        const fileId = getFileId(file);
+        if (isVideoFile(file) && !processedFilesRef.current.has(fileId)) {
+          const thumb = getDriveVideoThumbnail(file);
+          if (thumb) {
+            driveThumbs[fileId] = thumb;
+            processedFilesRef.current.add(fileId);
+          }
+        }
+      });
+
+      if (Object.keys(driveThumbs).length > 0) {
+        setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
+      }
+    };
+
+    processThumbnails();
+
+    // Cleanup on unmount
+    return () => {
+      abortController.abort();
+    };
+  }, [files, driveFiles, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+  // Removed videoThumbs from dependencies
 
 
   const addField = (setter, values, ma) => {
