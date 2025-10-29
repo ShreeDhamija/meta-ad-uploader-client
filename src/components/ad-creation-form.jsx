@@ -431,6 +431,12 @@ export default function AdCreationForm({
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
   const [preserveMedia, setPreserveMedia] = useState(false);
+  const [liveProgress, setLiveProgress] = useState({
+    completed: 0,
+    succeeded: 0,
+    failed: 0,
+    total: 0
+  });
 
 
 
@@ -860,6 +866,7 @@ export default function AdCreationForm({
 
     // ✅ Call the reset function to clear the previous job's state.
     resetProgress();
+    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0 });
 
     const jobToProcess = jobQueue[0];
 
@@ -1812,12 +1819,6 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (jobData) => {
 
-    console.log('🚀 handleCreateAd called with jobData:', {
-      headlines: jobData.formData.headlines,
-      messages: jobData.formData.messages,
-      filesCount: jobData.formData.files.length + jobData.formData.driveFiles.length,
-      isCarouselAd: jobData.formData.isCarouselAd
-    });
 
     const {
       // Form content
@@ -3667,12 +3668,36 @@ export default function AdCreationForm({
         });
       }
 
+      setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length });
+
+      const trackedPromises = promises.map(promise =>
+        promise
+          .then(result => {
+            setLiveProgress(prev => ({
+              ...prev,
+              completed: prev.completed + 1,
+              succeeded: prev.succeeded + 1
+            }));
+            return result;
+          })
+          .catch(error => {
+            setLiveProgress(prev => ({
+              ...prev,
+              completed: prev.completed + 1,
+              failed: prev.failed + 1
+            }));
+            throw error;
+          })
+      );
+
+
       // ============================================================================
       // EXECUTE ALL API CALLS
       // ============================================================================
       // Replace the existing Promise.all block with:
       try {
-        const responses = await Promise.allSettled(promises);
+        const responses = await Promise.allSettled(trackedPromises); // 🆕 Changed from promises to trackedPromises
+
 
         const successCount = responses.filter(r => r.status === 'fulfilled').length;
         const failureCount = responses.filter(r => r.status === 'rejected').length;
@@ -3945,22 +3970,9 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">
-                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {(() => {
-                          if (currentJob.formData.duplicateAdSet) {
-                            return currentJob.formData.newAdSetName || 'New Ad Set';
-                          } else {
-                            const selectedAdSetIds = currentJob.formData.selectedAdSets;
-                            if (selectedAdSetIds.length === 1) {
-                              const adSet = adSets.find(a => a.id === selectedAdSetIds[0]);
-                              return adSet?.name || 'selected adset';
-                            } else {
-                              return `${selectedAdSetIds.length} adsets`;
-                            }
-                          }
-                        })()}
+                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {/* ... adset name logic ... */}
                       </p>
                       <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
-
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
@@ -3968,8 +3980,20 @@ export default function AdCreationForm({
                         style={{ width: `${progress || trackedProgress}%` }}
                       />
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">{progressMessage || trackedMessage}</p>
-
+                    <div className="flex justify-between items-center mt-2">
+                      <p className="text-xs text-gray-500">{progressMessage || trackedMessage}</p>
+                      {liveProgress.total > 0 && (
+                        <p className="text-xs font-medium text-gray-600">
+                          {liveProgress.completed}/{liveProgress.total}
+                          {liveProgress.succeeded > 0 && (
+                            <span className="text-green-600 ml-1">✓{liveProgress.succeeded}</span>
+                          )}
+                          {liveProgress.failed > 0 && (
+                            <span className="text-red-600 ml-1">✗{liveProgress.failed}</span>
+                          )}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 
