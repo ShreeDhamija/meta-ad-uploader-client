@@ -2074,20 +2074,31 @@ transition-all duration-150 hover:!bg-black
                         <CommandItem
                           key="create-new-adset"
                           value="create-new-adset"
+                          disabled={selectedCampaigns.length !== 1}
                           onSelect={() => {
-                            setShowDuplicateBlock(true)
-                            setSelectedAdSets([]) // Clear any selected ad sets when choosing to create a new one
-                            setOpenAdSet(false)
+                            if (selectedCampaigns.length === 1) {
+                              setShowDuplicateBlock(true)
+                              setSelectedAdSets([])
+                              setOpenAdSet(false)
+                            }
                           }}
                           className={`
-                            h-10 w-full px-4 py-3 m-1 rounded-xl 
-                            !bg-zinc-700 !text-white shadow-md 
-                            flex items-center justify-center 
-                            text-sm font-semibold cursor-pointer 
-                            transition-all duration-150 hover:!bg-black
-                          `}
+                          h-10 w-full px-4 py-3 m-1 rounded-xl 
+                          ${selectedCampaign.length !== 1 ? '!bg-zinc-800 !text-zinc-500' : '!bg-zinc-700 !text-white'}
+                          shadow-md 
+                          flex items-center justify-center 
+                          text-sm font-semibold 
+                          ${selectedCampaign.length !== 1 ? 'cursor-not-allowed' : 'cursor-pointer'}
+                          transition-all duration-150 
+                          ${selectedCampaign.length === 1 ? 'hover:!bg-black' : ''}
+                        `}
                         >
                           🚀 Launch in a New Ad Set
+                          {selectedCampaigns.length !== 1 && (
+                            <span className="ml-2 text-xs text-zinc-400">
+                              (Please select 1 campaign)
+                            </span>
+                          )}
                         </CommandItem>
                       )}
                     </CommandGroup>
