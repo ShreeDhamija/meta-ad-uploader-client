@@ -5079,8 +5079,7 @@ export default function AdCreationForm({
                 <RadioGroupItem
                   value="active"
                   id="statusActive"
-                  className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500"
-
+                  className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
                 />
                 <Label
                   htmlFor="statusActive"
