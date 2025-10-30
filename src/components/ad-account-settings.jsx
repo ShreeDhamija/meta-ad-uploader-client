@@ -2074,9 +2074,9 @@ transition-all duration-150 hover:!bg-black
                         <CommandItem
                           key="create-new-adset"
                           value="create-new-adset"
-                          disabled={selectedCampaigns.length !== 1}
+                          disabled={selectedCampaign.length !== 1}
                           onSelect={() => {
-                            if (selectedCampaigns.length === 1) {
+                            if (selectedCampaign.length === 1) {
                               setShowDuplicateBlock(true)
                               setSelectedAdSets([])
                               setOpenAdSet(false)
