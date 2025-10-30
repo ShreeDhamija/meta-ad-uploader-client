@@ -2094,7 +2094,7 @@ transition-all duration-150 hover:!bg-black
                         `}
                         >
                           🚀 Launch in a New Ad Set
-                          {selectedCampaigns.length !== 1 && (
+                          {selectedCampaign.length !== 1 && (
                             <span className="ml-2 text-xs text-zinc-400">
                               (Please select 1 campaign)
                             </span>
