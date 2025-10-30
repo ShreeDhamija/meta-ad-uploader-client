@@ -333,11 +333,12 @@ export default function Home() {
             {/* Mobile message - hidden on desktop */}
             <div className="mobile-message fixed inset-0 bg-white flex-col items-center justify-center p-6 z-50 hidden">
                 <div className="text-center max-w-md">
+                    <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
                     <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Required</h1>
                     <p className="text-gray-600 mb-6">
-                        This application is optimized for desktop use. Please visit us on a desktop or laptop computer for the best experience.
+                        Thanks for signing up! <br></br>Blip works best on a bigger screen. <br></br> We've sent you an email to help you pick up from here once you’re back at your computer!
                     </p>
-                    <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
+
 
                 </div>
             </div>

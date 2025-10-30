@@ -3804,21 +3804,21 @@ export default function AdCreationForm({
     setJobQueue(prev => [...prev, newJob]);
 
     // Clear form immediately
-    setFiles([]);
-    setDriveFiles([]);
-    setVideoThumbs({});
-    setThumbnail(null);
+    // setFiles([]);
+    // setDriveFiles([]);
+    // setVideoThumbs({});
+    // setThumbnail(null);
 
-    setFileGroups([]);
-    setEnablePlacementCustomization(false);
-    // if (!preserveMedia) {
-    //   setFiles([]);
-    //   setDriveFiles([]);
-    //   setVideoThumbs({});
-    //   setThumbnail(null);
-    //   setFileGroups([]);
-    //   setEnablePlacementCustomization(false);
-    // }
+    // setFileGroups([]);
+    // setEnablePlacementCustomization(false);
+    if (!preserveMedia) {
+      setFiles([]);
+      setDriveFiles([]);
+      setVideoThumbs({});
+      setThumbnail(null);
+      setFileGroups([]);
+      setEnablePlacementCustomization(false);
+    }
 
 
   };
@@ -3898,12 +3898,12 @@ export default function AdCreationForm({
                       <div className="flex-1 min-w-0">
                         <p
                           className={`text-sm break-words ${job.status === 'error'
-                              ? 'text-red-600'
-                              : job.status === 'partial-success'
-                                ? 'text-[#F0A000]'
-                                : job.status === 'retry'
-                                  ? 'text-orange-600'
-                                  : 'text-gray-700'
+                            ? 'text-red-600'
+                            : job.status === 'partial-success'
+                              ? 'text-[#F0A000]'
+                              : job.status === 'retry'
+                                ? 'text-orange-600'
+                                : 'text-gray-700'
                             }`}
                         >
                           {job.message}
@@ -5028,7 +5028,7 @@ export default function AdCreationForm({
             )}
 
           </div>
-          <div
+          {/* <div
             className={cn(
               "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
               launchPaused
@@ -5056,9 +5056,9 @@ export default function AdCreationForm({
             >
               Publish ads TURNED OFF
             </Label>
-          </div>
+          </div> */}
 
-          {/* <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
             <Label className="text-sm font-medium">Ad Status:</Label>
 
             <RadioGroup
@@ -5067,7 +5067,7 @@ export default function AdCreationForm({
               disabled={!isLoggedIn}
               className="flex items-center space-x-2"
             >
-              
+
               <div
                 className={cn(
                   "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
@@ -5095,7 +5095,7 @@ export default function AdCreationForm({
                 </Label>
               </div>
 
-              
+
               <div
                 className={cn(
                   "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
@@ -5148,7 +5148,7 @@ export default function AdCreationForm({
             >
               Preserve Media on Upload
             </Label>
-          </div> */}
+          </div>
 
 
         </form>

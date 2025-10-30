@@ -13,6 +13,7 @@ import {
 import App from "./App.jsx";
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
+import Signup from "./pages/Login.jsx";
 import Settings from "./pages/Settings.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import TermsOfService from "./pages/Landing/TermsOfService.jsx";
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Home /> },
       { path: "login", element: <Login /> },
+      { path: "signup", element: <Signup /> },
       { path: "settings", element: <Settings /> },
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
