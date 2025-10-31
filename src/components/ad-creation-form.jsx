@@ -3148,7 +3148,7 @@ export default function AdCreationForm({
 
           // NOW trigger SSE after formData is built
           // setJobId(frontendJobId);
-          triggerSSEOnce(frontendJobId);
+          // triggerSSEOnce(frontendJobId);
 
           promises.push(createAdApiCall(formData, API_BASE_URL));
         });
@@ -3227,7 +3227,7 @@ export default function AdCreationForm({
 
               // NOW trigger SSE after formData is built
               // setJobId(frontendJobId);
-              triggerSSEOnce(frontendJobId);
+              // triggerSSEOnce(frontendJobId);
 
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
@@ -3288,7 +3288,7 @@ export default function AdCreationForm({
 
             // NOW trigger SSE after formData is built
             // setJobId(frontendJobId);
-            triggerSSEOnce(frontendJobId);
+            // triggerSSEOnce(frontendJobId);
 
             promises.push(createAdApiCall(formData, API_BASE_URL));
           });
@@ -3344,7 +3344,7 @@ export default function AdCreationForm({
 
           // NOW trigger SSE after formData is built
           // setJobId(frontendJobId);
-          triggerSSEOnce(frontendJobId);
+          // triggerSSEOnce(frontendJobId);
 
           promises.push(createAdApiCall(formData, API_BASE_URL));
         });
@@ -3432,7 +3432,7 @@ export default function AdCreationForm({
 
               // NOW trigger SSE after formData is built
               // setJobId(frontendJobId);
-              triggerSSEOnce(frontendJobId);
+              // triggerSSEOnce(frontendJobId);
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
               localIterationIndex++;
@@ -3497,7 +3497,7 @@ export default function AdCreationForm({
 
               // NOW trigger SSE after formData is built
               // setJobId(frontendJobId);
-              triggerSSEOnce(frontendJobId);
+              // triggerSSEOnce(frontendJobId);
 
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
@@ -3531,7 +3531,7 @@ export default function AdCreationForm({
 
               // NOW trigger SSE after formData is built
               // setJobId(frontendJobId);
-              triggerSSEOnce(frontendJobId);
+              // triggerSSEOnce(frontendJobId);
 
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
@@ -3565,7 +3565,7 @@ export default function AdCreationForm({
 
               // NOW trigger SSE after formData is built
               // setJobId(frontendJobId);
-              triggerSSEOnce(frontendJobId);
+              // triggerSSEOnce(frontendJobId);
 
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
