@@ -1751,6 +1751,7 @@ export default function AdCreationForm({
 
       // Configuration
       launchPaused,
+      adType,
       isCarouselAd,
       enablePlacementCustomization,
       fileGroups,
