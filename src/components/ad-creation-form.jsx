@@ -1309,119 +1309,6 @@ export default function AdCreationForm({
   };
 
 
-  // const generateThumbnail = useCallback((file) => {
-  //   return new Promise((resolve, reject) => {
-  //     const url = URL.createObjectURL(file)
-  //     const video = document.createElement("video")
-
-  //     // CRITICAL: Add timeout
-  //     const timeout = setTimeout(() => {
-  //       URL.revokeObjectURL(url)
-  //       reject("Timeout")
-  //     }, 8000)
-
-  //     video.preload = "metadata"
-  //     video.src = url
-  //     video.muted = true
-  //     video.playsInline = true
-  //     video.currentTime = 0.1
-
-  //     video.addEventListener("loadeddata", () => {
-  //       clearTimeout(timeout) // Clear timeout on success
-  //       try {
-  //         const canvas = document.createElement("canvas")
-  //         canvas.width = video.videoWidth
-  //         canvas.height = video.videoHeight
-  //         const ctx = canvas.getContext("2d")
-  //         ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-  //         const dataURL = canvas.toDataURL()
-  //         URL.revokeObjectURL(url)
-  //         resolve(dataURL)
-  //       } catch (err) {
-  //         reject(err)
-  //       }
-  //     })
-
-  //     video.addEventListener("error", () => {
-  //       clearTimeout(timeout)
-  //       URL.revokeObjectURL(url)
-  //       reject("Error generating thumbnail")
-  //     })
-  //   })
-  // }, [])
-
-
-
-  // const getDriveVideoThumbnail = (driveFile) => {
-  //   // if (!driveFile.mimeType.startsWith('video/')) return null;
-  //   if (!isVideoFile(driveFile)) return null;
-
-  //   // Google Drive provides thumbnails for videos via this URL
-  //   return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
-  // };
-
-
-  // useEffect(() => {
-  //   const processThumbnails = async () => {
-  //     const videoFiles = files.filter(file =>
-  //       isVideoFile(file) && !videoThumbs[getFileId(file)]
-  //     );
-
-
-  //     if (videoFiles.length === 0) return;
-
-  //     // Adaptive batch size
-  //     const BATCH_SIZE = videoFiles.length <= 3 ? videoFiles.length
-  //       : videoFiles.length <= 10 ? 3
-  //         : 4; // Slightly larger batches for many files
-
-  //     // Show initial progress if many files
-  //     if (videoFiles.length > 5) {
-  //       toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
-  //     }
-
-  //     for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
-  //       const batch = videoFiles.slice(i, i + BATCH_SIZE);
-
-  //       const thumbnailPromises = batch.map(file =>
-  //         generateThumbnail(file)
-  //           .then(thumb => ({ id: getFileId(file), thumb }))
-  //           .catch(err => {
-  //             console.error(`Thumbnail error for ${file.name}:`, err);
-  //             return {
-  //               id: getFileId(file),
-  //               thumb: "https://api.withblip.com/thumbnail.jpg"
-  //             };
-  //           })
-  //       );
-
-  //       const results = await Promise.all(thumbnailPromises);
-
-
-  //       setVideoThumbs(prev => {
-  //         const updates = {};
-  //         results.forEach(result => {
-  //           if (result) updates[result.id] = result.thumb;
-  //         });
-  //         return { ...prev, ...updates };
-  //       });
-
-
-  //       // Shorter pause for better UX
-  //       if (i + BATCH_SIZE < videoFiles.length) {
-  //         await new Promise(resolve => setTimeout(resolve, 10));
-  //       }
-  //     }
-
-  //     // Handle Drive files...
-  //   };
-
-  //   processThumbnails();
-  // }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
-
-
-  // Functions for managing dynamic input fields
-
 
   const generateThumbnail = useCallback((file) => {
     return new Promise((resolve, reject) => {
@@ -3715,6 +3602,11 @@ export default function AdCreationForm({
       // ============================================================================
       // Replace the existing Promise.all block with:
       try {
+
+
+        setJobId(frontendJobId);
+        // Small delay to let SSE connect
+        await new Promise(resolve => setTimeout(resolve, 100));
         const responses = await Promise.allSettled(trackedPromises); // 🆕 Changed from promises to trackedPromises
 
 
