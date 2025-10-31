@@ -3165,6 +3165,15 @@ export default function AdCreationForm({
 
       // Pre-compute common JSON strings and values
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
+      let sseTriggered = false; // Flag to track if SSE has been triggered
+
+      // Helper to trigger SSE once
+      const triggerSSEOnce = (jobId) => {
+        if (!sseTriggered) {
+          setJobId(jobId);
+          sseTriggered = true;
+        }
+      };
 
       // Pre-compute ad names for all files
       const precomputedAdNames = [];
@@ -3251,7 +3260,8 @@ export default function AdCreationForm({
           });
 
           // NOW trigger SSE after formData is built
-          setJobId(frontendJobId);
+          // setJobId(frontendJobId);
+          triggerSSEOnce(frontendJobId);
 
           promises.push(createAdApiCall(formData, API_BASE_URL));
         });
@@ -3329,7 +3339,9 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
               // NOW trigger SSE after formData is built
-              setJobId(frontendJobId);
+              // setJobId(frontendJobId);
+              triggerSSEOnce(frontendJobId);
+
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
               globalFileIndex++;
@@ -3388,7 +3400,8 @@ export default function AdCreationForm({
             appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
             // NOW trigger SSE after formData is built
-            setJobId(frontendJobId);
+            // setJobId(frontendJobId);
+            triggerSSEOnce(frontendJobId);
 
             promises.push(createAdApiCall(formData, API_BASE_URL));
           });
@@ -3443,7 +3456,8 @@ export default function AdCreationForm({
           appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
           // NOW trigger SSE after formData is built
-          setJobId(frontendJobId);
+          // setJobId(frontendJobId);
+          triggerSSEOnce(frontendJobId);
 
           promises.push(createAdApiCall(formData, API_BASE_URL));
         });
@@ -3530,7 +3544,8 @@ export default function AdCreationForm({
               formData.append("hasUngroupedFiles", hasUngroupedFiles);
 
               // NOW trigger SSE after formData is built
-              setJobId(frontendJobId);
+              // setJobId(frontendJobId);
+              triggerSSEOnce(frontendJobId);
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
               localIterationIndex++;
@@ -3594,7 +3609,9 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
               // NOW trigger SSE after formData is built
-              setJobId(frontendJobId);
+              // setJobId(frontendJobId);
+              triggerSSEOnce(frontendJobId);
+
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
             });
@@ -3626,7 +3643,9 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
               // NOW trigger SSE after formData is built
-              setJobId(frontendJobId);
+              // setJobId(frontendJobId);
+              triggerSSEOnce(frontendJobId);
+
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
             });
@@ -3658,7 +3677,9 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
               // NOW trigger SSE after formData is built
-              setJobId(frontendJobId);
+              // setJobId(frontendJobId);
+              triggerSSEOnce(frontendJobId);
+
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
             });
@@ -3804,13 +3825,6 @@ export default function AdCreationForm({
     setJobQueue(prev => [...prev, newJob]);
 
     // Clear form immediately
-    // setFiles([]);
-    // setDriveFiles([]);
-    // setVideoThumbs({});
-    // setThumbnail(null);
-
-    // setFileGroups([]);
-    // setEnablePlacementCustomization(false);
     if (!preserveMedia) {
       setFiles([]);
       setDriveFiles([]);
