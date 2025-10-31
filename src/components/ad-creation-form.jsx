@@ -522,6 +522,7 @@ export default function AdCreationForm({
 
         // Ad configuration
         launchPaused,
+        adType,
         isCarouselAd,
         enablePlacementCustomization,
         fileGroups: fileGroups ? [...fileGroups.map(group => [...group])] : [],
@@ -535,7 +536,13 @@ export default function AdCreationForm({
         adValues,
 
         // Reference data needed for processing
-        adSets: [...adSets]
+        adSets: [...adSets],
+        adSetDisplayName: duplicateAdSet
+          ? (newAdSetName || 'New Ad Set')
+          : selectedAdSets.length === 1
+            ? (adSets.find(a => a.id === selectedAdSets[0])?.name || 'selected ad set')
+            : `${selectedAdSets.length} adsets`
+
       }
     };
   };
@@ -3223,19 +3230,7 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">
-                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {(() => {
-                          if (currentJob.formData.duplicateAdSet) {
-                            return currentJob.formData.newAdSetName || 'New Ad Set';
-                          } else {
-                            const selectedAdSetIds = currentJob.formData.selectedAdSets;
-                            if (selectedAdSetIds.length === 1) {
-                              const adSet = adSets.find(a => a.id === selectedAdSetIds[0]);
-                              return adSet?.name || 'selected adset';
-                            } else {
-                              return `${selectedAdSetIds.length} adsets`;
-                            }
-                          }
-                        })()}
+                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {currentJob.formData.adSetDisplayName}
                       </p>
                       <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
                     </div>
@@ -3276,7 +3271,7 @@ export default function AdCreationForm({
                       <QueueIcon className="w-6 h-6 text-yellow-600" />
                     </div>
                     <p className="flex-1 text-sm text-gray-600">
-                      Queued {job.adCount} ad{job.adCount !== 1 ? 's' : ''} to {adSets.find(a => a.id === job.formData.selectedAdSets[0])?.name || 'New Adset'}
+                      Queued {job.adCount} ad{job.adCount !== 1 ? 's' : ''} to {job.formData.adSetDisplayName}
                     </p>
                     <button
                       onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
