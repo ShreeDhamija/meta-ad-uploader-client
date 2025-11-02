@@ -936,7 +936,7 @@ export default function AdCreationForm({
 
         const completedJob = {
           id: currentJob.id,
-          message: `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${adSetDisplayText}`,
+          message: `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${currentJob.formData.adSetDisplayName}`,
           completedAt: Date.now(),
           status: 'success'
         };
@@ -1726,6 +1726,12 @@ export default function AdCreationForm({
   const handleCreateAd = async (jobData) => {
 
 
+    console.log('🎯 JOB DATA RECEIVED:', {
+      capturedAdType: jobData.formData.adType,
+      isCarouselAd: jobData.formData.isCarouselAd,
+      jobId: jobData.id
+    });
+
     const {
       // Form content
       headlines,
@@ -1751,7 +1757,7 @@ export default function AdCreationForm({
 
       // Configuration
       launchPaused,
-      adType,
+      adType: capturedAdType,
       isCarouselAd,
       enablePlacementCustomization,
       fileGroups,
@@ -1768,7 +1774,12 @@ export default function AdCreationForm({
     setIsCreatingAds(true);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
-
+    console.log('🎯 DESTRUCTURED VALUES:', {
+      capturedAdType,
+      isCarouselAd,
+      nonDynamicAdSetIds,
+      fileGroupsLength: fileGroups?.length
+    });
 
     if (uploadingToS3) {
       setPublishPending(true);
@@ -1803,20 +1814,13 @@ export default function AdCreationForm({
 
       try {
         const allFiles = [...files, ...driveFiles];
-        // const videoFiles = allFiles.filter(file =>
-        //   file.type?.startsWith('video/') || file.mimeType?.startsWith('video/')
-        // );
-
         const videoFiles = allFiles.filter(isVideoFile);
-
 
         if (videoFiles.length > 0) {
           const BATCH_SIZE = 3;
 
           for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
             const batch = videoFiles.slice(i, i + BATCH_SIZE);
-
-
 
             // Update progress message
             setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
@@ -1895,17 +1899,6 @@ export default function AdCreationForm({
         setProgress(percent);
         setProgressMessage("Uploading files for processing...");
       };
-
-      console.log('🔍 Large files check before upload:', largeFiles.map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        hasUniqueId: !!file.uniqueId,
-        uniqueId: file.uniqueId,
-        getFileIdResult: getFileId(file),
-        allFileKeys: Object.keys(file)
-      })));
-
 
       const uploadPromises = largeFiles.map(file =>
         limit(() => uploadToS3(file, updateOverallProgress, getFileId(file))) // <-- Pass the ID here
@@ -2018,9 +2011,12 @@ export default function AdCreationForm({
       // console.log("passed validation check");
     }
 
+
+
     // Add flexible ads validation
-    if (adType === 'flexible') {
+    if (capturedAdType === 'flexible') {
       const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
+      console.log('✅ PRELIM FLEXIBLE AD BLOCK CHECK');
 
       // If no groups, validate single ad
       if (fileGroups.length === 0) {
@@ -2400,18 +2396,6 @@ export default function AdCreationForm({
 
       // Pre-compute common JSON strings and values
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
-      let sseTriggered = false; // Flag to track if SSE has been triggered
-
-      // Helper to trigger SSE once
-      const triggerSSEOnce = (jobId) => {
-        if (!sseTriggered) {
-          setJobId(jobId);
-          sseTriggered = true;
-        }
-      };
-
-      // Pre-compute ad names for all files
-      const precomputedAdNames = [];
       let globalFileIndex = 0;
 
       // ============================================================================
@@ -2438,7 +2422,7 @@ export default function AdCreationForm({
           0,
           link[0],
           jobData.formData.adNameFormulaV2,
-          adType
+          capturedAdType
         );
 
         // For carousel, process each selected ad set separately
@@ -2493,11 +2477,6 @@ export default function AdCreationForm({
               }));
             }
           });
-
-          // NOW trigger SSE after formData is built
-          // setJobId(frontendJobId);
-          // triggerSSEOnce(frontendJobId);
-
           promises.push(createAdApiCall(formData, API_BASE_URL));
         });
       }
@@ -2505,7 +2484,7 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 2: FLEXIBLE ADS TO NON-DYNAMIC AD SETS
       // ============================================================================
-      if (adType === 'flexible' && nonDynamicAdSetIds.length > 0) {
+      if (capturedAdType === 'flexible' && nonDynamicAdSetIds.length > 0) {
         console.log("🎨 Creating flexible ad with:", {
           filesCount: files.length + driveFiles.length + s3Results.length + s3DriveResults.length,
           groupCount: fileGroups.length,
@@ -2527,7 +2506,7 @@ export default function AdCreationForm({
               groupIndex,
               link[0],
               jobData.formData.adNameFormulaV2,
-              adType
+              capturedAdType
             );
           });
 
@@ -2572,12 +2551,6 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-
-              // NOW trigger SSE after formData is built
-              // setJobId(frontendJobId);
-              // triggerSSEOnce(frontendJobId);
-
-
               promises.push(createAdApiCall(formData, API_BASE_URL));
               globalFileIndex++;
             });
@@ -2592,7 +2565,7 @@ export default function AdCreationForm({
             0,
             link[0],
             jobData.formData.adNameFormulaV2,
-            adType
+            capturedAdType
           );
 
           nonDynamicAdSetIds.forEach((adSetId) => {
@@ -2633,11 +2606,6 @@ export default function AdCreationForm({
 
             // Append shop destination
             appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-
-            // NOW trigger SSE after formData is built
-            // setJobId(frontendJobId);
-            // triggerSSEOnce(frontendJobId);
-
             promises.push(createAdApiCall(formData, API_BASE_URL));
           });
         }
@@ -2689,11 +2657,6 @@ export default function AdCreationForm({
 
           // Append shop destination
           appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-
-          // NOW trigger SSE after formData is built
-          // setJobId(frontendJobId);
-          // triggerSSEOnce(frontendJobId);
-
           promises.push(createAdApiCall(formData, API_BASE_URL));
         });
       }
@@ -2701,7 +2664,12 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 4: NON-DYNAMIC AD SETS (Non-Carousel, Non-Flexible)
       // ============================================================================
-      if (nonDynamicAdSetIds.length > 0 && !isCarouselAd && adType !== 'flexible') {
+      if (nonDynamicAdSetIds.length > 0 && !isCarouselAd && capturedAdType !== 'flexible') {
+        console.log('⚠️ ENTERED REGULAR AD BLOCK - THIS IS WRONG IF JOB WAS FLEXIBLE!', {
+          capturedAdType,
+          isCarouselAd
+        });
+
         nonDynamicAdSetIds.forEach((adSetId) => {
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
           const hasUngroupedFiles = (
@@ -2777,11 +2745,6 @@ export default function AdCreationForm({
 
               // Append has ungrouped files flag
               formData.append("hasUngroupedFiles", hasUngroupedFiles);
-
-              // NOW trigger SSE after formData is built
-              // setJobId(frontendJobId);
-              // triggerSSEOnce(frontendJobId);
-
               promises.push(createAdApiCall(formData, API_BASE_URL));
               localIterationIndex++;
             });
@@ -2842,12 +2805,6 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-
-              // NOW trigger SSE after formData is built
-              // setJobId(frontendJobId);
-              // triggerSSEOnce(frontendJobId);
-
-
               promises.push(createAdApiCall(formData, API_BASE_URL));
             });
 
@@ -2876,11 +2833,6 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-
-              // NOW trigger SSE after formData is built
-              // setJobId(frontendJobId);
-              // triggerSSEOnce(frontendJobId);
-
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
             });
@@ -2911,16 +2863,18 @@ export default function AdCreationForm({
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              // NOW trigger SSE after formData is built
-              // setJobId(frontendJobId);
-              // triggerSSEOnce(frontendJobId);
-
-
               promises.push(createAdApiCall(formData, API_BASE_URL));
             });
           }
         });
       }
+
+
+      if (promises.length === 0) {
+        setIsLoading(false);
+        throw new Error("Form data failed to compile. You ran into our sneakiest bug. We're trying to fix it. Trying a different job should relove it for now.");
+      }
+
 
       setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length });
 
@@ -2943,6 +2897,7 @@ export default function AdCreationForm({
             throw error;
           })
       );
+
 
 
       // ============================================================================
@@ -4270,35 +4225,6 @@ export default function AdCreationForm({
             )}
 
           </div>
-          {/* <div
-            className={cn(
-              "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
-              launchPaused
-                ? "bg-red-50 border border-red-300" // Conditional: light red background and border if PAUSED
-                : "border border-transparent" // Default: transparent border (or can be themed)
-            )}
-          >
-            <Checkbox
-              id="launchPaused"
-              checked={launchPaused}
-              onCheckedChange={setLaunchPaused}
-              disabled={!isLoggedIn}
-              className={cn(
-                "rounded-md", // Or "rounded-lg", "rounded-full"
-                "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0", // Remove focus ring
-                launchPaused ? "data-[state=checked]:border-red-500 data-[state=checked]:bg-red-500" : ""
-              )} // Optional: style checkbox itself when checked & paused
-            />
-            <Label
-              htmlFor="launchPaused"
-              className={cn(
-                "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-                launchPaused ? "text-red-600" : "" // Conditional: red text if PAUSED
-              )}
-            >
-              Publish ads TURNED OFF
-            </Label>
-          </div> */}
 
           <div className="flex items-center space-x-2">
             <Label className="text-sm font-medium">Ad Status:</Label>
