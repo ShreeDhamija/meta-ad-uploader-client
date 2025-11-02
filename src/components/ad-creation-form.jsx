@@ -1726,12 +1726,6 @@ export default function AdCreationForm({
   const handleCreateAd = async (jobData) => {
 
 
-    console.log('🎯 JOB DATA RECEIVED:', {
-      capturedAdType: jobData.formData.adType,
-      isCarouselAd: jobData.formData.isCarouselAd,
-      jobId: jobData.id
-    });
-
     const {
       // Form content
       headlines,
