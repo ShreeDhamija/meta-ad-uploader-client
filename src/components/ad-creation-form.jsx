@@ -1726,7 +1726,7 @@ export default function AdCreationForm({
   const handleCreateAd = async (jobData) => {
 
 
-
+    console.log("handle create ad called");
 
     const {
       // Form content
@@ -2388,7 +2388,7 @@ export default function AdCreationForm({
 
     try {
       const promises = [];
-
+      console.log("building formdata");
       // Pre-compute common JSON strings and values
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
       let globalFileIndex = 0;
@@ -2732,7 +2732,7 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-
+              console.log("pushing promises");
               // Append has ungrouped files flag
               formData.append("hasUngroupedFiles", hasUngroupedFiles);
               promises.push(createAdApiCall(formData, API_BASE_URL));
@@ -2856,6 +2856,7 @@ export default function AdCreationForm({
               promises.push(createAdApiCall(formData, API_BASE_URL));
             });
           }
+          console.log("all promises built, pushing axios calls now");
         });
       }
 
@@ -2898,6 +2899,7 @@ export default function AdCreationForm({
 
 
         setJobId(frontendJobId);
+        console.log("SSE triggered");
         // Small delay to let SSE connect
         await new Promise(resolve => setTimeout(resolve, 100));
         const responses = await Promise.allSettled(trackedPromises); // 🆕 Changed from promises to trackedPromises
