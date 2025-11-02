@@ -1726,6 +1726,8 @@ export default function AdCreationForm({
   const handleCreateAd = async (jobData) => {
 
 
+
+
     const {
       // Form content
       headlines,
@@ -1751,7 +1753,7 @@ export default function AdCreationForm({
 
       // Configuration
       launchPaused,
-      adType: capturedAdType,
+      adType,
       isCarouselAd,
       enablePlacementCustomization,
       fileGroups,
@@ -1768,12 +1770,7 @@ export default function AdCreationForm({
     setIsCreatingAds(true);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
-    console.log('🎯 DESTRUCTURED VALUES:', {
-      capturedAdType,
-      isCarouselAd,
-      nonDynamicAdSetIds,
-      fileGroupsLength: fileGroups?.length
-    });
+
 
     if (uploadingToS3) {
       setPublishPending(true);
@@ -1808,13 +1805,20 @@ export default function AdCreationForm({
 
       try {
         const allFiles = [...files, ...driveFiles];
+        // const videoFiles = allFiles.filter(file =>
+        //   file.type?.startsWith('video/') || file.mimeType?.startsWith('video/')
+        // );
+
         const videoFiles = allFiles.filter(isVideoFile);
+
 
         if (videoFiles.length > 0) {
           const BATCH_SIZE = 3;
 
           for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
             const batch = videoFiles.slice(i, i + BATCH_SIZE);
+
+
 
             // Update progress message
             setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
@@ -2005,12 +2009,9 @@ export default function AdCreationForm({
       // console.log("passed validation check");
     }
 
-
-
     // Add flexible ads validation
-    if (capturedAdType === 'flexible') {
+    if (adType === 'flexible') {
       const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
-      console.log('✅ PRELIM FLEXIBLE AD BLOCK CHECK');
 
       // If no groups, validate single ad
       if (fileGroups.length === 0) {
@@ -2416,7 +2417,7 @@ export default function AdCreationForm({
           0,
           link[0],
           jobData.formData.adNameFormulaV2,
-          capturedAdType
+          adType
         );
 
         // For carousel, process each selected ad set separately
@@ -2478,7 +2479,7 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 2: FLEXIBLE ADS TO NON-DYNAMIC AD SETS
       // ============================================================================
-      if (capturedAdType === 'flexible' && nonDynamicAdSetIds.length > 0) {
+      if (adType === 'flexible' && nonDynamicAdSetIds.length > 0) {
         console.log("🎨 Creating flexible ad with:", {
           filesCount: files.length + driveFiles.length + s3Results.length + s3DriveResults.length,
           groupCount: fileGroups.length,
@@ -2500,7 +2501,7 @@ export default function AdCreationForm({
               groupIndex,
               link[0],
               jobData.formData.adNameFormulaV2,
-              capturedAdType
+              adType
             );
           });
 
@@ -2559,7 +2560,7 @@ export default function AdCreationForm({
             0,
             link[0],
             jobData.formData.adNameFormulaV2,
-            capturedAdType
+            adType
           );
 
           nonDynamicAdSetIds.forEach((adSetId) => {
@@ -2658,12 +2659,7 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 4: NON-DYNAMIC AD SETS (Non-Carousel, Non-Flexible)
       // ============================================================================
-      if (nonDynamicAdSetIds.length > 0 && !isCarouselAd && capturedAdType !== 'flexible') {
-        console.log('⚠️ ENTERED REGULAR AD BLOCK - THIS IS WRONG IF JOB WAS FLEXIBLE!', {
-          capturedAdType,
-          isCarouselAd
-        });
-
+      if (nonDynamicAdSetIds.length > 0 && !isCarouselAd && adType !== 'flexible') {
         nonDynamicAdSetIds.forEach((adSetId) => {
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
           const hasUngroupedFiles = (
