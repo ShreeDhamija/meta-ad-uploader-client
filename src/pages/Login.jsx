@@ -26,12 +26,12 @@ export default function Login() {
     }
 
     return (
-        <div className="flex justify-center align-center items-center h-screen px-4 overflow-visible">
+        <div className="flex justify-center align-center items-center h-screen md:px-4 overflow-visible">
 
 
-            <div className="flex rounded-xl overflow-hidden p-6 overflow-visible">
+            <div className="flex w-full md:w-auto rounded-xl overflow-hidden md:p-6 overflow-visible">
 
-                <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-3xl shadow-lg min-w-[420px] min-h-[650px] flex flex-col justify-center">
+                <div className="w-full h-screen md:max-w-md space-y-6 bg-white p-8 md:rounded-3xl md:shadow-lg md:min-w-[420px] min-h-[650px] md:h-auto flex flex-col justify-center">
 
                     <div className="text-center space-y-1">
                         <img
@@ -40,7 +40,7 @@ export default function Login() {
                             className=" shadom-sm w-[48px] h-[48px] mx-auto rounded-md mb-2"
                         />
                         <h2 className="text-2xl font-bold tracking-tight">Welcome To Blip</h2>
-                        <p className="text-sm text-muted-foreground">Login with your facebook account</p>
+                        <p className="text-sm text-muted-foreground">Login with your facebook account to get started</p>
                     </div>
                     <Button
                         onClick={handleFacebookLogin}
@@ -70,7 +70,7 @@ export default function Login() {
             </div >
 
 
-            <div className="w-[490px] h-[700px] overflow-visible">
+            <div className="hidden md:block w-[490px] h-[700px] overflow-visible">
                 <img src={SignUpImg}
                     alt="Login Visual"
                     className="w-full h-full object-cover"

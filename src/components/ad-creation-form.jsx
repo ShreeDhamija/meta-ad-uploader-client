@@ -4301,7 +4301,7 @@ export default function AdCreationForm({
                 "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
               )}
             >
-              Keep Media after Upload
+              Don't clear media after publishing ads
             </Label>
           </div>
 
