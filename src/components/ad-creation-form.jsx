@@ -4301,7 +4301,7 @@ export default function AdCreationForm({
                 "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
               )}
             >
-              Preserve Media on Upload
+              Keep Media after Upload
             </Label>
           </div>
 
