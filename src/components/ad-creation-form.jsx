@@ -1726,7 +1726,7 @@ export default function AdCreationForm({
   const handleCreateAd = async (jobData) => {
 
 
-    console.log("handle create ad called");
+    console.log(` ⏱️ [${new Date().toISOString()}] handle create ad called`);
 
     const {
       // Form content
@@ -2856,7 +2856,7 @@ export default function AdCreationForm({
               promises.push(createAdApiCall(formData, API_BASE_URL));
             });
           }
-          console.log("all promises built, pushing axios calls now");
+          console.log(` ⏱️ [${new Date().toISOString()}] all promises built, pushing axios calls now`);
         });
       }
 
@@ -2899,7 +2899,7 @@ export default function AdCreationForm({
 
 
         setJobId(frontendJobId);
-        console.log("SSE triggered");
+        console.log(` ⏱️ [${new Date().toISOString()}] SSE triggered`);
         // Small delay to let SSE connect
         await new Promise(resolve => setTimeout(resolve, 100));
         const responses = await Promise.allSettled(trackedPromises); // 🆕 Changed from promises to trackedPromises
