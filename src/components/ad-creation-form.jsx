@@ -2264,7 +2264,7 @@ export default function AdCreationForm({
     ) => {
       // Add all small local files
       files.forEach((file) => {
-        if (file.size <= S3_UPLOAD_THRESHOLD) {
+        if (file.size <= S3_UPLOAD_THRESHOLD && adType !== 'flexible') {
           formData.append("mediaFiles", file);
         }
       });
