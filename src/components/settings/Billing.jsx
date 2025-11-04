@@ -45,6 +45,30 @@ export default function BillingSettings() {
     } = useSubscription()
 
 
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        if (!sessionId) return;
+        console.log("SessionID", sessionId);
+
+        fetch(`/api/stripe/session/${sessionId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.amount_total) {
+                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer.push({
+                        event: 'purchase',
+                        value: data.amount_total,
+                        // currency: data.currency,
+                        // planType: data.planType,
+                        // discount: data.discount
+                    });
+                    console.log("Session data pushed");
+                }
+            })
+            .catch(console.error);
+    }, []);
+
 
     // In Billing.jsx, update the API calls:
     const handleUpgrade = async (planType = 'agency') => {
@@ -180,72 +204,72 @@ export default function BillingSettings() {
                                 </div>
                             </div>
                         </CardHeader>
-                       <CardContent className="space-y-4">
-    {isPaidSubscriber() && (
-        <div className="space-y-2">
-            {subscriptionData.willCancelAt ? (
-                <>
-                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
-                        <p className="text-sm text-orange-800">
-                            {(() => {
-                                const cancelDate = new Date(subscriptionData.willCancelAt);
-                                const now = new Date();
-                                const hasExpired = now > cancelDate;
+                        <CardContent className="space-y-4">
+                            {isPaidSubscriber() && (
+                                <div className="space-y-2">
+                                    {subscriptionData.willCancelAt ? (
+                                        <>
+                                            <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
+                                                <p className="text-sm text-orange-800">
+                                                    {(() => {
+                                                        const cancelDate = new Date(subscriptionData.willCancelAt);
+                                                        const now = new Date();
+                                                        const hasExpired = now > cancelDate;
 
-                                return hasExpired
-                                    ? `Your subscription expired on ${cancelDate.toLocaleDateString()}`
-                                    : `Your subscription will continue until ${cancelDate.toLocaleDateString()}. 
+                                                        return hasExpired
+                                                            ? `Your subscription expired on ${cancelDate.toLocaleDateString()}`
+                                                            : `Your subscription will continue until ${cancelDate.toLocaleDateString()}. 
                                     Your team members will lose access after this date as well.`;
-                            })()}
-                        </p>
-                    </div>
-                    <Button onClick={handleReactivate}
-                        className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
-                        disabled={isLoading}
-                    >
-                        Reactivate Subscription
-                    </Button>
-                </>
-            ) : (
-                <Button
-                    onClick={handleCancel}
-                    variant="destructive"
-                    disabled={isLoading}
-                    className="w-full h-12 rounded-2xl"
-                >
-                    Cancel Subscription
-                </Button>
-            )}
-        </div>
-    )}
+                                                    })()}
+                                                </p>
+                                            </div>
+                                            <Button onClick={handleReactivate}
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
+                                                disabled={isLoading}
+                                            >
+                                                Reactivate Subscription
+                                            </Button>
+                                        </>
+                                    ) : (
+                                        <Button
+                                            onClick={handleCancel}
+                                            variant="destructive"
+                                            disabled={isLoading}
+                                            className="w-full h-12 rounded-2xl"
+                                        >
+                                            Cancel Subscription
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
 
-    {/* Trial Warning */}
-    {isOnTrial() && subscriptionData.trialDaysLeft <= 3 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-            <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-600" />
-                <p className="text-sm font-medium text-yellow-800">
-                    {subscriptionData.trialDaysLeft == 0 ? "Your trial is expired" : `Your trial expires in ${subscriptionData.trialDaysLeft} day`}
-                    {(subscriptionData.trialDaysLeft == 1 || subscriptionData.trialDaysLeft == 0) ? "" : "s"}
-                </p>
-            </div>
-            <p className="text-sm text-yellow-700 mt-1">
-                Upgrade now to continue using all features without interruption.
-            </p>
-        </div>
-    )}
+                            {/* Trial Warning */}
+                            {isOnTrial() && subscriptionData.trialDaysLeft <= 3 && (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                                    <div className="flex items-center gap-2">
+                                        <AlertCircle className="w-5 h-5 text-yellow-600" />
+                                        <p className="text-sm font-medium text-yellow-800">
+                                            {subscriptionData.trialDaysLeft == 0 ? "Your trial is expired" : `Your trial expires in ${subscriptionData.trialDaysLeft} day`}
+                                            {(subscriptionData.trialDaysLeft == 1 || subscriptionData.trialDaysLeft == 0) ? "" : "s"}
+                                        </p>
+                                    </div>
+                                    <p className="text-sm text-yellow-700 mt-1">
+                                        Upgrade now to continue using all features without interruption.
+                                    </p>
+                                </div>
+                            )}
 
-    {/* Trial Expired Warning */}
-    {isTrialExpired() && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <div className="flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-                <p className="text-sm font-medium text-red-800">Your trial has expired</p>
-            </div>
-            <p className="text-sm text-red-700 mt-1">Upgrade to a paid plan to continue using the service.</p>
-        </div>
-    )}
-</CardContent>
+                            {/* Trial Expired Warning */}
+                            {isTrialExpired() && (
+                                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                                    <div className="flex items-center gap-2">
+                                        <AlertCircle className="w-5 h-5 text-red-600" />
+                                        <p className="text-sm font-medium text-red-800">Your trial has expired</p>
+                                    </div>
+                                    <p className="text-sm text-red-700 mt-1">Upgrade to a paid plan to continue using the service.</p>
+                                </div>
+                            )}
+                        </CardContent>
                     </Card>
 
                     {/* Pro Plan Benefits */}
@@ -374,61 +398,61 @@ export default function BillingSettings() {
 
                                 </CardContent>
                             </Card>
-                            
+
                             <Card className="flex-1 rounded-[20px]">
                                 <CardHeader className="p-1">
                                     <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-6 shadow-[0_2px_10px_0px_rgba(147,51,234,0.15)] border border-2 border-purple-100">
-                                    <div>
-                                        <CardTitle className="flex items-center text-lg">
-                                        <img src={StarIcon} className="w-10 h-10" />
-                                        <p className="text-[26px] font-bold">Starter</p>
-                                        </CardTitle>
-                                        <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
-                                    </div>
-                                    <>
-                                        <link
-                                        rel="stylesheet"
-                                        href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&display=swap"
-                                        />
                                         <div>
-                                        <div
-                                            className="text-4xl font-bold text-gray-900"
-                                            style={{ fontFamily: "'DM Mono', monospace" }}
-                                        >
-                                            $99
+                                            <CardTitle className="flex items-center text-lg">
+                                                <img src={StarIcon} className="w-10 h-10" />
+                                                <p className="text-[26px] font-bold">Starter</p>
+                                            </CardTitle>
+                                            <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
                                         </div>
-                                        <div className="text-sm text-gray-400">/month</div>
-                                        </div>
-                                    </>
+                                        <>
+                                            <link
+                                                rel="stylesheet"
+                                                href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&display=swap"
+                                            />
+                                            <div>
+                                                <div
+                                                    className="text-4xl font-bold text-gray-900"
+                                                    style={{ fontFamily: "'DM Mono', monospace" }}
+                                                >
+                                                    $99
+                                                </div>
+                                                <div className="text-sm text-gray-400">/month</div>
+                                            </div>
+                                        </>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-6 p-6 pb-8">
                                     <div className="flex items-top gap-3 text-sm">
-                                    <CheckIcon3 className="w-6 h-6" />
-                                    <span className="text-[14px] text-gray-500">1 Ad Account Limit</span>
+                                        <CheckIcon3 className="w-6 h-6" />
+                                        <span className="text-[14px] text-gray-500">1 Ad Account Limit</span>
                                     </div>
                                     <div className="flex items-top gap-3 text-sm">
-                                    <CheckIcon3 className="w-6 h-6" />
-                                    <span className="text-[14px] text-gray-500">Unlimited Ad Posting</span>
+                                        <CheckIcon3 className="w-6 h-6" />
+                                        <span className="text-[14px] text-gray-500">Unlimited Ad Posting</span>
                                     </div>
                                     <div className="flex items-top gap-3 text-sm">
-                                    <CheckIcon3 className="w-6 h-6" />
-                                    <span className="text-[14px] text-gray-500">Instant Settings Sync</span>
+                                        <CheckIcon3 className="w-6 h-6" />
+                                        <span className="text-[14px] text-gray-500">Instant Settings Sync</span>
                                     </div>
                                     <div className="flex items-top gap-3 text-sm">
-                                    <CheckIcon3 className="w-6 h-6" />
-                                    <span className="text-[14px] text-gray-500">Up to 3 Team Seats</span>
+                                        <CheckIcon3 className="w-6 h-6" />
+                                        <span className="text-[14px] text-gray-500">Up to 3 Team Seats</span>
                                     </div>
                                     <Button
-                                    onClick={() => handleUpgrade('starter')}
-                                    disabled={isLoading}
-                                    className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
-                                    size="lg"
+                                        onClick={() => handleUpgrade('starter')}
+                                        disabled={isLoading}
+                                        className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
+                                        size="lg"
                                     >
-                                    Upgrade
+                                        Upgrade
                                     </Button>
                                 </CardContent>
-                                </Card>
+                            </Card>
 
                         </div>
 
