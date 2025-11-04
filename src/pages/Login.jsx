@@ -31,7 +31,7 @@ export default function Login() {
     }
 
     return (
-        <div className="relative flex justify-center align-center items-center h-screen md:px-4 overflow-visible">
+        <div className="relative flex justify-center align-center items-center h-screen md:px-4 overflow-hidden">
 
             <img src={Rocket}
                 alt=""
@@ -55,13 +55,6 @@ export default function Login() {
             <img src={Book}
                 alt=""
                 className="md:hidden absolute bottom-[-10px] right-[-20px]  w-[150px] h-auto pointer-events-none"
-            />
-
-            {/* Right edge image - only on mobile */}
-            <img
-                src="/path-to-your-image.png"
-                alt=""
-                className="md:hidden absolute right-0 top-1/2 -translate-y-1/2 w-24 h-auto pointer-events-none"
             />
             <div className="flex w-full md:w-auto rounded-xl overflow-hidden md:p-6 overflow-visible">
 
