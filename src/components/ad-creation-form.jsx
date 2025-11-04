@@ -2193,9 +2193,12 @@ export default function AdCreationForm({
       const groupVideoMetadata = [];
 
       // Add local files from this group
+      // Add local files from this group (only if not already in S3)
       group.forEach(fileId => {
         const file = files.find(f => getFileId(f) === fileId);
-        if (file && !file.isDrive && file.size <= S3_UPLOAD_THRESHOLD) {
+        const isInS3 = s3Results.some(s3File => s3File.uniqueId === fileId);
+
+        if (file && !file.isDrive && file.size <= S3_UPLOAD_THRESHOLD && !isInS3) {
           formData.append("mediaFiles", file);
 
           if (isVideoFile(file)) {
@@ -2264,7 +2267,7 @@ export default function AdCreationForm({
     ) => {
       // Add all small local files
       files.forEach((file) => {
-        if (file.size <= S3_UPLOAD_THRESHOLD && adType !== 'flexible') {
+        if (file.size <= S3_UPLOAD_THRESHOLD) {
           formData.append("mediaFiles", file);
         }
       });
