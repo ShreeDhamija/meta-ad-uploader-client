@@ -63,7 +63,7 @@ export default function BillingSettings() {
                         // planType: data.planType,
                         // discount: data.discount
                     });
-                    console.log("Session data pushed");
+
                 }
             })
             .catch(console.error);
