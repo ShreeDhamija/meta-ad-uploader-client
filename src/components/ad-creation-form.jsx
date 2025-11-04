@@ -1863,11 +1863,18 @@ export default function AdCreationForm({
       }
     }
 
+    // const largeFiles = files.filter(file =>
+    //   isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
+    // );
+    // const largeDriveFiles = driveFiles.filter(file =>
+    //   isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
+    // );
+
     const largeFiles = files.filter(file =>
-      isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
+      (isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD) || adType === 'flexible'
     );
     const largeDriveFiles = driveFiles.filter(file =>
-      isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
+      (isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD) || adType === 'flexible'
     );
 
 
