@@ -55,11 +55,9 @@ export default function BillingSettings() {
         console.log("[Billing] Found session_id:", sessionId);
         const fetchUrl = `${API_BASE_URL}/api/stripe/session/${encodeURIComponent(sessionId)}`;
 
-        console.log("[Billing] Fetching Stripe session from:", fetchUrl);
-
         fetch(fetchUrl, { credentials: "include" })
             .then(async (res) => {
-                console.log("[Billing] Response status:", res.status);
+
 
                 if (!res.ok) {
                     const text = await res.text();
@@ -68,7 +66,7 @@ export default function BillingSettings() {
                 }
 
                 const data = await res.json();
-                console.log("[Billing] Stripe session data received:", data);
+
 
                 if (data.amount_total) {
                     console.log("[Billing] Pushing to dataLayer...");
@@ -80,13 +78,7 @@ export default function BillingSettings() {
                         // planType: data.planType,
                         // discount: data.discount,
                     });
-                    console.log("[Billing] ✅ dataLayer push successful:", {
-                        event: "stripe_subscription_success",
-                        value: data.amount_total,
-                        currency: data.currency,
-                        planType: data.planType,
-                        discount: data.discount,
-                    });
+
                 } else {
                     console.warn("[Billing] No amount_total found in response. Data:", data);
                 }
@@ -96,7 +88,7 @@ export default function BillingSettings() {
                 if (url.searchParams.has("session_id")) {
                     url.searchParams.delete("session_id");
                     window.history.replaceState({}, "", url);
-                    console.log("[Billing] Cleaned up session_id from URL");
+
                 }
             })
             .catch((err) => {
