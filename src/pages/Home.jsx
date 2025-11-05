@@ -188,8 +188,7 @@ export default function Home() {
     }, [subscriptionData.planType, selectedAdAccountIds])
 
     useEffect(() => {
-        console.log("Istrialexpired home", isTrialExpired);
-        console.log("userhasactiveaccess home", userHasActiveAccess);
+
         if (
             !subscriptionLoading &&
             isTrialExpired &&
@@ -483,15 +482,10 @@ export default function Home() {
                         hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
                         onClose={handleCloseOnboarding}
                         onGoToSettings={() => {
-                            console.log("onGoToSettings called")
-                            console.log("navigate function:", navigate)
-                            console.log("typeof navigate:", typeof navigate)
 
                             try {
-                                // Navigate FIRST, before unmounting the component
-                                console.log("About to call navigate")
+                                // Navigate FIRST, before unmounting the component                                
                                 navigate("/settings")
-                                console.log("Navigate called successfully")
 
                                 // Then update state and save settings
                                 setHasSeenOnboarding(true)

@@ -118,7 +118,6 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
         maxRetryDelay
       );
 
-      console.log(`⏳ ${reason} - Retrying connection in ${delay}ms... (attempt ${retryCount})`);
 
 
       retryTimeoutId = setTimeout(() => {
@@ -139,8 +138,6 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
       jobNotFoundCount++;
       // Shorter delay for job not found since server is responding
       const delay = Math.min(baseRetryDelay, 1000);
-
-      // console.log(`⏳ Job not found - Retrying in ${delay}ms... (attempt ${jobNotFoundCount}/${maxJobNotFoundRetries})`);
 
       retryTimeoutId = setTimeout(() => {
         if (isSubscribed) connectSSE();
@@ -573,7 +570,7 @@ export default function AdCreationForm({
       throw new Error('File missing or invalid size property');
     }
 
-    // console.log('✅ Input validation passed');
+
 
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
@@ -582,13 +579,12 @@ export default function AdCreationForm({
     let s3Key = null;
 
     try {
-      // console.log('🔄 Step 1: Starting multipart upload...');
 
       const startPayload = {
         fileName: file.name,
         fileType: file.type
       };
-      // console.log('📤 Sending start-upload request:', startPayload);
+
 
       const startResponse = await axios.post(
         `${API_BASE_URL}/auth/s3/start-upload`,
@@ -631,12 +627,6 @@ export default function AdCreationForm({
         const end = start + CHUNK_SIZE;
         const chunk = file.slice(start, end);
 
-        console.log(`📦 Preparing chunk ${partNumber}/${totalChunks}:`, {
-          partNumber,
-          chunkSize: chunk.size,
-          start,
-          end: Math.min(end, file.size)
-        });
 
         return limit(async () => {
           try {
@@ -648,7 +638,6 @@ export default function AdCreationForm({
 
             if (onChunkUploaded) {
               uploadedChunks++;
-              console.log(`📈 Progress: ${uploadedChunks}/${totalChunks} chunks uploaded`);
               onChunkUploaded();
             }
 
@@ -659,7 +648,7 @@ export default function AdCreationForm({
             }
 
             const cleanEtag = etag.replace(/"/g, '');
-            console.log(`🏷️ Chunk ${partNumber} ETag:`, cleanEtag);
+
 
             return { PartNumber: partNumber, ETag: cleanEtag };
           } catch (chunkError) {
@@ -674,26 +663,9 @@ export default function AdCreationForm({
         });
       });
 
-      console.log('⏳ Waiting for all chunks to upload...');
+
       const completedParts = await Promise.all(uploadPromises);
 
-      console.log('✅ Step 3 complete:', {
-        completedPartsCount: completedParts.length,
-        expectedCount: totalChunks,
-        allPartsValid: completedParts.every(p => p.PartNumber && p.ETag)
-      });
-
-      console.log('🔄 Step 4: Completing multipart upload...');
-      const completePayload = {
-        key: s3Key,
-        uploadId: uploadId,
-        parts: completedParts
-      };
-      console.log('📤 Sending complete-upload request:', {
-        key: s3Key,
-        uploadId: uploadId.substring(0, 20) + '...',
-        partsCount: completedParts.length
-      });
 
       const completeResponse = await axios.post(
         `${API_BASE_URL}/auth/s3/complete-upload`,
@@ -701,9 +673,6 @@ export default function AdCreationForm({
         { withCredentials: true }
       );
 
-
-
-      console.log('✅ Step 4 complete - Upload successful!');
 
       const result = {
         name: file.name,
@@ -732,7 +701,7 @@ export default function AdCreationForm({
 
       // Cleanup on error
       if (uploadId && s3Key) {
-        console.log('🧹 Attempting to abort failed upload...');
+
         try {
           await axios.post(
             `${API_BASE_URL}/auth/s3/abort-upload`,
@@ -742,7 +711,6 @@ export default function AdCreationForm({
             },
             { withCredentials: true }
           );
-          console.log('✅ Failed upload aborted successfully');
         } catch (abortError) {
           console.error('❌ Failed to abort upload:', abortError.message);
         }
@@ -1725,9 +1693,6 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (jobData) => {
 
-
-    console.log(` ⏱️ [${new Date().toISOString()}] handle create ad called`);
-
     const {
       // Form content
       headlines,
@@ -1827,7 +1792,6 @@ export default function AdCreationForm({
             const batchPromises = batch.map(async (file) => {
               try {
                 const aspectRatio = await getVideoAspectRatio(file);
-                console.log("aspect ratio for video", aspectRatio);
                 if (aspectRatio) {
                   // const key = file.id || file.name;
                   const key = getFileId(file);
@@ -1991,7 +1955,7 @@ export default function AdCreationForm({
         }
       }
     });
-    // console.log("✅ About to reach try block");
+
 
     // Add carousel validation
     if (isCarouselAd) {
@@ -2006,7 +1970,6 @@ export default function AdCreationForm({
         setIsLoading(false);
         return;
       }
-      // console.log("passed validation check");
     }
 
     // Add flexible ads validation
@@ -2388,7 +2351,6 @@ export default function AdCreationForm({
 
     try {
       const promises = [];
-      console.log("building formdata");
       // Pre-compute common JSON strings and values
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
       let globalFileIndex = 0;
@@ -2480,15 +2442,10 @@ export default function AdCreationForm({
       // SECTION 2: FLEXIBLE ADS TO NON-DYNAMIC AD SETS
       // ============================================================================
       if (adType === 'flexible' && nonDynamicAdSetIds.length > 0) {
-        console.log("🎨 Creating flexible ad with:", {
-          filesCount: files.length + driveFiles.length + s3Results.length + s3DriveResults.length,
-          groupCount: fileGroups.length,
-          nonDynamicAdSetIds
-        });
+
 
         if (fileGroups.length > 0) {
           // GROUPED FLEXIBLE ADS: Create one ad per group per ad set
-          console.log(`📦 Creating ${fileGroups.length} grouped flexible ads`);
 
           // Pre-compute ad names for each group
           const groupAdNames = fileGroups.map((group, groupIndex) => {
@@ -2674,7 +2631,7 @@ export default function AdCreationForm({
 
           // Process GROUPED files if placement customization is enabled
           if (enablePlacementCustomization && fileGroups.length > 0) {
-            console.log("checking grouped files");
+
 
             // Pre-compute ad names for grouped files
             const groupedAdNames = fileGroups.map((group, groupIndex) => {
@@ -2732,7 +2689,6 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-              console.log("pushing promises");
               // Append has ungrouped files flag
               formData.append("hasUngroupedFiles", hasUngroupedFiles);
               promises.push(createAdApiCall(formData, API_BASE_URL));
@@ -2856,7 +2812,6 @@ export default function AdCreationForm({
               promises.push(createAdApiCall(formData, API_BASE_URL));
             });
           }
-          console.log(` ⏱️ [${new Date().toISOString()}] all promises built, pushing axios calls now`);
         });
       }
 
@@ -2899,7 +2854,6 @@ export default function AdCreationForm({
 
 
         setJobId(frontendJobId);
-        console.log(` ⏱️ [${new Date().toISOString()}] SSE triggered`);
         // Small delay to let SSE connect
         await new Promise(resolve => setTimeout(resolve, 100));
         const responses = await Promise.allSettled(trackedPromises); // 🆕 Changed from promises to trackedPromises
@@ -3764,7 +3718,6 @@ export default function AdCreationForm({
                         onChange={(e) => {
                           if (isCarouselAd && applyHeadlinesToAllCards) {
                             const newHeadlines = new Array(headlines.length).fill(e.target.value);
-                            console.log('📝 Updating all headlines to:', newHeadlines);
                             setHeadlines(newHeadlines);
                           } else {
                             updateField(setHeadlines, headlines, index, e.target.value);
