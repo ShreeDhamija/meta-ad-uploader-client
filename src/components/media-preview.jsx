@@ -451,20 +451,12 @@ export default function MediaPreview({
   const handleAIGroup = useCallback(async () => {
     try {
       setIsAIGrouping(true);
-      console.log('Starting AI grouping with', files.length, 'files');
-
 
       const processedImages = await Promise.all(
         files.map(async (file, index) => {
-          console.log(`Processing file ${index}:`, file.name);
           const base64 = await compressAndConvertToBase64(file);
           const aspectRatio = await getAspectRatio(file);
 
-          console.log(`File ${index} processed:`, {
-            name: file.name,
-            base64Length: base64.length,
-            aspectRatio
-          });
 
           return {
             base64,
@@ -489,18 +481,13 @@ export default function MediaPreview({
       });
 
 
-
-
-      console.log('Response status:', response.status);
       const responseText = await response.text();
-      console.log('Response text:', responseText);
 
       if (!response.ok) {
         throw new Error(`Grouping failed: ${responseText}`);
       }
 
       const result = JSON.parse(responseText);
-      console.log('Parsed result:', result);
 
       // Convert AI indices to actual fileIds
       const newGroups = result.groups.map(indexGroup =>

@@ -38,9 +38,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
 
                                 <button
                                     onClick={() => {
-                                        console.log("Settings button clicked")
-                                        console.log("onGoToSettings prop:", onGoToSettings)
-                                        console.log("typeof onGoToSettings:", typeof onGoToSettings)
+
                                         onGoToSettings()
                                     }}
                                     className="group flex flex-col items-center space-y-3 focus:outline-none"
