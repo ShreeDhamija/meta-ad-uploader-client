@@ -666,6 +666,12 @@ export default function AdCreationForm({
 
       const completedParts = await Promise.all(uploadPromises);
 
+      const completePayload = {
+        key: s3Key,
+        uploadId: uploadId,
+        parts: completedParts
+      };
+
 
       const completeResponse = await axios.post(
         `${API_BASE_URL}/auth/s3/complete-upload`,
