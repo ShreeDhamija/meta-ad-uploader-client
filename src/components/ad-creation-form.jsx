@@ -444,7 +444,7 @@ export default function AdCreationForm({
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
-  const S3_UPLOAD_THRESHOLD = 40 * 1024 * 1024; // 40 MB
+  const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
 
 
   const refreshPage = useCallback(() => {
@@ -1863,18 +1863,11 @@ export default function AdCreationForm({
       }
     }
 
-    // const largeFiles = files.filter(file =>
-    //   isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
-    // );
-    // const largeDriveFiles = driveFiles.filter(file =>
-    //   isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
-    // );
-
     const largeFiles = files.filter(file =>
-      (isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD) || adType === 'flexible'
+      isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
     );
     const largeDriveFiles = driveFiles.filter(file =>
-      (isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD) || adType === 'flexible'
+      isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
     );
 
 
@@ -2193,12 +2186,9 @@ export default function AdCreationForm({
       const groupVideoMetadata = [];
 
       // Add local files from this group
-      // Add local files from this group (only if not already in S3)
       group.forEach(fileId => {
         const file = files.find(f => getFileId(f) === fileId);
-        const isInS3 = s3Results.some(s3File => s3File.uniqueId === fileId);
-
-        if (file && !file.isDrive && file.size <= S3_UPLOAD_THRESHOLD && !isInS3) {
+        if (file && !file.isDrive && file.size <= S3_UPLOAD_THRESHOLD) {
           formData.append("mediaFiles", file);
 
           if (isVideoFile(file)) {
