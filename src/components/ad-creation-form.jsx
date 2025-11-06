@@ -2344,11 +2344,43 @@ export default function AdCreationForm({
     /**
      * Make API call to create ad
      */
+    // const createAdApiCall = async (formData, API_BASE_URL) => {
+    //   return axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
+    //     withCredentials: true,
+    //     headers: { "Content-Type": "multipart/form-data" },
+    //   });
+    // };
     const createAdApiCall = async (formData, API_BASE_URL) => {
-      return axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
-        withCredentials: true,
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const maxRetries = 5;
+      const baseDelay = 1000; // Start with 1 second
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const response = await axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
+            withCredentials: true,
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+
+          // Success - return the response
+          return response;
+
+        } catch (error) {
+          // Check if it's the last attempt
+          if (attempt === maxRetries - 1) {
+            console.error(`Failed after ${maxRetries} attempts:`, error.message);
+            throw error; // Re-throw on final attempt
+          }
+
+          // Log the retry attempt
+          console.warn(`Attempt ${attempt + 1} failed, retrying... (${error.message})`);
+
+          // Calculate delay with exponential backoff + jitter
+          const delay = baseDelay * Math.pow(1.5, attempt) + Math.random() * 500;
+
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     };
 
     // ============================================================================
