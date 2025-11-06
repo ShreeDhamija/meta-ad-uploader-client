@@ -441,7 +441,7 @@ export default function AdCreationForm({
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
-  const S3_UPLOAD_THRESHOLD = 4 * 1024 * 1024; // 40 MB
+  const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
 
 
   const refreshPage = useCallback(() => {
@@ -2157,7 +2157,7 @@ export default function AdCreationForm({
       // Add local files from this group
       group.forEach(fileId => {
         const file = files.find(f => getFileId(f) === fileId);
-        if (file && !file.isDrive && file.size <= S3_UPLOAD_THRESHOLD) {
+        if (file && !file.isDrive && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) {
           formData.append("mediaFiles", file);
 
           if (isVideoFile(file)) {
@@ -2226,7 +2226,7 @@ export default function AdCreationForm({
     ) => {
       // Add all small local files
       files.forEach((file) => {
-        if (file.size <= S3_UPLOAD_THRESHOLD) {
+        if (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) {
           formData.append("mediaFiles", file);
         }
       });
@@ -2296,7 +2296,7 @@ export default function AdCreationForm({
 
       // Process files in the order they appear in the UI
       files.forEach((file) => {
-        if (file.size <= S3_UPLOAD_THRESHOLD) {
+        if (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) {
           fileOrder.push({
             index: fileIndex++,
             type: 'local',
@@ -2317,7 +2317,7 @@ export default function AdCreationForm({
 
       // Process drive files
       driveFiles.forEach((driveFile) => {
-        if (driveFile.size <= S3_UPLOAD_THRESHOLD) {
+        if (!isVideoFile(driveFile) || driveFile.size <= S3_UPLOAD_THRESHOLD) {
           fileOrder.push({
             index: fileIndex++,
             type: 'drive',
