@@ -441,7 +441,7 @@ export default function AdCreationForm({
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
-  const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
+  const S3_UPLOAD_THRESHOLD = 4 * 1024 * 1024; // 40 MB
 
 
   const refreshPage = useCallback(() => {
