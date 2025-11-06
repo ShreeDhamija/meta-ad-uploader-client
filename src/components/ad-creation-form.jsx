@@ -2425,13 +2425,13 @@ export default function AdCreationForm({
 
           // Add media files to formData
           files.forEach((file) => {
-            if (file.size <= S3_UPLOAD_THRESHOLD) {
+            if (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) {
               formData.append("mediaFiles", file);
             }
           });
 
           driveFiles.forEach((driveFile) => {
-            if (driveFile.size <= S3_UPLOAD_THRESHOLD) {
+            if (!isVideoFile(driveFile) || driveFile.size <= S3_UPLOAD_THRESHOLD) {
               formData.append("driveFiles", JSON.stringify({
                 id: driveFile.id,
                 name: driveFile.name,
@@ -2626,7 +2626,7 @@ export default function AdCreationForm({
         nonDynamicAdSetIds.forEach((adSetId) => {
           const groupedFileIds = enablePlacementCustomization ? new Set(fileGroups.flat()) : new Set();
           const hasUngroupedFiles = (
-            files.some(file => !groupedFileIds.has(getFileId(file)) && file.size <= S3_UPLOAD_THRESHOLD) ||
+            files.some(file => !groupedFileIds.has(getFileId(file)) && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
             [...s3Results, ...s3DriveResults].some(s3File =>
               !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id))
@@ -2706,7 +2706,8 @@ export default function AdCreationForm({
           if (hasUngroupedFiles) {
             // Pre-compute ad names for all ungrouped files
             const ungroupedLocalFiles = files.filter(file =>
-              file.size <= S3_UPLOAD_THRESHOLD && !groupedFileIds.has(getFileId(file))
+              (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) && !groupedFileIds.has(getFileId(file))
+
             );
             const ungroupedDriveFiles = smallDriveFiles.filter(driveFile =>
               !groupedFileIds.has(driveFile.id)
