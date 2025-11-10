@@ -1051,7 +1051,6 @@ export default function AdCreationForm({
       "image/jpeg",
       "image/png",
       "image/gif",
-      "image/webp",
       "video/mp4",
       "video/webm",
       "video/quicktime"
@@ -1255,14 +1254,12 @@ export default function AdCreationForm({
 
 
 
+
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
-    accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp'],
-      'video/*': [] // Empty array = allow all video types
-    }
-  });
+  })
 
 
   const getVideoAspectRatio = async (file) => {
