@@ -2966,7 +2966,9 @@ export default function AdCreationForm({
             successCount,      // ADD
             failureCount,      // ADD
             totalCount,
-            errorMessages // NEW: Send error messages
+            errorMessages,
+            selectedAdSets,      // ADD - from formData destructure
+            selectedAdAccount    //
 
           }, {
             withCredentials: true,
