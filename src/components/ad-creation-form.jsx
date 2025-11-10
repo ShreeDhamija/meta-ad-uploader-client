@@ -1243,7 +1243,7 @@ export default function AdCreationForm({
     );
 
     if (filteredFiles.length < acceptedFiles.length) {
-      toast.error("WebP and HEIC files are not supported. by Facebook");
+      toast.error("WebP and HEIC files are not supported by Facebook");
     }
 
     setFiles(prev => [
