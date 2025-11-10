@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw } from "lucide-react"
+import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -3139,6 +3139,26 @@ export default function AdCreationForm({
                             <RotateCcw className="h-4 w-4" />
                           </button>
                         )}
+                        <div className="flex gap-2">
+                          {job.adsetIds && job.adsetIds.length > 0 && job.selectedAdAccount && (
+                            <button
+                              onClick={() => {
+                                const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?act=${job.selectedAdAccount}&selected_adset_ids=${job.adsetIds[0]}`;
+                                window.open(url, '_blank');
+                              }}
+                              className="text-blue-400 hover:text-blue-300 transition-colors"
+                              title="View in Ads Manager"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleRemoveCompletedJob(job.id)}
+                            className="text-gray-400 hover:text-red-400 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
                         <button
                           onClick={() =>
                             setCompletedJobs((prev) => prev.filter((j) => j.id !== job.id))
@@ -3146,6 +3166,7 @@ export default function AdCreationForm({
                           className="text-gray-400 hover:text-gray-600 p-1"
                           title="Remove job"
                         >
+
                           <CircleX className="h-4 w-4 text-gray-500" />
                         </button>
                       </div>
