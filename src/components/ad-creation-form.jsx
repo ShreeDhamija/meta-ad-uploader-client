@@ -926,7 +926,9 @@ export default function AdCreationForm({
           id: currentJob.id,
           message: `${currentJob.adCount || 1} Ad${currentJob.adCount !== 1 ? 's' : ''} successfully posted to ${currentJob.formData.adSetDisplayName}`,
           completedAt: Date.now(),
-          status: 'success'
+          status: 'success',
+          selectedAdSets: currentJob.formData.selectedAdSets,      // ADD THIS
+          selectedAdAccount: currentJob.formData.selectedAdAccount  // ADD THIS
         };
         setCompletedJobs(prev => [...prev, completedJob]);
 
@@ -942,7 +944,9 @@ export default function AdCreationForm({
           successCount: metaData.successCount,
           failureCount: metaData.failureCount,
           totalCount: metaData.totalCount,
-          errorMessages: metaData.errorMessages // NEW
+          errorMessages: metaData.errorMessages,
+          selectedAdSets: currentJob.formData.selectedAdSets,      // ADD THIS
+          selectedAdAccount: currentJob.formData.selectedAdAccount  // ADD THIS
 
         };
         setCompletedJobs(prev => [...prev, completedJob]);
