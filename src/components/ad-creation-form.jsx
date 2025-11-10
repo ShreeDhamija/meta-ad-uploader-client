@@ -3096,7 +3096,6 @@ export default function AdCreationForm({
                 {/* Completed Jobs */}
 
                 {completedJobs.map((job) => {
-                  console.log('Job object:', job); // Debug line
                   return (
                     <div key={job.id} className="p-3.5 border-b border-gray-100">
                       {/* Main job row */}
@@ -3151,7 +3150,7 @@ export default function AdCreationForm({
                                 const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?act=${job.selectedAdAccount}&selected_adset_ids=${job.selectedAdSets[0]}`;
                                 window.open(url, '_blank');
                               }}
-                              className="text-blue-400 hover:text-blue-300 transition-colors"
+                              className="text-gray-500 hover:text-blue-500 transition-colors"
                               title="View in Ads Manager"
                             >
                               <Eye className="w-4 h-4" />
