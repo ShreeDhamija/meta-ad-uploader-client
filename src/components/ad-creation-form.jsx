@@ -3091,110 +3091,112 @@ export default function AdCreationForm({
 
                 {/* Completed Jobs */}
 
-                {completedJobs.map((job) => (
-                  <div key={job.id} className="p-3.5 border-b border-gray-100">
-                    {/* Main job row */}
-                    <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0">
-                        {job.status === 'error' ? (
-                          <CircleX className="w-6 h-6 text-red-500" />
-                        ) : job.status === 'partial-success' ? (
-                          <PartialSuccess className="w-6 h-6" />
-                        ) : job.status === 'retry' ? (
-                          <AlertTriangle className="w-6 h-6 text-orange-500" />
-                        ) : (
-                          <CheckIcon className="w-6 h-6" />
-                        )}
-                      </div>
+                {completedJobs.map((job) => {
+                  console.log('Job object:', job); // Debug line
+                  return (
+                    <div key={job.id} className="p-3.5 border-b border-gray-100">
+                      {/* Main job row */}
+                      <div className="flex items-center gap-3">
+                        <div className="flex-shrink-0">
+                          {job.status === 'error' ? (
+                            <CircleX className="w-6 h-6 text-red-500" />
+                          ) : job.status === 'partial-success' ? (
+                            <PartialSuccess className="w-6 h-6" />
+                          ) : job.status === 'retry' ? (
+                            <AlertTriangle className="w-6 h-6 text-orange-500" />
+                          ) : (
+                            <CheckIcon className="w-6 h-6" />
+                          )}
+                        </div>
 
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-sm break-words ${job.status === 'error'
-                            ? 'text-red-600'
-                            : job.status === 'partial-success'
-                              ? 'text-[#F0A000]'
-                              : job.status === 'retry'
-                                ? 'text-orange-600'
-                                : 'text-gray-700'
-                            }`}
-                        >
-                          {job.message}
-                        </p>
-
-                        {job.status === 'retry' && (
-                          <span className="block text-xs text-orange-500 mt-1">
-                            Reload page to try again.
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex gap-1 flex-shrink-0">
-                        {job.status === 'retry' && (
-                          <button
-                            onClick={refreshPage}
-                            className="text-orange-600 hover:text-orange-800 p-1 rounded"
-                            title="Retry job"
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`text-sm break-words ${job.status === 'error'
+                              ? 'text-red-600'
+                              : job.status === 'partial-success'
+                                ? 'text-[#F0A000]'
+                                : job.status === 'retry'
+                                  ? 'text-orange-600'
+                                  : 'text-gray-700'
+                              }`}
                           >
-                            <RotateCcw className="h-4 w-4" />
-                          </button>
-                        )}
+                            {job.message}
+                          </p>
 
-                        {job.selectedAdSets && job.selectedAdSets.length > 0 && job.selectedAdAccount && (
+                          {job.status === 'retry' && (
+                            <span className="block text-xs text-orange-500 mt-1">
+                              Reload page to try again.
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex gap-1 flex-shrink-0">
+                          {job.status === 'retry' && (
+                            <button
+                              onClick={refreshPage}
+                              className="text-orange-600 hover:text-orange-800 p-1 rounded"
+                              title="Retry job"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </button>
+                          )}
+
+                          {job.selectedAdSets && job.selectedAdSets.length > 0 && job.selectedAdAccount && (
+                            <button
+                              onClick={() => {
+                                const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?act=${job.selectedAdAccount}&selected_adset_ids=${job.selectedAdSets[0]}`;
+                                window.open(url, '_blank');
+                              }}
+                              className="text-blue-400 hover:text-blue-300 transition-colors"
+                              title="View in Ads Manager"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          )}
+
                           <button
-                            onClick={() => {
-                              const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?act=${job.selectedAdAccount}&selected_adset_ids=${job.selectedAdSets[0]}`;
-                              window.open(url, '_blank');
-                            }}
-                            className="text-blue-400 hover:text-blue-300 transition-colors"
-                            title="View in Ads Manager"
+                            onClick={() =>
+                              setCompletedJobs((prev) => prev.filter((j) => j.id !== job.id))
+                            }
+                            className="text-gray-400 hover:text-gray-600 p-1"
+                            title="Remove job"
                           >
-                            <Eye className="w-4 h-4" />
+                            <CircleX className="h-4 w-4 text-gray-500" />
                           </button>
-                        )}
-
-                        <button
-                          onClick={() =>
-                            setCompletedJobs((prev) => prev.filter((j) => j.id !== job.id))
-                          }
-                          className="text-gray-400 hover:text-gray-600 p-1"
-                          title="Remove job"
-                        >
-
-                          <CircleX className="h-4 w-4 text-gray-500" />
-                        </button>
+                        </div>
                       </div>
+
+                      {/* Error details (moved outside the flex row) */}
+                      {job.status === 'partial-success' && job.errorMessages?.length > 0 && (
+                        <div className="mt-2 ml-9">
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-[#FF0000]">
+                              View error details
+                            </summary>
+                            <ul className="mt-1 ml-4 list-disc space-y-0.5 text-[#FF0000]">
+                              {(() => {
+                                const errorCounts = job.errorMessages.reduce((acc, errorMsg) => {
+                                  acc[errorMsg] = (acc[errorMsg] || 0) + 1;
+                                  return acc;
+                                }, {});
+                                return Object.entries(errorCounts).map(([errorMsg, count], idx) => (
+                                  <li key={idx} className="break-words">
+                                    {errorMsg}
+                                    {count > 1 && (
+                                      <span className="ml-1 text-red-500 font-medium">
+                                        (×{count})
+                                      </span>
+                                    )}
+                                  </li>
+                                ));
+                              })()}
+                            </ul>
+                          </details>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Error details (moved outside the flex row) */}
-                    {job.status === 'partial-success' && job.errorMessages?.length > 0 && (
-                      <div className="mt-2 ml-9">
-                        <details className="text-xs">
-                          <summary className="cursor-pointer text-[#FF0000]">
-                            View error details
-                          </summary>
-                          <ul className="mt-1 ml-4 list-disc space-y-0.5 text-[#FF0000]">
-                            {(() => {
-                              const errorCounts = job.errorMessages.reduce((acc, errorMsg) => {
-                                acc[errorMsg] = (acc[errorMsg] || 0) + 1;
-                                return acc;
-                              }, {});
-                              return Object.entries(errorCounts).map(([errorMsg, count], idx) => (
-                                <li key={idx} className="break-words">
-                                  {errorMsg}
-                                  {count > 1 && (
-                                    <span className="ml-1 text-red-500 font-medium">
-                                      (×{count})
-                                    </span>
-                                  )}
-                                </li>
-                              ));
-                            })()}
-                          </ul>
-                        </details>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
 
                 {/* Current Job */}
                 {currentJob && (
