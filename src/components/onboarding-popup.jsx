@@ -17,8 +17,8 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             <h2 className="text-2xl font-semibold text-[#415363] mb-1">
                                 Welcome to Blip, {userName}!
                             </h2>
-                            <p className="text-gray-500 mb-2 text-sm">We highly suggest configuring preferences before launching ads</p>
-                            <p className="text-gray-400 text-sm mb-10">It will take a minute and save you hours. We promise.</p>
+                            <p className="text-gray-500 mb-10 text-sm">Jump straight into launching ads or set up your ad templates</p>
+                            {/* <p className="text-gray-400 text-sm mb-10">It will take a minute and save you hours. We promise.</p> */}
                             <div className="flex justify-center gap-6">
 
 
@@ -51,9 +51,9 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                     <div className="bg-gradient-to-b from-[#FF609F] to-[#F72585] text-white text-sm font-medium rounded-full px-4 py-2.5 w-[200px] flex items-center justify-center">
                                         Configure Preferences
                                     </div>
-                                    <div className="text-[#FF609F] text-xs font-medium flex items-center justify-center">
+                                    {/* <div className="text-[#FF609F] text-xs font-medium flex items-center justify-center">
                                         (Recommended)
-                                    </div>
+                                    </div> */}
                                 </button>
 
 
