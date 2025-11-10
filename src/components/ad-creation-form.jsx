@@ -1236,13 +1236,24 @@ export default function AdCreationForm({
 
   // Dropzone logic
   const onDrop = useCallback((acceptedFiles) => {
-    // setFiles((prev) => [...prev, ...acceptedFiles]);
+    // 🚫 Filter out .webp and .heic files
+    const filteredFiles = acceptedFiles.filter(
+      (file) =>
+        !file.name.toLowerCase().endsWith(".webp") &&
+        !file.name.toLowerCase().endsWith(".heic")
+    );
+
+    if (filteredFiles.length < acceptedFiles.length) {
+      toast.error("WebP and HEIC files are not supported. by Facebook");
+    }
+
     setFiles(prev => [
       ...prev,
-      ...acceptedFiles.map(withUniqueId)
+      ...filteredFiles.map(withUniqueId)
     ]);
-
   }, []);
+
+
 
 
 
