@@ -2360,7 +2360,7 @@ export default function AdCreationForm({
      */
 
     const createAdApiCall = async (formData, API_BASE_URL) => {
-      const maxRetries = 10;
+      const maxRetries = 5;
       const baseDelay = 1000; // Start with 1 second
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
