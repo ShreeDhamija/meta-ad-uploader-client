@@ -1255,12 +1255,13 @@ export default function AdCreationForm({
 
 
 
-
-
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
-  })
+    accept: {
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp']
+    }
+  });
 
 
   const getVideoAspectRatio = async (file) => {
