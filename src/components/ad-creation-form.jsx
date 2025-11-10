@@ -1407,10 +1407,7 @@ export default function AdCreationForm({
         return;
       }
 
-      // Show toast ONLY for files that actually need processing
-      // if (videoFiles.length > 5) {
-      //   toast.info(`Generating thumbnails for ${videoFiles.length} videos...`);
-      // }
+
 
       // Mark files as being processed
       videoFiles.forEach(file => {
@@ -3140,10 +3137,10 @@ export default function AdCreationForm({
                           </button>
                         )}
 
-                        {job.adsetIds && job.adsetIds.length > 0 && job.selectedAdAccount && (
+                        {job.selectedAdSets && job.selectedAdSets.length > 0 && job.selectedAdAccount && (
                           <button
                             onClick={() => {
-                              const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?act=${job.selectedAdAccount}&selected_adset_ids=${job.adsetIds[0]}`;
+                              const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?act=${job.selectedAdAccount}&selected_adset_ids=${job.selectedAdSets[0]}`;
                               window.open(url, '_blank');
                             }}
                             className="text-blue-400 hover:text-blue-300 transition-colors"
