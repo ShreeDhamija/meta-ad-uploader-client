@@ -1259,7 +1259,8 @@ export default function AdCreationForm({
     onDrop,
     multiple: true,
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp']
+      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.bmp'],
+      'video/*': [] // Empty array = allow all video types
     }
   });
 
