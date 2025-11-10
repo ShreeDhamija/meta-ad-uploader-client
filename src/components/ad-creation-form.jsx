@@ -673,11 +673,25 @@ export default function AdCreationForm({
       };
 
 
-      const completeResponse = await axios.post(
-        `${API_BASE_URL}/auth/s3/complete-upload`,
-        completePayload,
-        { withCredentials: true }
-      );
+      let completeResponse;
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        try {
+          completeResponse = await axios.post(
+            `${API_BASE_URL}/auth/s3/complete-upload`,
+            completePayload,
+            { withCredentials: true }
+          );
+          break; // Success, exit retry loop
+        } catch (error) {
+          if (attempt === 3) {
+            throw error; // Final attempt failed, throw error
+          }
+          const delay = 2000 * Math.pow(2, attempt - 1);
+          console.log(`⚠️ S3 complete-upload attempt ${attempt} failed. Retrying in ${delay}ms...`);
+          console.log(`   Error: ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
 
 
       const result = {
@@ -2344,14 +2358,9 @@ export default function AdCreationForm({
     /**
      * Make API call to create ad
      */
-    // const createAdApiCall = async (formData, API_BASE_URL) => {
-    //   return axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
-    //     withCredentials: true,
-    //     headers: { "Content-Type": "multipart/form-data" },
-    //   });
-    // };
+
     const createAdApiCall = async (formData, API_BASE_URL) => {
-      const maxRetries = 5;
+      const maxRetries = 10;
       const baseDelay = 1000; // Start with 1 second
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
