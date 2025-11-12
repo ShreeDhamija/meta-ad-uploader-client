@@ -304,7 +304,7 @@ export default function Home() {
     const handleOnboardingImport = async (adAccountId) => {
         try {
             // Fetch copy
-            const copyRes = await fetch('/auth/fetch-single-recent-copy', {
+            const copyRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-copy`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adAccountId })
@@ -312,11 +312,11 @@ export default function Home() {
             const copyData = await copyRes.json();
 
             // Fetch URL
-            const urlRes = await fetch(`/auth/fetch-single-recent-url?adAccountId=${adAccountId}`);
+            const urlRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-url?adAccountId=${adAccountId}`);
             const urlData = await urlRes.json();
 
             // Fetch pages (placeholder)
-            const pagesRes = await fetch(`/auth/fetch-recent-pages?adAccountId=${adAccountId}`);
+            const pagesRes = await fetch(`${API_BASE_URL}/auth/fetch-recent-pages?adAccountId=${adAccountId}`);
             const pagesData = await pagesRes.json();
 
             // Set the imported values to state
