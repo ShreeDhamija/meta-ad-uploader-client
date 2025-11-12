@@ -306,29 +306,34 @@ export default function Home() {
             // Fetch copy
             const copyRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-copy`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adAccountId })
             });
             const copyData = await copyRes.json();
 
             // Fetch URL
-            const urlRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-url?adAccountId=${adAccountId}`);
+            const urlRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-url?adAccountId=${adAccountId}`, {
+                credentials: 'include'
+            });
             const urlData = await urlRes.json();
 
             // Fetch pages (placeholder)
-            const pagesRes = await fetch(`${API_BASE_URL}/auth/fetch-recent-pages?adAccountId=${adAccountId}`);
+            const pagesRes = await fetch(`${API_BASE_URL}/auth/fetch-recent-pages?adAccountId=${adAccountId}`, {
+                credentials: 'include'
+            });
             const pagesData = await pagesRes.json();
 
             // Set the imported values to state
             if (copyData.primaryText) {
-                setPrimaryText(copyData.primaryText); // or however you're managing this state
+                setMessages(copyData.primaryText); // or however you're managing this state
             }
             if (copyData.headline) {
-                setHeadline(copyData.headline);
+                setHeadlines(copyData.headline);
             }
             if (urlData.link) {
-                setCustomURL(urlData.link);
-                setShowCustomURL(true);
+                setCustomLink(urlData.link);
+                setShowCustomLink(true);
             }
         } catch (error) {
             console.error('Failed to import ad data:', error);
