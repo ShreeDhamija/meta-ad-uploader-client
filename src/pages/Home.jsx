@@ -527,6 +527,7 @@ export default function Home() {
                         onClose={handleCloseOnboarding}
                         adAccounts={adAccounts} // your ad accounts array
                         onImport={handleOnboardingImport}
+                        onAdAccountChange={setSelectedAdAccount}  // ADD THIS
                         onGoToSettings={() => {
 
                             try {

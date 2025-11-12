@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button"
 import HomePopup from '@/assets/HomePopup.webp';
 import Home from '@/assets/Home.webp';
 import Rocket from '@/assets/rocket.webp';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding, adAccounts, onImport }) {
+export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding, adAccounts, onImport, onAdAccountChange }) {
 
     const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
@@ -141,18 +142,24 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                 Do you want to import values used in your most recent ad to quick test an ad launch?
                             </h2>
 
-                            <select
+                            <Select
                                 value={selectedAdAccount}
-                                onChange={(e) => setSelectedAdAccount(e.target.value)}
-                                className="w-full px-4 py-3 mb-6 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-[#F72585]"
+                                onValueChange={(value) => {
+                                    setSelectedAdAccount(value);
+                                    onAdAccountChange?.(value); // Call parent callback
+                                }}
                             >
-                                <option value="">Select Ad Account</option>
-                                {adAccounts.map(account => (
-                                    <option key={account.id} value={account.id}>
-                                        {account.name}
-                                    </option>
-                                ))}
-                            </select>
+                                <SelectTrigger className="w-full px-4 py-3 mb-6 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-[#F72585]">
+                                    <SelectValue placeholder="Select Ad Account" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(adAccounts || []).map(account => (
+                                        <SelectItem key={account.id} value={account.id}>
+                                            {account.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
 
                             <div className="flex justify-center gap-4">
                                 <Button
