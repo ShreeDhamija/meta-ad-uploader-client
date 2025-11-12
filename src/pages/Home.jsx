@@ -325,13 +325,13 @@ export default function Home() {
             const pagesData = await pagesRes.json();
 
             // Set the imported values to state
-            if (copyData.primaryText) {
-                setMessages(copyData.primaryText); // or however you're managing this state
+            if (copyData && copyData.primaryText) {
+                setMessages([copyData.primaryText]);
             }
-            if (copyData.headline) {
-                setHeadlines(copyData.headline);
+            if (copyData && copyData.headline) {
+                setHeadlines([copyData.headline]);
             }
-            if (urlData.link) {
+            if (urlData && urlData.link) {
                 setCustomLink(urlData.link);
                 setShowCustomLink(true);
             }
