@@ -135,6 +135,8 @@ export default function Home() {
     const [pageId, setPageId] = useState("")
     const [instagramAccountId, setInstagramAccountId] = useState("")
     const [link, setLink] = useState([""])
+    const [customLink, setCustomLink] = useState("")
+    const [showCustomLink, setShowCustomLink] = useState(false)
     const [cta, setCta] = useState("LEARN_MORE")
 
     const [thumbnail, setThumbnail] = useState(null)
@@ -409,6 +411,10 @@ export default function Home() {
                             setDescriptions={setDescriptions}
                             link={link}
                             setLink={setLink}
+                            customLink={customLink}
+                            setCustomLink={setCustomLink}
+                            showCustomLink={showCustomLink}
+                            setShowCustomLink={setShowCustomLink}
                             cta={cta}
                             setCta={setCta}
                             thumbnail={thumbnail}

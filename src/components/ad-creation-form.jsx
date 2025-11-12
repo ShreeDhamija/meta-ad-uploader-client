@@ -344,6 +344,10 @@ export default function AdCreationForm({
   setDescriptions,
   link,
   setLink,
+  customLink,
+  setCustomLink,
+  showCustomLink,
+  setShowCustomLink,
   cta,
   setCta,
   thumbnail,
@@ -409,8 +413,8 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
-  const [customLink, setCustomLink] = useState("")
-  const [showCustomLink, setShowCustomLink] = useState(false)
+  // const [customLink, setCustomLink] = useState("")
+  // const [showCustomLink, setShowCustomLink] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
 
   //Porgress Trackers
