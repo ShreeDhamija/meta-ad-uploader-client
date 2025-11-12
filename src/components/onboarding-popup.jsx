@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader } from "lucide-react"
 
 
-export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding, adAccounts, onImport, documentExists }) {
+export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding, adAccounts, onImport, hasAnySettings }) {
 
     const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
@@ -139,7 +139,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                     {/* HOME STEP */}
                     {step === "home" && (
                         <>
-                            {documentExists ? (
+                            {hasAnySettings ? (
                                 // NEW IMPORT LAYOUT
                                 <div key="home" className="w-full animate-fadeSwap text-center">
                                     <img

@@ -157,6 +157,7 @@ export default function Home() {
     const [videoThumbs, setVideoThumbs] = useState({})
     const { adAccounts, setAdAccounts, pages, setPages, pagesLoading } = useAppData()
     const { settings: adAccountSettings, documentExists } = useAdAccountSettings(selectedAdAccount)
+    const [hasAnyAdAccountSettings, setHasAnyAdAccountSettings] = useState(false);
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
     const userHasActiveAccess = hasActiveAccess();
@@ -201,6 +202,24 @@ export default function Home() {
         }
 
     }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
+
+    useEffect(() => {
+        const checkSettings = async () => {
+            try {
+                const res = await fetch(`${API_BASE_URL}/settings/has-any-ad-account-settings`, {
+                    credentials: "include",
+                });
+                const data = await res.json();
+                setHasAnyAdAccountSettings(data.hasAnySettings || false);
+            } catch (err) {
+                console.error("Failed to check ad account settings:", err);
+            }
+        };
+
+        if (isLoggedIn) {
+            checkSettings();
+        }
+    }, [isLoggedIn]);
 
     // --- NEW, CORRECTED CODE ---
     useEffect(() => {
@@ -548,7 +567,7 @@ export default function Home() {
                         onClose={handleCloseOnboarding}
                         adAccounts={adAccounts} // your ad accounts array
                         onImport={handleOnboardingImport}
-                        documentExists={documentExists}  // ADD THIS
+                        hasAnySettings={hasAnyAdAccountSettings}  // PASS THIS
                         onGoToSettings={() => {
 
                             try {

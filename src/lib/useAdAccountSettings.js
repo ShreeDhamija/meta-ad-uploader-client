@@ -11,6 +11,7 @@ export default function useAdAccountSettings(adAccountId) {
         defaultAdName: "",
     });
 
+
     useEffect(() => {
         if (!adAccountId) return;
         setLoading(true); // ← This is essential for account switches
