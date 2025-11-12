@@ -304,6 +304,7 @@ export default function Home() {
     const handleOnboardingImport = async (adAccountId) => {
         try {
             // Fetch copy
+
             const copyRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-copy`, {
                 method: 'POST',
                 credentials: 'include',
@@ -323,7 +324,7 @@ export default function Home() {
                 credentials: 'include'
             });
             const pagesData = await pagesRes.json();
-
+            setSelectedAdAccount(adAccountId);
             // Set the imported values to state
             if (copyData && copyData.primaryText) {
                 setMessages([copyData.primaryText]);
@@ -527,7 +528,6 @@ export default function Home() {
                         onClose={handleCloseOnboarding}
                         adAccounts={adAccounts} // your ad accounts array
                         onImport={handleOnboardingImport}
-                        onAdAccountChange={setSelectedAdAccount}  // ADD THIS
                         onGoToSettings={() => {
 
                             try {

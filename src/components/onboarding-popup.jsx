@@ -4,20 +4,25 @@ import HomePopup from '@/assets/HomePopup.webp';
 import Home from '@/assets/Home.webp';
 import Rocket from '@/assets/rocket.webp';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Loader } from "lucide-react"
 
-export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding, adAccounts, onImport, onAdAccountChange }) {
+
+export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding, adAccounts, onImport }) {
 
     const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
+    const [isImporting, setIsImporting] = useState(false)
     const handleImport = async () => {
         if (!selectedAdAccount) return;
 
+        setIsImporting(true);
         try {
-            // Call the import handler from parent
             await onImport(selectedAdAccount);
             onClose();
         } catch (error) {
             console.error("Import failed:", error);
+        } finally {
+            setIsImporting(false);
         }
     }
 
@@ -142,19 +147,17 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                 Do you want to import values used in your most recent ad to quick test an ad launch?
                             </h2>
 
-                            <Select
-                                value={selectedAdAccount}
-                                onValueChange={(value) => {
-                                    setSelectedAdAccount(value);
-                                    onAdAccountChange?.(value); // Call parent callback
-                                }}
-                            >
-                                <SelectTrigger className="w-full px-4 py-3 mb-6 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-[#F72585]">
+                            <Select value={selectedAdAccount} onValueChange={setSelectedAdAccount}>
+                                <SelectTrigger className="w-full px-4 py-3 mb-6 rounded-2xl border border-gray-300 bg-white text-gray-700 focus:outline-none focus:border-[#F72585]">
                                     <SelectValue placeholder="Select Ad Account" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="bg-white rounded-2xl">
                                     {(adAccounts || []).map(account => (
-                                        <SelectItem key={account.id} value={account.id}>
+                                        <SelectItem
+                                            key={account.id}
+                                            value={account.id}
+                                            className="rounded-xl data-[state=checked]:bg-[#FFF5F9] hover:bg-[#FFF5F9]"
+                                        >
                                             {account.name}
                                         </SelectItem>
                                     ))}
@@ -164,18 +167,26 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             <div className="flex justify-center gap-4">
                                 <Button
                                     onClick={handleImport}
-                                    disabled={!selectedAdAccount}
+                                    disabled={!selectedAdAccount || isImporting}
                                     className="bg-gradient-to-b from-[#FF609F] to-[#F72585] hover:opacity-90 text-white text-base px-8 py-2.5 rounded-full disabled:opacity-50"
                                 >
                                     Import
                                 </Button>
                                 <Button
                                     onClick={onClose}
-                                    className="bg-white border-2 border-[#F72585] text-[#F72585] hover:bg-gray-50 text-base px-8 py-2.5 rounded-full"
+                                    disabled={isImporting}
+                                    className="bg-[#FAF9F7] border-2 border-[#F72585] text-[#F72585] hover:bg-[#FAF9F7] hover:opacity-80 text-base px-8 py-2.5 rounded-full shadow-none"
                                 >
                                     Skip
                                 </Button>
                             </div>
+
+                            {isImporting && (
+                                <div className="flex flex-col items-center gap-2 mt-4">
+                                    <Loader className="w-6 h-6 animate-spin text-[#F72585]" />
+                                    <p className="text-sm text-gray-600">Importing data...</p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
