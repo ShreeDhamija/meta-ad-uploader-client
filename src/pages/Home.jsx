@@ -301,6 +301,39 @@ export default function Home() {
     };
 
 
+    const handleOnboardingImport = async (adAccountId) => {
+        try {
+            // Fetch copy
+            const copyRes = await fetch('/auth/fetch-single-recent-copy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ adAccountId })
+            });
+            const copyData = await copyRes.json();
+
+            // Fetch URL
+            const urlRes = await fetch(`/auth/fetch-single-recent-url?adAccountId=${adAccountId}`);
+            const urlData = await urlRes.json();
+
+            // Fetch pages (placeholder)
+            const pagesRes = await fetch(`/auth/fetch-recent-pages?adAccountId=${adAccountId}`);
+            const pagesData = await pagesRes.json();
+
+            // Set the imported values to state
+            if (copyData.primaryText) {
+                setPrimaryText(copyData.primaryText); // or however you're managing this state
+            }
+            if (copyData.headline) {
+                setHeadline(copyData.headline);
+            }
+            if (urlData.link) {
+                setCustomURL(urlData.link);
+                setShowCustomURL(true);
+            }
+        } catch (error) {
+            console.error('Failed to import ad data:', error);
+        }
+    };
 
     const refreshAdSets = useCallback(async () => {
         if (!selectedCampaign) return
@@ -487,6 +520,8 @@ export default function Home() {
                         userName={userName}
                         hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
                         onClose={handleCloseOnboarding}
+                        adAccounts={adAccounts} // your ad accounts array
+                        onImport={handleOnboardingImport}
                         onGoToSettings={() => {
 
                             try {

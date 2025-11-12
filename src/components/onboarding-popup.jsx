@@ -4,8 +4,22 @@ import HomePopup from '@/assets/HomePopup.webp';
 import Home from '@/assets/Home.webp';
 import Rocket from '@/assets/rocket.webp';
 
-export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding }) {
+export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding, adAccounts, onImport }) {
+
     const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
+    const [selectedAdAccount, setSelectedAdAccount] = useState("")
+    const handleImport = async () => {
+        if (!selectedAdAccount) return;
+
+        try {
+            // Call the import handler from parent
+            await onImport(selectedAdAccount);
+            onClose();
+        } catch (error) {
+            console.error("Import failed:", error);
+        }
+    }
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-8 py-10 w-[520px] relative overflow-hidden text-center">
@@ -62,11 +76,11 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                     )}
 
                     {/* HOME STEP */}
-                    {step === "home" && (
+                    {/* {step === "home" && (
                         <div key="home" className="w-full animate-fadeSwap text-left flex flex-col md:flex-row gap-6 items-stretch">
-                            {/* Left content */}
+                            
                             <div className="flex-1 flex flex-col justify-between">
-                                {/* Top content block */}
+                                
                                 <div>
                                     <img
                                         src="https://api.withblip.com/home.webp"
@@ -94,7 +108,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                     </div>
                                 </div>
 
-                                {/* Bottom aligned button */}
+
                                 <Button
                                     onClick={onClose}
                                     className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full mt-4 w-[180px]"
@@ -104,7 +118,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             </div>
 
 
-                            {/* Right image */}
+                            
                             <div className="flex-1 bg-[#FDCEDF] rounded-2xl overflow-hidden flex items-center justify-center">
                                 <img
                                     src={HomePopup}
@@ -113,6 +127,48 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                 />
                             </div>
 
+                        </div>
+                    )} */}
+
+                    {step === "home" && (
+                        <div key="home" className="w-full animate-fadeSwap text-center">
+                            <img
+                                src="https://api.withblip.com/home.webp"
+                                alt="Home Icon"
+                                className="w-20 mx-auto mb-4"
+                            />
+                            <h2 className="text-2xl font-semibold text-[#415363] mb-6">
+                                Do you want to import values used in your most recent ad to quick test an ad launch?
+                            </h2>
+
+                            <select
+                                value={selectedAdAccount}
+                                onChange={(e) => setSelectedAdAccount(e.target.value)}
+                                className="w-full px-4 py-3 mb-6 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-[#F72585]"
+                            >
+                                <option value="">Select Ad Account</option>
+                                {adAccounts.map(account => (
+                                    <option key={account.id} value={account.id}>
+                                        {account.name}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <div className="flex justify-center gap-4">
+                                <Button
+                                    onClick={handleImport}
+                                    disabled={!selectedAdAccount}
+                                    className="bg-gradient-to-b from-[#FF609F] to-[#F72585] hover:opacity-90 text-white text-base px-8 py-2.5 rounded-full disabled:opacity-50"
+                                >
+                                    Import
+                                </Button>
+                                <Button
+                                    onClick={onClose}
+                                    className="bg-white border-2 border-[#F72585] text-[#F72585] hover:bg-gray-50 text-base px-8 py-2.5 rounded-full"
+                                >
+                                    Skip
+                                </Button>
+                            </div>
                         </div>
                     )}
                 </div>
