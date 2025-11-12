@@ -303,23 +303,35 @@ export default function Home() {
 
     const handleOnboardingImport = async (adAccountId) => {
         try {
-            // Fetch copy
+            // Set the selected ad account
             setSelectedAdAccount(adAccountId);
+
+            // Fetch copy
             const copyRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-copy`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adAccountId })
             });
+
+            if (!copyRes.ok) {
+                throw new Error('Failed to fetch copy');
+            }
+
             const copyData = await copyRes.json();
 
             // Fetch URL
             const urlRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-url?adAccountId=${adAccountId}`, {
                 credentials: 'include'
             });
+
+            if (!urlRes.ok) {
+                throw new Error('Failed to fetch URL');
+            }
+
             const urlData = await urlRes.json();
 
-            // Fetch pages (placeholder)
+            // Fetch pages
             const pagesRes = await fetch(`${API_BASE_URL}/auth/fetch-recent-pages?adAccountId=${adAccountId}`, {
                 credentials: 'include'
             });
@@ -336,11 +348,19 @@ export default function Home() {
                 setCustomLink(urlData.link);
                 setShowCustomLink(true);
             }
+            if (pagesData && pagesData.pageId) {
+                setPageId(pagesData.pageId);
+            }
+            if (pagesData && pagesData.instagramAccountId) {
+                setInstagramAccountId(pagesData.instagramAccountId);
+            }
+
+            toast.success('Ad data imported successfully');
         } catch (error) {
             console.error('Failed to import ad data:', error);
+            toast.error('Failed to import ad data');
         }
     };
-
     const refreshAdSets = useCallback(async () => {
         if (!selectedCampaign) return
         setIsLoading(true)
@@ -528,6 +548,7 @@ export default function Home() {
                         onClose={handleCloseOnboarding}
                         adAccounts={adAccounts} // your ad accounts array
                         onImport={handleOnboardingImport}
+                        documentExists={documentExists}  // ADD THIS
                         onGoToSettings={() => {
 
                             try {

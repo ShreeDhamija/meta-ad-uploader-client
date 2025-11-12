@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader } from "lucide-react"
 
 
-export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding, adAccounts, onImport }) {
+export default function OnboardingPopup({ userName, onClose, onGoToSettings, hasSeenSettingsOnboarding, adAccounts, onImport, documentExists }) {
 
     const [step, setStep] = useState(hasSeenSettingsOnboarding ? "home" : "initial")
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
@@ -136,58 +136,113 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                         </div>
                     )} */}
 
+                    {/* HOME STEP */}
                     {step === "home" && (
-                        <div key="home" className="w-full animate-fadeSwap text-center">
-                            <img
-                                src="https://api.withblip.com/home.webp"
-                                alt="Home Icon"
-                                className="w-20 mx-auto mb-4"
-                            />
-                            <h2 className="text-2xl font-semibold text-[#415363] mb-6">
-                                Do you want to import values used in your most recent ad to quick test an ad launch?
-                            </h2>
+                        <>
+                            {documentExists ? (
+                                // NEW IMPORT LAYOUT
+                                <div key="home" className="w-full animate-fadeSwap text-center">
+                                    <img
+                                        src="https://api.withblip.com/home.webp"
+                                        alt="Home Icon"
+                                        className="w-20 mx-auto mb-4"
+                                    />
+                                    <h2 className="text-2xl font-semibold text-[#415363] mb-6">
+                                        Do you want to import values used in your most recent ad to quick test an ad launch?
+                                    </h2>
 
-                            <Select value={selectedAdAccount} onValueChange={setSelectedAdAccount}>
-                                <SelectTrigger className="w-full px-4 py-3 mb-6 rounded-2xl border border-gray-300 bg-white text-gray-700 focus:outline-none focus:border-[#F72585]">
-                                    <SelectValue placeholder="Select Ad Account" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white rounded-2xl">
-                                    {(adAccounts || []).map(account => (
-                                        <SelectItem
-                                            key={account.id}
-                                            value={account.id}
-                                            className="rounded-xl data-[state=checked]:bg-[#FFF5F9] hover:bg-[#FFF5F9]"
+                                    <Select value={selectedAdAccount} onValueChange={setSelectedAdAccount}>
+                                        <SelectTrigger className="w-full px-4 py-3 mb-6 rounded-2xl border border-gray-300 bg-white text-gray-700 focus:outline-none focus:border-[#F72585]">
+                                            <SelectValue placeholder="Select Ad Account" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-white rounded-2xl">
+                                            {(adAccounts || []).map(account => (
+                                                <SelectItem
+                                                    key={account.id}
+                                                    value={account.id}
+                                                    className="rounded-xl data-[state=checked]:bg-[#FFF5F9] hover:bg-[#FFF5F9]"
+                                                >
+                                                    {account.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <div className="flex justify-center gap-4">
+                                        <Button
+                                            onClick={handleImport}
+                                            disabled={!selectedAdAccount || isImporting}
+                                            className="bg-gradient-to-b from-[#FF609F] to-[#F72585] hover:opacity-90 text-white text-base px-8 py-2.5 rounded-full disabled:opacity-50"
                                         >
-                                            {account.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                            Import
+                                        </Button>
+                                        <Button
+                                            onClick={onClose}
+                                            disabled={isImporting}
+                                            className="bg-[#FAF9F7] border-2 border-[#F72585] text-[#F72585] hover:bg-[#FAF9F7] hover:opacity-80 text-base px-8 py-2.5 rounded-full shadow-none"
+                                        >
+                                            Skip
+                                        </Button>
+                                    </div>
 
-                            <div className="flex justify-center gap-4">
-                                <Button
-                                    onClick={handleImport}
-                                    disabled={!selectedAdAccount || isImporting}
-                                    className="bg-gradient-to-b from-[#FF609F] to-[#F72585] hover:opacity-90 text-white text-base px-8 py-2.5 rounded-full disabled:opacity-50"
-                                >
-                                    Import
-                                </Button>
-                                <Button
-                                    onClick={onClose}
-                                    disabled={isImporting}
-                                    className="bg-[#FAF9F7] border-2 border-[#F72585] text-[#F72585] hover:bg-[#FAF9F7] hover:opacity-80 text-base px-8 py-2.5 rounded-full shadow-none"
-                                >
-                                    Skip
-                                </Button>
-                            </div>
+                                    {isImporting && (
+                                        <div className="flex flex-row items-center justify-center gap-2 mt-4">
+                                            <Loader className="w-6 h-6 animate-spin text-[#F72585]" />
+                                            <p className="text-sm text-gray-600">Importing data...</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                // ORIGINAL HOME PAGE LAYOUT
+                                <div key="home" className="w-full animate-fadeSwap text-left flex flex-col md:flex-row gap-6 items-stretch">
+                                    {/* Left content */}
+                                    <div className="flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <img
+                                                src="https://api.withblip.com/home.webp"
+                                                alt="Home Icon"
+                                                className="w-14 mb-4"
+                                            />
+                                            <h2 className="text-[24px] font-semibold text-[#415363] mb-6">Home Page</h2>
 
-                            {isImporting && (
-                                <div className="flex flex-row items-center justify-center gap-2 mt-4">
-                                    <Loader className="w-6 h-6 animate-spin text-[#F72585]" />
-                                    <p className="text-sm text-gray-600">Importing data...</p>
+                                            <div className="mb-6">
+                                                <div className="text-[#ED9C07] text-sm font-semibold rounded-full inline-block py-1">
+                                                    Step 1
+                                                </div>
+                                                <p className="text-gray-700 text-sm">
+                                                    Pick an ad account, campaign, then choose to launch ads in a new or existing adset.
+                                                </p>
+                                            </div>
+
+                                            <div className="mb-8">
+                                                <div className="text-[#ED9C07] text-sm font-semibold rounded-full inline-block py-1">
+                                                    Step 2
+                                                </div>
+                                                <p className="text-gray-700 text-sm">
+                                                    Enter your ad info and queue as many ads as you want without waiting for a job to finish!
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            onClick={onClose}
+                                            className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full mt-4 w-[180px]"
+                                        >
+                                            Start Launching Ads
+                                        </Button>
+                                    </div>
+
+                                    {/* Right image */}
+                                    <div className="flex-1 bg-[#FDCEDF] rounded-2xl overflow-hidden flex items-center justify-center">
+                                        <img
+                                            src={HomePopup}
+                                            alt="Preview UI"
+                                            className="w-full h-full object-cover "
+                                        />
+                                    </div>
                                 </div>
                             )}
-                        </div>
+                        </>
                     )}
                 </div>
 
