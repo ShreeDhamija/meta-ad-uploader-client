@@ -328,7 +328,7 @@ export default function Home() {
         setSelectedAdSets([])
         if (!adAccountId) return
 
-        setIsAdAccountChanging(true);
+        // setIsAdAccountChanging(true);
         setIsLoading(true)
         try {
             const res = await fetch(
@@ -353,7 +353,7 @@ export default function Home() {
             console.error("Failed to fetch campaigns:", err)
         } finally {
             setIsLoading(false)
-            setIsAdAccountChanging(false);
+            // setIsAdAccountChanging(false);
         }
     });
 
