@@ -25,7 +25,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
 
 export default function AdAccountSettings({
-  //isLoggedIn,
+
   isLoading,
   setIsLoading,
   isLoadingAdSets,
@@ -33,7 +33,6 @@ export default function AdAccountSettings({
   setAdAccounts,
   selectedAdAccount,
   setSelectedAdAccount,
-  //setAdSetDestinationType,
   campaigns,
   setCampaigns,
   selectedCampaign,
@@ -80,12 +79,6 @@ export default function AdAccountSettings({
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
 
 
-
-
-  // const selectedCampaignData = useMemo(() =>
-  //   campaigns.find(c => c.id === selectedCampaign),
-  //   [campaigns, selectedCampaign]
-  // );
 
   const selectedCampaignData = useMemo(() =>
     campaigns.filter(c => selectedCampaign.includes(c.id)),

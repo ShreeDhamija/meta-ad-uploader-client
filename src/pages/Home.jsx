@@ -112,14 +112,12 @@ export default function Home() {
     // Ad account selection and setup
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
     const [campaigns, setCampaigns] = useState([])
-    // const [selectedCampaign, setSelectedCampaign] = useState("")
     const [selectedCampaign, setSelectedCampaign] = useState([])
     const [adSets, setAdSets] = useState([])
     const [selectedAdSets, setSelectedAdSets] = useState([])
     const [showDuplicateBlock, setShowDuplicateBlock] = useState(false)
     const [duplicateAdSet, setDuplicateAdSet] = useState("")
     const [newAdSetName, setNewAdSetName] = useState("")
-    // const [campaignObjective, setCampaignObjective] = useState("")
     const [campaignObjective, setCampaignObjective] = useState([])
     const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
     const [duplicateCampaign, setDuplicateCampaign] = useState("")
@@ -320,10 +318,50 @@ export default function Home() {
     };
 
 
+    const handleAdAccountChange = useCallback(async (value) => {
+        const adAccountId = value
+        setSelectedAdAccount(adAccountId)
+        setCampaigns([])
+        setAdSets([])
+        // setSelectedCampaign("")
+        setSelectedCampaign([])
+        setSelectedAdSets([])
+        if (!adAccountId) return
+
+        setIsAdAccountChanging(true);
+        setIsLoading(true)
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${adAccountId}`,
+                { credentials: "include" },
+            )
+            const data = await res.json()
+            if (data.campaigns) {
+                const priority = {
+                    ACTIVE: 1,
+                    PAUSED: 2,
+                }
+
+                const sortedCampaigns = sortCampaigns(data.campaigns);
+                setCampaigns(sortedCampaigns);
+
+
+
+            }
+        } catch (err) {
+            toast.error(`Failed to fetch campaigns: ${err.message || "Unknown error occurred"}`)
+            console.error("Failed to fetch campaigns:", err)
+        } finally {
+            setIsLoading(false)
+            setIsAdAccountChanging(false);
+        }
+    });
+
     const handleOnboardingImport = async (adAccountId) => {
         try {
             // Set the selected ad account
-            setSelectedAdAccount(adAccountId);
+            await handleAdAccountChange(adAccountId);
+            setAdName("Ad Generated Through Blip");
 
             // Fetch copy
             const copyRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-copy`, {
