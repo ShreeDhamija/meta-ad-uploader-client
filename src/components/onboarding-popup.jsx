@@ -139,7 +139,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                     {/* HOME STEP */}
                     {step === "home" && (
                         <>
-                            {hasAnySettings ? (
+                            {!hasAnySettings ? (
                                 // NEW IMPORT LAYOUT
                                 <div key="home" className="w-full animate-fadeSwap text-center">
                                     <img
