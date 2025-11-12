@@ -182,7 +182,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                             </div>
 
                             {isImporting && (
-                                <div className="flex flex-col items-center gap-2 mt-4">
+                                <div className="flex flex-row items-center gap-2 mt-4">
                                     <Loader className="w-6 h-6 animate-spin text-[#F72585]" />
                                     <p className="text-sm text-gray-600">Importing data...</p>
                                 </div>
