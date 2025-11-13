@@ -3116,8 +3116,9 @@ export default function AdCreationForm({
                           )}
                         </div>
 
-                        <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0 overflow-hidden">
                           <p
+                            style={{ overflowWrap: 'anywhere' }}
                             className={`text-sm break-words ${job.status === 'error'
                               ? 'text-red-600'
                               : job.status === 'partial-success'
