@@ -81,65 +81,11 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                         </div>
                     )}
 
-                    {/* HOME STEP */}
-                    {/* {step === "home" && (
-                        <div key="home" className="w-full animate-fadeSwap text-left flex flex-col md:flex-row gap-6 items-stretch">
-                            
-                            <div className="flex-1 flex flex-col justify-between">
-                                
-                                <div>
-                                    <img
-                                        src="https://api.withblip.com/home.webp"
-                                        alt="Home Icon"
-                                        className="w-14 mb-4"
-                                    />
-                                    <h2 className="text-[24px] font-semibold text-[#415363] mb-6">Home Page</h2>
-
-                                    <div className="mb-6">
-                                        <div className="text-[#ED9C07] text-sm font-semibold rounded-full inline-block py-1">
-                                            Step 1
-                                        </div>
-                                        <p className="text-gray-700 text-sm">
-                                            Pick an ad account, campaign, then choose to launch ads in a new or existing adset.
-                                        </p>
-                                    </div>
-
-                                    <div className="mb-8">
-                                        <div className="text-[#ED9C07] text-sm font-semibold rounded-full inline-block py-1">
-                                            Step 2
-                                        </div>
-                                        <p className="text-gray-700 text-sm">
-                                            Enter your ad info and queue as many ads as you want without waiting for a job to finish!
-                                        </p>
-                                    </div>
-                                </div>
-
-
-                                <Button
-                                    onClick={onClose}
-                                    className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full mt-4 w-[180px]"
-                                >
-                                    Start Launching Ads
-                                </Button>
-                            </div>
-
-
-                            
-                            <div className="flex-1 bg-[#FDCEDF] rounded-2xl overflow-hidden flex items-center justify-center">
-                                <img
-                                    src={HomePopup}
-                                    alt="Preview UI"
-                                    className="w-full h-full object-cover "
-                                />
-                            </div>
-
-                        </div>
-                    )} */}
 
                     {/* HOME STEP */}
                     {step === "home" && (
                         <>
-                            {!hasAnySettings ? (
+                            {hasAnySettings ? (
                                 // NEW IMPORT LAYOUT
                                 <div key="home" className="w-full animate-fadeSwap text-center">
                                     <img
