@@ -1504,11 +1504,12 @@ export default function AdCreationForm({
   }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
-  const addField = (setter, values, ma) => {
-    if (values.length < 5) {
-      setter([...values, ""])
+  const addField = (setter, values) => {
+    const maxFields = isCarouselAd ? 10 : 5;
+    if (values.length < maxFields) {
+      setter([...values, ""]);
     }
-  }
+  };
 
   const removeField = (setter, values, index) => {
     if (values.length > 1) {
