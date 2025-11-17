@@ -27,7 +27,14 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            onClick={(e) => {
+                if (e.target === e.currentTarget && step === "home") {
+                    onClose();
+                }
+            }}
+        >
             <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-8 py-10 w-[520px] relative overflow-hidden text-center">
                 <div className="relative w-full transition-all duration-300">
                     {/* INITIAL STEP */}

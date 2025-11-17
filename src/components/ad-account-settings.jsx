@@ -1105,7 +1105,7 @@ transition-all duration-150 hover:!bg-black
                           <X className="w-3 h-3 text-gray-500" />
                         </Checkbox.Indicator>
                       </Checkbox>
-                      <span className="text-gray-800 text-xs">{adset ? adset.name : id}</span>
+                      <span className="text-gray-800 text-xs break-all">{adset ? adset.name : id}</span>
                     </label>
                   )
                 })}
