@@ -288,7 +288,7 @@ export default function BillingSettings() {
                                                 className="w-full h-12 rounded-2xl flex items-center justify-center gap-2 bg-zinc-800"
                                             >
                                                 <FileText className="w-4 h-4 text-white" />
-                                                View Invoices
+                                                <p className="text-white"> View Invoices </p>
                                             </Button>
                                             <Button
                                                 onClick={handleCancel}
