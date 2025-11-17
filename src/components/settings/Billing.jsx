@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-// import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CheckCircle, AlertCircle, Users, Copy, X, CreditCard, Trash2, Loader } from "lucide-react"
+import { AlertCircle, Users, FileText } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -181,6 +180,27 @@ export default function BillingSettings() {
         )
     }
 
+    const handleViewInvoices = async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/customer-portal`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            if (response.ok) {
+                const { url } = await response.json();
+                window.location.href = url;
+            } else {
+                const error = await response.json();
+                toast.error(error.message || "Failed to access customer portal");
+            }
+        } catch (error) {
+            toast.error("Failed to access customer portal");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const getStatusBadge = () => {
         if (isPaidSubscriber()) {
@@ -260,14 +280,25 @@ export default function BillingSettings() {
                                             </Button>
                                         </>
                                     ) : (
-                                        <Button
-                                            onClick={handleCancel}
-                                            variant="destructive"
-                                            disabled={isLoading}
-                                            className="w-full h-12 rounded-2xl"
-                                        >
-                                            Cancel Subscription
-                                        </Button>
+                                        <>
+                                            <Button
+                                                onClick={handleViewInvoices}
+                                                variant="outline"
+                                                disabled={isLoading}
+                                                className="w-full h-12 rounded-2xl flex items-center justify-center gap-2"
+                                            >
+                                                <FileText className="w-4 h-4" />
+                                                View Invoices
+                                            </Button>
+                                            <Button
+                                                onClick={handleCancel}
+                                                variant="destructive"
+                                                disabled={isLoading}
+                                                className="w-full h-12 rounded-2xl"
+                                            >
+                                                Cancel Subscription
+                                            </Button>
+                                        </>
                                     )}
                                 </div>
                             )}
