@@ -285,7 +285,7 @@ export default function BillingSettings() {
                                                 onClick={handleViewInvoices}
                                                 variant="outline"
                                                 disabled={isLoading}
-                                                className="w-full h-12 rounded-2xl flex items-center justify-center gap-2 bg-zinc-800"
+                                                className="w-full h-12 rounded-2xl flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-900"
                                             >
                                                 <FileText className="w-4 h-4 text-white" />
                                                 <p className="text-white"> View Invoices </p>
