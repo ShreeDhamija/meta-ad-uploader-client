@@ -190,7 +190,7 @@ export default function BillingSettings() {
 
             if (response.ok) {
                 const { url } = await response.json();
-                window.location.href = url;
+                window.open(url, '_blank');  // Changed this line
             } else {
                 const error = await response.json();
                 toast.error(error.message || "Failed to access customer portal");
