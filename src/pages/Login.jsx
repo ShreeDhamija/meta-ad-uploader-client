@@ -1,7 +1,8 @@
 import { useAuth } from "@/lib/AuthContext"
-import { useNavigate } from "react-router-dom"
-import { useEffect } from "react"
+import { useNavigate, useLocation } from "react-router-dom"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { useIntercom } from "@/lib/useIntercom";
 import SignUpImg from "../assets/signup.webp?url"
 import Rocket from "../assets/rocket2.webp?url"
@@ -9,14 +10,20 @@ import Book from "../assets/Book.webp?url"
 import Cat from "../assets/Cat.webp?url"
 import Moon from "../assets/Moon.webp?url"
 import Meteor from "../assets/Meteor.webp?url"
+import Check from "../assets/icons/check.svg"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 export default function Login() {
     const { isLoggedIn } = useAuth()
     const navigate = useNavigate()
+    const location = useLocation()
+    const [email, setEmail] = useState("")
+    const [isValidEmail, setIsValidEmail] = useState(false)
     useIntercom(true, true);
 
+    // Check if we're on the signup page
+    const isSignupPage = location.pathname === '/signup'
 
     useEffect(() => {
         if (isLoggedIn) {
@@ -24,10 +31,22 @@ export default function Login() {
         }
     }, [isLoggedIn, navigate])
 
-    const handleFacebookLogin = () => {
+    useEffect(() => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        setIsValidEmail(emailRegex.test(email))
+    }, [email])
 
+    const handleFacebookLogin = () => {
         console.log("API_BASE_URL:", API_BASE_URL);
-        window.location.href = `${API_BASE_URL}/auth/facebook?state=login`;
+
+        if (isSignupPage) {
+            // Signup flow with email
+            const encodedEmail = encodeURIComponent(email)
+            window.location.href = `${API_BASE_URL}/auth/facebook?state=signup&user_email=${encodedEmail}`;
+        } else {
+            // Login flow without email
+            window.location.href = `${API_BASE_URL}/auth/facebook?state=login`;
+        }
     }
 
     return (
@@ -67,22 +86,62 @@ export default function Login() {
                             className=" shadom-sm w-[48px] h-[48px] mx-auto rounded-md mb-2"
                         />
                         <h2 className="text-2xl font-bold tracking-tight">Welcome To Blip</h2>
-                        <p className="text-sm text-muted-foreground">Login with your facebook account to get started</p>
+                        <p className="text-sm text-muted-foreground">
+                            {isSignupPage ? 'You are so close to ditching Ads Manager forever' : 'Login with your facebook account'}
+                        </p>
                     </div>
-                    <Button
-                        onClick={handleFacebookLogin}
-                        variant="secondary"
-                        className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
-                    >
-                        <img
-                            src="https://api.withblip.com/facebooklogo.png"
-                            alt="Facebook"
-                            className="w-5 h-5"
-                        />
-                        Login with Facebook
-                    </Button>
 
+                    {isSignupPage ? (
+                        // Signup flow with email field
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-medium text-muted-foreground">Step 1.</label>
+                                    {isValidEmail && (
+                                        <img src={Check} alt="Valid" className="size-5" />
+                                    )}
+                                </div>
+                                <Input
+                                    type="email"
+                                    placeholder="Enter your work email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="rounded-xl"
+                                />
+                            </div>
 
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-muted-foreground">Step 2.</label>
+                                <Button
+                                    onClick={handleFacebookLogin}
+                                    disabled={!isValidEmail}
+                                    variant="secondary"
+                                    className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <img
+                                        src="https://api.withblip.com/facebooklogo.png"
+                                        alt="Facebook"
+                                        className="w-5 h-5"
+                                    />
+                                    Sign up with Facebook
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        // Login flow - just the button
+                        <Button
+                            onClick={handleFacebookLogin}
+                            variant="secondary"
+                            className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
+                        >
+                            <img
+                                src="https://api.withblip.com/facebooklogo.png"
+                                alt="Facebook"
+                                className="w-5 h-5"
+                            />
+                            Login with Facebook
+                        </Button>
+                    )}
 
                     <p className="text-xs text-center text-muted-foreground mt-2">
                         By clicking continue, you agree to our{" "}
