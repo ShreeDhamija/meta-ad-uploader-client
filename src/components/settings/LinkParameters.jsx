@@ -470,7 +470,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
             <div className="flex gap-2 items-center py-2">
                 <Input
-                    placeholder="Enter UTM string here"
+                    placeholder="Enter UTM string here eg: utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}&utm_term={{adset.name}}"
                     value={rawUtmString}
                     onChange={(e) => setRawUtmString(e.target.value)}
                     className="rounded-xl bg-white"

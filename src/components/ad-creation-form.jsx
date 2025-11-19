@@ -3889,7 +3889,7 @@ export default function AdCreationForm({
                         disabled={!isLoggedIn || availableLinks.length === 0}
                       >
                         <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
-                          <SelectValue placeholder={availableLinks.length === 0 ? "No links available - Add links in Settings" : "Select a link"} />
+                          <SelectValue placeholder={availableLinks.length === 0 ? "Add links in Settings or choose Custom Link Below" : "Select a link"} />
                         </SelectTrigger>
                         <SelectContent className="bg-white shadow-lg rounded-xl">
                           {availableLinks.map((linkObj, index) => (
