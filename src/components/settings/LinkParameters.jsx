@@ -273,10 +273,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
     // Add this function after handleSetAsDefault:
     const handleDeleteLink = useCallback((linkIndex) => {
-        // if (links.length <= 1) {
-        //     toast.error("Cannot delete the last link");
-        //     return;
-        // }
+
 
         const linkToDelete = links[linkIndex];
         const updatedLinks = links.filter((_, index) => index !== linkIndex);
@@ -296,7 +293,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
 
         setLinkDropdownOpen(false);
-        // toast.success("Link deleted");
+
     }, [links, selectedLinkIndex, setLinks]);
 
     return (
@@ -365,7 +362,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 <CommandList className="max-h-[500px] overflow-y-auto p-1">
                                     {links.map((link, index) => (
                                         <CommandItem
-                                            key={index}
+                                            key={link.url}
                                             value={index.toString()}
                                             onSelect={() => handleLinkSelect(index)}
                                             className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1 group relative"
@@ -385,11 +382,11 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                             <button
                                                 type="button"
                                                 className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0"
-                                                onMouseDown={(e) => {
-                                                    e.stopPropagation();
-                                                    e.preventDefault();
-                                                    handleDeleteLink(index);
-                                                }}
+                                                // onMouseDown={(e) => {
+                                                //     e.stopPropagation();
+                                                //     e.preventDefault();
+                                                //     handleDeleteLink(index);
+                                                // }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     e.preventDefault();
