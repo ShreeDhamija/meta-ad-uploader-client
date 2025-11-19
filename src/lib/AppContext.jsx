@@ -11,6 +11,7 @@ export const AppProvider = ({ children }) => {
   const [adAccounts, setAdAccounts] = useState([])
   const [allAdAccounts, setAllAdAccounts] = useState([]);
   const [pagesLoading, setPagesLoading] = useState(false);
+  const [adAccountsLoading, setAdAccountsLoading] = useState(false);
 
   const { subscriptionData } = useSubscription()
   const { selectedAdAccountIds } = useGlobalSettings() // Changed from selectedAdAccountId
@@ -33,6 +34,7 @@ export const AppProvider = ({ children }) => {
 
   useEffect(() => {
     const fetchAdAccounts = async () => {
+      setAdAccountsLoading(true);
       try {
         const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, {
           credentials: "include",
@@ -45,6 +47,8 @@ export const AppProvider = ({ children }) => {
         }
       } catch (err) {
         console.error("Failed to fetch ad accounts:", err)
+      } finally {
+        setAdAccountsLoading(false);
       }
     }
     const fetchPages = async () => {
@@ -77,7 +81,7 @@ export const AppProvider = ({ children }) => {
 
   return (
     <AppContext.Provider value={{
-      pages, setPages, adAccounts, setAdAccounts, allAdAccounts, pagesLoading
+      pages, setPages, adAccounts, setAdAccounts, allAdAccounts, pagesLoading, adAccountsLoading
     }}>
       {children}
     </AppContext.Provider>

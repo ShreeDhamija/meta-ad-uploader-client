@@ -51,7 +51,7 @@ const DEFAULT_AD_NAME_FORMULA = {
 };
 
 export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAccountPopup, subscriptionData }) {
-  const { adAccounts, pages } = useAppData()
+  const { adAccounts, pages, adAccountsLoading } = useAppData()
   const [selectedAdAccount, setSelectedAdAccount] = useState(preselectedAdAccount || null)
   const [openAdAccount, setOpenAdAccount] = useState(false)
   const [searchValue, setSearchValue] = useState("")
@@ -365,7 +365,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           <label className="text-md font-medium text-gray-800">Select Ad Account</label>
           <div className="flex items-center gap-2">
 
-            {(subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter'  ) && (
+            {(subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (
               <Button
                 size="sm"
                 variant="outline"
@@ -443,23 +443,31 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                 className="bg-white"
               />
               <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                <CommandGroup>
-                  {filteredAdAccounts.map((acct) => (
-                    <CommandItem
-                      key={acct.id}
-                      value={acct.id}
-                      onSelect={handleAdAccountSelect}
-                      className={`
+                {adAccountsLoading ? (
+                  <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
+                    <Loader className="h-4 w-4 animate-spin" />
+                    Fetching ad accounts...
+                  </div>
+                ) : (
+
+                  <CommandGroup>
+                    {filteredAdAccounts.map((acct) => (
+                      <CommandItem
+                        key={acct.id}
+                        value={acct.id}
+                        onSelect={handleAdAccountSelect}
+                        className={`
                         px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150
                         hover:bg-gray-100
                         ${selectedAdAccount === acct.id ? "bg-gray-100 font-semibold" : ""}
                         `}
-                      data-selected={acct.id === selectedAdAccount}
-                    >
-                      {acct.name || acct.id}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                        data-selected={acct.id === selectedAdAccount}
+                      >
+                        {acct.name || acct.id}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
               </CommandList>
             </Command>
           </PopoverContent>

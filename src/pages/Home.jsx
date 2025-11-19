@@ -153,7 +153,7 @@ export default function Home() {
     const [fileGroups, setFileGroups] = useState([]);
     const [files, setFiles] = useState([])
     const [videoThumbs, setVideoThumbs] = useState({})
-    const { adAccounts, setAdAccounts, pages, setPages, pagesLoading } = useAppData()
+    const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading } = useAppData()
     const { settings: adAccountSettings, documentExists } = useAdAccountSettings(selectedAdAccount)
     const [hasAnyAdAccountSettings, setHasAnyAdAccountSettings] = useState(false);
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
@@ -472,6 +472,7 @@ export default function Home() {
                             setAdAccounts={setAdAccounts}
                             selectedAdAccount={selectedAdAccount}
                             setSelectedAdAccount={setSelectedAdAccount}
+                            adAccountsLoading={adAccountsLoading}
                             campaigns={campaigns}
                             setCampaigns={setCampaigns}
                             selectedCampaign={selectedCampaign}

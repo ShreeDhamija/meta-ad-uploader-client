@@ -33,6 +33,7 @@ export default function AdAccountSettings({
   setAdAccounts,
   selectedAdAccount,
   setSelectedAdAccount,
+  adAccountsLoading,
   campaigns,
   setCampaigns,
   selectedCampaign,
@@ -460,33 +461,40 @@ export default function AdAccountSettings({
                   />
                   <CommandEmpty>No ad account found.</CommandEmpty>
                   <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                    <CommandGroup>
-                      {filteredAccounts.length > 0 ? (
-                        filteredAccounts.map((acct) => (
-                          <CommandItem
-                            key={acct.id}
-                            value={acct.id}
-                            onSelect={() => {
-                              handleAdAccountChange(acct.id)
-                              setOpen(false)
-                            }}
-                            className={cn(
-                              "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                              "data-[selected=true]:bg-gray-100",
-                              selectedAdAccount === acct.id && "bg-gray-100 rounded-xl font-semibold",
-                              "hover:bg-gray-100",
-                            )}
-                            data-selected={acct.id === selectedAdAccount}
-                          >
-                            {acct.name || acct.id}
+                    {(isLoadingAdAccounts || adAccountsLoading) ? (
+                      <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
+                        <Loader className="h-4 w-4 animate-spin" />
+                        Fetching ad accounts...
+                      </div>
+                    ) : (
+                      <CommandGroup>
+                        {filteredAccounts.length > 0 ? (
+                          filteredAccounts.map((acct) => (
+                            <CommandItem
+                              key={acct.id}
+                              value={acct.id}
+                              onSelect={() => {
+                                handleAdAccountChange(acct.id)
+                                setOpen(false)
+                              }}
+                              className={cn(
+                                "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                "data-[selected=true]:bg-gray-100",
+                                selectedAdAccount === acct.id && "bg-gray-100 rounded-xl font-semibold",
+                                "hover:bg-gray-100",
+                              )}
+                              data-selected={acct.id === selectedAdAccount}
+                            >
+                              {acct.name || acct.id}
+                            </CommandItem>
+                          ))
+                        ) : (
+                          <CommandItem disabled className="opacity-50 cursor-not-allowed">
+                            No ad account found.
                           </CommandItem>
-                        ))
-                      ) : (
-                        <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                          No ad account found.
-                        </CommandItem>
-                      )}
-                    </CommandGroup>
+                        )}
+                      </CommandGroup>
+                    )}
                   </CommandList>
                 </Command>
 
