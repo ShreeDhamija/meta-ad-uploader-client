@@ -470,15 +470,15 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
             <div className="flex gap-2 items-center py-2">
                 <Input
-                    placeholder="Enter UTM string here eg: utm_source=facebook&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}&utm_term={{adset.name}}"
+                    placeholder="Enter UTM string here eg: utm_source=facebook&utm_campaign={{campaign.name}}&utm_medium=paid&utm_content={{ad.name}}&utm_term={{adset.name}}"
                     value={rawUtmString}
                     onChange={(e) => setRawUtmString(e.target.value)}
-                    className="rounded-xl bg-white"
+                    className="rounded-xl bg-white placeholder:text-xs"
                 />
                 <Button
                     onClick={handleExtractUtms}
                     disabled={!rawUtmString}
-                    className="bg-blue-600 text-white text-xs rounded-xl hover:bg-blue-700 whitespace-nowrap placeholder:text-xs"
+                    className="bg-blue-600 text-white text-xs rounded-xl hover:bg-blue-700 whitespace-nowrap "
                 >
 
                     Extract UTMs
