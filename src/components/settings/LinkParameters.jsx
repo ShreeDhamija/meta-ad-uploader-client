@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, memo } from "react"
+import { useState, useCallback, useMemo, memo, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Trash2, Plus, ChevronDown } from "lucide-react"
@@ -40,29 +40,63 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     const [showAddForm, setShowAddForm] = useState(false)
     const [newLinkUrl, setNewLinkUrl] = useState("")
     const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
-    const [selectedLinkIndex, setSelectedLinkIndex] = useState(0) // Frontend-only selection
+    // const [selectedLinkIndex, setSelectedLinkIndex] = useState(0) // Frontend-only selection
+    const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
+
+
+
+    // Show add form when no links exist
+    useEffect(() => {
+        setShowAddForm(links.length === 0);
+    }, [links.length]);
 
     // Get currently selected link (frontend logic only)
+    // const selectedLink = useMemo(() => {
+    //     if (links.length === 0) return null;
+
+    //     // If selectedIndex is valid, use it
+    //     if (selectedLinkIndex >= 0 && selectedLinkIndex < links.length) {
+    //         return links[selectedLinkIndex];
+    //     }
+
+    //     // Otherwise find default link or use first one
+    //     const defaultLink = links.find(link => link.isDefault);
+    //     if (defaultLink) {
+    //         const defaultIndex = links.indexOf(defaultLink);
+    //         setSelectedLinkIndex(defaultIndex);
+    //         return defaultLink;
+    //     }
+
+    //     // Fall back to first link
+    //     setSelectedLinkIndex(0);
+    //     return links[0];
+    // }, [links, selectedLinkIndex]);
     const selectedLink = useMemo(() => {
         if (links.length === 0) return null;
+
+        // First priority: Find and use default link if no explicit selection has been made
+        if (selectedLinkIndex === null) {
+            const defaultLink = links.find(link => link.isDefault);
+            if (defaultLink) {
+                const defaultIndex = links.indexOf(defaultLink);
+                setSelectedLinkIndex(defaultIndex);
+                return defaultLink;
+            }
+            // If no default, use first link
+            setSelectedLinkIndex(0);
+            return links[0];
+        }
 
         // If selectedIndex is valid, use it
         if (selectedLinkIndex >= 0 && selectedLinkIndex < links.length) {
             return links[selectedLinkIndex];
         }
 
-        // Otherwise find default link or use first one
-        const defaultLink = links.find(link => link.isDefault);
-        if (defaultLink) {
-            const defaultIndex = links.indexOf(defaultLink);
-            setSelectedLinkIndex(defaultIndex);
-            return defaultLink;
-        }
-
-        // Fall back to first link
+        // Fallback if index is somehow invalid
         setSelectedLinkIndex(0);
         return links[0];
     }, [links, selectedLinkIndex]);
+
 
     // Memoized handlers for UTM pairs
     const handlePairChange = useCallback((index, field, value) => {
