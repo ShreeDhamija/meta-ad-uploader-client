@@ -3948,7 +3948,7 @@ export default function AdCreationForm({
                             className="border-gray-300 w-4 h-4 rounded-md"
                           />
                           <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
-                            Use custom link
+                            Enter custom link
                           </label>
                         </div>
                       </div>

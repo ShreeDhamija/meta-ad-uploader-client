@@ -143,6 +143,30 @@ export default function Login() {
                         </Button>
                     )}
 
+
+
+                    {isSignupPage ? (
+                        <p className="text-sm text-center text-muted-foreground">
+                            Already have an account?{" "}
+                            <button
+                                onClick={() => navigate('/login')}
+                                className="font-bold underline text-blue-600 hover:text-blue-800"
+                            >
+                                Head to Login
+                            </button>
+                        </p>
+                    ) : (
+                        <p className="text-sm text-center text-muted-foreground">
+                            New user?{" "}
+                            <button
+                                onClick={() => navigate('/signup')}
+                                className="font-bold underline text-blue-600 hover:text-blue-800"
+                            >
+                                Head to Sign Up Page
+                            </button>
+                        </p>
+                    )}
+
                     <p className="text-xs text-center text-muted-foreground mt-2">
                         By clicking continue, you agree to our{" "}
                         <br></br>
