@@ -459,7 +459,7 @@ export default function AdAccountSettings({
                     value={searchValue}
                     onValueChange={setSearchValue}
                   />
-                  <CommandEmpty>No ad account found.</CommandEmpty>
+                  {/* <CommandEmpty>No ad account found.</CommandEmpty> */}
                   <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                     {(isLoadingAdAccounts || adAccountsLoading) ? (
                       <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
