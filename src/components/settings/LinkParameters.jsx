@@ -272,8 +272,9 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     )
 
     // Add this function after handleSetAsDefault:
-    const handleDeleteLink = useCallback((linkIndex) => {
-
+    const handleDeleteLink = useCallback((linkUrl) => {
+        const linkIndex = links.findIndex(l => l.url === linkUrl);
+        if (linkIndex === -1) return;
 
         const linkToDelete = links[linkIndex];
         const updatedLinks = links.filter((_, index) => index !== linkIndex);
@@ -293,7 +294,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
 
         setLinkDropdownOpen(false);
-
     }, [links, selectedLinkIndex, setLinks]);
 
     return (
@@ -363,7 +363,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     {links.map((link, index) => (
                                         <CommandItem
                                             key={link.url}
-                                            value={index.toString()}
+                                            value={link.url} // CHANGE: Use URL instead of index.toString()
                                             onSelect={() => handleLinkSelect(index)}
                                             className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl m-1 group relative"
                                         >
@@ -382,15 +382,10 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                             <button
                                                 type="button"
                                                 className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0"
-                                                // onMouseDown={(e) => {
-                                                //     e.stopPropagation();
-                                                //     e.preventDefault();
-                                                //     handleDeleteLink(index);
-                                                // }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     e.preventDefault();
-                                                    handleDeleteLink(index);
+                                                    handleDeleteLink(link.url); // CHANGE: Pass link.url instead of index
                                                 }}
                                             >
                                                 <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
