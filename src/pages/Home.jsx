@@ -643,6 +643,12 @@ export default function Home() {
                             setShowTrialExpiredPopup(false);
                             setHasDismissedTrialPopup(true);
                         }}
+                        joinTeam={() => {
+                            // Navigate to billing tab in settings
+                            navigate("/settings?tab=team");
+                            setShowTrialExpiredPopup(false);
+                            setHasDismissedTrialPopup(true);
+                        }}
                         onChatWithUs={() => {
                             showMessenger();
                             setShowTrialExpiredPopup(false);

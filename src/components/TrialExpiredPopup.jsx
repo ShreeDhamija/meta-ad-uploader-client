@@ -2,7 +2,7 @@ import React from 'react';
 import { X, MessageCircle } from 'lucide-react';
 import Rocket2 from '@/assets/rocket2.webp';
 
-const TrialExpiredPopup = ({ onClose, onUpgrade, onChatWithUs }) => {
+const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs }) => {
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) {
             onClose();
@@ -34,7 +34,7 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, onChatWithUs }) => {
                     <p className="text-gray-500 text-center text-sm">
                         We hope you've found using Blip helpful!
                     </p>
-                   
+
                     {/* Heading */}
                     <p className="text-3xl font-bold text-gray-800 text-center mb-4 leading-tight">
                         Your Trial Has Expired
@@ -48,6 +48,15 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, onChatWithUs }) => {
                         className="w-[300px] bg-[#F72585] text-white font-bold py-4 px-8 rounded-full text-xl"
                     >
                         Upgrade To Pro
+                    </button>
+                </div>
+                <div className="flex justify-center mb-4">
+
+                    <button
+                        onClick={joinTeam}
+                        className="w-[300px] bg-zinc-800 hover:bg-zinc-900 text-white font-bold py-4 px-8 rounded-full text-xl"
+                    >
+                        Join a Team
                     </button>
                 </div>
                 {/* Need Help Label */}
@@ -64,11 +73,11 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, onChatWithUs }) => {
                         <MessageCircle size={16} />
                         Chat With Us
                     </button>
-                    
+
                 </div>
-                 <p className="text-gray-400 text-center text-xs mt-4">
-                        If you're part of a team, ask your team lead to subscribe. <br></br>It will grant access to the whole team
-                    </p>
+                <p className="text-gray-400 text-center text-xs mt-4">
+                    If you're part of a team, ask your team lead to subscribe. <br></br>It will grant access to the whole team
+                </p>
             </div>
         </div >
     );
