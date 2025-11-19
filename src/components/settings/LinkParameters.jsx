@@ -37,8 +37,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     const [isFetchingTags, setIsFetchingTags] = useState(false)
 
     // Frontend-only states for link management
-    // const [showAddForm, setShowAddForm] = useState(false)
-    const [showAddForm, setShowAddForm] = useState(links.length === 0)
+    const [showAddForm, setShowAddForm] = useState(false)
     const [newLinkUrl, setNewLinkUrl] = useState("")
     const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(0) // Frontend-only selection
