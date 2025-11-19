@@ -40,7 +40,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     const [showAddForm, setShowAddForm] = useState(false)
     const [newLinkUrl, setNewLinkUrl] = useState("")
     const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
-    // const [selectedLinkIndex, setSelectedLinkIndex] = useState(0) // Frontend-only selection
+    const [rawUtmString, setRawUtmString] = useState("");
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
 
 
@@ -50,26 +50,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         setShowAddForm(links.length === 0);
     }, [links.length]);
 
-    // Get currently selected link (frontend logic only)
-    // const selectedLink = useMemo(() => {
-    //     if (links.length === 0) return null;
-
-    //     // If selectedIndex is valid, use it
-    //     if (selectedLinkIndex >= 0 && selectedLinkIndex < links.length) {
-    //         return links[selectedLinkIndex];
-    //     }
-
-    //     // Otherwise find default link or use first one
-    //     const defaultLink = links.find(link => link.isDefault);
-    //     if (defaultLink) {
-    //         const defaultIndex = links.indexOf(defaultLink);
-    //         setSelectedLinkIndex(defaultIndex);
-    //         return defaultLink;
-    //     }
-
-    //     // Fall back to first link
-    //     setSelectedLinkIndex(0);
-    //     return links[0];
     // }, [links, selectedLinkIndex]);
     const selectedLink = useMemo(() => {
         if (links.length === 0) return null;
@@ -242,6 +222,34 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             setIsFetchingTags(false);
         }
     }, [selectedAdAccount])
+
+
+    const handleExtractUtms = useCallback(() => {
+        if (!rawUtmString.trim()) return;
+
+        // Handle if user pastes full URL (split by ?) or just the query string
+        const queryString = rawUtmString.includes('?') ? rawUtmString.split('?')[1] : rawUtmString;
+
+        const newPairs = queryString.split('&')
+            .filter(part => part.includes('=')) // Ensure valid pair
+            .map(part => {
+                const [key, ...valueParts] = part.split('=');
+                // Join rest in case value contains '='
+                return {
+                    key: key.trim(),
+                    value: valueParts.join('=').trim()
+                };
+            });
+
+        if (newPairs.length > 0) {
+            setUtmPairs(newPairs);
+            setRawUtmString("");
+            toast.success("UTMs extracted successfully");
+        } else {
+            toast.error("No valid UTM parameters found");
+        }
+    }, [rawUtmString, setUtmPairs]);
+
 
     const handleCloseImportPopup = useCallback(() => {
         setShowImportPopup(false);
@@ -456,10 +464,27 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             <div className="space-y-1 pt-2">
                 <label className="text-sm font-semibold">UTM Parameters</label>
                 <p className="text-xs text-gray-500">
-                    We have pre filled your link parameters with the most commonly used values. You can delete or change them.
-                    All links use the same parameters.
+                    We have pre filled your link parameters with some commonly used values.<br></br> You can edit them in the column, or paste your existing string of UTMs and we will extract the values.
                 </p>
             </div>
+
+            <div className="flex gap-2 items-center py-2">
+                <Input
+                    placeholder="Enter UTM string here"
+                    value={rawUtmString}
+                    onChange={(e) => setRawUtmString(e.target.value)}
+                    className="rounded-xl bg-white"
+                />
+                <Button
+                    onClick={handleExtractUtms}
+                    disabled={!rawUtmString}
+                    className="bg-blue-600 text-white rounded-xl hover:bg-blue-700 whitespace-nowrap"
+                >
+
+                    Extract UTMs
+                </Button>
+            </div>
+
 
             {/* Key/Value Grid */}
             <div className="flex flex-col space-y-5">
