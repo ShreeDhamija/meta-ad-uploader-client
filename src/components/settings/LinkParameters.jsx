@@ -478,7 +478,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 <Button
                     onClick={handleExtractUtms}
                     disabled={!rawUtmString}
-                    className="bg-blue-600 text-white text-xs rounded-xl hover:bg-blue-700 whitespace-nowrap"
+                    className="bg-blue-600 text-white text-xs rounded-xl hover:bg-blue-700 whitespace-nowrap placeholder:text-xs"
                 >
 
                     Extract UTMs
