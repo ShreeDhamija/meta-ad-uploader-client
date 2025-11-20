@@ -41,14 +41,6 @@ const DEFAULT_ENHANCEMENTS = {
   textGeneration: false,
 };
 
-const DEFAULT_AD_NAME_FORMULA = {
-  order: ["adType", "dateType", "fileName", "iteration"],
-  selected: [],
-  values: {
-    dateType: "MonthYYYY",
-    customTexts: {}
-  }
-};
 
 export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAccountPopup, subscriptionData }) {
   const { adAccounts, pages, adAccountsLoading } = useAppData()
@@ -62,16 +54,18 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
 
   const [links, setLinks] = useState([]) // Array of {url, isDefault}
-  const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
+  // const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
+  const [utmPairs, setUtmPairs] = useState([])
+
   const [defaultCTA, setDefaultCTA] = useState("Learn More")
   const [copyTemplates, setCopyTemplates] = useState({})
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
-  const [mainButtonVisible, setMainButtonVisible] = useState(false)
-  const [showFloatingButton, setShowFloatingButton] = useState(false)
-  const [animateClass, setAnimateClass] = useState("")
+  // const [mainButtonVisible, setMainButtonVisible] = useState(false)
+  // const [showFloatingButton, setShowFloatingButton] = useState(false)
+  // const [animateClass, setAnimateClass] = useState("")
   const [isReauthOpen, setIsReauthOpen] = useState(false)
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
   // Add a ref to track template-only updates
@@ -153,7 +147,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const calculateInitialSettings = useCallback((adSettings) => {
     const utms = Array.isArray(adSettings.defaultUTMs) && adSettings.defaultUTMs.length > 0
       ? adSettings.defaultUTMs
-      : DEFAULT_UTM_PAIRS;
+      : [];
+
 
 
 
@@ -253,22 +248,22 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     utmPairs,
     enhancements,
     adNameFormulaV2,
-    isFirstEverSave  // Add this to dependencies
-    // Add to dependencies
+    isFirstEverSave
+
 
   ]);
 
   // Effect for floating button animation
-  useEffect(() => {
-    if (hasChanges && !mainButtonVisible) {
-      setShowFloatingButton(true);
-      setAnimateClass("floating-save-button-enter");
-    } else if (showFloatingButton) {
-      setAnimateClass("floating-save-button-exit");
-      const timeoutId = setTimeout(() => setShowFloatingButton(false), 300);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [hasChanges, mainButtonVisible, showFloatingButton]);
+  // useEffect(() => {
+  //   if (hasChanges && !mainButtonVisible) {
+  //     setShowFloatingButton(true);
+  //     setAnimateClass("floating-save-button-enter");
+  //   } else if (showFloatingButton) {
+  //     setAnimateClass("floating-save-button-exit");
+  //     const timeoutId = setTimeout(() => setShowFloatingButton(false), 300);
+  //     return () => clearTimeout(timeoutId);
+  //   }
+  // }, [hasChanges, mainButtonVisible, showFloatingButton]);
 
   // Auto-save links with debounce
 
@@ -298,21 +293,21 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, [links]);
 
   // Effect for intersection observer
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setMainButtonVisible(entry.isIntersecting);
-      },
-      { threshold: 0.5 }
-    );
+  // useEffect(() => {
+  //   const observer = new IntersectionObserver(
+  //     ([entry]) => {
+  //       setMainButtonVisible(entry.isIntersecting);
+  //     },
+  //     { threshold: 0.5 }
+  //   );
 
-    const mainSaveButton = document.getElementById("main-save-button");
-    if (mainSaveButton) observer.observe(mainSaveButton);
+  //   const mainSaveButton = document.getElementById("main-save-button");
+  //   if (mainSaveButton) observer.observe(mainSaveButton);
 
-    return () => {
-      if (mainSaveButton) observer.unobserve(mainSaveButton);
-    };
-  }, []);
+  //   return () => {
+  //     if (mainSaveButton) observer.unobserve(mainSaveButton);
+  //   };
+  // }, []);
 
   // Effect for dirty state tracking
   useEffect(() => {
@@ -533,7 +528,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
           <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
 
-          <div className="pt-2">
+          {/* <div className="pt-2">
             <Button
               id="main-save-button"
               className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[45px]"
@@ -541,11 +536,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             >
               Save Settings
             </Button>
-          </div>
+          </div> */}
         </div>
       </fieldset>
 
-      {showFloatingButton && (
+      {/* {showFloatingButton && (
         <div
           className={`fixed bottom-6 right-6 z-50 ${animateClass}`}
           style={{
@@ -565,7 +560,24 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             Save Settings
           </Button>
         </div>
-      )}
+      )} */}
+      {/* New Floating Save Bar */}
+      <div
+        className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ease-in-out ${hasChanges ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0 pointer-events-none"
+          }`}
+      >
+        <div className="bg-[#18181b] text-white pl-6 pr-2 py-2 rounded-full shadow-2xl flex items-center gap-6 border border-zinc-700/50">
+          <span className="text-sm font-medium text-zinc-100">
+            You have unsaved changes
+          </span>
+          <Button
+            onClick={handleSave}
+            className="bg-blue-600 hover:bg-blue-500 text-white rounded-full px-6 h-9 text-sm font-medium transition-colors"
+          >
+            Save Changes
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }
