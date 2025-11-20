@@ -26,7 +26,7 @@ const DEFAULT_PREFILL_PAIRS = [
     { key: "utm_term", value: "{{adset.name}}" }
 ];
 
-function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount }) {
+function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount, onSave }) {
     const [inputValue, setInputValue] = useState("")
     const [openIndex, setOpenIndex] = useState(null)
 
@@ -46,6 +46,16 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     const [linkDropdownOpen, setLinkDropdownOpen] = useState(false)
     const [rawUtmString, setRawUtmString] = useState("");
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
+
+    const [tempUtmPairs, setTempUtmPairs] = useState([]);
+
+    // 2. TEMP HANDLERS
+    const handleTempPairChange = useCallback((index, field, value) => {
+        setTempUtmPairs(prev => prev.map((pair, i) => i === index ? { ...pair, [field]: value } : pair))
+    }, []);
+    const handleAddTempPair = useCallback(() => setTempUtmPairs(prev => [...prev, { key: "", value: "" }]), []);
+    const handleDeleteTempPair = useCallback((index) => setTempUtmPairs(prev => prev.filter((_, i) => i !== index)), []);
+
 
     // Show add form when no links exist
     useEffect(() => {
@@ -126,6 +136,8 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
     }, [linkImportPreview, links, setLinks]);
 
+
+
     const handleAddNewLink = useCallback(() => {
         if (!newLinkUrl.trim()) {
             toast.error("Please enter a link URL");
@@ -144,6 +156,8 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         setNewLinkUrl("");
         setShowAddForm(false);
     }, [newLinkUrl, links, setLinks]);
+
+
 
     const handleSetAsDefault = useCallback(() => {
         if (!selectedLink || selectedLink.isDefault) return;
@@ -171,6 +185,8 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
         setLinkDropdownOpen(false);
     }, [links, selectedLinkIndex, setLinks]);
+
+
 
 
     // --- API: Import Links Only ---
@@ -203,40 +219,33 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
     // --- API: Setup UTMs (Fetch & Modal) ---
     const handleOpenUtmSetup = useCallback(async () => {
-        if (!selectedAdAccount) {
-            toast.error("No ad account selected");
-            return;
-        }
+        if (!selectedAdAccount) return;
 
         setShowUtmSetupModal(true);
         setIsFetchingUtms(true);
-        setUtmFetchError(false);
+
+        // Copy current real settings to draft
+        let currentPairs = utmPairs.length > 0 ? [...utmPairs] : [];
+        setTempUtmPairs(currentPairs);
 
         try {
-            const res = await fetch(
-                `${API_BASE_URL}/auth/fetch-recent-utms?adAccountId=${selectedAdAccount}`,
-                { credentials: "include" }
-            );
+            const res = await fetch(`${API_BASE_URL}/auth/fetch-recent-utms?adAccountId=${selectedAdAccount}`, { credentials: "include" });
             const data = await res.json();
 
             if (data.pairs && data.pairs.length > 0) {
-                setUtmPairs(data.pairs);
-            } else {
-                // Requirement 5: No UTMs found label, suggest default pairs
-                // We set the default pairs if the current list is empty to help the user
-                if (utmPairs.length === 0) {
-                    setUtmPairs(DEFAULT_PREFILL_PAIRS);
-                }
-                setUtmFetchError(true); // Used to show the "No found, here are defaults" message
+                setTempUtmPairs(data.pairs); // Update Draft
+                setUtmFetchSuccess(true);
+            } else if (currentPairs.length === 0) {
+                setTempUtmPairs(DEFAULT_PREFILL_PAIRS); // Suggest Defaults in Draft
+                setUtmFetchError(true);
             }
         } catch (err) {
-            console.error("UTM import error:", err);
-            toast.error("Failed to fetch recent UTMs");
-            if (utmPairs.length === 0) setUtmPairs(DEFAULT_PREFILL_PAIRS);
+            if (currentPairs.length === 0) setTempUtmPairs(DEFAULT_PREFILL_PAIRS);
         } finally {
             setIsFetchingUtms(false);
         }
-    }, [selectedAdAccount, setUtmPairs, utmPairs.length]);
+    }, [selectedAdAccount, utmPairs]);
+
 
 
     const handleExtractUtms = useCallback(() => {
@@ -261,6 +270,13 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             toast.error("No valid UTM parameters found");
         }
     }, [rawUtmString, setUtmPairs]);
+
+    const handleSaveUtms = useCallback(async () => {
+        setUtmPairs(tempUtmPairs); // Update local UI
+        setShowUtmSetupModal(false); // Close popup
+        if (onSave) await onSave({ defaultUTMs: tempUtmPairs }); // Save to DB
+    }, [tempUtmPairs, setUtmPairs, onSave]);
+
 
 
     // Memoized filtered suggestions
@@ -602,7 +618,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
 
                                     <div className="flex flex-col space-y-3">
-                                        {utmPairs.map((pair, i) => (
+                                        {tempUtmPairs.map((pair, i) => (
                                             <div key={i} className="flex gap-2 items-center">
                                                 {/* Requirement 3: Equal width columns (flex-1) */}
                                                 <Input
@@ -676,20 +692,10 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-gray-200 flex justify-end gap-2 bg-white rounded-b-2xl">
+                        <div className="p-4 bg-white rounded-b-2xl border-t border-gray-200">
                             <Button
-                                variant="outline"
-                                className="rounded-xl"
-                                onClick={() => setShowUtmSetupModal(false)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                className="bg-black text-white rounded-xl hover:bg-zinc-800 px-6"
-                                onClick={() => {
-                                    setShowUtmSetupModal(false);
-                                    // toast.success("UTMs saved");
-                                }}
+                                className="w-full bg-black text-white rounded-xl hover:bg-zinc-800 h-10"
+                                onClick={handleSaveUtms}
                             >
                                 Save & Close
                             </Button>

@@ -171,13 +171,13 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, []);
 
   // Optimized save handler
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (overrides = {}) => {
     if (!selectedAdAccount) {
       alert("Select an Ad Account first");
       return;
     }
-    console.log("🔍 HandleSave Debug:");
-    console.log("- isFirstEverSave value:", isFirstEverSave);
+
+    const currentUtms = overrides.defaultUTMs !== undefined ? overrides.defaultUTMs : utmPairs;
 
 
     const adAccountSettings = {
@@ -185,7 +185,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultInstagram: selectedInstagram,
       links: links,
       defaultCTA,
-      defaultUTMs: utmPairs,
+      defaultUTMs: currentUtms, // <--- Use the variable
       creativeEnhancements: enhancements,
       adNameFormulaV2: {
         rawInput: adNameFormulaV2?.rawInput || ""
@@ -220,7 +220,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         defaultInstagram: selectedInstagram,
         links: links,
         defaultCTA,
-        defaultUTMs: utmPairs,
+        defaultUTMs: currentUtms, // <--- Update this too
         creativeEnhancements: enhancements,
         adNameFormulaV2: adNameFormulaV2  // Add this line too
 
@@ -487,6 +487,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             utmPairs={utmPairs}
             setUtmPairs={setUtmPairs}
             selectedAdAccount={selectedAdAccount}
+            onSave={handleSave} // <--- PASS THIS
+
           />
 
           <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
@@ -496,22 +498,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         </div>
       </fieldset>
 
-      {/* <div
-        className={`sticky bottom-4 z-50 w-full transition-all duration-300 ease-in-out ${hasChanges ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0 pointer-events-none"
-          }`}
-      >
-        <div className="bg-blue-600 text-white px-4 pr-2 py-2 rounded-2xl shadow-xl flex items-center justify-between border border-blue-500/50">
-          <span className="text-sm font-medium">
-            You have unsaved changes
-          </span>
-          <Button
-            onClick={handleSave}
-            className="bg-white text-blue-600 hover:bg-blue-50 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
-          >
-            Save Changes
-          </Button>
-        </div>
-      </div> */}
+
       {/* Portal Save Bar */}
       {document.getElementById('settings-save-bar-portal') && createPortal(
         <div
@@ -519,7 +506,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             }`}
         >
 
-          <div className="mx-auto max-w-3xl px-6 py-2 flex items-center justify-center gap-4">
+          <div className="mx-auto max-w-3xl px-6 py-1.5 flex items-center justify-center gap-4">
             <span className="text-sm font-medium">
               You have unsaved changes
             </span>
