@@ -263,13 +263,18 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             });
 
         if (newPairs.length > 0) {
-            setUtmPairs(newPairs);
+            // CHANGE THIS LINE:
+            // setUtmPairs(newPairs); 
+
+            // TO THIS:
+            setTempUtmPairs(newPairs);
+
             setRawUtmString("");
             toast.success("UTMs extracted successfully");
         } else {
             toast.error("No valid UTM parameters found");
         }
-    }, [rawUtmString, setUtmPairs]);
+    }, [rawUtmString, setTempUtmPairs]); // Update dependency here as well
 
     const handleSaveUtms = useCallback(() => {
         setUtmPairs(tempUtmPairs);
