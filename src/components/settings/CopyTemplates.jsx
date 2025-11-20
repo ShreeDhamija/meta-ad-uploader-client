@@ -769,28 +769,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       </div>
 
       <div className="space-y-2 pt-2">
-        {/* <Button
-          className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
-          onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
-
-        >
-          {nameAlreadyExists
-            ? "This template name already exists"
-            : isProcessing
-              ? "Saving..."
-              : !templateName.trim() && (primaryTexts.some(t => t.trim()) || headlines.some(t => t.trim()))
-                ? "Enter Template Name to Save"
-                : "Save Template"
-          }
-
-        </Button> */}
-        {/* {templateChanged && !nameAlreadyExists && (
-          <p className="text-xs text-red-500 bg-red-200 rounded-xl border border-bg-100 text-left mt-1 p-2">
-            *You have unsaved changes
-          </p>
-        )} */}
-
 
         {/* Bottom row with remaining two buttons split 50/50 */}
         <div className="flex gap-4">

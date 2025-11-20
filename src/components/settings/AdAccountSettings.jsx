@@ -470,7 +470,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         >
           <div className="mx-auto max-w-3xl px-6 py-1.5 flex items-center justify-center gap-4">
             <span className="text-sm font-medium">
-              You have unsaved changes
+              You have unsaved changes to Settings
             </span>
             <Button
               onClick={handleSave}
