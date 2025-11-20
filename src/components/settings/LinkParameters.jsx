@@ -1128,13 +1128,15 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
                 {/* Show summary if pairs exist, otherwise just button */}
                 {utmPairs.length > 0 && (
-                    <div className="mb-3 flex flex-wrap gap-2">
-                        {utmPairs.slice(0, 3).map((pair, i) => (
-                            pair.key && <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded-md text-gray-600">
-                                {pair.key}={pair.value}
-                            </span>
-                        ))}
-                        {utmPairs.length > 3 && <span className="text-xs text-gray-500 py-1">+{utmPairs.length - 3} more</span>}
+                    <div className="mb-3">
+                        <p className="text-xs font-medium text-gray-900 mb-2">Saved UTMs</p>
+                        <div className="flex flex-wrap gap-2">
+                            {utmPairs.map((pair, i) => (
+                                pair.key && <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded-md text-gray-600">
+                                    {pair.key}={pair.value}
+                                </span>
+                            ))}
+                        </div>
                     </div>
                 )}
 
@@ -1275,7 +1277,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             ) : (
                                 <>
                                     {/* Requirement 5: No UTMs found label */}
-                                    {utmFetchSuccess && (
+                                    {!utmFetchError && (
                                         <div className="mb-4 p-3 bg-green-50 text-green-800 text-xs rounded-xl border border-green-100">
                                             We found these UTMs from your recent ads.
                                         </div>
