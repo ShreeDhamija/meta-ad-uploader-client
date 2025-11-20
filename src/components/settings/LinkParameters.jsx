@@ -461,10 +461,10 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             {/* --- MODAL 1: IMPORT LINKS (Modified to remove Tabs) --- */}
             {showLinkImportModal && (
                 <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
+                    style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
                     onClick={() => setShowLinkImportModal(false)}
                 >
                     <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200"
-                        style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="sticky top-0 bg-white z-10 px-6 py-6 border-b border-gray-200 flex justify-between items-center">
@@ -534,10 +534,10 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             {/* --- MODAL 2: UTM SETUP (New Requirement) --- */}
             {showUtmSetupModal && (
                 <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
+                    style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
                     onClick={() => setShowUtmSetupModal(false)}
                 >
                     <div className="bg-white rounded-2xl max-h-[85vh] w-[600px] shadow-xl relative border border-gray-200 flex flex-col"
-                        style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}

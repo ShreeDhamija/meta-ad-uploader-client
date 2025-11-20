@@ -63,9 +63,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
-  // const [mainButtonVisible, setMainButtonVisible] = useState(false)
-  // const [showFloatingButton, setShowFloatingButton] = useState(false)
-  // const [animateClass, setAnimateClass] = useState("")
   const [isReauthOpen, setIsReauthOpen] = useState(false)
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
   // Add a ref to track template-only updates
@@ -253,19 +250,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
   ]);
 
-  // Effect for floating button animation
-  // useEffect(() => {
-  //   if (hasChanges && !mainButtonVisible) {
-  //     setShowFloatingButton(true);
-  //     setAnimateClass("floating-save-button-enter");
-  //   } else if (showFloatingButton) {
-  //     setAnimateClass("floating-save-button-exit");
-  //     const timeoutId = setTimeout(() => setShowFloatingButton(false), 300);
-  //     return () => clearTimeout(timeoutId);
-  //   }
-  // }, [hasChanges, mainButtonVisible, showFloatingButton]);
 
-  // Auto-save links with debounce
 
 
 
@@ -292,22 +277,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     }
   }, [links]);
 
-  // Effect for intersection observer
-  // useEffect(() => {
-  //   const observer = new IntersectionObserver(
-  //     ([entry]) => {
-  //       setMainButtonVisible(entry.isIntersecting);
-  //     },
-  //     { threshold: 0.5 }
-  //   );
 
-  //   const mainSaveButton = document.getElementById("main-save-button");
-  //   if (mainSaveButton) observer.observe(mainSaveButton);
-
-  //   return () => {
-  //     if (mainSaveButton) observer.unobserve(mainSaveButton);
-  //   };
-  // }, []);
 
   // Effect for dirty state tracking
   useEffect(() => {
@@ -528,51 +498,21 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
           <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
 
-          {/* <div className="pt-2">
-            <Button
-              id="main-save-button"
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-[14px] h-[45px]"
-              onClick={handleSave}
-            >
-              Save Settings
-            </Button>
-          </div> */}
         </div>
       </fieldset>
 
-      {/* {showFloatingButton && (
-        <div
-          className={`fixed bottom-6 right-6 z-50 ${animateClass}`}
-          style={{
-            width: "300px",
-            height: "50px",
-            display: showFloatingButton || animateClass === "floating-save-button-exit" ? "block" : "none",
-            backgroundColor: "white",
-            borderRadius: "12px",
-            boxShadow: "0px 4px 14px rgba(0,0,0,0.15)",
-            padding: "4px",
-          }}
-        >
-          <Button
-            className="w-full h-full bg-blue-500 hover:bg-blue-600 text-white shadow-lg rounded-xl"
-            onClick={handleSave}
-          >
-            Save Settings
-          </Button>
-        </div>
-      )} */}
-      {/* New Floating Save Bar */}
+
       <div
-        className={`fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 ease-in-out ${hasChanges ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0 pointer-events-none"
+        className={`fixed bottom-0 left-0 right-0 z-[100] w-full bg-blue-600 shadow-[0_-4px_10px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out ${hasChanges ? "translate-y-0" : "translate-y-full"
           }`}
       >
-        <div className="bg-[#18181b] text-white pl-6 pr-2 py-2 rounded-full shadow-2xl flex items-center gap-6 border border-zinc-700/50">
-          <span className="text-sm font-medium text-zinc-100">
+        <div className="mx-auto flex max-w-3xl items-center justify-between p-4">
+          <span className="text-sm font-medium text-white">
             You have unsaved changes
           </span>
           <Button
             onClick={handleSave}
-            className="bg-blue-600 hover:bg-blue-500 text-white rounded-full px-6 h-9 text-sm font-medium transition-colors"
+            className="bg-white text-blue-600 hover:bg-gray-50 rounded-xl px-6 h-10 font-semibold shadow-sm"
           >
             Save Changes
           </Button>
