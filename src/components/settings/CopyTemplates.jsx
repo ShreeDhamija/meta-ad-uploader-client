@@ -785,11 +785,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           }
 
         </Button> */}
-        {templateChanged && !nameAlreadyExists && (
+        {/* {templateChanged && !nameAlreadyExists && (
           <p className="text-xs text-red-500 bg-red-200 rounded-xl border border-bg-100 text-left mt-1 p-2">
             *You have unsaved changes
           </p>
-        )}
+        )} */}
 
 
         {/* Bottom row with remaining two buttons split 50/50 */}

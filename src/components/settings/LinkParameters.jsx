@@ -457,8 +457,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 {/* Show summary if pairs exist, otherwise just button */}
                 {utmPairs.length > 0 && (
                     <div className="mb-3">
-
-
+                        <p className="text-xs font-bold">Saved UTMs</p>
                         <div className="flex flex-wrap gap-2">
                             {utmPairs.map((pair, i) => (
                                 pair.key && <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded-md text-gray-600">
@@ -468,7 +467,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                         </div>
 
                     </div>
-
                 )}
 
 
