@@ -501,23 +501,24 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         </div>
       </fieldset>
 
-
       <div
-        className={`fixed bottom-0 left-0 right-0 z-[100] w-full bg-blue-600 shadow-[0_-4px_10px_rgba(0,0,0,0.1)] transition-transform duration-300 ease-in-out ${hasChanges ? "translate-y-0" : "translate-y-full"
+        className={`sticky bottom-4 z-50 w-full transition-all duration-300 ease-in-out ${hasChanges ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0 pointer-events-none"
           }`}
       >
-        <div className="mx-auto flex max-w-3xl items-center justify-between p-4">
-          <span className="text-sm font-medium text-white">
+        <div className="bg-blue-600 text-white px-6 py-3 rounded-xl shadow-xl flex items-center justify-between border border-blue-500/50">
+          <span className="text-sm font-medium">
             You have unsaved changes
           </span>
           <Button
             onClick={handleSave}
-            className="bg-white text-blue-600 hover:bg-gray-50 rounded-xl px-6 h-10 font-semibold shadow-sm"
+            className="bg-white text-blue-600 hover:bg-blue-50 rounded-lg px-6 h-9 text-sm font-semibold shadow-sm"
           >
             Save Changes
           </Button>
         </div>
       </div>
+
+
     </div>
   )
 }
