@@ -518,8 +518,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           className={`w-full bg-blue-600 text-white transition-transform duration-300 ease-in-out ${hasChanges ? "translate-y-0" : "translate-y-full"
             }`}
         >
-          {/* Inner container to match form width (max-w-3xl) and align content */}
-          <div className="mx-auto max-w-3xl px-6 py-3 flex items-center justify-between">
+
+          <div className="mx-auto max-w-3xl px-6 py-2 flex items-center justify-center gap-4">
             <span className="text-sm font-medium">
               You have unsaved changes
             </span>
