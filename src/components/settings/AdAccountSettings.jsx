@@ -465,17 +465,16 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       {/* Portal Save Bar */}
       {document.getElementById('settings-save-bar-portal') && createPortal(
         <div
-          className={`w-full bg-blue-600 text-white transition-transform duration-300 ease-in-out ${hasChanges ? "translate-y-0" : "translate-y-full"
+          className={`fixed bottom-0 left-0 right-0 z-40 w-full bg-blue-600 text-white transition-transform duration-300 ease-in-out ${hasChanges ? "translate-y-0" : "translate-y-full"
             }`}
         >
-
           <div className="mx-auto max-w-3xl px-6 py-1.5 flex items-center justify-center gap-4">
             <span className="text-sm font-medium">
               You have unsaved changes
             </span>
             <Button
               onClick={handleSave}
-              className="bg-white text-blue-600 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
+              className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
             >
               Save Changes
             </Button>

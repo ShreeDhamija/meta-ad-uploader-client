@@ -211,6 +211,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   ]);
 
   const blocker = useBlocker(() => templateChanged);
+  const [isDiscarded, setIsDiscarded] = useState(false);
+
+  useEffect(() => {
+    if (templateChanged) {
+      setIsDiscarded(false);
+    }
+  }, [templateChanged, templateName, primaryTexts, headlines]);
 
   useEffect(() => {
     const handler = (e) => {
@@ -778,11 +785,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           }
 
         </Button> */}
-        {/* {templateChanged && !nameAlreadyExists && (
+        {templateChanged && !nameAlreadyExists && (
           <p className="text-xs text-red-500 bg-red-200 rounded-xl border border-bg-100 text-left mt-1 p-2">
             *You have unsaved changes
           </p>
-        )} */}
+        )}
 
 
         {/* Bottom row with remaining two buttons split 50/50 */}
@@ -962,7 +969,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 variant="outline"
                 onClick={() => blocker.proceed()}
               >
-                Continue Without Saving
+                Discard Changes and Continue
               </Button>
               <Button variant="ghost" onClick={() => blocker.reset()}>
                 Cancel
@@ -974,16 +981,16 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
 
       {/* PORTAL: Sticky Save Template Bar */}
+      {/* PORTAL: Sticky Save Template Bar */}
       {document.getElementById('settings-save-bar-portal') && createPortal(
         <div
-          className={`w-full bg-zinc-950 text-white transition-transform duration-300 ease-in-out ${
-            // Only show if there are changes to save, otherwise hide below view
-            (templateChanged || templateName.trim()) ? "translate-y-0" : "translate-y-full"
+          className={`fixed bottom-0 left-0 right-0 z-50 w-full bg-zinc-950 text-white transition-transform duration-300 ease-in-out ${
+            // Logic: Show if changed AND not discarded
+            (templateChanged && !isDiscarded) ? "translate-y-0" : "translate-y-full"
             }`}
         >
           <div className="mx-auto max-w-3xl px-6 py-1.5 flex items-center justify-center gap-4">
             <span className="text-sm font-medium text-zinc-200">
-              {/* Dynamic Text Status */}
               {nameAlreadyExists
                 ? "This Template Name Already Exists"
                 : !templateName.trim()
@@ -992,13 +999,26 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               }
             </span>
 
-            <Button
-              className="bg-white text-zinc-900 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={handleSaveTemplate}
-              disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
-            >
-              {isProcessing ? "Saving..." : "Save Template"}
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* NEW: Discard Button */}
+              <Button
+                className="bg-white text-zinc-900 hover:bg-gray-100 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSaveTemplate}
+                disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
+              >
+
+                <Button
+                  variant="ghost"
+                  className="tex-white hover:text-white h-9 rounded-xl text-sm"
+                  onClick={() => setIsDiscarded(true)}
+                >
+                  Discard
+                </Button>
+
+
+                {isProcessing ? "Saving..." : "Save Template"}
+              </Button>
+            </div>
           </div>
         </div>,
         document.getElementById('settings-save-bar-portal')
