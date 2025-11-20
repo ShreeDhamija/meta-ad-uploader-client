@@ -1003,7 +1003,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               {/* NEW: Discard Button */}
 
               <Button
-                className="bg-white text-zinc-900 hover:bg-gray-100 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-white text-zinc-900 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleSaveTemplate}
                 disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
               >
