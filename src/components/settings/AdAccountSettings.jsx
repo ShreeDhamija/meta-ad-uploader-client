@@ -53,7 +53,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [utmPairs, setUtmPairs] = useState([])
 
   const [defaultCTA, setDefaultCTA] = useState("Learn More")
-  const [copyTemplates, setCopyTemplates] = useState({})
+  // const [copyTemplates, setCopyTemplates] = useState({})
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
   const [isDirty, setIsDirty] = useState(false)
@@ -235,31 +235,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     isFirstEverSave
   ]);
 
-
-
-
-  // Auto-save only when setting default link
-  // useEffect(() => {
-  //   if (hasChanges && selectedAdAccount && initialSettings && Object.keys(initialSettings).length > 0) {
-  //     const linksChanged = JSON.stringify(links) !== JSON.stringify(initialSettings.links);
-
-  //     if (linksChanged) {
-  //       // Check if this was just a default change (same URLs, different default flags)
-  //       const currentUrls = links.map(l => l.url).sort();
-  //       const initialUrls = initialSettings.links.map(l => l.url).sort();
-  //       const sameUrls = JSON.stringify(currentUrls) === JSON.stringify(initialUrls);
-
-  //       // Only auto-save if URLs are the same (meaning only default changed)
-  //       if (sameUrls && links.length === initialSettings.links.length) {
-  //         const timeoutId = setTimeout(() => {
-  //           handleSave();
-  //         }, 1);
-
-  //         return () => clearTimeout(timeoutId);
-  //       }
-  //     }
-  //   }
-  // }, [links]);
 
 
 
@@ -500,7 +475,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             </span>
             <Button
               onClick={handleSave}
-              className="bg-white text-blue-600 hover:bg-blue-50 rounded-lg px-6 h-9 text-sm font-semibold shadow-sm"
+              className="bg-white text-blue-600 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
             >
               Save Changes
             </Button>

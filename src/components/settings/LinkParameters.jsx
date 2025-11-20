@@ -469,7 +469,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
                 <Button
                     onClick={handleOpenUtmSetup}
-                    className="bg-zinc-600 text-white w-full rounded-xl hover:bg-black h-[40px]"
+                    className="bg-zinc-800 text-white hover:text-white hover:bg-black w-full rounded-xl h-[40px]"
                 >
                     <Settings2 className="w-4 h-4 mr-2" />
                     Set Up UTMs

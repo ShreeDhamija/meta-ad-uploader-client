@@ -22,6 +22,7 @@ import {
   DialogFooter,
   DialogOverlay
 } from "@/components/ui/dialog";
+import { createPortal } from "react-dom"
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -761,7 +762,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       </div>
 
       <div className="space-y-2 pt-2">
-        <Button
+        {/* <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
           disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
@@ -776,12 +777,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 : "Save Template"
           }
 
-        </Button>
-        {templateChanged && !nameAlreadyExists && (
+        </Button> */}
+        {/* {templateChanged && !nameAlreadyExists && (
           <p className="text-xs text-red-500 bg-red-200 rounded-xl border border-bg-100 text-left mt-1 p-2">
             *You have unsaved changes
           </p>
-        )}
+        )} */}
 
 
         {/* Bottom row with remaining two buttons split 50/50 */}
@@ -970,6 +971,39 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </DialogContent>
         </Dialog>
       )}
+
+
+      {/* PORTAL: Sticky Save Template Bar */}
+      {document.getElementById('settings-save-bar-portal') && createPortal(
+        <div
+          className={`w-full bg-zinc-950 text-white transition-transform duration-300 ease-in-out ${
+            // Only show if there are changes to save, otherwise hide below view
+            (templateChanged || templateName.trim()) ? "translate-y-0" : "translate-y-full"
+            }`}
+        >
+          <div className="mx-auto max-w-3xl px-6 py-1.5 flex items-center justify-center gap-4">
+            <span className="text-sm font-medium text-zinc-200">
+              {/* Dynamic Text Status */}
+              {nameAlreadyExists
+                ? "This Template Name Already Exists"
+                : !templateName.trim()
+                  ? "Enter Name to Save Template"
+                  : "You have unsaved template changes"
+              }
+            </span>
+
+            <Button
+              className="bg-white text-zinc-900 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleSaveTemplate}
+              disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
+            >
+              {isProcessing ? "Saving..." : "Save Template"}
+            </Button>
+          </div>
+        </div>,
+        document.getElementById('settings-save-bar-portal')
+      )}
+
     </div>
   )
 }
