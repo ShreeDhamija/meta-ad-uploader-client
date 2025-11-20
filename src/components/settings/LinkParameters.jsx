@@ -1225,6 +1225,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     onClick={() => setShowUtmSetupModal(false)}
                 >
                     <div className="bg-white rounded-2xl max-h-[85vh] w-[600px] shadow-xl relative border border-gray-200 flex flex-col"
+                        style={{ marginTop: -20 }} // Requirement 3: -20px top margin
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -1250,7 +1251,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 <label className="text-xs font-semibold text-gray-600 block mb-2">Extract from String</label>
                                 <div className="flex gap-2 items-center">
                                     <Input
-                                        placeholder="Paste URL or UTM string (e.g. utm_source=facebook...)"
+                                        placeholder="Paste UTM string here eg: utm_source=facebook&utm_campaign={{campaign.name}}&utm_medium=paid&utm_content={{ad.name}}&utm_term={{adset.name}}"
                                         value={rawUtmString}
                                         onChange={(e) => setRawUtmString(e.target.value)}
                                         className="rounded-xl bg-white placeholder:text-xs h-9"
@@ -1274,22 +1275,31 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             ) : (
                                 <>
                                     {/* Requirement 5: No UTMs found label */}
+                                    {utmFetchSuccess && (
+                                        <div className="mb-4 p-3 bg-green-50 text-green-800 text-xs rounded-xl border border-green-100">
+                                            We found these UTMs from your recent ads.
+                                        </div>
+                                    )}
+
+                                    {/* Error/Default Label */}
                                     {utmFetchError && (
                                         <div className="mb-4 p-3 bg-blue-50 text-blue-800 text-xs rounded-xl border border-blue-100">
                                             No recent UTMs found on Ad Account. Showing suggested default values.
                                         </div>
                                     )}
 
+
                                     <div className="flex flex-col space-y-3">
                                         {utmPairs.map((pair, i) => (
                                             <div key={i} className="flex gap-2 items-center">
+                                                {/* Requirement 3: Equal width columns (flex-1) */}
                                                 <Input
                                                     placeholder="Key"
                                                     value={pair.key}
                                                     onChange={(e) => handlePairChange(i, "key", e.target.value)}
-                                                    className="rounded-xl w-1/3 bg-white h-10"
+                                                    className="rounded-xl flex-1 bg-white h-10"
                                                 />
-                                                <div className="relative w-2/3">
+                                                <div className="relative flex-1">
                                                     <Input
                                                         placeholder={`Value`}
                                                         value={pair.value}
@@ -1315,7 +1325,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                                             key={index}
                                                                             value={suggestion}
                                                                             onMouseDown={(e) => {
-                                                                                e.preventDefault(); // Prevent blur
+                                                                                e.preventDefault();
                                                                                 handlePairChange(i, "value", suggestion)
                                                                                 setOpenIndex(null)
                                                                             }}
@@ -1333,7 +1343,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                     variant="ghost"
                                                     size="icon"
                                                     onClick={() => handleDeletePair(i)}
-                                                    className="hover:bg-red-50 rounded-full h-8 w-8"
+                                                    className="hover:bg-red-50 rounded-full h-8 w-8 shrink-0"
                                                 >
                                                     <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
                                                 </Button>
@@ -1341,10 +1351,10 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                         ))}
                                     </div>
 
+
                                     <Button
                                         onClick={handleAddPair}
-                                        variant="outline"
-                                        className="w-full rounded-xl mt-4 border-dashed border-gray-300 text-gray-500 hover:border-gray-400 hover:bg-gray-50"
+                                        className="w-full rounded-xl mt-4 bg-zinc-800 text-white hover:bg-zinc-900 border-none shadow-none"
                                     >
                                         <Plus className="w-4 h-4 mr-2" />
                                         Add New Parameter
@@ -1354,7 +1364,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-t border-gray-200 flex justify-end gap-2 bg-white rounded-b-2xl">
+                        <div className="p-4 border-gray-200 flex justify-end gap-2 bg-white rounded-b-2xl">
                             <Button
                                 variant="outline"
                                 className="rounded-xl"
