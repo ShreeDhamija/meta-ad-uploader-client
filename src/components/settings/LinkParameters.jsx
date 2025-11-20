@@ -618,22 +618,27 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
 
                                     <div className="flex flex-col space-y-3">
+                                        {/* 1. Iterate over tempUtmPairs */}
                                         {tempUtmPairs.map((pair, i) => (
                                             <div key={i} className="flex gap-2 items-center">
-                                                {/* Requirement 3: Equal width columns (flex-1) */}
+                                                {/* KEY INPUT */}
                                                 <Input
                                                     placeholder="Key"
                                                     value={pair.key}
-                                                    onChange={(e) => handlePairChange(i, "key", e.target.value)}
+                                                    // 2. Use handleTempPairChange
+                                                    onChange={(e) => handleTempPairChange(i, "key", e.target.value)}
                                                     className="rounded-xl flex-1 bg-white h-10"
                                                 />
+
+                                                {/* VALUE INPUT */}
                                                 <div className="relative flex-1">
                                                     <Input
                                                         placeholder={`Value`}
                                                         value={pair.value}
+                                                        // 3. Use handleTempPairChange
                                                         onChange={(e) => {
                                                             setInputValue(e.target.value)
-                                                            handlePairChange(i, "value", e.target.value)
+                                                            handleTempPairChange(i, "value", e.target.value)
                                                         }}
                                                         onFocus={() => {
                                                             setInputValue("")
@@ -654,7 +659,8 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                                             value={suggestion}
                                                                             onMouseDown={(e) => {
                                                                                 e.preventDefault();
-                                                                                handlePairChange(i, "value", suggestion)
+                                                                                // 4. Use handleTempPairChange for suggestions
+                                                                                handleTempPairChange(i, "value", suggestion)
                                                                                 setOpenIndex(null)
                                                                             }}
                                                                             className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-lg text-sm"
@@ -667,10 +673,13 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {/* DELETE BUTTON */}
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => handleDeletePair(i)}
+                                                    // 5. Use handleDeleteTempPair
+                                                    onClick={() => handleDeleteTempPair(i)}
                                                     className="hover:bg-red-50 rounded-full h-8 w-8 shrink-0"
                                                 >
                                                     <Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
@@ -678,6 +687,16 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                             </div>
                                         ))}
                                     </div>
+
+                                    {/* ADD BUTTON */}
+                                    <Button
+                                        // 6. Use handleAddTempPair
+                                        onClick={handleAddTempPair}
+                                        className="w-full rounded-xl mt-4 bg-zinc-800 text-white hover:bg-zinc-900 border-none shadow-none"
+                                    >
+                                        <Plus className="w-4 h-4 mr-2" />
+                                        Add New Parameter
+                                    </Button>
 
 
                                     <Button
