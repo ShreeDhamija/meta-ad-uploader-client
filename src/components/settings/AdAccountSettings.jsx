@@ -171,26 +171,23 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, []);
 
   // Optimized save handler
-  const handleSave = useCallback(async (overrides = {}) => {
+  const handleSave = useCallback(async () => {
     if (!selectedAdAccount) {
       alert("Select an Ad Account first");
       return;
     }
 
-    const currentUtms = overrides.defaultUTMs !== undefined ? overrides.defaultUTMs : utmPairs;
-
-
+    // 1. Construct settings object directly from state variables
     const adAccountSettings = {
       defaultPage: selectedPage,
       defaultInstagram: selectedInstagram,
       links: links,
       defaultCTA,
-      defaultUTMs: currentUtms, // <--- Use the variable
+      defaultUTMs: utmPairs, // <--- Direct state reference
       creativeEnhancements: enhancements,
       adNameFormulaV2: {
         rawInput: adNameFormulaV2?.rawInput || ""
       }
-
     };
 
     try {
@@ -199,40 +196,32 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         adAccountSettings,
       });
 
-
       toast.success("Updates saved!");
 
       if (isFirstEverSave) {
-        // console.log("🎉 Triggering confetti!");
         confetti({
           particleCount: 150,
           spread: 70,
           origin: { y: 0.6 },
           colors: ['#3b82f6', '#10b981', '#f59e0b']
         });
-      } else {
-        // console.log("❌ Not triggering confetti, isFirstEverSave is false");
       }
 
-
+      // 2. Update Initial Settings to match current state
       const newInitialSettings = {
         defaultPage: selectedPage,
         defaultInstagram: selectedInstagram,
         links: links,
         defaultCTA,
-        defaultUTMs: currentUtms, // <--- Update this too
+        defaultUTMs: utmPairs, // <--- Direct state reference
         creativeEnhancements: enhancements,
-        adNameFormulaV2: adNameFormulaV2  // Add this line too
-
+        adNameFormulaV2: adNameFormulaV2
       };
 
       setInitialSettings(newInitialSettings);
-      if (overrides.defaultUTMs !== undefined) {
-        setUtmPairs(overrides.defaultUTMs);
-      }
       setIsDirty(false);
     } catch (err) {
-      toast.error("Failed to save ad account settings: " + err.message);
+      toast.error("Failed to save settings: " + err.message);
     }
   }, [
     selectedAdAccount,
@@ -244,10 +233,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     enhancements,
     adNameFormulaV2,
     isFirstEverSave
-
-
   ]);
-
 
 
 
@@ -490,7 +476,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             utmPairs={utmPairs}
             setUtmPairs={setUtmPairs}
             selectedAdAccount={selectedAdAccount}
-            onSave={handleSave} // <--- PASS THIS
 
           />
 

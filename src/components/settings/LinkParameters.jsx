@@ -26,7 +26,7 @@ const DEFAULT_PREFILL_PAIRS = [
     { key: "utm_term", value: "{{adset.name}}" }
 ];
 
-function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount, onSave }) {
+function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount }) {
     const [inputValue, setInputValue] = useState("")
     const [openIndex, setOpenIndex] = useState(null)
 
@@ -47,7 +47,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     const [rawUtmString, setRawUtmString] = useState("");
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
     const [tempUtmPairs, setTempUtmPairs] = useState([]);
-    const [isSaving, setIsSaving] = useState(false)
 
 
     // 2. TEMP HANDLERS
@@ -272,13 +271,10 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
         }
     }, [rawUtmString, setUtmPairs]);
 
-    const handleSaveUtms = useCallback(async () => {
-
+    const handleSaveUtms = useCallback(() => {
+        setUtmPairs(tempUtmPairs);
         setShowUtmSetupModal(false);
-        setIsSaving(true);
-        if (onSave) await onSave({ defaultUTMs: tempUtmPairs });
-        setIsSaving(false);
-    }, [tempUtmPairs, setUtmPairs, onSave]);
+    }, [tempUtmPairs, setUtmPairs]);
 
 
 
@@ -456,26 +452,16 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 {/* Show summary if pairs exist, otherwise just button */}
                 {utmPairs.length > 0 && (
                     <div className="mb-3">
-                        <p className="text-xs font-medium text-gray-900 mb-2">Saved UTMs</p>
 
 
-                        {isSaving ? (
-                            <div className="mb-3 flex items-center gap-3 py-2 px-1">
-                                <Loader size={5} margin={-2} color="#2563eb" />
-                                <span className="text-xs font-medium text-blue-600 animate-pulse">
-                                    Loading parameters...
+                        <div className="flex flex-wrap gap-2">
+                            {utmPairs.map((pair, i) => (
+                                pair.key && <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded-md text-gray-600">
+                                    {pair.key}={pair.value}
                                 </span>
-                            </div>
-                        ) : (
+                            ))}
+                        </div>
 
-                            <div className="flex flex-wrap gap-2">
-                                {utmPairs.map((pair, i) => (
-                                    pair.key && <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded-md text-gray-600">
-                                        {pair.key}={pair.value}
-                                    </span>
-                                ))}
-                            </div>
-                        )}
                     </div>
 
                 )}
