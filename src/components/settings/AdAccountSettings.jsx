@@ -18,15 +18,10 @@ import CreativeEnhancements from "./CreativeEnhancements"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import LabelIcon from '@/assets/icons/label.svg?react';
 import confetti from 'canvas-confetti'
+import { createPortal } from "react-dom"
+
 
 // Constants moved outside component to prevent recreation
-const DEFAULT_UTM_PAIRS = [
-  { key: "utm_source", value: "facebook" },
-  { key: "utm_medium", value: "paid" },
-  { key: "utm_campaign", value: "{{campaign.name}}" },
-  { key: "utm_content", value: "{{ad.name}}" },
-  { key: "utm_term", value: "{{adset.name}}" },
-];
 
 const DEFAULT_ENHANCEMENTS = {
   overlay: false,
@@ -501,11 +496,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         </div>
       </fieldset>
 
-      <div
+      {/* <div
         className={`sticky bottom-4 z-50 w-full transition-all duration-300 ease-in-out ${hasChanges ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0 pointer-events-none"
           }`}
       >
-        <div className="bg-blue-600 text-white px-4 py-2 rounded-2xl shadow-xl flex items-center justify-between border border-blue-500/50">
+        <div className="bg-blue-600 text-white px-4 pr-2 py-2 rounded-2xl shadow-xl flex items-center justify-between border border-blue-500/50">
           <span className="text-sm font-medium">
             You have unsaved changes
           </span>
@@ -516,8 +511,28 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             Save Changes
           </Button>
         </div>
-      </div>
-
+      </div> */}
+      {/* Portal Save Bar */}
+      {document.getElementById('settings-save-bar-portal') && createPortal(
+        <div
+          className={`w-full bg-blue-600 text-white transition-transform duration-300 ease-in-out ${hasChanges ? "translate-y-0" : "translate-y-full"
+            }`}
+        >
+          {/* Inner container to match form width (max-w-3xl) and align content */}
+          <div className="mx-auto max-w-3xl px-6 py-3 flex items-center justify-between">
+            <span className="text-sm font-medium">
+              You have unsaved changes
+            </span>
+            <Button
+              onClick={handleSave}
+              className="bg-white text-blue-600 hover:bg-blue-50 rounded-lg px-6 h-9 text-sm font-semibold shadow-sm"
+            >
+              Save Changes
+            </Button>
+          </div>
+        </div>,
+        document.getElementById('settings-save-bar-portal')
+      )}
 
     </div>
   )

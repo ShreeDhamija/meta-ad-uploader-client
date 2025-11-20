@@ -189,7 +189,7 @@ export default function Settings() {
 
             {/* Main Area */}
             <main className="flex-1 py-6 pr-6">
-                <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-[calc(100vh-3rem)] flex flex-col overflow-hidden">
+                <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
                     <div className="flex-1 overflow-auto">
                         <div className="w-full max-w-3xl mx-auto p-16">
                             <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
@@ -214,6 +214,8 @@ export default function Settings() {
                             </div>
                         </div>
                     </div>
+                    <div id="settings-save-bar-portal" className="absolute bottom-0 left-0 w-full z-50" />
+
                 </div>
             </main>
 
