@@ -272,7 +272,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     }, [rawUtmString, setUtmPairs]);
 
     const handleSaveUtms = useCallback(async () => {
-        setUtmPairs(tempUtmPairs); // Update local UI
+        // setUtmPairs(tempUtmPairs); // Update local UI
         setShowUtmSetupModal(false); // Close popup
         if (onSave) await onSave({ defaultUTMs: tempUtmPairs }); // Save to DB
     }, [tempUtmPairs, setUtmPairs, onSave]);
@@ -692,15 +692,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     <Button
                                         // 6. Use handleAddTempPair
                                         onClick={handleAddTempPair}
-                                        className="w-full rounded-xl mt-4 bg-zinc-800 text-white hover:bg-zinc-900 border-none shadow-none"
-                                    >
-                                        <Plus className="w-4 h-4 mr-2" />
-                                        Add New Parameter
-                                    </Button>
-
-
-                                    <Button
-                                        onClick={handleAddPair}
                                         className="w-full rounded-xl mt-4 bg-zinc-800 text-white hover:bg-zinc-900 border-none shadow-none"
                                     >
                                         <Plus className="w-4 h-4 mr-2" />

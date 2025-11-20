@@ -227,6 +227,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       };
 
       setInitialSettings(newInitialSettings);
+      if (overrides.defaultUTMs !== undefined) {
+        setUtmPairs(overrides.defaultUTMs);
+      }
       setIsDirty(false);
     } catch (err) {
       toast.error("Failed to save ad account settings: " + err.message);
