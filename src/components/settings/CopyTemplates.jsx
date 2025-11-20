@@ -981,10 +981,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
 
       {/* PORTAL: Sticky Save Template Bar */}
-      {/* PORTAL: Sticky Save Template Bar */}
+
       {document.getElementById('settings-save-bar-portal') && createPortal(
         <div
-          className={`fixed bottom-0 left-0 right-0 z-50 w-full bg-zinc-950 text-white transition-transform duration-300 ease-in-out ${
+          className={`absolute bottom-0 left-0 w-full z-50 w-full bg-zinc-950 text-white transition-transform duration-300 ease-in-out ${
             // Logic: Show if changed AND not discarded
             (templateChanged && !isDiscarded) ? "translate-y-0" : "translate-y-full"
             }`}
@@ -1001,23 +1001,24 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
             <div className="flex items-center gap-2">
               {/* NEW: Discard Button */}
+
               <Button
                 className="bg-white text-zinc-900 hover:bg-gray-100 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleSaveTemplate}
                 disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
               >
-
-                <Button
-                  variant="ghost"
-                  className="tex-white hover:text-white h-9 rounded-xl text-sm"
-                  onClick={() => setIsDiscarded(true)}
-                >
-                  Discard
-                </Button>
-
-
                 {isProcessing ? "Saving..." : "Save Template"}
               </Button>
+
+              <Button
+                variant="ghost"
+                className="text-white hover:text-white h-9 rounded-xl text-sm"
+                onClick={() => setIsDiscarded(true)}
+              >
+                Discard
+              </Button>
+
+
             </div>
           </div>
         </div>,
