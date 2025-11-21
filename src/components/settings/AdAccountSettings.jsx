@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
-import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogOverlay } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { ChevronsUpDown, Loader, CirclePlus } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
@@ -19,9 +19,7 @@ import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import LabelIcon from '@/assets/icons/label.svg?react';
 import confetti from 'canvas-confetti'
 import { createPortal } from "react-dom"
-// Add useBlocker to imports
-import { useBlocker } from "react-router-dom";
-import { } from "@/components/ui/dialog"
+
 
 // Constants moved outside component to prevent recreation
 
@@ -283,22 +281,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, [adAccounts]); // Only depend on adAccounts, not selectedAdAccount
 
 
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (hasChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [hasChanges]);
-
-  // 2. React Router Blocker (covers Templates AND Settings)
-  const blocker = useBlocker(hasChanges);
-
-
   return (
     <div className="space-y-6 w-full max-w-3xl">
       {/* Ad Account Dropdown */}
@@ -500,35 +482,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         </div>,
         document.getElementById('settings-save-bar-portal')
       )}
-      {blocker.state === "blocked" && (
-        <Dialog open={true} onOpenChange={() => blocker.reset()}>
-          <DialogContent className="z-[9999]">
-            <DialogHeader>
-              <DialogTitle>Unsaved Changes</DialogTitle>
-              <DialogDescription>
-                You have unsaved changes. Leaving now will discard them.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button onClick={async () => {
-                await handleSave();
-                blocker.proceed(); // Save, then go
-              }}>
-                Save & Leave
-              </Button>
-              <Button variant="destructive" onClick={() => blocker.proceed()}>
-                Discard Changes {/* Just go. Component unmounts, changes die. */}
-              </Button>
-              <Button variant="ghost" onClick={() => blocker.reset()}>
-                Cancel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+
     </div>
-
-
   )
 }
 
