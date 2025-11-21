@@ -778,8 +778,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
         </Button>
         {templateChanged && !nameAlreadyExists && (
-          <p className="text-xs text-red-500 bg-red-200 rounded-xl border border-bg-100 text-left mt-1 p-2">
-            *You have unsaved changes
+          <p className="text-xs text-white bg-red-500 rounded-xl border text-left mt-1 p-2">
+            Your templates have unsaved changes.
           </p>
         )}
 
