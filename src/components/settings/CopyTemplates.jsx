@@ -777,12 +777,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           }
 
         </Button>
-        {templateChanged && !nameAlreadyExists && (
-          <p className="text-xs text-white bg-red-500 rounded-xl border text-left mt-1 p-2">
-            Your templates have unsaved changes.
-          </p>
-        )}
-
 
         {/* Bottom row with remaining two buttons split 50/50 */}
         <div className="flex gap-4">
@@ -798,6 +792,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             </Button>
           )}
         </div>
+
+        {templateChanged && !nameAlreadyExists && (
+          <p className="text-xs text-white bg-rose-500 rounded-xl border text-left mt-1 p-2">
+            Your templates have unsaved changes.
+          </p>
+        )}
       </div>
 
       {showImportPopup && (
