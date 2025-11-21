@@ -3883,33 +3883,6 @@ export default function AdCreationForm({
                   // Single link mode (normal ads or carousel with "apply to all")
                   <div className="space-y-3">
                     {!showCustomLink && (
-                      // <Select
-                      //   value={link[0] || ""}
-                      //   onValueChange={(value) => setLink([value])}
-                      //   disabled={!isLoggedIn || availableLinks.length === 0}
-                      // >
-                      //   <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
-                      //     <SelectValue placeholder={availableLinks.length === 0 ? "Add links in Settings or choose Custom Link Below" : "Select a link"} />
-                      //   </SelectTrigger>
-                      //   <SelectContent className="bg-white shadow-lg rounded-xl">
-                      //     {availableLinks.map((linkObj, index) => (
-                      //       <SelectItem
-                      //         key={index}
-                      //         value={linkObj.url}
-                      //         className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
-                      //       >
-                      //         <div className="flex items-center justify-between w-full">
-                      //           <span className="truncate max-w-[300px]">{linkObj.url}</span>
-                      //           {linkObj.isDefault && (
-                      //             <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
-                      //               Default
-                      //             </span>
-                      //           )}
-                      //         </div>
-                      //       </SelectItem>
-                      //     ))}
-                      //   </SelectContent>
-                      // </Select>
                       <Select
                         value={link[0] || ""}
                         onValueChange={(value) => setLink([value])}
@@ -3925,7 +3898,7 @@ export default function AdCreationForm({
                           />
                         </SelectTrigger>
 
-                        <SelectContent className="bg-white shadow-lg rounded-xl min-w-[500px]">
+                        <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
                           {availableLinks.map((linkObj, index) => (
                             <SelectItem
                               key={index}
@@ -3933,7 +3906,7 @@ export default function AdCreationForm({
                               className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
                             >
                               <div className="flex items-center justify-between w-full">
-                                <span className="truncate max-w-[550px]">{linkObj.url}</span>
+                                <span className="truncate max-w-[650px]">{linkObj.url}</span>
 
                                 {linkObj.isDefault && (
                                   <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">
