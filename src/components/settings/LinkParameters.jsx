@@ -311,7 +311,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             {/* Link Selection and Management (Unchanged) */}
             <div className="space-y-2">
                 <div className="space-y-1">
-                    <label className="text-sm font-semibold">Ad Landing Page Links</label>
+                    <label className="text-sm font-semibold">Landing Page Links</label>
                     <p className="text-xs text-gray-500">
                         Add and set default links for your ads.
                     </p>
@@ -432,7 +432,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 ) : (
                     <Button
                         onClick={() => setShowAddForm(true)}
-                        className="bg-zinc-600 text-white w-full rounded-xl hover:bg-black mt-2 h-[40px]"
+                        className="bg-zinc-600 text-white w-full rounded-xl hover:zinc-800 mt-2 h-[40px]"
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         Add New Link
@@ -452,7 +452,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 {/* Show summary if pairs exist, otherwise just button */}
                 {utmPairs.length > 0 && (
                     <div className="mb-3">
-                        <p className="text-xs font-bold mb-1 text-zinc-800">Saved UTMs</p>
+                        <p className="text-xs font-semibold mb-1 text-zinc-700">Saved UTMs</p>
                         <div className="flex flex-wrap gap-2">
                             {utmPairs.map((pair, i) => (
                                 pair.key && <span key={i} className="text-xs bg-gray-200 px-2 py-1 rounded-md text-gray-600">
@@ -467,7 +467,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
                 <Button
                     onClick={handleOpenUtmSetup}
-                    className="bg-zinc-800 text-white hover:text-white hover:bg-black w-full rounded-xl h-[40px]"
+                    className="bg-zinc-600 text-white w-full rounded-xl hover:bg-zinc-800 mt-2 h-[40px]"
                 >
                     <Settings2 className="w-4 h-4 mr-2" />
                     Set Up UTMs

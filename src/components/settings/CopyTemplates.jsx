@@ -1729,7 +1729,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         {primaryTexts.length < 5 && (
           <Button
             variant="ghost"
-            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-black hover:text-white h-[40px]"
+            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-zinc-800 hover:text-white h-[40px]"
             onClick={() => handleAdd(setPrimaryTexts, primaryTexts)}
             disabled={isProcessing}
           >
@@ -1760,7 +1760,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         {headlines.length < 5 && (
           <Button
             variant="ghost"
-            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-black hover:text-white h-[40px]"
+            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-zinc-800 hover:text-white h-[40px]"
             onClick={() => handleAdd(setHeadlines, headlines)}
             disabled={isProcessing}
           >
