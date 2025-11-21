@@ -1113,7 +1113,7 @@ function reducer(state, action) {
         ...state,
         templates: updatedTemplates,
         defaultName: newDefaultName,
-        editingTemplate: action.payload.name, // Update the editing template to the new name
+        editingTemplate: action.payload.name,
       }
     }
 
@@ -1174,9 +1174,12 @@ export default function CopyTemplates({
   const [primaryTexts, setPrimaryTexts] = useState(["", "", "", "", ""])
   const [headlines, setHeadlines] = useState(["", "", "", "", ""])
   const [isProcessing, setIsProcessing] = useState(false)
+
   const isEditingDefault = useMemo(() =>
     defaultName === editingTemplate, [defaultName, editingTemplate]
   )
+
+  // Name validation (for creation mode)
   const nameAlreadyExists = useMemo(() =>
     templateName.trim() &&
     templateName !== editingTemplate &&
@@ -1186,10 +1189,7 @@ export default function CopyTemplates({
 
 
   // --- INITIALIZATION ---
-  // Only initialize when the account changes, or if we have parent data but reducer is empty (initial load)
-  // We track last account ID to prevent re-initializing during edits
   const lastAccountIdRef = useRef(selectedAdAccount);
-
   useEffect(() => {
     const accountChanged = selectedAdAccount !== lastAccountIdRef.current;
     const hasParentData = parentTemplates && Object.keys(parentTemplates).length > 0;
@@ -1204,13 +1204,12 @@ export default function CopyTemplates({
         },
       });
 
-      // Set selected inputs if we have a selected template
+      // Initialize inputs if we have a selection
       const initialName = parentDefaultName && parentTemplates[parentDefaultName]
         ? parentDefaultName
         : Object.keys(parentTemplates || {})[0] || "";
 
       if (initialName && parentTemplates[initialName]) {
-        // This prevents the inputs from being empty on first render
         setTemplateName(parentTemplates[initialName].name || "");
         setPrimaryTexts(parentTemplates[initialName].primaryTexts || ["", "", "", "", ""]);
         setHeadlines(parentTemplates[initialName].headlines || ["", "", "", "", ""]);
@@ -1222,13 +1221,61 @@ export default function CopyTemplates({
 
 
   // --- SYNC TO PARENT ---
-  // Whenever local reducer state changes, update the parent state
   useEffect(() => {
     if (state.templates) onSyncTemplates(state.templates);
     if (state.defaultName !== undefined) onSyncDefaultName(state.defaultName);
   }, [state.templates, state.defaultName, onSyncTemplates, onSyncDefaultName]);
 
 
+  // --- LIVE EDITING (EXISTING TEMPLATES) ---
+  // This effect automatically dispatches changes to the reducer as you type
+  // ONLY if we are editing an existing template (selectedName exists)
+  useEffect(() => {
+    if (!selectedName || !templates[selectedName]) return; // Create mode handled manually
+
+    const current = templates[selectedName];
+
+    // Check for differences
+    const textChanged = JSON.stringify(primaryTexts) !== JSON.stringify(current.primaryTexts);
+    const headlinesChanged = JSON.stringify(headlines) !== JSON.stringify(current.headlines);
+    const nameChanged = templateName !== current.name;
+
+    if (!textChanged && !headlinesChanged && !nameChanged) return;
+
+    // Prevent invalid renames
+    if (nameChanged) {
+      if (!templateName.trim()) return;
+      if (templates[templateName]) return; // Name taken
+    }
+
+    // Dispatch Update immediately
+    const filteredPrimaryTexts = primaryTexts.filter(text => text.trim() !== "");
+    const filteredHeadlines = headlines.filter(text => text.trim() !== "");
+
+    dispatch({
+      type: "SAVE_TEMPLATE",
+      payload: {
+        name: templateName,
+        data: {
+          name: templateName,
+          primaryTexts: filteredPrimaryTexts.length ? filteredPrimaryTexts : primaryTexts, // Keep empties if user is emptying
+          headlines: filteredHeadlines.length ? filteredHeadlines : headlines
+        },
+        oldName: selectedName
+      }
+    });
+
+    // If renamed, follow selection
+    if (nameChanged) {
+      dispatch({ type: "SELECT_TEMPLATE", payload: templateName });
+    }
+
+    if (onTemplateUpdate) onTemplateUpdate();
+
+  }, [primaryTexts, headlines, templateName, selectedName, templates, onTemplateUpdate]);
+
+
+  // --- COPY IMPORT LOGIC ---
   const [showImportPopup, setShowImportPopup] = useState(false)
   const [recentAds, setRecentAds] = useState([])
   const [isFetchingCopy, setIsFetchingCopy] = useState(false)
@@ -1236,66 +1283,42 @@ export default function CopyTemplates({
     primaryTexts: [],
     headlines: []
   });
-
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [paginationCursor, setPaginationCursor] = useState(null);
 
-
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
-
     setIsFetchingCopy(true);
-    // Reset pagination cursor on initial fetch
     setPaginationCursor(null);
-
     fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         adAccountId: selectedAdAccount,
         excludePrimaryTexts: [],
         excludeHeadlines: [],
-        after: null // Initial fetch
+        after: null
       })
     })
       .then(res => res.json())
       .then(data => {
         if (data.primaryTexts || data.headlines) {
-          setRecentAds({
-            primaryTexts: data.primaryTexts || [],
-            headlines: data.headlines || []
-          });
-
-          setPreviouslyFetched({
-            primaryTexts: data.primaryTexts || [],
-            headlines: data.headlines || []
-          });
-
-          // Store pagination cursor
+          setRecentAds({ primaryTexts: data.primaryTexts || [], headlines: data.headlines || [] });
+          setPreviouslyFetched({ primaryTexts: data.primaryTexts || [], headlines: data.headlines || [] });
           setPaginationCursor(data.nextCursor);
-        } else {
-          throw new Error("No data");
         }
       })
-      .catch(err => {
-        console.error("Error fetching ad copy:", err);
-        toast.error("Failed to load recent ad copy");
-      })
-      .finally(() => {
-        setIsFetchingCopy(false);
-      });
+      .catch(err => console.error(err))
+      .finally(() => setIsFetchingCopy(false));
   }, [showImportPopup, selectedAdAccount]);
 
 
+  // --- HANDLERS ---
+
+  // Update local input state (UI only, until Effect picks it up)
   useEffect(() => {
-    if (justSavedRef.current) {
-      // Skip this render cycle
-      justSavedRef.current = false
-      return
-    }
+    if (justSavedRef.current) { justSavedRef.current = false; return; }
 
     if (selectedName && templates[selectedName]) {
       const t = templates[selectedName]
@@ -1303,66 +1326,12 @@ export default function CopyTemplates({
       setPrimaryTexts(t.primaryTexts || ["", "", "", "", ""])
       setHeadlines(t.headlines || ["", "", "", "", ""])
     } else if (editingTemplate === null) {
+      // Create Mode
       setTemplateName("")
-      setPrimaryTexts(["", "", "", "", ""])  // Changed from [""]
-      setHeadlines(["", "", "", "", ""])      // Changed from [""]
+      setPrimaryTexts(["", "", "", "", ""])
+      setHeadlines(["", "", "", "", ""])
     }
   }, [selectedName, templates, editingTemplate])
-
-
-
-  const handleLoadMore = useCallback(async () => {
-    if (!paginationCursor) {
-      toast.info("No more copy available");
-      return;
-    }
-
-    setIsLoadingMore(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          adAccountId: selectedAdAccount,
-          excludePrimaryTexts: previouslyFetched.primaryTexts,
-          excludeHeadlines: previouslyFetched.headlines,
-          after: paginationCursor // Use stored cursor
-        })
-      });
-
-      const data = await response.json();
-
-      const newPrimaryCount = data.primaryTexts?.length || 0;
-      const newHeadlineCount = data.headlines?.length || 0;
-      const hasNewCopy = newPrimaryCount > 0 || newHeadlineCount > 0;
-
-      if (hasNewCopy) {
-        setRecentAds(prev => ({
-          primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
-          headlines: [...(prev.headlines || []), ...(data.headlines || [])]
-        }));
-
-        setPreviouslyFetched(prev => ({
-          primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
-          headlines: [...prev.headlines, ...(data.headlines || [])]
-        }));
-
-        // Update pagination cursor
-        setPaginationCursor(data.nextCursor);
-      } else {
-        toast.info("No more unique copy found");
-      }
-
-    } catch (err) {
-      console.error("Error loading more:", err);
-      toast.error("Failed to load more copy");
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [selectedAdAccount, previouslyFetched, paginationCursor]);
 
 
   const handleAdd = useCallback((setter, state) => {
@@ -1381,95 +1350,53 @@ export default function CopyTemplates({
     setter(updated)
   }, [])
 
-  // 2. IMPORTANT: Memoize template operations
   const handleNewTemplate = useCallback(() => {
     dispatch({ type: "NEW_TEMPLATE" })
     setTemplateName("")
-    setPrimaryTexts(["", "", "", "", ""])  // Changed from [""]
-    setHeadlines(["", "", "", "", ""])      // Changed from [""]
+    setPrimaryTexts(["", "", "", "", ""])
+    setHeadlines(["", "", "", "", ""])
   }, [])
 
-
-  const handleSaveTemplate = async () => {
-    if (!templateName.trim()) {
-      toast.error("Template name is required")
-      return
-    }
+  // Manual Create (Only used for New Templates)
+  const handleCreateTemplate = async () => {
+    if (!templateName.trim()) { toast.error("Template name is required"); return; }
 
     const filteredPrimaryTexts = primaryTexts.filter(text => text.trim() !== "");
     const filteredHeadlines = headlines.filter(text => text.trim() !== "");
 
     const newTemplate = {
       name: templateName,
-      primaryTexts: filteredPrimaryTexts,  // Changed from primaryTexts
-      headlines: filteredHeadlines,        // Changed from headlines
+      primaryTexts: filteredPrimaryTexts,
+      headlines: filteredHeadlines,
     }
 
-    setIsProcessing(true)
-    try {
-      // NO API CALLS HERE. Just update reducer. Parent syncs changes.
+    // Dispatch creates entry -> Syncs to Parent -> Parent shows Save Bar
+    dispatch({
+      type: "SAVE_TEMPLATE",
+      payload: { name: templateName, data: newTemplate, oldName: null }
+    })
 
-      const isEditing = editingTemplate !== null && editingTemplate !== ""
-      const isRenaming = isEditing && editingTemplate !== templateName
-      const shouldBeDefault = isRenaming && editingTemplate === defaultName
+    justSavedRef.current = true
+    setTimeout(() => {
+      dispatch({ type: "SELECT_TEMPLATE", payload: templateName })
+    }, 0)
 
-      // Update local state
-      dispatch({
-        type: "SAVE_TEMPLATE",
-        payload: {
-          name: templateName,
-          data: newTemplate,
-          oldName: isEditing ? editingTemplate : null,
-        },
-      })
-
-      // If we renamed the default, update that too in the reducer
-      if (shouldBeDefault) {
-        dispatch({ type: "SET_DEFAULT", payload: templateName });
-      }
-
-      justSavedRef.current = true
-      setTimeout(() => {
-        dispatch({ type: "SELECT_TEMPLATE", payload: templateName })
-      }, 0)
-
-      if (onTemplateUpdate) onTemplateUpdate();
-
-      toast.success("Template updated (Click 'Save Changes' below)")
-    } catch (err) {
-      toast.error("Failed to update template")
-      console.error(err)
-    } finally {
-      setIsProcessing(false)
-    }
+    if (onTemplateUpdate) onTemplateUpdate();
+    toast.success("Template created (Click 'Save Changes' below)")
   }
 
   const handleSetAsDefault = async () => {
     if (!templateName.trim() || defaultName === templateName) return
-
-    // NO API CALLS HERE. Just update reducer. Parent syncs changes.
     dispatch({ type: "SET_DEFAULT", payload: templateName })
-
     if (onTemplateUpdate) onTemplateUpdate();
     toast.success("Default set (Click 'Save Changes' below)")
   }
 
-
   const handleDeleteTemplate = useCallback(async (templateName) => {
     if (!templateName) return
-
-    setIsProcessing(true)
-    try {
-      // NO API CALLS HERE. Just update reducer. Parent syncs changes.
-      dispatch({ type: "DELETE_TEMPLATE", payload: templateName })
-
-      if (onTemplateUpdate) onTemplateUpdate();
-      toast.success("Template deleted (Click 'Save Changes' below)")
-    } catch (err) {
-      toast.error("Failed to delete template")
-    } finally {
-      setIsProcessing(false)
-    }
+    dispatch({ type: "DELETE_TEMPLATE", payload: templateName })
+    if (onTemplateUpdate) onTemplateUpdate();
+    toast.success("Template deleted (Click 'Save Changes' below)")
   }, [onTemplateUpdate])
 
   const availableTemplates = useMemo(() =>
@@ -1480,56 +1407,62 @@ export default function CopyTemplates({
     }), [templates, defaultName]
   )
 
+  // Import helpers omitted for brevity but needed for component
   const createPrimaryTextImportHandler = useCallback((text) => () => {
     const currentTexts = [...primaryTexts];
     const emptyIndex = currentTexts.findIndex(t => t === "");
-    let importedToIndex;
-
-    if (emptyIndex !== -1) {
-      currentTexts[emptyIndex] = text;
-      importedToIndex = emptyIndex;
-    } else if (currentTexts.length < 5) {
-      currentTexts.push(text);
-      importedToIndex = currentTexts.length - 1;
-    } else {
-      currentTexts[currentTexts.length - 1] = text;
-      importedToIndex = currentTexts.length - 1;
-    }
-
+    if (emptyIndex !== -1) currentTexts[emptyIndex] = text;
+    else if (currentTexts.length < 5) currentTexts.push(text);
+    else currentTexts[currentTexts.length - 1] = text;
     setPrimaryTexts(currentTexts);
-    toast.success(`Imported text into Primary Text ${importedToIndex + 1}`);
   }, [primaryTexts])
 
   const createHeadlineImportHandler = useCallback((text) => () => {
     const currentHeadlines = [...headlines];
     const emptyIndex = currentHeadlines.findIndex(t => t === "");
-    let importedToIndex;
-
-    if (emptyIndex !== -1) {
-      currentHeadlines[emptyIndex] = text;
-      importedToIndex = emptyIndex;
-    } else if (currentHeadlines.length < 5) {
-      currentHeadlines.push(text);
-      importedToIndex = currentHeadlines.length - 1;
-    } else {
-      currentHeadlines[currentHeadlines.length - 1] = text;
-      importedToIndex = currentHeadlines.length - 1;
-    }
-
+    if (emptyIndex !== -1) currentHeadlines[emptyIndex] = text;
+    else if (currentHeadlines.length < 5) currentHeadlines.push(text);
+    else currentHeadlines[currentHeadlines.length - 1] = text;
     setHeadlines(currentHeadlines);
-    toast.success(`Imported text into Headline ${importedToIndex + 1}`);
   }, [headlines])
 
-  // Helper function to normalize text for comparison (removes extra whitespace, case insensitive)
   const normalizeText = (text) => text.trim().toLowerCase().replace(/\s+/g, ' ');
-
-  // Check if text exists in current template
   const textExistsInTemplate = (text, templateTexts) => {
     const normalizedText = normalizeText(text);
-    return templateTexts.some(templateText =>
-      normalizeText(templateText) === normalizedText
-    );
+    return templateTexts.some(templateText => normalizeText(templateText) === normalizedText);
   };
+
+  // Simplified load more handler
+  const handleLoadMore = useCallback(async () => {
+    if (!paginationCursor) return;
+    setIsLoadingMore(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adAccountId: selectedAdAccount,
+          excludePrimaryTexts: previouslyFetched.primaryTexts,
+          excludeHeadlines: previouslyFetched.headlines,
+          after: paginationCursor
+        })
+      });
+      const data = await response.json();
+      if (data.primaryTexts?.length || data.headlines?.length) {
+        setRecentAds(prev => ({
+          primaryTexts: [...prev.primaryTexts, ...data.primaryTexts],
+          headlines: [...prev.headlines, ...data.headlines]
+        }));
+        setPreviouslyFetched(prev => ({
+          primaryTexts: [...prev.primaryTexts, ...data.primaryTexts],
+          headlines: [...prev.headlines, ...data.headlines]
+        }));
+        setPaginationCursor(data.nextCursor);
+      }
+    } catch (e) { console.error(e) } finally { setIsLoadingMore(false) }
+  }, [paginationCursor, previouslyFetched, selectedAdAccount]);
+
 
   return (
     <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
@@ -1559,7 +1492,7 @@ export default function CopyTemplates({
         </div>
       </div>
 
-      {/* New row with template dropdown and set as default button */}
+      {/* Template Selection */}
       <div className="flex items-center gap-3 mb-4 transition-all duration-300">
         <Select
           value={selectedName}
@@ -1585,7 +1518,7 @@ export default function CopyTemplates({
           variant="outline"
           size="sm"
           className="rounded-xl px-3 whitespace-nowrap"
-          disabled={!templateName.trim() || isEditingDefault || isProcessing}
+          disabled={!templateName.trim() || isEditingDefault || isProcessing || !selectedName}
           onClick={handleSetAsDefault}
         >
           Set as Default
@@ -1616,7 +1549,6 @@ export default function CopyTemplates({
               maxRows={10}
               disabled={isProcessing}
             />
-
             {primaryTexts.length > 1 && (
               <Trash2
                 className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
@@ -1669,21 +1601,23 @@ export default function CopyTemplates({
       </div>
 
       <div className="space-y-2 pt-2">
-
-        {/* Bottom row with remaining two buttons split 50/50 */}
         <div className="flex gap-4">
-          <Button
-            className="bg-white text-zinc-900 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed w-full border border-gray-200 hover:bg-gray-50"
-            onClick={handleSaveTemplate}
-            disabled={!templateName.trim() || isProcessing || nameAlreadyExists}
-          >
-            {selectedName && templates[selectedName] ? "Update Template" : "Create Template"}
-          </Button>
+          {/* ONLY show Create button if we are NOT editing an existing template */}
+          {!selectedName && (
+            <Button
+              className="bg-white text-zinc-900 rounded-xl px-6 h-9 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed w-full border border-gray-200 hover:bg-gray-50"
+              onClick={handleCreateTemplate}
+              disabled={!templateName.trim() || isProcessing || nameAlreadyExists}
+            >
+              Create Template
+            </Button>
+          )}
 
+          {/* Show Add New button if we have templates (so we can switch to create mode) */}
           {availableTemplates.length > 0 && (
             <Button
               variant="outline"
-              className="w-full rounded-xl h-[40px] bg-zinc-800 hover:bg-black flex hover:text-white items-center gap-2 text-white transition-all duration-300 ease-in-out animate-in slide-in-from-bottom-2"
+              className="w-full rounded-xl h-[40px] bg-zinc-800 hover:bg-black flex hover:text-white items-center gap-2 text-white"
               onClick={handleNewTemplate}
               disabled={isProcessing}
             >
@@ -1694,11 +1628,12 @@ export default function CopyTemplates({
         </div>
       </div>
 
+      {/* Import Popup - Same as before */}
       {showImportPopup && (
         <div
           className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-start pt-48"
           style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
-          onClick={() => setShowImportPopup(false)} // Add this line
+          onClick={() => setShowImportPopup(false)}
         >
           <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out"
             onClick={(e) => e.stopPropagation()}
@@ -1709,22 +1644,15 @@ export default function CopyTemplates({
                   <div className="flex flex-col items-center justify-center py-10 space-y-4">
                     <RotateLoader size={6} margin={-16} color="#adadad" />
                     <span className="text-sm text-gray-600">Loading text copy...</span>
-                    <span className="text-sm text-gray-600">This can take a few seconds depending on Facebooks Mood.</span>
                   </div>
                 ) : (
                   <Tabs defaultValue="primary-texts" className="w-full">
                     <div className="flex items-center justify-between mb-4 w-full">
                       <TabsList className="flex h-10 items-center justify-start rounded-full bg-muted p-1 text-muted-foreground w-fit">
-                        <TabsTrigger
-                          value="primary-texts"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                        >
+                        <TabsTrigger value="primary-texts" className="rounded-full px-4 py-1.5 text-sm font-medium">
                           Primary Texts ({recentAds.primaryTexts?.length || 0})
                         </TabsTrigger>
-                        <TabsTrigger
-                          value="headlines"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-                        >
+                        <TabsTrigger value="headlines" className="rounded-full px-4 py-1.5 text-sm font-medium">
                           Headlines ({recentAds.headlines?.length || 0})
                         </TabsTrigger>
                       </TabsList>
@@ -1734,7 +1662,6 @@ export default function CopyTemplates({
                       >
                         <CirclePlus className="w-4 h-4 rotate-45 text-white" />
                         <p className="text-white">Close</p>
-
                       </Button>
                     </div>
 
@@ -1744,9 +1671,7 @@ export default function CopyTemplates({
                           {recentAds.primaryTexts.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
-                                <div className="text-xs font-medium text-gray-500">
-                                  Primary Text {index + 1}
-                                </div>
+                                <div className="text-xs font-medium text-gray-500">Primary Text {index + 1}</div>
                                 <Button
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, primaryTexts)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
@@ -1755,20 +1680,15 @@ export default function CopyTemplates({
                                   onClick={textExistsInTemplate(text, primaryTexts) ? undefined : createPrimaryTextImportHandler(text)}
                                   disabled={textExistsInTemplate(text, primaryTexts)}
                                 >
-                                  {/* <Download className="w-3 h-3" /> */}
                                   {textExistsInTemplate(text, primaryTexts) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
-                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
-                                {text}
-                              </div>
+                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">{text}</div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-10 text-gray-500">
-                          No primary texts found
-                        </div>
+                        <div className="text-center py-10 text-gray-500">No primary texts found</div>
                       )}
                     </TabsContent>
 
@@ -1778,9 +1698,7 @@ export default function CopyTemplates({
                           {recentAds.headlines.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
-                                <div className="text-xs font-medium text-gray-500">
-                                  Headline {index + 1}
-                                </div>
+                                <div className="text-xs font-medium text-gray-500">Headline {index + 1}</div>
                                 <Button
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, headlines)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
@@ -1789,20 +1707,15 @@ export default function CopyTemplates({
                                   onClick={textExistsInTemplate(text, headlines) ? undefined : createHeadlineImportHandler(text)}
                                   disabled={textExistsInTemplate(text, headlines)}
                                 >
-                                  {/* <Download className="w-3 h-3" /> */}
                                   {textExistsInTemplate(text, headlines) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
-                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
-                                {text}
-                              </div>
+                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">{text}</div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center py-10 text-gray-500">
-                          No headlines found
-                        </div>
+                        <div className="text-center py-10 text-gray-500">No headlines found</div>
                       )}
                     </TabsContent>
                     <div className="text-center pt-4 mt-4">
@@ -1811,18 +1724,10 @@ export default function CopyTemplates({
                         onClick={handleLoadMore}
                         disabled={isFetchingCopy || isLoadingMore}
                       >
-                        {isFetchingCopy || isLoadingMore ? (
-                          <>
-                            <Loader className="w-4 h-4 animate-spin mr-2" />
-                            Loading More Copy...
-                          </>
-                        ) : (
-                          'Load More Copy'
-                        )}
+                        {isFetchingCopy || isLoadingMore ? <Loader className="w-4 h-4 animate-spin mr-2" /> : 'Load More Copy'}
                       </Button>
                     </div>
                   </Tabs>
-
                 )}
               </div>
             </div>

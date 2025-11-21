@@ -537,8 +537,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const { settings: adSettings, setSettings: setAdSettings, loading, isFirstEverSave } = useAdAccountSettings(selectedAdAccount)
 
 
-  const [links, setLinks] = useState([]) // Array of {url, isDefault}
-  // const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
+  const [links, setLinks] = useState([])
   const [utmPairs, setUtmPairs] = useState([])
 
   const [defaultCTA, setDefaultCTA] = useState("Learn More")
@@ -549,16 +548,14 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   // ----------------------------------
 
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
-  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
+  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
   const [isReauthOpen, setIsReauthOpen] = useState(false)
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-  // Add a ref to track template-only updates
+
   const skipFormResetRef = useRef(false);
 
-
-  // Create callback to pass to CopyTemplates
   const handleTemplateUpdate = useCallback(() => {
     skipFormResetRef.current = true;
   }, []);
@@ -656,13 +653,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     };
   }, []);
 
-  // Optimized ad account selection handler
   const handleAdAccountSelect = useCallback((accountId) => {
     setSelectedAdAccount(accountId);
     setOpenAdAccount(false);
   }, []);
 
-  // Optimized ad name formula handlers
   const handleFormulaInputChange = useCallback((newRawInput) => {
     setAdNameFormulaV2({
       rawInput: newRawInput
@@ -682,7 +677,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultInstagram: selectedInstagram,
       links: links,
       defaultCTA,
-      defaultUTMs: utmPairs, // <--- Direct state reference
+      defaultUTMs: utmPairs,
       creativeEnhancements: enhancements,
       adNameFormulaV2: {
         rawInput: adNameFormulaV2?.rawInput || ""
@@ -715,7 +710,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         defaultInstagram: selectedInstagram,
         links: links,
         defaultCTA,
-        defaultUTMs: utmPairs, // <--- Direct state reference
+        defaultUTMs: utmPairs,
         creativeEnhancements: enhancements,
         adNameFormulaV2: adNameFormulaV2,
         copyTemplates: copyTemplates,
@@ -775,16 +770,14 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
 
 
-  // Add this effect after the existing useEffect hooks
   useEffect(() => {
-    // Only check if we have a selected account and the adAccounts array has been populated
     if (selectedAdAccount && adAccounts.length > 0) {
       const accountStillExists = adAccounts.some(acc => acc.id === selectedAdAccount);
       if (!accountStillExists) {
         setSelectedAdAccount(null);
       }
     }
-  }, [adAccounts, selectedAdAccount]); // Added selectedAdAccount as dep to be safe
+  }, [adAccounts, selectedAdAccount]);
 
 
   return (
