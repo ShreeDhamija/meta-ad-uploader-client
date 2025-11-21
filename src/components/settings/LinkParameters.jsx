@@ -328,7 +328,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             >
                                 {selectedLink ? (
                                     <div className="flex items-center justify-between w-full">
-                                        <span className="text-sm truncate max-w-[300px]">
+                                        <span className="text-sm truncate max-w-[350px]">
                                             {selectedLink.url}
                                         </span>
                                         {selectedLink.isDefault && (
