@@ -218,11 +218,41 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
 
     // --- API: Setup UTMs (Fetch & Modal) ---
+    // const handleOpenUtmSetup = useCallback(async () => {
+    //     if (!selectedAdAccount) return;
+
+    //     setShowUtmSetupModal(true);
+    //     setIsFetchingUtms(true);
+
+    //     // Copy current real settings to draft
+    //     let currentPairs = utmPairs.length > 0 ? [...utmPairs] : [];
+    //     setTempUtmPairs(currentPairs);
+
+    //     try {
+    //         const res = await fetch(`${API_BASE_URL}/auth/fetch-recent-utms?adAccountId=${selectedAdAccount}`, { credentials: "include" });
+    //         const data = await res.json();
+
+    //         if (data.pairs && data.pairs.length > 0) {
+    //             setTempUtmPairs(data.pairs); // Update Draft
+    //             setUtmFetchSuccess(true);
+    //         } else if (currentPairs.length === 0) {
+    //             setTempUtmPairs(DEFAULT_PREFILL_PAIRS); // Suggest Defaults in Draft
+    //             setUtmFetchError(true);
+    //         }
+    //     } catch (err) {
+    //         if (currentPairs.length === 0) setTempUtmPairs(DEFAULT_PREFILL_PAIRS);
+    //     } finally {
+    //         setIsFetchingUtms(false);
+    //     }
+    // }, [selectedAdAccount, utmPairs]);
+
+    // --- API: Setup UTMs (Fetch & Modal) ---
     const handleOpenUtmSetup = useCallback(async () => {
         if (!selectedAdAccount) return;
 
         setShowUtmSetupModal(true);
         setIsFetchingUtms(true);
+        setUtmFetchError(false); // Reset error state on open
 
         // Copy current real settings to draft
         let currentPairs = utmPairs.length > 0 ? [...utmPairs] : [];
@@ -234,7 +264,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
             if (data.pairs && data.pairs.length > 0) {
                 setTempUtmPairs(data.pairs); // Update Draft
-                setUtmFetchSuccess(true);
             } else if (currentPairs.length === 0) {
                 setTempUtmPairs(DEFAULT_PREFILL_PAIRS); // Suggest Defaults in Draft
                 setUtmFetchError(true);
@@ -245,8 +274,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             setIsFetchingUtms(false);
         }
     }, [selectedAdAccount, utmPairs]);
-
-
 
     const handleExtractUtms = useCallback(() => {
         if (!rawUtmString.trim()) return;
