@@ -2371,9 +2371,40 @@ export default function AdCreationForm({
       return fileOrder;
     };
 
-    /**
-     * Make API call to create ad
-     */
+
+    // const createAdApiCall = async (formData, API_BASE_URL) => {
+    //   const maxRetries = 5;
+    //   const baseDelay = 1000; // Start with 1 second
+
+    //   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    //     try {
+    //       const response = await axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
+    //         withCredentials: true,
+    //         headers: { "Content-Type": "multipart/form-data" },
+    //       });
+
+    //       // Success - return the response
+    //       return response;
+
+    //     } catch (error) {
+    //       // Check if it's the last attempt
+    //       if (attempt === maxRetries - 1) {
+    //         console.error(`Failed after ${maxRetries} attempts:`, error.message);
+    //         throw error; // Re-throw on final attempt
+    //       }
+
+    //       // Log the retry attempt
+    //       console.warn(`Attempt ${attempt + 1} failed, retrying... (${error.message})`);
+
+    //       // Calculate delay with exponential backoff + jitter
+    //       const delay = baseDelay * Math.pow(1.5, attempt) + Math.random() * 500;
+
+    //       // Wait before retrying
+    //       await new Promise(resolve => setTimeout(resolve, delay));
+    //     }
+    //   }
+    // };
+
 
     const createAdApiCall = async (formData, API_BASE_URL) => {
       const maxRetries = 5;
@@ -2390,6 +2421,16 @@ export default function AdCreationForm({
           return response;
 
         } catch (error) {
+          // Check if it's a legitimate server error starting with "Create Ad Error"
+          const errorMessage = error.response?.data?.error?.message;
+          const isCreateAdError = typeof errorMessage === 'string' && errorMessage.startsWith('Create Ad Error');
+
+          // Don't retry if we got a "Create Ad Error" from the server
+          if (isCreateAdError) {
+            console.error('Create Ad Error received, not retrying:', error.response?.data);
+            throw error;
+          }
+
           // Check if it's the last attempt
           if (attempt === maxRetries - 1) {
             console.error(`Failed after ${maxRetries} attempts:`, error.message);
@@ -2408,9 +2449,6 @@ export default function AdCreationForm({
       }
     };
 
-    // ============================================================================
-    // MAIN REFACTORED CODE
-    // ============================================================================
 
     try {
       const promises = [];
