@@ -1654,7 +1654,7 @@ export default function AdCreationForm({
           adTypeLabel = 'FLEX';
         else if (adType === 'carousel')
           adTypeLabel = 'CAR';
-        else adTypeLabel = "";
+        else adTypeLabel = fileType;
       }
       catch (e) {
         adTypeLabel = "";
