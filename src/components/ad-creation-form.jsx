@@ -2421,9 +2421,19 @@ export default function AdCreationForm({
           return response;
 
         } catch (error) {
+          // Log the entire error structure to see what we're getting
+          console.log('Full error object:', error);
+          console.log('error.response:', error.response);
+          console.log('error.response?.data:', error.response?.data);
+          console.log('error.message:', error.message);
+
           // Check if it's a legitimate server error starting with "Create Ad Error"
           const errorMessage = error.response?.data?.error?.message;
+          console.log('Extracted errorMessage:', errorMessage);
+          console.log('Type of errorMessage:', typeof errorMessage);
+
           const isCreateAdError = typeof errorMessage === 'string' && errorMessage.startsWith('Create Ad Error');
+          console.log('isCreateAdError:', isCreateAdError);
 
           // Don't retry if we got a "Create Ad Error" from the server
           if (isCreateAdError) {
