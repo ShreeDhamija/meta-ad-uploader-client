@@ -2408,7 +2408,7 @@ export default function AdCreationForm({
 
     const createAdApiCall = async (formData, API_BASE_URL) => {
       const maxRetries = 5;
-      const baseDelay = 1000; // Start with 1 second
+      const baseDelay = 1000;
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
@@ -2417,43 +2417,23 @@ export default function AdCreationForm({
             headers: { "Content-Type": "multipart/form-data" },
           });
 
-          // Success - return the response
           return response;
 
         } catch (error) {
-          // Log the entire error structure to see what we're getting
-          console.log('Full error object:', error);
-          console.log('error.response:', error.response);
-          console.log('error.response?.data:', error.response?.data);
-          console.log('error.message:', error.message);
 
-          // Check if it's a legitimate server error starting with "Create Ad Error"
-          const errorMessage = error.response?.data?.error?.message;
-          console.log('Extracted errorMessage:', errorMessage);
-          console.log('Type of errorMessage:', typeof errorMessage);
-
-          const isCreateAdError = typeof errorMessage === 'string' && errorMessage.startsWith('Create Ad Error');
-          console.log('isCreateAdError:', isCreateAdError);
-
-          // Don't retry if we got a "Create Ad Error" from the server
-          if (isCreateAdError) {
-            console.error('Create Ad Error received, not retrying:', error.response?.data);
+          if (error.response && error.response.status === 400) {
+            console.error('Create Ad Logic Error received (not retrying):', error.response.data);
             throw error;
           }
 
-          // Check if it's the last attempt
           if (attempt === maxRetries - 1) {
             console.error(`Failed after ${maxRetries} attempts:`, error.message);
-            throw error; // Re-throw on final attempt
+            throw error;
           }
 
-          // Log the retry attempt
           console.warn(`Attempt ${attempt + 1} failed, retrying... (${error.message})`);
 
-          // Calculate delay with exponential backoff + jitter
           const delay = baseDelay * Math.pow(1.5, attempt) + Math.random() * 500;
-
-          // Wait before retrying
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
