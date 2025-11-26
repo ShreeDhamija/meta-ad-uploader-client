@@ -548,6 +548,26 @@ export default function AdCreationForm({
     };
   };
 
+  // Add this helper function
+  const uploadChunkWithRetry = async (url, chunk, fileType, partNumber, maxRetries = 3) => {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await axios.put(url, chunk, {
+          headers: { 'Content-Type': fileType },
+          timeout: 120000, // Increase to 2 min for slow connections
+        });
+        return response;
+      } catch (error) {
+        const isLastAttempt = attempt === maxRetries;
+        const isNetworkError = !error.response || error.code === 'ECONNABORTED';
+
+        if (isLastAttempt || !isNetworkError) throw error;
+
+        console.log(`⚠️ Chunk ${partNumber} failed (attempt ${attempt}/${maxRetries}). Retrying...`);
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1))); // Exponential backoff
+      }
+    }
+  };
 
   const uploadToS3 = async (file, onChunkUploaded, uniqueId) => {
     // Validate inputs
@@ -635,10 +655,13 @@ export default function AdCreationForm({
         return limit(async () => {
           try {
 
-            const uploadResponse = await axios.put(url, chunk, {
-              headers: { 'Content-Type': file.type },
-              timeout: 60000
-            });
+            // const uploadResponse = await axios.put(url, chunk, {
+            //   headers: { 'Content-Type': file.type },
+            //   timeout: 60000
+            // });
+
+            const uploadResponse = await uploadChunkWithRetry(url, chunk, file.type, partNumber);
+
 
             if (onChunkUploaded) {
               uploadedChunks++;

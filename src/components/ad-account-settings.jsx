@@ -114,44 +114,6 @@ export default function AdAccountSettings({
   );
 
 
-  // const handleAdAccountChange = useCallback(async (value) => {
-  //   const adAccountId = value
-  //   setSelectedAdAccount(adAccountId)
-  //   setCampaigns([])
-  //   setAdSets([])
-  //   // setSelectedCampaign("")
-  //   setSelectedCampaign([])
-  //   setSelectedAdSets([])
-  //   if (!adAccountId) return
-
-  //   setIsAdAccountChanging(true);
-  //   setIsLoading(true)
-  //   try {
-  //     const res = await fetch(
-  //       `${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${adAccountId}`,
-  //       { credentials: "include" },
-  //     )
-  //     const data = await res.json()
-  //     if (data.campaigns) {
-  //       const priority = {
-  //         ACTIVE: 1,
-  //         PAUSED: 2,
-  //       }
-
-  //       const sortedCampaigns = sortCampaigns(data.campaigns);
-  //       setCampaigns(sortedCampaigns);
-
-
-
-  //     }
-  //   } catch (err) {
-  //     toast.error(`Failed to fetch campaigns: ${err.message || "Unknown error occurred"}`)
-  //     console.error("Failed to fetch campaigns:", err)
-  //   } finally {
-  //     setIsLoading(false)
-  //     setIsAdAccountChanging(false);
-  //   }
-  // });
 
   const handleAdAccountChange = useCallback(async (value) => {
     const adAccountId = value
