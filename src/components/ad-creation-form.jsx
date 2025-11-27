@@ -2922,25 +2922,25 @@ export default function AdCreationForm({
 
       setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length });
 
-      const trackedPromises = promises.map(promise =>
-        promise
-          .then(result => {
-            setLiveProgress(prev => ({
-              ...prev,
-              completed: prev.completed + 1,
-              succeeded: prev.succeeded + 1
-            }));
-            return result;
-          })
-          .catch(error => {
-            setLiveProgress(prev => ({
-              ...prev,
-              completed: prev.completed + 1,
-              failed: prev.failed + 1
-            }));
-            throw error;
-          })
-      );
+      // const trackedPromises = promises.map(promise =>
+      //   promise
+      //     .then(result => {
+      //       setLiveProgress(prev => ({
+      //         ...prev,
+      //         completed: prev.completed + 1,
+      //         succeeded: prev.succeeded + 1
+      //       }));
+      //       return result;
+      //     })
+      //     .catch(error => {
+      //       setLiveProgress(prev => ({
+      //         ...prev,
+      //         completed: prev.completed + 1,
+      //         failed: prev.failed + 1
+      //       }));
+      //       throw error;
+      //     })
+      // );
 
 
 
@@ -2954,7 +2954,44 @@ export default function AdCreationForm({
         setJobId(frontendJobId);
         // Small delay to let SSE connect
         await new Promise(resolve => setTimeout(resolve, 100));
-        const responses = await Promise.allSettled(trackedPromises); // 🆕 Changed from promises to trackedPromises
+        // const responses = await Promise.allSettled(trackedPromises); // 🆕 Changed from promises to trackedPromises
+
+        const responses = new Array(promises.length);
+
+        const trackedPromises = promises.map((promise, index) =>
+          promise
+            .then(result => {
+              // 1. Update Live Counter
+              setLiveProgress(prev => ({
+                ...prev,
+                completed: prev.completed + 1,
+                succeeded: prev.succeeded + 1
+              }));
+
+              // 2. Record Success explicitly
+              responses[index] = { status: 'fulfilled', value: result };
+              return result;
+            })
+            .catch(error => {
+              // 1. Update Live Counter
+              setLiveProgress(prev => ({
+                ...prev,
+                completed: prev.completed + 1,
+                failed: prev.failed + 1
+              }));
+
+              // 2. Record Failure explicitly 
+              // This ensures that if the live counter saw a fail, the report sees a fail.
+              responses[index] = { status: 'rejected', reason: error };
+
+              // We return null (and catch the error here) so Promise.all below
+              // doesn't crash. We've already recorded the failure in 'responses'.
+              return null;
+            })
+        );
+
+        // We use Promise.all because we are catching rejections internally in trackedPromises
+        await Promise.all(trackedPromises);
 
 
         const successCount = responses.filter(r => r.status === 'fulfilled').length;
