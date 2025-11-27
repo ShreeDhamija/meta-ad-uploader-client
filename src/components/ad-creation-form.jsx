@@ -2433,6 +2433,8 @@ export default function AdCreationForm({
 
     try {
       const promises = [];
+      const promiseMetadata = []; // ADD THIS
+
       // Pre-compute common JSON strings and values
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
       let globalFileIndex = 0;
@@ -2517,6 +2519,8 @@ export default function AdCreationForm({
             }
           });
           promises.push(createAdApiCall(formData, API_BASE_URL));
+          promiseMetadata.push(null); // ADD - keeps array indices aligned
+
         });
       }
 
@@ -2641,6 +2645,8 @@ export default function AdCreationForm({
             // Append shop destination
             appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
             promises.push(createAdApiCall(formData, API_BASE_URL));
+            promiseMetadata.push(null); // ADD - keeps array indices aligned
+
           });
         }
       }
@@ -2692,6 +2698,8 @@ export default function AdCreationForm({
           // Append shop destination
           appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
           promises.push(createAdApiCall(formData, API_BASE_URL));
+          promiseMetadata.push(null); // ADD - keeps array indices aligned
+
         });
       }
 
@@ -2774,6 +2782,7 @@ export default function AdCreationForm({
               // Append has ungrouped files flag
               formData.append("hasUngroupedFiles", hasUngroupedFiles);
               promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: groupedAdNames[groupIndex] }); // ADD
               localIterationIndex++;
             });
           }
@@ -2835,6 +2844,8 @@ export default function AdCreationForm({
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
               promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: file.name }); // ADD
+
             });
 
             // Handle small drive files
@@ -2864,6 +2875,8 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: driveFile.name }); // ADD
+
             });
 
             // Handle S3 uploaded files
@@ -2893,6 +2906,8 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
               promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: s3File.name || s3File.originalName || 'S3 Video' }); // ADD
+
             });
           }
         });
@@ -2946,20 +2961,37 @@ export default function AdCreationForm({
         const failureCount = responses.filter(r => r.status === 'rejected').length;
         const totalCount = responses.length;
 
-        const errorMessages = responses
-          .filter(r => r.status === 'rejected')
-          .map((r, index) => {
-            let errorMsg = 'Unknown error';
-            if (r.reason?.response?.data?.error) {
-              errorMsg = r.reason.response.data.error;
-            } else if (r.reason?.response?.data) {
-              errorMsg = r.reason.response.data;
-            } else if (r.reason?.message) {
-              errorMsg = r.reason.message;
-            }
-            return errorMsg;
-          });
+        // const errorMessages = responses
+        //   .filter(r => r.status === 'rejected')
+        //   .map((r, index) => {
+        //     let errorMsg = 'Unknown error';
+        //     if (r.reason?.response?.data?.error) {
+        //       errorMsg = r.reason.response.data.error;
+        //     } else if (r.reason?.response?.data) {
+        //       errorMsg = r.reason.response.data;
+        //     } else if (r.reason?.message) {
+        //       errorMsg = r.reason.message;
+        //     }
+        //     return errorMsg;
+        //   });
 
+        const errorMessages = responses
+          .map((r, index) => ({ response: r, meta: promiseMetadata[index] }))
+          .filter(({ response }) => response.status === 'rejected')
+          .map(({ response, meta }) => {
+            let errorMsg = 'Unknown error';
+            if (response.reason?.response?.data?.error) {
+              errorMsg = response.reason.response.data.error;
+            } else if (response.reason?.response?.data) {
+              errorMsg = response.reason.response.data;
+            } else if (response.reason?.message) {
+              errorMsg = response.reason.message;
+            }
+            return {
+              fileName: meta?.fileName || null,
+              error: errorMsg
+            };
+          });
 
 
         let jobStatus = 'complete';
@@ -3203,16 +3235,26 @@ export default function AdCreationForm({
                             </summary>
                             <ul className="mt-1 ml-4 list-disc space-y-0.5 text-[#FF0000]">
                               {(() => {
-                                const errorCounts = job.errorMessages.reduce((acc, errorMsg) => {
-                                  acc[errorMsg] = (acc[errorMsg] || 0) + 1;
+                                const errorGroups = job.errorMessages.reduce((acc, item) => {
+                                  const key = item.error;
+                                  if (!acc[key]) {
+                                    acc[key] = { error: item.error, fileNames: [] };
+                                  }
+                                  if (item.fileName) {
+                                    acc[key].fileNames.push(item.fileName);
+                                  }
                                   return acc;
                                 }, {});
-                                return Object.entries(errorCounts).map(([errorMsg, count], idx) => (
+
+                                return Object.values(errorGroups).map((group, idx) => (
                                   <li key={idx} className="break-words">
-                                    {errorMsg}
-                                    {count > 1 && (
+                                    {group.fileNames.length > 0 && (
+                                      <span className="font-medium">{group.fileNames.join(', ')}: </span>
+                                    )}
+                                    {group.error}
+                                    {group.fileNames.length === 0 && job.errorMessages.filter(e => e.error === group.error).length > 1 && (
                                       <span className="ml-1 text-red-500 font-medium">
-                                        (×{count})
+                                        (×{job.errorMessages.filter(e => e.error === group.error).length})
                                       </span>
                                     )}
                                   </li>
