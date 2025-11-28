@@ -44,7 +44,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [searchValue, setSearchValue] = useState("")
   const [selectedPage, setSelectedPage] = useState(null)
   const [selectedInstagram, setSelectedInstagram] = useState(null)
-
+  const [savingSettings, setSavingSettings] = useState(false)
   const { settings: adSettings, setSettings: setAdSettings, loading, isFirstEverSave } = useAdAccountSettings(selectedAdAccount)
 
 
@@ -172,6 +172,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
   // Optimized save handler
   const handleSave = useCallback(async () => {
+
+    setSavingSettings(true);
     if (!selectedAdAccount) {
       alert("Select an Ad Account first");
       return;
@@ -222,6 +224,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       setIsDirty(false);
     } catch (err) {
       toast.error("Failed to save settings: " + err.message);
+    }
+    finally {
+      setSavingSettings(false);
     }
   }, [
     selectedAdAccount,
@@ -476,7 +481,14 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               onClick={handleSave}
               className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
             >
-              Save Changes
+              {isLoadingCampaigns ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  <span className="block truncate flex-1 text-left text-gray-500">Fetching campaigns...</span>
+                </>
+              ) : (
+                <p className="text-blue-600 hover:text-blue-800"> Save Changes</p>
+              )}
             </Button>
           </div>
         </div>,

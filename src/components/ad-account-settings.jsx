@@ -330,12 +330,9 @@ export default function AdAccountSettings({
         setDuplicateCampaign("");
         setNewCampaignName("");
 
-        // Refresh campaigns to show the new one
-        await refreshCampaigns();
 
-        // Select the newly created campaign
+        await refreshCampaigns();
         setSelectedCampaign([data.copied_campaign_id]);
-        // Clear ad sets since we're switching to a new campaign
         setAdSets([]);
         setSelectedAdSets([]);
 
