@@ -3935,20 +3935,14 @@ export default function AdCreationForm({
                 {!isCarouselAd || link.length === 1 ? (
                   // Single link mode (normal ads or carousel with "apply to all")
                   <div className="space-y-3">
-                    {!showCustomLink && (
+                    {!showCustomLink && availableLinks.length > 0 && (
                       <Select
                         value={link[0] || ""}
                         onValueChange={(value) => setLink([value])}
                         disabled={!isLoggedIn || availableLinks.length === 0}
                       >
                         <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow w-full">
-                          <SelectValue
-                            placeholder={
-                              availableLinks.length === 0
-                                ? "Add links in Settings or choose Custom Link Below"
-                                : "Select a link"
-                            }
-                          />
+                          <SelectValue placeholder="Select a link" />
                         </SelectTrigger>
 
                         <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
@@ -3976,7 +3970,7 @@ export default function AdCreationForm({
                     <div className="flex items-center space-x-2">
                       <div className="space-y-2 w-full">
                         {/* Custom link input */}
-                        {showCustomLink && (
+                        {(showCustomLink || availableLinks.length === 0) && (
                           <div className="w-full">
                             <Input
                               type="url"
@@ -3993,30 +3987,29 @@ export default function AdCreationForm({
                           </div>
                         )}
 
-                        {/* Checkbox toggle */}
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="custom-link-toggle"
-                            checked={showCustomLink}
-                            onCheckedChange={(checked) => {
-                              setShowCustomLink(checked);
-                              if (!checked) {
-                                setCustomLink("");
-                                const dropdownValue = defaultLink?.url || "";
-                                setLink([dropdownValue]);
-                              }
-                            }}
-                            className="border-gray-300 w-4 h-4 rounded-md"
-                          />
-                          <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
-                            Enter custom link
-                          </label>
-                        </div>
+                        {/* Checkbox toggle - only show if they have saved links */}
+                        {availableLinks.length > 0 && (
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="custom-link-toggle"
+                              checked={showCustomLink}
+                              onCheckedChange={(checked) => {
+                                setShowCustomLink(checked);
+                                if (!checked) {
+                                  setCustomLink("");
+                                  const dropdownValue = defaultLink?.url || "";
+                                  setLink([dropdownValue]);
+                                }
+                              }}
+                              className="border-gray-300 w-4 h-4 rounded-md"
+                            />
+                            <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
+                              Enter custom link
+                            </label>
+                          </div>
+                        )}
                       </div>
-
                     </div>
-
-
                   </div>
                 ) : (
                   // Multiple links mode (carousel with separate links per card)
