@@ -210,10 +210,10 @@ export default function MediaPreview({
   const sensors = useSensors(useSensor(PointerSensor));
 
   // Memoized computations
-  const canGroupFiles = useMemo(() =>
-    selectedFiles.size >= 2 && selectedFiles.size <= 3,
-    [selectedFiles.size]
-  );
+  const canGroupFiles = useMemo(() => {
+    const maxGroupSize = adType === 'flexible' ? 10 : 3;
+    return selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize;
+  }, [selectedFiles.size, adType]);
 
   const canAIGroup = useMemo(() => {
     const imageFiles = files.filter(file => !isVideoFile(file));
