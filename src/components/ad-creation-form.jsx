@@ -3976,13 +3976,8 @@ export default function AdCreationForm({
                               type="url"
                               value={customLink}
                               onChange={(e) => {
-                                let value = e.target.value;
-                                // Auto-prepend https:// if user doesn't include a protocol
-                                if (value && !value.match(/^https?:\/\//i)) {
-                                  value = 'https://' + value;
-                                }
-                                setCustomLink(value);
-                                setLink([value]);
+                                setCustomLink(e.target.value);
+                                setLink([e.target.value]);
                               }}
                               className="w-full border border-gray-400 rounded-xl bg-white shadow"
                               placeholder="https://example.com"
