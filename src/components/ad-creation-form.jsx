@@ -3973,7 +3973,7 @@ export default function AdCreationForm({
                         {(showCustomLink || availableLinks.length === 0) && (
                           <div className="w-full">
                             <Input
-                              type="url"
+                              type="text"
                               value={customLink}
                               onChange={(e) => {
                                 setCustomLink(e.target.value);
@@ -4097,7 +4097,7 @@ export default function AdCreationForm({
 
                         {linkCustomStates?.[index] && (
                           <Input
-                            type="url"
+                            type="text"
                             value={value}
                             onChange={(e) => {
                               const newLinks = [...link];
