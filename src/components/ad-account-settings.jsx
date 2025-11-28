@@ -562,7 +562,7 @@ export default function AdAccountSettings({
                   variant="outline"
                   role="combobox"
                   aria-expanded={openCampaign}
-                  disabled={!isLoggedIn || isLoadingCampaigns}
+                  disabled={!isLoggedIn || !selectedAdAccount || isLoadingCampaigns || (selectedAdAccount && campaigns.length === 0)}
                   className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                 >
                   <div className="w-full overflow-hidden flex items-center gap-2">
@@ -819,7 +819,7 @@ transition-all duration-150 hover:!bg-black
                   variant="outline"
                   role="combobox"
                   aria-expanded={openAdSet}
-                  disabled={!isLoggedIn || isLoadingAdSetsLocal}
+                  disabled={!isLoggedIn || selectedCampaign.length === 0 || isLoadingAdSetsLocal || (selectedCampaign.length > 0 && adSets.length === 0)}
                   className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
                   <div className="w-full overflow-hidden flex items-center gap-2">
