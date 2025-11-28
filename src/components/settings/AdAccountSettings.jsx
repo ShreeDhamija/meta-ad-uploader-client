@@ -481,7 +481,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               onClick={handleSave}
               className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
             >
-              {isLoadingCampaigns ? (
+              {savingSettings ? (
                 <>
                   <Loader className="h-4 w-4 animate-spin" />
                   <span className="block truncate flex-1 text-left text-gray-500">Fetching campaigns...</span>
