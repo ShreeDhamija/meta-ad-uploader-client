@@ -78,6 +78,7 @@ export default function AdAccountSettings({
   const navigate = useNavigate()
   const [isLoadingAdAccounts, setIsLoadingAdAccounts] = useState(false);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
+  const [isLoadingAdSetsLocal, setIsLoadingAdSetsLocal] = useState(false);
 
 
 
@@ -125,6 +126,7 @@ export default function AdAccountSettings({
     if (!adAccountId) return
 
     setIsAdAccountChanging(true);
+    setIsLoadingCampaigns(true);
     setIsLoading(true)
 
     const maxRetries = 3;
@@ -156,6 +158,8 @@ export default function AdAccountSettings({
 
     setIsLoading(false)
     setIsAdAccountChanging(false);
+    setIsLoadingCampaigns(false);
+
   }, [])
 
 
@@ -193,7 +197,9 @@ export default function AdAccountSettings({
     setCampaignObjective(objectives);
 
     // Fetch adsets from all selected campaigns
-    setIsLoading(true);
+    // setIsLoading(true);
+    setIsLoadingAdSetsLocal(true);
+
     try {
       const adSetPromises = newSelectedCampaigns.map(id =>
         fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${id}`, {
@@ -220,7 +226,9 @@ export default function AdAccountSettings({
       toast.error(`Failed to fetch ad sets: ${err.message || "Unknown error occurred"}`);
       console.error("Failed to fetch ad sets:", err);
     } finally {
-      setIsLoading(false);
+      // setIsLoading(false);
+      setIsLoadingAdSetsLocal(false);
+
     }
   }, [selectedCampaign, campaigns, sortAdSets]);
 
@@ -554,17 +562,26 @@ export default function AdAccountSettings({
                   variant="outline"
                   role="combobox"
                   aria-expanded={openCampaign}
-                  disabled={!isLoggedIn || campaigns.length === 0 || isLoadingCampaigns}
+                  disabled={!isLoggedIn || isLoadingCampaigns}
                   className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                 >
-                  <div className="w-full overflow-hidden">
-                    <span className="block truncate flex-1 text-left">
-                      {selectedCampaign.length === 0
-                        ? "Select campaigns"
-                        : selectedCampaign.length === 1
-                          ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaign[0]
-                          : `${selectedCampaign.length} campaigns selected`}
-                    </span>
+                  <div className="w-full overflow-hidden flex items-center gap-2">
+                    {isLoadingCampaigns ? (
+                      <>
+                        <Loader className="h-4 w-4 animate-spin" />
+                        <span className="block truncate flex-1 text-left text-gray-500">Fetching campaigns...</span>
+                      </>
+                    ) : (
+                      <span className="block truncate flex-1 text-left">
+                        {selectedAdAccount && campaigns.length === 0
+                          ? "No campaigns found"
+                          : selectedCampaign.length === 0
+                            ? "Select campaigns"
+                            : selectedCampaign.length === 1
+                              ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaign[0]
+                              : `${selectedCampaign.length} campaigns selected`}
+                      </span>
+                    )}
                   </div>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -802,15 +819,27 @@ transition-all duration-150 hover:!bg-black
                   variant="outline"
                   role="combobox"
                   aria-expanded={openAdSet}
-                  disabled={!isLoggedIn || adSets.length === 0}
+                  disabled={!isLoggedIn || isLoadingAdSetsLocal}
                   className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
-                  {showDuplicateBlock
-                    ? "New Ad Set"
-                    : selectedAdSets.length > 0
-                      ? `${selectedAdSets.length} AdSet${selectedAdSets.length > 1 ? "s" : ""} selected`
-                      : "Select Ad Sets"}
-
+                  <div className="w-full overflow-hidden flex items-center gap-2">
+                    {isLoadingAdSetsLocal ? (
+                      <>
+                        <Loader className="h-4 w-4 animate-spin" />
+                        <span className="block truncate flex-1 text-left text-gray-500">Fetching ad sets...</span>
+                      </>
+                    ) : (
+                      <span className="block truncate flex-1 text-left">
+                        {showDuplicateBlock
+                          ? "New Ad Set"
+                          : selectedCampaign.length > 0 && adSets.length === 0
+                            ? "No ad sets found"
+                            : selectedAdSets.length > 0
+                              ? `${selectedAdSets.length} AdSet${selectedAdSets.length > 1 ? "s" : ""} selected`
+                              : "Select Ad Sets"}
+                      </span>
+                    )}
+                  </div>
                   <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                 </Button>
               </PopoverTrigger>

@@ -2922,35 +2922,7 @@ export default function AdCreationForm({
 
       setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length });
 
-      // const trackedPromises = promises.map(promise =>
-      //   promise
-      //     .then(result => {
-      //       setLiveProgress(prev => ({
-      //         ...prev,
-      //         completed: prev.completed + 1,
-      //         succeeded: prev.succeeded + 1
-      //       }));
-      //       return result;
-      //     })
-      //     .catch(error => {
-      //       setLiveProgress(prev => ({
-      //         ...prev,
-      //         completed: prev.completed + 1,
-      //         failed: prev.failed + 1
-      //       }));
-      //       throw error;
-      //     })
-      // );
-
-
-
-      // ============================================================================
-      // EXECUTE ALL API CALLS
-      // ============================================================================
-      // Replace the existing Promise.all block with:
       try {
-
-
         setJobId(frontendJobId);
         // Small delay to let SSE connect
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -2980,12 +2952,7 @@ export default function AdCreationForm({
                 failed: prev.failed + 1
               }));
 
-              // 2. Record Failure explicitly 
-              // This ensures that if the live counter saw a fail, the report sees a fail.
               responses[index] = { status: 'rejected', reason: error };
-
-              // We return null (and catch the error here) so Promise.all below
-              // doesn't crash. We've already recorded the failure in 'responses'.
               return null;
             })
         );
@@ -2993,24 +2960,12 @@ export default function AdCreationForm({
         // We use Promise.all because we are catching rejections internally in trackedPromises
         await Promise.all(trackedPromises);
 
-
         const successCount = responses.filter(r => r.status === 'fulfilled').length;
         const failureCount = responses.filter(r => r.status === 'rejected').length;
         const totalCount = responses.length;
 
-        // const errorMessages = responses
-        //   .filter(r => r.status === 'rejected')
-        //   .map((r, index) => {
-        //     let errorMsg = 'Unknown error';
-        //     if (r.reason?.response?.data?.error) {
-        //       errorMsg = r.reason.response.data.error;
-        //     } else if (r.reason?.response?.data) {
-        //       errorMsg = r.reason.response.data;
-        //     } else if (r.reason?.message) {
-        //       errorMsg = r.reason.message;
-        //     }
-        //     return errorMsg;
-        //   });
+
+
 
         const errorMessages = responses
           .map((r, index) => ({ response: r, meta: promiseMetadata[index] }))
