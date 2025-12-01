@@ -1829,20 +1829,13 @@ export default function AdCreationForm({
 
       try {
         const allFiles = [...files, ...driveFiles];
-        // const videoFiles = allFiles.filter(file =>
-        //   file.type?.startsWith('video/') || file.mimeType?.startsWith('video/')
-        // );
-
         const videoFiles = allFiles.filter(isVideoFile);
-
 
         if (videoFiles.length > 0) {
           const BATCH_SIZE = 3;
 
           for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
             const batch = videoFiles.slice(i, i + BATCH_SIZE);
-
-
 
             // Update progress message
             setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
@@ -2734,7 +2727,8 @@ export default function AdCreationForm({
                 firstFileForNaming || files[0] || driveFiles[0],
                 localIterationIndex + groupIndex,
                 link[0],
-                jobData.formData.adNameFormulaV2
+                jobData.formData.adNameFormulaV2,
+                adType
               );
             });
 
@@ -2803,19 +2797,19 @@ export default function AdCreationForm({
 
             // Pre-compute ad names
             const localFileAdNames = ungroupedLocalFiles.map((file, index) =>
-              computeAdNameFromFormula(file, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2)
+              computeAdNameFromFormula(file, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
             );
 
             localIterationIndex += ungroupedLocalFiles.length;
 
             const driveFileAdNames = ungroupedDriveFiles.map((driveFile, index) =>
-              computeAdNameFromFormula(driveFile, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2)
+              computeAdNameFromFormula(driveFile, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
             );
 
             localIterationIndex += ungroupedDriveFiles.length;
 
             const s3FileAdNames = ungroupedS3Files.map((s3File, index) =>
-              computeAdNameFromFormula(s3File, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2)
+              computeAdNameFromFormula(s3File, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
             );
 
             // Handle local files
