@@ -2734,7 +2734,8 @@ export default function AdCreationForm({
                 firstFileForNaming || files[0] || driveFiles[0],
                 localIterationIndex + groupIndex,
                 link[0],
-                jobData.formData.adNameFormulaV2
+                jobData.formData.adNameFormulaV2,
+                adType
               );
             });
 
@@ -2803,19 +2804,19 @@ export default function AdCreationForm({
 
             // Pre-compute ad names
             const localFileAdNames = ungroupedLocalFiles.map((file, index) =>
-              computeAdNameFromFormula(file, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2)
+              computeAdNameFromFormula(file, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
             );
 
             localIterationIndex += ungroupedLocalFiles.length;
 
             const driveFileAdNames = ungroupedDriveFiles.map((driveFile, index) =>
-              computeAdNameFromFormula(driveFile, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2)
+              computeAdNameFromFormula(driveFile, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
             );
 
             localIterationIndex += ungroupedDriveFiles.length;
 
             const s3FileAdNames = ungroupedS3Files.map((s3File, index) =>
-              computeAdNameFromFormula(s3File, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2)
+              computeAdNameFromFormula(s3File, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
             );
 
             // Handle local files
