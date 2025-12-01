@@ -152,6 +152,7 @@ export default function Home() {
     const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
     const [fileGroups, setFileGroups] = useState([]);
     const [files, setFiles] = useState([])
+    const [importedPosts, setImportedPosts] = useState([])
     const [videoThumbs, setVideoThumbs] = useState({})
     const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading } = useAppData()
     const { settings: adAccountSettings, documentExists } = useAdAccountSettings(selectedAdAccount)
@@ -538,6 +539,8 @@ export default function Home() {
                             setThumbnail={setThumbnail}
                             files={files}
                             setFiles={setFiles}
+                            importedPosts={importedPosts}
+                            setImportedPosts={setImportedPosts}
                             videoThumbs={videoThumbs}
                             setVideoThumbs={setVideoThumbs}
                             selectedAdSets={selectedAdSets}
@@ -580,6 +583,8 @@ export default function Home() {
                             <MediaPreview
                                 files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
                                 setFiles={setFiles}
+                                importedPosts={importedPosts}
+                                setImportedPosts={setImportedPosts}
                                 driveFiles={driveFiles}
                                 setDriveFiles={setDriveFiles}
                                 videoThumbs={videoThumbs}

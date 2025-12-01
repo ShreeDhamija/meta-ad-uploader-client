@@ -355,6 +355,8 @@ export default function AdCreationForm({
   setThumbnail,
   files,
   setFiles,
+  importedPosts,
+  setImportedPosts,
   videoThumbs,
   setVideoThumbs,
   selectedAdSets,
@@ -414,7 +416,7 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
-  const [importedPosts, setImportedPosts] = useState([])
+  // const [importedPosts, setImportedPosts] = useState([])
   const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
 
