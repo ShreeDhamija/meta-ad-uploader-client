@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye } from "lucide-react"
+import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
+import PostSelectorModal from "@/components/PostSelectorModal"  // Adjust path as needed
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -413,8 +414,8 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
-  // const [customLink, setCustomLink] = useState("")
-  // const [showCustomLink, setShowCustomLink] = useState(false)
+  const [importedPosts, setImportedPosts] = useState([])
+  const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
 
   //Porgress Trackers
@@ -471,7 +472,9 @@ export default function AdCreationForm({
       }
     };
 
-    if (isCarouselAd || isDynamicAdSet()) {
+    if (importedPosts.length > 0) {
+      adCount = importedPosts.length * (selectedAdSets.length || 1);
+    } else if (isCarouselAd || isDynamicAdSet()) {
       // Carousel and dynamic ads are always 1 ad per selected adset
       adCount = selectedAdSets.length || 1;
     } else if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
@@ -511,6 +514,8 @@ export default function AdCreationForm({
         driveFiles: [...driveFiles],  // These already contain accessToken per file
         videoThumbs: { ...videoThumbs },
         thumbnail,
+        importedPosts: [...importedPosts],
+
 
         // Selection states
         selectedAdSets: [...selectedAdSets],
@@ -1750,6 +1755,27 @@ export default function AdCreationForm({
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
 
 
+
+  const handleImportPosts = (selectedPosts) => {
+    // Add newly selected posts, avoiding duplicates
+    setImportedPosts(prev => {
+      const existingIds = new Set(prev.map(p => p.id))
+      const newPosts = selectedPosts.filter(p => !existingIds.has(p.id))
+      return [...prev, ...newPosts]
+    })
+    toast.success(`Imported ${selectedPosts.length} post(s)`)
+  }
+
+  // Remove an imported post
+  const handleRemovePost = (postId) => {
+    setImportedPosts(prev => prev.filter(p => p.id !== postId))
+  }
+
+  // Clear all imported posts
+  const handleClearPosts = () => {
+    setImportedPosts([])
+  }
+
   const handleCreateAd = async (jobData) => {
 
     const {
@@ -2435,6 +2461,47 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 1: CAROUSEL ADS
       // ============================================================================
+
+
+
+      if (importedPosts && importedPosts.length > 0) {
+        console.log('📝 Creating ads from imported posts');
+
+        // For each adset, create ads from each imported post
+        const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+
+        adSetIdsToUse.forEach((adSetId, adSetIndex) => {
+          importedPosts.forEach((post, postIndex) => {
+            const formData = new FormData();
+
+            // Compute ad name
+            const adName = computeAdNameFromFormula(
+              { name: `Post_${post.id.split('_')[1]}` },  // Use post ID as "filename"
+              (adSetIndex * importedPosts.length) + postIndex,
+              link[0],
+              jobData.formData.adNameFormulaV2
+            );
+
+            // Basic fields
+            formData.append("adName", adName);
+            formData.append("adAccountId", selectedAdAccount);
+            formData.append("adSetId", adSetId);
+            formData.append("pageId", pageId);
+            formData.append("instagramAccountId", instagramAccountId || "");
+            formData.append("launchPaused", launchPaused);
+            formData.append("jobId", frontendJobId);
+
+            // POST-SPECIFIC: Send the post ID instead of media
+            formData.append("postId", post.id);  // This is the key difference!
+            formData.append("adType", "post");   // Signal to backend this is a post-based ad
+
+            promises.push(createAdApiCall(formData, API_BASE_URL));
+            promiseMetadata.push({ fileName: `Post ${post.id.split('_')[1]}` });
+          });
+        });
+
+      }
+
       if (isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
           toast.error("Please select at least one ad set for carousel");
@@ -3058,7 +3125,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -3076,6 +3143,8 @@ export default function AdCreationForm({
       setThumbnail(null);
       setFileGroups([]);
       setEnablePlacementCustomization(false);
+      setImportedPosts([]);  // ADD THIS
+
     }
 
 
@@ -4184,6 +4253,75 @@ export default function AdCreationForm({
                   )}
                 </div>
               </div>
+
+              {/* ===== NEW: Display Imported Posts ===== */}
+              {importedPosts.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                      Imported Posts ({importedPosts.length})
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearPosts}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {importedPosts.map((post) => (
+                      <div
+                        key={post.id}
+                        className="relative group rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
+                      >
+                        {/* Thumbnail */}
+                        <div className="aspect-square">
+                          {post.full_picture ? (
+                            <img
+                              src={post.full_picture}
+                              alt="Post"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                              <FileText className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Post ID overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
+                          <p className="text-xs text-white font-mono truncate">
+                            {post.id.split('_')[1]}
+                          </p>
+                        </div>
+
+                        {/* Remove button */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemovePost(post.id)}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ===== ADD: Post Selector Modal ===== */}
+              <PostSelectorModal
+                isOpen={isPostSelectorOpen}
+                onClose={() => setIsPostSelectorOpen(false)}
+                pageId={pageId}
+                onImport={handleImportPosts}
+              />
+
             </div>
           </div>
           <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
