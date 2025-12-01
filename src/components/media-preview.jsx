@@ -831,7 +831,7 @@ export default function MediaPreview({
                             <Trash className="h-2 w-2" />
                           </Button>
                         </div>
-                        <p className="mt-1 ml-1 text-sm truncate font-mono text-gray-600">
+                        <p className="mt-1 ml-1 text-xs truncate font-mono text-gray-600">
                           {post.id.split('_')[1]}
                         </p>
                       </div>
