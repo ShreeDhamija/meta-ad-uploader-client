@@ -4235,7 +4235,21 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-2">
-              <Label className="block">Upload Media</Label>
+              <div className="flex items-center justify-between">
+                <Label className="block">Upload Media</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsPostSelectorOpen(true)}
+                  disabled={!isLoggedIn || !pageId}
+                  className="text-xs"
+                >
+                  <FileText className="h-3 w-3 mr-1" />
+                  Create with Post ID
+                </Button>
+              </div>
+
               <div
                 {...getRootProps()}
                 className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"

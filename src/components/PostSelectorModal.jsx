@@ -16,15 +16,7 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
-/**
- * PostSelectorModal - Allows users to browse and select existing Facebook Page posts
- * to use as ad creatives via object_story_id
- * 
- * @param {boolean} isOpen - Controls modal visibility
- * @param {function} onClose - Callback when modal is closed
- * @param {string} pageId - Facebook Page ID to fetch posts from
- * @param {function} onImport - Callback with selected posts array
- */
+
 export default function PostSelectorModal({ isOpen, onClose, pageId, onImport }) {
     const [posts, setPosts] = useState([])
     const [selectedPostIds, setSelectedPostIds] = useState(new Set())
@@ -208,8 +200,8 @@ export default function PostSelectorModal({ isOpen, onClose, pageId, onImport })
                                 <div
                                     key={post.id}
                                     className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedPostIds.has(post.id)
-                                            ? 'border-blue-500 bg-blue-50'
-                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                         }`}
                                     onClick={() => togglePostSelection(post.id)}
                                 >
