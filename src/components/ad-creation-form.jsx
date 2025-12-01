@@ -1791,7 +1791,7 @@ export default function AdCreationForm({
       driveFiles,
       videoThumbs,
       thumbnail,
-
+      importedPosts,
       // Selections
       selectedAdSets,
       duplicateAdSet,
@@ -1833,7 +1833,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
