@@ -47,7 +47,6 @@ export default function PostSelectorModal({ isOpen, onClose, pageId, onImport })
                 params: {
                     pageId,
                     after: cursor,
-                    fields: 'id,created_time,full_picture,message'
                 },
                 withCredentials: true
             })
