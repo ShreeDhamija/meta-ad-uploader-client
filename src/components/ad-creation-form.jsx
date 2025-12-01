@@ -4420,7 +4420,7 @@ export default function AdCreationForm({
               disabled={
                 !isLoggedIn ||
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
-                (files.length === 0 && driveFiles.length === 0) ||
+                (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
                 (adType === 'carousel' && (files.length + driveFiles.length) < 2) ||
                 (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length) > 10) ||
