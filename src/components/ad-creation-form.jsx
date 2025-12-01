@@ -4270,66 +4270,6 @@ export default function AdCreationForm({
                 </div>
               </div>
 
-              {/* ===== NEW: Display Imported Posts ===== */}
-              {importedPosts.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">
-                      Imported Posts ({importedPosts.length})
-                    </Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearPosts}
-                      className="text-xs text-red-500 hover:text-red-700"
-                    >
-                      Clear All
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {importedPosts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="relative group rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
-                      >
-                        {/* Thumbnail */}
-                        <div className="aspect-square">
-                          {post.full_picture ? (
-                            <img
-                              src={post.full_picture}
-                              alt="Post"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                              <FileText className="h-8 w-8 text-gray-400" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Post ID overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1">
-                          <p className="text-xs text-white font-mono truncate">
-                            {post.id.split('_')[1]}
-                          </p>
-                        </div>
-
-                        {/* Remove button */}
-                        <button
-                          type="button"
-                          onClick={() => handleRemovePost(post.id)}
-                          className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* ===== ADD: Post Selector Modal ===== */}
               <PostSelectorModal
                 isOpen={isPostSelectorOpen}
