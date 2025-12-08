@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye } from "lucide-react"
+import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
+import PostSelectorModal from "@/components/PostSelectorModal"  // Adjust path as needed
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -354,6 +355,8 @@ export default function AdCreationForm({
   setThumbnail,
   files,
   setFiles,
+  importedPosts,
+  setImportedPosts,
   videoThumbs,
   setVideoThumbs,
   selectedAdSets,
@@ -386,7 +389,9 @@ export default function AdCreationForm({
   refreshAdSets,
   adNameFormulaV2,
   setAdNameFormulaV2,
-  campaignObjective
+  campaignObjective,
+  selectedFiles,
+  setSelectedFiles
 }) {
   // Local state
   const navigate = useNavigate()
@@ -413,8 +418,8 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
-  // const [customLink, setCustomLink] = useState("")
-  // const [showCustomLink, setShowCustomLink] = useState(false)
+  // const [importedPosts, setImportedPosts] = useState([])
+  const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
 
   //Porgress Trackers
@@ -471,7 +476,9 @@ export default function AdCreationForm({
       }
     };
 
-    if (isCarouselAd || isDynamicAdSet()) {
+    if (importedPosts.length > 0) {
+      adCount = importedPosts.length * (selectedAdSets.length || 1);
+    } else if (isCarouselAd || isDynamicAdSet()) {
       // Carousel and dynamic ads are always 1 ad per selected adset
       adCount = selectedAdSets.length || 1;
     } else if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
@@ -511,6 +518,8 @@ export default function AdCreationForm({
         driveFiles: [...driveFiles],  // These already contain accessToken per file
         videoThumbs: { ...videoThumbs },
         thumbnail,
+        importedPosts: [...importedPosts],
+
 
         // Selection states
         selectedAdSets: [...selectedAdSets],
@@ -767,32 +776,75 @@ export default function AdCreationForm({
     }
   };
 
-  async function uploadDriveFileToS3(file) {
+  // async function uploadDriveFileToS3(file) {
+  //   const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+
+
+
+  //   const res = await fetch(`${API_BASE_URL}/api/upload-from-drive`, {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json"
+  //     },
+  //     body: JSON.stringify({
+  //       driveFileUrl: driveDownloadUrl,
+  //       fileName: file.name,
+  //       mimeType: file.mimeType,
+  //       accessToken: file.accessToken,
+  //       size: file.size// ✅ Pass the access token from the file object
+  //     })
+  //   });
+
+  //   const data = await res.json();
+  //   if (!res.ok) throw new Error(data.error || "S3 upload failed again");
+  //   return {
+  //     ...file, // Spreads all original properties like id, name, etc.
+  //     s3Url: data.s3Url,
+  //     isS3Upload: true
+  //   };
+  // }
+
+  async function uploadDriveFileToS3(file, maxRetries = 3) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/upload-from-drive`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            driveFileUrl: driveDownloadUrl,
+            fileName: file.name,
+            mimeType: file.mimeType,
+            accessToken: file.accessToken,
+            size: file.size
+          })
+        });
 
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "S3 upload failed");
 
-    const res = await fetch(`${API_BASE_URL}/api/upload-from-drive`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        driveFileUrl: driveDownloadUrl,
-        fileName: file.name,
-        mimeType: file.mimeType,
-        accessToken: file.accessToken,
-        size: file.size// ✅ Pass the access token from the file object
-      })
-    });
+        // Success! Return the result
+        return {
+          ...file,
+          s3Url: data.s3Url,
+          isS3Upload: true
+        };
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "S3 upload failed again");
-    return {
-      ...file, // Spreads all original properties like id, name, etc.
-      s3Url: data.s3Url,
-      isS3Upload: true
-    };
+      } catch (error) {
+        // If this was the last attempt, throw the error
+        if (attempt === maxRetries) {
+          throw new Error(`S3 upload failed after ${maxRetries} attempts: ${error.message}`);
+        }
+
+        // Wait before retrying (exponential backoff: 1s, 2s, 4s)
+        const delayMs = Math.pow(2, attempt - 1) * 1000;
+        console.log(`Upload attempt ${attempt} failed, retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
   }
 
 
@@ -1750,6 +1802,27 @@ export default function AdCreationForm({
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
 
 
+
+  const handleImportPosts = (selectedPosts) => {
+    // Add newly selected posts, avoiding duplicates
+    setImportedPosts(prev => {
+      const existingIds = new Set(prev.map(p => p.id))
+      const newPosts = selectedPosts.filter(p => !existingIds.has(p.id))
+      return [...prev, ...newPosts]
+    })
+    toast.success(`Imported ${selectedPosts.length} post(s)`)
+  }
+
+  // Remove an imported post
+  const handleRemovePost = (postId) => {
+    setImportedPosts(prev => prev.filter(p => p.id !== postId))
+  }
+
+  // Clear all imported posts
+  const handleClearPosts = () => {
+    setImportedPosts([])
+  }
+
   const handleCreateAd = async (jobData) => {
 
     const {
@@ -1765,7 +1838,7 @@ export default function AdCreationForm({
       driveFiles,
       videoThumbs,
       thumbnail,
-
+      importedPosts,
       // Selections
       selectedAdSets,
       duplicateAdSet,
@@ -1807,7 +1880,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -1829,20 +1902,13 @@ export default function AdCreationForm({
 
       try {
         const allFiles = [...files, ...driveFiles];
-        // const videoFiles = allFiles.filter(file =>
-        //   file.type?.startsWith('video/') || file.mimeType?.startsWith('video/')
-        // );
-
         const videoFiles = allFiles.filter(isVideoFile);
-
 
         if (videoFiles.length > 0) {
           const BATCH_SIZE = 3;
 
           for (let i = 0; i < videoFiles.length; i += BATCH_SIZE) {
             const batch = videoFiles.slice(i, i + BATCH_SIZE);
-
-
 
             // Update progress message
             setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
@@ -2442,6 +2508,47 @@ export default function AdCreationForm({
       // ============================================================================
       // SECTION 1: CAROUSEL ADS
       // ============================================================================
+
+
+
+      if (importedPosts && importedPosts.length > 0) {
+        console.log('📝 Creating ads from imported posts');
+
+        // For each adset, create ads from each imported post
+        const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+
+        adSetIdsToUse.forEach((adSetId, adSetIndex) => {
+          importedPosts.forEach((post, postIndex) => {
+            const formData = new FormData();
+
+            // Compute ad name
+            const adName = computeAdNameFromFormula(
+              { name: `Post_${post.id.split('_')[1]}` },  // Use post ID as "filename"
+              (adSetIndex * importedPosts.length) + postIndex,
+              link[0],
+              jobData.formData.adNameFormulaV2
+            );
+
+            // Basic fields
+            formData.append("adName", adName);
+            formData.append("adAccountId", selectedAdAccount);
+            formData.append("adSetId", adSetId);
+            formData.append("pageId", pageId);
+            formData.append("instagramAccountId", instagramAccountId || "");
+            formData.append("launchPaused", launchPaused);
+            formData.append("jobId", frontendJobId);
+
+            // POST-SPECIFIC: Send the post ID instead of media
+            formData.append("postId", post.id);  // This is the key difference!
+            formData.append("adType", "post");   // Signal to backend this is a post-based ad
+
+            promises.push(createAdApiCall(formData, API_BASE_URL));
+            promiseMetadata.push({ fileName: `Post ${post.id.split('_')[1]}` });
+          });
+        });
+
+      }
+
       if (isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
           toast.error("Please select at least one ad set for carousel");
@@ -3065,7 +3172,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -3083,6 +3190,8 @@ export default function AdCreationForm({
       setThumbnail(null);
       setFileGroups([]);
       setEnablePlacementCustomization(false);
+      setImportedPosts([]);  // ADD THIS
+
     }
 
 
@@ -3328,7 +3437,7 @@ export default function AdCreationForm({
       }
 
       <CardHeader>
-        <CardTitle className="flex items-center justify-between w-full">
+        <CardTitle className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 md:gap-2">
           <div className="flex items-center gap-2">
             <ConfigIcon className="w-5 h-5" />
             Select ad preferences
@@ -3476,7 +3585,8 @@ export default function AdCreationForm({
                     style={{
                       minWidth: "var(--radix-popover-trigger-width)",
                       width: "auto",
-                      maxWidth: "none",
+                      maxWidth: "var(--radix-popover-trigger-width)",
+
                     }}
                   >
                     <Command filter={() => 1} loop={false} defaultValue={pageId}>
@@ -3579,7 +3689,8 @@ export default function AdCreationForm({
                     style={{
                       minWidth: "var(--radix-popover-trigger-width)",
                       width: "auto",
-                      maxWidth: "none"
+                      maxWidth: "var(--radix-popover-trigger-width)",
+
                     }}
                   >
                     <Command loop={false}>
@@ -4173,7 +4284,10 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-2">
-              <Label className="block">Upload Media</Label>
+              <div className="space-y-2">
+                <Label className="block">Upload Media</Label>
+              </div>
+
               <div
                 {...getRootProps()}
                 className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
@@ -4191,6 +4305,15 @@ export default function AdCreationForm({
                   )}
                 </div>
               </div>
+
+              {/* ===== ADD: Post Selector Modal ===== */}
+              <PostSelectorModal
+                isOpen={isPostSelectorOpen}
+                onClose={() => setIsPostSelectorOpen(false)}
+                pageId={pageId}
+                onImport={handleImportPosts}
+              />
+
             </div>
           </div>
           <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
@@ -4275,13 +4398,14 @@ export default function AdCreationForm({
               disabled={
                 !isLoggedIn ||
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
-                (files.length === 0 && driveFiles.length === 0) ||
+                (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
                 (adType === 'carousel' && (files.length + driveFiles.length) < 2) ||
                 (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 (!showCustomLink && !link[0]) ||
-                (showCustomLink && !customLink.trim())
+                (showCustomLink && !customLink.trim()) ||
+                (selectedFiles.size > 0)
               }
             >
               Publish Ads
@@ -4305,6 +4429,10 @@ export default function AdCreationForm({
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please provide a link URL
               </div>
+            )}
+            {enablePlacementCustomization && selectedFiles && (selectedFiles.size > 1) && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                You have ungrouped files for placement customization. Use the group ads button on the top right to group files               </div>
             )}
 
           </div>

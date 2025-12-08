@@ -77,13 +77,12 @@ export default function Header({ showMessenger, hideMessenger }) {
       {/* Action Buttons (Right) */}
       <div className="flex items-center gap-2 bg-white shadow-md border border-gray-300 rounded-[40px] px-3 py-2 ml-2">
 
-        {/* Trial/Subscription Status Button - show if on trial OR if access expired */}
+        {/* Trial/Subscription Status Button - hide on mobile */}
         {!subscriptionLoading && (isOnTrial() || !hasActiveAccess()) && (
           <>
-
             <button
               onClick={handleUpgrade}
-              className={`flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium ${getTrialButtonStyle()}`}
+              className={`hidden md:flex items-center gap-2 px-3 py-1 rounded-full transition text-sm font-medium ${getTrialButtonStyle()}`}
               title={
                 isSubscriptionExpired() ? "Your subscription has expired" :
                   isTrialExpired() ? "Your trial has expired" :
@@ -96,20 +95,20 @@ export default function Header({ showMessenger, hideMessenger }) {
             <Button
               onClick={handleUpgrade}
               size="sm"
-              className={`h-7 px-3 text-xs text-white rounded-full ${!hasActiveAccess() ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+              className={`hidden md:flex h-7 px-3 text-xs text-white rounded-full ${!hasActiveAccess() ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
             >
               <CreditCard className="w-3 h-3 mr-1" />
               {!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}
             </Button>
-            <div className="h-8 w-px bg-gray-300" />
+            <div className="hidden md:block h-8 w-px bg-gray-300" />
           </>
         )}
 
         <button
           onClick={() => navigate("/settings")}
           title="Settings"
-          className="flex items-center gap-1 p-1 rounded-full transition !bg-transparent hover:!bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0"
+          className="hidden md:flex items-center gap-1 p-1 rounded-full transition !bg-transparent hover:!bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0"
           style={{
             backgroundColor: "transparent",
             outline: "none",
@@ -118,17 +117,17 @@ export default function Header({ showMessenger, hideMessenger }) {
           }}
         >
           <Settings className="w-5 h-5 text-gray-700" />
-          <span className="text-gray-700 text-sm">Preferences</span>
+          <span className="hidden md:inline text-gray-700 text-sm">Preferences</span>
         </button>
 
         {/* Chat Support Button */}
         <button
           onClick={handleChatToggle}
           title="Support Chat"
-          className=" px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center transition-colors ml-2 gap-2"
+          className="px-2 md:px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center transition-colors ml-2 gap-2"
         >
           <MessageCircle className="w-4 h-4" />
-          <span className="text-xs">Chat With Us</span>
+          <span className="inline text-xs">Chat With Us</span>
         </button>
 
         <div className="h-8 w-px bg-gray-300" />

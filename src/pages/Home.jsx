@@ -152,6 +152,7 @@ export default function Home() {
     const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
     const [fileGroups, setFileGroups] = useState([]);
     const [files, setFiles] = useState([])
+    const [importedPosts, setImportedPosts] = useState([])
     const [videoThumbs, setVideoThumbs] = useState({})
     const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading } = useAppData()
     const { settings: adAccountSettings, documentExists } = useAdAccountSettings(selectedAdAccount)
@@ -160,7 +161,9 @@ export default function Home() {
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
     const userHasActiveAccess = hasActiveAccess();
     const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState(new Set());
 
+    const [showMobileBanner, setShowMobileBanner] = useState(true);
 
     if (authLoading) return null
 
@@ -447,20 +450,27 @@ export default function Home() {
     return (
 
         <>
+
             {/* Mobile message - hidden on desktop */}
-            <div className="mobile-message fixed inset-0 bg-white flex-col items-center justify-center p-6 z-50 hidden">
-                <div className="text-center max-w-md">
-                    <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
-                    <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Required</h1>
-                    <p className="text-gray-600 mb-6">
-                        Thanks for signing up! <br></br>Blip works best on a bigger screen. <br></br> We've sent you an email to help you pick up from here once you’re back at your computer!
-                    </p>
-
-
+            {showMobileBanner && (
+                <div className="mobile-message fixed inset-0 bg-white flex-col items-center justify-center p-6 z-50 hidden">
+                    <div className="text-center max-w-md">
+                        <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
+                        <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Recommended</h1>
+                        <p className="text-gray-600 mb-6">
+                            Thanks for signing up! <br></br>Blip works best on a bigger screen. <br></br> We've sent you an email to help you<br></br> pick up from here.
+                        </p>
+                        <button
+                            onClick={() => setShowMobileBanner(false)}
+                            className="mt-4 px-6 py-2 text-sm text-white bg-blue-600 rounded-xl hover:text-blue-700 transition-colors"
+                        >
+                            Continue Anyway
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
-            <div className=" desktop-only w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
+            <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
                 <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
                 <div className="flex flex-col xl:flex-row gap-6 min-w-0">
                     <div className={`flex-1 xl:flex-[55] min-w-0 space-y-6 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
@@ -538,6 +548,8 @@ export default function Home() {
                             setThumbnail={setThumbnail}
                             files={files}
                             setFiles={setFiles}
+                            importedPosts={importedPosts}
+                            setImportedPosts={setImportedPosts}
                             videoThumbs={videoThumbs}
                             setVideoThumbs={setVideoThumbs}
                             selectedAdSets={selectedAdSets}
@@ -571,6 +583,8 @@ export default function Home() {
                             adNameFormulaV2={adNameFormulaV2}
                             setAdNameFormulaV2={setAdNameFormulaV2}
                             campaignObjective={campaignObjective}
+                            selectedFiles={selectedFiles}
+                            setSelectedFiles={setSelectedFiles}
                         />
                     </div>
 
@@ -580,6 +594,8 @@ export default function Home() {
                             <MediaPreview
                                 files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
                                 setFiles={setFiles}
+                                importedPosts={importedPosts}
+                                setImportedPosts={setImportedPosts}
                                 driveFiles={driveFiles}
                                 setDriveFiles={setDriveFiles}
                                 videoThumbs={videoThumbs}
@@ -592,6 +608,8 @@ export default function Home() {
                                 selectedAdSets={selectedAdSets}
                                 adSets={adSets}
                                 duplicateAdSet={duplicateAdSet}
+                                selectedFiles={selectedFiles}
+                                setSelectedFiles={setSelectedFiles}
 
                             />
                         </ErrorBoundary>

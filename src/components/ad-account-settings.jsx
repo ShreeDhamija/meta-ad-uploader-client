@@ -454,7 +454,8 @@ export default function AdAccountSettings({
                 style={{
                   minWidth: "var(--radix-popover-trigger-width)",
                   width: "auto",
-                  maxWidth: "none",
+                  maxWidth: "var(--radix-popover-trigger-width)",
+
                 }}
               >
                 <Command
@@ -584,16 +585,11 @@ export default function AdAccountSettings({
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                className="w-[--radix-popover-trigger-width] md:w-auto md:min-w-[--radix-popover-trigger-width] p-0 bg-white shadow-lg rounded-xl"
                 align="start"
                 sideOffset={4}
                 side="bottom"
                 avoidCollisions={false}
-                style={{
-                  minWidth: "var(--radix-popover-trigger-width)",
-                  width: "auto",
-                  maxWidth: "none",
-                }}
               >
                 <Command loop={false}>
                   <CommandInput
@@ -701,16 +697,11 @@ transition-all duration-150 hover:!bg-black
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                      className="w-[--radix-popover-trigger-width] md:w-auto md:min-w-[--radix-popover-trigger-width] p-0 bg-white shadow-lg rounded-xl"
                       align="start"
                       sideOffset={4}
                       side="bottom"
                       avoidCollisions={false}
-                      style={{
-                        minWidth: "var(--radix-popover-trigger-width)",
-                        width: "auto",
-                        maxWidth: "none",
-                      }}
                     >
                       <Command loop={false}>
                         <CommandInput
@@ -841,16 +832,11 @@ transition-all duration-150 hover:!bg-black
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                className="w-[--radix-popover-trigger-width] md:w-auto md:min-w-[--radix-popover-trigger-width] p-0 bg-white shadow-lg rounded-xl"
                 align="start"
                 sideOffset={4}
                 side="bottom"
                 avoidCollisions={false}
-                style={{
-                  minWidth: "var(--radix-popover-trigger-width)",
-                  width: "auto",
-                  maxWidth: "none",
-                }}
               >
                 <Command loop={false}>
                   <CommandInput
@@ -1020,16 +1006,11 @@ transition-all duration-150 hover:!bg-black
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                      className="w-[--radix-popover-trigger-width] md:w-auto md:min-w-[--radix-popover-trigger-width] p-0 bg-white shadow-lg rounded-xl"
                       align="start"
                       sideOffset={4}
                       side="bottom"
                       avoidCollisions={false}
-                      style={{
-                        minWidth: "var(--radix-popover-trigger-width)",
-                        width: "auto",
-                        maxWidth: "none",
-                      }}
                     >
                       <Command loop={false}>
                         <CommandInput

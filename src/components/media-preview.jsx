@@ -190,6 +190,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
 export default function MediaPreview({
   files,
   setFiles,
+  importedPosts,
+  setImportedPosts,
   driveFiles,
   setDriveFiles,
   videoThumbs,
@@ -201,9 +203,11 @@ export default function MediaPreview({
   setFileGroups,
   selectedAdSets,
   adSets,
-  duplicateAdSet
+  duplicateAdSet,
+  selectedFiles,
+  setSelectedFiles
 }) {
-  const [selectedFiles, setSelectedFiles] = useState(new Set());
+  // const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isAIGrouping, setIsAIGrouping] = useState(false);
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
 
@@ -572,7 +576,7 @@ export default function MediaPreview({
 
   return (
     <>
-      {files.length > 0 ? (
+      {(files.length > 0 || importedPosts.length > 0) ? (
         <Card
           className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-2xl"
           style={{ height: "calc(100vh - 140px)" }}
@@ -675,6 +679,7 @@ export default function MediaPreview({
                   setDriveFiles([]);
                   setSelectedFiles(new Set());
                   setFileGroups([]);
+                  setImportedPosts([]);
                 }}
                 className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
               >
@@ -809,6 +814,30 @@ export default function MediaPreview({
                         />
                       );
                     })}
+
+                    {importedPosts.map((post) => (
+                      <div key={post.id} className="relative group">
+                        <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
+                          <img
+                            src={post.full_picture || "https://api.withblip.com/thumbnail.jpg"}
+                            alt="Post"
+                            className="w-full h-auto object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-sm h-7 w-7 p-3 z-30"
+                            style={{ opacity: 0.9, backgroundColor: "white" }}
+                            onClick={() => setImportedPosts(prev => prev.filter(p => p.id !== post.id))}
+                          >
+                            <Trash className="h-2 w-2" />
+                          </Button>
+                        </div>
+                        <p className="mt-1 ml-1 text-xs truncate font-mono text-gray-600">
+                          {post.id.split('_')[1]}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </SortableContext>

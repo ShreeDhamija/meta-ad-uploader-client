@@ -19,6 +19,7 @@ import Card from '@/assets/icons/card.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react"; // pick or create a suitable icon
+import DesktopIcon from '@/assets/Desktop.webp';
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -109,126 +110,146 @@ export default function Settings() {
     if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
-        <div className="flex bg-gray-100 min-h-screen">
-            {/* Sidebar */}
-            <div className="w-[290px] flex flex-col h-screen sticky top-0 px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
-                <div className=" rounded-3xl p-4 flex flex-col h-full">
-                    {/* Main Content (will take all available vertical space except the footer) */}
-                    <div className="flex-1 flex flex-col">
-                        {/* Back to Home Button */}
-                        <Button
-                            onClick={() => navigate("/")}
-                            className="flex items-center justify-start gap-2 bg-white border border-gray-200 shadow-sm rounded-[20px] py-6 text- font-medium w-full mb-4 hover:!bg-white hover:shadow-md"
-                            variant="ghost"
-                        >
-                            <HomeBtn className="!w-5 !h-5" />
-                            <div className="h-4 w-px bg-gray-300 max-lg:hidden" />
-                            <span className="text-gray-700 max-lg:hidden">Back To Home</span>
-                        </Button>
+        <>
 
-                        {/* Tab Buttons */}
-                        <div className="space-y-2">
-                            {["adaccount", "billing", "team"].map((tab) => {
-                                const Icon = tabIconMap[tab];
-                                return (
-                                    <button
-                                        key={tab}
-                                        onClick={() => handleTabChange(tab)} t
-                                        className={cn(
-                                            "w-full flex items-center gap-2 px-4 py-2 rounded-2xl",
-                                            activeTab === tab
-                                                ? "bg-gradient-to-b from-zinc-600 to-zinc-700 border border-2 border-zinc-200/20 font-semibold text-white shadow-md"
-                                                : "hover:bg-gray-300",
-                                            "justify-start max-lg:justify-center max-lg:px-2",
-                                        )}
-                                    >
-                                        <Icon
-                                            aria-label={`${tab} icon`}
+            <div className="mobile-message fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-[100] lg:hidden">
+                <div className="text-center max-w-md">
+                    <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
+                    <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Recommended</h1>
+                    <p className="text-gray-600 mb-6">
+                        Blip works best on a bigger screen. <br></br> We've sent you an email to help you<br></br> pick up from here.
+                    </p>
+                    <button
+                        onClick={() => navigate("/")}
+                        className="mt-4 px-6 py-2 text-sm text-white bg-blue-600 rounded-xl hover:text-blue-700 transition-colors"
+                    >
+                        Go Home
+                    </button>
+                </div>
+            </div>
+
+
+            <div className="flex bg-gray-100 min-h-screen">
+                {/* Sidebar */}
+                <div className="w-[290px] flex flex-col h-screen sticky top-0 px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
+                    <div className=" rounded-3xl p-4 flex flex-col h-full">
+                        {/* Main Content (will take all available vertical space except the footer) */}
+                        <div className="flex-1 flex flex-col">
+                            {/* Back to Home Button */}
+                            <Button
+                                onClick={() => navigate("/")}
+                                className="flex items-center justify-start gap-2 bg-white border border-gray-200 shadow-sm rounded-[20px] py-6 text- font-medium w-full mb-4 hover:!bg-white hover:shadow-md"
+                                variant="ghost"
+                            >
+                                <HomeBtn className="!w-5 !h-5" />
+                                <div className="h-4 w-px bg-gray-300 max-lg:hidden" />
+                                <span className="text-gray-700 max-lg:hidden">Back To Home</span>
+                            </Button>
+
+                            {/* Tab Buttons */}
+                            <div className="space-y-2">
+                                {["adaccount", "billing", "team"].map((tab) => {
+                                    const Icon = tabIconMap[tab];
+                                    return (
+                                        <button
+                                            key={tab}
+                                            onClick={() => handleTabChange(tab)} t
                                             className={cn(
-                                                "w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-500 ease-in-out object-contain flex-shrink-0",
+                                                "w-full flex items-center gap-2 px-4 py-2 rounded-2xl",
                                                 activeTab === tab
-                                                    ? "brightness-0 invert"
-                                                    : "grayscale brightness-75 contrast-75 opacity-60"
+                                                    ? "bg-gradient-to-b from-zinc-600 to-zinc-700 border border-2 border-zinc-200/20 font-semibold text-white shadow-md"
+                                                    : "hover:bg-gray-300",
+                                                "justify-start max-lg:justify-center max-lg:px-2",
                                             )}
-                                        />
-                                        <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
-                                            {tabLabelMap[tab]}
-                                        </span>
+                                        >
+                                            <Icon
+                                                aria-label={`${tab} icon`}
+                                                className={cn(
+                                                    "w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-500 ease-in-out object-contain flex-shrink-0",
+                                                    activeTab === tab
+                                                        ? "brightness-0 invert"
+                                                        : "grayscale brightness-75 contrast-75 opacity-60"
+                                                )}
+                                            />
+                                            <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
+                                                {tabLabelMap[tab]}
+                                            </span>
 
-                                    </button>
-                                );
-                            })}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Any other content, just add margin-bottom as needed */}
                         </div>
 
-                        {/* Any other content, just add margin-bottom as needed */}
-                    </div>
-
-                    {/* Footer Profile + Logout pinned to bottom */}
-                    <div className="pt-4 mt-auto">
-                        <div className="w-full flex items-center bg-white border border-gray-200 shadow-sm rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
-                            {/* Profile image + name - hidden on small screens */}
-                            <div className="flex items-center gap-2 flex-grow max-lg:hidden">
-                                <img
-                                    src={profilePicUrl || "/placeholder.svg"}
-                                    alt="Profile"
-                                    className="w-8 h-8 rounded-full object-cover"
-                                />
-                                <span className="text-sm font-medium text-black truncate max-w-[120px]">{userName}</span>
-                            </div>
-                            {/* Divider and logout button grouped together */}
-                            <div className="flex items-center">
-                                <div className="h-6 w-px bg-gray-300 max-lg:hidden" />
-                                <button onClick={handleLogout} className="ml-3 rounded-full transition max-lg:ml-0" title="Logout">
-                                    <LogOutIcon className="w-4 h-4 max-lg:w-5 max-lg:h-5 text-red-600" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Main Area */}
-            <main className="flex-1 py-6 pr-6">
-                <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
-                    <div className="flex-1 overflow-auto">
-                        <div className="w-full max-w-3xl mx-auto p-16">
-                            <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
-                            <h1 className="text-xl font-semibold mb-1 text-left">
-                                {tabTitleMap[activeTab]}
-                            </h1>
-
-                            <p className="text-gray-400 text-sm mb-6 text-left">{tabDescriptionMap[activeTab]}</p>
-
-                            <div className="w-full">
-                                {/* {activeTab === "global" && <GlobalSettings />} */}
-                                {activeTab === "adaccount" && (
-                                    <AdAccountSettings
-                                        preselectedAdAccount={preselectedAdAccount}
-                                        onTriggerAdAccountPopup={() => setShowAdAccountPopup(true)}
-                                        subscriptionData={subscriptionData}
+                        {/* Footer Profile + Logout pinned to bottom */}
+                        <div className="pt-4 mt-auto">
+                            <div className="w-full flex items-center bg-white border border-gray-200 shadow-sm rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
+                                {/* Profile image + name - hidden on small screens */}
+                                <div className="flex items-center gap-2 flex-grow max-lg:hidden">
+                                    <img
+                                        src={profilePicUrl || "/placeholder.svg"}
+                                        alt="Profile"
+                                        className="w-8 h-8 rounded-full object-cover"
                                     />
-                                )}
-                                {activeTab === "billing" && <BillingSettings />}
-                                {activeTab === "team" && <TeamSettings />}
-
+                                    <span className="text-sm font-medium text-black truncate max-w-[120px]">{userName}</span>
+                                </div>
+                                {/* Divider and logout button grouped together */}
+                                <div className="flex items-center">
+                                    <div className="h-6 w-px bg-gray-300 max-lg:hidden" />
+                                    <button onClick={handleLogout} className="ml-3 rounded-full transition max-lg:ml-0" title="Logout">
+                                        <LogOutIcon className="w-4 h-4 max-lg:w-5 max-lg:h-5 text-red-600" />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div id="settings-save-bar-portal" className="absolute bottom-0 left-0 w-full z-50" />
-
                 </div>
-            </main>
 
-            <div>
-                <Toaster richColors position="bottom-left" closeButton />
+                {/* Main Area */}
+                <main className="flex-1 py-6 pr-6">
+                    <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
+                        <div className="flex-1 overflow-auto">
+                            <div className="w-full max-w-3xl mx-auto p-16">
+                                <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
+                                <h1 className="text-xl font-semibold mb-1 text-left">
+                                    {tabTitleMap[activeTab]}
+                                </h1>
+
+                                <p className="text-gray-400 text-sm mb-6 text-left">{tabDescriptionMap[activeTab]}</p>
+
+                                <div className="w-full">
+                                    {/* {activeTab === "global" && <GlobalSettings />} */}
+                                    {activeTab === "adaccount" && (
+                                        <AdAccountSettings
+                                            preselectedAdAccount={preselectedAdAccount}
+                                            onTriggerAdAccountPopup={() => setShowAdAccountPopup(true)}
+                                            subscriptionData={subscriptionData}
+                                        />
+                                    )}
+                                    {activeTab === "billing" && <BillingSettings />}
+                                    {activeTab === "team" && <TeamSettings />}
+
+                                </div>
+                            </div>
+                        </div>
+                        <div id="settings-save-bar-portal" className="absolute bottom-0 left-0 w-full z-50" />
+
+                    </div>
+                </main>
+
+                <div>
+                    <Toaster richColors position="bottom-left" closeButton />
+                </div>
+                {showSettingsPopup && <SettingsOnboardingPopup onClose={handleCloseSettingsPopup} />}
+                <AdAccountSelectionPopup
+                    isOpen={showAdAccountPopup}
+                    onClose={() => setShowAdAccountPopup(false)}
+                    selectedAdAccountIds={selectedAdAccountIds}
+
+                />
             </div>
-            {showSettingsPopup && <SettingsOnboardingPopup onClose={handleCloseSettingsPopup} />}
-            <AdAccountSelectionPopup
-                isOpen={showAdAccountPopup}
-                onClose={() => setShowAdAccountPopup(false)}
-                selectedAdAccountIds={selectedAdAccountIds}
-
-            />
-        </div>
+        </>
     )
 }
