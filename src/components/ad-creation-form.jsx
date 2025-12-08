@@ -4237,19 +4237,8 @@ export default function AdCreationForm({
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="space-y-2">
                 <Label className="block">Upload Media</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsPostSelectorOpen(true)}
-                  disabled={!isLoggedIn || !pageId}
-                  className="text-xs"
-                >
-                  <FileText className="h-3 w-3 mr-1" />
-                  Create with Post ID
-                </Button>
               </div>
 
               <div
