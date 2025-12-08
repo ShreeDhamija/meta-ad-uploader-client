@@ -3585,7 +3585,8 @@ export default function AdCreationForm({
                     style={{
                       minWidth: "var(--radix-popover-trigger-width)",
                       width: "auto",
-                      maxWidth: "none",
+                      maxWidth: "var(--radix-popover-trigger-width)",
+
                     }}
                   >
                     <Command filter={() => 1} loop={false} defaultValue={pageId}>
@@ -3688,7 +3689,8 @@ export default function AdCreationForm({
                     style={{
                       minWidth: "var(--radix-popover-trigger-width)",
                       width: "auto",
-                      maxWidth: "none"
+                      maxWidth: "var(--radix-popover-trigger-width)",
+
                     }}
                   >
                     <Command loop={false}>

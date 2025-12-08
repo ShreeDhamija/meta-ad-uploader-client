@@ -456,13 +456,13 @@ export default function Home() {
                 <div className="mobile-message fixed inset-0 bg-white flex-col items-center justify-center p-6 z-50 hidden">
                     <div className="text-center max-w-md">
                         <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
-                        <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Required</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Recommended</h1>
                         <p className="text-gray-600 mb-6">
-                            Thanks for signing up! <br></br>Blip works best on a bigger screen. <br></br> We've sent you an email to help you pick up from here once you're back at your computer!
+                            Thanks for signing up! <br></br>Blip works best on a bigger screen. <br></br> We've sent you an email to help you<br></br> pick up from here.
                         </p>
                         <button
                             onClick={() => setShowMobileBanner(false)}
-                            className="mt-4 px-6 py-2 text-sm text-blue-600 hover:text-blue-700 underline transition-colors"
+                            className="mt-4 px-6 py-2 text-sm text-white bg-blue-600 rounded-xl hover:text-blue-700 transition-colors"
                         >
                             Continue Anyway
                         </button>
@@ -470,7 +470,7 @@ export default function Home() {
                 </div>
             )}
 
-            <div className=" desktop-only w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
+            <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
                 <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
                 <div className="flex flex-col xl:flex-row gap-6 min-w-0">
                     <div className={`flex-1 xl:flex-[55] min-w-0 space-y-6 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>

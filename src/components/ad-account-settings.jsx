@@ -454,7 +454,8 @@ export default function AdAccountSettings({
                 style={{
                   minWidth: "var(--radix-popover-trigger-width)",
                   width: "auto",
-                  maxWidth: "none",
+                  maxWidth: "var(--radix-popover-trigger-width)",
+
                 }}
               >
                 <Command
@@ -592,7 +593,8 @@ export default function AdAccountSettings({
                 style={{
                   minWidth: "var(--radix-popover-trigger-width)",
                   width: "auto",
-                  maxWidth: "none",
+                  maxWidth: "var(--radix-popover-trigger-width)",
+
                 }}
               >
                 <Command loop={false}>
@@ -709,7 +711,8 @@ transition-all duration-150 hover:!bg-black
                       style={{
                         minWidth: "var(--radix-popover-trigger-width)",
                         width: "auto",
-                        maxWidth: "none",
+                        maxWidth: "var(--radix-popover-trigger-width)",
+
                       }}
                     >
                       <Command loop={false}>
@@ -849,7 +852,8 @@ transition-all duration-150 hover:!bg-black
                 style={{
                   minWidth: "var(--radix-popover-trigger-width)",
                   width: "auto",
-                  maxWidth: "none",
+                  maxWidth: "var(--radix-popover-trigger-width)",
+
                 }}
               >
                 <Command loop={false}>
@@ -1028,7 +1032,8 @@ transition-all duration-150 hover:!bg-black
                       style={{
                         minWidth: "var(--radix-popover-trigger-width)",
                         width: "auto",
-                        maxWidth: "none",
+                        maxWidth: "var(--radix-popover-trigger-width)",
+
                       }}
                     >
                       <Command loop={false}>
