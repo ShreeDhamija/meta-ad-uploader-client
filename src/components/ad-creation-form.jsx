@@ -3440,7 +3440,7 @@ export default function AdCreationForm({
         <CardTitle className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             <ConfigIcon className="w-5 h-5" />
-            <span className="text-sm md:text-base">Select ad preferences</span>
+            Select ad preferences
           </div>
           <div className="flex items-center space-x-2">
             <Label htmlFor="ad-type" className="text-sm whitespace-nowrap">
