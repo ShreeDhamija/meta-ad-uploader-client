@@ -19,7 +19,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
-import PostSelectorModal from "@/components/PostSelectorModal"  // Adjust path as needed
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -40,30 +39,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
 
-const JOB_CACHE_KEY = 'ad_creation_job_cache';
-
-const getJobCache = (jobId) => {
-  try {
-    const cached = localStorage.getItem(`${JOB_CACHE_KEY}_${jobId}`);
-    return cached ? JSON.parse(cached) : null;
-  } catch {
-    return null;
-  }
-};
-
-const setJobCache = (jobId, data) => {
-  try {
-    localStorage.setItem(`${JOB_CACHE_KEY}_${jobId}`, JSON.stringify(data));
-  } catch { }
-};
-
 const useAdCreationProgress = (jobId, isCreatingAds) => {
-  const cached = jobId ? getJobCache(jobId) : null;
-
-  const [progress, setProgress] = useState(cached?.progress ?? 0);
-  const [message, setMessage] = useState(cached?.message ?? '');
-  const [status, setStatus] = useState(cached?.status ?? 'idle');
-  const [metaData, setMetadata] = useState(cached?.metaData ?? {});
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState('idle');
+  const [metaData, setMetadata] = useState({});
 
 
 
@@ -242,22 +222,10 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
                 errorMessages: data.errorMessages // NEW
 
               });
-              setJobCache(jobId, {
-                progress: data.progress,
-                message: data.message,
-                status: data.status,
-                metaData: {
-                  successCount: data.successCount,
-                  failureCount: data.failureCount,
-                  totalCount: data.totalCount,
-                  errorMessages: data.errorMessages
-                }
-              });
 
               // Auto-cleanup on job completion
               if (data.status === 'complete' || data.status === 'error' || data.status === 'partial-success') {
                 console.log('🏁 Job finished, closing SSE');
-                localStorage.removeItem(`${JOB_CACHE_KEY}_${jobId}`); // Clear cache
                 cleanup();
               }
             }
@@ -808,33 +776,7 @@ export default function AdCreationForm({
     }
   };
 
-  // async function uploadDriveFileToS3(file) {
-  //   const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
-
-
-  //   const res = await fetch(`${API_BASE_URL}/api/upload-from-drive`, {
-  //     method: "POST",
-  //     headers: {
-  //       "Content-Type": "application/json"
-  //     },
-  //     body: JSON.stringify({
-  //       driveFileUrl: driveDownloadUrl,
-  //       fileName: file.name,
-  //       mimeType: file.mimeType,
-  //       accessToken: file.accessToken,
-  //       size: file.size// ✅ Pass the access token from the file object
-  //     })
-  //   });
-
-  //   const data = await res.json();
-  //   if (!res.ok) throw new Error(data.error || "S3 upload failed again");
-  //   return {
-  //     ...file, // Spreads all original properties like id, name, etc.
-  //     s3Url: data.s3Url,
-  //     isS3Upload: true
-  //   };
-  // }
 
   async function uploadDriveFileToS3(file, maxRetries = 3) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
@@ -4337,15 +4279,6 @@ export default function AdCreationForm({
                   )}
                 </div>
               </div>
-
-              {/* ===== ADD: Post Selector Modal ===== */}
-              <PostSelectorModal
-                isOpen={isPostSelectorOpen}
-                onClose={() => setIsPostSelectorOpen(false)}
-                pageId={pageId}
-                onImport={handleImportPosts}
-              />
-
             </div>
           </div>
           <div style={{ marginTop: "10px", marginBottom: "1rem" }}>

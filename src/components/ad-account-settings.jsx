@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -59,7 +60,9 @@ export default function AdAccountSettings({
   documentExists,
   refreshAdSets,
   sortAdSets,
-  sortCampaigns
+  sortCampaigns,
+  useExistingPosts,
+  setUseExistingPosts
 
 }) {
   // Local state for comboboxes
@@ -1132,6 +1135,22 @@ transition-all duration-150 hover:!bg-black
               </div>
             )}
           </div>
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border">
+            <div className="space-y-0.5">
+              <Label htmlFor="use-existing-posts" className="text-sm font-medium">
+                Use Existing Page Posts
+              </Label>
+              <p className="text-xs text-gray-500">
+                Import posts from your Facebook Page instead of creating new ads
+              </p>
+            </div>
+            <Switch
+              id="use-existing-posts"
+              checked={useExistingPosts}
+              onCheckedChange={setUseExistingPosts}
+            />
+          </div>
+
         </div>
       </CardContent>
     </Card >
