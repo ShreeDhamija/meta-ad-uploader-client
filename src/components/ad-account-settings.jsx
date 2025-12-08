@@ -1135,7 +1135,7 @@ transition-all duration-150 hover:!bg-black
               </div>
             )}
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <div className="space-y-0.5">
               <Label htmlFor="use-existing-posts" className="text-sm font-medium">
                 Create using Post ID

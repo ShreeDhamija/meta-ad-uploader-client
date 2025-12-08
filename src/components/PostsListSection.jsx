@@ -105,15 +105,7 @@ export default function PostsListSection({
         })
     }
 
-    // Select all visible posts
-    const selectAll = () => {
-        setSelectedPostIds(new Set(posts.map(p => p.id)))
-    }
 
-    // Clear selection
-    const clearSelection = () => {
-        setSelectedPostIds(new Set())
-    }
 
     // Handle import - adds to importedPosts, avoiding duplicates
     const handleImport = () => {
@@ -200,34 +192,6 @@ export default function PostsListSection({
             {/* Posts Section - Only show after fetching */}
             {hasFetched && (
                 <div className="border border-gray-200 rounded-xl p-3">
-                    {/* Selection controls */}
-                    <div className="flex items-center justify-between pb-3 border-b mb-3">
-                        <div className="flex gap-2">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={selectAll}
-                                disabled={posts.length === 0}
-                                className="rounded-lg text-xs h-7"
-                            >
-                                Select All
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={clearSelection}
-                                disabled={selectedPostIds.size === 0}
-                                className="rounded-lg text-xs h-7"
-                            >
-                                Clear
-                            </Button>
-                        </div>
-                        <span className="text-sm text-gray-500">
-                            {selectedPostIds.size} selected
-                        </span>
-                    </div>
 
                     {/* Posts list */}
                     <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
@@ -264,12 +228,10 @@ export default function PostsListSection({
                                         )}
                                         onClick={() => togglePostSelection(post.id)}
                                     >
-                                        {/* Checkbox */}
+                                        {/* Checkbox - display only, click handled by parent div */}
                                         <Checkbox
                                             checked={selectedPostIds.has(post.id)}
-                                            onCheckedChange={() => togglePostSelection(post.id)}
-                                            onClick={(e) => e.stopPropagation()}
-                                            className="mt-1"
+                                            className="mt-1 pointer-events-none"
                                         />
 
                                         {/* Thumbnail */}
