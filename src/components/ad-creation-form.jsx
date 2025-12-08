@@ -3437,7 +3437,7 @@ export default function AdCreationForm({
       }
 
       <CardHeader>
-        <CardTitle className="flex items-center justify-between w-full">
+        <CardTitle className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-2">
           <div className="flex items-center gap-2">
             <ConfigIcon className="w-5 h-5" />
             Select ad preferences
