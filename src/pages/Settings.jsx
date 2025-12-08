@@ -112,7 +112,7 @@ export default function Settings() {
     return (
         <>
 
-            <div className="mobile-message fixed inset-0 bg-white flex-col items-center justify-center p-6 z-50 hidden">
+            <div className="mobile-message fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-50 hidden">
                 <div className="text-center max-w-md">
                     <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
                     <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Recommended</h1>
