@@ -1135,14 +1135,11 @@ transition-all duration-150 hover:!bg-black
               </div>
             )}
           </div>
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border">
+          <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="use-existing-posts" className="text-sm font-medium">
-                Use Existing Page Posts
+                Create using Post ID
               </Label>
-              <p className="text-xs text-gray-500">
-                Import posts from your Facebook Page instead of creating new ads
-              </p>
             </div>
             <Switch
               id="use-existing-posts"

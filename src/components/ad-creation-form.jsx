@@ -19,6 +19,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
+import PostsListSection from "./PostsListSection"
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -391,7 +392,8 @@ export default function AdCreationForm({
   setAdNameFormulaV2,
   campaignObjective,
   selectedFiles,
-  setSelectedFiles
+  setSelectedFiles,
+  useExistingPosts
 }) {
   // Local state
   const navigate = useNavigate()
@@ -1777,25 +1779,25 @@ export default function AdCreationForm({
 
 
 
-  const handleImportPosts = (selectedPosts) => {
-    // Add newly selected posts, avoiding duplicates
-    setImportedPosts(prev => {
-      const existingIds = new Set(prev.map(p => p.id))
-      const newPosts = selectedPosts.filter(p => !existingIds.has(p.id))
-      return [...prev, ...newPosts]
-    })
-    toast.success(`Imported ${selectedPosts.length} post(s)`)
-  }
+  // const handleImportPosts = (selectedPosts) => {
+  //   // Add newly selected posts, avoiding duplicates
+  //   setImportedPosts(prev => {
+  //     const existingIds = new Set(prev.map(p => p.id))
+  //     const newPosts = selectedPosts.filter(p => !existingIds.has(p.id))
+  //     return [...prev, ...newPosts]
+  //   })
+  //   toast.success(`Imported ${selectedPosts.length} post(s)`)
+  // }
 
-  // Remove an imported post
-  const handleRemovePost = (postId) => {
-    setImportedPosts(prev => prev.filter(p => p.id !== postId))
-  }
+  // // Remove an imported post
+  // const handleRemovePost = (postId) => {
+  //   setImportedPosts(prev => prev.filter(p => p.id !== postId))
+  // }
 
-  // Clear all imported posts
-  const handleClearPosts = () => {
-    setImportedPosts([])
-  }
+  // // Clear all imported posts
+  // const handleClearPosts = () => {
+  //   setImportedPosts([])
+  // }
 
   const handleCreateAd = async (jobData) => {
 
@@ -3751,383 +3753,310 @@ export default function AdCreationForm({
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label className="flex items-center gap-2 mb-0">
-                    <TemplateIcon className="w-4 h-4" />
-                    {Object.keys(copyTemplates).length === 0
-                      ? "Select a Copy Template"
-                      : "Select a Copy Template"}
-                  </Label>
-                  {Object.keys(copyTemplates).length === 0 && (<Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
-                  >
-                    <CogIcon className="w-3 h-3 text-white" />
-                    Setup Templates
-                  </Button>
-                  )}
-                </div>
 
-                <Select
-                  value={selectedTemplate}
-                  onValueChange={setSelectedTemplate}
-                  disabled={Object.keys(copyTemplates).length === 0}
-                >
-                  <SelectTrigger
-                    className="border border-gray-400 rounded-xl bg-white shadow"
-                    disabled={Object.keys(copyTemplates).length === 0}
-                  >
-                    <SelectValue
-                      placeholder={
-                        Object.keys(copyTemplates).length === 0
-                          ? "No templates available for selected ad account"
-                          : "Choose a Template"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
-                    {Object.entries(copyTemplates)
-                      .sort(([a], [b]) => {
-                        if (a === defaultTemplateName) return -1;
-                        if (b === defaultTemplateName) return 1;
-                        return a.localeCompare(b);
-                      })
-                      .map(([templateName]) => (
-                        <SelectItem
-                          key={templateName}
-                          value={templateName}
-                          className="text-sm px-4 py-2 rounded-xl hover:bg-gray-100"
-                        >
-                          {templateName}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {useExistingPosts ? (
+              // Show PostsListSection when toggle is ON
+              <PostsListSection
+                pageId={pageId}
+                importedPosts={importedPosts}
+                setImportedPosts={setImportedPosts}
+              />
+            ) : (
+              // Show regular form content when toggle is OFF
+              <>
 
-
-              <div className="space-y-2">
-                {/* Primary text Section */}
-                <div className="space-y-2">
-                  <Label className="flex items-center justify-between">
-                    <span>
-                      Primary Text
-                      {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
-                    </span>
-                    {isCarouselAd && (
-                      <div className="flex items-center space-x-1 ">
-                        <Checkbox
-                          id="apply-text-all"
-                          checked={applyTextToAllCards}
-                          onCheckedChange={(checked) => {
-                            setApplyTextToAllCards(checked);
-                            if (checked && messages.length > 0) {
-                              const firstMessage = messages[0];
-                              const fileCount = files.length + driveFiles.length;
-                              if (fileCount > 0) {
-                                setMessages(new Array(fileCount).fill(firstMessage));
-                              }
-
-                            } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
-                              const tpl = copyTemplates[selectedTemplate];
-                              setMessages(tpl.primaryTexts || [""]);
-                            }
-                          }}
-                          className="border-gray-300 w-4 h-4 rounded-md"
-                        />
-                        <label htmlFor="apply-text-all" className="text-xs font-medium">
-                          Apply To All Cards
-                        </label>
-                      </div>
-                    )}
-                  </Label>
-                  <div className="space-y-3">
-                    {messages.map((value, index) => (
-                      <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? 'hidden' : ''}`}>
-                        <TextareaAutosize
-                          value={value}
-                          onChange={(e) => {
-                            if (isCarouselAd && applyTextToAllCards) {
-                              // Update all positions with the same value
-                              setMessages(new Array(messages.length).fill(e.target.value));
-                            } else {
-                              updateField(setMessages, messages, index, e.target.value);
-                            }
-                          }}
-                          placeholder={isCarouselAd ? `Text for card ${index + 1}` : "Add text option"}
-                          disabled={!isLoggedIn}
-                          minRows={2}
-                          maxRows={10}
-                          className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
-                          style={{
-                            scrollbarWidth: 'thin',
-                            scrollbarColor: '#c7c7c7 transparent'
-                          }}
-                        />
-                        {messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                            size="icon"
-                            onClick={() => removeField(setMessages, messages, index)}
-                          >
-                            <Trash2
-                              className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                            <span className="sr-only">Remove</span>
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    {messages.length < (isCarouselAd ? 10 : 5) && (
-                      <Button
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 mb-0">
+                        <TemplateIcon className="w-4 h-4" />
+                        {Object.keys(copyTemplates).length === 0
+                          ? "Select a Copy Template"
+                          : "Select a Copy Template"}
+                      </Label>
+                      {Object.keys(copyTemplates).length === 0 && (<Button
                         type="button"
                         size="sm"
-                        className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                        onClick={() => addField(setMessages, messages)}
+                        variant="outline"
+                        onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+                        className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
                       >
-                        <Plus className="mr-2 h-4 w-4 text-white" />
-                        {isCarouselAd ? 'Add card text' : 'Add text option'}
+                        <CogIcon className="w-3 h-3 text-white" />
+                        Setup Templates
                       </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Headlines Section */}
-              <div className="space-y-2">
-                <Label className="flex items-center justify-between">
-                  <span>
-                    Headlines
-                    {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
-                  </span>
-                  {isCarouselAd && (
-                    <div className="flex items-center space-x-1">
-                      <Checkbox
-                        id="apply-headlines-all"
-                        checked={applyHeadlinesToAllCards}
-                        onCheckedChange={(checked) => {
-                          setApplyHeadlinesToAllCards(checked);
-                          if (checked && headlines.length > 0) {
-                            const firstHeadline = headlines[0];
-                            const fileCount = files.length + driveFiles.length; // ← Use file count!
-                            if (fileCount > 0) {
-                              setHeadlines(new Array(fileCount).fill(firstHeadline));
-                            }
-                          } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
-                            const tpl = copyTemplates[selectedTemplate];
-                            setHeadlines(tpl.headlines || [""]);
-                          }
-                        }}
-                        className="border-gray-300 w-4 h-4 rounded-md"
-                      />
-                      <label htmlFor="apply-headlines-all" className="text-xs font-medium">
-                        Apply To All Cards
-                      </label>
-                    </div>
-                  )}
-                </Label>
-                <div className="space-y-3">
-                  {headlines.map((value, index) => (
-                    <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
-                      <TextareaAutosize
-                        value={value}
-                        onChange={(e) => {
-                          if (isCarouselAd && applyHeadlinesToAllCards) {
-                            const newHeadlines = new Array(headlines.length).fill(e.target.value);
-                            setHeadlines(newHeadlines);
-                          } else {
-                            updateField(setHeadlines, headlines, index, e.target.value);
-                          }
-                        }}
-                        minRows={1}
-                        maxRows={10}
-                        className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
-                        style={{
-                          scrollbarWidth: 'thin',
-                          scrollbarColor: '#c7c7c7 transparent'
-                        }}
-                        placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Enter headline"}
-                        disabled={!isLoggedIn}
-                      />
-                      {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                          size="icon"
-                          onClick={() => removeField(setHeadlines, headlines, index)}
-                        >
-                          <Trash2
-                            className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
-                          <span className="sr-only">Remove</span>
-                        </Button>
                       )}
                     </div>
-                  ))}
-                  {headlines.length < (isCarouselAd ? 10 : 5) && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                      onClick={() => addField(setHeadlines, headlines)}
+
+                    <Select
+                      value={selectedTemplate}
+                      onValueChange={setSelectedTemplate}
+                      disabled={Object.keys(copyTemplates).length === 0}
                     >
-                      <Plus className="mr-2 h-4 w-4 text-white" />
-                      {isCarouselAd ? 'Add card headline' : 'Add headline option'}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <LinkIcon className="w-4 h-4" />
-                    Link (URL)
-                  </span>
-                  {isCarouselAd && (
-                    <div className="flex items-center space-x-1">
-                      <Checkbox
-                        id="apply-link-all"
-                        checked={link.length === 1}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            const currentLink = customLink.trim() || link[0] || "";
-                            setLink([currentLink]);
-                          } else {
-                            const currentLink = customLink.trim() || link[0] || "";
-                            setLink([currentLink, ""]);
-                          }
-                        }}
-                        className="border-gray-300 w-4 h-4 rounded-md"
-                      />
-                      <label htmlFor="apply-link-all" className="text-xs font-medium">
-                        Apply To All Cards
-                      </label>
-                    </div>
-                  )}
-                </Label>
-                <p className="text-gray-500 text-[12px] font-regular">
-                  Your UTMs will be auto applied from Preferences
-                </p>
-
-                {!isCarouselAd || link.length === 1 ? (
-                  // Single link mode (normal ads or carousel with "apply to all")
-                  <div className="space-y-3">
-                    {!showCustomLink && availableLinks.length > 0 && (
-                      <Select
-                        value={link[0] || ""}
-                        onValueChange={(value) => setLink([value])}
-                        disabled={!isLoggedIn || availableLinks.length === 0}
+                      <SelectTrigger
+                        className="border border-gray-400 rounded-xl bg-white shadow"
+                        disabled={Object.keys(copyTemplates).length === 0}
                       >
-                        <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow w-full">
-                          <SelectValue placeholder="Select a link" />
-                        </SelectTrigger>
-
-                        <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
-                          {availableLinks.map((linkObj, index) => (
+                        <SelectValue
+                          placeholder={
+                            Object.keys(copyTemplates).length === 0
+                              ? "No templates available for selected ad account"
+                              : "Choose a Template"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
+                        {Object.entries(copyTemplates)
+                          .sort(([a], [b]) => {
+                            if (a === defaultTemplateName) return -1;
+                            if (b === defaultTemplateName) return 1;
+                            return a.localeCompare(b);
+                          })
+                          .map(([templateName]) => (
                             <SelectItem
-                              key={index}
-                              value={linkObj.url}
-                              className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
+                              key={templateName}
+                              value={templateName}
+                              className="text-sm px-4 py-2 rounded-xl hover:bg-gray-100"
                             >
-                              <div className="flex items-center justify-between w-full">
-                                <span className="truncate max-w-[650px]">{linkObj.url}</span>
-
-                                {linkObj.isDefault && (
-                                  <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">
-                                    Default
-                                  </span>
-                                )}
-                              </div>
+                              {templateName}
                             </SelectItem>
                           ))}
-                        </SelectContent>
-                      </Select>
-                    )}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                    <div className="flex items-center space-x-2">
-                      <div className="space-y-2 w-full">
-                        {/* Custom link input */}
-                        {(showCustomLink || availableLinks.length === 0) && (
-                          <div className="w-full">
-                            <Input
-                              type="text"
-                              value={customLink}
-                              onChange={(e) => {
-                                setCustomLink(e.target.value);
-                                setLink([e.target.value]);
-                              }}
-                              className="w-full border border-gray-400 rounded-xl bg-white shadow"
-                              placeholder="https://example.com"
-                              disabled={!isLoggedIn}
-                              required
-                            />
-                          </div>
-                        )}
 
-                        {/* Checkbox toggle - only show if they have saved links */}
-                        {availableLinks.length > 0 && (
-                          <div className="flex items-center space-x-2">
+                  <div className="space-y-2">
+                    {/* Primary text Section */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center justify-between">
+                        <span>
+                          Primary Text
+                          {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
+                        </span>
+                        {isCarouselAd && (
+                          <div className="flex items-center space-x-1 ">
                             <Checkbox
-                              id="custom-link-toggle"
-                              checked={showCustomLink}
+                              id="apply-text-all"
+                              checked={applyTextToAllCards}
                               onCheckedChange={(checked) => {
-                                setShowCustomLink(checked);
-                                if (!checked) {
-                                  setCustomLink("");
-                                  const dropdownValue = defaultLink?.url || "";
-                                  setLink([dropdownValue]);
+                                setApplyTextToAllCards(checked);
+                                if (checked && messages.length > 0) {
+                                  const firstMessage = messages[0];
+                                  const fileCount = files.length + driveFiles.length;
+                                  if (fileCount > 0) {
+                                    setMessages(new Array(fileCount).fill(firstMessage));
+                                  }
+
+                                } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
+                                  const tpl = copyTemplates[selectedTemplate];
+                                  setMessages(tpl.primaryTexts || [""]);
                                 }
                               }}
                               className="border-gray-300 w-4 h-4 rounded-md"
                             />
-                            <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
-                              Enter custom link
+                            <label htmlFor="apply-text-all" className="text-xs font-medium">
+                              Apply To All Cards
                             </label>
                           </div>
+                        )}
+                      </Label>
+                      <div className="space-y-3">
+                        {messages.map((value, index) => (
+                          <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? 'hidden' : ''}`}>
+                            <TextareaAutosize
+                              value={value}
+                              onChange={(e) => {
+                                if (isCarouselAd && applyTextToAllCards) {
+                                  // Update all positions with the same value
+                                  setMessages(new Array(messages.length).fill(e.target.value));
+                                } else {
+                                  updateField(setMessages, messages, index, e.target.value);
+                                }
+                              }}
+                              placeholder={isCarouselAd ? `Text for card ${index + 1}` : "Add text option"}
+                              disabled={!isLoggedIn}
+                              minRows={2}
+                              maxRows={10}
+                              className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                              style={{
+                                scrollbarWidth: 'thin',
+                                scrollbarColor: '#c7c7c7 transparent'
+                              }}
+                            />
+                            {messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                                size="icon"
+                                onClick={() => removeField(setMessages, messages, index)}
+                              >
+                                <Trash2
+                                  className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                                <span className="sr-only">Remove</span>
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+                        {messages.length < (isCarouselAd ? 10 : 5) && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                            onClick={() => addField(setMessages, messages)}
+                          >
+                            <Plus className="mr-2 h-4 w-4 text-white" />
+                            {isCarouselAd ? 'Add card text' : 'Add text option'}
+                          </Button>
                         )}
                       </div>
                     </div>
                   </div>
-                ) : (
-                  // Multiple links mode (carousel with separate links per card)
-                  <div className="space-y-4">
-                    {link.map((value, index) => (
-                      <div key={index} className="border border-gray-200 rounded-xl p-3 space-y-3">
-                        <Label className="text-sm font-medium">Card {index + 1} Link</Label>
 
-                        {(!linkCustomStates || !linkCustomStates[index]) && (
-                          <Select
-                            value={value || ""}
-                            onValueChange={(newValue) => {
-                              const newLinks = [...link];
-                              newLinks[index] = newValue;
-                              setLink(newLinks);
+                  {/* Headlines Section */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center justify-between">
+                      <span>
+                        Headlines
+                        {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
+                      </span>
+                      {isCarouselAd && (
+                        <div className="flex items-center space-x-1">
+                          <Checkbox
+                            id="apply-headlines-all"
+                            checked={applyHeadlinesToAllCards}
+                            onCheckedChange={(checked) => {
+                              setApplyHeadlinesToAllCards(checked);
+                              if (checked && headlines.length > 0) {
+                                const firstHeadline = headlines[0];
+                                const fileCount = files.length + driveFiles.length; // ← Use file count!
+                                if (fileCount > 0) {
+                                  setHeadlines(new Array(fileCount).fill(firstHeadline));
+                                }
+                              } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
+                                const tpl = copyTemplates[selectedTemplate];
+                                setHeadlines(tpl.headlines || [""]);
+                              }
                             }}
+                            className="border-gray-300 w-4 h-4 rounded-md"
+                          />
+                          <label htmlFor="apply-headlines-all" className="text-xs font-medium">
+                            Apply To All Cards
+                          </label>
+                        </div>
+                      )}
+                    </Label>
+                    <div className="space-y-3">
+                      {headlines.map((value, index) => (
+                        <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
+                          <TextareaAutosize
+                            value={value}
+                            onChange={(e) => {
+                              if (isCarouselAd && applyHeadlinesToAllCards) {
+                                const newHeadlines = new Array(headlines.length).fill(e.target.value);
+                                setHeadlines(newHeadlines);
+                              } else {
+                                updateField(setHeadlines, headlines, index, e.target.value);
+                              }
+                            }}
+                            minRows={1}
+                            maxRows={10}
+                            className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                            style={{
+                              scrollbarWidth: 'thin',
+                              scrollbarColor: '#c7c7c7 transparent'
+                            }}
+                            placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Enter headline"}
+                            disabled={!isLoggedIn}
+                          />
+                          {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                              size="icon"
+                              onClick={() => removeField(setHeadlines, headlines, index)}
+                            >
+                              <Trash2
+                                className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
+                              <span className="sr-only">Remove</span>
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {headlines.length < (isCarouselAd ? 10 : 5) && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                          onClick={() => addField(setHeadlines, headlines)}
+                        >
+                          <Plus className="mr-2 h-4 w-4 text-white" />
+                          {isCarouselAd ? 'Add card headline' : 'Add headline option'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <LinkIcon className="w-4 h-4" />
+                        Link (URL)
+                      </span>
+                      {isCarouselAd && (
+                        <div className="flex items-center space-x-1">
+                          <Checkbox
+                            id="apply-link-all"
+                            checked={link.length === 1}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                const currentLink = customLink.trim() || link[0] || "";
+                                setLink([currentLink]);
+                              } else {
+                                const currentLink = customLink.trim() || link[0] || "";
+                                setLink([currentLink, ""]);
+                              }
+                            }}
+                            className="border-gray-300 w-4 h-4 rounded-md"
+                          />
+                          <label htmlFor="apply-link-all" className="text-xs font-medium">
+                            Apply To All Cards
+                          </label>
+                        </div>
+                      )}
+                    </Label>
+                    <p className="text-gray-500 text-[12px] font-regular">
+                      Your UTMs will be auto applied from Preferences
+                    </p>
+
+                    {!isCarouselAd || link.length === 1 ? (
+                      // Single link mode (normal ads or carousel with "apply to all")
+                      <div className="space-y-3">
+                        {!showCustomLink && availableLinks.length > 0 && (
+                          <Select
+                            value={link[0] || ""}
+                            onValueChange={(value) => setLink([value])}
                             disabled={!isLoggedIn || availableLinks.length === 0}
                           >
-                            <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
+                            <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow w-full">
                               <SelectValue placeholder="Select a link" />
                             </SelectTrigger>
-                            <SelectContent className="bg-white shadow-lg rounded-xl">
-                              {availableLinks.map((linkObj, linkIndex) => (
+
+                            <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
+                              {availableLinks.map((linkObj, index) => (
                                 <SelectItem
-                                  key={linkIndex}
+                                  key={index}
                                   value={linkObj.url}
-                                  className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl mx-2 my-1"
+                                  className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
                                 >
                                   <div className="flex items-center justify-between w-full">
-                                    <span className="truncate max-w-[250px]">{linkObj.url}</span>
+                                    <span className="truncate max-w-[650px]">{linkObj.url}</span>
+
                                     {linkObj.isDefault && (
-                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">
                                         Default
                                       </span>
                                     )}
@@ -4138,222 +4067,312 @@ export default function AdCreationForm({
                           </Select>
                         )}
 
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`custom-link-${index}`}
-                              checked={linkCustomStates?.[index] || false}
-                              onCheckedChange={(checked) => {
-                                const newStates = { ...linkCustomStates };
-                                newStates[index] = checked;
-                                setLinkCustomStates(newStates);
+                        <div className="flex items-center space-x-2">
+                          <div className="space-y-2 w-full">
+                            {/* Custom link input */}
+                            {(showCustomLink || availableLinks.length === 0) && (
+                              <div className="w-full">
+                                <Input
+                                  type="text"
+                                  value={customLink}
+                                  onChange={(e) => {
+                                    setCustomLink(e.target.value);
+                                    setLink([e.target.value]);
+                                  }}
+                                  className="w-full border border-gray-400 rounded-xl bg-white shadow"
+                                  placeholder="https://example.com"
+                                  disabled={!isLoggedIn}
+                                  required
+                                />
+                              </div>
+                            )}
 
-                                if (!checked) {
-                                  // Reset to dropdown value
-                                  const newLinks = [...link];
-                                  newLinks[index] = defaultLink?.url || "";
-                                  setLink(newLinks);
-                                }
-                              }}
-                              className="border-gray-300 w-4 h-4 rounded-md"
-                            />
-                            <label htmlFor={`custom-link-${index}`} className="text-xs font-medium text-gray-600">
-                              Use custom link
-                            </label>
+                            {/* Checkbox toggle - only show if they have saved links */}
+                            {availableLinks.length > 0 && (
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="custom-link-toggle"
+                                  checked={showCustomLink}
+                                  onCheckedChange={(checked) => {
+                                    setShowCustomLink(checked);
+                                    if (!checked) {
+                                      setCustomLink("");
+                                      const dropdownValue = defaultLink?.url || "";
+                                      setLink([dropdownValue]);
+                                    }
+                                  }}
+                                  className="border-gray-300 w-4 h-4 rounded-md"
+                                />
+                                <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
+                                  Enter custom link
+                                </label>
+                              </div>
+                            )}
                           </div>
-
-                          {link.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const newLinks = link.filter((_, i) => i !== index);
-                                setLink(newLinks);
-                                // Also clean up custom states
-                                const newStates = { ...linkCustomStates };
-                                delete newStates[index];
-                                setLinkCustomStates(newStates);
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4 text-gray-600 hover:text-red-500" />
-                            </Button>
-                          )}
                         </div>
+                      </div>
+                    ) : (
+                      // Multiple links mode (carousel with separate links per card)
+                      <div className="space-y-4">
+                        {link.map((value, index) => (
+                          <div key={index} className="border border-gray-200 rounded-xl p-3 space-y-3">
+                            <Label className="text-sm font-medium">Card {index + 1} Link</Label>
 
-                        {linkCustomStates?.[index] && (
-                          <Input
-                            type="text"
-                            value={value}
-                            onChange={(e) => {
-                              const newLinks = [...link];
-                              newLinks[index] = e.target.value;
-                              setLink(newLinks);
-                            }}
-                            className="border border-gray-400 rounded-xl bg-white shadow"
-                            placeholder="https://example.com"
-                            disabled={!isLoggedIn}
-                            required
-                          />
+                            {(!linkCustomStates || !linkCustomStates[index]) && (
+                              <Select
+                                value={value || ""}
+                                onValueChange={(newValue) => {
+                                  const newLinks = [...link];
+                                  newLinks[index] = newValue;
+                                  setLink(newLinks);
+                                }}
+                                disabled={!isLoggedIn || availableLinks.length === 0}
+                              >
+                                <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
+                                  <SelectValue placeholder="Select a link" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white shadow-lg rounded-xl">
+                                  {availableLinks.map((linkObj, linkIndex) => (
+                                    <SelectItem
+                                      key={linkIndex}
+                                      value={linkObj.url}
+                                      className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl mx-2 my-1"
+                                    >
+                                      <div className="flex items-center justify-between w-full">
+                                        <span className="truncate max-w-[250px]">{linkObj.url}</span>
+                                        {linkObj.isDefault && (
+                                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                            Default
+                                          </span>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`custom-link-${index}`}
+                                  checked={linkCustomStates?.[index] || false}
+                                  onCheckedChange={(checked) => {
+                                    const newStates = { ...linkCustomStates };
+                                    newStates[index] = checked;
+                                    setLinkCustomStates(newStates);
+
+                                    if (!checked) {
+                                      // Reset to dropdown value
+                                      const newLinks = [...link];
+                                      newLinks[index] = defaultLink?.url || "";
+                                      setLink(newLinks);
+                                    }
+                                  }}
+                                  className="border-gray-300 w-4 h-4 rounded-md"
+                                />
+                                <label htmlFor={`custom-link-${index}`} className="text-xs font-medium text-gray-600">
+                                  Use custom link
+                                </label>
+                              </div>
+
+                              {link.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    const newLinks = link.filter((_, i) => i !== index);
+                                    setLink(newLinks);
+                                    // Also clean up custom states
+                                    const newStates = { ...linkCustomStates };
+                                    delete newStates[index];
+                                    setLinkCustomStates(newStates);
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 text-gray-600 hover:text-red-500" />
+                                </Button>
+                              )}
+                            </div>
+
+                            {linkCustomStates?.[index] && (
+                              <Input
+                                type="text"
+                                value={value}
+                                onChange={(e) => {
+                                  const newLinks = [...link];
+                                  newLinks[index] = e.target.value;
+                                  setLink(newLinks);
+                                }}
+                                className="border border-gray-400 rounded-xl bg-white shadow"
+                                placeholder="https://example.com"
+                                disabled={!isLoggedIn}
+                                required
+                              />
+                            )}
+                          </div>
+                        ))}
+
+                        {link.length < 10 && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                            onClick={() => setLink([...link, ""])}
+                          >
+                            <Plus className="mr-2 h-4 w-4 text-white" />
+                            Add Card Link
+                          </Button>
                         )}
                       </div>
-                    ))}
-
-                    {link.length < 10 && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                        onClick={() => setLink([...link, ""])}
-                      >
-                        <Plus className="mr-2 h-4 w-4 text-white" />
-                        Add Card Link
-                      </Button>
                     )}
                   </div>
-                )}
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="cta" className="flex items-center gap-2">
-                  <CTAIcon className="w-4 h-4" />
-                  Call-to-Action (CTA)
-                </Label>
-                <Select disabled={!isLoggedIn} value={cta} onValueChange={setCta}>
-                  <SelectTrigger id="cta" className="border border-gray-400 rounded-xl bg-white shadow">
-                    <SelectValue placeholder="Select a CTA" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
-                    {ctaOptions.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className={cn(
-                          "w-full text-left",
-                          "px-4 py-2 m-1 rounded-xl", // padding and spacing
-                          "transition-colors duration-150",
-                          "hover:bg-gray-100 hover:rounded-xl",
-                          "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
-                          "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
-                          cta === option.value && "!bg-gray-100 font-semibold rounded-xl"
-                        )}
-                      >
-                        {option.label}
-                      </SelectItem>
+                  <div className="space-y-2">
+                    <Label htmlFor="cta" className="flex items-center gap-2">
+                      <CTAIcon className="w-4 h-4" />
+                      Call-to-Action (CTA)
+                    </Label>
+                    <Select disabled={!isLoggedIn} value={cta} onValueChange={setCta}>
+                      <SelectTrigger id="cta" className="border border-gray-400 rounded-xl bg-white shadow">
+                        <SelectValue placeholder="Select a CTA" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
+                        {ctaOptions.map((option) => (
+                          <SelectItem
+                            key={option.value}
+                            value={option.value}
+                            className={cn(
+                              "w-full text-left",
+                              "px-4 py-2 m-1 rounded-xl", // padding and spacing
+                              "transition-colors duration-150",
+                              "hover:bg-gray-100 hover:rounded-xl",
+                              "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
+                              "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
+                              cta === option.value && "!bg-gray-100 font-semibold rounded-xl"
+                            )}
+                          >
+                            {option.label}
+                          </SelectItem>
 
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {/* Shop Destination Selector - Only show when needed */}
-              <ShopDestinationSelector
-                pageId={pageId}
-                selectedShopDestination={selectedShopDestination}
-                setSelectedShopDestination={setSelectedShopDestination}
-                selectedShopDestinationType={selectedShopDestinationType}
-                setSelectedShopDestinationType={setSelectedShopDestinationType}
-                isVisible={showShopDestinationSelector}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <div className="space-y-2">
-                <Label className="block">Upload Media</Label>
-              </div>
-
-              <div
-                {...getRootProps()}
-                className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
-                  }`}
-              >
-                <input {...getInputProps()} disabled={!isLoggedIn} />
-                <div className="flex flex-col items-center gap-2">
-                  <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
-                  {isDragActive ? (
-                    <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
-                  ) : (
-                    <p className="text-sm text-gray-500 group-hover:text-black">
-                      Drag & drop files here, or click to select files
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-          <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
-            <Button type="button" onClick={handleDriveClick} className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px]">
-              <img
-                src="https://api.withblip.com/googledrive.png"
-                alt="Drive Icon"
-                className="h-4 w-4"
-              />
-              Choose Files from Google Drive
-
-            </Button>
-            <div className="text-xs text-gray-500 text-left mt-0.5">
-              Drive files upload 5X faster
-            </div>
-          </div>
-
-          {showFolderInput && (
-            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]" style={{
-              top: 'calc(50vh - 500px)' // Positions it above center where picker usually appears
-            }} >
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowFolderInput(false);
-                      setFolderLinkValue("");
-                    }}
-                    className="h-6 w-6 p-0"
-                  >
-
-                  </Button>
-                </div>
-
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    placeholder="Paste Google Drive folder link here"
-                    value={folderLinkValue}
-                    onChange={(e) => setFolderLinkValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleImportFromFolder();
-                      }
-                    }}
-                    className="flex-1"
-
+                  {/* Shop Destination Selector - Only show when needed */}
+                  <ShopDestinationSelector
+                    pageId={pageId}
+                    selectedShopDestination={selectedShopDestination}
+                    setSelectedShopDestination={setSelectedShopDestination}
+                    selectedShopDestinationType={selectedShopDestinationType}
+                    setSelectedShopDestinationType={setSelectedShopDestinationType}
+                    isVisible={showShopDestinationSelector}
                   />
-                  <Button
-                    type="button"
-                    onClick={handleImportFromFolder}
-                    disabled={!folderLinkValue}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    {isImportingFolder ? (
-                      <>
-                        <Loader className="h-4 w-4 mr-2 animate-spin" />
-                        Opening...
-                      </>
-                    ) : (
-                      "Open"
-                    )}
-                  </Button>
                 </div>
 
-                <div className="text-xs text-gray-500">
-                  Or browse files below ↓
+                <div className="space-y-2">
+                  <div className="space-y-2">
+                    <Label className="block">Upload Media</Label>
+                  </div>
+
+                  <div
+                    {...getRootProps()}
+                    className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                      }`}
+                  >
+                    <input {...getInputProps()} disabled={!isLoggedIn} />
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
+                      {isDragActive ? (
+                        <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
+                      ) : (
+                        <p className="text-sm text-gray-500 group-hover:text-black">
+                          Drag & drop files here, or click to select files
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
+
+                <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
+                  <Button type="button" onClick={handleDriveClick} className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px]">
+                    <img
+                      src="https://api.withblip.com/googledrive.png"
+                      alt="Drive Icon"
+                      className="h-4 w-4"
+                    />
+                    Choose Files from Google Drive
+
+                  </Button>
+                  <div className="text-xs text-gray-500 text-left mt-0.5">
+                    Drive files upload 5X faster
+                  </div>
+                </div>
+
+                {showFolderInput && (
+                  <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]" style={{
+                    top: 'calc(50vh - 500px)' // Positions it above center where picker usually appears
+                  }} >
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowFolderInput(false);
+                            setFolderLinkValue("");
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
+
+                        </Button>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Paste Google Drive folder link here"
+                          value={folderLinkValue}
+                          onChange={(e) => setFolderLinkValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleImportFromFolder();
+                            }
+                          }}
+                          className="flex-1"
+
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleImportFromFolder}
+                          disabled={!folderLinkValue}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          {isImportingFolder ? (
+                            <>
+                              <Loader className="h-4 w-4 mr-2 animate-spin" />
+                              Opening...
+                            </>
+                          ) : (
+                            "Open"
+                          )}
+                        </Button>
+                      </div>
+
+                      <div className="text-xs text-gray-500">
+                        Or browse files below ↓
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </>
+            )}
+          </div>
+
 
 
           <div className="space-y-1">

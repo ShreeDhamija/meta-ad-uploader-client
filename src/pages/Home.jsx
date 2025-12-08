@@ -9,7 +9,7 @@ import AdAccountSettings from "../components/ad-account-settings"
 import AdCreationForm from "../components/ad-creation-form"
 import MediaPreview from "../components/media-preview"
 import OnboardingPopup from "../components/onboarding-popup"
-import PagePostSelector from "../components/PagePostSelector"
+
 import { useAuth } from "../lib/AuthContext"
 import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
@@ -514,98 +514,82 @@ export default function Home() {
                             setUseExistingPosts={setUseExistingPosts}
                         />
 
-                        {useExistingPosts ? (
-                            <PagePostSelector
-                                isLoggedIn={isLoggedIn}
-                                isLoading={isLoading}
-                                setIsLoading={setIsLoading}
-                                pages={pages}
-                                setPages={setPages}
-                                pagesLoading={pagesLoading}
-                                pageId={pageId}
-                                setPageId={setPageId}
-                                instagramAccountId={instagramAccountId}
-                                setInstagramAccountId={setInstagramAccountId}
-                                onImportPosts={(posts) => setImportedPosts(posts)}
-                                selectedAdSets={selectedAdSets}
-                            />
-                        ) : (
-                            <AdCreationForm
-                                isLoading={isLoading}
-                                setIsLoading={setIsLoading}
-                                pages={pages}
-                                setPages={setPages}
-                                pagesLoading={pagesLoading}
-                                pageId={pageId}
-                                setPageId={setPageId}
-                                instagramAccountId={instagramAccountId}
-                                setInstagramAccountId={setInstagramAccountId}
-                                adName={adName}
-                                setAdName={setAdName}
-                                adOrder={adOrder}
-                                setAdOrder={setAdOrder}
-                                selectedItems={selectedItems}
-                                setSelectedItems={setSelectedItems}
-                                onItemToggle={onItemToggle}
-                                adValues={adValues}
-                                setAdValues={setAdValues}
-                                messages={messages}
-                                setMessages={setMessages}
-                                headlines={headlines}
-                                setHeadlines={setHeadlines}
-                                descriptions={descriptions}
-                                setDescriptions={setDescriptions}
-                                link={link}
-                                setLink={setLink}
-                                customLink={customLink}
-                                setCustomLink={setCustomLink}
-                                showCustomLink={showCustomLink}
-                                setShowCustomLink={setShowCustomLink}
-                                cta={cta}
-                                setCta={setCta}
-                                thumbnail={thumbnail}
-                                setThumbnail={setThumbnail}
-                                files={files}
-                                setFiles={setFiles}
-                                importedPosts={importedPosts}
-                                setImportedPosts={setImportedPosts}
-                                videoThumbs={videoThumbs}
-                                setVideoThumbs={setVideoThumbs}
-                                selectedAdSets={selectedAdSets}
-                                duplicateAdSet={duplicateAdSet}
-                                selectedCampaign={selectedCampaign}
-                                selectedAdAccount={selectedAdAccount}
-                                adSets={adSets}
-                                copyTemplates={adAccountSettings.copyTemplates || {}}
-                                defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
-                                selectedTemplate={selectedTemplate}
-                                setSelectedTemplate={setSelectedTemplate}
-                                driveFiles={driveFiles}
-                                setDriveFiles={setDriveFiles}
-                                selectedShopDestination={selectedShopDestination}
-                                setSelectedShopDestination={setSelectedShopDestination}
-                                selectedShopDestinationType={selectedShopDestinationType}
-                                setSelectedShopDestinationType={setSelectedShopDestinationType}
-                                newAdSetName={newAdSetName}
-                                launchPaused={launchPaused}
-                                setLaunchPaused={setLaunchPaused}
-                                isCarouselAd={isCarouselAd}
-                                setIsCarouselAd={setIsCarouselAd}
-                                adType={adType}
-                                setAdType={setAdType}
-                                enablePlacementCustomization={enablePlacementCustomization}
-                                setEnablePlacementCustomization={setEnablePlacementCustomization}
-                                fileGroups={fileGroups}
-                                setFileGroups={setFileGroups}
-                                adAccountSettings={adAccountSettings}
-                                refreshAdSets={refreshAdSets}
-                                adNameFormulaV2={adNameFormulaV2}
-                                setAdNameFormulaV2={setAdNameFormulaV2}
-                                campaignObjective={campaignObjective}
-                                selectedFiles={selectedFiles}
-                                setSelectedFiles={setSelectedFiles}
-                            />
-                        )}
+                        <AdCreationForm
+                            isLoading={isLoading}
+                            setIsLoading={setIsLoading}
+                            pages={pages}
+                            setPages={setPages}
+                            pagesLoading={pagesLoading}
+                            pageId={pageId}
+                            setPageId={setPageId}
+                            instagramAccountId={instagramAccountId}
+                            setInstagramAccountId={setInstagramAccountId}
+                            adName={adName}
+                            setAdName={setAdName}
+                            adOrder={adOrder}
+                            setAdOrder={setAdOrder}
+                            selectedItems={selectedItems}
+                            setSelectedItems={setSelectedItems}
+                            onItemToggle={onItemToggle}
+                            adValues={adValues}
+                            setAdValues={setAdValues}
+                            messages={messages}
+                            setMessages={setMessages}
+                            headlines={headlines}
+                            setHeadlines={setHeadlines}
+                            descriptions={descriptions}
+                            setDescriptions={setDescriptions}
+                            link={link}
+                            setLink={setLink}
+                            customLink={customLink}
+                            setCustomLink={setCustomLink}
+                            showCustomLink={showCustomLink}
+                            setShowCustomLink={setShowCustomLink}
+                            cta={cta}
+                            setCta={setCta}
+                            thumbnail={thumbnail}
+                            setThumbnail={setThumbnail}
+                            files={files}
+                            setFiles={setFiles}
+                            importedPosts={importedPosts}
+                            setImportedPosts={setImportedPosts}
+                            videoThumbs={videoThumbs}
+                            setVideoThumbs={setVideoThumbs}
+                            selectedAdSets={selectedAdSets}
+                            duplicateAdSet={duplicateAdSet}
+                            selectedCampaign={selectedCampaign}
+                            selectedAdAccount={selectedAdAccount}
+                            adSets={adSets}
+                            copyTemplates={adAccountSettings.copyTemplates || {}}
+                            defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
+                            selectedTemplate={selectedTemplate}
+                            setSelectedTemplate={setSelectedTemplate}
+                            driveFiles={driveFiles}
+                            setDriveFiles={setDriveFiles}
+                            selectedShopDestination={selectedShopDestination}
+                            setSelectedShopDestination={setSelectedShopDestination}
+                            selectedShopDestinationType={selectedShopDestinationType}
+                            setSelectedShopDestinationType={setSelectedShopDestinationType}
+                            newAdSetName={newAdSetName}
+                            launchPaused={launchPaused}
+                            setLaunchPaused={setLaunchPaused}
+                            isCarouselAd={isCarouselAd}
+                            setIsCarouselAd={setIsCarouselAd}
+                            adType={adType}
+                            setAdType={setAdType}
+                            enablePlacementCustomization={enablePlacementCustomization}
+                            setEnablePlacementCustomization={setEnablePlacementCustomization}
+                            fileGroups={fileGroups}
+                            setFileGroups={setFileGroups}
+                            adAccountSettings={adAccountSettings}
+                            refreshAdSets={refreshAdSets}
+                            adNameFormulaV2={adNameFormulaV2}
+                            setAdNameFormulaV2={setAdNameFormulaV2}
+                            campaignObjective={campaignObjective}
+                            selectedFiles={selectedFiles}
+                            setSelectedFiles={setSelectedFiles}
+                            useExistingPosts={useExistingPosts}
+                        />
                     </div>
 
                     {/* <div className="flex-1 min-w-0"> */}
