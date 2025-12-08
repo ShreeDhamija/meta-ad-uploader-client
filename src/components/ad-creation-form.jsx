@@ -39,11 +39,31 @@ import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 
+
+const JOB_CACHE_KEY = 'ad_creation_job_cache';
+
+const getJobCache = (jobId) => {
+  try {
+    const cached = localStorage.getItem(`${JOB_CACHE_KEY}_${jobId}`);
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+};
+
+const setJobCache = (jobId, data) => {
+  try {
+    localStorage.setItem(`${JOB_CACHE_KEY}_${jobId}`, JSON.stringify(data));
+  } catch { }
+};
+
 const useAdCreationProgress = (jobId, isCreatingAds) => {
-  const [progress, setProgress] = useState(0);
-  const [message, setMessage] = useState('');
-  const [status, setStatus] = useState('idle');
-  const [metaData, setMetadata] = useState({});
+  const cached = jobId ? getJobCache(jobId) : null;
+
+  const [progress, setProgress] = useState(cached?.progress ?? 0);
+  const [message, setMessage] = useState(cached?.message ?? '');
+  const [status, setStatus] = useState(cached?.status ?? 'idle');
+  const [metaData, setMetadata] = useState(cached?.metaData ?? {});
 
 
 
@@ -222,10 +242,22 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
                 errorMessages: data.errorMessages // NEW
 
               });
+              setJobCache(jobId, {
+                progress: data.progress,
+                message: data.message,
+                status: data.status,
+                metaData: {
+                  successCount: data.successCount,
+                  failureCount: data.failureCount,
+                  totalCount: data.totalCount,
+                  errorMessages: data.errorMessages
+                }
+              });
 
               // Auto-cleanup on job completion
               if (data.status === 'complete' || data.status === 'error' || data.status === 'partial-success') {
                 console.log('🏁 Job finished, closing SSE');
+                localStorage.removeItem(`${JOB_CACHE_KEY}_${jobId}`); // Clear cache
                 cleanup();
               }
             }
