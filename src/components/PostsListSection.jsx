@@ -347,19 +347,7 @@ export default function PostsListSection({
     }, [pageId])
 
     // Mark already imported posts as selected when posts load
-    useEffect(() => {
-        if (posts.length > 0 && importedPosts.length > 0) {
-            const importedIds = new Set(importedPosts.map(p => p.id))
-            const alreadyImported = posts.filter(p => importedIds.has(p.id)).map(p => p.id)
-            if (alreadyImported.length > 0) {
-                setSelectedPostIds(prev => {
-                    const newSet = new Set(prev)
-                    alreadyImported.forEach(id => newSet.add(id))
-                    return newSet
-                })
-            }
-        }
-    }, [posts, importedPosts])
+
 
     // Fetch posts from the page
     const fetchPosts = useCallback(async (cursor = null) => {
