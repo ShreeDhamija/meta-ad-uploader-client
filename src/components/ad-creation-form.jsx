@@ -4428,7 +4428,7 @@ export default function AdCreationForm({
                 Please provide a link URL
               </div>
             )}
-            {enablePlacementCustomization && selectedFiles && (selectedFiles.size > 0) && (
+            {enablePlacementCustomization && selectedFiles && (selectedFiles.size > 1) && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 You have ungrouped files for placement customization. Use the group ads button on the top right to group files               </div>
             )}

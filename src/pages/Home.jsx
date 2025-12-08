@@ -163,6 +163,7 @@ export default function Home() {
     const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState(new Set());
 
+    const [showMobileBanner, setShowMobileBanner] = useState(true);
 
     if (authLoading) return null
 
@@ -449,18 +450,25 @@ export default function Home() {
     return (
 
         <>
+
             {/* Mobile message - hidden on desktop */}
-            <div className="mobile-message fixed inset-0 bg-white flex-col items-center justify-center p-6 z-50 hidden">
-                <div className="text-center max-w-md">
-                    <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
-                    <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Required</h1>
-                    <p className="text-gray-600 mb-6">
-                        Thanks for signing up! <br></br>Blip works best on a bigger screen. <br></br> We've sent you an email to help you pick up from here once you’re back at your computer!
-                    </p>
-
-
+            {showMobileBanner && (
+                <div className="mobile-message fixed inset-0 bg-white flex-col items-center justify-center p-6 z-50 hidden">
+                    <div className="text-center max-w-md">
+                        <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
+                        <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Required</h1>
+                        <p className="text-gray-600 mb-6">
+                            Thanks for signing up! <br></br>Blip works best on a bigger screen. <br></br> We've sent you an email to help you pick up from here once you're back at your computer!
+                        </p>
+                        <button
+                            onClick={() => setShowMobileBanner(false)}
+                            className="mt-4 px-6 py-2 text-sm text-blue-600 hover:text-blue-700 underline transition-colors"
+                        >
+                            Continue Anyway
+                        </button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             <div className=" desktop-only w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
                 <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
