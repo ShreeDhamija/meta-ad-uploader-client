@@ -389,7 +389,9 @@ export default function AdCreationForm({
   refreshAdSets,
   adNameFormulaV2,
   setAdNameFormulaV2,
-  campaignObjective
+  campaignObjective,
+  selectedFiles,
+  setSelectedFiles
 }) {
   // Local state
   const navigate = useNavigate()
@@ -774,32 +776,75 @@ export default function AdCreationForm({
     }
   };
 
-  async function uploadDriveFileToS3(file) {
+  // async function uploadDriveFileToS3(file) {
+  //   const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
+
+
+
+  //   const res = await fetch(`${API_BASE_URL}/api/upload-from-drive`, {
+  //     method: "POST",
+  //     headers: {
+  //       "Content-Type": "application/json"
+  //     },
+  //     body: JSON.stringify({
+  //       driveFileUrl: driveDownloadUrl,
+  //       fileName: file.name,
+  //       mimeType: file.mimeType,
+  //       accessToken: file.accessToken,
+  //       size: file.size// ✅ Pass the access token from the file object
+  //     })
+  //   });
+
+  //   const data = await res.json();
+  //   if (!res.ok) throw new Error(data.error || "S3 upload failed again");
+  //   return {
+  //     ...file, // Spreads all original properties like id, name, etc.
+  //     s3Url: data.s3Url,
+  //     isS3Upload: true
+  //   };
+  // }
+
+  async function uploadDriveFileToS3(file, maxRetries = 3) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/upload-from-drive`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            driveFileUrl: driveDownloadUrl,
+            fileName: file.name,
+            mimeType: file.mimeType,
+            accessToken: file.accessToken,
+            size: file.size
+          })
+        });
 
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "S3 upload failed");
 
-    const res = await fetch(`${API_BASE_URL}/api/upload-from-drive`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        driveFileUrl: driveDownloadUrl,
-        fileName: file.name,
-        mimeType: file.mimeType,
-        accessToken: file.accessToken,
-        size: file.size// ✅ Pass the access token from the file object
-      })
-    });
+        // Success! Return the result
+        return {
+          ...file,
+          s3Url: data.s3Url,
+          isS3Upload: true
+        };
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "S3 upload failed again");
-    return {
-      ...file, // Spreads all original properties like id, name, etc.
-      s3Url: data.s3Url,
-      isS3Upload: true
-    };
+      } catch (error) {
+        // If this was the last attempt, throw the error
+        if (attempt === maxRetries) {
+          throw new Error(`S3 upload failed after ${maxRetries} attempts: ${error.message}`);
+        }
+
+        // Wait before retrying (exponential backoff: 1s, 2s, 4s)
+        const delayMs = Math.pow(2, attempt - 1) * 1000;
+        console.log(`Upload attempt ${attempt} failed, retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
   }
 
 
@@ -4357,7 +4402,8 @@ export default function AdCreationForm({
                 (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 (!showCustomLink && !link[0]) ||
-                (showCustomLink && !customLink.trim())
+                (showCustomLink && !customLink.trim()) ||
+                (selectedFiles.size > 0)
               }
             >
               Publish Ads
@@ -4381,6 +4427,10 @@ export default function AdCreationForm({
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please provide a link URL
               </div>
+            )}
+            {enablePlacementCustomization && selectedFiles && (selectedFiles.size > 0) && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                You have ungrouped files for placement customization. Use the group ads button on the top right to group files               </div>
             )}
 
           </div>

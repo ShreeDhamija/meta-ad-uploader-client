@@ -161,6 +161,7 @@ export default function Home() {
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
     const userHasActiveAccess = hasActiveAccess();
     const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState(new Set());
 
 
     if (authLoading) return null
@@ -574,6 +575,8 @@ export default function Home() {
                             adNameFormulaV2={adNameFormulaV2}
                             setAdNameFormulaV2={setAdNameFormulaV2}
                             campaignObjective={campaignObjective}
+                            selectedFiles={selectedFiles}
+                            setSelectedFiles={setSelectedFiles}
                         />
                     </div>
 
@@ -597,6 +600,8 @@ export default function Home() {
                                 selectedAdSets={selectedAdSets}
                                 adSets={adSets}
                                 duplicateAdSet={duplicateAdSet}
+                                selectedFiles={selectedFiles}
+                                setSelectedFiles={setSelectedFiles}
 
                             />
                         </ErrorBoundary>

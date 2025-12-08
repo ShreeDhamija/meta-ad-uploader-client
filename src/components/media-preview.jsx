@@ -203,9 +203,11 @@ export default function MediaPreview({
   setFileGroups,
   selectedAdSets,
   adSets,
-  duplicateAdSet
+  duplicateAdSet,
+  selectedFiles,
+  setSelectedFiles
 }) {
-  const [selectedFiles, setSelectedFiles] = useState(new Set());
+  // const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isAIGrouping, setIsAIGrouping] = useState(false);
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
 
