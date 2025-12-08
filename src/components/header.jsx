@@ -127,7 +127,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           className="px-2 md:px-4 py-2 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center transition-colors ml-2 gap-2"
         >
           <MessageCircle className="w-4 h-4" />
-          <span className="hidden md:inline text-xs">Chat With Us</span>
+          <span className="inline text-xs">Chat With Us</span>
         </button>
 
         <div className="h-8 w-px bg-gray-300" />
