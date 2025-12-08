@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -12,14 +12,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function PostsListSection({
     pageId,
-    importedPosts = [],
-    setImportedPosts, // PARENT SETTER
+    importedPosts, // We don't read this for checkboxes anymore, just like the Modal didn't
+    setImportedPosts,
 }) {
-    // 1. LOCAL BUFFER STATE
-    // We store selections here first. We do NOT touch the parent yet.
+    // 1. USE LOCAL STATE (Just like the Modal did)
     const [selectedPostIds, setSelectedPostIds] = useState(new Set())
 
-    // API Data state
     const [posts, setPosts] = useState([])
     const [isLoadingPosts, setIsLoadingPosts] = useState(false)
     const [isLoadingMore, setIsLoadingMore] = useState(false)
@@ -28,7 +26,7 @@ export default function PostsListSection({
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
 
-    // Reset local state when page changes
+    // Reset when page changes (Like the Modal's isOpen effect)
     useEffect(() => {
         setPosts([])
         setSelectedPostIds(new Set()) // Clear local selection
@@ -38,9 +36,12 @@ export default function PostsListSection({
         setHasMore(false)
     }, [pageId])
 
-    // Fetch Logic (Memoized)
+    // Fetch Logic (Copied from Modal)
     const fetchPosts = useCallback(async (cursor = null) => {
-        if (!pageId) return
+        if (!pageId) {
+            setError("Please select a page first")
+            return
+        }
 
         const isInitialLoad = !cursor
         if (isInitialLoad) {
@@ -57,9 +58,14 @@ export default function PostsListSection({
                 params: { pageId, after: cursor },
                 withCredentials: true
             })
+
             const { data, paging } = response.data
 
-            setPosts(prev => isInitialLoad ? (data || []) : [...prev, ...(data || [])])
+            if (isInitialLoad) {
+                setPosts(data || [])
+            } else {
+                setPosts(prev => [...prev, ...(data || [])])
+            }
 
             if (paging?.cursors?.after && paging?.next) {
                 setNextCursor(paging.cursors.after)
@@ -68,47 +74,56 @@ export default function PostsListSection({
                 setNextCursor(null)
                 setHasMore(false)
             }
+
         } catch (err) {
             console.error(err)
-            setError("Failed to fetch posts")
+            const msg = err.response?.data?.error || err.message || "Failed"
+            setError(msg)
+            toast.error(msg)
         } finally {
             setIsLoadingPosts(false)
             setIsLoadingMore(false)
         }
     }, [pageId])
 
-    // 2. TOGGLE LOCAL ONLY
-    // Wrapped in useCallback to ensure stability
-    const togglePostSelection = useCallback((postId) => {
+    // 2. TOGGLE LOCAL STATE ONLY (Exactly like the Modal)
+    const togglePostSelection = (postId) => {
         setSelectedPostIds(prev => {
             const newSet = new Set(prev)
-            if (newSet.has(postId)) newSet.delete(postId)
-            else newSet.add(postId)
+            if (newSet.has(postId)) {
+                newSet.delete(postId)
+            } else {
+                newSet.add(postId)
+            }
             return newSet
         })
-    }, [])
+    }
 
-    // 3. PUSH TO PARENT (The "Commit" Action)
-    // This runs ONCE when button is clicked. Impossible to cause a loop.
-    const handleImport = useCallback(() => {
-        // Find actual post objects based on IDs
-        const postsToAdd = posts.filter(p => selectedPostIds.has(p.id))
+    // 3. IMPORT TO PARENT (Exactly like the Modal's handleImport)
+    const handleImport = () => {
+        // Find the full post objects
+        const selectedPosts = posts.filter(p => selectedPostIds.has(p.id))
 
-        if (postsToAdd.length === 0) return
-
+        // Update Parent (This is the only time we touch the parent)
         setImportedPosts(prev => {
-            // Prevent duplicates logic
-            const currentIds = new Set(prev.map(p => p.id))
-            const uniqueNewPosts = postsToAdd.filter(p => !currentIds.has(p.id))
-            return [...prev, ...uniqueNewPosts]
+            // Handle existing posts to avoid duplicates
+            const currentPosts = Array.isArray(prev) ? prev : []
+            const existingIds = new Set(currentPosts.map(p => p.id))
+            const newPosts = selectedPosts.filter(p => !existingIds.has(p.id))
+            return [...currentPosts, ...newPosts]
         })
 
-        toast.success(`Added ${postsToAdd.length} posts`)
-        setSelectedPostIds(new Set()) // Clear selection after adding
-    }, [posts, selectedPostIds, setImportedPosts])
+        toast.success(`Imported ${selectedPosts.length} post(s)`)
+        setSelectedPostIds(new Set()) // Clear selection after import
+    }
 
-    // Helper to calculate count efficiently
-    const selectedCount = selectedPostIds.size
+    const loadMore = () => {
+        if (nextCursor && !isLoadingMore) fetchPosts(nextCursor)
+    }
+
+    // Display helpers
+    const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    const truncateMessage = (m, l = 80) => (!m ? "No caption" : m.length <= l ? m : m.substring(0, l) + "...")
 
     return (
         <div className="space-y-4">
@@ -121,7 +136,7 @@ export default function PostsListSection({
                 {isLoadingPosts ? (
                     <><Loader className="h-4 w-4 mr-2 animate-spin" /> Loading...</>
                 ) : (
-                    <><Search className="h-4 w-4 mr-2" /> {hasFetched ? 'Refresh' : 'Load Posts'}</>
+                    <><Search className="h-4 w-4 mr-2" /> {hasFetched ? 'Refresh Posts' : 'Load Posts'}</>
                 )}
             </Button>
 
@@ -143,30 +158,36 @@ export default function PostsListSection({
                                     checked={selectedPostIds.has(post.id)}
                                     className="mt-1 pointer-events-none"
                                 />
-                                {/* Thumbnail & Content logic here... */}
+                                <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                    {post.full_picture ? (
+                                        <img src={post.full_picture} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }} />
+                                    ) : null}
+                                    <div className={cn("w-full h-full items-center justify-center", post.full_picture ? "hidden" : "flex")}>
+                                        <ImageOff className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm line-clamp-2">{post.message || "No caption"}</p>
-                                    <span className="text-xs text-gray-500">{new Date(post.created_time).toLocaleDateString()}</span>
+                                    <p className="text-sm text-gray-900 line-clamp-2">{truncateMessage(post.message)}</p>
+                                    <span className="text-xs text-gray-500">{formatDate(post.created_time)}</span>
                                 </div>
                             </div>
                         ))}
-
                         {hasMore && (
-                            <Button variant="outline" className="w-full mt-2" onClick={() => fetchPosts(nextCursor)} disabled={isLoadingMore}>
+                            <Button variant="outline" className="w-full mt-2" onClick={loadMore} disabled={isLoadingMore}>
                                 Load More
                             </Button>
                         )}
                     </div>
 
-                    {/* THE CIRCUIT BREAKER: The Add Button */}
+                    {/* The Circuit Breaker - Only update parent here */}
                     <div className="pt-3 border-t mt-3">
                         <Button
                             type="button"
                             onClick={handleImport}
-                            disabled={selectedCount === 0}
+                            disabled={selectedPostIds.size === 0}
                             className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl"
                         >
-                            Add {selectedCount > 0 ? `${selectedCount} ` : ''} Posts
+                            Add {selectedPostIds.size > 0 ? `${selectedPostIds.size} ` : ''} Posts
                         </Button>
                     </div>
                 </div>
