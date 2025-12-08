@@ -35,9 +35,6 @@ export default function PostsListSection({
         setHasMore(false)
     }, [pageId])
 
-
-
-
     // Fetch posts from the page
     const fetchPosts = useCallback(async (cursor = null) => {
         if (!pageId) {
@@ -92,8 +89,8 @@ export default function PostsListSection({
         }
     }, [pageId])
 
-    // Toggle post selection
-    const togglePostSelection = (postId) => {
+    // Toggle post selection - Wrapped in useCallback to prevent render loops
+    const togglePostSelection = useCallback((postId) => {
         setSelectedPostIds(prev => {
             const newSet = new Set(prev)
             if (newSet.has(postId)) {
@@ -103,11 +100,10 @@ export default function PostsListSection({
             }
             return newSet
         })
-    }
-
+    }, [])
 
     // Handle import - adds to importedPosts, avoiding duplicates
-    const handleImport = () => {
+    const handleImport = useCallback(() => {
         const selectedPosts = posts.filter(p => selectedPostIds.has(p.id))
 
         setImportedPosts(prev => {
@@ -117,30 +113,24 @@ export default function PostsListSection({
         })
 
         toast.success(`Imported ${selectedPosts.length} post(s)`)
-    }
+    }, [posts, selectedPostIds, setImportedPosts])
 
-    // Remove an imported post
-    const handleRemovePost = (postId) => {
+    // Remove an imported post - Wrapped in useCallback
+    const handleRemovePost = useCallback((postId) => {
         setImportedPosts(prev => prev.filter(p => p.id !== postId))
         setSelectedPostIds(prev => {
             const newSet = new Set(prev)
             newSet.delete(postId)
             return newSet
         })
-    }
-
-    // Clear all imported posts
-    const handleClearPosts = () => {
-        setImportedPosts([])
-        setSelectedPostIds(new Set())
-    }
+    }, [setImportedPosts])
 
     // Load more posts
-    const loadMore = () => {
+    const loadMore = useCallback(() => {
         if (nextCursor && !isLoadingMore) {
             fetchPosts(nextCursor)
         }
-    }
+    }, [nextCursor, isLoadingMore, fetchPosts])
 
     // Format date for display
     const formatDate = (dateString) => {
@@ -216,71 +206,60 @@ export default function PostsListSection({
                             </div>
                         ) : (
                             <div className="space-y-2 pr-1">
-                                {posts.map((post) => {
-                                    const isImported = importedPosts.some(p => p.id === post.id)
-                                    return (
-                                        <div
-                                            key={post.id}
-                                            className={cn(
-                                                "flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors",
-                                                isImported
-                                                    ? "border-green-500 bg-green-50"
-                                                    : selectedPostIds.has(post.id)
-                                                        ? "border-blue-500 bg-blue-50"
-                                                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                                            )}
-                                            onClick={() => togglePostSelection(post.id)}
-                                        >
-                                            {/* Checkbox */}
-                                            <Checkbox
-                                                checked={selectedPostIds.has(post.id)}
-                                                onCheckedChange={() => togglePostSelection(post.id)}
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="mt-1"
-                                            />
+                                {posts.map((post) => (
+                                    <div
+                                        key={post.id}
+                                        className={cn(
+                                            "flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors",
+                                            selectedPostIds.has(post.id)
+                                                ? "border-blue-500 bg-blue-50"
+                                                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                        )}
+                                        onClick={() => togglePostSelection(post.id)}
+                                    >
+                                        {/* Checkbox - display only, click handled by parent div */}
+                                        <Checkbox
+                                            checked={selectedPostIds.has(post.id)}
+                                            onCheckedChange={() => { }}
+                                            className="mt-1 pointer-events-none"
+                                        />
 
-                                            {/* Thumbnail */}
-                                            <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                                                {post.full_picture ? (
-                                                    <img
-                                                        src={post.full_picture}
-                                                        alt="Post thumbnail"
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            e.target.style.display = 'none'
-                                                            e.target.nextSibling.style.display = 'flex'
-                                                        }}
-                                                    />
-                                                ) : null}
-                                                <div
-                                                    className={cn(
-                                                        "w-full h-full items-center justify-center",
-                                                        post.full_picture ? "hidden" : "flex"
-                                                    )}
-                                                >
-                                                    <ImageOff className="h-5 w-5 text-gray-400" />
-                                                </div>
-                                            </div>
-
-                                            {/* Post info */}
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm text-gray-900 line-clamp-2">
-                                                    {truncateMessage(post.message)}
-                                                </p>
-                                                <div className="flex items-center gap-2 mt-1">
-                                                    <span className="text-xs text-gray-500">
-                                                        {formatDate(post.created_time)}
-                                                    </span>
-                                                    {isImported && (
-                                                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                                                            Added
-                                                        </span>
-                                                    )}
-                                                </div>
+                                        {/* Thumbnail */}
+                                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                                            {post.full_picture ? (
+                                                <img
+                                                    src={post.full_picture}
+                                                    alt="Post thumbnail"
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none'
+                                                        e.target.nextSibling.style.display = 'flex'
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <div
+                                                className={cn(
+                                                    "w-full h-full items-center justify-center",
+                                                    post.full_picture ? "hidden" : "flex"
+                                                )}
+                                            >
+                                                <ImageOff className="h-5 w-5 text-gray-400" />
                                             </div>
                                         </div>
-                                    )
-                                })}
+
+                                        {/* Post info */}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm text-gray-900 line-clamp-2">
+                                                {truncateMessage(post.message)}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-xs text-gray-500">
+                                                    {formatDate(post.created_time)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
 
                                 {/* Load more button */}
                                 {hasMore && (
