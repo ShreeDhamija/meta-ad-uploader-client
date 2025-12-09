@@ -20,7 +20,7 @@ import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostsListSection from "@/components/PostsListSection"
-import PostSelectorModal from "@/components/Test"
+import PostSelectorInline from "@/components/Test"
 
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
@@ -3764,12 +3764,10 @@ export default function AdCreationForm({
               //   importedPosts={importedPosts}
               //   setImportedPosts={setImportedPosts}
               // />
-              <Button
-                onClick={() => setShowPostSelector(true)}
-                className="px-4 py-2 w-full rounded-xl bg-blue-600 text-white"
-              >
-                Select Posts
-              </Button>
+              <PostSelectorInline
+                pageId={pageId}
+                onImport={setImportedPosts}
+              />
 
 
             ) : (
@@ -4382,12 +4380,12 @@ export default function AdCreationForm({
 
               </>
             )}
-            <PostSelectorModal
+            {/* <PostSelectorModal
               isOpen={showPostSelector}
               onClose={() => setShowPostSelector(false)}
               pageId={pageId}
               onImport={setImportedPosts}
-            />
+            /> */}
           </div>
 
 
