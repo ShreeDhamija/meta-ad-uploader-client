@@ -278,7 +278,7 @@
 // }
 "use client"
 
-import { useState, useCallback, memo } from "react"
+import { useState, useCallback, memo, useEffect, useRef } from "react"
 import axios from "axios"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -288,6 +288,26 @@ import { Loader, ChevronDown, ImageOff } from "lucide-react"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 function PostSelectorInline({ pageId, onImport }) {
+    // DEBUG: Track renders and prop changes
+    const renderCount = useRef(0);
+    const prevPageId = useRef(pageId);
+    const prevOnImport = useRef(onImport);
+
+    useEffect(() => {
+        renderCount.current += 1;
+        console.log('🔄 PostSelectorInline render #', renderCount.current);
+
+        if (prevPageId.current !== pageId) {
+            console.log('📝 pageId changed:', prevPageId.current, '->', pageId);
+            prevPageId.current = pageId;
+        }
+
+        if (prevOnImport.current !== onImport) {
+            console.log('⚠️ onImport reference changed!');
+            prevOnImport.current = onImport;
+        }
+    });
+
     const [posts, setPosts] = useState([])
     const [selectedPostIds, setSelectedPostIds] = useState(new Set())
     const [isLoading, setIsLoading] = useState(false)
@@ -297,6 +317,7 @@ function PostSelectorInline({ pageId, onImport }) {
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
 
+    // Rest of your code stays the same...
     const fetchPosts = useCallback(async (cursor = null) => {
         if (!pageId) {
             setError("No page selected")
@@ -390,7 +411,7 @@ function PostSelectorInline({ pageId, onImport }) {
 
     return (
         <div className="space-y-4">
-            {/* Fetch/Refetch Button */}
+            {/* All your existing JSX */}
             <Button
                 onClick={() => fetchPosts()}
                 disabled={isLoading}
@@ -406,14 +427,12 @@ function PostSelectorInline({ pageId, onImport }) {
                 )}
             </Button>
 
-            {/* Loading State */}
             {isLoading && !hasFetched && (
                 <div className="flex items-center justify-center py-8">
                     <Loader className="h-8 w-8 animate-spin text-gray-400" />
                 </div>
             )}
 
-            {/* Error State */}
             {error && (
                 <div className="flex flex-col items-center justify-center text-center p-4 border border-red-200 rounded-lg bg-red-50">
                     <p className="text-red-500 mb-4">{error}</p>
@@ -423,14 +442,12 @@ function PostSelectorInline({ pageId, onImport }) {
                 </div>
             )}
 
-            {/* Empty State */}
             {hasFetched && !isLoading && posts.length === 0 && !error && (
                 <div className="flex items-center justify-center py-8 text-gray-500 border border-gray-200 rounded-lg">
                     No eligible posts found for this page
                 </div>
             )}
 
-            {/* Posts List */}
             {posts.length > 0 && (
                 <>
                     <div className="flex items-center justify-between py-2 border-b">
@@ -515,7 +532,6 @@ function PostSelectorInline({ pageId, onImport }) {
                         )}
                     </div>
 
-                    {/* Import Button */}
                     <Button
                         onClick={handleImport}
                         disabled={selectedPostIds.size === 0}
