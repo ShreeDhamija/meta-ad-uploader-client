@@ -500,7 +500,7 @@ function PostSelectorInline({ pageId, onImport }) {
                             >
                                 <Checkbox
                                     checked={selectedPostIds.has(post.id)}
-                                    onCheckedChange={() => togglePostSelection(post.id)}
+                                    // onCheckedChange={() => togglePostSelection(post.id)}
                                     onClick={(e) => e.stopPropagation()}
                                 />
 
