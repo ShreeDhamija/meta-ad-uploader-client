@@ -397,6 +397,58 @@ export default function AdCreationForm({
   setSelectedFiles,
   useExistingPosts
 }) {
+
+
+
+
+  // ========== DEBUG CODE START ==========
+  const renderCount = useRef(0);
+  const prevPropsRef = useRef({});
+
+  renderCount.current += 1;
+
+  // Log render count
+  if (renderCount.current > 5) {
+    console.log('🔴 AdCreationForm render #', renderCount.current);
+  }
+
+  // Track which props are changing
+  useEffect(() => {
+    const currentProps = {
+      selectedAdAccount,
+      pages,
+      adSets,
+      selectedAdSets,
+      pageId,
+      instagramAccountId,
+      adName,
+      files,
+      importedPosts,
+      driveFiles,
+      useExistingPosts,
+      videoThumbs,
+      selectedTemplate,
+      link,
+      cta,
+      adType
+    };
+
+    Object.keys(currentProps).forEach(key => {
+      if (prevPropsRef.current[key] !== currentProps[key]) {
+        console.log(`📝 Prop changed: ${key}`);
+        // Only log details for non-array/object props to keep console clean
+        if (typeof currentProps[key] !== 'object') {
+          console.log(`   from:`, prevPropsRef.current[key]);
+          console.log(`   to:`, currentProps[key]);
+        }
+      }
+    });
+
+    prevPropsRef.current = currentProps;
+  });
+  // ========== DEBUG CODE END ==========
+
+
   // Local state
   const [showPostSelector, setShowPostSelector] = useState(false);
   const navigate = useNavigate()
@@ -456,7 +508,24 @@ export default function AdCreationForm({
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
 
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
+  // ========== DEBUG STATE TRACKING START ==========
+  // Wrap critical state setters to see when they're called
+  useEffect(() => {
+    console.log('🔵 files changed, length:', files.length);
+  }, [files]);
 
+  useEffect(() => {
+    console.log('🔵 importedPosts changed, length:', importedPosts.length);
+  }, [importedPosts]);
+
+  useEffect(() => {
+    console.log('🔵 driveFiles changed, length:', driveFiles.length);
+  }, [driveFiles]);
+
+  useEffect(() => {
+    console.log('🔵 videoThumbs changed');
+  }, [videoThumbs]);
+  // ========== DEBUG STATE TRACKING END ==========
 
   const refreshPage = useCallback(() => {
     window.location.reload();
@@ -3182,6 +3251,15 @@ export default function AdCreationForm({
       onImport={setImportedPosts}
     />
   ), [pageId, setImportedPosts]);
+
+
+  // ========== DETECT RENDER PHASE STATE UPDATES ==========
+  // This will catch if any setState is called during render
+  if (renderCount.current > 50) {
+    console.error('🚨 INFINITE LOOP DETECTED - stopping logs');
+    renderCount.current = 0; // Reset to avoid console spam
+  }
+  // ========== END DETECTION ==========
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
