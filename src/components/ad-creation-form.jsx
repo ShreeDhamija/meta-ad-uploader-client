@@ -20,6 +20,8 @@ import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostsListSection from "@/components/PostsListSection"
+import PostSelectorModal from "@/components/Test"
+
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -396,6 +398,7 @@ export default function AdCreationForm({
   useExistingPosts
 }) {
   // Local state
+  const [showPostSelector, setShowPostSelector] = useState(false);
   const navigate = useNavigate()
   const [openPage, setOpenPage] = useState(false)
   const [googleAuthStatus, setGoogleAuthStatus] = useState({
@@ -3756,11 +3759,19 @@ export default function AdCreationForm({
 
             {useExistingPosts ? (
               // Show PostsListSection when toggle is ON
-              <PostsListSection
-                pageId={pageId}
-                importedPosts={importedPosts}
-                setImportedPosts={setImportedPosts}
-              />
+              // <PostsListSection
+              //   pageId={pageId}
+              //   importedPosts={importedPosts}
+              //   setImportedPosts={setImportedPosts}
+              // />
+              <Button
+                onClick={() => setShowPostSelector(true)}
+                className="px-4 py-2"
+              >
+                Select Posts
+              </Button>
+
+
             ) : (
               // Show regular form content when toggle is OFF
               <>
@@ -4371,6 +4382,12 @@ export default function AdCreationForm({
 
               </>
             )}
+            <PostSelectorModal
+              isOpen={showPostSelector}
+              onClose={() => setShowPostSelector(false)}
+              pageId={pageId}
+              onImport={setImportedPosts}
+            />
           </div>
 
 
