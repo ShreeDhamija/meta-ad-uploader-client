@@ -278,7 +278,7 @@
 // }
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback, memo } from "react"
 import axios from "axios"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -287,7 +287,7 @@ import { Loader, ChevronDown, ImageOff } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
-export default function PostSelectorInline({ pageId, onImport }) {
+function PostSelectorInline({ pageId, onImport }) {
     const [posts, setPosts] = useState([])
     const [selectedPostIds, setSelectedPostIds] = useState(new Set())
     const [isLoading, setIsLoading] = useState(false)
@@ -528,3 +528,5 @@ export default function PostSelectorInline({ pageId, onImport }) {
         </div>
     )
 }
+
+export default memo(PostSelectorInline)
