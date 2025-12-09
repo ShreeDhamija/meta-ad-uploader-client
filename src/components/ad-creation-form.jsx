@@ -3766,7 +3766,7 @@ export default function AdCreationForm({
               // />
               <Button
                 onClick={() => setShowPostSelector(true)}
-                className="px-4 py-2"
+                className="px-4 py-2 w-full rounded-xl bg-blue-600 text-white"
               >
                 Select Posts
               </Button>
