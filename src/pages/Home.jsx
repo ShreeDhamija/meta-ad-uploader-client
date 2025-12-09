@@ -167,7 +167,13 @@ export default function Home() {
     const [showMobileBanner, setShowMobileBanner] = useState(true);
 
     if (authLoading) return null
-
+    const setImportedPostsRef = useRef(setImportedPosts);
+    useEffect(() => {
+        if (setImportedPostsRef.current !== setImportedPosts) {
+            console.log('⚠️ setImportedPosts reference changed in Home!');
+            setImportedPostsRef.current = setImportedPosts;
+        }
+    });
 
     useEffect(() => {
         if (!authLoading && !isLoggedIn) {
