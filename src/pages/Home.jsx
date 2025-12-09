@@ -175,7 +175,9 @@ export default function Home() {
         }
     }, [authLoading, isLoggedIn]);
 
-
+    useEffect(() => {
+        console.log('🏠 Home - pageId:', pageId);
+    }, [pageId]);
 
     useEffect(() => {
         if (!isLoggedIn || loading) return

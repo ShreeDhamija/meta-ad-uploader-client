@@ -3764,10 +3764,12 @@ export default function AdCreationForm({
               //   importedPosts={importedPosts}
               //   setImportedPosts={setImportedPosts}
               // />
-              <PostSelectorInline
-                pageId={pageId}
-                onImport={setImportedPosts}
-              />
+              useMemo(() => (
+                <PostSelectorInline
+                  pageId={pageId}
+                  onImport={setImportedPosts}
+                />
+              ), [pageId, setImportedPosts])
 
 
             ) : (
