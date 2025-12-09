@@ -3758,12 +3758,7 @@ export default function AdCreationForm({
 
 
             {useExistingPosts ? (
-              // Show PostsListSection when toggle is ON
-              // <PostsListSection
-              //   pageId={pageId}
-              //   importedPosts={importedPosts}
-              //   setImportedPosts={setImportedPosts}
-              // />
+
               <PostSelectorInline
                 pageId={pageId}
                 onImport={setImportedPosts}
@@ -4380,12 +4375,7 @@ export default function AdCreationForm({
 
               </>
             )}
-            {/* <PostSelectorModal
-              isOpen={showPostSelector}
-              onClose={() => setShowPostSelector(false)}
-              pageId={pageId}
-              onImport={setImportedPosts}
-            /> */}
+
           </div>
 
 
