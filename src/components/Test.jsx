@@ -492,17 +492,18 @@ function PostSelectorInline({ pageId, onImport }) {
                         {posts.map((post) => (
                             <div
                                 key={post.id}
-                                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedPostIds.has(post.id)
+                                className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${selectedPostIds.has(post.id)
                                     ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
-                                onClick={() => togglePostSelection(post.id)}
+
                             >
                                 <Checkbox
                                     checked={selectedPostIds.has(post.id)}
-                                    // onCheckedChange={() => togglePostSelection(post.id)}
-                                    onClick={(e) => e.stopPropagation()}
+                                    onCheckedChange={() => togglePostSelection(post.id)}
+
                                 />
+
 
                                 <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
                                     {post.full_picture ? (
