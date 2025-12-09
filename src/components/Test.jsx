@@ -317,6 +317,38 @@ function PostSelectorInline({ pageId, onImport }) {
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
 
+
+
+    // DEBUG: Track state changes
+    useEffect(() => {
+        console.log('🟦 posts changed, length:', posts.length);
+    }, [posts]);
+
+    useEffect(() => {
+        console.log('🟦 selectedPostIds changed, size:', selectedPostIds.size);
+    }, [selectedPostIds]);
+
+    useEffect(() => {
+        console.log('🟦 isLoading changed:', isLoading);
+    }, [isLoading]);
+
+    useEffect(() => {
+        console.log('🟦 error changed:', error);
+    }, [error]);
+
+    useEffect(() => {
+        console.log('🟦 nextCursor changed:', nextCursor);
+    }, [nextCursor]);
+
+    useEffect(() => {
+        console.log('🟦 hasMore changed:', hasMore);
+    }, [hasMore]);
+
+    useEffect(() => {
+        console.log('🟦 hasFetched changed:', hasFetched);
+    }, [hasFetched]);
+    // ===== END DEBUG =====
+
     // Rest of your code stays the same...
     const fetchPosts = useCallback(async (cursor = null) => {
         if (!pageId) {
@@ -461,8 +493,8 @@ function PostSelectorInline({ pageId, onImport }) {
                             <div
                                 key={post.id}
                                 className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${selectedPostIds.has(post.id)
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
                                 onClick={() => togglePostSelection(post.id)}
                             >

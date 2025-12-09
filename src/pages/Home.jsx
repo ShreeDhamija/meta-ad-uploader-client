@@ -1,6 +1,6 @@
 // "use client"
 
-import React, { useState, useEffect, useCallback, useRef } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { toast, Toaster } from "sonner"
 import { useNavigate } from "react-router-dom"
 
@@ -167,13 +167,7 @@ export default function Home() {
     const [showMobileBanner, setShowMobileBanner] = useState(true);
 
     if (authLoading) return null
-    const setImportedPostsRef = useRef(setImportedPosts);
-    useEffect(() => {
-        if (setImportedPostsRef.current !== setImportedPosts) {
-            console.log('⚠️ setImportedPosts reference changed in Home!');
-            setImportedPostsRef.current = setImportedPosts;
-        }
-    });
+
 
     useEffect(() => {
         if (!authLoading && !isLoggedIn) {
