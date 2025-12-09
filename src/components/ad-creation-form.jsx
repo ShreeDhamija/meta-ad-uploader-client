@@ -3176,6 +3176,12 @@ export default function AdCreationForm({
 
   };
 
+  const postSelectorContent = useMemo(() => (
+    <PostSelectorInline
+      pageId={pageId}
+      onImport={setImportedPosts}
+    />
+  ), [pageId, setImportedPosts]);
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
@@ -3764,12 +3770,7 @@ export default function AdCreationForm({
               //   importedPosts={importedPosts}
               //   setImportedPosts={setImportedPosts}
               // />
-              useMemo(() => (
-                <PostSelectorInline
-                  pageId={pageId}
-                  onImport={setImportedPosts}
-                />
-              ), [pageId, setImportedPosts])
+              postSelectorContent
 
 
             ) : (
