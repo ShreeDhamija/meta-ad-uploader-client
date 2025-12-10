@@ -222,7 +222,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                             size="sm"
                             onClick={() => fetchAds(null, datePreset)}
                             disabled={isLoading}
-                            className="h-6 px-3 bg-gray-800 hover:bg-black text-white rounded-xl"
+                            className="h-6 px-3 py-2 bg-gray-800 hover:bg-black text-white rounded-lg"
                         >
                             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                             Refresh Ads
@@ -231,7 +231,6 @@ function PostSelectorInline({ adAccountId, onImport }) {
 
                     {/* Header Row */}
                     <div className="grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 px-2 py-2 text-xs font-medium text-white bg-gray-700 rounded-lg items-center">
-                        <div className="w-5"></div>
                         <div> Thumbnail</div>
                         <div>Ad Name</div>
                         <div>Post ID</div>
