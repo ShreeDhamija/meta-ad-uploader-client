@@ -422,8 +422,7 @@ export default function AdCreationForm({
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
-  // const [importedPosts, setImportedPosts] = useState([])
-  const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
+  // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
 
   //Porgress Trackers
@@ -2499,7 +2498,7 @@ export default function AdCreationForm({
             // POST-SPECIFIC: Send the post ID instead of media
             formData.append("postId", post.id);  // This is the key difference!
             formData.append("adType", "post");   // Signal to backend this is a post-based ad
-
+            console.log(post.id);
             promises.push(createAdApiCall(formData, API_BASE_URL));
             promiseMetadata.push({ fileName: `Post ${post.id.split('_')[1]}` });
           });
