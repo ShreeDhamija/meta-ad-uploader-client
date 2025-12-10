@@ -2470,7 +2470,7 @@ export default function AdCreationForm({
 
       if (importedPosts && importedPosts.length > 0) {
         console.log('📝 Creating ads from imported posts');
-
+        console.log(importedPosts);
         // For each adset, create ads from each imported post
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
 
@@ -2496,7 +2496,7 @@ export default function AdCreationForm({
             formData.append("jobId", frontendJobId);
 
             // POST-SPECIFIC: Send the post ID instead of media
-            formData.append("postId", post.id);  // This is the key difference!
+            formData.append("postId", post.post_id);  // This is the key difference!
             formData.append("adType", "post");   // Signal to backend this is a post-based ad
             console.log(post.id);
             promises.push(createAdApiCall(formData, API_BASE_URL));
