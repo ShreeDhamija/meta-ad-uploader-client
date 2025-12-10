@@ -5,9 +5,22 @@ import axios from "axios"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Loader, ChevronDown, ImageOff, Copy, Check } from "lucide-react"
+import { Loader, ChevronDown, ImageOff, Copy, Check, RefreshCw } from "lucide-react"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+const DATE_PRESETS = [
+    { label: '1 Day', value: 'yesterday' },
+    { label: '3 Days', value: 'last_3d' },
+    { label: '7 Days', value: 'last_7d' },
+    { label: '30 Days', value: 'last_30d' },
+]
 
 function PostSelectorInline({ adAccountId, onImport }) {
     // DEBUG: Track renders and prop changes
@@ -38,9 +51,10 @@ function PostSelectorInline({ adAccountId, onImport }) {
     const [nextCursor, setNextCursor] = useState(null)
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
+    const [copiedId, setCopiedId] = useState(null)
+    const [datePreset, setDatePreset] = useState('last_7d')
 
-
-    const fetchAds = useCallback(async (cursor = null) => {
+    const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
         if (!adAccountId) {
             setError("No ad account selected")
             return
@@ -59,6 +73,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
         try {
             const params = {
                 adAccountId,
+                datePreset: preset,
             }
 
             // Only add cursor if loading more (pagination)
@@ -102,7 +117,19 @@ function PostSelectorInline({ adAccountId, onImport }) {
             setIsLoading(false)
             setIsLoadingMore(false)
         }
+    }, [adAccountId, datePreset])
+
+    // Auto-fetch when component mounts or adAccountId changes
+    useEffect(() => {
+        if (adAccountId) {
+            fetchAds(null, datePreset)
+        }
     }, [adAccountId])
+
+    const handleDatePresetChange = (newPreset) => {
+        setDatePreset(newPreset)
+        fetchAds(null, newPreset)
+    }
 
     const toggleAdSelection = (adId) => {
         setSelectedAdIds(prev => {
@@ -123,7 +150,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
 
     const loadMore = () => {
         if (nextCursor && !isLoadingMore) {
-            fetchAds(nextCursor)
+            fetchAds(nextCursor, datePreset)
         }
     }
 
@@ -145,25 +172,24 @@ function PostSelectorInline({ adAccountId, onImport }) {
         return parts.length > 1 ? parts[1] : objectStoryId
     }
 
+    const copyToClipboard = async (text, adId) => {
+        try {
+            await navigator.clipboard.writeText(text)
+            setCopiedId(adId)
+            toast.success('Post ID copied!')
+            setTimeout(() => setCopiedId(null), 2000)
+        } catch (err) {
+            toast.error('Failed to copy')
+        }
+    }
 
+    const getDatePresetLabel = () => {
+        const preset = DATE_PRESETS.find(p => p.value === datePreset)
+        return preset ? preset.label : '7 Days'
+    }
 
     return (
         <div className="space-y-4">
-            <Button
-                onClick={() => fetchAds()}
-                disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl"
-            >
-                {isLoading ? (
-                    <>
-                        <Loader className="h-4 w-4 mr-2 animate-spin" />
-                        Fetching Ads...
-                    </>
-                ) : (
-                    hasFetched ? 'Refetch Ads' : 'Fetch Ads'
-                )}
-            </Button>
-
             {isLoading && !hasFetched && (
                 <div className="flex items-center justify-center py-8">
                     <Loader className="h-8 w-8 animate-spin text-gray-400" />
@@ -173,7 +199,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
             {error && (
                 <div className="flex flex-col items-center justify-center text-center p-4 border border-red-200 rounded-lg bg-red-50">
                     <p className="text-red-500 mb-4">{error}</p>
-                    <Button variant="outline" onClick={() => fetchAds()}>
+                    <Button variant="outline" onClick={() => fetchAds(null, datePreset)}>
                         Retry
                     </Button>
                 </div>
@@ -187,29 +213,56 @@ function PostSelectorInline({ adAccountId, onImport }) {
 
             {ads.length > 0 && (
                 <>
-                    <div className="flex items-center justify-between py-2 border-b">
+                    <div className="flex items-center justify-between py-2">
                         <span className="text-sm text-gray-500">
                             {selectedAdIds.size} selected
                         </span>
-                        <span className="text-sm text-gray-400">
-                            {ads.length} ads loaded
-                        </span>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => fetchAds(null, datePreset)}
+                            disabled={isLoading}
+                            className="h-8 px-2 text-gray-500 hover:text-gray-700"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                        </Button>
                     </div>
 
                     {/* Header Row */}
-                    <div className="grid grid-cols-[auto_48px_1fr_120px_80px] gap-3 px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide border-b bg-gray-50 rounded-t-lg">
+                    <div className="grid grid-cols-[auto_48px_1fr_120px_100px] gap-3 px-3 py-2 text-sm font-medium text-white bg-gray-700 rounded-xl">
                         <div className="w-5"></div>
-                        <div>Thumb</div>
+                        <div>Thumbnail</div>
                         <div>Ad Name</div>
                         <div>Post ID</div>
-                        <div className="text-right">Spend</div>
+                        <div className="text-right">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
+                                        <span>Spend ({getDatePresetLabel()})</span>
+                                        <ChevronDown className="h-3 w-3" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    {DATE_PRESETS.map((preset) => (
+                                        <DropdownMenuItem
+                                            key={preset.value}
+                                            onClick={() => handleDatePresetChange(preset.value)}
+                                            className={datePreset === preset.value ? 'bg-gray-100' : ''}
+                                        >
+                                            {preset.label}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
 
-                    <div className="space-y-1">
+                    {/* Scrollable Ad List - max 10 visible */}
+                    <div className="max-h-[520px] overflow-y-auto space-y-1 pr-1">
                         {ads.map((ad) => (
                             <label
                                 key={ad.id}
-                                className={`grid grid-cols-[auto_48px_1fr_120px_80px] gap-3 items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id)
+                                className={`grid grid-cols-[auto_48px_1fr_120px_100px] gap-3 items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id)
                                     ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
@@ -254,6 +307,22 @@ function PostSelectorInline({ adAccountId, onImport }) {
                                     >
                                         {extractPostId(ad.post_id)}
                                     </span>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            copyToClipboard(ad.post_id, ad.id)
+                                        }}
+                                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                        title="Copy full Post ID"
+                                    >
+                                        {copiedId === ad.id ? (
+                                            <Check className="h-3 w-3 text-green-500" />
+                                        ) : (
+                                            <Copy className="h-3 w-3 text-gray-400" />
+                                        )}
+                                    </button>
                                 </div>
 
                                 {/* Spend */}
