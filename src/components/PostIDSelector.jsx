@@ -190,9 +190,10 @@ function PostSelectorInline({ adAccountId, onImport }) {
 
     return (
         <div className="space-y-4">
-            {isLoading && !hasFetched && (
-                <div className="flex items-center justify-center py-8">
-                    <Loader className="h-8 w-8 animate-spin text-gray-400" />
+            {isLoading && (
+                <div className="flex items-center justify-center gap-2 py-8">
+                    <Loader className="h-6 w-6 animate-spin text-gray-400" />
+                    <span className="text-sm text-gray-500">Fetching ads...</span>
                 </div>
             )}
 
@@ -213,28 +214,28 @@ function PostSelectorInline({ adAccountId, onImport }) {
 
             {ads.length > 0 && (
                 <>
-                    <div className="flex items-center justify-between py-2">
+                    <div className="flex items-center justify-between">
                         <span className="text-sm text-gray-500">
                             {selectedAdIds.size} selected
                         </span>
                         <Button
-                            variant="ghost"
                             size="sm"
                             onClick={() => fetchAds(null, datePreset)}
                             disabled={isLoading}
-                            className="h-8 px-2 text-gray-500 hover:text-gray-700"
+                            className="h-8 px-3 bg-black hover:bg-gray-800 text-white"
                         >
-                            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                            Refresh Ads
                         </Button>
                     </div>
 
                     {/* Header Row */}
-                    <div className="grid grid-cols-[auto_48px_1fr_120px_100px] gap-3 px-3 py-2 text-sm font-medium text-white bg-gray-700 rounded-xl">
+                    <div className="grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 px-2 py-1.5 text-xs font-medium text-white bg-gray-700 rounded-xl items-center">
                         <div className="w-5"></div>
-                        <div>Thumbnail</div>
+                        <div></div>
                         <div>Ad Name</div>
                         <div>Post ID</div>
-                        <div className="text-right">
+                        <div className="text-right whitespace-nowrap">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className="flex items-center gap-1 ml-auto hover:opacity-80 transition-opacity">
@@ -242,7 +243,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                                         <ChevronDown className="h-3 w-3" />
                                     </button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                                <DropdownMenuContent align="end" className="bg-white rounded-xl">
                                     {DATE_PRESETS.map((preset) => (
                                         <DropdownMenuItem
                                             key={preset.value}
@@ -262,8 +263,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         {ads.map((ad) => (
                             <label
                                 key={ad.id}
-                                className={`grid grid-cols-[auto_48px_1fr_120px_100px] gap-3 items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id)
-                                    ? 'border-blue-500 bg-blue-50'
+                                className={`grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id) ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
                             >
