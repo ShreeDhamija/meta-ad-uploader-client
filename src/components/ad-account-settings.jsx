@@ -1135,17 +1135,17 @@ transition-all duration-150 hover:!bg-black
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="space-y-0.5">
-              <Label htmlFor="use-existing-posts" className="text-sm font-medium">
-                Create using Post ID
-              </Label>
+          <div>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-gray-700">Create with Post ID</label>
+              <Switch
+                checked={useExistingPosts}
+                onCheckedChange={setUseExistingPosts}
+              />
             </div>
-            <Switch
-              id="use-existing-posts"
-              checked={useExistingPosts}
-              onCheckedChange={setUseExistingPosts}
-            />
+            {useExistingPosts && !selectedAdAccount && (
+              <p className="text-xs text-amber-600 mt-1">Select an ad account to fetch ads</p>
+            )}
           </div>
 
         </div>
