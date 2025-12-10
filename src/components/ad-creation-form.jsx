@@ -1781,26 +1781,6 @@ export default function AdCreationForm({
 
 
 
-  // const handleImportPosts = (selectedPosts) => {
-  //   // Add newly selected posts, avoiding duplicates
-  //   setImportedPosts(prev => {
-  //     const existingIds = new Set(prev.map(p => p.id))
-  //     const newPosts = selectedPosts.filter(p => !existingIds.has(p.id))
-  //     return [...prev, ...newPosts]
-  //   })
-  //   toast.success(`Imported ${selectedPosts.length} post(s)`)
-  // }
-
-  // // Remove an imported post
-  // const handleRemovePost = (postId) => {
-  //   setImportedPosts(prev => prev.filter(p => p.id !== postId))
-  // }
-
-  // // Clear all imported posts
-  // const handleClearPosts = () => {
-  //   setImportedPosts([])
-  // }
-
   const handleCreateAd = async (jobData) => {
 
     const {
@@ -4420,7 +4400,7 @@ export default function AdCreationForm({
             )}
 
             {/* Validation message for missing link */}
-            {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (
+            {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (importedPosts.length === 0) && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please provide a link URL
               </div>

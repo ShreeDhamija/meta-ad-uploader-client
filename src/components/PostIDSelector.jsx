@@ -5,7 +5,7 @@ import axios from "axios"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Loader, ChevronDown, ImageOff, Copy, Check, RefreshCw } from "lucide-react"
+import { Loader, ChevronDown, ImageOff, RefreshCw } from "lucide-react"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -51,7 +51,6 @@ function PostSelectorInline({ adAccountId, onImport }) {
     const [nextCursor, setNextCursor] = useState(null)
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
-    const [copiedId, setCopiedId] = useState(null)
     const [datePreset, setDatePreset] = useState('last_7d')
 
     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
@@ -172,16 +171,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
         return parts.length > 1 ? parts[1] : objectStoryId
     }
 
-    const copyToClipboard = async (text, adId) => {
-        try {
-            await navigator.clipboard.writeText(text)
-            setCopiedId(adId)
-            toast.success('Post ID copied!')
-            setTimeout(() => setCopiedId(null), 2000)
-        } catch (err) {
-            toast.error('Failed to copy')
-        }
-    }
+
 
     const getDatePresetLabel = () => {
         const preset = DATE_PRESETS.find(p => p.value === datePreset)
@@ -259,7 +249,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                     </div>
 
                     {/* Scrollable Ad List - max 10 visible */}
-                    <div className="max-h-[520px] overflow-y-auto space-y-1 pr-1">
+                    <div className="max-h-[620px] overflow-y-auto space-y-1 pr-1 overscroll-behavior: contain">
                         {ads.map((ad) => (
                             <label
                                 key={ad.id}
@@ -307,22 +297,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                                     >
                                         {extractPostId(ad.post_id)}
                                     </span>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            copyToClipboard(ad.post_id, ad.id)
-                                        }}
-                                        className="p-1 hover:bg-gray-200 rounded transition-colors"
-                                        title="Copy full Post ID"
-                                    >
-                                        {copiedId === ad.id ? (
-                                            <Check className="h-3 w-3 text-green-500" />
-                                        ) : (
-                                            <Copy className="h-3 w-3 text-gray-400" />
-                                        )}
-                                    </button>
+
                                 </div>
 
                                 {/* Spend */}
