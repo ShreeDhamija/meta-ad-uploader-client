@@ -819,7 +819,7 @@ export default function MediaPreview({
                       <div key={post.id} className="relative group">
                         <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
                           <img
-                            src={post.full_picture || "https://api.withblip.com/thumbnail.jpg"}
+                            src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
                             alt="Post"
                             className="w-full h-auto object-cover"
                           />

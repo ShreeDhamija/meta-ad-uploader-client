@@ -3502,214 +3502,221 @@ export default function AdCreationForm({
           }}
           className="space-y-6">
           <div className="space-y-10">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
-                    <FacebookIcon className="w-4 h-4" />
-                    Select a Page
-                  </Label>
-                  <RefreshCcw
-                    className={cn(
-                      "h-4 w-4 cursor-pointer transition-all duration-200",
-                      isPagesLoading
-                        ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
-                        : "text-gray-500 hover:text-gray-700"
-                    )}
-                    onClick={refreshPages}
-                  />
 
-                </div>
-                <Popover open={openPage} onOpenChange={setOpenPage}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openPage}
-                      disabled={!isLoggedIn || pagesLoading || isPagesLoading} // 👈 Disable while loading
-                      id="page"
-                      className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
-                    >
-                      {(pagesLoading || isPagesLoading) ? ( // 👈 Show loading state in button
-                        <div className="flex items-center gap-2">
-                          <Loader className="h-4 w-4 animate-spin" />
-                          <span>Loading pages...</span>
-                        </div>
-                      ) : pageId ? (
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={
-                              pages.find((page) => page.id === pageId)?.profilePicture ||
-                              "https://api.withblip.com/backup_page_image.png"
-                            }
-                            alt="Page"
-                            className="w-5 h-5 rounded-full object-cover"
-                          />
-                          <span>{pages.find((page) => page.id === pageId)?.name || pageId}</span>
-                        </div>
-                      ) : (
-                        "Select a Page"
+            {useExistingPosts ? (
+
+              <></>
+
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      <FacebookIcon className="w-4 h-4" />
+                      Select a Page
+                    </Label>
+                    <RefreshCcw
+                      className={cn(
+                        "h-4 w-4 cursor-pointer transition-all duration-200",
+                        isPagesLoading
+                          ? "h-3.5 w-3.5 text-gray-300 animate-[spin_3s_linear_infinite]"
+                          : "text-gray-500 hover:text-gray-700"
                       )}
+                      onClick={refreshPages}
+                    />
 
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
-                    align="start"
-                    sideOffset={4}
-                    side="bottom"
-                    avoidCollisions={false}
-                    style={{
-                      minWidth: "var(--radix-popover-trigger-width)",
-                      width: "auto",
-                      maxWidth: "var(--radix-popover-trigger-width)",
+                  </div>
+                  <Popover open={openPage} onOpenChange={setOpenPage}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openPage}
+                        disabled={!isLoggedIn || pagesLoading || isPagesLoading} // 👈 Disable while loading
+                        id="page"
+                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
+                      >
+                        {(pagesLoading || isPagesLoading) ? ( // 👈 Show loading state in button
+                          <div className="flex items-center gap-2">
+                            <Loader className="h-4 w-4 animate-spin" />
+                            <span>Loading pages...</span>
+                          </div>
+                        ) : pageId ? (
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={
+                                pages.find((page) => page.id === pageId)?.profilePicture ||
+                                "https://api.withblip.com/backup_page_image.png"
+                              }
+                              alt="Page"
+                              className="w-5 h-5 rounded-full object-cover"
+                            />
+                            <span>{pages.find((page) => page.id === pageId)?.name || pageId}</span>
+                          </div>
+                        ) : (
+                          "Select a Page"
+                        )}
 
-                    }}
-                  >
-                    <Command filter={() => 1} loop={false} defaultValue={pageId}>
-                      <CommandInput
-                        placeholder="Search pages..."
-                        value={pageSearchValue}
-                        onValueChange={setPageSearchValue}
-                      />
-                      <CommandEmpty>No page found.</CommandEmpty>
-                      <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                        <CommandGroup>
-                          {filteredPages.length > 0 ? (
-                            filteredPages.map((page) => (
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                      align="start"
+                      sideOffset={4}
+                      side="bottom"
+                      avoidCollisions={false}
+                      style={{
+                        minWidth: "var(--radix-popover-trigger-width)",
+                        width: "auto",
+                        maxWidth: "var(--radix-popover-trigger-width)",
+
+                      }}
+                    >
+                      <Command filter={() => 1} loop={false} defaultValue={pageId}>
+                        <CommandInput
+                          placeholder="Search pages..."
+                          value={pageSearchValue}
+                          onValueChange={setPageSearchValue}
+                        />
+                        <CommandEmpty>No page found.</CommandEmpty>
+                        <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                          <CommandGroup>
+                            {filteredPages.length > 0 ? (
+                              filteredPages.map((page) => (
+                                <CommandItem
+                                  key={page.id}
+                                  value={page.id}
+                                  onSelect={() => {
+                                    setPageId(page.id)
+                                    setOpenPage(false)
+                                    if (page.instagramAccount?.id) {
+                                      setInstagramAccountId(page.instagramAccount.id)
+                                    } else {
+                                      setInstagramAccountId("") // Clear if not available
+                                    }
+                                  }}
+                                  className={cn(
+                                    "px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                    "data-[selected=true]:bg-gray-100",
+                                    pageId === page.id && "bg-gray-100 rounded-xl font-semibold",
+                                    "hover:bg-gray-100",
+                                    "flex items-center gap-2" // 👈 for image + name layout
+                                  )}
+                                  data-selected={page.id === pageId}
+                                >
+
+                                  <img
+                                    src={page.profilePicture || "/placeholder.svg"}
+                                    alt={`${page.name} profile`}
+                                    className="w-6 h-6 rounded-full object-cover border border-gray-300"
+                                  />
+                                  <span className="truncate">{page.name}</span>
+                                  <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
+
+                                </CommandItem>
+
+                              ))
+                            ) : (
+                              <CommandItem disabled className="opacity-50 cursor-not-allowed">
+                                No page found.
+                              </CommandItem>
+                            )}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <InstagramIcon className="w-4 h-4" />
+                    Select Instagram Account
+                  </Label>
+                  <Popover open={openInstagram} onOpenChange={setOpenInstagram}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openInstagram}
+                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
+                        disabled={filteredInstagramAccounts.length === 0}
+                      >
+                        {instagramAccountId ? (
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={
+                                pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount?.profilePictureUrl ||
+                                "https://api.withblip.com/backup_page_image.png"
+                                || "/placeholder.svg"}
+                              alt="Instagram"
+                              className="w-5 h-5 rounded-full object-cover"
+                            />
+                            <span>
+                              {pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount?.username || instagramAccountId}
+                            </span>
+                          </div>
+                        ) : (
+                          "Select Instagram Account"
+                        )}
+
+                        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                      align="start"
+                      sideOffset={4}
+                      side="bottom"
+                      avoidCollisions={false}
+                      style={{
+                        minWidth: "var(--radix-popover-trigger-width)",
+                        width: "auto",
+                        maxWidth: "var(--radix-popover-trigger-width)",
+
+                      }}
+                    >
+                      <Command loop={false}>
+                        <CommandInput
+                          placeholder="Search Instagram usernames..."
+                          value={instagramSearchValue}
+                          onValueChange={setInstagramSearchValue}
+                        />
+                        <CommandEmpty>No Instagram accounts found.</CommandEmpty>
+                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                          <CommandGroup>
+                            {filteredInstagramAccounts.map((page) => (
                               <CommandItem
-                                key={page.id}
-                                value={page.id}
+                                key={page.instagramAccount.id}
+                                value={page.instagramAccount.id}
                                 onSelect={() => {
-                                  setPageId(page.id)
-                                  setOpenPage(false)
-                                  if (page.instagramAccount?.id) {
-                                    setInstagramAccountId(page.instagramAccount.id)
-                                  } else {
-                                    setInstagramAccountId("") // Clear if not available
-                                  }
+                                  setInstagramAccountId(page.instagramAccount.id)
+                                  setOpenInstagram(false)
                                 }}
                                 className={cn(
                                   "px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                                  "data-[selected=true]:bg-gray-100",
-                                  pageId === page.id && "bg-gray-100 rounded-xl font-semibold",
-                                  "hover:bg-gray-100",
-                                  "flex items-center gap-2" // 👈 for image + name layout
+                                  instagramAccountId === page.instagramAccount.id && "bg-gray-100 font-semibold",
+                                  "hover:bg-gray-100 flex items-center gap-2"
                                 )}
-                                data-selected={page.id === pageId}
                               >
-
                                 <img
-                                  src={page.profilePicture || "/placeholder.svg"}
-                                  alt={`${page.name} profile`}
+                                  src={page.instagramAccount.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
+                                  alt={`${page.instagramAccount.username} profile`}
                                   className="w-6 h-6 rounded-full object-cover border border-gray-300"
                                 />
-                                <span className="truncate">{page.name}</span>
-                                <span className="text-xs text-gray-400 ml-2">{page.id}</span> {/* 👈 Gray ID on same line */}
-
+                                <span>{page.instagramAccount.username}</span>
                               </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-                            ))
-                          ) : (
-                            <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                              No page found.
-                            </CommandItem>
-                          )}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
               </div>
-
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <InstagramIcon className="w-4 h-4" />
-                  Select Instagram Account
-                </Label>
-                <Popover open={openInstagram} onOpenChange={setOpenInstagram}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openInstagram}
-                      className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
-                      disabled={filteredInstagramAccounts.length === 0}
-                    >
-                      {instagramAccountId ? (
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={
-                              pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount?.profilePictureUrl ||
-                              "https://api.withblip.com/backup_page_image.png"
-                              || "/placeholder.svg"}
-                            alt="Instagram"
-                            className="w-5 h-5 rounded-full object-cover"
-                          />
-                          <span>
-                            {pages.find((p) => p.instagramAccount?.id === instagramAccountId)?.instagramAccount?.username || instagramAccountId}
-                          </span>
-                        </div>
-                      ) : (
-                        "Select Instagram Account"
-                      )}
-
-                      <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
-                    align="start"
-                    sideOffset={4}
-                    side="bottom"
-                    avoidCollisions={false}
-                    style={{
-                      minWidth: "var(--radix-popover-trigger-width)",
-                      width: "auto",
-                      maxWidth: "var(--radix-popover-trigger-width)",
-
-                    }}
-                  >
-                    <Command loop={false}>
-                      <CommandInput
-                        placeholder="Search Instagram usernames..."
-                        value={instagramSearchValue}
-                        onValueChange={setInstagramSearchValue}
-                      />
-                      <CommandEmpty>No Instagram accounts found.</CommandEmpty>
-                      <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                        <CommandGroup>
-                          {filteredInstagramAccounts.map((page) => (
-                            <CommandItem
-                              key={page.instagramAccount.id}
-                              value={page.instagramAccount.id}
-                              onSelect={() => {
-                                setInstagramAccountId(page.instagramAccount.id)
-                                setOpenInstagram(false)
-                              }}
-                              className={cn(
-                                "px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
-                                instagramAccountId === page.instagramAccount.id && "bg-gray-100 font-semibold",
-                                "hover:bg-gray-100 flex items-center gap-2"
-                              )}
-                            >
-                              <img
-                                src={page.instagramAccount.profilePictureUrl || "https://api.withblip.com/backup_page_image.png"}
-                                alt={`${page.instagramAccount.username} profile`}
-                                className="w-6 h-6 rounded-full object-cover border border-gray-300"
-                              />
-                              <span>{page.instagramAccount.username}</span>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
+            )}
             <div className="space-y-1">
               <Label htmlFor="adName" className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
@@ -3759,7 +3766,7 @@ export default function AdCreationForm({
             {useExistingPosts ? (
 
               <PostSelectorInline
-                pageId={pageId}
+                adAccountId={selectedAdAccount}
                 onImport={setImportedPosts}
               />
 
