@@ -22,55 +22,26 @@ const DATE_PRESETS = [
     { label: '30 Days', value: 'last_30d' },
 ]
 
-/**
- * HOOK: useScrollTrap
- * This is the "Nuclear" option. It manually calculates scroll position
- * and prevents the browser from passing scroll events to the parent window.
- */
-function useScrollTrap(ref, active) {
-    useEffect(() => {
-        const element = ref.current;
-        if (!element || !active) return;
-
-        const handleWheel = (e) => {
-            const { scrollTop, scrollHeight, clientHeight } = element;
-            const isScrollingUp = e.deltaY < 0;
-            const isScrollingDown = e.deltaY > 0;
-
-            // 1. Prevent parent scroll when hitting the TOP
-            if (isScrollingUp && scrollTop <= 0) {
-                e.preventDefault();
-            }
-
-            // 2. Prevent parent scroll when hitting the BOTTOM
-            // We use a 1px buffer because high-DPI screens can be floaty
-            if (isScrollingDown && Math.abs(scrollHeight - clientHeight - scrollTop) <= 1) {
-                e.preventDefault();
-            }
-
-            // 3. Stop the event from bubbling up regardless
-            e.stopPropagation();
-        };
-
-        const handleTouchMove = (e) => {
-            // Simple stop propagation for touch to prevent "pulling" the page
-            e.stopPropagation();
-        };
-
-        // passive: false is required to use preventDefault()
-        element.addEventListener('wheel', handleWheel, { passive: false });
-        element.addEventListener('touchmove', handleTouchMove, { passive: false });
-
-        return () => {
-            element.removeEventListener('wheel', handleWheel);
-            element.removeEventListener('touchmove', handleTouchMove);
-        };
-    }, [ref, active]);
-}
-
 function PostSelectorInline({ adAccountId, onImport }) {
-    // Refs
-    const scrollContainerRef = useRef(null);
+    // DEBUG: Track renders and prop changes
+    const renderCount = useRef(0);
+    const prevAdAccountId = useRef(adAccountId);
+    const prevOnImport = useRef(onImport);
+
+    useEffect(() => {
+        renderCount.current += 1;
+        console.log('🔄 PostSelectorInline render #', renderCount.current);
+
+        if (prevAdAccountId.current !== adAccountId) {
+            console.log('📝 adAccountId changed:', prevAdAccountId.current, '->', adAccountId);
+            prevAdAccountId.current = adAccountId;
+        }
+
+        if (prevOnImport.current !== onImport) {
+            console.log('⚠️ onImport reference changed!');
+            prevOnImport.current = onImport;
+        }
+    });
 
     const [ads, setAds] = useState([])
     const [selectedAdIds, setSelectedAdIds] = useState(new Set())
@@ -81,9 +52,6 @@ function PostSelectorInline({ adAccountId, onImport }) {
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
     const [datePreset, setDatePreset] = useState('last_7d')
-
-    // Activate the scroll trap whenever ads are present
-    useScrollTrap(scrollContainerRef, ads.length > 0);
 
     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
         if (!adAccountId) {
@@ -107,7 +75,10 @@ function PostSelectorInline({ adAccountId, onImport }) {
                 datePreset: preset,
             }
 
-            if (cursor) params.after = cursor
+            // Only add cursor if loading more (pagination)
+            if (cursor) {
+                params.after = cursor
+            }
 
             const response = await axios.get(`${API_BASE_URL}/auth/ad-insights`, {
                 params,
@@ -120,6 +91,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                 setAds(data || [])
                 setHasFetched(true)
             } else {
+                // Append new ads, avoiding duplicates by ad_id
                 setAds(prev => {
                     const existingIds = new Set(prev.map(ad => ad.ad_id))
                     const newAds = (data || []).filter(ad => !existingIds.has(ad.ad_id))
@@ -146,6 +118,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
         }
     }, [adAccountId, datePreset])
 
+    // Auto-fetch when component mounts or adAccountId changes
     useEffect(() => {
         if (adAccountId) {
             fetchAds(null, datePreset)
@@ -193,9 +166,12 @@ function PostSelectorInline({ adAccountId, onImport }) {
 
     const extractPostId = (objectStoryId) => {
         if (!objectStoryId) return "—"
+        // object_story_id format is usually "pageId_postId"
         const parts = objectStoryId.split('_')
         return parts.length > 1 ? parts[1] : objectStoryId
     }
+
+
 
     const getDatePresetLabel = () => {
         const preset = DATE_PRESETS.find(p => p.value === datePreset)
@@ -243,6 +219,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         </Button>
                     </div>
 
+                    {/* Header Row */}
                     <div className="grid grid-cols-[20px_48px_1fr_120px_110px] gap-2 px-2 py-2 text-xs font-medium text-white bg-gray-700 rounded-lg items-center">
                         <div></div>
                         <div className="-ml-4">Thumbnail</div>
@@ -271,22 +248,12 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         </div>
                     </div>
 
-                    {/* SCROLL CONTAINER */}
-                    {/* We use a specific style height (60vh) to strictly constrain this container */}
-                    <div
-                        ref={scrollContainerRef}
-                        className="overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
-                        style={{
-                            height: '60vh', // Forces a fixed height relative to viewport
-                            minHeight: '300px',
-                            overscrollBehavior: 'contain', // Fallback
-                            isolation: 'isolate'
-                        }}
-                    >
+                    {/* Scrollable Ad List - max 10 visible */}
+                    <div className="max-h-[620px] overflow-y-auto space-y-1 pr-1 overscroll-contain">
                         {ads.map((ad) => (
                             <label
                                 key={ad.id}
-                                className={`grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 items-center p-3 mb-1 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id) ? 'border-blue-500 bg-blue-50'
+                                className={`grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id) ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
                             >
@@ -295,6 +262,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                                     onCheckedChange={() => toggleAdSelection(ad.id)}
                                 />
 
+                                {/* Thumbnail */}
                                 <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-100 flex-shrink-0">
                                     {ad.image_url ? (
                                         <img
@@ -314,12 +282,14 @@ function PostSelectorInline({ adAccountId, onImport }) {
                                     </div>
                                 </div>
 
+                                {/* Ad Name */}
                                 <div className="min-w-0">
                                     <p className="text-sm text-gray-900 truncate" title={ad.ad_name}>
                                         {truncateText(ad.ad_name, 50)}
                                     </p>
                                 </div>
 
+                                {/* Post ID */}
                                 <div className="flex items-center gap-1">
                                     <span
                                         className="text-xs text-gray-500 font-mono truncate"
@@ -330,6 +300,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
 
                                 </div>
 
+                                {/* Spend */}
                                 <div className="text-right">
                                     <span className="text-sm font-medium text-gray-900">
                                         {formatSpend(ad.spend)}
@@ -339,7 +310,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         ))}
 
                         {hasMore && (
-                            <div className="pt-2 pb-1">
+                            <div className="pt-2">
                                 <Button
                                     variant="outline"
                                     className="w-full"
