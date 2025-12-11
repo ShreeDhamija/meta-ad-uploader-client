@@ -23,26 +23,6 @@ const DATE_PRESETS = [
 ]
 
 function PostSelectorInline({ adAccountId, onImport }) {
-    // DEBUG: Track renders and prop changes
-    const renderCount = useRef(0);
-    const prevAdAccountId = useRef(adAccountId);
-    const prevOnImport = useRef(onImport);
-
-    useEffect(() => {
-        renderCount.current += 1;
-        console.log('🔄 PostSelectorInline render #', renderCount.current);
-
-        if (prevAdAccountId.current !== adAccountId) {
-            console.log('📝 adAccountId changed:', prevAdAccountId.current, '->', adAccountId);
-            prevAdAccountId.current = adAccountId;
-        }
-
-        if (prevOnImport.current !== onImport) {
-            console.log('⚠️ onImport reference changed!');
-            prevOnImport.current = onImport;
-        }
-    });
-
     const [ads, setAds] = useState([])
     const [selectedAdIds, setSelectedAdIds] = useState(new Set())
     const [isLoading, setIsLoading] = useState(false)
@@ -52,6 +32,68 @@ function PostSelectorInline({ adAccountId, onImport }) {
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
     const [datePreset, setDatePreset] = useState('last_7d')
+
+    const scrollContainerRef = useRef(null)
+
+    // Prevent scroll from escaping this container
+    useEffect(() => {
+        const container = scrollContainerRef.current
+        if (!container) return
+
+        const handleWheel = (e) => {
+            const { scrollTop, scrollHeight, clientHeight } = container
+            const isScrollable = scrollHeight > clientHeight
+
+            if (!isScrollable) {
+                e.preventDefault()
+                return
+            }
+
+            const isAtTop = scrollTop <= 0
+            const isAtBottom = scrollTop + clientHeight >= scrollHeight
+
+            if ((e.deltaY < 0 && isAtTop) || (e.deltaY > 0 && isAtBottom)) {
+                e.preventDefault()
+            }
+        }
+
+        let touchStartY = 0
+
+        const handleTouchStart = (e) => {
+            touchStartY = e.touches[0].clientY
+        }
+
+        const handleTouchMove = (e) => {
+            const { scrollTop, scrollHeight, clientHeight } = container
+            const isScrollable = scrollHeight > clientHeight
+
+            if (!isScrollable) {
+                e.preventDefault()
+                return
+            }
+
+            const touchY = e.touches[0].clientY
+            const isScrollingUp = touchY > touchStartY
+            const isScrollingDown = touchY < touchStartY
+
+            const isAtTop = scrollTop <= 0
+            const isAtBottom = scrollTop + clientHeight >= scrollHeight
+
+            if ((isScrollingUp && isAtTop) || (isScrollingDown && isAtBottom)) {
+                e.preventDefault()
+            }
+        }
+
+        container.addEventListener('wheel', handleWheel, { passive: false })
+        container.addEventListener('touchstart', handleTouchStart, { passive: true })
+        container.addEventListener('touchmove', handleTouchMove, { passive: false })
+
+        return () => {
+            container.removeEventListener('wheel', handleWheel)
+            container.removeEventListener('touchstart', handleTouchStart)
+            container.removeEventListener('touchmove', handleTouchMove)
+        }
+    }, [ads])
 
     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
         if (!adAccountId) {
@@ -75,7 +117,6 @@ function PostSelectorInline({ adAccountId, onImport }) {
                 datePreset: preset,
             }
 
-            // Only add cursor if loading more (pagination)
             if (cursor) {
                 params.after = cursor
             }
@@ -91,7 +132,6 @@ function PostSelectorInline({ adAccountId, onImport }) {
                 setAds(data || [])
                 setHasFetched(true)
             } else {
-                // Append new ads, avoiding duplicates by ad_id
                 setAds(prev => {
                     const existingIds = new Set(prev.map(ad => ad.ad_id))
                     const newAds = (data || []).filter(ad => !existingIds.has(ad.ad_id))
@@ -118,7 +158,6 @@ function PostSelectorInline({ adAccountId, onImport }) {
         }
     }, [adAccountId, datePreset])
 
-    // Auto-fetch when component mounts or adAccountId changes
     useEffect(() => {
         if (adAccountId) {
             fetchAds(null, datePreset)
@@ -166,12 +205,9 @@ function PostSelectorInline({ adAccountId, onImport }) {
 
     const extractPostId = (objectStoryId) => {
         if (!objectStoryId) return "—"
-        // object_story_id format is usually "pageId_postId"
         const parts = objectStoryId.split('_')
         return parts.length > 1 ? parts[1] : objectStoryId
     }
-
-
 
     const getDatePresetLabel = () => {
         const preset = DATE_PRESETS.find(p => p.value === datePreset)
@@ -248,12 +284,17 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         </div>
                     </div>
 
-                    {/* Scrollable Ad List - max 10 visible */}
+                    {/* Scrollable container - scroll is fully isolated */}
                     <div
-                        className="overflow-y-auto space-y-1 pr-1 border-t border-b border-gray-100 my-2 py-2 max-h-[60vh] min-h-[300px]"
-                        style={{ overscrollBehavior: 'contain' }}
-                        onWheel={(e) => e.stopPropagation()}
-                        onTouchMove={(e) => e.stopPropagation()}
+                        ref={scrollContainerRef}
+                        className="space-y-1 pr-1"
+                        style={{
+                            maxHeight: '620px',
+                            overflowY: 'auto',
+                            overflowX: 'hidden',
+                            overscrollBehavior: 'contain',
+                            WebkitOverflowScrolling: 'touch',
+                        }}
                     >
                         {ads.map((ad) => (
                             <label
@@ -302,7 +343,6 @@ function PostSelectorInline({ adAccountId, onImport }) {
                                     >
                                         {extractPostId(ad.post_id)}
                                     </span>
-
                                 </div>
 
                                 {/* Spend */}
@@ -315,7 +355,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         ))}
 
                         {hasMore && (
-                            <div className="pt-2 pb-2">
+                            <div className="pt-2">
                                 <Button
                                     variant="outline"
                                     className="w-full"
