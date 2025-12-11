@@ -23,13 +23,24 @@ const DATE_PRESETS = [
 ]
 
 function PostSelectorInline({ adAccountId, onImport }) {
-    // Refs
+    // DEBUG: Track renders and prop changes
     const renderCount = useRef(0);
-    const scrollContainerRef = useRef(null); // <--- NEW: Ref for the scroll container
+    const prevAdAccountId = useRef(adAccountId);
+    const prevOnImport = useRef(onImport);
 
     useEffect(() => {
         renderCount.current += 1;
-        // console.log('🔄 PostSelectorInline render #', renderCount.current);
+        console.log('🔄 PostSelectorInline render #', renderCount.current);
+
+        if (prevAdAccountId.current !== adAccountId) {
+            console.log('📝 adAccountId changed:', prevAdAccountId.current, '->', adAccountId);
+            prevAdAccountId.current = adAccountId;
+        }
+
+        if (prevOnImport.current !== onImport) {
+            console.log('⚠️ onImport reference changed!');
+            prevOnImport.current = onImport;
+        }
     });
 
     const [ads, setAds] = useState([])
@@ -41,39 +52,6 @@ function PostSelectorInline({ adAccountId, onImport }) {
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
     const [datePreset, setDatePreset] = useState('last_7d')
-
-    // --- NEW: THE SCROLL TRAP ---
-    // This effect creates a hard logic trap. If the mouse is inside the list,
-    // and the list hits the top or bottom, we KILL the event so the parent never sees it.
-    useEffect(() => {
-        const element = scrollContainerRef.current;
-        if (!element) return;
-
-        const handleWheel = (e) => {
-            const { scrollTop, scrollHeight, clientHeight } = element;
-            const isScrollingUp = e.deltaY < 0;
-            const isScrollingDown = e.deltaY > 0;
-
-            // Check if we are at the top and trying to scroll up
-            if (isScrollingUp && scrollTop <= 0) {
-                e.preventDefault();
-            }
-
-            // Check if we are at the bottom and trying to scroll down
-            // We use a small buffer (1px) for float calculation safety
-            if (isScrollingDown && Math.abs(scrollHeight - clientHeight - scrollTop) < 1) {
-                e.preventDefault();
-            }
-        };
-
-        // passive: false is REQUIRED to allow preventDefault()
-        element.addEventListener('wheel', handleWheel, { passive: false });
-
-        return () => {
-            element.removeEventListener('wheel', handleWheel);
-        };
-    }, [ads]); // Re-bind if ads change to ensure dimensions are fresh
-    // ----------------------------
 
     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
         if (!adAccountId) {
@@ -97,6 +75,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                 datePreset: preset,
             }
 
+            // Only add cursor if loading more (pagination)
             if (cursor) {
                 params.after = cursor
             }
@@ -112,6 +91,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                 setAds(data || [])
                 setHasFetched(true)
             } else {
+                // Append new ads, avoiding duplicates by ad_id
                 setAds(prev => {
                     const existingIds = new Set(prev.map(ad => ad.ad_id))
                     const newAds = (data || []).filter(ad => !existingIds.has(ad.ad_id))
@@ -138,6 +118,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
         }
     }, [adAccountId, datePreset])
 
+    // Auto-fetch when component mounts or adAccountId changes
     useEffect(() => {
         if (adAccountId) {
             fetchAds(null, datePreset)
@@ -185,9 +166,12 @@ function PostSelectorInline({ adAccountId, onImport }) {
 
     const extractPostId = (objectStoryId) => {
         if (!objectStoryId) return "—"
+        // object_story_id format is usually "pageId_postId"
         const parts = objectStoryId.split('_')
         return parts.length > 1 ? parts[1] : objectStoryId
     }
+
+
 
     const getDatePresetLabel = () => {
         const preset = DATE_PRESETS.find(p => p.value === datePreset)
@@ -264,26 +248,12 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         </div>
                     </div>
 
-                    {/* Scrollable Ad List - DEFINITE SCROLL TRAP IMPLEMENTATION */}
-                    <div
-                        ref={scrollContainerRef}
-                        // We use max-h-[60vh] to ensure it fits on screen.
-                        // We use overscroll-none as the CSS backup.
-                        className="overflow-y-auto pr-1 max-h-[60vh] min-h-[300px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
-                        style={{
-                            overscrollBehavior: 'none', // Prevents bounce and chaining in modern browsers
-                            isolation: 'isolate' // Creates a stacking context
-                        }}
-                    >
-                        {/* 
-                           REMOVED 'space-y-1' from parent div. 
-                           Added 'mb-1' to children instead.
-                           This prevents "gaps" between items where the mouse could slip through and scroll the background.
-                        */}
+                    {/* Scrollable Ad List - max 10 visible */}
+                    <div className="max-h-[620px] overflow-y-auto space-y-1 pr-1 overscroll-contain">
                         {ads.map((ad) => (
                             <label
                                 key={ad.id}
-                                className={`grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 items-center p-3 mb-1 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id) ? 'border-blue-500 bg-blue-50'
+                                className={`grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id) ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
                             >
@@ -340,7 +310,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         ))}
 
                         {hasMore && (
-                            <div className="pt-2 pb-1">
+                            <div className="pt-2">
                                 <Button
                                     variant="outline"
                                     className="w-full"
