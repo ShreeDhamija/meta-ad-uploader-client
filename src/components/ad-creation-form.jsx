@@ -3743,12 +3743,13 @@ export default function AdCreationForm({
 
 
             {useExistingPosts ? (
+              <div className="overflow-hidden max-h-[calc(100vh-300px)]">
 
-              <PostSelectorInline
-                adAccountId={selectedAdAccount}
-                onImport={setImportedPosts}
-              />
-
+                <PostSelectorInline
+                  adAccountId={selectedAdAccount}
+                  onImport={setImportedPosts}
+                />
+              </div>
 
             ) : (
               // Show regular form content when toggle is OFF
