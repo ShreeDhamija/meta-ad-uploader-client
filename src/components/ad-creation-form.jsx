@@ -3156,7 +3156,7 @@ export default function AdCreationForm({
 
 
   return (
-    <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl overflow-hidden">
+    <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
       {hasStartedAnyJob && (
         <div className="fixed bottom-4 right-4 z-50">
           {/* Collapsed State */}
@@ -3471,7 +3471,7 @@ export default function AdCreationForm({
         </CardTitle>
       </CardHeader>
 
-      <CardContent className="overflow-y-auto max-h-[calc(100vh-200px)]">
+      <CardContent>
         <form onSubmit={handleQueueJob}
           onKeyDown={(e) => {
             // Prevent Enter from submitting unless it's in a textarea (for line breaks)
@@ -3480,7 +3480,7 @@ export default function AdCreationForm({
             }
           }}
           className="space-y-6">
-          <div className="space-y-10">
+          <div className="space-y-10 overflow-hidden">
 
             {useExistingPosts ? (
 
