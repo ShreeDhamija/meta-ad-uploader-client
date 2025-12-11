@@ -588,7 +588,7 @@ export default function Home() {
                             campaignObjective={campaignObjective}
                             selectedFiles={selectedFiles}
                             setSelectedFiles={setSelectedFiles}
-                            useExistingPosts={useExist}
+                            useExistingPosts={useExistingPosts}
                         />
                     </div>
 
