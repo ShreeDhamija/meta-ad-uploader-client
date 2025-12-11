@@ -23,6 +23,15 @@ const DATE_PRESETS = [
 ]
 
 function PostSelectorInline({ adAccountId, onImport }) {
+    // Refs
+    const renderCount = useRef(0);
+    const scrollContainerRef = useRef(null); // <--- NEW: Ref for the scroll container
+
+    useEffect(() => {
+        renderCount.current += 1;
+        // console.log('🔄 PostSelectorInline render #', renderCount.current);
+    });
+
     const [ads, setAds] = useState([])
     const [selectedAdIds, setSelectedAdIds] = useState(new Set())
     const [isLoading, setIsLoading] = useState(false)
@@ -33,67 +42,38 @@ function PostSelectorInline({ adAccountId, onImport }) {
     const [hasFetched, setHasFetched] = useState(false)
     const [datePreset, setDatePreset] = useState('last_7d')
 
-    const scrollContainerRef = useRef(null)
-
-    // Prevent scroll from escaping this container
+    // --- NEW: THE SCROLL TRAP ---
+    // This effect creates a hard logic trap. If the mouse is inside the list,
+    // and the list hits the top or bottom, we KILL the event so the parent never sees it.
     useEffect(() => {
-        const container = scrollContainerRef.current
-        if (!container) return
+        const element = scrollContainerRef.current;
+        if (!element) return;
 
         const handleWheel = (e) => {
-            const { scrollTop, scrollHeight, clientHeight } = container
-            const isScrollable = scrollHeight > clientHeight
+            const { scrollTop, scrollHeight, clientHeight } = element;
+            const isScrollingUp = e.deltaY < 0;
+            const isScrollingDown = e.deltaY > 0;
 
-            if (!isScrollable) {
-                e.preventDefault()
-                return
+            // Check if we are at the top and trying to scroll up
+            if (isScrollingUp && scrollTop <= 0) {
+                e.preventDefault();
             }
 
-            const isAtTop = scrollTop <= 0
-            const isAtBottom = scrollTop + clientHeight >= scrollHeight
-
-            if ((e.deltaY < 0 && isAtTop) || (e.deltaY > 0 && isAtBottom)) {
-                e.preventDefault()
+            // Check if we are at the bottom and trying to scroll down
+            // We use a small buffer (1px) for float calculation safety
+            if (isScrollingDown && Math.abs(scrollHeight - clientHeight - scrollTop) < 1) {
+                e.preventDefault();
             }
-        }
+        };
 
-        let touchStartY = 0
-
-        const handleTouchStart = (e) => {
-            touchStartY = e.touches[0].clientY
-        }
-
-        const handleTouchMove = (e) => {
-            const { scrollTop, scrollHeight, clientHeight } = container
-            const isScrollable = scrollHeight > clientHeight
-
-            if (!isScrollable) {
-                e.preventDefault()
-                return
-            }
-
-            const touchY = e.touches[0].clientY
-            const isScrollingUp = touchY > touchStartY
-            const isScrollingDown = touchY < touchStartY
-
-            const isAtTop = scrollTop <= 0
-            const isAtBottom = scrollTop + clientHeight >= scrollHeight
-
-            if ((isScrollingUp && isAtTop) || (isScrollingDown && isAtBottom)) {
-                e.preventDefault()
-            }
-        }
-
-        container.addEventListener('wheel', handleWheel, { passive: false })
-        container.addEventListener('touchstart', handleTouchStart, { passive: true })
-        container.addEventListener('touchmove', handleTouchMove, { passive: false })
+        // passive: false is REQUIRED to allow preventDefault()
+        element.addEventListener('wheel', handleWheel, { passive: false });
 
         return () => {
-            container.removeEventListener('wheel', handleWheel)
-            container.removeEventListener('touchstart', handleTouchStart)
-            container.removeEventListener('touchmove', handleTouchMove)
-        }
-    }, [ads])
+            element.removeEventListener('wheel', handleWheel);
+        };
+    }, [ads]); // Re-bind if ads change to ensure dimensions are fresh
+    // ----------------------------
 
     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
         if (!adAccountId) {
@@ -284,22 +264,26 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         </div>
                     </div>
 
-                    {/* Scrollable container - scroll is fully isolated */}
+                    {/* Scrollable Ad List - DEFINITE SCROLL TRAP IMPLEMENTATION */}
                     <div
                         ref={scrollContainerRef}
-                        className="space-y-1 pr-1"
+                        // We use max-h-[60vh] to ensure it fits on screen.
+                        // We use overscroll-none as the CSS backup.
+                        className="overflow-y-auto pr-1 max-h-[60vh] min-h-[300px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
                         style={{
-                            maxHeight: '620px',
-                            overflowY: 'auto',
-                            overflowX: 'hidden',
-                            overscrollBehavior: 'contain',
-                            WebkitOverflowScrolling: 'touch',
+                            overscrollBehavior: 'none', // Prevents bounce and chaining in modern browsers
+                            isolation: 'isolate' // Creates a stacking context
                         }}
                     >
+                        {/* 
+                           REMOVED 'space-y-1' from parent div. 
+                           Added 'mb-1' to children instead.
+                           This prevents "gaps" between items where the mouse could slip through and scroll the background.
+                        */}
                         {ads.map((ad) => (
                             <label
                                 key={ad.id}
-                                className={`grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 items-center p-3 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id) ? 'border-blue-500 bg-blue-50'
+                                className={`grid grid-cols-[auto_48px_1fr_120px_110px] gap-2 items-center p-3 mb-1 rounded-lg border cursor-pointer transition-colors ${selectedAdIds.has(ad.id) ? 'border-blue-500 bg-blue-50'
                                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                     }`}
                             >
@@ -343,6 +327,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                                     >
                                         {extractPostId(ad.post_id)}
                                     </span>
+
                                 </div>
 
                                 {/* Spend */}
@@ -355,7 +340,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         ))}
 
                         {hasMore && (
-                            <div className="pt-2">
+                            <div className="pt-2 pb-1">
                                 <Button
                                     variant="outline"
                                     className="w-full"
