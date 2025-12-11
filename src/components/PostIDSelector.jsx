@@ -249,7 +249,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                     </div>
 
                     {/* Scrollable Ad List - max 10 visible */}
-                    <div className="max-h-[620px] overflow-y-auto space-y-1 pr-1 overscroll-contain">
+                    <div className="max-h-[50vh] overflow-y-auto space-y-1 pr-1 overscroll-contain">
                         {ads.map((ad) => (
                             <label
                                 key={ad.id}
