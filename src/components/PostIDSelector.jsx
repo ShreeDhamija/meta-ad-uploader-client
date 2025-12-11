@@ -249,7 +249,12 @@ function PostSelectorInline({ adAccountId, onImport }) {
                     </div>
 
                     {/* Scrollable Ad List - max 10 visible */}
-                    <div className="max-h-[620px] overflow-y-auto space-y-1 pr-1 overscroll-contain">
+                    <div
+                        className="overflow-y-auto space-y-1 pr-1 border-t border-b border-gray-100 my-2 py-2 max-h-[60vh] min-h-[300px]"
+                        style={{ overscrollBehavior: 'contain' }}
+                        onWheel={(e) => e.stopPropagation()}
+                        onTouchMove={(e) => e.stopPropagation()}
+                    >
                         {ads.map((ad) => (
                             <label
                                 key={ad.id}
@@ -310,7 +315,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                         ))}
 
                         {hasMore && (
-                            <div className="pt-2">
+                            <div className="pt-2 pb-2">
                                 <Button
                                     variant="outline"
                                     className="w-full"
