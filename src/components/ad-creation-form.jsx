@@ -2480,7 +2480,7 @@ export default function AdCreationForm({
 
             // Compute ad name
             const adName = computeAdNameFromFormula(
-              { name: `Post_${post.id.split('_')[1]}` },  // Use post ID as "filename"
+              null,  // Use post ID as "filename"
               (adSetIndex * importedPosts.length) + postIndex,
               link[0],
               jobData.formData.adNameFormulaV2
