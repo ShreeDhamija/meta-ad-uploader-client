@@ -547,7 +547,11 @@ export default function MediaPreview({
 
 
 
-
+  const extractPostId = (objectStoryId) => {
+    if (!objectStoryId) return "—"
+    const parts = objectStoryId.split('_')
+    return parts.length > 1 ? parts[1] : objectStoryId
+  }
 
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
@@ -837,7 +841,7 @@ export default function MediaPreview({
                         <p className="mt-1 ml-1 text-xs font-mono text-gray-700">{post.post_id}</p>
                         {/* Existing text below */}
                         <p className="mt-1 ml-1 text-xs truncate font-mono text-gray-600">
-                          {post.id.split('_')[1]}
+                          {extractPostId(post.id)}
                         </p>
                       </div>
                     ))}

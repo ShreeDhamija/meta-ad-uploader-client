@@ -1665,12 +1665,12 @@ export default function AdCreationForm({
     const monthYear = `${monthAbbrev}${year}`;
     const monthDayYear = `${monthAbbrev}${date}${year}`;
 
-    let fileName = "file_name";
+    let fileName = "";
     if (file && file.name) {
       fileName = file.name.replace(/\.[^/.]+$/, "");
     }
 
-    let fileType = "file_type";
+    let fileType = "";
 
     if (file) {
       if (isVideoFile(file)) {
@@ -1723,7 +1723,7 @@ export default function AdCreationForm({
       .replace(/\{\{URL Slug\}\}/g, urlSlug)
       .replace(/\{\{Ad Type\}\}/g, adTypeLabel);
 
-    return adName || "Ad Generated Through Blip";
+    return adName.trim() || "Ad Generated Through Blip";
   }, [adNameFormulaV2]);
 
 
