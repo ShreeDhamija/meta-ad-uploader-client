@@ -242,7 +242,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                             <div></div>
                             <div className="-ml-4">Thumbnail</div>
                             <div>Ad Name</div>
-                            <div>Post ID</div>
+                            <div>Ad Set</div>
                             <div className="text-right whitespace-nowrap">
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
