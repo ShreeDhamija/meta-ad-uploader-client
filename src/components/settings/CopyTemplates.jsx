@@ -4,6 +4,7 @@ import React, { useEffect, useReducer, useState, useRef, useCallback, useMemo } 
 import { useBlocker } from "react-router";
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { toast } from "sonner"
 import { CirclePlus, CircleCheck, Trash2, Download, X, Loader } from 'lucide-react'
@@ -781,16 +782,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       {/* Add Descriptions Checkbox */}
       <div className="flex items-center space-x-2 pt-2">
-        <input
-          type="checkbox"
+        <Checkbox
           id="addDescriptions"
           checked={addDescriptions}
-          onChange={(e) => setAddDescriptions(e.target.checked)}
-          className="w-4 h-4 accent-zinc-700 rounded border-gray-300 cursor-pointer"
+          onCheckedChange={(checked) => setAddDescriptions(checked)}
+          className="border-gray-300 w-4 h-4 rounded-md"
           disabled={isProcessing}
         />
-        <label htmlFor="addDescriptions" className="text-sm text-gray-600 cursor-pointer">
-          Add Descriptions
+        <label htmlFor="addDescriptions" className="text-xs text-gray-600 cursor-pointer">
+          Add Descriptions (Only compatible with for regular image/video ads)
         </label>
       </div>
 
