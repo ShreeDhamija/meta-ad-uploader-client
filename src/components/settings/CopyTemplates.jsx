@@ -315,8 +315,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       setTemplateName("");
       setPrimaryTexts(["", "", "", "", ""]);  // Changed from [""]
       setHeadlines(["", "", "", "", ""]);
-      setDescriptions(t.descriptions?.length ? t.descriptions : ["", "", "", "", ""])
-      setAddDescriptions(t.descriptions?.length > 0)  // Auto-check if descriptions exist
+      setDescriptions(["", "", "", "", ""]);
+      setAddDescriptions(false);    // Changed from [""]
     }
   }, [selectedAdAccount, adSettings])
 
@@ -332,8 +332,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       setTemplateName(t.name || "")
       setPrimaryTexts(t.primaryTexts || [""])
       setHeadlines(t.headlines || [""])
-      setDescriptions(t.descriptions || [""])
-      setAddDescriptions(t.addDescriptions || false)
+      setDescriptions(t.descriptions?.length ? t.descriptions : ["", "", "", "", ""])
+      setAddDescriptions(t.descriptions?.length > 0)  // Auto-check if descriptions exist
     } else if (editingTemplate === null) {
       setTemplateName("")
       setPrimaryTexts(["", "", "", "", ""])  // Changed from [""]
