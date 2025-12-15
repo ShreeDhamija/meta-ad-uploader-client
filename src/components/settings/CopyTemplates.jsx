@@ -204,8 +204,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       templateName !== currentTemplate.name ||
       JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
       JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []) ||
-      JSON.stringify(descriptions) !== JSON.stringify(currentTemplate.descriptions || [])
-
+      JSON.stringify(addDescriptions ? descriptions.filter(t => t.trim()) : []) !== JSON.stringify(currentTemplate.descriptions || [])
     );
   }, [
     templateName,
