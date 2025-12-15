@@ -3434,7 +3434,7 @@ export default function AdCreationForm({
                     const tpl = copyTemplates[selectedTemplate];
                     setMessages(tpl.primaryTexts || [""]);
                     setHeadlines(tpl.headlines || [""]);
-                    setDescriptions(tpl.headlines || [""]);
+                    setDescriptions(tpl.descriptions || [""]);
                   }
                 }
               }}
