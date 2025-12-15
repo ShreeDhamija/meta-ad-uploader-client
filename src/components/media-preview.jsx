@@ -838,8 +838,6 @@ export default function MediaPreview({
                           </Button>
                         </div>
                         {/* post_id below the image card */}
-                        <p className="mt-1 ml-1 text-xs font-mono text-gray-700">{post.post_id}</p>
-                        {/* Existing text below */}
                         <p className="mt-1 ml-1 text-xs truncate font-mono text-gray-600">
                           {extractPostId(post.id)}
                         </p>
