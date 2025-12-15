@@ -833,6 +833,9 @@ export default function MediaPreview({
                             <Trash className="h-2 w-2" />
                           </Button>
                         </div>
+                        {/* post_id below the image card */}
+                        <p className="mt-1 ml-1 text-xs font-mono text-gray-700">{post.post_id}</p>
+                        {/* Existing text below */}
                         <p className="mt-1 ml-1 text-xs truncate font-mono text-gray-600">
                           {post.id.split('_')[1]}
                         </p>

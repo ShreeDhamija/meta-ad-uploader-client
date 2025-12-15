@@ -321,7 +321,7 @@ function PostSelectorInline({ adAccountId, onImport }) {
                                 <div className="flex items-center gap-1">
                                     <span
                                         className="text-xs text-gray-900 truncate"
-                                        title={ad.post_id}
+                                        title={ad.adset_name}
                                     >
                                         {truncateText(ad.adset_name, 50)}
                                     </span>
