@@ -3993,52 +3993,16 @@ export default function AdCreationForm({
                   </div>
 
                   {/* Descriptions Section - only show if template has descriptions */}
+
                   {descriptions.some(d => d.trim()) && (
                     <div className="space-y-2">
-                      <Label className="flex items-center justify-between">
-                        <span>
-                          Descriptions
-                          {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
-                        </span>
-                        {isCarouselAd && (
-                          <div className="flex items-center space-x-1">
-                            {/* <Checkbox
-                              id="apply-descriptions-all"
-                              checked={applyDescriptionsToAllCards}
-                              onCheckedChange={(checked) => {
-                                setApplyDescriptionsToAllCards(checked);
-                                if (checked && descriptions.length > 0) {
-                                  const firstDescription = descriptions[0];
-                                  const fileCount = files.length + driveFiles.length;
-                                  if (fileCount > 0) {
-                                    setDescriptions(new Array(fileCount).fill(firstDescription));
-                                  }
-                                } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
-                                  const tpl = copyTemplates[selectedTemplate];
-                                  setDescriptions(tpl.descriptions || [""]);
-                                }
-                              }}
-                              className="border-gray-300 w-4 h-4 rounded-md"
-                            /> */}
-                            <label htmlFor="apply-descriptions-all" className="text-xs font-medium">
-                              Apply To All Cards
-                            </label>
-                          </div>
-                        )}
-                      </Label>
+                      <Label>Descriptions</Label>
                       <div className="space-y-3">
                         {descriptions.map((value, index) => (
-                          <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyDescriptionsToAllCards && index > 0 ? 'hidden' : ''}`}>
+                          <div key={index} className="flex items-center gap-2">
                             <TextareaAutosize
                               value={value}
-                              onChange={(e) => {
-                                if (isCarouselAd && applyDescriptionsToAllCards) {
-                                  const newDescriptions = new Array(descriptions.length).fill(e.target.value);
-                                  setDescriptions(newDescriptions);
-                                } else {
-                                  updateField(setDescriptions, descriptions, index, e.target.value);
-                                }
-                              }}
+                              onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
                               minRows={1}
                               maxRows={10}
                               className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
@@ -4046,10 +4010,10 @@ export default function AdCreationForm({
                                 scrollbarWidth: 'thin',
                                 scrollbarColor: '#c7c7c7 transparent'
                               }}
-                              placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter description"}
+                              placeholder="Enter description"
                               disabled={!isLoggedIn}
                             />
-                            {descriptions.length > 1 && !(isCarouselAd && applyDescriptionsToAllCards) && (
+                            {descriptions.length > 1 && (
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -4057,22 +4021,21 @@ export default function AdCreationForm({
                                 size="icon"
                                 onClick={() => removeField(setDescriptions, descriptions, index)}
                               >
-                                <Trash2
-                                  className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
+                                <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
                                 <span className="sr-only">Remove</span>
                               </Button>
                             )}
                           </div>
                         ))}
-                        {descriptions.length < (isCarouselAd ? 10 : 5) && (
+                        {descriptions.length < 5 && (
                           <Button
                             type="button"
                             size="sm"
-                            className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                            className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
                             onClick={() => addField(setDescriptions, descriptions)}
                           >
                             <Plus className="mr-2 h-4 w-4 text-white" />
-                            {isCarouselAd ? 'Add card description' : 'Add description option'}
+                            Add description option
                           </Button>
                         )}
                       </div>
