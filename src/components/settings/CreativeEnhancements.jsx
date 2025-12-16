@@ -51,6 +51,28 @@ const ENHANCEMENT_ITEMS = [
         label: "Text Generation",
         description: "Text variations, generated with AI based on your original text or previous ads",
     },
+
+    //new CE
+    {
+        key: "translate",
+        label: "Translate Text",
+        description: "Adding text translations to your ad can help make your ads more relevant.",
+    },
+    {
+        key: "reveal",
+        label: "Reveal Details Over Time",
+        description: "Information from your website to be revealed a few seconds after looking at your ad.",
+    },
+    {
+        key: "summary",
+        label: "Show Summaries",
+        description: "Show AI summary of reviews & selling points from your website above the comments",
+    },
+    {
+        key: "animation",
+        label: "Image Animations",
+        description: "Add common movements such as panning, zooming, rotating & more to eligible images",
+    },
 ];
 
 // Memoized individual enhancement item component to prevent unnecessary re-renders
