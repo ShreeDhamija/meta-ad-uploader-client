@@ -2479,16 +2479,16 @@ export default function AdCreationForm({
           importedPosts.forEach((post, postIndex) => {
             const formData = new FormData();
 
-            // Compute ad name
-            const adName = computeAdNameFromFormula(
-              null,  // Use post ID as "filename"
-              (adSetIndex * importedPosts.length) + postIndex,
-              link[0],
-              jobData.formData.adNameFormulaV2
-            );
+
+            // const adName = computeAdNameFromFormula(
+            //   null,  // Use post ID as "filename"
+            //   (adSetIndex * importedPosts.length) + postIndex,
+            //   link[0],
+            //   jobData.formData.adNameFormulaV2
+            // );
 
             // Basic fields
-            formData.append("adName", adName);
+            formData.append("adName", post.ad_name);
             formData.append("adAccountId", selectedAdAccount);
             formData.append("adSetId", adSetId);
             formData.append("pageId", pageId);
