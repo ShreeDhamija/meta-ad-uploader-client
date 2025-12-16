@@ -4002,7 +4002,7 @@ export default function AdCreationForm({
                         </span>
                         {isCarouselAd && (
                           <div className="flex items-center space-x-1">
-                            <Checkbox
+                            {/* <Checkbox
                               id="apply-descriptions-all"
                               checked={applyDescriptionsToAllCards}
                               onCheckedChange={(checked) => {
@@ -4019,7 +4019,7 @@ export default function AdCreationForm({
                                 }
                               }}
                               className="border-gray-300 w-4 h-4 rounded-md"
-                            />
+                            /> */}
                             <label htmlFor="apply-descriptions-all" className="text-xs font-medium">
                               Apply To All Cards
                             </label>
