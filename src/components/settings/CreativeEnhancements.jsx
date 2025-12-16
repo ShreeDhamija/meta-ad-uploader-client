@@ -56,27 +56,22 @@ const ENHANCEMENT_ITEMS = [
     {
         key: "translate",
         label: "Translate Text",
-        description: "Adding text translations to your ad can help customise your creative and make your ads more relevant.",
+        description: "Adding text translations to your ad can help make your ads more relevant.",
     },
     {
         key: "reveal",
         label: "Reveal Details Over Time",
-        description: "Information from your website or app store product page to be revealed a few seconds after looking at your ad.",
+        description: "Information from your website to be revealed a few seconds after looking at your ad.",
     },
-    // {
-    //     key: "music",
-    //     label: "Music Generation",
-    //     description: "Text variations, generated with AI based on your original text or previous ads",
-    // },
     {
         key: "summary",
         label: "Show Summaries",
-        description: "AI summarised reviews and selling points from your website above the comments in your ad.",
+        description: "Show AI summary of reviews & selling points from your website above the comments",
     },
     {
         key: "animation",
         label: "Image Animations",
-        description: "Add common movements such as panning, zooming, rotating and more to your eligible images",
+        description: "Add common movements such as panning, zooming, rotating & more to eligible images",
     },
 ];
 
