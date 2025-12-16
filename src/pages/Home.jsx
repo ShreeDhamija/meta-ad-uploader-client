@@ -162,6 +162,7 @@ export default function Home() {
     const userHasActiveAccess = hasActiveAccess();
     const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState(new Set());
+    const [useExistingPosts, setUseExistingPosts] = useState(false);
 
     const [showMobileBanner, setShowMobileBanner] = useState(true);
 
@@ -235,6 +236,7 @@ export default function Home() {
             setSelectedTemplate(undefined);
             setMessages([""]);
             setHeadlines([""]);
+            setDescriptions([""]);
 
             // --- Core logic for your request (Scenario 1) ---
             // No ad account selected, so show all fields unchecked.
@@ -283,6 +285,7 @@ export default function Home() {
             setSelectedTemplate(undefined);
             setMessages([""]);
             setHeadlines([""]);
+            setDescriptions([""]);
         } else {
             const initialTemplateName = keys.includes(adAccountSettings.defaultTemplateName)
                 ? adAccountSettings.defaultTemplateName
@@ -292,6 +295,7 @@ export default function Home() {
             const selectedTemplateData = templates[initialTemplateName];
             setMessages(selectedTemplateData?.primaryTexts || [""]);
             setHeadlines(selectedTemplateData?.headlines || [""]);
+            setDescriptions(selectedTemplateData?.descriptions || [""]);
         }
 
     }, [selectedAdAccount, adAccountSettings]); // Keep dependencies the same
@@ -509,6 +513,8 @@ export default function Home() {
                             refreshAdSets={refreshAdSets}
                             sortAdSets={sortAdSets}
                             sortCampaigns={sortCampaigns}
+                            useExistingPosts={useExistingPosts}
+                            setUseExistingPosts={setUseExistingPosts}
                         />
 
                         <AdCreationForm
@@ -585,6 +591,7 @@ export default function Home() {
                             campaignObjective={campaignObjective}
                             selectedFiles={selectedFiles}
                             setSelectedFiles={setSelectedFiles}
+                            useExistingPosts={useExistingPosts}
                         />
                     </div>
 

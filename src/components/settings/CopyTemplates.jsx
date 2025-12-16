@@ -4,6 +4,7 @@ import React, { useEffect, useReducer, useState, useRef, useCallback, useMemo } 
 import { useBlocker } from "react-router";
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { toast } from "sonner"
 import { CirclePlus, CircleCheck, Trash2, Download, X, Loader } from 'lucide-react'
@@ -170,6 +171,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [templateName, setTemplateName] = useState("")
   const [primaryTexts, setPrimaryTexts] = useState(["", "", "", "", ""])
   const [headlines, setHeadlines] = useState(["", "", "", "", ""])
+  const [descriptions, setDescriptions] = useState(["", "", "", "", ""])
+  const [addDescriptions, setAddDescriptions] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const isEditingDefault = useMemo(() =>
     defaultName === editingTemplate, [defaultName, editingTemplate]
@@ -190,6 +193,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     // Brand new template → trigger warning as soon as any field has content
     if (!currentTemplate?.id && !currentTemplate?.name) {
       return !!(
+        descriptions.some(text => text.trim()) ||
         templateName.trim() ||
         primaryTexts.some(text => text.trim()) ||
         headlines.some(text => text.trim())
@@ -200,13 +204,16 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     return (
       templateName !== currentTemplate.name ||
       JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
-      JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || [])
+      JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []) ||
+      JSON.stringify(addDescriptions ? descriptions.filter(t => t.trim()) : []) !== JSON.stringify(currentTemplate.descriptions || [])
     );
   }, [
     templateName,
     currentTemplate,
     primaryTexts,
-    headlines
+    headlines,
+    descriptions,
+
   ]);
 
   const blocker = useBlocker(() => templateChanged);
@@ -289,7 +296,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     if (!selectedAdAccount || !adSettings) return
 
 
-
     const templates = adSettings.copyTemplates || {};
     const defaultName = adSettings.defaultTemplateName || "";
     const firstTemplate =
@@ -308,7 +314,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     if (!firstTemplate) {
       setTemplateName("");
       setPrimaryTexts(["", "", "", "", ""]);  // Changed from [""]
-      setHeadlines(["", "", "", "", ""]);      // Changed from [""]
+      setHeadlines(["", "", "", "", ""]);
+      setDescriptions(["", "", "", "", ""]);
+      setAddDescriptions(false);    // Changed from [""]
     }
   }, [selectedAdAccount, adSettings])
 
@@ -324,10 +332,14 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       setTemplateName(t.name || "")
       setPrimaryTexts(t.primaryTexts || [""])
       setHeadlines(t.headlines || [""])
+      setDescriptions(t.descriptions?.length ? t.descriptions : ["", "", "", "", ""])
+      setAddDescriptions(t.descriptions?.length > 0)  // Auto-check if descriptions exist
     } else if (editingTemplate === null) {
       setTemplateName("")
       setPrimaryTexts(["", "", "", "", ""])  // Changed from [""]
-      setHeadlines(["", "", "", "", ""])      // Changed from [""]
+      setHeadlines(["", "", "", "", ""])
+      setDescriptions(["", "", "", "", ""])
+      setAddDescriptions(false)   // Changed from [""]
     }
   }, [selectedName, templates, editingTemplate])
 
@@ -409,6 +421,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     setTemplateName("")
     setPrimaryTexts(["", "", "", "", ""])  // Changed from [""]
     setHeadlines(["", "", "", "", ""])      // Changed from [""]
+    setDescriptions(["", "", "", "", ""])
+    setAddDescriptions(false)
   }, [])
 
 
@@ -420,11 +434,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
     const filteredPrimaryTexts = primaryTexts.filter(text => text.trim() !== "");
     const filteredHeadlines = headlines.filter(text => text.trim() !== "");
+    const filteredDescriptions = descriptions.filter(text => text.trim() !== "");
+
 
     const newTemplate = {
       name: templateName,
       primaryTexts: filteredPrimaryTexts,  // Changed from primaryTexts
-      headlines: filteredHeadlines,        // Changed from headlines
+      headlines: filteredHeadlines,
+      descriptions: addDescriptions ? filteredDescriptions : [],
+      addDescriptions: addDescriptions,
     }
 
 
@@ -496,12 +514,14 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
     const filteredPrimaryTexts = primaryTexts.filter(text => text.trim() !== "");
     const filteredHeadlines = headlines.filter(text => text.trim() !== "");
-
+    const filteredDescriptions = descriptions.filter(text => text.trim() !== "");
 
     const updatedTemplate = {
       name: templateName,
       primaryTexts: filteredPrimaryTexts,  // Changed from primaryTexts
       headlines: filteredHeadlines,        // Changed from headlines
+      descriptions: addDescriptions ? filteredDescriptions : [],
+      addDescriptions: addDescriptions,
     }
 
 
@@ -759,6 +779,54 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           </Button>
         )}
       </div>
+
+      {/* Add Descriptions Checkbox */}
+      <div className="flex items-center space-x-2 pt-2">
+        <Checkbox
+          id="addDescriptions"
+          checked={addDescriptions}
+          onCheckedChange={(checked) => setAddDescriptions(checked)}
+          className="border-gray-300 w-4 h-4 rounded-md"
+          disabled={isProcessing}
+        />
+        <label htmlFor="addDescriptions" className="text-xs text-gray-600 cursor-pointer">
+          Add Descriptions (Only compatible with regular image/video ads)
+        </label>
+      </div>
+
+      {/* Descriptions Section */}
+      {addDescriptions && (
+        <div className="space-y-2">
+          <label className="text-[14px] text-gray-700">Description</label>
+          {descriptions.map((text, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <Input
+                placeholder={`Enter Description ${i + 1}`}
+                value={text}
+                onChange={(e) => handleChange(i, setDescriptions, descriptions, e.target.value)}
+                className="rounded-xl bg-white"
+                disabled={isProcessing}
+              />
+              {descriptions.length > 1 && (
+                <Trash2
+                  className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
+                  onClick={() => handleRemove(i, setDescriptions, descriptions)}
+                />
+              )}
+            </div>
+          ))}
+          {descriptions.length < 5 && (
+            <Button
+              variant="ghost"
+              className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-zinc-800 hover:text-white h-[40px]"
+              onClick={() => handleAdd(setDescriptions, descriptions)}
+              disabled={isProcessing}
+            >
+              + Add new description
+            </Button>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2 pt-2">
         <Button

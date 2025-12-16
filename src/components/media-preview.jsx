@@ -547,7 +547,11 @@ export default function MediaPreview({
 
 
 
-
+  const extractPostId = (objectStoryId) => {
+    if (!objectStoryId) return "—"
+    const parts = objectStoryId.split('_')
+    return parts.length > 1 ? parts[1] : objectStoryId
+  }
 
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
@@ -819,7 +823,7 @@ export default function MediaPreview({
                       <div key={post.id} className="relative group">
                         <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
                           <img
-                            src={post.full_picture || "https://api.withblip.com/thumbnail.jpg"}
+                            src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
                             alt="Post"
                             className="w-full h-auto object-cover"
                           />
@@ -833,8 +837,9 @@ export default function MediaPreview({
                             <Trash className="h-2 w-2" />
                           </Button>
                         </div>
+                        {/* post_id below the image card */}
                         <p className="mt-1 ml-1 text-xs truncate font-mono text-gray-600">
-                          {post.id.split('_')[1]}
+                          {extractPostId(post.id)}
                         </p>
                       </div>
                     ))}

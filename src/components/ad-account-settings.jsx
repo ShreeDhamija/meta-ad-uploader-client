@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect } from "react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -59,7 +60,9 @@ export default function AdAccountSettings({
   documentExists,
   refreshAdSets,
   sortAdSets,
-  sortCampaigns
+  sortCampaigns,
+  useExistingPosts,
+  setUseExistingPosts
 
 }) {
   // Local state for comboboxes
@@ -1132,6 +1135,19 @@ transition-all duration-150 hover:!bg-black
               </div>
             )}
           </div>
+          {/* <div>
+            <div className="flex items-center space-x-2">
+              <label className="text-sm text-gray-700">Scale with existing Post ID</label>
+              <Switch
+                checked={useExistingPosts}
+                onCheckedChange={setUseExistingPosts}
+              />
+            </div>
+            {useExistingPosts && !selectedAdAccount && (
+              <p className="text-xs text-amber-600 mt-1">Select an ad account to fetch ads</p>
+            )}
+          </div> */}
+
         </div>
       </CardContent>
     </Card >
