@@ -10,6 +10,7 @@ import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
 import PageSelectors from "./PageSelectors"
 import LinkParameters from "./LinkParameters"
+import MultiAdvertiserAds from "./MultiAdvertiserAds"
 import DefaultCTA from "./DefaultCTA"
 import { toast } from "sonner"
 import { saveSettings } from "@/lib/saveSettings"
@@ -34,6 +35,10 @@ const DEFAULT_ENHANCEMENTS = {
   expandImage: false,
   catalogItems: false,
   textGeneration: false,
+  translate: false,
+  reveal: false,
+  summary: false,
+  animation: false,
 };
 
 
@@ -43,6 +48,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [openAdAccount, setOpenAdAccount] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [selectedPage, setSelectedPage] = useState(null)
+  const [multiAdvertiserAds, setMultiAdvertiserAds] = useState(false)
   const [selectedInstagram, setSelectedInstagram] = useState(null)
   const [savingSettings, setSavingSettings] = useState(false)
   const { settings: adSettings, setSettings: setAdSettings, loading, isFirstEverSave } = useAdAccountSettings(selectedAdAccount)
@@ -117,7 +123,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultCTA !== initialSettings.defaultCTA ||
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
-      adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput
+      adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput ||
+      multiAdvertiserAds !== initialSettings.multiAdvertiserAds  // ADD THIS LINE
+
 
 
 
@@ -131,6 +139,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     enhancements,
     adNameFormulaV2,  // Add to dependencies
     initialSettings,
+    multiAdvertiserAds,  // ADD THIS
     selectedAdAccount,
     areUtmPairsEqual
   ]);
@@ -151,7 +160,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultCTA: adSettings.defaultCTA || "LEARN_MORE",
       defaultUTMs: utms,
       creativeEnhancements: adSettings.creativeEnhancements || DEFAULT_ENHANCEMENTS,
-      adNameFormulaV2: adSettings.adNameFormulaV2 || { rawInput: "" }
+      adNameFormulaV2: adSettings.adNameFormulaV2 || { rawInput: "" },
+      multiAdvertiserAds: adSettings.multiAdvertiserAds || false  // ADD THIS
+
     };
   }, []);
 
@@ -189,7 +200,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       creativeEnhancements: enhancements,
       adNameFormulaV2: {
         rawInput: adNameFormulaV2?.rawInput || ""
-      }
+      },
+      multiAdvertiserAds: multiAdvertiserAds  // ADD THIS
+
     };
 
     try {
@@ -217,7 +230,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         defaultCTA,
         defaultUTMs: utmPairs, // <--- Direct state reference
         creativeEnhancements: enhancements,
-        adNameFormulaV2: adNameFormulaV2
+        adNameFormulaV2: adNameFormulaV2,
+        multiAdvertiserAds: multiAdvertiserAds  // ADD THIS
+
       };
 
       setInitialSettings(newInitialSettings);
@@ -237,6 +252,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     utmPairs,
     enhancements,
     adNameFormulaV2,
+    multiAdvertiserAds,
     isFirstEverSave
   ]);
 
@@ -270,6 +286,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setEnhancements(initial.creativeEnhancements);
     setAdNameFormulaV2(initial.adNameFormulaV2); // Add this line
     setInitialSettings(initial);
+    setMultiAdvertiserAds(initial.multiAdvertiserAds);  // ADD THIS LINE
+
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
 
 
@@ -462,6 +480,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
 
           <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
+          <MultiAdvertiserAds enabled={multiAdvertiserAds} setEnabled={setMultiAdvertiserAds} />
+
 
         </div>
       </fieldset>
