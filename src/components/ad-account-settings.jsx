@@ -1135,9 +1135,9 @@ transition-all duration-150 hover:!bg-black
               </div>
             )}
           </div>
-          {/* <div>
+          <div>
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-gray-700">Scale with existing Post ID</label>
+              <label className="text-sm text-gray-700">Duplicate Existing ads(Post ID)</label>
               <Switch
                 checked={useExistingPosts}
                 onCheckedChange={setUseExistingPosts}
@@ -1146,7 +1146,7 @@ transition-all duration-150 hover:!bg-black
             {useExistingPosts && !selectedAdAccount && (
               <p className="text-xs text-amber-600 mt-1">Select an ad account to fetch ads</p>
             )}
-          </div> */}
+          </div>
 
         </div>
       </CardContent>

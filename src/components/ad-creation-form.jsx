@@ -447,13 +447,11 @@ export default function AdCreationForm({
     total: 0
   });
 
-
-
   // const [isCarouselAd, setIsCarouselAd] = useState(false);
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
-
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
+  const [usePostID, setUsePostID] = useState(false);
 
 
   const refreshPage = useCallback(() => {
@@ -2478,15 +2476,6 @@ export default function AdCreationForm({
         adSetIdsToUse.forEach((adSetId, adSetIndex) => {
           importedPosts.forEach((post, postIndex) => {
             const formData = new FormData();
-
-
-            // const adName = computeAdNameFromFormula(
-            //   null,  // Use post ID as "filename"
-            //   (adSetIndex * importedPosts.length) + postIndex,
-            //   link[0],
-            //   jobData.formData.adNameFormulaV2
-            // );
-
             // Basic fields
             formData.append("adName", post.ad_name);
             formData.append("adAccountId", selectedAdAccount);
@@ -2497,9 +2486,16 @@ export default function AdCreationForm({
             formData.append("jobId", frontendJobId);
 
             // POST-SPECIFIC: Send the post ID instead of media
-            formData.append("postId", post.post_id);  // This is the key difference!
-            formData.append("adType", "post");   // Signal to backend this is a post-based ad
-            console.log(post.id);
+            if (usePostID) {
+              // Duplication mode - use ad copies endpoint
+              formData.append("adId", post.id);
+              formData.append("adType", "duplication");
+            } else {
+              // Original mode - create from post
+              formData.append("postId", post.post_id);
+              formData.append("adType", "post");
+            }
+
             promises.push(createAdApiCall(formData, API_BASE_URL));
             promiseMetadata.push({ fileName: `Post ${post.id.split('_')[1]}` });
           });
@@ -3491,6 +3487,8 @@ export default function AdCreationForm({
                 <PostSelectorInline
                   adAccountId={selectedAdAccount}
                   onImport={setImportedPosts}
+                  usePostID={usePostID}
+                  setUsePostID={setUsePostID}
                 />
               </div>
 

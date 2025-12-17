@@ -5,6 +5,8 @@ import axios from "axios"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { Loader, ChevronDown, ImageOff, RefreshCw } from "lucide-react"
 import {
     DropdownMenu,
@@ -22,7 +24,7 @@ const DATE_PRESETS = [
     { label: '30 Days', value: 'last_30d' },
 ]
 
-function PostSelectorInline({ adAccountId, onImport }) {
+function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) {
     const renderCount = useRef(0);
     const prevAdAccountId = useRef(adAccountId);
     const prevOnImport = useRef(onImport);
@@ -235,6 +237,19 @@ function PostSelectorInline({ adAccountId, onImport }) {
                                 <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
                                 Refresh Ads
                             </Button>
+                        </div>
+                        {/* Duplication Mode Toggle */}
+                        <div className="flex items-center justify-between py-2 px-1">
+                            <div className="flex items-center gap-2">
+                                <Switch
+                                    id="use-post-id"
+                                    checked={usePostID}
+                                    onCheckedChange={setUsePostID}
+                                />
+                                <Label htmlFor="use-post-id" className="text-sm text-gray-600 cursor-pointer">
+                                    Use Post ID
+                                </Label>
+                            </div>
                         </div>
 
                         {/* Column Headers - Fixed */}
