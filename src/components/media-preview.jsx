@@ -820,7 +820,7 @@ export default function MediaPreview({
                     })}
 
                     {importedPosts.map((post) => (
-                      <div key={post.id} className="relative group">
+                      <div key={post.id} className="relative group" title={post.ad_name}>
                         <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
                           <img
                             src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
@@ -838,8 +838,9 @@ export default function MediaPreview({
                           </Button>
                         </div>
                         {/* post_id below the image card */}
-                        <p className="mt-1 ml-1 text-xs font-mono text-gray-700">{post.ad_name}</p>
-                        {/* Existing text below */}
+                        <p className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full">
+                          {post.ad_name}
+                        </p>
                       </div>
                     ))}
                   </div>
