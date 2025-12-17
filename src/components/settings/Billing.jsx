@@ -479,7 +479,7 @@ export default function BillingSettings() {
                                                     className="text-4xl font-bold text-gray-900"
                                                     style={{ fontFamily: "'DM Mono', monospace" }}
                                                 >
-                                                    $99
+                                                    $49
                                                 </div>
                                                 <div className="text-sm text-gray-400">/month</div>
                                             </div>
