@@ -2487,13 +2487,13 @@ export default function AdCreationForm({
 
             // POST-SPECIFIC: Send the post ID instead of media
             if (usePostID) {
-              // Duplication mode - use ad copies endpoint
-              formData.append("adId", post.id);
-              formData.append("adType", "duplication");
-            } else {
-              // Original mode - create from post
+              // Post ID mode - create ad from post using object_story_id
               formData.append("postId", post.post_id);
               formData.append("adType", "post");
+            } else {
+              // Duplication mode - use ad copies endpoint
+              formData.append("adId", post.ad_id);  // ← Changed from post.id to post.ad_id
+              formData.append("adType", "duplication");
             }
 
             promises.push(createAdApiCall(formData, API_BASE_URL));
