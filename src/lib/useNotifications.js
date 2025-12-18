@@ -13,6 +13,8 @@ export default function useNotifications() {
             });
             if (!res.ok) throw new Error('Failed to fetch');
             const data = await res.json();
+            console.log('4. Notifications received from API:', data.notifications);
+
             setNotifications(data.notifications || []);
         } catch (err) {
             console.error("Failed to fetch notifications:", err);
