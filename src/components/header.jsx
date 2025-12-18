@@ -284,41 +284,42 @@ export default function Header({ showMessenger, hideMessenger }) {
         )}
 
         {/* Notifications Dropdown */}
-        <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownClose}>
-          <DropdownMenuTrigger asChild>
-            <button
-              title="Notifications"
-              className="relative p-1.5 rounded-full hover:bg-gray-100 transition focus:outline-none"
-            >
-              <Bell className="w-5 h-5 text-gray-700" />
-              {hasUnread && (
-                <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full" />
-              )}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>What's New</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {notificationsLoading ? (
-              <div className="flex justify-center py-4">
-                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="py-4 text-center text-sm text-gray-500">
-                You're all caught up!
-              </div>
-            ) : (
-              <div className="max-h-64 overflow-y-auto">
-                {notifications.map((n) => (
-                  <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 cursor-default">
-                    <p className="text-sm text-gray-700">{n.message}</p>
-                    <p className="text-xs text-gray-400">{formatTime(n.createdAt)}</p>
-                  </DropdownMenuItem>
-                ))}
-              </div>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {hasUnread && (
+          <>
+            <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownClose}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  title="Notifications"
+                  className="relative p-1.5 rounded-full hover:bg-gray-100 transition focus:outline-none"
+                >
+                  <Bell className="w-5 h-5 text-gray-700" />
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-80 bg-white rounded-2xl">
+                <DropdownMenuLabel>What's New</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notificationsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 cursor-default">
+                        <p className="text-sm text-gray-700">{n.message}</p>
+                        <p className="text-xs text-gray-400">{formatTime(n.createdAt)}</p>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Divider after bell */}
+            <div className="h-8 w-px bg-gray-300" />
+          </>
+        )}
 
         <button
           onClick={() => navigate("/settings")}
