@@ -157,7 +157,7 @@ export default function Header({ showMessenger, hideMessenger }) {
                 ) : (
                   <div className="max-h-64 overflow-y-auto">
                     {notifications.map((n) => (
-                      <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 cursor-default">
+                      <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 cursor-default !rounded-xl">
                         <p className="text-sm text-gray-700">{n.message}</p>
                         <p className="text-xs text-gray-400">{formatTime(n.createdAt)}</p>
                       </DropdownMenuItem>
