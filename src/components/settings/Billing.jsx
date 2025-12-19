@@ -433,7 +433,7 @@ export default function BillingSettings() {
                                 <CardContent className="space-y-6 p-6 pb-8">
                                     <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Up to 3 Ad Accounts</span>
+                                        <span className="text-[14px] text-gray-500">Up to 5 Ad Accounts</span>
                                     </div>
                                     <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon2 className="w-6 h-6" />
@@ -501,7 +501,7 @@ export default function BillingSettings() {
                                     </div>
                                     <div className="flex items-top gap-3 text-sm">
                                         <CheckIcon3 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Up to 3 Team Seats</span>
+                                        <span className="text-[14px] text-gray-500">Unlimited Team Seats</span>
                                     </div>
                                     <Button
                                         onClick={() => handleUpgrade('starter')}
