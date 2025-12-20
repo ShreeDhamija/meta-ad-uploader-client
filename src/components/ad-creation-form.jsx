@@ -4447,7 +4447,7 @@ export default function AdCreationForm({
             )}
 
             {/* Validation message for missing link */}
-            {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (importedPosts.length === 0) && (
+            {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (importedPosts.length === 0) && (!useExistingPosts) && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please provide a link URL
               </div>
