@@ -193,7 +193,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
 
     return (
 
-        <div className="flex flex-col h-full min-h-[30vh] max-h-[80vh] overflow-hidden">
+        <div className="flex flex-col h-full min-h-[50vh] max-h-[80vh] overflow-hidden">
 
             {/* Loading State - Fixed height, doesn't affect layout */}
             {isLoading && (
@@ -329,7 +329,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
                                 {/* Ad Name */}
                                 <div className="min-w-0">
                                     <p className="text-xs text-gray-900 truncate" title={ad.ad_name}>
-                                        {truncateText(ad.ad_name, 50)}
+                                        {truncateText(ad.ad_name, 75)}
                                     </p>
                                 </div>
 
@@ -339,7 +339,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
                                         className="text-xs text-gray-900 truncate"
                                         title={ad.adset_name}
                                     >
-                                        {truncateText(ad.adset_name, 50)}
+                                        {truncateText(ad.adset_name, 75)}
                                     </span>
                                 </div>
 
