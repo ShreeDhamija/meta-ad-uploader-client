@@ -4425,8 +4425,8 @@ export default function AdCreationForm({
                 (adType === 'carousel' && (files.length + driveFiles.length) < 2) ||
                 (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
-                ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
-                ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
+                (!showCustomLink && !link[0]) ||
+                (showCustomLink && !customLink.trim()) ||
                 (selectedFiles.size > 0)
               }
             >

@@ -129,6 +129,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
         fetchAds(null, newPreset)
     }
 
+    // 1. toggleAdSelection only manages local state
     const toggleAdSelection = (adId) => {
         setSelectedAdIds(prev => {
             const newSet = new Set(prev)
@@ -137,14 +138,15 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
             } else {
                 newSet.add(adId)
             }
-
-            // Immediately call onImport with the updated selection
-            const selectedAds = ads.filter(ad => newSet.has(ad.id))
-            onImport(selectedAds)
-
             return newSet
         })
     }
+
+    // 2. useEffect syncs to parent whenever selection changes
+    useEffect(() => {
+        const selectedAds = ads.filter(ad => selectedAdIds.has(ad.id))
+        onImport(selectedAds)
+    }, [selectedAdIds, ads, onImport])
 
 
 
