@@ -286,7 +286,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
                     <div
                         ref={scrollContainerRef}
                         onWheel={handleWheel}
-                        className="flex-1 min-h-0 overflow-y-auto overscroll-contain isolate space-y-1 pr-1"
+                        className="flex-1 min-h-[600px] overflow-y-auto overscroll-contain isolate space-y-1 pr-1"
                         style={{
                             // Extra insurance against scroll propagation
                             overscrollBehavior: 'contain',
