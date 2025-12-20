@@ -137,14 +137,16 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
             } else {
                 newSet.add(adId)
             }
+
+            // Immediately call onImport with the updated selection
+            const selectedAds = ads.filter(ad => newSet.has(ad.id))
+            onImport(selectedAds)
+
             return newSet
         })
     }
 
-    const handleImport = () => {
-        const selectedAds = ads.filter(ad => selectedAdIds.has(ad.id))
-        onImport(selectedAds)
-    }
+
 
     const loadMore = () => {
         if (nextCursor && !isLoadingMore) {
@@ -190,9 +192,8 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
     }, []);
 
     return (
-        // CRITICAL FIX: Use a flex column container with fixed max height
-        // This creates a "scroll boundary" that prevents expansion
-        <div className="flex flex-col h-full max-h-[600px] overflow-hidden">
+
+        <div className="flex flex-col h-full min-h-[30vh] max-h-[80vh] overflow-hidden">
 
             {/* Loading State - Fixed height, doesn't affect layout */}
             {isLoading && (
@@ -374,18 +375,6 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
                                 </Button>
                             </div>
                         )}
-                    </div>
-
-                    {/* Import Button - Fixed at bottom, never scrolls */}
-                    <div className="flex-shrink-0 pt-3">
-                        <Button
-                            type="button"
-                            onClick={handleImport}
-                            disabled={selectedAdIds.size === 0}
-                            className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl"
-                        >
-                            Import {selectedAdIds.size > 0 ? `(${selectedAdIds.size})` : ''}
-                        </Button>
                     </div>
                 </>
             )}
