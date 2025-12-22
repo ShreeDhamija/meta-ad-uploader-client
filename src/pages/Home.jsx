@@ -608,6 +608,8 @@ export default function Home() {
                                 setImportedPosts={setImportedPosts}
                                 driveFiles={driveFiles}
                                 setDriveFiles={setDriveFiles}
+                                importedFiles={importedFiles}
+                                setImportedFiles={setImportedFiles}
                                 videoThumbs={videoThumbs}
                                 isCarouselAd={isCarouselAd}
                                 adType={adType}

@@ -194,13 +194,6 @@ export function MetaMediaLibraryModal({
         // Add to parent's importedFiles state
         setImportedFiles(prev => [...prev, ...newImportedFiles]);
 
-        toast.success(
-            `Successfully imported ${totalSelected} item${totalSelected > 1 ? "s" : ""}`,
-            {
-                description: `${selectedImagesList.length} image${selectedImagesList.length !== 1 ? "s" : ""} and ${selectedVideosList.length} video${selectedVideosList.length !== 1 ? "s" : ""}`,
-            }
-        );
-
         // Reset selections and close modal
         setSelectedImages(new Set());
         setSelectedVideos(new Set());
