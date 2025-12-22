@@ -236,7 +236,7 @@ export function MetaMediaLibraryModal({
                 type="button"
                 size="sm"
                 disabled={!isLoggedIn}
-                className="rounded-xl flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white hover:text-white"
+                className="rounded-xl flex items-center gap-2 bg-zinc-700 hover:bg-zinc-800 text-white hover:text-white"
                 onClick={() => {
                     if (!adAccountId) {
                         toast.error("Please select an ad account");
@@ -248,7 +248,7 @@ export function MetaMediaLibraryModal({
                 <FolderOpen className="h-4 w-4 text-white hover:text-white" />
                 Import From Meta Media Library
             </Button>
-            <DialogContent className="max-w-3xl max-h-[80vh] rounded-3xl">
+            <DialogContent className="max-w-3xl w-[700px] max-h-[80vh] rounded-[32px]">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold">
                         Meta Media Library
@@ -285,12 +285,8 @@ export function MetaMediaLibraryModal({
                             </div>
                         ) : (
                             <>
-                                <div className="flex items-center justify-end mb-3">
-                                    <span className="text-sm text-gray-500">
-                                        {selectedImages.size} selected
-                                    </span>
-                                </div>
-                                <ScrollArea className="h-[400px] pr-4">
+
+                                <ScrollArea className="h-[400px] pr-4 overflow-x-hidden">
                                     <div className="space-y-2">
                                         {images.map((image) => (
                                             <div
@@ -334,7 +330,7 @@ export function MetaMediaLibraryModal({
                                                     variant="outline"
                                                     onClick={handleLoadMoreImages}
                                                     disabled={loadingMoreImages}
-                                                    className="rounded-xl"
+                                                    className="w-full rounded-xl"
                                                 >
                                                     {loadingMoreImages ? (
                                                         <>
@@ -365,11 +361,7 @@ export function MetaMediaLibraryModal({
                             </div>
                         ) : (
                             <>
-                                <div className="flex items-center justify-end mb-3">
-                                    <span className="text-sm text-gray-500">
-                                        {selectedVideos.size} selected
-                                    </span>
-                                </div>
+
                                 <ScrollArea className="h-[400px] pr-4">
                                     <div className="space-y-2">
                                         {videos.map((video) => (
@@ -414,7 +406,7 @@ export function MetaMediaLibraryModal({
                                                     variant="outline"
                                                     onClick={handleLoadMoreVideos}
                                                     disabled={loadingMoreVideos}
-                                                    className="rounded-xl"
+                                                    className="w-full rounded-xl"
                                                 >
                                                     {loadingMoreVideos ? (
                                                         <>
@@ -434,7 +426,7 @@ export function MetaMediaLibraryModal({
                     </TabsContent>
                 </Tabs>
 
-                <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
+                <div className="flex justify-end gap-3 mt-4 pt-4">
                     <Button
                         variant="outline"
                         onClick={() => setOpen(false)}
