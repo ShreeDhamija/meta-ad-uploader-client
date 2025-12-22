@@ -785,6 +785,11 @@ transition-all duration-150 hover:!bg-black
                 </div>
               </div>
             )}
+            {selectedAdAccount && campaigns.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1.5">
+                No campaigns in this ad account, try selecting a different one.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2 ">
