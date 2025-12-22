@@ -195,7 +195,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
 
     return (
 
-        <div className="flex flex-col h-full min-h-[50vh] max-h-[80vh] overflow-hidden">
+        <div className="flex flex-col h-full min-h-[70vh] max-h-[80vh] overflow-hidden">
 
             {/* Loading State - Fixed height, doesn't affect layout */}
             {isLoading && (
