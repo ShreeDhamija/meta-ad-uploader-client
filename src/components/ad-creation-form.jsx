@@ -20,7 +20,7 @@ import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostSelectorInline from "@/components/PostIDSelector"
-
+import { MetaMediaLibraryModal } from "@/components/MetaMediaLibraryModal";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -359,6 +359,8 @@ export default function AdCreationForm({
   setFiles,
   importedPosts,
   setImportedPosts,
+  importedFiles,
+  setImportedFiles,
   videoThumbs,
   setVideoThumbs,
   selectedAdSets,
@@ -4296,7 +4298,6 @@ export default function AdCreationForm({
                       </SelectContent>
                     </Select>
                   </div>
-
                   {/* Shop Destination Selector - Only show when needed */}
                   <ShopDestinationSelector
                     pageId={pageId}
@@ -4309,10 +4310,15 @@ export default function AdCreationForm({
                 </div>
 
                 <div className="space-y-2">
-                  <div className="space-y-2">
+                  <div className="flex items-center justify-between">
                     <Label className="block">Upload Media</Label>
+                    <MetaMediaLibraryModal
+                      adAccountId={selectedAdAccount}
+                      isLoggedIn={isLoggedIn}
+                      importedFiles={importedFiles}
+                      setImportedFiles={setImportedFiles}
+                    />
                   </div>
-
                   <div
                     {...getRootProps()}
                     className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"

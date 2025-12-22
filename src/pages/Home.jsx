@@ -153,6 +153,7 @@ export default function Home() {
     const [fileGroups, setFileGroups] = useState([]);
     const [files, setFiles] = useState([])
     const [importedPosts, setImportedPosts] = useState([])
+    const [importedFiles, setImportedFiles] = useState([]);
     const [videoThumbs, setVideoThumbs] = useState({})
     const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading } = useAppData()
     const { settings: adAccountSettings, documentExists } = useAdAccountSettings(selectedAdAccount)
@@ -556,6 +557,8 @@ export default function Home() {
                             setFiles={setFiles}
                             importedPosts={importedPosts}
                             setImportedPosts={setImportedPosts}
+                            importedFiles={importedFiles}
+                            setImportedFiles={setImportedFiles}
                             videoThumbs={videoThumbs}
                             setVideoThumbs={setVideoThumbs}
                             selectedAdSets={selectedAdSets}
