@@ -582,7 +582,7 @@ export default function MediaPreview({
 
   return (
     <>
-      {(files.length > 0 || importedPosts.length > 0) ? (
+      {(files.length > 0 || importedPosts.length > 0 || importedFiles.length > 0) ? (
         <Card
           className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-2xl"
           style={{ height: "calc(100vh - 140px)" }}
