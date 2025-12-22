@@ -686,6 +686,7 @@ export default function MediaPreview({
                   setSelectedFiles(new Set());
                   setFileGroups([]);
                   setImportedPosts([]);
+                  setImportedFiles([]);
                 }}
                 className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
               >

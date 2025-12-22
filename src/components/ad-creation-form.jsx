@@ -522,6 +522,8 @@ export default function AdCreationForm({
         videoThumbs: { ...videoThumbs },
         thumbnail,
         importedPosts: [...importedPosts],
+        importedFiles: [...importedFiles],  // ADD THIS
+
 
 
         // Selection states
@@ -1797,7 +1799,7 @@ export default function AdCreationForm({
       videoThumbs,
       thumbnail,
       importedPosts,
-      // Selections
+      importedFiles,
       selectedAdSets,
       duplicateAdSet,
       newAdSetName,
@@ -1838,7 +1840,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -2298,7 +2300,8 @@ export default function AdCreationForm({
         smallDriveFiles,
         s3Results,
         s3DriveResults,
-        S3_UPLOAD_THRESHOLD
+        S3_UPLOAD_THRESHOLD,
+        importedFiles,
       }
     ) => {
       // Add all small local files
@@ -2323,6 +2326,22 @@ export default function AdCreationForm({
         formData.append("s3VideoUrls", s3File.s3Url);
         formData.append("s3VideoNames", s3File.name);
       });
+
+      if (importedFiles && importedFiles.length > 0) {
+        const metaImages = importedFiles.filter(f => f.type === 'image');
+        const metaVideos = importedFiles.filter(f => f.type === 'video');
+
+        metaImages.forEach((metaFile) => {
+          formData.append("metaImageHashes", metaFile.hash);
+          formData.append("metaImageNames", metaFile.name);
+        });
+
+        metaVideos.forEach((metaFile) => {
+          formData.append("metaVideoIds", metaFile.id);
+          formData.append("metaVideoNames", metaFile.name);
+        });
+      }
+
     };
 
     /**
@@ -2355,6 +2374,24 @@ export default function AdCreationForm({
     const appendSingleS3File = (formData, s3File) => {
       formData.append("s3VideoUrl", s3File.s3Url);
       formData.append("s3VideoName", s3File.name);
+      formData.append("enablePlacementCustomization", false);
+    };
+
+    /**
+    * Append single Meta library image file fields
+    */
+    const appendMetaImageFile = (formData, metaFile) => {
+      formData.append("metaImageHash", metaFile.hash);
+      formData.append("metaImageName", metaFile.name);
+      formData.append("enablePlacementCustomization", false);
+    };
+
+    /**
+     * Append single Meta library video file fields
+     */
+    const appendMetaVideoFile = (formData, metaFile) => {
+      formData.append("metaVideoId", metaFile.id);
+      formData.append("metaVideoName", metaFile.name);
       formData.append("enablePlacementCustomization", false);
     };
 
@@ -2697,7 +2734,8 @@ export default function AdCreationForm({
               smallDriveFiles,
               s3Results,
               s3DriveResults,
-              S3_UPLOAD_THRESHOLD
+              S3_UPLOAD_THRESHOLD,
+              importedFiles
             });
 
             // Add video thumbnail if provided
@@ -2755,7 +2793,8 @@ export default function AdCreationForm({
             smallDriveFiles,
             s3Results,
             s3DriveResults,
-            S3_UPLOAD_THRESHOLD
+            S3_UPLOAD_THRESHOLD,
+            importedFiles
           });
 
           // Append shop destination
@@ -2777,7 +2816,9 @@ export default function AdCreationForm({
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
             [...s3Results, ...s3DriveResults].some(s3File =>
               !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id))
-            )
+            ) ||
+            (importedFiles && importedFiles.length > 0)  // ADD THIS
+
           );
 
           let localIterationIndex = 0;
@@ -2973,6 +3014,76 @@ export default function AdCreationForm({
               promiseMetadata.push({ fileName: s3File.name || s3File.originalName || 'S3 Video' }); // ADD
 
             });
+
+
+            // Handle Meta library imported files
+            const metaImages = (importedFiles || []).filter(f => f.type === 'image');
+            const metaVideos = (importedFiles || []).filter(f => f.type === 'video');
+
+            // Pre-compute ad names for meta files
+            const metaImageAdNames = metaImages.map((file, index) =>
+              computeAdNameFromFormula({ name: file.name }, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
+            );
+
+            localIterationIndex += metaImages.length;
+
+            const metaVideoAdNames = metaVideos.map((file, index) =>
+              computeAdNameFromFormula({ name: file.name }, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
+            );
+
+            // Handle Meta library images
+            metaImages.forEach((metaFile, index) => {
+              const formData = new FormData();
+
+              appendCommonFields(formData, {
+                adName: metaImageAdNames[index],
+                headlinesJSON: commonPrecomputed.headlinesJSON,
+                descriptionsJSON: commonPrecomputed.descriptionsJSON,
+                messagesJSON: commonPrecomputed.messagesJSON,
+                selectedAdAccount,
+                adSetId,
+                pageId,
+                instagramAccountId,
+                linkJSON: commonPrecomputed.linkJSON,
+                cta,
+                launchPaused,
+                jobId: frontendJobId
+              });
+
+              appendMetaImageFile(formData, metaFile);
+              appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
+
+              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: metaFile.name });
+            });
+
+            // Handle Meta library videos
+            metaVideos.forEach((metaFile, index) => {
+              const formData = new FormData();
+
+              appendCommonFields(formData, {
+                adName: metaVideoAdNames[index],
+                headlinesJSON: commonPrecomputed.headlinesJSON,
+                descriptionsJSON: commonPrecomputed.descriptionsJSON,
+                messagesJSON: commonPrecomputed.messagesJSON,
+                selectedAdAccount,
+                adSetId,
+                pageId,
+                instagramAccountId,
+                linkJSON: commonPrecomputed.linkJSON,
+                cta,
+                launchPaused,
+                jobId: frontendJobId
+              });
+
+              appendMetaVideoFile(formData, metaFile);
+              appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
+
+              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: metaFile.name });
+            });
+
+
           }
         });
       }
@@ -3128,7 +3239,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -3147,6 +3258,7 @@ export default function AdCreationForm({
       setFileGroups([]);
       setEnablePlacementCustomization(false);
       setImportedPosts([]);  // ADD THIS
+      setImportedFiles([]);
 
     }
 
