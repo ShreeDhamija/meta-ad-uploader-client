@@ -288,7 +288,7 @@ export default function AdAccountSettings({
         setCampaigns(sortCampaigns(data.campaigns));
         toast.success("Campaigns refreshed successfully!");
       } else {
-        toast.error("No campaigns returned.");
+        toast.error("No campaigns found.");
       }
     } catch (err) {
       toast.error(`Failed to fetch campaigns: ${err.message || "Unknown error"}`);
@@ -575,7 +575,7 @@ export default function AdAccountSettings({
                     ) : (
                       <span className="block truncate flex-1 text-left">
                         {selectedAdAccount && campaigns.length === 0
-                          ? "No campaigns found"
+                          ? "No campaigns exist in this ad account. Try selecting a different account."
                           : selectedCampaign.length === 0
                             ? "Select campaigns"
                             : selectedCampaign.length === 1
@@ -600,7 +600,7 @@ export default function AdAccountSettings({
                     value={campaignSearchValue}
                     onValueChange={setCampaignSearchValue}
                   />
-                  <CommandEmpty>No campaigns found.</CommandEmpty>
+                  <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
                   <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                     <CommandGroup>
                       {filteredCampaigns.map((camp) => {
@@ -712,7 +712,7 @@ transition-all duration-150 hover:!bg-black
                           value={duplicateCampaignSearchValue}
                           onValueChange={setDuplicateCampaignSearchValue}
                         />
-                        <CommandEmpty>No campaigns found.</CommandEmpty>
+                        <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
                         <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                           <CommandGroup>
                             {campaigns
@@ -785,11 +785,7 @@ transition-all duration-150 hover:!bg-black
                 </div>
               </div>
             )}
-            {selectedAdAccount && campaigns.length === 0 && !isLoadingCampaigns && (
-              <p className="text-xs text-muted-foreground text-red-600 mt-1.5">
-                No campaigns in this ad account, try selecting a different one.
-              </p>
-            )}
+
           </div>
 
           <div className="space-y-2 ">
