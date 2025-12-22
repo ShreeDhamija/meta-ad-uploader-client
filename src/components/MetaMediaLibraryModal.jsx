@@ -194,6 +194,13 @@ export function MetaMediaLibraryModal({
         // Add to parent's importedFiles state
         setImportedFiles(prev => [...prev, ...newImportedFiles]);
 
+        toast.success(
+            `Successfully imported ${totalSelected} item${totalSelected > 1 ? "s" : ""}`,
+            {
+                description: `${selectedImagesList.length} image${selectedImagesList.length !== 1 ? "s" : ""} and ${selectedVideosList.length} video${selectedVideosList.length !== 1 ? "s" : ""}`,
+            }
+        );
+
         // Reset selections and close modal
         setSelectedImages(new Set());
         setSelectedVideos(new Set());
@@ -229,7 +236,7 @@ export function MetaMediaLibraryModal({
                 type="button"
                 size="sm"
                 disabled={!isLoggedIn}
-                className="rounded-xl flex items-center gap-2 bg-zinc-700 hover:bg-zinc-800 text-white hover:text-white"
+                className="rounded-xl flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white hover:text-white"
                 onClick={() => {
                     if (!adAccountId) {
                         toast.error("Please select an ad account");
@@ -241,7 +248,7 @@ export function MetaMediaLibraryModal({
                 <FolderOpen className="h-4 w-4 text-white hover:text-white" />
                 Import From Meta Media Library
             </Button>
-            <DialogContent className="max-w-3xl w-[700px] max-h-[80vh] rounded-[32px]">
+            <DialogContent className="max-w-3xl max-h-[80vh] rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold">
                         Meta Media Library
@@ -279,7 +286,7 @@ export function MetaMediaLibraryModal({
                         ) : (
                             <>
 
-                                <ScrollArea className="h-[400px] pr-4 overflow-x-hidden">
+                                <ScrollArea className="h-[400px] pr-4">
                                     <div className="space-y-2">
                                         {images.map((image) => (
                                             <div
