@@ -225,6 +225,7 @@ export function MetaMediaLibraryModal({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <Button
+                type="button"
                 size="sm"
                 disabled={!isLoggedIn}
                 className="rounded-xl flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white hover:text-white"
