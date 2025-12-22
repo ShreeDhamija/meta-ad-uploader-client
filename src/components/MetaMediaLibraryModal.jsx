@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios"
 import {
     Dialog,
     DialogContent,
@@ -12,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Image as ImageIcon, Video, FolderOpen } from "lucide-react";
 import { toast } from "sonner";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export function MetaMediaLibraryModal({
     adAccountId,
@@ -49,15 +52,17 @@ export function MetaMediaLibraryModal({
         }
 
         try {
-            const params = new URLSearchParams({ adAccountId });
+            const params = { adAccountId };
             if (cursor) {
-                params.append("after", cursor);
+                params.after = cursor;
             }
 
-            const response = await fetch(`/api/meta/media/images?${params.toString()}`, {
-                credentials: "include",
+            const response = await axios.get(`${API_BASE_URL}/auth/library-images`, {
+                params,
+                withCredentials: true,
             });
-            const data = await response.json();
+
+            const data = response.data;
 
             if (data.success) {
                 if (cursor) {
@@ -78,6 +83,7 @@ export function MetaMediaLibraryModal({
         }
     };
 
+    // Replace the fetchVideos function with:
     const fetchVideos = async (cursor) => {
         if (!adAccountId) return;
 
@@ -89,15 +95,17 @@ export function MetaMediaLibraryModal({
         }
 
         try {
-            const params = new URLSearchParams({ adAccountId });
+            const params = { adAccountId };
             if (cursor) {
-                params.append("after", cursor);
+                params.after = cursor;
             }
 
-            const response = await fetch(`/api/meta/media/videos?${params.toString()}`, {
-                credentials: "include",
+            const response = await axios.get(`${API_BASE_URL}/auth/library-videos`, {
+                params,
+                withCredentials: true,
             });
-            const data = await response.json();
+
+            const data = response.data;
 
             if (data.success) {
                 if (cursor) {
