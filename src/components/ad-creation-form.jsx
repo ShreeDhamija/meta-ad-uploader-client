@@ -499,7 +499,7 @@ export default function AdCreationForm({
       }
     }
     else {
-      adCount = files.length + driveFiles.length;
+      adCount = files.length + driveFiles.length + importedFiles.length;
     }
 
 
@@ -1738,7 +1738,7 @@ export default function AdCreationForm({
 
   useEffect(() => {
     if (isCarouselAd) {
-      const fileCount = files.length + driveFiles.length;
+      const fileCount = files.length + driveFiles.length + importedFiles.length;
 
       // Sync messages when apply-to-all is checked
       if (applyTextToAllCards && fileCount > 0 && messages.length !== fileCount) {
@@ -1752,7 +1752,7 @@ export default function AdCreationForm({
         setHeadlines(new Array(fileCount).fill(firstHeadline));
       }
     }
-  }, [files.length, driveFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
+  }, [files.length, driveFiles.length, importedFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
 
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
@@ -2044,7 +2044,7 @@ export default function AdCreationForm({
 
     // Add carousel validation
     if (isCarouselAd) {
-      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
+      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length + (importedFiles?.length || 0);
       if (totalFiles < 2) {
         toast.error("Carousel ads require at least 2 files");
         setIsLoading(false);
@@ -2059,7 +2059,7 @@ export default function AdCreationForm({
 
     // Add flexible ads validation
     if (adType === 'flexible') {
-      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
+      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length + (importedFiles?.length || 0);
 
       // If no groups, validate single ad
       if (fileGroups.length === 0) {
@@ -2154,7 +2154,8 @@ export default function AdCreationForm({
         s3Results,
         s3DriveResults,
         S3_UPLOAD_THRESHOLD,
-        smallDriveFiles
+        smallDriveFiles,
+        importedFiles
       }
     ) => {
       formData.append("isCarouselAd", isCarouselAd);
@@ -2166,6 +2167,21 @@ export default function AdCreationForm({
         formData.append("s3VideoUrls", s3File.s3Url);
         formData.append("s3VideoName", s3File.name);
       });
+
+      if (importedFiles && importedFiles.length > 0) {
+        const metaImages = importedFiles.filter(f => f.type === 'image');
+        const metaVideos = importedFiles.filter(f => f.type === 'video');
+
+        metaImages.forEach((metaFile) => {
+          formData.append("metaImageHashes", metaFile.hash);
+          formData.append("metaImageNames", metaFile.name);
+        });
+
+        metaVideos.forEach((metaFile) => {
+          formData.append("metaVideoIds", metaFile.id);
+          formData.append("metaVideoNames", metaFile.name);
+        });
+      }
     };
 
     /**
@@ -2228,7 +2244,8 @@ export default function AdCreationForm({
         S3_UPLOAD_THRESHOLD,
         getFileId,
         isVideoFile,
-        aspectRatioMap
+        aspectRatioMap,
+        importedFiles
       }
     ) => {
       const groupVideoMetadata = [];
@@ -2403,7 +2420,9 @@ export default function AdCreationForm({
       driveFiles,
       s3Results,
       s3DriveResults,
-      S3_UPLOAD_THRESHOLD
+      S3_UPLOAD_THRESHOLD,
+      importedFiles  // ADD THIS PARAMETER
+
     ) => {
       const fileOrder = [];
       let fileIndex = 0;
@@ -2451,6 +2470,26 @@ export default function AdCreationForm({
           }
         }
       });
+
+      if (importedFiles && importedFiles.length > 0) {
+        importedFiles.forEach((metaFile) => {
+          if (metaFile.type === 'image') {
+            fileOrder.push({
+              index: fileIndex++,
+              type: 'metaImage',
+              hash: metaFile.hash,
+              name: metaFile.name
+            });
+          } else if (metaFile.type === 'video') {
+            fileOrder.push({
+              index: fileIndex++,
+              type: 'metaVideo',
+              id: metaFile.id,
+              name: metaFile.name
+            });
+          }
+        });
+      }
 
       return fileOrder;
     };
@@ -2554,12 +2593,13 @@ export default function AdCreationForm({
           driveFiles,
           s3Results,
           s3DriveResults,
-          S3_UPLOAD_THRESHOLD
+          S3_UPLOAD_THRESHOLD,
+          importedFiles
         );
 
         // Pre-compute ad name for carousel
         const carouselAdName = computeAdNameFromFormula(
-          files[0] || driveFiles[0],
+          files[0] || driveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
           0,
           link[0],
           jobData.formData.adNameFormulaV2,
@@ -2595,7 +2635,8 @@ export default function AdCreationForm({
             s3Results,
             s3DriveResults,
             S3_UPLOAD_THRESHOLD,
-            smallDriveFiles
+            smallDriveFiles,
+            importedFiles
           });
 
           // Append shop destination
@@ -2637,7 +2678,11 @@ export default function AdCreationForm({
           const groupAdNames = fileGroups.map((group, groupIndex) => {
             const firstFileId = group[0];
             const firstFile = files.find(f => getFileId(f) === firstFileId) ||
-              driveFiles.find(f => f.id === firstFileId);
+              driveFiles.find(f => f.id === firstFileId) ||
+              (importedFiles || []).find(f =>
+                (f.type === 'image' && f.hash === firstFileId) ||
+                (f.type === 'video' && f.id === firstFileId)
+              );
 
             return computeAdNameFromFormula(
               firstFile || files[0] || driveFiles[0],
@@ -2684,7 +2729,8 @@ export default function AdCreationForm({
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
-                aspectRatioMap
+                aspectRatioMap,
+                importedFiles
               });
 
               // Append shop destination
@@ -2699,7 +2745,7 @@ export default function AdCreationForm({
 
           // Pre-compute ad name once for ungrouped flexible
           const ungroupedFlexibleAdName = computeAdNameFromFormula(
-            files[0] || driveFiles[0],
+            files[0] || driveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
             0,
             link[0],
             jobData.formData.adNameFormulaV2,
@@ -2826,13 +2872,17 @@ export default function AdCreationForm({
           // Process GROUPED files if placement customization is enabled
           if (enablePlacementCustomization && fileGroups.length > 0) {
 
-
             // Pre-compute ad names for grouped files
             const groupedAdNames = fileGroups.map((group, groupIndex) => {
               const firstFileId = group[0];
+
               const firstFileForNaming = files.find(f => getFileId(f) === firstFileId) ||
                 smallDriveFiles.find(f => f.id === firstFileId) ||
-                [...s3Results, ...s3DriveResults].find(f => f.uniqueId === firstFileId || f.id === firstFileId);
+                [...s3Results, ...s3DriveResults].find(f => f.uniqueId === firstFileId || f.id === firstFileId) ||
+                (importedFiles || []).find(f =>
+                  (f.type === 'image' && f.hash === firstFileId) ||
+                  (f.type === 'video' && f.id === firstFileId)
+                );
 
               return computeAdNameFromFormula(
                 firstFileForNaming || files[0] || driveFiles[0],
@@ -2871,7 +2921,8 @@ export default function AdCreationForm({
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
-                aspectRatioMap
+                aspectRatioMap,
+                importedFiles
               });
 
               // Append placement customization fields
