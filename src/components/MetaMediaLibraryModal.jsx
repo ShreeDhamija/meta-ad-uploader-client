@@ -224,17 +224,21 @@ export function MetaMediaLibraryModal({
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!isLoggedIn}
-                    className="rounded-xl flex items-center gap-2"
-                >
-                    <FolderOpen className="h-4 w-4" />
-                    Import From Meta Media Library
-                </Button>
-            </DialogTrigger>
+            <Button
+                size="sm"
+                disabled={!isLoggedIn}
+                className="rounded-xl flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white hover:text-white"
+                onClick={() => {
+                    if (!adAccountId) {
+                        toast.error("Please select an ad account");
+                        return;
+                    }
+                    setOpen(true);
+                }}
+            >
+                <FolderOpen className="h-4 w-4 text-white hover:text-white" />
+                Import From Meta Media Library
+            </Button>
             <DialogContent className="max-w-3xl max-h-[80vh] rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold">
@@ -284,8 +288,8 @@ export function MetaMediaLibraryModal({
                                                 key={image.hash}
                                                 onClick={() => toggleImageSelection(image.hash)}
                                                 className={`flex items-center gap-4 p-3 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50 ${selectedImages.has(image.hash)
-                                                        ? "border-primary bg-primary/5"
-                                                        : "border-gray-200"
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-gray-200"
                                                     }`}
                                             >
                                                 <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
@@ -364,8 +368,8 @@ export function MetaMediaLibraryModal({
                                                 key={video.id}
                                                 onClick={() => toggleVideoSelection(video.id)}
                                                 className={`flex items-center gap-4 p-3 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50 ${selectedVideos.has(video.id)
-                                                        ? "border-primary bg-primary/5"
-                                                        : "border-gray-200"
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-gray-200"
                                                     }`}
                                             >
                                                 <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0 flex items-center justify-center">
