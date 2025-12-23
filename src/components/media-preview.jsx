@@ -876,7 +876,7 @@ export default function MediaPreview({
                   {/* Ungrouped files */}
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-6" style={{ padding: '6px', }}>
                     {ungroupedFiles.map((file, index) => {
-                      const fileId = file.isDrive ? file.id : file.uniqueId || file.name;
+                      const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
                       return (
                         <SortableMediaItem
                           key={fileId}

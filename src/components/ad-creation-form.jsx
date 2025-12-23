@@ -2917,8 +2917,10 @@ export default function AdCreationForm({
             [...s3Results, ...s3DriveResults].some(s3File =>
               !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id))
             ) ||
-            (importedFiles && importedFiles.length > 0)  // ADD THIS
-
+            (importedFiles && importedFiles.some(f => {  // ✅ FIX: Check if any are actually ungrouped
+              const fileId = f.type === 'image' ? f.hash : f.id;
+              return !groupedFileIds.has(fileId);
+            }))
           );
 
           let localIterationIndex = 0;
@@ -3122,8 +3124,13 @@ export default function AdCreationForm({
 
 
             // Handle Meta library imported files
-            const metaImages = (importedFiles || []).filter(f => f.type === 'image');
-            const metaVideos = (importedFiles || []).filter(f => f.type === 'video');
+            // Handle Meta library imported files - ONLY ungrouped ones
+            const metaImages = (importedFiles || []).filter(f =>
+              f.type === 'image' && !groupedFileIds.has(f.hash)
+            );
+            const metaVideos = (importedFiles || []).filter(f =>
+              f.type === 'video' && !groupedFileIds.has(f.id)
+            );
 
             // Pre-compute ad names for meta files
             const metaImageAdNames = metaImages.map((file, index) =>
