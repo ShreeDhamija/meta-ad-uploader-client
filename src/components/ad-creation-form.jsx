@@ -4607,7 +4607,7 @@ export default function AdCreationForm({
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
                 (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-                (adType === 'carousel' && (files.length + driveFiles.length && importedFiles.length) < 2) ||
+                (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length) < 2) ||
                 (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
