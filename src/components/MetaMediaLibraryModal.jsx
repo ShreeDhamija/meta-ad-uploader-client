@@ -5,7 +5,8 @@ import {
     DialogContent,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
+    DialogOverlay
+
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -240,6 +241,7 @@ export function MetaMediaLibraryModal({
                 <FolderOpen className="h-4 w-4 text-white hover:text-white" />
                 Import From Meta Media Library
             </Button>
+            <DialogOverlay className="bg-black/20 fixed inset-[-20px]" />
             <DialogContent className="max-w-3xl max-h-[80vh] rounded-3xl">
                 <DialogHeader>
                     <DialogTitle className="text-xl font-semibold">
@@ -278,7 +280,7 @@ export function MetaMediaLibraryModal({
                         ) : (
                             <>
 
-                                <ScrollArea className="h-[400px] pr-4">
+                                <ScrollArea className="h-[600px] pr-4 outline-none focus:outline-none">
                                     <div className="space-y-2">
                                         {images.map((image) => (
                                             <div
@@ -289,7 +291,7 @@ export function MetaMediaLibraryModal({
                                                     : "border-gray-200"
                                                     }`}
                                             >
-                                                <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                                                <div className="relative h-32 w-32 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
                                                     <img
                                                         src={image.url}
                                                         alt={image.name}
@@ -354,7 +356,7 @@ export function MetaMediaLibraryModal({
                         ) : (
                             <>
 
-                                <ScrollArea className="h-[400px] pr-4">
+                                <ScrollArea className="h-[600px] pr-4 outline-none focus:outline-none">
                                     <div className="space-y-2">
                                         {videos.map((video) => (
                                             <div
@@ -365,7 +367,7 @@ export function MetaMediaLibraryModal({
                                                     : "border-gray-200"
                                                     }`}
                                             >
-                                                <div className="relative h-16 w-16 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0 flex items-center justify-center">
+                                                <div className="relative h-32 w-32 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0 flex items-center justify-center">
                                                     {video.thumbnail_url ? (
                                                         <img
                                                             src={video.thumbnail_url}
