@@ -1872,8 +1872,6 @@ export default function AdCreationForm({
 
             // Update progress message
             setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
-
-            // Process batch in parallel
             const batchPromises = batch.map(async (file) => {
               try {
                 const aspectRatio = await getVideoAspectRatio(file);
@@ -1909,6 +1907,16 @@ export default function AdCreationForm({
       } catch (error) {
         console.error('Error getting video aspect ratios:', error);
         // Continue anyway with defaults
+      }
+
+      if (importedFiles && importedFiles.length > 0) {
+        importedFiles.forEach(file => {
+          if (file.width && file.height) {
+            const aspectRatio = file.width / file.height;
+            const key = file.type === 'image' ? file.hash : file.id;
+            aspectRatioMap[key] = aspectRatio;
+          }
+        });
       }
     }
 
@@ -2316,6 +2324,36 @@ export default function AdCreationForm({
           } else if (metaFile.type === 'video') {
             formData.append("metaVideoIds", metaFile.id);
             formData.append("metaVideoNames", metaFile.name);
+          }
+        }
+      });
+
+      group.forEach(fileId => {
+        const metaFile = (importedFiles || []).find(f =>
+          (f.type === 'image' && f.hash === fileId) ||
+          (f.type === 'video' && f.id === fileId)
+        );
+        if (metaFile) {
+          if (metaFile.type === 'image') {
+            formData.append("metaImageHashes", metaFile.hash);
+            formData.append("metaImageNames", metaFile.name);
+            // NEW: Send dimensions for placement categorization
+            formData.append("metaImageWidths", String(metaFile.width || 0));
+            formData.append("metaImageHeights", String(metaFile.height || 0));
+          } else if (metaFile.type === 'video') {
+            formData.append("metaVideoIds", metaFile.id);
+            formData.append("metaVideoNames", metaFile.name);
+            // NEW: Send dimensions for placement categorization
+            formData.append("metaVideoWidths", String(metaFile.width || 0));
+            formData.append("metaVideoHeights", String(metaFile.height || 0));
+
+            // NEW: Include in video metadata for aspect ratio tracking
+            groupVideoMetadata.push({
+              metaVideoId: metaFile.id,
+              aspectRatio: (metaFile.width && metaFile.height)
+                ? metaFile.width / metaFile.height
+                : 16 / 9
+            });
           }
         }
       });
