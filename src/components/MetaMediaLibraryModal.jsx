@@ -181,6 +181,8 @@ export function MetaMediaLibraryModal({
                 hash: img.hash,
                 created_time: img.created_time,
                 source: "meta_library",
+                width: img.width,
+                height: img.height,
             })),
             ...selectedVideosList.map(vid => ({
                 type: "video",
@@ -189,6 +191,8 @@ export function MetaMediaLibraryModal({
                 thumbnail_url: vid.thumbnail_url,
                 created_time: vid.created_time,
                 source: "meta_library",
+                width: vid.width,
+                height: vid.height,
             })),
         ];
 

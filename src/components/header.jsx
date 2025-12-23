@@ -89,7 +89,7 @@ export default function Header({ showMessenger, hideMessenger }) {
     return `${days} day${days !== 1 ? 's' : ''} left`
   }
 
-  console.log('5. Notifications in state:', notifications);
+
 
   return (
     <header className="flex justify-between items-center py-3 mb-4">

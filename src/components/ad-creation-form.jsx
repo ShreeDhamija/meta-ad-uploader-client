@@ -2324,27 +2324,7 @@ export default function AdCreationForm({
         }
       });
 
-      group.forEach(fileId => {
-        const metaFile = (importedFiles || []).find(f =>
-          (f.type === 'image' && f.hash === fileId) ||
-          (f.type === 'video' && f.id === fileId)
-        );
 
-        console.log('🔍 DEBUG appendGroupMediaFiles - looking for meta file:', {
-          fileId,
-          found: !!metaFile,
-          metaFile: metaFile ? { type: metaFile.type, name: metaFile.name } : null
-        });
-        if (metaFile) {
-          if (metaFile.type === 'image') {
-            formData.append("metaImageHashes", metaFile.hash);
-            formData.append("metaImageNames", metaFile.name);
-          } else if (metaFile.type === 'video') {
-            formData.append("metaVideoIds", metaFile.id);
-            formData.append("metaVideoNames", metaFile.name);
-          }
-        }
-      });
 
       group.forEach(fileId => {
         const metaFile = (importedFiles || []).find(f =>
