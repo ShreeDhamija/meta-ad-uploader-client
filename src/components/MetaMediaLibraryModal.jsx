@@ -291,7 +291,7 @@ export function MetaMediaLibraryModal({
                                                     : "border-gray-200"
                                                     }`}
                                             >
-                                                <div className="relative h-32 w-32 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                                                <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
                                                     <img
                                                         src={image.url}
                                                         alt={image.name}
@@ -367,7 +367,7 @@ export function MetaMediaLibraryModal({
                                                     : "border-gray-200"
                                                     }`}
                                             >
-                                                <div className="relative h-32 w-32 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0 flex items-center justify-center">
+                                                <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0 flex items-center justify-center">
                                                     {video.thumbnail_url ? (
                                                         <img
                                                             src={video.thumbnail_url}

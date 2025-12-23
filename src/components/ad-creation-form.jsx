@@ -1824,6 +1824,18 @@ export default function AdCreationForm({
       adSets
     } = jobData.formData;
 
+
+    console.log('🔍 DEBUG - Initial state:', {
+      fileGroups,
+      importedFilesCount: importedFiles?.length,
+      importedFiles: importedFiles?.map(f => ({
+        type: f.type,
+        id: f.type === 'image' ? f.hash : f.id,
+        name: f.name
+      })),
+      enablePlacementCustomization
+    });
+
     setIsCreatingAds(true);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
@@ -2317,6 +2329,12 @@ export default function AdCreationForm({
           (f.type === 'image' && f.hash === fileId) ||
           (f.type === 'video' && f.id === fileId)
         );
+
+        console.log('🔍 DEBUG appendGroupMediaFiles - looking for meta file:', {
+          fileId,
+          found: !!metaFile,
+          metaFile: metaFile ? { type: metaFile.type, name: metaFile.name } : null
+        });
         if (metaFile) {
           if (metaFile.type === 'image') {
             formData.append("metaImageHashes", metaFile.hash);
@@ -2923,6 +2941,24 @@ export default function AdCreationForm({
             }))
           );
 
+          console.log('🔍 DEBUG - Grouped file IDs:', {
+            groupedFileIds: Array.from(groupedFileIds),
+            fileGroupsFlat: fileGroups.flat()
+          });
+
+          // 3. Right after calculating hasUngroupedFiles
+          console.log('🔍 DEBUG - hasUngroupedFiles:', {
+            hasUngroupedFiles,
+            ungroupedMetaCheck: importedFiles?.map(f => {
+              const fileId = f.type === 'image' ? f.hash : f.id;
+              return {
+                fileId,
+                isGrouped: groupedFileIds.has(fileId)
+              };
+            })
+          });
+
+
           let localIterationIndex = 0;
 
           // Process GROUPED files if placement customization is enabled
@@ -2968,6 +3004,13 @@ export default function AdCreationForm({
                 jobId: frontendJobId
               });
 
+
+              console.log('🔍 DEBUG - Processing group:', {
+                groupIndex,
+                groupFileIds: group,
+                groupLength: group.length
+              });
+
               // Append group media files
               const groupVideoMetadata = appendGroupMediaFiles(formData, group, {
                 files,
@@ -2979,6 +3022,14 @@ export default function AdCreationForm({
                 isVideoFile,
                 aspectRatioMap,
                 importedFiles
+              });
+
+              console.log('🔍 DEBUG - FormData entries for group:', {
+                groupIndex,
+                metaImageHashes: formData.getAll('metaImageHashes'),
+                metaVideoIds: formData.getAll('metaVideoIds'),
+                metaImageWidths: formData.getAll('metaImageWidths'),
+                metaVideoWidths: formData.getAll('metaVideoWidths')
               });
 
               // Append placement customization fields
