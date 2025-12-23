@@ -2304,6 +2304,22 @@ export default function AdCreationForm({
         }
       });
 
+      group.forEach(fileId => {
+        const metaFile = (importedFiles || []).find(f =>
+          (f.type === 'image' && f.hash === fileId) ||
+          (f.type === 'video' && f.id === fileId)
+        );
+        if (metaFile) {
+          if (metaFile.type === 'image') {
+            formData.append("metaImageHashes", metaFile.hash);
+            formData.append("metaImageNames", metaFile.name);
+          } else if (metaFile.type === 'video') {
+            formData.append("metaVideoIds", metaFile.id);
+            formData.append("metaVideoNames", metaFile.name);
+          }
+        }
+      });
+
       return groupVideoMetadata;
     };
 
@@ -3994,7 +4010,7 @@ export default function AdCreationForm({
                                 setApplyTextToAllCards(checked);
                                 if (checked && messages.length > 0) {
                                   const firstMessage = messages[0];
-                                  const fileCount = files.length + driveFiles.length;
+                                  const fileCount = files.length + driveFiles.length + importedFiles.length;
                                   if (fileCount > 0) {
                                     setMessages(new Array(fileCount).fill(firstMessage));
                                   }
@@ -4081,7 +4097,7 @@ export default function AdCreationForm({
                               setApplyHeadlinesToAllCards(checked);
                               if (checked && headlines.length > 0) {
                                 const firstHeadline = headlines[0];
-                                const fileCount = files.length + driveFiles.length; // ← Use file count!
+                                const fileCount = files.length + driveFiles.length + importedFiles.length; // ← Use file count!
                                 if (fileCount > 0) {
                                   setHeadlines(new Array(fileCount).fill(firstHeadline));
                                 }
@@ -4591,8 +4607,8 @@ export default function AdCreationForm({
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
                 (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-                (adType === 'carousel' && (files.length + driveFiles.length) < 2) ||
-                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length) > 10) ||
+                (adType === 'carousel' && (files.length + driveFiles.length && importedFiles.length) < 2) ||
+                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
                 ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
