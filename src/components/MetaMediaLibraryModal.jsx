@@ -736,9 +736,8 @@ export function MetaMediaLibraryModal({
                                         <ScrollArea className="h-[600px] pr-4 outline-none focus:outline-none">
                                             <div className="space-y-2">
                                                 {images.map((image) => (
-                                                    <div
+                                                    <label
                                                         key={image.hash}
-                                                        onClick={() => toggleImageSelection(image.hash)}
                                                         className={`flex items-center gap-4 p-3 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50 ${selectedImages.has(image.hash)
                                                             ? "border-primary bg-primary/5"
                                                             : "border-gray-200"
@@ -766,10 +765,9 @@ export function MetaMediaLibraryModal({
                                                         <Checkbox
                                                             checked={selectedImages.has(image.hash)}
                                                             onCheckedChange={() => toggleImageSelection(image.hash)}
-                                                            onClick={(e) => e.stopPropagation()}
                                                             className="rounded-lg h-5 w-5"
                                                         />
-                                                    </div>
+                                                    </label>
                                                 ))}
 
                                                 {/* Load More Button */}
@@ -813,9 +811,8 @@ export function MetaMediaLibraryModal({
                                         <ScrollArea className="h-[600px] pr-4 outline-none focus:outline-none">
                                             <div className="space-y-2">
                                                 {videos.map((video) => (
-                                                    <div
+                                                    <label
                                                         key={video.id}
-                                                        onClick={() => toggleVideoSelection(video.id)}
                                                         className={`flex items-center gap-4 p-3 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50 ${selectedVideos.has(video.id)
                                                             ? "border-primary bg-primary/5"
                                                             : "border-gray-200"
@@ -843,10 +840,9 @@ export function MetaMediaLibraryModal({
                                                         <Checkbox
                                                             checked={selectedVideos.has(video.id)}
                                                             onCheckedChange={() => toggleVideoSelection(video.id)}
-                                                            onClick={(e) => e.stopPropagation()}
                                                             className="rounded-lg h-5 w-5"
                                                         />
-                                                    </div>
+                                                    </label>
                                                 ))}
 
                                                 {/* Load More Button */}
