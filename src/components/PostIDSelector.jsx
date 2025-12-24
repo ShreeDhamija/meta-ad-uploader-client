@@ -224,7 +224,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
 
             {/* Main Content - Only renders when we have ads */}
             {ads.length > 0 && (
-                <>
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                     {/* Header Section - Fixed, never scrolls */}
                     <div className="flex-shrink-0 space-y-3 pb-2">
                         <div className="flex items-center justify-between">
@@ -288,7 +288,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
                     <div
                         ref={scrollContainerRef}
                         onWheel={handleWheel}
-                        className="flex-1 min-h-0 overflow-y-auto overscroll-contain isolate space-y-1 pr-1 pb-4"
+                        className="flex-1 min-h-0 overflow-y-auto overscroll-contain isolate space-y-1 pr-1"
                         style={{
                             // Extra insurance against scroll propagation
                             overscrollBehavior: 'contain',
@@ -378,7 +378,8 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
                             </div>
                         )}
                     </div>
-                </>
+                </div>
+
             )}
         </div>
     )

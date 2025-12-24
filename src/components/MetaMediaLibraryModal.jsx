@@ -667,7 +667,7 @@ export function MetaMediaLibraryModal({
     };
 
     return (
-        <div className="w-full">
+        <>
             <Button
                 type="button"
                 size="sm"
@@ -686,202 +686,211 @@ export function MetaMediaLibraryModal({
             </Button>
 
             {open && (
-                <div className="mt-4 w-full border border-gray-200 rounded-3xl bg-white p-6 shadow-sm">
-                    {/* Header */}
-                    <div className="mb-4">
-                        <h2 className="text-xl font-semibold flex items-center gap-2">
-                            <FolderOpen className="h-5 w-5" />
-                            Meta Media Library
-                        </h2>
-                    </div>
+                <>
+                    {/* Overlay */}
+                    <div
+                        className="fixed inset-0 bg-black/50 z-50"
+                        onClick={() => setOpen(false)}
+                    />
 
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1">
-                            <TabsTrigger
-                                value="static"
-                                className="rounded-xl flex items-center gap-2"
-                            >
-                                <ImageIcon className="h-4 w-4" />
-                                Static ({images.length})
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="video"
-                                className="rounded-xl flex items-center gap-2"
-                            >
-                                <Video className="h-4 w-4" />
-                                Video ({videos.length})
-                            </TabsTrigger>
-                        </TabsList>
+                    {/* Modal */}
+                    <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl max-h-[80vh] rounded-3xl bg-white p-6 shadow-lg">
+                        {/* Header */}
+                        <div className="mb-4">
+                            <h2 className="text-xl font-semibold flex items-center gap-2">
+                                <FolderOpen className="h-5 w-5" />
+                                Meta Media Library
+                            </h2>
+                        </div>
 
-                        <TabsContent value="static" className="mt-4">
-                            {loadingImages ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                                </div>
-                            ) : images.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                                    <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
-                                    <p>No images found in your media library</p>
-                                </div>
-                            ) : (
-                                <>
-                                    <ScrollArea className="h-[600px] pr-4 outline-none focus:outline-none">
-                                        <div className="space-y-2">
-                                            {images.map((image) => (
-                                                <div
-                                                    key={image.hash}
-                                                    onClick={() => toggleImageSelection(image.hash)}
-                                                    className={`flex items-center gap-4 p-3 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50 ${selectedImages.has(image.hash)
-                                                        ? "border-primary bg-primary/5"
-                                                        : "border-gray-200"
-                                                        }`}
-                                                >
-                                                    <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                                                        <img
-                                                            src={image.url}
-                                                            alt={image.name}
-                                                            className="h-full w-full object-cover"
-                                                            onError={(e) => {
-                                                                e.target.src =
-                                                                    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E";
-                                                            }}
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                            <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1">
+                                <TabsTrigger
+                                    value="static"
+                                    className="rounded-xl flex items-center gap-2"
+                                >
+                                    <ImageIcon className="h-4 w-4" />
+                                    Static ({images.length})
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="video"
+                                    className="rounded-xl flex items-center gap-2"
+                                >
+                                    <Video className="h-4 w-4" />
+                                    Video ({videos.length})
+                                </TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="static" className="mt-4">
+                                {loadingImages ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                                    </div>
+                                ) : images.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                                        <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
+                                        <p>No images found in your media library</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <ScrollArea className="h-[600px] pr-4 outline-none focus:outline-none">
+                                            <div className="space-y-2">
+                                                {images.map((image) => (
+                                                    <div
+                                                        key={image.hash}
+                                                        onClick={() => toggleImageSelection(image.hash)}
+                                                        className={`flex items-center gap-4 p-3 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50 ${selectedImages.has(image.hash)
+                                                            ? "border-primary bg-primary/5"
+                                                            : "border-gray-200"
+                                                            }`}
+                                                    >
+                                                        <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                                                            <img
+                                                                src={image.url}
+                                                                alt={image.name}
+                                                                className="h-full w-full object-cover"
+                                                                onError={(e) => {
+                                                                    e.target.src =
+                                                                        "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E";
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-medium text-sm truncate">
+                                                                {image.name || "Untitled"}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">
+                                                                {formatDate(image.created_time)}
+                                                            </p>
+                                                        </div>
+                                                        <Checkbox
+                                                            checked={selectedImages.has(image.hash)}
+                                                            className="rounded-lg h-5 w-5"
                                                         />
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-sm truncate">
-                                                            {image.name || "Untitled"}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500">
-                                                            {formatDate(image.created_time)}
-                                                        </p>
-                                                    </div>
-                                                    <Checkbox
-                                                        checked={selectedImages.has(image.hash)}
-                                                        className="rounded-lg h-5 w-5"
-                                                    />
-                                                </div>
-                                            ))}
+                                                ))}
 
-                                            {/* Load More Button */}
-                                            {imagesPagination.hasMore && (
-                                                <div className="flex justify-center pt-4">
-                                                    <Button
-                                                        type="button"
-                                                        onClick={handleLoadMoreImages}
-                                                        disabled={loadingMoreImages}
-                                                        className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                                                {/* Load More Button */}
+                                                {imagesPagination.hasMore && (
+                                                    <div className="flex justify-center pt-4">
+                                                        <Button
+                                                            type="button"
+                                                            onClick={handleLoadMoreImages}
+                                                            disabled={loadingMoreImages}
+                                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                                                        >
+                                                            {loadingMoreImages ? (
+                                                                <>
+                                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                                    Loading...
+                                                                </>
+                                                            ) : (
+                                                                "Load More"
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </ScrollArea>
+                                    </>
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="video" className="mt-4">
+                                {loadingVideos ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                                    </div>
+                                ) : videos.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                                        <Video className="h-12 w-12 mb-2 opacity-50" />
+                                        <p>No videos found in your media library</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <ScrollArea className="h-[600px] pr-4 outline-none focus:outline-none">
+                                            <div className="space-y-2">
+                                                {videos.map((video) => (
+                                                    <div
+                                                        key={video.id}
+                                                        onClick={() => toggleVideoSelection(video.id)}
+                                                        className={`flex items-center gap-4 p-3 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50 ${selectedVideos.has(video.id)
+                                                            ? "border-primary bg-primary/5"
+                                                            : "border-gray-200"
+                                                            }`}
                                                     >
-                                                        {loadingMoreImages ? (
-                                                            <>
-                                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                                                Loading...
-                                                            </>
-                                                        ) : (
-                                                            "Load More"
-                                                        )}
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </ScrollArea>
-                                </>
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="video" className="mt-4">
-                            {loadingVideos ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-                                </div>
-                            ) : videos.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                                    <Video className="h-12 w-12 mb-2 opacity-50" />
-                                    <p>No videos found in your media library</p>
-                                </div>
-                            ) : (
-                                <>
-                                    <ScrollArea className="h-[600px] pr-4 outline-none focus:outline-none">
-                                        <div className="space-y-2">
-                                            {videos.map((video) => (
-                                                <div
-                                                    key={video.id}
-                                                    onClick={() => toggleVideoSelection(video.id)}
-                                                    className={`flex items-center gap-4 p-3 rounded-2xl border-2 cursor-pointer transition-all hover:border-primary/50 ${selectedVideos.has(video.id)
-                                                        ? "border-primary bg-primary/5"
-                                                        : "border-gray-200"
-                                                        }`}
-                                                >
-                                                    <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0 flex items-center justify-center">
-                                                        {video.thumbnail_url ? (
-                                                            <img
-                                                                src={video.thumbnail_url}
-                                                                alt={video.title}
-                                                                className="h-full w-full object-cover"
-                                                            />
-                                                        ) : (
-                                                            <Video className="h-8 w-8 text-gray-400" />
-                                                        )}
+                                                        <div className="relative h-24 w-24 rounded-xl overflow-hidden bg-gray-800 flex-shrink-0 flex items-center justify-center">
+                                                            {video.thumbnail_url ? (
+                                                                <img
+                                                                    src={video.thumbnail_url}
+                                                                    alt={video.title}
+                                                                    className="h-full w-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <Video className="h-8 w-8 text-gray-400" />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="font-medium text-sm truncate">
+                                                                {video.title || "Untitled"}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">
+                                                                {formatDate(video.created_time)}
+                                                            </p>
+                                                        </div>
+                                                        <Checkbox
+                                                            checked={selectedVideos.has(video.id)}
+                                                            className="rounded-lg h-5 w-5"
+                                                        />
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-sm truncate">
-                                                            {video.title || "Untitled"}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500">
-                                                            {formatDate(video.created_time)}
-                                                        </p>
+                                                ))}
+
+                                                {/* Load More Button */}
+                                                {videosPagination.hasMore && (
+                                                    <div className="flex justify-center pt-4">
+                                                        <Button
+                                                            type="button"
+                                                            onClick={handleLoadMoreVideos}
+                                                            disabled={loadingMoreVideos}
+                                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                                                        >
+                                                            {loadingMoreVideos ? (
+                                                                <>
+                                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                                    Loading...
+                                                                </>
+                                                            ) : (
+                                                                "Load More"
+                                                            )}
+                                                        </Button>
                                                     </div>
-                                                    <Checkbox
-                                                        checked={selectedVideos.has(video.id)}
-                                                        className="rounded-lg h-5 w-5"
-                                                    />
-                                                </div>
-                                            ))}
+                                                )}
+                                            </div>
+                                        </ScrollArea>
+                                    </>
+                                )}
+                            </TabsContent>
+                        </Tabs>
 
-                                            {/* Load More Button */}
-                                            {videosPagination.hasMore && (
-                                                <div className="flex justify-center pt-4">
-                                                    <Button
-                                                        type="button"
-                                                        onClick={handleLoadMoreVideos}
-                                                        disabled={loadingMoreVideos}
-                                                        className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
-                                                    >
-                                                        {loadingMoreVideos ? (
-                                                            <>
-                                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                                                Loading...
-                                                            </>
-                                                        ) : (
-                                                            "Load More"
-                                                        )}
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </ScrollArea>
-                                </>
-                            )}
-                        </TabsContent>
-                    </Tabs>
-
-                    <div className="flex justify-end gap-3 mt-4 pt-4">
-                        <Button
-                            variant="outline"
-                            onClick={() => setOpen(false)}
-                            className="rounded-xl"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleImport}
-                            disabled={selectedImages.size === 0 && selectedVideos.size === 0}
-                            className="rounded-xl"
-                        >
-                            Import ({selectedImages.size + selectedVideos.size})
-                        </Button>
+                        <div className="flex justify-end gap-3 mt-4 pt-4">
+                            <Button
+                                variant="outline"
+                                onClick={() => setOpen(false)}
+                                className="rounded-xl"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleImport}
+                                disabled={selectedImages.size === 0 && selectedVideos.size === 0}
+                                className="rounded-xl"
+                            >
+                                Import ({selectedImages.size + selectedVideos.size})
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                </>
             )}
-        </div>
+        </>
     );
 }
