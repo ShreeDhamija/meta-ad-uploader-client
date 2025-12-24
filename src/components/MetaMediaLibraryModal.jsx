@@ -765,6 +765,8 @@ export function MetaMediaLibraryModal({
                                                         </div>
                                                         <Checkbox
                                                             checked={selectedImages.has(image.hash)}
+                                                            onCheckedChange={() => toggleImageSelection(image.hash)}
+                                                            onClick={(e) => e.stopPropagation()}
                                                             className="rounded-lg h-5 w-5"
                                                         />
                                                     </div>
@@ -840,6 +842,8 @@ export function MetaMediaLibraryModal({
                                                         </div>
                                                         <Checkbox
                                                             checked={selectedVideos.has(video.id)}
+                                                            onCheckedChange={() => toggleVideoSelection(video.id)}
+                                                            onClick={(e) => e.stopPropagation()}
                                                             className="rounded-lg h-5 w-5"
                                                         />
                                                     </div>
