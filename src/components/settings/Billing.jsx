@@ -333,55 +333,55 @@ export default function BillingSettings() {
                                             </Button>
 
                                             {/* Change Plan - Only for Team Owners */}
-                                            {subscriptionData?.isTeamOwner && (
-                                                <>
-                                                    <Button
-                                                        onClick={() => setShowPlanSelector(!showPlanSelector)}
-                                                        variant="outline"
-                                                        className="w-full h-12 rounded-2xl flex items-center justify-center gap-2"
-                                                    >
-                                                        {showPlanSelector ? 'Hide Plans' : 'Change Plan'}
-                                                    </Button>
 
-                                                    {showPlanSelector && (
-                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
-                                                            {PLANS.map((plan) => (
-                                                                <Card
-                                                                    key={plan.type}
-                                                                    className={`rounded-2xl cursor-pointer transition-all ${subscriptionData?.planType === plan.type
-                                                                        ? 'border-2 border-blue-500 bg-blue-50'
-                                                                        : 'border border-gray-200 hover:border-blue-300'
-                                                                        }`}
-                                                                >
-                                                                    <CardContent className="p-4">
-                                                                        <h3 className="font-semibold text-lg">{plan.name}</h3>
-                                                                        <p className="text-2xl font-bold mt-2">${plan.price}<span className="text-sm font-normal text-gray-500">/mo</span></p>
-                                                                        <p className="text-gray-500 text-sm mt-1">{plan.adAccounts} Ad Account{plan.adAccounts > 1 ? 's' : ''}</p>
+                                            <>
+                                                <Button
+                                                    onClick={() => setShowPlanSelector(!showPlanSelector)}
+                                                    variant="outline"
+                                                    className="w-full h-12 rounded-2xl flex items-center justify-center gap-2"
+                                                >
+                                                    {showPlanSelector ? 'Hide Plans' : 'Change Plan'}
+                                                </Button>
 
-                                                                        <Button
-                                                                            onClick={() => handleChangePlan(plan.type)}
-                                                                            disabled={subscriptionData?.planType === plan.type || changingPlan}
-                                                                            className={`mt-3 w-full rounded-xl h-10 ${subscriptionData?.planType === plan.type
-                                                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                                : 'bg-zinc-800 hover:bg-zinc-900 text-white'
-                                                                                }`}
-                                                                        >
-                                                                            {subscriptionData?.planType === plan.type
-                                                                                ? 'Current Plan'
-                                                                                : changingPlan
-                                                                                    ? 'Changing...'
-                                                                                    : 'Switch'}
-                                                                        </Button>
-                                                                    </CardContent>
-                                                                </Card>
-                                                            ))}
-                                                            <p className="col-span-full text-xs text-gray-400 text-center">
-                                                                Changes take effect at your next billing cycle
-                                                            </p>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            )}
+                                                {showPlanSelector && (
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+                                                        {PLANS.map((plan) => (
+                                                            <Card
+                                                                key={plan.type}
+                                                                className={`rounded-2xl cursor-pointer transition-all ${subscriptionData?.planType === plan.type
+                                                                    ? 'border-2 border-blue-500 bg-blue-50'
+                                                                    : 'border border-gray-200 hover:border-blue-300'
+                                                                    }`}
+                                                            >
+                                                                <CardContent className="p-4">
+                                                                    <h3 className="font-semibold text-lg">{plan.name}</h3>
+                                                                    <p className="text-2xl font-bold mt-2">${plan.price}<span className="text-sm font-normal text-gray-500">/mo</span></p>
+                                                                    <p className="text-gray-500 text-sm mt-1">{plan.adAccounts} Ad Account{plan.adAccounts > 1 ? 's' : ''}</p>
+
+                                                                    <Button
+                                                                        onClick={() => handleChangePlan(plan.type)}
+                                                                        disabled={subscriptionData?.planType === plan.type || changingPlan}
+                                                                        className={`mt-3 w-full rounded-xl h-10 ${subscriptionData?.planType === plan.type
+                                                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                            : 'bg-zinc-800 hover:bg-zinc-900 text-white'
+                                                                            }`}
+                                                                    >
+                                                                        {subscriptionData?.planType === plan.type
+                                                                            ? 'Current Plan'
+                                                                            : changingPlan
+                                                                                ? 'Changing...'
+                                                                                : 'Switch'}
+                                                                    </Button>
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))}
+                                                        <p className="col-span-full text-xs text-gray-400 text-center">
+                                                            Changes take effect at your next billing cycle
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </>
+
 
                                             <Button
                                                 onClick={handleCancel}
