@@ -28,10 +28,11 @@ import StarIcon from '@/assets/icons/star.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 // Add this constant for plan details
 const PLANS = [
-    { type: 'starter', name: 'Starter', adAccounts: 5, price: 29 },
-    { type: 'brand', name: 'Brand', adAccounts: 15, price: 79 },
-    { type: 'agency', name: 'Agency', adAccounts: 50, price: 149 },
+    { type: 'light', name: 'Starter', adAccounts: 1, price: 49, icon: StarIcon },
+    { type: 'brand', name: 'Brand', adAccounts: 5, price: 199, icon: LightningIcon },
+    { type: 'pro', name: 'Agency', adAccounts: 99, price: 370, icon: RocketIcon },
 ];
+
 
 
 
@@ -69,16 +70,15 @@ export default function BillingSettings() {
             const data = await response.json();
 
             if (data.success) {
-                alert(`Plan will change to ${newPlanType} on ${new Date(data.effectiveDate).toLocaleDateString()}`);
+                toast.success(`Plan will change to ${data.newPlanType} at your next billing cycle`);
                 setShowPlanSelector(false);
-                // Refresh subscription data
                 refreshSubscriptionData();
             } else {
-                alert(data.error || 'Failed to change plan');
+                toast.error(data.error || 'Failed to change plan');
             }
         } catch (error) {
             console.error('Error changing plan:', error);
-            alert('Failed to change plan');
+            toast.error('Failed to change plan');
         } finally {
             setChangingPlan(false);
         }
@@ -343,36 +343,42 @@ export default function BillingSettings() {
 
                                                 {showPlanSelector && (
                                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
-                                                        {PLANS.map((plan) => (
-                                                            <Card
-                                                                key={plan.type}
-                                                                className={`rounded-2xl cursor-pointer transition-all ${subscriptionData?.planType === plan.type
-                                                                    ? 'border-2 border-blue-500 bg-blue-50'
-                                                                    : 'border border-gray-200 hover:border-blue-300'
-                                                                    }`}
-                                                            >
-                                                                <CardContent className="p-4">
-                                                                    <h3 className="font-semibold text-lg">{plan.name}</h3>
-                                                                    <p className="text-2xl font-bold mt-2">${plan.price}<span className="text-sm font-normal text-gray-500">/mo</span></p>
-                                                                    <p className="text-gray-500 text-sm mt-1">{plan.adAccounts} Ad Account{plan.adAccounts > 1 ? 's' : ''}</p>
+                                                        {PLANS.map((plan) => {
+                                                            const isCurrentPlan = subscriptionData?.planType === plan.type;
+                                                            return (
+                                                                <Card
+                                                                    key={plan.type}
+                                                                    className={`rounded-2xl transition-all ${isCurrentPlan
+                                                                            ? 'border-2 border-blue-500 bg-white'
+                                                                            : 'border border-gray-200 hover:border-blue-300'
+                                                                        }`}
+                                                                >
+                                                                    <CardContent className="p-4">
+                                                                        <div className="flex items-center gap-1">
+                                                                            <img src={plan.icon} alt={plan.name} className="w-8 h-8" />
+                                                                            <h3 className="font-semibold text-lg">{plan.name}</h3>
+                                                                        </div>
+                                                                        <p className="text-2xl font-bold mt-2">${plan.price}<span className="text-sm font-normal text-gray-500">/mo</span></p>
+                                                                        <p className="text-gray-500 text-sm mt-1">{plan.adAccounts} Ad Account{plan.adAccounts > 1 ? 's' : ''}</p>
 
-                                                                    <Button
-                                                                        onClick={() => handleChangePlan(plan.type)}
-                                                                        disabled={subscriptionData?.planType === plan.type || changingPlan}
-                                                                        className={`mt-3 w-full rounded-xl h-10 ${subscriptionData?.planType === plan.type
-                                                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                                                            : 'bg-zinc-800 hover:bg-zinc-900 text-white'
-                                                                            }`}
-                                                                    >
-                                                                        {subscriptionData?.planType === plan.type
-                                                                            ? 'Current Plan'
-                                                                            : changingPlan
-                                                                                ? 'Changing...'
-                                                                                : 'Switch'}
-                                                                    </Button>
-                                                                </CardContent>
-                                                            </Card>
-                                                        ))}
+                                                                        <Button
+                                                                            onClick={() => !isCurrentPlan && handleChangePlan(plan.type)}
+                                                                            disabled={changingPlan && !isCurrentPlan}
+                                                                            className={`mt-3 w-full rounded-xl h-10 ${isCurrentPlan
+                                                                                    ? 'bg-blue-600 text-white cursor-default hover:bg-blue-600'
+                                                                                    : 'bg-zinc-800 hover:bg-zinc-900 text-white'
+                                                                                }`}
+                                                                        >
+                                                                            {isCurrentPlan
+                                                                                ? 'Current Plan'
+                                                                                : changingPlan
+                                                                                    ? 'Changing...'
+                                                                                    : 'Switch'}
+                                                                        </Button>
+                                                                    </CardContent>
+                                                                </Card>
+                                                            );
+                                                        })}
                                                         <p className="col-span-full text-xs text-gray-400 text-center">
                                                             Changes take effect at your next billing cycle
                                                         </p>
