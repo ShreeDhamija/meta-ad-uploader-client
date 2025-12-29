@@ -59,7 +59,7 @@ export default function BillingSettings() {
 
         setChangingPlan(true);
         try {
-            const response = await fetch('/api/stripe/change-plan', {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/change-plan`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -331,8 +331,6 @@ export default function BillingSettings() {
                                                 <FileText className="w-4 h-4 text-white" />
                                                 <p className="text-white"> View Invoices </p>
                                             </Button>
-
-                                            {/* Change Plan - Only for Team Owners */}
 
                                             <>
                                                 <Button
