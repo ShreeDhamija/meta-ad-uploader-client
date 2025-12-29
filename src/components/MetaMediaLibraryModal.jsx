@@ -1136,8 +1136,8 @@ export function MetaMediaLibraryModal({
                     <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl max-h-[80vh] rounded-3xl bg-white p-6 shadow-lg">
                         {/* Header */}
                         <div className="mb-4">
-                            <h2 className="text-xl font-semibold flex items-center gap-2">
-                                <FolderOpen className="h-5 w-5" />
+                            <h2 className="text-lg font-semibold flex items-center gap-2">
+                                <FolderOpen className="h-4 w-4" />
                                 Meta Media Library
                             </h2>
                         </div>

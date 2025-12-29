@@ -26,7 +26,12 @@ import RocketIcon from '@/assets/icons/rocket2.webp';
 import LightningIcon from '@/assets/icons/zap.webp';
 import StarIcon from '@/assets/icons/star.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-
+// Add this constant for plan details
+const PLANS = [
+    { type: 'starter', name: 'Starter', adAccounts: 5, price: 29 },
+    { type: 'brand', name: 'Brand', adAccounts: 15, price: 79 },
+    { type: 'agency', name: 'Agency', adAccounts: 50, price: 149 },
+];
 
 
 
@@ -42,6 +47,42 @@ export default function BillingSettings() {
         isTrialExpired,
         isPaidSubscriber,
     } = useSubscription()
+
+    const [showPlanSelector, setShowPlanSelector] = useState(false);
+    const [changingPlan, setChangingPlan] = useState(false);
+
+
+
+    // Add this function
+    const handleChangePlan = async (newPlanType) => {
+        if (newPlanType === subscriptionData?.planType) return;
+
+        setChangingPlan(true);
+        try {
+            const response = await fetch('/api/stripe/change-plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ newPlanType }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert(`Plan will change to ${newPlanType} on ${new Date(data.effectiveDate).toLocaleDateString()}`);
+                setShowPlanSelector(false);
+                // Refresh subscription data
+                refreshSubscriptionData();
+            } else {
+                alert(data.error || 'Failed to change plan');
+            }
+        } catch (error) {
+            console.error('Error changing plan:', error);
+            alert('Failed to change plan');
+        } finally {
+            setChangingPlan(false);
+        }
+    };
 
 
     useEffect(() => {
@@ -290,6 +331,58 @@ export default function BillingSettings() {
                                                 <FileText className="w-4 h-4 text-white" />
                                                 <p className="text-white"> View Invoices </p>
                                             </Button>
+
+                                            {/* Change Plan - Only for Team Owners */}
+                                            {subscriptionData?.isTeamOwner && (
+                                                <>
+                                                    <Button
+                                                        onClick={() => setShowPlanSelector(!showPlanSelector)}
+                                                        variant="outline"
+                                                        className="w-full h-12 rounded-2xl flex items-center justify-center gap-2"
+                                                    >
+                                                        {showPlanSelector ? 'Hide Plans' : 'Change Plan'}
+                                                    </Button>
+
+                                                    {showPlanSelector && (
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+                                                            {PLANS.map((plan) => (
+                                                                <Card
+                                                                    key={plan.type}
+                                                                    className={`rounded-2xl cursor-pointer transition-all ${subscriptionData?.planType === plan.type
+                                                                        ? 'border-2 border-blue-500 bg-blue-50'
+                                                                        : 'border border-gray-200 hover:border-blue-300'
+                                                                        }`}
+                                                                >
+                                                                    <CardContent className="p-4">
+                                                                        <h3 className="font-semibold text-lg">{plan.name}</h3>
+                                                                        <p className="text-2xl font-bold mt-2">${plan.price}<span className="text-sm font-normal text-gray-500">/mo</span></p>
+                                                                        <p className="text-gray-500 text-sm mt-1">{plan.adAccounts} Ad Account{plan.adAccounts > 1 ? 's' : ''}</p>
+
+                                                                        <Button
+                                                                            onClick={() => handleChangePlan(plan.type)}
+                                                                            disabled={subscriptionData?.planType === plan.type || changingPlan}
+                                                                            className={`mt-3 w-full rounded-xl h-10 ${subscriptionData?.planType === plan.type
+                                                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                                                                : 'bg-zinc-800 hover:bg-zinc-900 text-white'
+                                                                                }`}
+                                                                        >
+                                                                            {subscriptionData?.planType === plan.type
+                                                                                ? 'Current Plan'
+                                                                                : changingPlan
+                                                                                    ? 'Changing...'
+                                                                                    : 'Switch'}
+                                                                        </Button>
+                                                                    </CardContent>
+                                                                </Card>
+                                                            ))}
+                                                            <p className="col-span-full text-xs text-gray-400 text-center">
+                                                                Changes take effect at your next billing cycle
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            )}
+
                                             <Button
                                                 onClick={handleCancel}
                                                 variant="destructive"
