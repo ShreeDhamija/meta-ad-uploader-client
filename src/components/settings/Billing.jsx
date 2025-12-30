@@ -332,6 +332,15 @@ export default function BillingSettings() {
                                                 <p className="text-white"> View Invoices </p>
                                             </Button>
 
+                                            <Button
+                                                onClick={handleCancel}
+                                                variant="destructive"
+                                                disabled={isLoading}
+                                                className="w-full h-12 rounded-2xl"
+                                            >
+                                                Cancel Subscription
+                                            </Button>
+
                                             <>
                                                 <Button
                                                     onClick={() => setShowPlanSelector(!showPlanSelector)}
@@ -349,8 +358,8 @@ export default function BillingSettings() {
                                                                 <Card
                                                                     key={plan.type}
                                                                     className={`rounded-2xl transition-all ${isCurrentPlan
-                                                                            ? 'border-2 border-blue-500 bg-white'
-                                                                            : 'border border-gray-200 hover:border-blue-300'
+                                                                        ? 'border-2 border-blue-500 bg-white'
+                                                                        : 'border border-gray-200 hover:border-blue-300'
                                                                         }`}
                                                                 >
                                                                     <CardContent className="p-4">
@@ -365,8 +374,8 @@ export default function BillingSettings() {
                                                                             onClick={() => !isCurrentPlan && handleChangePlan(plan.type)}
                                                                             disabled={changingPlan && !isCurrentPlan}
                                                                             className={`mt-3 w-full rounded-xl h-10 ${isCurrentPlan
-                                                                                    ? 'bg-blue-600 text-white cursor-default hover:bg-blue-600'
-                                                                                    : 'bg-zinc-800 hover:bg-zinc-900 text-white'
+                                                                                ? 'bg-blue-600 text-white cursor-default hover:bg-blue-600'
+                                                                                : 'bg-zinc-800 hover:bg-zinc-900 text-white'
                                                                                 }`}
                                                                         >
                                                                             {isCurrentPlan
@@ -387,14 +396,7 @@ export default function BillingSettings() {
                                             </>
 
 
-                                            <Button
-                                                onClick={handleCancel}
-                                                variant="destructive"
-                                                disabled={isLoading}
-                                                className="w-full h-12 rounded-2xl"
-                                            >
-                                                Cancel Subscription
-                                            </Button>
+
                                         </>
                                     )}
                                 </div>
