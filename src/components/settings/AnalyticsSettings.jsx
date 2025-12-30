@@ -37,12 +37,14 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import useGlobalSettings from "@/lib/useGlobalSettings"
+import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function AnalyticsSettings() {
-    const { adAccounts, selectedAdAccountIds, loading: settingsLoading } = useGlobalSettings()
+    const { adAccounts, adAccountsLoading } = useAppData()
+    const { selectedAdAccountIds, loading: settingsLoading } = useGlobalSettings()
     const [selectedAdAccount, setSelectedAdAccount] = useState(null)
     const [activeSubTab, setActiveSubTab] = useState('anomalies') // 'anomalies' | 'recommendations'
 
@@ -177,7 +179,7 @@ export default function AnalyticsSettings() {
         return account?.name || accountId
     }
 
-    if (settingsLoading) {
+    if (settingsLoading || adAccountsLoading) {
         return (
             <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -207,14 +209,23 @@ export default function AnalyticsSettings() {
             <div className="flex items-center justify-between">
                 <Select value={selectedAdAccount} onValueChange={setSelectedAdAccount}>
                     <SelectTrigger className="w-[280px] rounded-2xl h-11">
-                        <SelectValue placeholder="Select ad account" />
+                        <SelectValue placeholder="Select ad account">
+                            {selectedAdAccount
+                                ? (adAccounts?.find(a => a.id === selectedAdAccount)?.name || selectedAdAccount)
+                                : "Select ad account"
+                            }
+                        </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl">
-                        {selectedAdAccountIds.map(accountId => (
-                            <SelectItem key={accountId} value={accountId} className="rounded-xl">
-                                {getAdAccountName(accountId)}
-                            </SelectItem>
-                        ))}
+                        {selectedAdAccountIds.map(accountId => {
+                            const account = adAccounts?.find(a => a.id === accountId)
+                            return (
+                                <SelectItem key={accountId} value={accountId} className="rounded-xl">
+                                    {account?.name || accountId}
+                                </SelectItem>
+                            )
+                        })}
+
                     </SelectContent>
                 </Select>
 
