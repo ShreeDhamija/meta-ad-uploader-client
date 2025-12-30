@@ -69,7 +69,7 @@ export default function AnalyticsSettings() {
         if (!adAccountsLoading && adAccounts?.length > 0 && !selectedAdAccount) {
             setSelectedAdAccount(adAccounts[0].id)
         }
-    }, [settingsLoading, adAccounts, selectedAdAccount])
+    }, [adAccountsLoading, adAccounts, selectedAdAccount])
 
     // Fetch data when ad account changes
     useEffect(() => {
