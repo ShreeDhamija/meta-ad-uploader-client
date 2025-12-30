@@ -17,7 +17,8 @@ import {
     ArrowDownRight,
     Loader2,
     ChevronRight,
-    Zap
+    Zap,
+    ChevronsUpDown
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -31,7 +32,6 @@ import {
 } from "@/components/ui/dialog"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
-import { ChevronsUpDown, Loader2 } from "lucide-react" // Add ChevronsUpDown, keep Loader2
 // import useGlobalSettings from "@/lib/useGlobalSettings"
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
