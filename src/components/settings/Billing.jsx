@@ -28,9 +28,9 @@ import StarIcon from '@/assets/icons/star.webp';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 // Add this constant for plan details
 const PLANS = [
-    { type: 'light', name: 'Starter', adAccounts: 1, price: 49, icon: StarIcon },
-    { type: 'brand', name: 'Brand', adAccounts: 5, price: 199, icon: LightningIcon },
-    { type: 'pro', name: 'Agency', adAccounts: 99, price: 370, icon: RocketIcon },
+    { type: 'starter', name: 'Starter', adAccounts: '1', price: 49, icon: StarIcon },
+    { type: 'brand', name: 'Brand', adAccounts: '5', price: 199, icon: LightningIcon },
+    { type: 'pro', name: 'Agency', adAccounts: 'Unlimited', price: 370, icon: RocketIcon },
 ];
 
 
@@ -51,28 +51,39 @@ export default function BillingSettings() {
 
     const [showPlanSelector, setShowPlanSelector] = useState(false);
     const [changingPlan, setChangingPlan] = useState(false);
-
-
+    const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
+    const [pendingPlanChange, setPendingPlanChange] = useState(null);
 
     // Add this function
-    const handleChangePlan = async (newPlanType) => {
+    // This opens the confirmation dialog
+    const handleChangePlanClick = (newPlanType) => {
         if (newPlanType === subscriptionData?.planType) return;
+        setPendingPlanChange(newPlanType);
+        setShowChangePlanDialog(true);
+    };
 
+    // This actually changes the plan after confirmation
+    const confirmChangePlan = async () => {
+        if (!pendingPlanChange) return;
+
+        setShowChangePlanDialog(false);
         setChangingPlan(true);
+
         try {
             const response = await fetch(`${API_BASE_URL}/api/stripe/change-plan`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ newPlanType }),
+                body: JSON.stringify({ newPlanType: pendingPlanChange }),
             });
 
             const data = await response.json();
 
             if (data.success) {
-                toast.success(`Plan will change to ${data.newPlanType} at your next billing cycle`);
-                setShowPlanSelector(false);
-                refreshSubscriptionData();
+                toast.success(`Plan changed to ${data.newPlanType}. Reloading...`);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
                 toast.error(data.error || 'Failed to change plan');
             }
@@ -81,6 +92,7 @@ export default function BillingSettings() {
             toast.error('Failed to change plan');
         } finally {
             setChangingPlan(false);
+            setPendingPlanChange(null);
         }
     };
 
@@ -368,10 +380,12 @@ export default function BillingSettings() {
                                                                             <h3 className="font-semibold text-lg">{plan.name}</h3>
                                                                         </div>
                                                                         <p className="text-2xl font-bold mt-2">${plan.price}<span className="text-sm font-normal text-gray-500">/mo</span></p>
-                                                                        <p className="text-gray-500 text-sm mt-1">{plan.adAccounts} Ad Account{plan.adAccounts > 1 ? 's' : ''}</p>
+                                                                        <p className="text-gray-500 text-sm mt-1">
+                                                                            {plan.adAccounts === 'Unlimited' ? 'Unlimited' : plan.adAccounts} Ad Account{plan.adAccounts !== '1' ? 's' : ''}
+                                                                        </p>
 
                                                                         <Button
-                                                                            onClick={() => !isCurrentPlan && handleChangePlan(plan.type)}
+                                                                            onClick={() => !isCurrentPlan && handleChangePlanClick(plan.type)}
                                                                             disabled={changingPlan && !isCurrentPlan}
                                                                             className={`mt-3 w-full rounded-xl h-10 ${isCurrentPlan
                                                                                 ? 'bg-blue-600 text-white cursor-default hover:bg-blue-600'
@@ -670,6 +684,41 @@ export default function BillingSettings() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Change Plan Confirmation Dialog */}
+            <Dialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
+                <DialogOverlay className="bg-black/50 !-mt-[20px]" />
+                <DialogContent className="sm:max-w-[425px] !rounded-[30px] p-8 space-y-6">
+                    <DialogHeader className="space-y-4">
+                        <DialogTitle className="text-xl">Change Plan</DialogTitle>
+                        <DialogDescription className="text-base leading-relaxed">
+                            Are you sure you want to switch to the {PLANS.find(p => p.type === pendingPlanChange)?.name} plan?
+                            You and your team members will all be switched to this plan immediately.
+
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setShowChangePlanDialog(false);
+                                setPendingPlanChange(null);
+                            }}
+                            className="rounded-2xl flex-1"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={confirmChangePlan}
+                            className="bg-blue-600 hover:bg-blue-700 rounded-2xl flex-1"
+                        >
+                            Yes, Switch Plan
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
         </div>
     )
 }
