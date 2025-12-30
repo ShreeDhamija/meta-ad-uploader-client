@@ -276,10 +276,7 @@ import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import DesktopIcon from '@/assets/Desktop.webp';
-// NEW: Import an analytics icon - you can use any icon you prefer
-import ChartIcon from '@/assets/icons/chart.svg?react'; // You may need to create/add this icon
-// Alternative: use lucide-react if you don't have a custom icon:
-// import { BarChart3 } from "lucide-react";
+import { ChartLine } from "lucide-react";
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -300,7 +297,7 @@ export default function Settings() {
     // UPDATED: Added analytics to the tab icon map
     const tabIconMap = {
         adaccount: Folder,
-        analytics: ChartIcon, // NEW - use BarChart3 from lucide-react if you don't have custom icon
+        analytics: ChartLine, // NEW - use BarChart3 from lucide-react if you don't have custom icon
         billing: Card,
         team: UsersIcon,
     }
