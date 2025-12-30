@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,13 +29,9 @@ import {
     DialogTitle,
     DialogOverlay,
 } from "@/components/ui/dialog"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { ChevronsUpDown, Loader2 } from "lucide-react" // Add ChevronsUpDown, keep Loader2
 // import useGlobalSettings from "@/lib/useGlobalSettings"
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
@@ -63,6 +59,34 @@ export default function AnalyticsSettings() {
     const [applyingId, setApplyingId] = useState(null)
     const [showApplyDialog, setShowApplyDialog] = useState(false)
     const [selectedRec, setSelectedRec] = useState(null)
+
+
+    const [openAdAccount, setOpenAdAccount] = useState(false)
+    const [searchValue, setSearchValue] = useState("")
+
+    // Memoized filtered ad accounts
+    const filteredAdAccounts = useMemo(() => {
+        if (!searchValue) return adAccounts || [];
+        const lowerSearchValue = searchValue.toLowerCase();
+        return (adAccounts || []).filter(
+            (acct) =>
+                (acct.name?.toLowerCase() || "").includes(lowerSearchValue) ||
+                acct.id.toLowerCase().includes(lowerSearchValue)
+        );
+    }, [adAccounts, searchValue]);
+
+    // Memoized selected ad account display name
+    const selectedAdAccountName = useMemo(() => {
+        if (!selectedAdAccount) return "Select an Ad Account";
+        return adAccounts?.find((acct) => acct.id === selectedAdAccount)?.name || selectedAdAccount;
+    }, [selectedAdAccount, adAccounts]);
+
+    // Handler
+    const handleAdAccountSelect = (accountId) => {
+        setSelectedAdAccount(accountId)
+        setOpenAdAccount(false)
+    }
+
 
     // Set default ad account when data loads
     useEffect(() => {
@@ -207,27 +231,58 @@ export default function AnalyticsSettings() {
         <div className="space-y-6">
             {/* Ad Account Selector */}
             <div className="flex items-center justify-between">
-                <Select value={selectedAdAccount} onValueChange={setSelectedAdAccount}>
-                    <SelectTrigger className="w-[280px] rounded-2xl h-11">
-                        <SelectValue placeholder="Select ad account">
-                            {selectedAdAccount
-                                ? (adAccounts?.find(a => a.id === selectedAdAccount)?.name || selectedAdAccount)
-                                : "Select ad account"
-                            }
-                        </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl">
-                        {adAccounts.map(accountId => {
-                            const account = adAccounts?.find(a => a.id === accountId)
-                            return (
-                                <SelectItem key={accountId} value={accountId} className="rounded-xl">
-                                    {account?.name || accountId}
-                                </SelectItem>
-                            )
-                        })}
-
-                    </SelectContent>
-                </Select>
+                <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            className="w-[280px] justify-between rounded-2xl h-11 bg-white shadow-sm hover:bg-white"
+                        >
+                            {selectedAdAccountName}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                        className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                        align="start"
+                        sideOffset={4}
+                    >
+                        <Command filter={() => 1} loop={false} value="">
+                            <CommandInput
+                                placeholder="Search ad accounts..."
+                                value={searchValue}
+                                onValueChange={setSearchValue}
+                                className="bg-white"
+                            />
+                            <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                                {adAccountsLoading ? (
+                                    <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Fetching ad accounts...
+                                    </div>
+                                ) : (
+                                    <CommandGroup>
+                                        {filteredAdAccounts.map((acct) => (
+                                            <CommandItem
+                                                key={acct.id}
+                                                value={acct.id}
+                                                onSelect={handleAdAccountSelect}
+                                                className={`
+                                    px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150
+                                    hover:bg-gray-100
+                                    ${selectedAdAccount === acct.id ? "bg-gray-100 font-semibold" : ""}
+                                `}
+                                                data-selected={acct.id === selectedAdAccount}
+                                            >
+                                                {acct.name || acct.id}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                )}
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
 
                 <Button
                     variant="outline"

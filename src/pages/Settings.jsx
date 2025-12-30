@@ -258,7 +258,7 @@
 import { useAuth } from "@/lib/AuthContext"
 import { Navigate, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { LogOutIcon } from "lucide-react"
+import { LogOutIcon, ChartLine } from "lucide-react"
 import { Toaster } from "sonner"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
@@ -276,7 +276,6 @@ import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import DesktopIcon from '@/assets/Desktop.webp';
-import { ChartLine } from "lucide-react";
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
