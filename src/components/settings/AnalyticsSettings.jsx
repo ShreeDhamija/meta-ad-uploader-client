@@ -36,7 +36,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import useGlobalSettings from "@/lib/useGlobalSettings"
+// import useGlobalSettings from "@/lib/useGlobalSettings"
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
 
@@ -44,7 +44,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function AnalyticsSettings() {
     const { adAccounts, adAccountsLoading } = useAppData()
-    const { selectedAdAccountIds, loading: settingsLoading } = useGlobalSettings()
+    // const { selectedAdAccountIds, loading: settingsLoading } = useGlobalSettings()
     const [selectedAdAccount, setSelectedAdAccount] = useState(null)
     const [activeSubTab, setActiveSubTab] = useState('anomalies') // 'anomalies' | 'recommendations'
 
@@ -66,10 +66,10 @@ export default function AnalyticsSettings() {
 
     // Set default ad account when data loads
     useEffect(() => {
-        if (!settingsLoading && selectedAdAccountIds?.length > 0 && !selectedAdAccount) {
-            setSelectedAdAccount(selectedAdAccountIds[0])
+        if (!adAccountsLoading && adAccounts?.length > 0 && !selectedAdAccount) {
+            setSelectedAdAccount(adAccounts[0].id)
         }
-    }, [settingsLoading, selectedAdAccountIds, selectedAdAccount])
+    }, [settingsLoading, adAccounts, selectedAdAccount])
 
     // Fetch data when ad account changes
     useEffect(() => {
@@ -179,7 +179,7 @@ export default function AnalyticsSettings() {
         return account?.name || accountId
     }
 
-    if (settingsLoading || adAccountsLoading) {
+    if (adAccountsLoading) {
         return (
             <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -187,7 +187,7 @@ export default function AnalyticsSettings() {
         )
     }
 
-    if (!selectedAdAccountIds || selectedAdAccountIds.length === 0) {
+    if (!adAccounts || adAccounts.length === 0) {
         return (
             <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
                 <CardContent className="pt-6">
@@ -217,7 +217,7 @@ export default function AnalyticsSettings() {
                         </SelectValue>
                     </SelectTrigger>
                     <SelectContent className="rounded-2xl">
-                        {selectedAdAccountIds.map(accountId => {
+                        {adAccounts.map(accountId => {
                             const account = adAccounts?.find(a => a.id === accountId)
                             return (
                                 <SelectItem key={accountId} value={accountId} className="rounded-xl">
