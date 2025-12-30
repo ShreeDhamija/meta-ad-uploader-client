@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, Users, FileText } from "lucide-react"
+import { AlertCircle, Users, FileText, RefreshCw, Ban } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog,
@@ -348,8 +348,9 @@ export default function BillingSettings() {
                                                 onClick={handleCancel}
                                                 variant="destructive"
                                                 disabled={isLoading}
-                                                className="w-full h-12 rounded-2xl"
+                                                className="w-full h-12 rounded-2xl flex items-center justify-center gap-2"
                                             >
+                                                <Ban className="w-4 h-4" />
                                                 Cancel Subscription
                                             </Button>
 
@@ -359,6 +360,7 @@ export default function BillingSettings() {
                                                     variant="outline"
                                                     className="w-full h-12 rounded-2xl flex items-center justify-center gap-2"
                                                 >
+                                                    <RefreshCw className="w-4 h-4" />
                                                     {showPlanSelector ? 'Hide Plans' : 'Change Plan'}
                                                 </Button>
 
@@ -403,7 +405,7 @@ export default function BillingSettings() {
                                                             );
                                                         })}
                                                         <p className="col-span-full text-xs text-gray-400 text-center">
-                                                            Changes take effect at your next billing cycle
+                                                            Changes take effect immediately.
                                                         </p>
                                                     </div>
                                                 )}
