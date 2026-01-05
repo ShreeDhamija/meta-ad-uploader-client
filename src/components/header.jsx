@@ -1,14 +1,23 @@
 "use client"
 
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { LogOutIcon, Settings, Clock, CreditCard, MessageCircle } from "lucide-react"
+import { LogOutIcon, Settings, Clock, CreditCard, MessageCircle, Bell } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import { useNavigate } from "react-router-dom"
 import useSubscription from "@/lib/useSubscriptionSettings"
+import useNotifications from "@/lib/useNotifications"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
-
   const navigate = useNavigate()
   const {
     subscriptionData,
@@ -19,8 +28,28 @@ export default function Header({ showMessenger, hideMessenger }) {
     loading: subscriptionLoading
   } = useSubscription()
 
+  const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
 
+  const handleDropdownClose = (open) => {
+    setDropdownOpen(open)
+    if (!open && notifications.length > 0) {
+      markAsRead()
+    }
+  }
 
+  const formatTime = (dateString) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMins = Math.floor((now - date) / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
 
   const handleChatToggle = () => {
     if (showMessenger) {
@@ -38,7 +67,6 @@ export default function Header({ showMessenger, hideMessenger }) {
     const now = new Date();
     return now > cancelDate;
   }
-
 
   const getTrialButtonStyle = () => {
     if (!hasActiveAccess()) {
@@ -61,8 +89,9 @@ export default function Header({ showMessenger, hideMessenger }) {
     return `${days} day${days !== 1 ? 's' : ''} left`
   }
 
-  return (
 
+
+  return (
     <header className="flex justify-between items-center py-3 mb-4">
       {/* Profile Section (Left) */}
       <div className="flex items-center gap-3 bg-white shadow-md border border-gray-300 rounded-[40px] px-3 py-2">
@@ -102,6 +131,44 @@ export default function Header({ showMessenger, hideMessenger }) {
               {!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}
             </Button>
             <div className="hidden md:block h-8 w-px bg-gray-300" />
+          </>
+        )}
+
+        {/* Notifications Dropdown */}
+        {hasUnread && (
+          <>
+            <DropdownMenu open={dropdownOpen} onOpenChange={handleDropdownClose}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  title="Notifications"
+                  className="relative p-1.5 rounded-full hover:bg-gray-100 transition focus:outline-none"
+                >
+                  <Bell className="w-5 h-5 text-gray-700" />
+                  <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-80 bg-white rounded-2xl">
+                <DropdownMenuLabel>What's New</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notificationsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.map((n) => (
+                      <DropdownMenuItem key={n.id} className="flex flex-col items-start gap-1 cursor-default !rounded-xl">
+                        <p className="text-sm text-gray-700">{n.message}</p>
+                        <p className="text-xs text-gray-400">{formatTime(n.createdAt)}</p>
+                      </DropdownMenuItem>
+                    ))}
+                  </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Divider after bell */}
+            <div className="h-8 w-px bg-gray-300" />
           </>
         )}
 

@@ -20,7 +20,7 @@ import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostSelectorInline from "@/components/PostIDSelector"
-
+import { MetaMediaLibraryModal } from "@/components/MetaMediaLibraryModal";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -359,6 +359,8 @@ export default function AdCreationForm({
   setFiles,
   importedPosts,
   setImportedPosts,
+  importedFiles,
+  setImportedFiles,
   videoThumbs,
   setVideoThumbs,
   selectedAdSets,
@@ -447,13 +449,11 @@ export default function AdCreationForm({
     total: 0
   });
 
-
-
   // const [isCarouselAd, setIsCarouselAd] = useState(false);
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
-
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
+  const [usePostID, setUsePostID] = useState(false);
 
 
   const refreshPage = useCallback(() => {
@@ -499,7 +499,7 @@ export default function AdCreationForm({
       }
     }
     else {
-      adCount = files.length + driveFiles.length;
+      adCount = files.length + driveFiles.length + importedFiles.length;
     }
 
 
@@ -522,6 +522,8 @@ export default function AdCreationForm({
         videoThumbs: { ...videoThumbs },
         thumbnail,
         importedPosts: [...importedPosts],
+        importedFiles: [...importedFiles],  // ADD THIS
+
 
 
         // Selection states
@@ -1736,7 +1738,7 @@ export default function AdCreationForm({
 
   useEffect(() => {
     if (isCarouselAd) {
-      const fileCount = files.length + driveFiles.length;
+      const fileCount = files.length + driveFiles.length + importedFiles.length;
 
       // Sync messages when apply-to-all is checked
       if (applyTextToAllCards && fileCount > 0 && messages.length !== fileCount) {
@@ -1750,7 +1752,7 @@ export default function AdCreationForm({
         setHeadlines(new Array(fileCount).fill(firstHeadline));
       }
     }
-  }, [files.length, driveFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
+  }, [files.length, driveFiles.length, importedFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
 
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
@@ -1797,7 +1799,7 @@ export default function AdCreationForm({
       videoThumbs,
       thumbnail,
       importedPosts,
-      // Selections
+      importedFiles,
       selectedAdSets,
       duplicateAdSet,
       newAdSetName,
@@ -1822,6 +1824,18 @@ export default function AdCreationForm({
       adSets
     } = jobData.formData;
 
+
+    console.log('🔍 DEBUG - Initial state:', {
+      fileGroups,
+      importedFilesCount: importedFiles?.length,
+      importedFiles: importedFiles?.map(f => ({
+        type: f.type,
+        id: f.type === 'image' ? f.hash : f.id,
+        name: f.name
+      })),
+      enablePlacementCustomization
+    });
+
     setIsCreatingAds(true);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
@@ -1838,7 +1852,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -1870,8 +1884,6 @@ export default function AdCreationForm({
 
             // Update progress message
             setProgressMessage(`Analyzing videos: ${Math.min(i + BATCH_SIZE, videoFiles.length)}/${videoFiles.length}`);
-
-            // Process batch in parallel
             const batchPromises = batch.map(async (file) => {
               try {
                 const aspectRatio = await getVideoAspectRatio(file);
@@ -1907,6 +1919,16 @@ export default function AdCreationForm({
       } catch (error) {
         console.error('Error getting video aspect ratios:', error);
         // Continue anyway with defaults
+      }
+
+      if (importedFiles && importedFiles.length > 0) {
+        importedFiles.forEach(file => {
+          if (file.width && file.height) {
+            const aspectRatio = file.width / file.height;
+            const key = file.type === 'image' ? file.hash : file.id;
+            aspectRatioMap[key] = aspectRatio;
+          }
+        });
       }
     }
 
@@ -2042,7 +2064,7 @@ export default function AdCreationForm({
 
     // Add carousel validation
     if (isCarouselAd) {
-      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
+      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length + (importedFiles?.length || 0);
       if (totalFiles < 2) {
         toast.error("Carousel ads require at least 2 files");
         setIsLoading(false);
@@ -2057,7 +2079,7 @@ export default function AdCreationForm({
 
     // Add flexible ads validation
     if (adType === 'flexible') {
-      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length;
+      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length + (importedFiles?.length || 0);
 
       // If no groups, validate single ad
       if (fileGroups.length === 0) {
@@ -2152,7 +2174,8 @@ export default function AdCreationForm({
         s3Results,
         s3DriveResults,
         S3_UPLOAD_THRESHOLD,
-        smallDriveFiles
+        smallDriveFiles,
+        importedFiles
       }
     ) => {
       formData.append("isCarouselAd", isCarouselAd);
@@ -2164,6 +2187,21 @@ export default function AdCreationForm({
         formData.append("s3VideoUrls", s3File.s3Url);
         formData.append("s3VideoName", s3File.name);
       });
+
+      if (importedFiles && importedFiles.length > 0) {
+        const metaImages = importedFiles.filter(f => f.type === 'image');
+        const metaVideos = importedFiles.filter(f => f.type === 'video');
+
+        metaImages.forEach((metaFile) => {
+          formData.append("metaImageHashes", metaFile.hash);
+          formData.append("metaImageNames", metaFile.name);
+        });
+
+        metaVideos.forEach((metaFile) => {
+          formData.append("metaVideoIds", metaFile.id);
+          formData.append("metaVideoNames", metaFile.name);
+        });
+      }
     };
 
     /**
@@ -2226,7 +2264,8 @@ export default function AdCreationForm({
         S3_UPLOAD_THRESHOLD,
         getFileId,
         isVideoFile,
-        aspectRatioMap
+        aspectRatioMap,
+        importedFiles
       }
     ) => {
       const groupVideoMetadata = [];
@@ -2285,6 +2324,38 @@ export default function AdCreationForm({
         }
       });
 
+
+
+      group.forEach(fileId => {
+        const metaFile = (importedFiles || []).find(f =>
+          (f.type === 'image' && f.hash === fileId) ||
+          (f.type === 'video' && f.id === fileId)
+        );
+        if (metaFile) {
+          if (metaFile.type === 'image') {
+            formData.append("metaImageHashes", metaFile.hash);
+            formData.append("metaImageNames", metaFile.name);
+            // NEW: Send dimensions for placement categorization
+            formData.append("metaImageWidths", String(metaFile.width || 0));
+            formData.append("metaImageHeights", String(metaFile.height || 0));
+          } else if (metaFile.type === 'video') {
+            formData.append("metaVideoIds", metaFile.id);
+            formData.append("metaVideoNames", metaFile.name);
+            // NEW: Send dimensions for placement categorization
+            formData.append("metaVideoWidths", String(metaFile.width || 0));
+            formData.append("metaVideoHeights", String(metaFile.height || 0));
+
+            // NEW: Include in video metadata for aspect ratio tracking
+            groupVideoMetadata.push({
+              metaVideoId: metaFile.id,
+              aspectRatio: (metaFile.width && metaFile.height)
+                ? metaFile.width / metaFile.height
+                : 16 / 9
+            });
+          }
+        }
+      });
+
       return groupVideoMetadata;
     };
 
@@ -2298,7 +2369,8 @@ export default function AdCreationForm({
         smallDriveFiles,
         s3Results,
         s3DriveResults,
-        S3_UPLOAD_THRESHOLD
+        S3_UPLOAD_THRESHOLD,
+        importedFiles,
       }
     ) => {
       // Add all small local files
@@ -2323,6 +2395,22 @@ export default function AdCreationForm({
         formData.append("s3VideoUrls", s3File.s3Url);
         formData.append("s3VideoNames", s3File.name);
       });
+
+      if (importedFiles && importedFiles.length > 0) {
+        const metaImages = importedFiles.filter(f => f.type === 'image');
+        const metaVideos = importedFiles.filter(f => f.type === 'video');
+
+        metaImages.forEach((metaFile) => {
+          formData.append("metaImageHashes", metaFile.hash);
+          formData.append("metaImageNames", metaFile.name);
+        });
+
+        metaVideos.forEach((metaFile) => {
+          formData.append("metaVideoIds", metaFile.id);
+          formData.append("metaVideoNames", metaFile.name);
+        });
+      }
+
     };
 
     /**
@@ -2359,6 +2447,24 @@ export default function AdCreationForm({
     };
 
     /**
+    * Append single Meta library image file fields
+    */
+    const appendMetaImageFile = (formData, metaFile) => {
+      formData.append("metaImageHash", metaFile.hash);
+      formData.append("metaImageName", metaFile.name);
+      formData.append("enablePlacementCustomization", false);
+    };
+
+    /**
+     * Append single Meta library video file fields
+     */
+    const appendMetaVideoFile = (formData, metaFile) => {
+      formData.append("metaVideoId", metaFile.id);
+      formData.append("metaVideoName", metaFile.name);
+      formData.append("enablePlacementCustomization", false);
+    };
+
+    /**
      * Build file order metadata for carousel ads
      */
     const buildCarouselFileOrder = (
@@ -2366,7 +2472,9 @@ export default function AdCreationForm({
       driveFiles,
       s3Results,
       s3DriveResults,
-      S3_UPLOAD_THRESHOLD
+      S3_UPLOAD_THRESHOLD,
+      importedFiles  // ADD THIS PARAMETER
+
     ) => {
       const fileOrder = [];
       let fileIndex = 0;
@@ -2414,6 +2522,26 @@ export default function AdCreationForm({
           }
         }
       });
+
+      if (importedFiles && importedFiles.length > 0) {
+        importedFiles.forEach((metaFile) => {
+          if (metaFile.type === 'image') {
+            fileOrder.push({
+              index: fileIndex++,
+              type: 'metaImage',
+              hash: metaFile.hash,
+              name: metaFile.name
+            });
+          } else if (metaFile.type === 'video') {
+            fileOrder.push({
+              index: fileIndex++,
+              type: 'metaVideo',
+              id: metaFile.id,
+              name: metaFile.name
+            });
+          }
+        });
+      }
 
       return fileOrder;
     };
@@ -2478,15 +2606,6 @@ export default function AdCreationForm({
         adSetIdsToUse.forEach((adSetId, adSetIndex) => {
           importedPosts.forEach((post, postIndex) => {
             const formData = new FormData();
-
-
-            // const adName = computeAdNameFromFormula(
-            //   null,  // Use post ID as "filename"
-            //   (adSetIndex * importedPosts.length) + postIndex,
-            //   link[0],
-            //   jobData.formData.adNameFormulaV2
-            // );
-
             // Basic fields
             formData.append("adName", post.ad_name);
             formData.append("adAccountId", selectedAdAccount);
@@ -2497,9 +2616,16 @@ export default function AdCreationForm({
             formData.append("jobId", frontendJobId);
 
             // POST-SPECIFIC: Send the post ID instead of media
-            formData.append("postId", post.post_id);  // This is the key difference!
-            formData.append("adType", "post");   // Signal to backend this is a post-based ad
-            console.log(post.id);
+            if (usePostID) {
+              // Post ID mode - create ad from post using object_story_id
+              formData.append("postId", post.post_id);
+              formData.append("adType", "post");
+            } else {
+              // Duplication mode - use ad copies endpoint
+              formData.append("adId", post.ad_id);  // ← Changed from post.id to post.ad_id
+              formData.append("adType", "duplication");
+            }
+
             promises.push(createAdApiCall(formData, API_BASE_URL));
             promiseMetadata.push({ fileName: `Post ${post.id.split('_')[1]}` });
           });
@@ -2519,12 +2645,13 @@ export default function AdCreationForm({
           driveFiles,
           s3Results,
           s3DriveResults,
-          S3_UPLOAD_THRESHOLD
+          S3_UPLOAD_THRESHOLD,
+          importedFiles
         );
 
         // Pre-compute ad name for carousel
         const carouselAdName = computeAdNameFromFormula(
-          files[0] || driveFiles[0],
+          files[0] || driveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
           0,
           link[0],
           jobData.formData.adNameFormulaV2,
@@ -2560,7 +2687,8 @@ export default function AdCreationForm({
             s3Results,
             s3DriveResults,
             S3_UPLOAD_THRESHOLD,
-            smallDriveFiles
+            smallDriveFiles,
+            importedFiles
           });
 
           // Append shop destination
@@ -2602,7 +2730,11 @@ export default function AdCreationForm({
           const groupAdNames = fileGroups.map((group, groupIndex) => {
             const firstFileId = group[0];
             const firstFile = files.find(f => getFileId(f) === firstFileId) ||
-              driveFiles.find(f => f.id === firstFileId);
+              driveFiles.find(f => f.id === firstFileId) ||
+              (importedFiles || []).find(f =>
+                (f.type === 'image' && f.hash === firstFileId) ||
+                (f.type === 'video' && f.id === firstFileId)
+              );
 
             return computeAdNameFromFormula(
               firstFile || files[0] || driveFiles[0],
@@ -2649,7 +2781,8 @@ export default function AdCreationForm({
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
-                aspectRatioMap
+                aspectRatioMap,
+                importedFiles
               });
 
               // Append shop destination
@@ -2664,7 +2797,7 @@ export default function AdCreationForm({
 
           // Pre-compute ad name once for ungrouped flexible
           const ungroupedFlexibleAdName = computeAdNameFromFormula(
-            files[0] || driveFiles[0],
+            files[0] || driveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
             0,
             link[0],
             jobData.formData.adNameFormulaV2,
@@ -2699,7 +2832,8 @@ export default function AdCreationForm({
               smallDriveFiles,
               s3Results,
               s3DriveResults,
-              S3_UPLOAD_THRESHOLD
+              S3_UPLOAD_THRESHOLD,
+              importedFiles
             });
 
             // Add video thumbnail if provided
@@ -2757,7 +2891,8 @@ export default function AdCreationForm({
             smallDriveFiles,
             s3Results,
             s3DriveResults,
-            S3_UPLOAD_THRESHOLD
+            S3_UPLOAD_THRESHOLD,
+            importedFiles
           });
 
           // Append shop destination
@@ -2779,21 +2914,47 @@ export default function AdCreationForm({
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
             [...s3Results, ...s3DriveResults].some(s3File =>
               !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id))
-            )
+            ) ||
+            (importedFiles && importedFiles.some(f => {  // ✅ FIX: Check if any are actually ungrouped
+              const fileId = f.type === 'image' ? f.hash : f.id;
+              return !groupedFileIds.has(fileId);
+            }))
           );
+
+          console.log('🔍 DEBUG - Grouped file IDs:', {
+            groupedFileIds: Array.from(groupedFileIds),
+            fileGroupsFlat: fileGroups.flat()
+          });
+
+          // 3. Right after calculating hasUngroupedFiles
+          console.log('🔍 DEBUG - hasUngroupedFiles:', {
+            hasUngroupedFiles,
+            ungroupedMetaCheck: importedFiles?.map(f => {
+              const fileId = f.type === 'image' ? f.hash : f.id;
+              return {
+                fileId,
+                isGrouped: groupedFileIds.has(fileId)
+              };
+            })
+          });
+
 
           let localIterationIndex = 0;
 
           // Process GROUPED files if placement customization is enabled
           if (enablePlacementCustomization && fileGroups.length > 0) {
 
-
             // Pre-compute ad names for grouped files
             const groupedAdNames = fileGroups.map((group, groupIndex) => {
               const firstFileId = group[0];
+
               const firstFileForNaming = files.find(f => getFileId(f) === firstFileId) ||
                 smallDriveFiles.find(f => f.id === firstFileId) ||
-                [...s3Results, ...s3DriveResults].find(f => f.uniqueId === firstFileId || f.id === firstFileId);
+                [...s3Results, ...s3DriveResults].find(f => f.uniqueId === firstFileId || f.id === firstFileId) ||
+                (importedFiles || []).find(f =>
+                  (f.type === 'image' && f.hash === firstFileId) ||
+                  (f.type === 'video' && f.id === firstFileId)
+                );
 
               return computeAdNameFromFormula(
                 firstFileForNaming || files[0] || driveFiles[0],
@@ -2823,6 +2984,13 @@ export default function AdCreationForm({
                 jobId: frontendJobId
               });
 
+
+              console.log('🔍 DEBUG - Processing group:', {
+                groupIndex,
+                groupFileIds: group,
+                groupLength: group.length
+              });
+
               // Append group media files
               const groupVideoMetadata = appendGroupMediaFiles(formData, group, {
                 files,
@@ -2832,7 +3000,16 @@ export default function AdCreationForm({
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
-                aspectRatioMap
+                aspectRatioMap,
+                importedFiles
+              });
+
+              console.log('🔍 DEBUG - FormData entries for group:', {
+                groupIndex,
+                metaImageHashes: formData.getAll('metaImageHashes'),
+                metaVideoIds: formData.getAll('metaVideoIds'),
+                metaImageWidths: formData.getAll('metaImageWidths'),
+                metaVideoWidths: formData.getAll('metaVideoWidths')
               });
 
               // Append placement customization fields
@@ -2975,6 +3152,81 @@ export default function AdCreationForm({
               promiseMetadata.push({ fileName: s3File.name || s3File.originalName || 'S3 Video' }); // ADD
 
             });
+
+
+            // Handle Meta library imported files
+            // Handle Meta library imported files - ONLY ungrouped ones
+            const metaImages = (importedFiles || []).filter(f =>
+              f.type === 'image' && !groupedFileIds.has(f.hash)
+            );
+            const metaVideos = (importedFiles || []).filter(f =>
+              f.type === 'video' && !groupedFileIds.has(f.id)
+            );
+
+            // Pre-compute ad names for meta files
+            const metaImageAdNames = metaImages.map((file, index) =>
+              computeAdNameFromFormula({ name: file.name }, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
+            );
+
+            localIterationIndex += metaImages.length;
+
+            const metaVideoAdNames = metaVideos.map((file, index) =>
+              computeAdNameFromFormula({ name: file.name }, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
+            );
+
+            // Handle Meta library images
+            metaImages.forEach((metaFile, index) => {
+              const formData = new FormData();
+
+              appendCommonFields(formData, {
+                adName: metaImageAdNames[index],
+                headlinesJSON: commonPrecomputed.headlinesJSON,
+                descriptionsJSON: commonPrecomputed.descriptionsJSON,
+                messagesJSON: commonPrecomputed.messagesJSON,
+                selectedAdAccount,
+                adSetId,
+                pageId,
+                instagramAccountId,
+                linkJSON: commonPrecomputed.linkJSON,
+                cta,
+                launchPaused,
+                jobId: frontendJobId
+              });
+
+              appendMetaImageFile(formData, metaFile);
+              appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
+
+              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: metaFile.name });
+            });
+
+            // Handle Meta library videos
+            metaVideos.forEach((metaFile, index) => {
+              const formData = new FormData();
+
+              appendCommonFields(formData, {
+                adName: metaVideoAdNames[index],
+                headlinesJSON: commonPrecomputed.headlinesJSON,
+                descriptionsJSON: commonPrecomputed.descriptionsJSON,
+                messagesJSON: commonPrecomputed.messagesJSON,
+                selectedAdAccount,
+                adSetId,
+                pageId,
+                instagramAccountId,
+                linkJSON: commonPrecomputed.linkJSON,
+                cta,
+                launchPaused,
+                jobId: frontendJobId
+              });
+
+              appendMetaVideoFile(formData, metaFile);
+              appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
+
+              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: metaFile.name });
+            });
+
+
           }
         });
       }
@@ -3130,7 +3382,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -3149,6 +3401,7 @@ export default function AdCreationForm({
       setFileGroups([]);
       setEnablePlacementCustomization(false);
       setImportedPosts([]);  // ADD THIS
+      setImportedFiles([]);
 
     }
 
@@ -3491,6 +3744,8 @@ export default function AdCreationForm({
                 <PostSelectorInline
                   adAccountId={selectedAdAccount}
                   onImport={setImportedPosts}
+                  usePostID={usePostID}
+                  setUsePostID={setUsePostID}
                 />
               </div>
 
@@ -3831,7 +4086,7 @@ export default function AdCreationForm({
                                 setApplyTextToAllCards(checked);
                                 if (checked && messages.length > 0) {
                                   const firstMessage = messages[0];
-                                  const fileCount = files.length + driveFiles.length;
+                                  const fileCount = files.length + driveFiles.length + importedFiles.length;
                                   if (fileCount > 0) {
                                     setMessages(new Array(fileCount).fill(firstMessage));
                                   }
@@ -3918,7 +4173,7 @@ export default function AdCreationForm({
                               setApplyHeadlinesToAllCards(checked);
                               if (checked && headlines.length > 0) {
                                 const firstHeadline = headlines[0];
-                                const fileCount = files.length + driveFiles.length; // ← Use file count!
+                                const fileCount = files.length + driveFiles.length + importedFiles.length; // ← Use file count!
                                 if (fileCount > 0) {
                                   setHeadlines(new Array(fileCount).fill(firstHeadline));
                                 }
@@ -4298,7 +4553,6 @@ export default function AdCreationForm({
                       </SelectContent>
                     </Select>
                   </div>
-
                   {/* Shop Destination Selector - Only show when needed */}
                   <ShopDestinationSelector
                     pageId={pageId}
@@ -4311,10 +4565,15 @@ export default function AdCreationForm({
                 </div>
 
                 <div className="space-y-2">
-                  <div className="space-y-2">
+                  <div className="flex items-center justify-between">
                     <Label className="block">Upload Media</Label>
+                    <MetaMediaLibraryModal
+                      adAccountId={selectedAdAccount}
+                      isLoggedIn={isLoggedIn}
+                      importedFiles={importedFiles}
+                      setImportedFiles={setImportedFiles}
+                    />
                   </div>
-
                   <div
                     {...getRootProps()}
                     className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
@@ -4422,13 +4681,13 @@ export default function AdCreationForm({
               disabled={
                 !isLoggedIn ||
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
-                (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0) ||
+                (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-                (adType === 'carousel' && (files.length + driveFiles.length) < 2) ||
-                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length) > 10) ||
+                (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length) < 2) ||
+                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
-                (!showCustomLink && !link[0]) ||
-                (showCustomLink && !customLink.trim()) ||
+                ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
+                ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
                 (selectedFiles.size > 0)
               }
             >
@@ -4449,7 +4708,7 @@ export default function AdCreationForm({
             )}
 
             {/* Validation message for missing link */}
-            {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (importedPosts.length === 0) && (
+            {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (importedPosts.length === 0) && (!useExistingPosts) && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please provide a link URL
               </div>
