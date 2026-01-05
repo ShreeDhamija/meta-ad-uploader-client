@@ -352,7 +352,7 @@ export default function AnalyticsSettings() {
                                 <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center">
                                     <DollarSign className="w-3 h-3 text-blue-600" />
                                 </div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Today's Spend</p>
+                                <p className="text-xs text-gray-500">Today's Spend</p>
                             </div>
                             <p className="text-xl font-bold">{formatCurrency(quickStats.today.spend)}</p>
                             {quickStats.trends.spendVsYesterday !== 0 && (
@@ -369,7 +369,7 @@ export default function AnalyticsSettings() {
                                 <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center">
                                     <BarChart3 className="w-3 h-3 text-gray-600" />
                                 </div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">7-Day Spend</p>
+                                <p className="text-xs text-gray-500">7-Day Spend</p>
                             </div>
                             <p className="text-xl font-bold">{formatCurrency(quickStats.last7Days.spend)}</p>
                             <p className="text-xs text-gray-400 mt-1">
@@ -384,7 +384,7 @@ export default function AnalyticsSettings() {
                                 <div className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center">
                                     <Target className="w-3 h-3 text-purple-600" />
                                 </div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Today's CPR</p>
+                                <p className="text-xs text-gray-500">Today's CPR</p>
                             </div>
                             <p className="text-xl font-bold">
                                 {quickStats.today.cpr ? formatCurrency(quickStats.today.cpr) : 'N/A'}
@@ -403,7 +403,7 @@ export default function AnalyticsSettings() {
                                 <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
                                     <TrendingUp className="w-3 h-3 text-green-600" />
                                 </div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wide">Today's Results</p>
+                                <p className="text-xs text-gray-500">Today's Results</p>
                             </div>
                             <p className="text-xl font-bold">{quickStats.today.results.toLocaleString()}</p>
                             <p className="text-xs text-gray-400 mt-1 truncate">
