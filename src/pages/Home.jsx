@@ -563,6 +563,7 @@ export default function Home() {
                             setVideoThumbs={setVideoThumbs}
                             selectedAdSets={selectedAdSets}
                             duplicateAdSet={duplicateAdSet}
+                            campaigns={campaigns}
                             selectedCampaign={selectedCampaign}
                             selectedAdAccount={selectedAdAccount}
                             adSets={adSets}

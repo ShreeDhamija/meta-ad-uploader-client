@@ -365,6 +365,7 @@ export default function AdCreationForm({
   setVideoThumbs,
   selectedAdSets,
   duplicateAdSet,
+  campaigns,
   selectedCampaign,
   selectedAdAccount,
   adSets,
@@ -454,6 +455,9 @@ export default function AdCreationForm({
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
   const [usePostID, setUsePostID] = useState(false);
+  const [leadgenForms, setLeadgenForms] = useState([]);
+  const [selectedForm, setSelectedForm] = useState(null);
+  const [loadingForms, setLoadingForms] = useState(false);
 
 
   const refreshPage = useCallback(() => {
@@ -545,6 +549,7 @@ export default function AdCreationForm({
         // Shop configuration
         selectedShopDestination,
         selectedShopDestinationType,
+        selectedForm,
 
         // For computing adName
         adNameFormulaV2: adNameFormulaV2 ? { ...adNameFormulaV2 } : null,
@@ -1782,6 +1787,67 @@ export default function AdCreationForm({
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
 
 
+  const shouldShowLeadFormSelector = useMemo(() => {
+    // Must have selections
+    if (selectedCampaign.length === 0 || selectedAdSets.length === 0) {
+      return false;
+    }
+
+    // All selected campaigns must have LEADS objective
+    const allCampaignsAreLeads = selectedCampaign.every(campId => {
+      const campaign = campaigns.find(c => c.id === campId);
+      return campaign?.objective === 'OUTCOME_LEADS' || campaign?.objective === 'LEADS';
+    });
+
+    if (!allCampaignsAreLeads) {
+      return false;
+    }
+
+    // All selected ad sets must have valid destination types
+    const validDestinations = ['WEBSITE_AND_LEAD_FORM', 'ON_AD', 'LEAD_FORM_MESSENGER'];
+    const allAdSetsValid = selectedAdSets.every(adSetId => {
+      const adSet = adSets.find(a => a.id === adSetId);
+      return validDestinations.includes(adSet?.destination_type);
+    });
+
+    return allAdSetsValid;
+  }, [selectedCampaign, selectedAdSets, campaigns, adSets]);
+
+  // Fetch leadgen forms when conditions are met
+  useEffect(() => {
+    const fetchLeadgenForms = async () => {
+      if (!shouldShowLeadFormSelector || !pageId) {
+        setLeadgenForms([]);
+        setSelectedForm(null);
+        return;
+      }
+
+      setLoadingForms(true);
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/auth/fetch-leadgen-forms?pageId=${encodeURIComponent(pageId)}`,
+          { credentials: 'include' }
+        );
+        const data = await response.json();
+
+        if (data.success && data.forms) {
+          setLeadgenForms(data.forms);
+        } else {
+          setLeadgenForms([]);
+        }
+      } catch (error) {
+        console.error('Error fetching leadgen forms:', error);
+        setLeadgenForms([]);
+      } finally {
+        setLoadingForms(false);
+      }
+    };
+
+    fetchLeadgenForms();
+  }, [shouldShowLeadFormSelector, pageId]);
+
+
+
 
   const handleCreateAd = async (jobData) => {
 
@@ -1818,6 +1884,7 @@ export default function AdCreationForm({
       // Shop
       selectedShopDestination,
       selectedShopDestinationType,
+      selectedForm,
 
       // Other
       adValues,
@@ -2134,7 +2201,8 @@ export default function AdCreationForm({
         linkJSON,
         cta,
         launchPaused,
-        jobId
+        jobId,
+        selectedForm
       }
     ) => {
       formData.append("adName", adName);
@@ -2149,6 +2217,9 @@ export default function AdCreationForm({
       formData.append("cta", cta);
       formData.append("launchPaused", launchPaused);
       formData.append("jobId", jobId);
+      if (selectedForm) {
+        formData.append("leadgenFormId", selectedForm);
+      }
     };
 
     /**
@@ -2675,7 +2746,8 @@ export default function AdCreationForm({
             linkJSON: commonPrecomputed.linkJSON,
             cta,
             launchPaused,
-            jobId: frontendJobId
+            jobId: frontendJobId,
+            selectedForm
           });
 
           // Append carousel-specific fields
@@ -2762,7 +2834,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               // Append flexible ad fields
@@ -2820,7 +2893,8 @@ export default function AdCreationForm({
               linkJSON: commonPrecomputed.linkJSON,
               cta,
               launchPaused,
-              jobId: frontendJobId
+              jobId: frontendJobId,
+              selectedForm
             });
 
             // Append flexible ad fields
@@ -2879,7 +2953,8 @@ export default function AdCreationForm({
             linkJSON: commonPrecomputed.linkJSON,
             cta,
             launchPaused,
-            jobId: frontendJobId
+            jobId: frontendJobId,
+            selectedForm
           });
 
           // Append dynamic ad set fields
@@ -2981,7 +3056,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
 
@@ -3078,7 +3154,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               // Append single image file
@@ -3108,7 +3185,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               // Append single drive file
@@ -3139,7 +3217,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               // Append single S3 file
@@ -3190,7 +3269,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               appendMetaImageFile(formData, metaFile);
@@ -3216,7 +3296,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               appendMetaVideoFile(formData, metaFile);
@@ -4564,6 +4645,82 @@ export default function AdCreationForm({
                   />
                 </div>
 
+                {shouldShowLeadFormSelector && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="leadgen-form" className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        Select a Form
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!pageId || loadingForms) return;
+                          setLoadingForms(true);
+                          try {
+                            const response = await fetch(
+                              `${API_BASE_URL}/auth/fetch-leadgen-forms?pageId=${encodeURIComponent(pageId)}`,
+                              { credentials: 'include' }
+                            );
+                            const data = await response.json();
+                            if (data.success && data.forms) {
+                              setLeadgenForms(data.forms);
+                            } else {
+                              setLeadgenForms([]);
+                            }
+                          } catch (error) {
+                            console.error('Error fetching leadgen forms:', error);
+                            setLeadgenForms([]);
+                          } finally {
+                            setLoadingForms(false);
+                          }
+                        }}
+                        disabled={loadingForms}
+                        className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCcw className={cn("w-4 h-4", loadingForms && "animate-spin")} />
+
+                      </button>
+                    </div>
+
+                    <Select
+                      disabled={!isLoggedIn || loadingForms || leadgenForms.length === 0}
+                      value={selectedForm || ""}
+                      onValueChange={(value) => setSelectedForm(value || null)}
+                    >
+                      <SelectTrigger id="leadgen-form" className="border border-gray-400 rounded-xl bg-white shadow">
+                        <SelectValue placeholder={
+                          loadingForms
+                            ? "Loading forms..."
+                            : leadgenForms.length === 0
+                              ? "No forms available"
+                              : "Select a form"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
+                        {leadgenForms.map((form) => (
+                          <SelectItem
+                            key={form.id}
+                            value={form.id}
+                            className={cn(
+                              "w-full text-left",
+                              "px-4 py-2 m-1 rounded-xl",
+                              "transition-colors duration-150",
+                              "hover:bg-gray-100 hover:rounded-xl",
+                              "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
+                              "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
+                              selectedForm === form.id && "!bg-gray-100 font-semibold rounded-xl"
+                            )}
+                          >
+                            {form.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="block">Upload Media</Label>
@@ -4688,7 +4845,9 @@ export default function AdCreationForm({
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
                 ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
-                (selectedFiles.size > 0)
+                (selectedFiles.size > 0) ||
+                (shouldShowLeadFormSelector && !selectedForm)
+
               }
             >
               Publish Ads
@@ -4716,6 +4875,12 @@ export default function AdCreationForm({
             {enablePlacementCustomization && selectedFiles && (selectedFiles.size > 1) && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 You have ungrouped files for placement customization. Use the group ads button on the top right to group files               </div>
+            )}
+
+            {shouldShowLeadFormSelector && !selectedForm && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please select a lead form to publish lead ads
+              </div>
             )}
 
           </div>
