@@ -549,6 +549,7 @@ export default function AdCreationForm({
         // Shop configuration
         selectedShopDestination,
         selectedShopDestinationType,
+        selectedForm,
 
         // For computing adName
         adNameFormulaV2: adNameFormulaV2 ? { ...adNameFormulaV2 } : null,
@@ -1883,6 +1884,7 @@ export default function AdCreationForm({
       // Shop
       selectedShopDestination,
       selectedShopDestinationType,
+      selectedForm,
 
       // Other
       adValues,
@@ -2199,7 +2201,8 @@ export default function AdCreationForm({
         linkJSON,
         cta,
         launchPaused,
-        jobId
+        jobId,
+        selectedForm
       }
     ) => {
       formData.append("adName", adName);
@@ -2214,6 +2217,9 @@ export default function AdCreationForm({
       formData.append("cta", cta);
       formData.append("launchPaused", launchPaused);
       formData.append("jobId", jobId);
+      if (selectedForm) {
+        formData.append("leadgenFormId", selectedForm);
+      }
     };
 
     /**
@@ -2740,7 +2746,8 @@ export default function AdCreationForm({
             linkJSON: commonPrecomputed.linkJSON,
             cta,
             launchPaused,
-            jobId: frontendJobId
+            jobId: frontendJobId,
+            selectedForm
           });
 
           // Append carousel-specific fields
@@ -2827,7 +2834,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               // Append flexible ad fields
@@ -2885,7 +2893,8 @@ export default function AdCreationForm({
               linkJSON: commonPrecomputed.linkJSON,
               cta,
               launchPaused,
-              jobId: frontendJobId
+              jobId: frontendJobId,
+              selectedForm
             });
 
             // Append flexible ad fields
@@ -2944,7 +2953,8 @@ export default function AdCreationForm({
             linkJSON: commonPrecomputed.linkJSON,
             cta,
             launchPaused,
-            jobId: frontendJobId
+            jobId: frontendJobId,
+            selectedForm
           });
 
           // Append dynamic ad set fields
@@ -3046,7 +3056,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
 
@@ -3143,7 +3154,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               // Append single image file
@@ -3173,7 +3185,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               // Append single drive file
@@ -3204,7 +3217,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               // Append single S3 file
@@ -3255,7 +3269,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               appendMetaImageFile(formData, metaFile);
@@ -3281,7 +3296,8 @@ export default function AdCreationForm({
                 linkJSON: commonPrecomputed.linkJSON,
                 cta,
                 launchPaused,
-                jobId: frontendJobId
+                jobId: frontendJobId,
+                selectedForm
               });
 
               appendMetaVideoFile(formData, metaFile);
