@@ -4646,36 +4646,78 @@ export default function AdCreationForm({
                 </div>
 
                 {shouldShowLeadFormSelector && (
-                  <div className="form-field">
-                    <label htmlFor="leadgen-form-select">Select Lead Form</label>
-
-                    {loadingForms ? (
-                      <div className="loading-spinner">Loading forms...</div>
-                    ) : leadgenForms.length > 0 ? (
-                      <select
-                        id="leadgen-form-select"
-                        value={selectedForm || ''}
-                        onChange={(e) => setSelectedForm(e.target.value || null)}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="leadgen-form" className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        Select a Form
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!pageId || loadingForms) return;
+                          setLoadingForms(true);
+                          try {
+                            const response = await fetch(
+                              `${API_BASE_URL}/auth/fetch-leadgen-forms?pageId=${encodeURIComponent(pageId)}`,
+                              { credentials: 'include' }
+                            );
+                            const data = await response.json();
+                            if (data.success && data.forms) {
+                              setLeadgenForms(data.forms);
+                            } else {
+                              setLeadgenForms([]);
+                            }
+                          } catch (error) {
+                            console.error('Error fetching leadgen forms:', error);
+                            setLeadgenForms([]);
+                          } finally {
+                            setLoadingForms(false);
+                          }
+                        }}
+                        disabled={loadingForms}
+                        className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
                       >
-                        <option value="">-- Select a form --</option>
-                        {leadgenForms.map(form => (
-                          <option key={form.id} value={form.id}>
-                            {form.name} {form.locale ? `(${form.locale})` : ''}
-                          </option>
+                        <RefreshCcw className={cn("w-4 h-4", loadingForms && "animate-spin")} />
+                        Refresh
+                      </button>
+                    </div>
+
+                    <Select
+                      disabled={!isLoggedIn || loadingForms || leadgenForms.length === 0}
+                      value={selectedForm || ""}
+                      onValueChange={(value) => setSelectedForm(value || null)}
+                    >
+                      <SelectTrigger id="leadgen-form" className="border border-gray-400 rounded-xl bg-white shadow">
+                        <SelectValue placeholder={
+                          loadingForms
+                            ? "Loading forms..."
+                            : leadgenForms.length === 0
+                              ? "No forms available"
+                              : "Select a form"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
+                        {leadgenForms.map((form) => (
+                          <SelectItem
+                            key={form.id}
+                            value={form.id}
+                            className={cn(
+                              "w-full text-left",
+                              "px-4 py-2 m-1 rounded-xl",
+                              "transition-colors duration-150",
+                              "hover:bg-gray-100 hover:rounded-xl",
+                              "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
+                              "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
+                              selectedForm === form.id && "!bg-gray-100 font-semibold rounded-xl"
+                            )}
+                          >
+                            {form.name}
+                          </SelectItem>
                         ))}
-                      </select>
-                    ) : (
-                      <p className="no-forms-message">
-                        No active lead forms found for this page.
-                        <a
-                          href={`https://www.facebook.com/${pageId}/publishing_tools/?section=LEAD_ADS_FORMS`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Create one here
-                        </a>
-                      </p>
-                    )}
+                      </SelectContent>
+                    </Select>
+
                   </div>
                 )}
 
@@ -4803,7 +4845,9 @@ export default function AdCreationForm({
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
                 ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
-                (selectedFiles.size > 0)
+                (selectedFiles.size > 0) ||
+                (shouldShowLeadFormSelector && !selectedForm)
+
               }
             >
               Publish Ads
@@ -4831,6 +4875,12 @@ export default function AdCreationForm({
             {enablePlacementCustomization && selectedFiles && (selectedFiles.size > 1) && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 You have ungrouped files for placement customization. Use the group ads button on the top right to group files               </div>
+            )}
+
+            {shouldShowLeadFormSelector && !selectedForm && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please select a lead form to publish lead ads
+              </div>
             )}
 
           </div>
