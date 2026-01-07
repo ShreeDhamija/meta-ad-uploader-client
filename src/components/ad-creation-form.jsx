@@ -4679,7 +4679,7 @@ export default function AdCreationForm({
                         className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
                       >
                         <RefreshCcw className={cn("w-4 h-4", loadingForms && "animate-spin")} />
-                        Refresh
+
                       </button>
                     </div>
 
