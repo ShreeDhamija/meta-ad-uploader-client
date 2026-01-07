@@ -454,6 +454,9 @@ export default function AdCreationForm({
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
   const [usePostID, setUsePostID] = useState(false);
+  const [leadgenForms, setLeadgenForms] = useState([]);
+  const [selectedForm, setSelectedForm] = useState(null);
+  const [loadingForms, setLoadingForms] = useState(false);
 
 
   const refreshPage = useCallback(() => {
@@ -1780,6 +1783,67 @@ export default function AdCreationForm({
 
 
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
+
+
+  const shouldShowLeadFormSelector = useMemo(() => {
+    // Must have selections
+    if (selectedCampaign.length === 0 || selectedAdSets.length === 0) {
+      return false;
+    }
+
+    // All selected campaigns must have LEADS objective
+    const allCampaignsAreLeads = selectedCampaign.every(campId => {
+      const campaign = campaigns.find(c => c.id === campId);
+      return campaign?.objective === 'OUTCOME_LEADS' || campaign?.objective === 'LEADS';
+    });
+
+    if (!allCampaignsAreLeads) {
+      return false;
+    }
+
+    // All selected ad sets must have valid destination types
+    const validDestinations = ['WEBSITE_AND_LEAD_FORM', 'ON_AD', 'LEAD_FORM_MESSENGER'];
+    const allAdSetsValid = selectedAdSets.every(adSetId => {
+      const adSet = adSets.find(a => a.id === adSetId);
+      return validDestinations.includes(adSet?.destination_type);
+    });
+
+    return allAdSetsValid;
+  }, [selectedCampaign, selectedAdSets, campaigns, adSets]);
+
+  // Fetch leadgen forms when conditions are met
+  useEffect(() => {
+    const fetchLeadgenForms = async () => {
+      if (!shouldShowLeadFormSelector || !pageId) {
+        setLeadgenForms([]);
+        setSelectedForm(null);
+        return;
+      }
+
+      setLoadingForms(true);
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/auth/fetch-leadgen-forms?pageId=${encodeURIComponent(pageId)}`,
+          { credentials: 'include' }
+        );
+        const data = await response.json();
+
+        if (data.success && data.forms) {
+          setLeadgenForms(data.forms);
+        } else {
+          setLeadgenForms([]);
+        }
+      } catch (error) {
+        console.error('Error fetching leadgen forms:', error);
+        setLeadgenForms([]);
+      } finally {
+        setLoadingForms(false);
+      }
+    };
+
+    fetchLeadgenForms();
+  }, [shouldShowLeadFormSelector, pageId]);
+
 
 
 
@@ -4563,6 +4627,40 @@ export default function AdCreationForm({
                     isVisible={showShopDestinationSelector}
                   />
                 </div>
+
+                {shouldShowLeadFormSelector && (
+                  <div className="form-field">
+                    <label htmlFor="leadgen-form-select">Select Lead Form</label>
+
+                    {loadingForms ? (
+                      <div className="loading-spinner">Loading forms...</div>
+                    ) : leadgenForms.length > 0 ? (
+                      <select
+                        id="leadgen-form-select"
+                        value={selectedForm || ''}
+                        onChange={(e) => setSelectedForm(e.target.value || null)}
+                      >
+                        <option value="">-- Select a form --</option>
+                        {leadgenForms.map(form => (
+                          <option key={form.id} value={form.id}>
+                            {form.name} {form.locale ? `(${form.locale})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="no-forms-message">
+                        No active lead forms found for this page.
+                        <a
+                          href={`https://www.facebook.com/${pageId}/publishing_tools/?section=LEAD_ADS_FORMS`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Create one here
+                        </a>
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
