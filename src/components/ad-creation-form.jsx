@@ -365,6 +365,7 @@ export default function AdCreationForm({
   setVideoThumbs,
   selectedAdSets,
   duplicateAdSet,
+  campaigns,
   selectedCampaign,
   selectedAdAccount,
   adSets,
@@ -1809,7 +1810,7 @@ export default function AdCreationForm({
     });
 
     return allAdSetsValid;
-  }, [selectedCampaign, selectedAdSets]);
+  }, [selectedCampaign, selectedAdSets, campaigns, adSets]);
 
   // Fetch leadgen forms when conditions are met
   useEffect(() => {
