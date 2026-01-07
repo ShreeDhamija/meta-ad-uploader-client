@@ -1809,7 +1809,7 @@ export default function AdCreationForm({
     });
 
     return allAdSetsValid;
-  }, [selectedCampaign, selectedAdSets, campaigns, adSets]);
+  }, [selectedCampaign, selectedAdSets]);
 
   // Fetch leadgen forms when conditions are met
   useEffect(() => {
