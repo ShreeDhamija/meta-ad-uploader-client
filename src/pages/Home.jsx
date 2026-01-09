@@ -205,7 +205,7 @@ export default function Home() {
         ) {
             setShowTrialExpiredPopup(true);
         }
-        setShowTrialExpiredPopup(true);
+
 
 
     }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
