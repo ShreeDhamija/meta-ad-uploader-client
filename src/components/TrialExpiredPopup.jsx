@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, MessageCircle } from 'lucide-react';
 import Rocket2 from '@/assets/rocket2.webp';
+import React, { useState } from "react"
 
 const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExtendTrial, onExtendTrial }) => {
 
