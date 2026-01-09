@@ -460,8 +460,11 @@ export default function Home() {
     const handleExtendTrial = async () => {
         const result = await extendTrial();
         if (result.success) {
-            setShowTrialExpiredPopup(false); // Close the popup
-            // Optionally show a success toast
+            setShowTrialExpiredPopup(false);
+            toast.success("Trial Extended Successfully, reloading...")
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
         }
     };
 
