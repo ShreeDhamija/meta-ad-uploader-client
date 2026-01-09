@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, MessageCircle } from 'lucide-react';
 import Rocket2 from '@/assets/rocket2.webp';
-import React, { useState } from "react"
+import { useState } from "react"
 
 const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExtendTrial, onExtendTrial }) => {
 
@@ -12,6 +12,12 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExte
         if (e.target === e.currentTarget) {
             onClose();
         }
+    };
+
+    const handleExtendTrial = async () => {
+        setExtending(true);
+        await onExtendTrial();
+        setExtending(false);
     };
 
     return (
@@ -50,7 +56,7 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExte
 
                     <button
                         onClick={onUpgrade}
-                        className="w-[300px] bg-[#F72585] text-white font-bold py-4 px-8 rounded-full text-xl"
+                        className="w-[300px] bg-[#F72585] text-white font-bold py-4 px-8 rounded-3xl text-xl"
                     >
                         Upgrade To Pro
                     </button>
@@ -59,7 +65,7 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExte
 
                     <button
                         onClick={joinTeam}
-                        className="w-[300px] bg-zinc-800 hover:bg-zinc-900 text-white font-bold py-4 px-8 rounded-full text-xl"
+                        className="w-[300px] bg-zinc-800 hover:bg-zinc-900 text-white font-bold py-4 px-8 rounded-3xl text-xl"
                     >
                         Join a Team
                     </button>
@@ -68,13 +74,13 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExte
                 {canExtendTrial && (
                     <>
                         <p className="text-gray-500 text-center mb-2 text-sm">
-                            Didn't try Blip yet?
+                            Didn't get a chance to try Blip properly?
                         </p>
                         <div className="flex justify-center mb-4">
                             <button
                                 onClick={handleExtendTrial}
                                 disabled={extending}
-                                className="w-[300px] bg-white border-2 border-zinc-300 hover:border-zinc-400 text-zinc-700 font-bold py-4 px-8 rounded-full text-xl transition-colors disabled:opacity-50"
+                                className="w-[300px] bg-white border-2 border-zinc-300 hover:border-zinc-400 text-zinc-700 font-bold py-4 px-8 rounded-3xl text-xl transition-colors disabled:opacity-50"
                             >
                                 {extending ? 'Extending...' : 'Extend Your Trial'}
                             </button>

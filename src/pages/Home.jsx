@@ -172,28 +172,28 @@ export default function Home() {
     if (authLoading) return null
 
 
-    // useEffect(() => {
-    //     if (!authLoading && !isLoggedIn) {
-    //         navigate("/login");
-    //     }
-    // }, [authLoading, isLoggedIn]);
+    useEffect(() => {
+        if (!authLoading && !isLoggedIn) {
+            navigate("/login");
+        }
+    }, [authLoading, isLoggedIn]);
 
 
 
-    // useEffect(() => {
-    //     if (!isLoggedIn || loading) return
-    //     if (!hasSeenOnboarding) {
-    //         setShowOnboardingPopup(true)
-    //     }
-    // }, [isLoggedIn, loading, hasSeenOnboarding])
+    useEffect(() => {
+        if (!isLoggedIn || loading) return
+        if (!hasSeenOnboarding) {
+            setShowOnboardingPopup(true)
+        }
+    }, [isLoggedIn, loading, hasSeenOnboarding])
 
-    // useEffect(() => {
-    //     if (loading || subscriptionLoading) return;
+    useEffect(() => {
+        if (loading || subscriptionLoading) return;
 
-    //     if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
-    //         setShowAdAccountPopup(true)
-    //     }
-    // }, [subscriptionData.planType, selectedAdAccountIds])
+        if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
+            setShowAdAccountPopup(true)
+        }
+    }, [subscriptionData.planType, selectedAdAccountIds])
 
     useEffect(() => {
 
@@ -205,6 +205,7 @@ export default function Home() {
         ) {
             setShowTrialExpiredPopup(true);
         }
+        setShowTrialExpiredPopup(true);
 
 
     }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
