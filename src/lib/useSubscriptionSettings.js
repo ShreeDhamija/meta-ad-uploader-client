@@ -71,6 +71,31 @@ export default function useSubscription() {
         return subscriptionData.subscriptionStatus === 'active';
     };
 
+
+    const extendTrial = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/subscription/extend-trial`, {
+                method: 'POST',
+                credentials: "include",
+            });
+
+            if (res.ok) {
+                await fetchSubscriptionData(); // Refresh data after extending
+                return { success: true };
+            } else {
+                const error = await res.json();
+                return { success: false, error: error.message };
+            }
+        } catch (err) {
+            console.error("Failed to extend trial:", err);
+            return { success: false, error: err.message };
+        }
+    };
+
+    const canExtendTrial = () => {
+        return !subscriptionData.hasExtendedTrial;
+    };
+
     return {
         loading,
         subscriptionData,
@@ -78,6 +103,8 @@ export default function useSubscription() {
         hasActiveAccess,
         isOnTrial,
         isTrialExpired,
-        isPaidSubscriber
+        isPaidSubscriber,
+        extendTrial,      // add
+        canExtendTrial
     };
 }

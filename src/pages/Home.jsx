@@ -103,7 +103,9 @@ export default function Home() {
         isTrialExpired,
         hasActiveAccess,
         isPaidSubscriber,
-        loading: subscriptionLoading
+        loading: subscriptionLoading,
+        canExtendTrial,
+        extendTrial
     } = useSubscription()
     const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
     const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false);
@@ -170,28 +172,28 @@ export default function Home() {
     if (authLoading) return null
 
 
-    useEffect(() => {
-        if (!authLoading && !isLoggedIn) {
-            navigate("/login");
-        }
-    }, [authLoading, isLoggedIn]);
+    // useEffect(() => {
+    //     if (!authLoading && !isLoggedIn) {
+    //         navigate("/login");
+    //     }
+    // }, [authLoading, isLoggedIn]);
 
 
 
-    useEffect(() => {
-        if (!isLoggedIn || loading) return
-        if (!hasSeenOnboarding) {
-            setShowOnboardingPopup(true)
-        }
-    }, [isLoggedIn, loading, hasSeenOnboarding])
+    // useEffect(() => {
+    //     if (!isLoggedIn || loading) return
+    //     if (!hasSeenOnboarding) {
+    //         setShowOnboardingPopup(true)
+    //     }
+    // }, [isLoggedIn, loading, hasSeenOnboarding])
 
-    useEffect(() => {
-        if (loading || subscriptionLoading) return;
+    // useEffect(() => {
+    //     if (loading || subscriptionLoading) return;
 
-        if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
-            setShowAdAccountPopup(true)
-        }
-    }, [subscriptionData.planType, selectedAdAccountIds])
+    //     if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
+    //         setShowAdAccountPopup(true)
+    //     }
+    // }, [subscriptionData.planType, selectedAdAccountIds])
 
     useEffect(() => {
 
@@ -204,7 +206,10 @@ export default function Home() {
             setShowTrialExpiredPopup(true);
         }
 
+
     }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
+
+
 
     useEffect(() => {
         const checkSettings = async () => {
@@ -451,6 +456,16 @@ export default function Home() {
         }
     });
 
+    const handleExtendTrial = async () => {
+        const result = await extendTrial();
+        if (result.success) {
+            setShowTrialExpiredPopup(false); // Close the popup
+            // Optionally show a success toast
+        }
+    };
+
+
+
 
     return (
 
@@ -686,6 +701,8 @@ export default function Home() {
                             setShowTrialExpiredPopup(false);
                             setHasDismissedTrialPopup(true);
                         }}
+                        canExtendTrial={canExtendTrial()}
+                        onExtendTrial={handleExtendTrial}
                     />
                 )}
 

@@ -2,7 +2,11 @@ import React from 'react';
 import { X, MessageCircle } from 'lucide-react';
 import Rocket2 from '@/assets/rocket2.webp';
 
-const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs }) => {
+const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExtendTrial, onExtendTrial }) => {
+
+    const [extending, setExtending] = useState(false);
+
+
     const handleBackdropClick = (e) => {
         if (e.target === e.currentTarget) {
             onClose();
@@ -59,6 +63,24 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs }) => {
                         Join a Team
                     </button>
                 </div>
+
+                {canExtendTrial && (
+                    <>
+                        <p className="text-gray-500 text-center mb-2 text-sm">
+                            Didn't try Blip yet?
+                        </p>
+                        <div className="flex justify-center mb-4">
+                            <button
+                                onClick={handleExtendTrial}
+                                disabled={extending}
+                                className="w-[300px] bg-white border-2 border-zinc-300 hover:border-zinc-400 text-zinc-700 font-bold py-4 px-8 rounded-full text-xl transition-colors disabled:opacity-50"
+                            >
+                                {extending ? 'Extending...' : 'Extend Your Trial'}
+                            </button>
+                        </div>
+                    </>
+                )}
+
                 {/* Need Help Label */}
                 <p className="text-gray-500 text-center mb-2 text-sm">
                     Need Help?
