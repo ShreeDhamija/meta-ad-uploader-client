@@ -1138,7 +1138,7 @@ transition-all duration-150 hover:!bg-black
           </div>
           <div>
             <div className="flex items-center space-x-2">
-              <label className="text-sm text-gray-700">Duplicate Existing ads(Post ID)</label>
+              <label className="text-sm text-gray-700">Duplicate Existing ads</label>
               <Switch
                 checked={useExistingPosts}
                 onCheckedChange={setUseExistingPosts}

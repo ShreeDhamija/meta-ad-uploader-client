@@ -449,7 +449,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             <div className="flex items-center gap-2">
               <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
               <h3 className="font-medium text-[14px] text-zinc-950">
-                Ad Naming Convention
+                Set up your default ad naming conventions
               </h3>
             </div>
 

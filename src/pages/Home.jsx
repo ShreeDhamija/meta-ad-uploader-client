@@ -103,7 +103,9 @@ export default function Home() {
         isTrialExpired,
         hasActiveAccess,
         isPaidSubscriber,
-        loading: subscriptionLoading
+        loading: subscriptionLoading,
+        canExtendTrial,
+        extendTrial
     } = useSubscription()
     const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
     const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false);
@@ -204,7 +206,11 @@ export default function Home() {
             setShowTrialExpiredPopup(true);
         }
 
+
+
     }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
+
+
 
     useEffect(() => {
         const checkSettings = async () => {
@@ -451,6 +457,19 @@ export default function Home() {
         }
     });
 
+    const handleExtendTrial = async () => {
+        const result = await extendTrial();
+        if (result.success) {
+            setShowTrialExpiredPopup(false);
+            toast.success("Trial Extended Successfully, reloading...")
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }
+    };
+
+
+
 
     return (
 
@@ -686,6 +705,8 @@ export default function Home() {
                             setShowTrialExpiredPopup(false);
                             setHasDismissedTrialPopup(true);
                         }}
+                        canExtendTrial={canExtendTrial()}
+                        onExtendTrial={handleExtendTrial}
                     />
                 )}
 
