@@ -573,7 +573,7 @@ export default function AdCreationForm({
       try {
         const response = await axios.put(url, chunk, {
           headers: { 'Content-Type': fileType },
-          timeout: 120000, // Increase to 2 min for slow connections
+          timeout: 180000, // Increase to 2 min for slow connections
         });
         return response;
       } catch (error) {
@@ -588,7 +588,199 @@ export default function AdCreationForm({
     }
   };
 
-  const uploadToS3 = async (file, onChunkUploaded, uniqueId) => {
+  // const uploadToS3 = async (file, onChunkUploaded, uniqueId) => {
+  //   // Validate inputs
+  //   if (!file) {
+  //     console.error('❌ FATAL: No file provided to uploadToS3');
+  //     throw new Error('No file provided for upload');
+  //   }
+
+  //   if (!file.name) {
+  //     console.error('❌ FATAL: File has no name property:', file);
+  //     throw new Error('File missing name property');
+  //   }
+
+  //   if (!file.type) {
+  //     console.error('❌ FATAL: File has no type property:', file);
+  //     throw new Error('File missing type property');
+  //   }
+
+  //   if (typeof file.size !== 'number') {
+  //     console.error('❌ FATAL: File has invalid size:', {
+  //       size: file.size,
+  //       sizeType: typeof file.size
+  //     });
+  //     throw new Error('File missing or invalid size property');
+  //   }
+
+
+
+  //   const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
+  //   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  //   const limit = pLimit(5);
+  //   let uploadId = null;
+  //   let s3Key = null;
+
+  //   try {
+
+  //     const startPayload = {
+  //       fileName: file.name,
+  //       fileType: file.type
+  //     };
+
+
+  //     const startResponse = await axios.post(
+  //       `${API_BASE_URL}/auth/s3/start-upload`,
+  //       startPayload,
+  //       { withCredentials: true }
+  //     );
+
+  //     uploadId = startResponse.data.uploadId;
+  //     s3Key = startResponse.data.key;
+
+  //     if (!uploadId || !s3Key) {
+  //       console.error('❌ Invalid start-upload response:', startResponse.data);
+  //       throw new Error('Invalid response from start-upload endpoint');
+  //     }
+
+  //     const urlsPayload = {
+  //       key: s3Key,
+  //       uploadId: uploadId,
+  //       parts: totalChunks
+  //     };
+
+
+  //     const urlsResponse = await axios.post(
+  //       `${API_BASE_URL}/auth/s3/get-upload-urls`,
+  //       urlsPayload,
+  //       { withCredentials: true }
+  //     );
+
+  //     const presignedUrls = urlsResponse.data.parts;
+
+  //     if (!presignedUrls || !Array.isArray(presignedUrls)) {
+  //       console.error('❌ Invalid presigned URLs response:', urlsResponse.data);
+  //       throw new Error('Invalid presigned URLs response');
+  //     }
+  //     let uploadedChunks = 0;
+
+  //     const uploadPromises = presignedUrls.map((part, index) => {
+  //       const { partNumber, url } = part;
+  //       const start = (partNumber - 1) * CHUNK_SIZE;
+  //       const end = start + CHUNK_SIZE;
+  //       const chunk = file.slice(start, end);
+
+
+  //       return limit(async () => {
+  //         try {
+
+
+  //           const uploadResponse = await uploadChunkWithRetry(url, chunk, file.type, partNumber);
+  //           if (onChunkUploaded) {
+  //             uploadedChunks++;
+  //             onChunkUploaded();
+  //           }
+
+  //           const etag = uploadResponse.headers.etag;
+  //           if (!etag) {
+  //             console.error(`❌ No ETag received for chunk ${partNumber}`);
+  //             throw new Error(`No ETag received for part ${partNumber}`);
+  //           }
+
+  //           const cleanEtag = etag.replace(/"/g, '');
+
+
+  //           return { PartNumber: partNumber, ETag: cleanEtag };
+  //         } catch (chunkError) {
+  //           console.error(`❌ Error uploading chunk ${partNumber}:`, {
+  //             error: chunkError.message,
+  //             status: chunkError.response?.status,
+  //             statusText: chunkError.response?.statusText,
+  //             responseData: chunkError.response?.data
+  //           });
+  //           throw chunkError;
+  //         }
+  //       });
+  //     });
+
+
+  //     const completedParts = await Promise.all(uploadPromises);
+
+  //     const completePayload = {
+  //       key: s3Key,
+  //       uploadId: uploadId,
+  //       parts: completedParts
+  //     };
+
+
+  //     let completeResponse;
+  //     for (let attempt = 1; attempt <= 5; attempt++) {
+  //       try {
+  //         completeResponse = await axios.post(
+  //           `${API_BASE_URL}/auth/s3/complete-upload`,
+  //           completePayload,
+  //           { withCredentials: true }
+  //         );
+  //         break; // Success, exit retry loop
+  //       } catch (error) {
+  //         if (attempt === 3) {
+  //           throw error; // Final attempt failed, throw error
+  //         }
+  //         const delay = 2000 * Math.pow(2, attempt - 1);
+  //         console.log(`⚠️ S3 complete-upload attempt ${attempt} failed. Retrying in ${delay}ms...`);
+  //         console.log(`   Error: ${error.message}`);
+  //         await new Promise(resolve => setTimeout(resolve, delay));
+  //       }
+  //     }
+
+
+  //     const result = {
+  //       name: file.name,
+  //       type: file.type,
+  //       size: file.size,
+  //       s3Url: completeResponse.data.publicUrl,
+  //       isS3Upload: true,
+  //       uniqueId: uniqueId
+  //     };
+
+
+  //     return result;
+
+  //   } catch (error) {
+  //     console.error('❌ === S3 UPLOAD FAILED ===');
+  //     console.error('❌ Error details:', {
+  //       fileName: file.name,
+  //       error: error.message,
+  //       status: error.response?.status,
+  //       statusText: error.response?.statusText,
+  //       responseData: error.response?.data,
+  //       uploadId,
+  //       s3Key,
+  //       stack: error.stack
+  //     });
+
+  //     // Cleanup on error
+  //     if (uploadId && s3Key) {
+
+  //       try {
+  //         await axios.post(
+  //           `${API_BASE_URL}/auth/s3/abort-upload`,
+  //           {
+  //             key: s3Key,
+  //             uploadId: uploadId
+  //           },
+  //           { withCredentials: true }
+  //         );
+  //       } catch (abortError) {
+  //         console.error('❌ Failed to abort upload:', abortError.message);
+  //       }
+  //     }
+
+  //     throw new Error(`Failed to upload ${file.name} to S3: ${error.message}`);
+  //   }
+  // };
+
+  const uploadToS3 = async (file, onChunkUploaded, uniqueId, maxUploadRetries = 2) => {
     // Validate inputs
     if (!file) {
       console.error('❌ FATAL: No file provided to uploadToS3');
@@ -613,180 +805,174 @@ export default function AdCreationForm({
       throw new Error('File missing or invalid size property');
     }
 
-
-
     const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const limit = pLimit(5);
-    let uploadId = null;
-    let s3Key = null;
 
-    try {
+    let lastError = null;
 
-      const startPayload = {
-        fileName: file.name,
-        fileType: file.type
-      };
+    // Retry loop for the entire upload process
+    for (let uploadAttempt = 1; uploadAttempt <= maxUploadRetries; uploadAttempt++) {
+      let uploadId = null;
+      let s3Key = null;
 
+      try {
+        const startPayload = {
+          fileName: file.name,
+          fileType: file.type
+        };
 
-      const startResponse = await axios.post(
-        `${API_BASE_URL}/auth/s3/start-upload`,
-        startPayload,
-        { withCredentials: true }
-      );
+        const startResponse = await axios.post(
+          `${API_BASE_URL}/auth/s3/start-upload`,
+          startPayload,
+          { withCredentials: true }
+        );
 
-      uploadId = startResponse.data.uploadId;
-      s3Key = startResponse.data.key;
+        uploadId = startResponse.data.uploadId;
+        s3Key = startResponse.data.key;
 
-      if (!uploadId || !s3Key) {
-        console.error('❌ Invalid start-upload response:', startResponse.data);
-        throw new Error('Invalid response from start-upload endpoint');
-      }
+        if (!uploadId || !s3Key) {
+          console.error('❌ Invalid start-upload response:', startResponse.data);
+          throw new Error('Invalid response from start-upload endpoint');
+        }
 
-      const urlsPayload = {
-        key: s3Key,
-        uploadId: uploadId,
-        parts: totalChunks
-      };
+        const urlsPayload = {
+          key: s3Key,
+          uploadId: uploadId,
+          parts: totalChunks
+        };
 
+        const urlsResponse = await axios.post(
+          `${API_BASE_URL}/auth/s3/get-upload-urls`,
+          urlsPayload,
+          { withCredentials: true }
+        );
 
-      const urlsResponse = await axios.post(
-        `${API_BASE_URL}/auth/s3/get-upload-urls`,
-        urlsPayload,
-        { withCredentials: true }
-      );
+        const presignedUrls = urlsResponse.data.parts;
 
-      const presignedUrls = urlsResponse.data.parts;
+        if (!presignedUrls || !Array.isArray(presignedUrls)) {
+          console.error('❌ Invalid presigned URLs response:', urlsResponse.data);
+          throw new Error('Invalid presigned URLs response');
+        }
 
-      if (!presignedUrls || !Array.isArray(presignedUrls)) {
-        console.error('❌ Invalid presigned URLs response:', urlsResponse.data);
-        throw new Error('Invalid presigned URLs response');
-      }
-      let uploadedChunks = 0;
+        let uploadedChunksCount = 0;
 
-      const uploadPromises = presignedUrls.map((part, index) => {
-        const { partNumber, url } = part;
-        const start = (partNumber - 1) * CHUNK_SIZE;
-        const end = start + CHUNK_SIZE;
-        const chunk = file.slice(start, end);
+        const uploadPromises = presignedUrls.map((part, index) => {
+          const { partNumber, url } = part;
+          const start = (partNumber - 1) * CHUNK_SIZE;
+          const end = start + CHUNK_SIZE;
+          const chunk = file.slice(start, end);
 
+          return limit(async () => {
+            try {
+              const uploadResponse = await uploadChunkWithRetry(url, chunk, file.type, partNumber);
 
-        return limit(async () => {
-          try {
+              // Only call progress callback on first attempt to avoid double-counting
+              if (onChunkUploaded && uploadAttempt === 1) {
+                uploadedChunksCount++;
+                onChunkUploaded();
+              }
 
-            // const uploadResponse = await axios.put(url, chunk, {
-            //   headers: { 'Content-Type': file.type },
-            //   timeout: 60000
-            // });
+              const etag = uploadResponse.headers.etag;
+              if (!etag) {
+                console.error(`❌ No ETag received for chunk ${partNumber}`);
+                throw new Error(`No ETag received for part ${partNumber}`);
+              }
 
-            const uploadResponse = await uploadChunkWithRetry(url, chunk, file.type, partNumber);
-
-
-            if (onChunkUploaded) {
-              uploadedChunks++;
-              onChunkUploaded();
+              const cleanEtag = etag.replace(/"/g, '');
+              return { PartNumber: partNumber, ETag: cleanEtag };
+            } catch (chunkError) {
+              console.error(`❌ Error uploading chunk ${partNumber}:`, {
+                error: chunkError.message,
+                status: chunkError.response?.status,
+                statusText: chunkError.response?.statusText,
+                responseData: chunkError.response?.data
+              });
+              throw chunkError;
             }
-
-            const etag = uploadResponse.headers.etag;
-            if (!etag) {
-              console.error(`❌ No ETag received for chunk ${partNumber}`);
-              throw new Error(`No ETag received for part ${partNumber}`);
-            }
-
-            const cleanEtag = etag.replace(/"/g, '');
-
-
-            return { PartNumber: partNumber, ETag: cleanEtag };
-          } catch (chunkError) {
-            console.error(`❌ Error uploading chunk ${partNumber}:`, {
-              error: chunkError.message,
-              status: chunkError.response?.status,
-              statusText: chunkError.response?.statusText,
-              responseData: chunkError.response?.data
-            });
-            throw chunkError;
-          }
+          });
         });
-      });
 
+        const completedParts = await Promise.all(uploadPromises);
 
-      const completedParts = await Promise.all(uploadPromises);
+        const completePayload = {
+          key: s3Key,
+          uploadId: uploadId,
+          parts: completedParts
+        };
 
-      const completePayload = {
-        key: s3Key,
-        uploadId: uploadId,
-        parts: completedParts
-      };
-
-
-      let completeResponse;
-      for (let attempt = 1; attempt <= 5; attempt++) {
-        try {
-          completeResponse = await axios.post(
-            `${API_BASE_URL}/auth/s3/complete-upload`,
-            completePayload,
-            { withCredentials: true }
-          );
-          break; // Success, exit retry loop
-        } catch (error) {
-          if (attempt === 3) {
-            throw error; // Final attempt failed, throw error
+        let completeResponse;
+        for (let attempt = 1; attempt <= 5; attempt++) {
+          try {
+            completeResponse = await axios.post(
+              `${API_BASE_URL}/auth/s3/complete-upload`,
+              completePayload,
+              { withCredentials: true }
+            );
+            break;
+          } catch (error) {
+            if (attempt === 5) {
+              throw error;
+            }
+            const delay = 2000 * Math.pow(2, attempt - 1);
+            console.log(`⚠️ S3 complete-upload attempt ${attempt} failed. Retrying in ${delay}ms...`);
+            console.log(`   Error: ${error.message}`);
+            await new Promise(resolve => setTimeout(resolve, delay));
           }
-          const delay = 2000 * Math.pow(2, attempt - 1);
-          console.log(`⚠️ S3 complete-upload attempt ${attempt} failed. Retrying in ${delay}ms...`);
-          console.log(`   Error: ${error.message}`);
+        }
+
+        const result = {
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          s3Url: completeResponse.data.publicUrl,
+          isS3Upload: true,
+          uniqueId: uniqueId
+        };
+
+        return result;
+
+      } catch (error) {
+        lastError = error;
+        console.error(`❌ Upload attempt ${uploadAttempt}/${maxUploadRetries} failed for ${file.name}:`, error.message);
+
+        // Abort the current upload before retrying
+        if (uploadId && s3Key) {
+          console.log(`🧹 Aborting failed upload (attempt ${uploadAttempt})...`);
+          try {
+            await axios.post(
+              `${API_BASE_URL}/auth/s3/abort-upload`,
+              { key: s3Key, uploadId: uploadId },
+              { withCredentials: true }
+            );
+            console.log(`✅ Successfully aborted upload for retry`);
+          } catch (abortError) {
+            console.error('❌ Failed to abort upload:', abortError.message);
+          }
+        }
+
+        // If not the last attempt, wait before retrying
+        if (uploadAttempt < maxUploadRetries) {
+          const delay = 3000 * uploadAttempt;
+          console.log(`⏳ Retrying upload for ${file.name} in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
-
-
-      const result = {
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        s3Url: completeResponse.data.publicUrl,
-        isS3Upload: true,
-        uniqueId: uniqueId
-      };
-
-
-      return result;
-
-    } catch (error) {
-      console.error('❌ === S3 UPLOAD FAILED ===');
-      console.error('❌ Error details:', {
-        fileName: file.name,
-        error: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        responseData: error.response?.data,
-        uploadId,
-        s3Key,
-        stack: error.stack
-      });
-
-      // Cleanup on error
-      if (uploadId && s3Key) {
-
-        try {
-          await axios.post(
-            `${API_BASE_URL}/auth/s3/abort-upload`,
-            {
-              key: s3Key,
-              uploadId: uploadId
-            },
-            { withCredentials: true }
-          );
-        } catch (abortError) {
-          console.error('❌ Failed to abort upload:', abortError.message);
-        }
-      }
-
-      throw new Error(`Failed to upload ${file.name} to S3: ${error.message}`);
     }
+
+    // All retries exhausted
+    console.error('❌ === S3 UPLOAD FAILED AFTER ALL RETRIES ===');
+    console.error('❌ Final error details:', {
+      fileName: file.name,
+      error: lastError?.message,
+      status: lastError?.response?.status,
+      statusText: lastError?.response?.statusText,
+      responseData: lastError?.response?.data,
+      stack: lastError?.stack
+    });
+
+    throw new Error(`Failed to upload ${file.name} to S3 after ${maxUploadRetries} attempts: ${lastError?.message}`);
   };
-
-
 
   async function uploadDriveFileToS3(file, maxRetries = 3) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
