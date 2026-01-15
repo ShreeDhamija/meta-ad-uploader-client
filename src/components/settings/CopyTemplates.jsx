@@ -831,7 +831,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged}
+          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || !(primaryTexts.some(t => t.trim()) || headlines.some(t => t.trim()))}
 
         >
           {nameAlreadyExists
