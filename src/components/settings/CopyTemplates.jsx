@@ -666,13 +666,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             onClick={() => setShowImportPopup(true)}
           >
             <Download className="w-4 h-4" />
-            Import Recently Used Copy
+            Auto Import Copy Variants
           </Button>
         </div>
       </div>
 
       {/* New row with template dropdown and set as default button */}
-      <div className="flex items-center gap-3 mb-4 transition-all duration-300">
+      {Object.keys(templates).length > 0 && <div className="flex items-center gap-3 mb-4 transition-all duration-300">
         <Select
           value={selectedName}
           onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
@@ -702,7 +702,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         >
           Set as Default
         </Button>
-      </div>
+      </div>}
 
       <div className="space-y-1">
         <label className="text-[14px] text-gray-600">Template Name</label>

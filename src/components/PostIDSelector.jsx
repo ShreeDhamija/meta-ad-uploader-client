@@ -53,7 +53,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
     const [nextCursor, setNextCursor] = useState(null)
     const [hasMore, setHasMore] = useState(false)
     const [hasFetched, setHasFetched] = useState(false)
-    const [datePreset, setDatePreset] = useState('last_7d')
+    const [datePreset, setDatePreset] = useState('last_30d')
 
     const fetchAds = useCallback(async (cursor = null, preset = datePreset) => {
         if (!adAccountId) {

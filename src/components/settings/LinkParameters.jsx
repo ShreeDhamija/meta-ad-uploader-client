@@ -344,7 +344,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     </p>
                 </div>
 
-                <div className="flex gap-2 items-center">
+                {links.length > 0 && <div className="flex gap-2 items-center">
                     <Popover open={linkDropdownOpen} onOpenChange={setLinkDropdownOpen}>
                         <PopoverTrigger asChild>
                             <Button
@@ -423,7 +423,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     >
                         Set as Default
                     </Button>
-                </div>
+                </div>}
 
                 {showAddForm ? (
                     <div className="border border-gray-200 rounded-xl p-3 bg-white space-y-3">
