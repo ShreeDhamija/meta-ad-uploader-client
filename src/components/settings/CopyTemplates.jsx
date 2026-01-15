@@ -666,20 +666,19 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             onClick={() => setShowImportPopup(true)}
           >
             <Download className="w-4 h-4" />
-            Import Recently Used Copy
+            Auto Import Copy Variants
           </Button>
         </div>
       </div>
 
       {/* New row with template dropdown and set as default button */}
-      <div className="flex items-center gap-3 mb-4 transition-all duration-300">
+      {Object.keys(templates).length > 0 && <div className="flex items-center gap-3 mb-4 transition-all duration-300">
         <Select
           value={selectedName}
           onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
           disabled={availableTemplates.length === 0}
         >
-          <SelectTrigger className="flex-1 rounded-xl px-3 py-2 text-sm justify-between bg-white disabled:opacity-50 disabled:cursor-not-allowed">
-            <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
+          <SelectTrigger className="flex-1 max-w-[490px] overflow-hidden rounded-xl px-3 py-2 text-sm justify-between bg-white disabled:opacity-50 disabled:cursor-not-allowed">            <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
           </SelectTrigger>
           <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto relative">
             {availableTemplates.map(([name]) => (
@@ -702,7 +701,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         >
           Set as Default
         </Button>
-      </div>
+      </div>}
 
       <div className="space-y-1">
         <label className="text-[14px] text-gray-600">Template Name</label>
