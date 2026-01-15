@@ -678,7 +678,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
           disabled={availableTemplates.length === 0}
         >
-          <SelectTrigger className="flex-1 min-w-0 overflow-hidden rounded-xl px-3 py-2 text-sm justify-between bg-white disabled:opacity-50 disabled:cursor-not-allowed">            <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
+          <SelectTrigger className="flex-1 max-w-[490px] overflow-hidden rounded-xl px-3 py-2 text-sm justify-between bg-white disabled:opacity-50 disabled:cursor-not-allowed">            <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
           </SelectTrigger>
           <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto relative">
             {availableTemplates.map(([name]) => (
