@@ -129,13 +129,13 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                         >
                                             Import
                                         </Button>
-                                        <Button
+                                        {/* <Button
                                             onClick={onClose}
                                             disabled={isImporting}
                                             className="bg-[#FAF9F7] border-2 border-[#F72585] text-[#F72585] hover:bg-[#FAF9F7] hover:opacity-80 text-base px-8 py-2.5 rounded-full shadow-none"
                                         >
                                             Skip
-                                        </Button>
+                                        </Button> */}
                                     </div>
 
                                     {isImporting && (
