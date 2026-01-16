@@ -76,11 +76,11 @@ export default function SettingsOnboardingPopup({ onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-8 py-10 w-[620px] relative overflow-hidden text-left">
-                <div className="flex flex-col items-center w-full animate-fadeSwap">
+                <div className="flex flex-col w-full animate-fadeSwap">
                     <img
                         src={Settings}
                         alt="Settings Icon"
-                        className="w-14 mb-4"
+                        className="w-14 mb-2"
                     />
                     <h2 className="text-[24px] font-semibold text-[#415363] mb-6">Settings</h2>
 
@@ -112,12 +112,13 @@ export default function SettingsOnboardingPopup({ onClose }) {
                         loop
                         muted
                         playsInline
-                        className="w-full rounded-[16px] mb-6"
+                        controls
+                        className="w-full rounded-[16px] mb-6 border-2 border-black/20"
                     />
 
                     <Button
                         onClick={onClose}
-                        className="bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-2 rounded-full"
+                        className="w-full bg-[#F72585] hover:bg-[#e11d74] text-white text-base px-6 py-6 rounded-full"
                     >
                         Configure Preferences
                     </Button>
