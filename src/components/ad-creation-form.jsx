@@ -151,7 +151,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
       if (!isSubscribed) return;
 
       try {
-        console.log(`🔌 SSE connecting to job: ${jobId} (connection attempt ${retryCount + 1}, job search attempt ${jobNotFoundCount + 1})`);
+
 
         // Close any existing connection
         if (eventSource) {
@@ -171,7 +171,6 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
         }, connectionTimeout);
 
         eventSource.onopen = () => {
-          console.log('✅ SSE connected successfully');
           retryCount = 0; // Reset connection retry counter
 
           if (connectionTimeoutId) {
@@ -191,7 +190,6 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
             // Handle job not found with patience
             if (data.message === 'Job not found') {
-              console.log(`📋 Job not found yet (${jobNotFoundCount + 1}/${maxJobNotFoundRetries}), server is working...`);
 
               // Close current connection cleanly but don't cleanup everything
               if (eventSource) {
@@ -209,7 +207,6 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
             // Job found! Reset all counters and update state
             if (isSubscribed) {
-              console.log('✅ Job found! Receiving progress updates');
               retryCount = 0;
               jobNotFoundCount = 0;
 
@@ -227,7 +224,6 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
               // Auto-cleanup on job completion
               if (data.status === 'complete' || data.status === 'error' || data.status === 'partial-success') {
-                console.log('🏁 Job finished, closing SSE');
                 cleanup();
               }
             }
@@ -573,7 +569,7 @@ export default function AdCreationForm({
       try {
         const response = await axios.put(url, chunk, {
           headers: { 'Content-Type': fileType },
-          timeout: 180000, // Increase to 2 min for slow connections
+          timeout: 120000, // Increase to 2 min for slow connections
         });
         return response;
       } catch (error) {
@@ -582,7 +578,7 @@ export default function AdCreationForm({
 
         if (isLastAttempt || !isNetworkError) throw error;
 
-        console.log(`⚠️ Chunk ${partNumber} failed (attempt ${attempt}/${maxRetries}). Retrying...`);
+        // console.log(`⚠️ Chunk ${partNumber} failed (attempt ${attempt}/${maxRetries}). Retrying...`);
         await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1))); // Exponential backoff
       }
     }
@@ -915,8 +911,8 @@ export default function AdCreationForm({
               throw error;
             }
             const delay = 2000 * Math.pow(2, attempt - 1);
-            console.log(`⚠️ S3 complete-upload attempt ${attempt} failed. Retrying in ${delay}ms...`);
-            console.log(`   Error: ${error.message}`);
+            // console.log(`⚠️ S3 complete-upload attempt ${attempt} failed. Retrying in ${delay}ms...`);
+            // console.log(`   Error: ${error.message}`);
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
@@ -938,14 +934,14 @@ export default function AdCreationForm({
 
         // Abort the current upload before retrying
         if (uploadId && s3Key) {
-          console.log(`🧹 Aborting failed upload (attempt ${uploadAttempt})...`);
+          // console.log(`🧹 Aborting failed upload (attempt ${uploadAttempt})...`);
           try {
             await axios.post(
               `${API_BASE_URL}/auth/s3/abort-upload`,
               { key: s3Key, uploadId: uploadId },
               { withCredentials: true }
             );
-            console.log(`✅ Successfully aborted upload for retry`);
+            // console.log(`✅ Successfully aborted upload for retry`);
           } catch (abortError) {
             console.error('❌ Failed to abort upload:', abortError.message);
           }
@@ -954,7 +950,7 @@ export default function AdCreationForm({
         // If not the last attempt, wait before retrying
         if (uploadAttempt < maxUploadRetries) {
           const delay = 3000 * uploadAttempt;
-          console.log(`⏳ Retrying upload for ${file.name} in ${delay}ms...`);
+          // console.log(`⏳ Retrying upload for ${file.name} in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -1011,7 +1007,7 @@ export default function AdCreationForm({
 
         // Wait before retrying (exponential backoff: 1s, 2s, 4s)
         const delayMs = Math.pow(2, attempt - 1) * 1000;
-        console.log(`Upload attempt ${attempt} failed, retrying in ${delayMs}ms...`);
+        // console.log(`Upload attempt ${attempt} failed, retrying in ${delayMs}ms...`);
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
@@ -2078,17 +2074,6 @@ export default function AdCreationForm({
     } = jobData.formData;
 
 
-    console.log('🔍 DEBUG - Initial state:', {
-      fileGroups,
-      importedFilesCount: importedFiles?.length,
-      importedFiles: importedFiles?.map(f => ({
-        type: f.type,
-        id: f.type === 'image' ? f.hash : f.id,
-        name: f.name
-      })),
-      enablePlacementCustomization
-    });
-
     setIsCreatingAds(true);
     setProgress(0);
     setProgressMessage('Starting ad creation...');
@@ -2855,8 +2840,6 @@ export default function AdCreationForm({
 
 
       if (importedPosts && importedPosts.length > 0) {
-        console.log('📝 Creating ads from imported posts');
-        console.log(importedPosts);
         // For each adset, create ads from each imported post
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
 
@@ -3182,22 +3165,6 @@ export default function AdCreationForm({
             }))
           );
 
-          console.log('🔍 DEBUG - Grouped file IDs:', {
-            groupedFileIds: Array.from(groupedFileIds),
-            fileGroupsFlat: fileGroups.flat()
-          });
-
-          // 3. Right after calculating hasUngroupedFiles
-          console.log('🔍 DEBUG - hasUngroupedFiles:', {
-            hasUngroupedFiles,
-            ungroupedMetaCheck: importedFiles?.map(f => {
-              const fileId = f.type === 'image' ? f.hash : f.id;
-              return {
-                fileId,
-                isGrouped: groupedFileIds.has(fileId)
-              };
-            })
-          });
 
 
           let localIterationIndex = 0;
@@ -3247,11 +3214,6 @@ export default function AdCreationForm({
               });
 
 
-              console.log('🔍 DEBUG - Processing group:', {
-                groupIndex,
-                groupFileIds: group,
-                groupLength: group.length
-              });
 
               // Append group media files
               const groupVideoMetadata = appendGroupMediaFiles(formData, group, {
@@ -3266,13 +3228,7 @@ export default function AdCreationForm({
                 importedFiles
               });
 
-              console.log('🔍 DEBUG - FormData entries for group:', {
-                groupIndex,
-                metaImageHashes: formData.getAll('metaImageHashes'),
-                metaVideoIds: formData.getAll('metaVideoIds'),
-                metaImageWidths: formData.getAll('metaImageWidths'),
-                metaVideoWidths: formData.getAll('metaVideoWidths')
-              });
+
 
               // Append placement customization fields
               appendPlacementCustomizationFields(formData, {

@@ -101,7 +101,7 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                         className="w-20 mx-auto mb-4"
                                     />
                                     <h2 className="text-xl font-semibold text-[#415363] mb-6">
-                                        Do you want to import values used in your most recent ad to quick test an ad launch?
+                                        Lets import data from your most recent ad so you can quickly test an ad launch!
                                     </h2>
 
                                     <Select value={selectedAdAccount} onValueChange={setSelectedAdAccount}>
@@ -129,13 +129,13 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                         >
                                             Import
                                         </Button>
-                                        <Button
+                                        {/* <Button
                                             onClick={onClose}
                                             disabled={isImporting}
                                             className="bg-[#FAF9F7] border-2 border-[#F72585] text-[#F72585] hover:bg-[#FAF9F7] hover:opacity-80 text-base px-8 py-2.5 rounded-full shadow-none"
                                         >
                                             Skip
-                                        </Button>
+                                        </Button> */}
                                     </div>
 
                                     {isImporting && (

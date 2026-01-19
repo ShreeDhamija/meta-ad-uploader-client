@@ -109,8 +109,8 @@ export default function Settings() {
         }
     }, [subscriptionData.planType, selectedAdAccountIds])
 
-    if (authLoading) return null
-    if (!isLoggedIn) return <Navigate to="/login" />
+    // if (authLoading) return null
+    // if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <>

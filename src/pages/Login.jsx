@@ -86,9 +86,13 @@ export default function Login() {
                             className=" shadom-sm w-[48px] h-[48px] mx-auto rounded-md mb-2"
                         />
                         <h2 className="text-2xl font-bold tracking-tight">Welcome To Blip</h2>
+                        <p className="text-sm font-bold text-zinc-700">
+                            {isSignupPage ? 'Start your 7 Day Free Trial!' : ''}
+                        </p>
                         <p className="text-sm text-muted-foreground">
                             {isSignupPage ? 'You are so close to ditching Ads Manager forever' : 'Login with your facebook account'}
                         </p>
+
                     </div>
 
                     {isSignupPage ? (
