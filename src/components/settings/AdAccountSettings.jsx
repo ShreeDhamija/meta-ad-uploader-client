@@ -568,7 +568,26 @@ const DRAFT_CACHE_KEY = 'adAccountSettings_draft';
 
 export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAccountPopup, subscriptionData }) {
   const { adAccounts, pages, adAccountsLoading } = useAppData()
-  const [selectedAdAccount, setSelectedAdAccount] = useState(preselectedAdAccount || null)
+  const [selectedAdAccount, setSelectedAdAccount] = useState(() => {
+    // If there's a preselected account, use that
+    if (preselectedAdAccount) return preselectedAdAccount;
+
+    // Otherwise, check for cached draft and auto-select that account
+    try {
+      const cachedDraft = localStorage.getItem(DRAFT_CACHE_KEY);
+      if (cachedDraft) {
+        const draft = JSON.parse(cachedDraft);
+        const isRecent = Date.now() - draft.timestamp < 24 * 60 * 60 * 1000;
+        if (isRecent && draft.adAccountId) {
+          return draft.adAccountId;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to read cached draft:', e);
+    }
+
+    return null;
+  });
   const [openAdAccount, setOpenAdAccount] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [selectedPage, setSelectedPage] = useState(null)
@@ -811,10 +830,12 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, [hasChanges]);
 
   // Effect to save draft to localStorage when there are unsaved changes
+  // Effect to save/clear draft in localStorage based on unsaved changes
   useEffect(() => {
     if (!selectedAdAccount) return;
 
     if (hasChanges) {
+      // Save draft when there are unsaved changes
       const draft = {
         adAccountId: selectedAdAccount,
         selectedPage,
@@ -829,6 +850,19 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       };
 
       localStorage.setItem(DRAFT_CACHE_KEY, JSON.stringify(draft));
+    } else {
+      // Clear cache if no unsaved changes (and cache was for this account)
+      try {
+        const cached = localStorage.getItem(DRAFT_CACHE_KEY);
+        if (cached) {
+          const draft = JSON.parse(cached);
+          if (draft.adAccountId === selectedAdAccount) {
+            localStorage.removeItem(DRAFT_CACHE_KEY);
+          }
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
     }
   }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds]);
 
