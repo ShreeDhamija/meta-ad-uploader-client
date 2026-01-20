@@ -834,6 +834,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   useEffect(() => {
     if (!selectedAdAccount) return;
 
+    if (!Object.keys(initialSettings).length) return;
+
+
     if (hasChanges) {
       // Save draft when there are unsaved changes
       const draft = {
@@ -1130,13 +1133,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             <span className="text-sm font-medium">
               You have unsaved settings
             </span>
-            <Button
-              onClick={handleDismiss}
-              variant="ghost"
-              className="text-white hover:bg-blue-700 hover:text-white rounded-xl px-4 h-9 text-sm font-medium"
-            >
-              Dismiss
-            </Button>
+
             <Button
               onClick={handleSave}
               className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
@@ -1149,6 +1146,13 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               ) : (
                 <p className="text-blue-600 hover:text-blue-600">Save Changes</p>
               )}
+            </Button>
+            <Button
+              onClick={handleDismiss}
+              variant="ghost"
+              className="text-white hover:bg-blue-700 hover:text-white rounded-xl px-4 h-9 text-sm font-medium"
+            >
+              Dismiss changes
             </Button>
           </div>
         </div>,
