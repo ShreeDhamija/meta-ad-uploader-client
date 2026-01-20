@@ -20,7 +20,7 @@ import { useIntercom } from "@/lib/useIntercom";
 import DesktopIcon from '@/assets/Desktop.webp';
 import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-
+const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 
 // Check if user has active access
 
@@ -111,20 +111,47 @@ export default function Home() {
     const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false);
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
 
-    // Ad account selection and setup
-    const [selectedAdAccount, setSelectedAdAccount] = useState("")
-    const [campaigns, setCampaigns] = useState([])
-    const [selectedCampaign, setSelectedCampaign] = useState([])
-    const [adSets, setAdSets] = useState([])
-    const [selectedAdSets, setSelectedAdSets] = useState([])
-    const [showDuplicateBlock, setShowDuplicateBlock] = useState(false)
-    const [duplicateAdSet, setDuplicateAdSet] = useState("")
-    const [newAdSetName, setNewAdSetName] = useState("")
-    const [campaignObjective, setCampaignObjective] = useState([])
-    const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
-    const [duplicateCampaign, setDuplicateCampaign] = useState("")
-    const [newCampaignName, setNewCampaignName] = useState("")
+    const getCachedState = () => {
+        try {
+            const cached = localStorage.getItem(HOME_CACHE_KEY);
+            if (cached) {
+                const data = JSON.parse(cached);
+                const isRecent = Date.now() - data.timestamp < 24 * 60 * 60 * 1000;
+                if (isRecent) return data;
+            }
+        } catch (e) {
+            console.error('Failed to parse home cache:', e);
+        }
+        return null;
+    };
 
+    const cachedState = getCachedState();
+
+    // Ad account selection and setup
+    // const [selectedAdAccount, setSelectedAdAccount] = useState("")
+    // const [campaigns, setCampaigns] = useState([])
+    // const [selectedCampaign, setSelectedCampaign] = useState([])
+    // const [adSets, setAdSets] = useState([])
+    // const [selectedAdSets, setSelectedAdSets] = useState([])
+    // const [showDuplicateBlock, setShowDuplicateBlock] = useState(false)
+    // const [duplicateAdSet, setDuplicateAdSet] = useState("")
+    // const [newAdSetName, setNewAdSetName] = useState("")
+    // const [campaignObjective, setCampaignObjective] = useState([])
+    // const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
+    // const [duplicateCampaign, setDuplicateCampaign] = useState("")
+    // const [newCampaignName, setNewCampaignName] = useState("")
+    const [selectedAdAccount, setSelectedAdAccount] = useState(cachedState?.selectedAdAccount || "")
+    const [campaigns, setCampaigns] = useState(cachedState?.campaigns || [])
+    const [selectedCampaign, setSelectedCampaign] = useState(cachedState?.selectedCampaign || [])
+    const [adSets, setAdSets] = useState(cachedState?.adSets || [])
+    const [selectedAdSets, setSelectedAdSets] = useState(cachedState?.selectedAdSets || [])
+    const [showDuplicateBlock, setShowDuplicateBlock] = useState(cachedState?.showDuplicateBlock || false)
+    const [duplicateAdSet, setDuplicateAdSet] = useState(cachedState?.duplicateAdSet || "")
+    const [newAdSetName, setNewAdSetName] = useState(cachedState?.newAdSetName || "")
+    const [campaignObjective, setCampaignObjective] = useState(cachedState?.campaignObjective || [])
+    const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(cachedState?.showDuplicateCampaignBlock || false)
+    const [duplicateCampaign, setDuplicateCampaign] = useState(cachedState?.duplicateCampaign || "")
+    const [newCampaignName, setNewCampaignName] = useState(cachedState?.newCampaignName || "")
 
     // Ad creation form
     const [adName, setAdName] = useState("Default Ad Name With Blip")
@@ -210,6 +237,47 @@ export default function Home() {
 
     }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
 
+
+    // Cache ad account settings state
+    useEffect(() => {
+        // Only cache if there's a selected ad account
+        if (!selectedAdAccount) {
+            localStorage.removeItem(HOME_CACHE_KEY);
+            return;
+        }
+
+        const cacheData = {
+            selectedAdAccount,
+            campaigns,
+            selectedCampaign,
+            adSets,
+            selectedAdSets,
+            showDuplicateBlock,
+            duplicateAdSet,
+            newAdSetName,
+            campaignObjective,
+            showDuplicateCampaignBlock,
+            duplicateCampaign,
+            newCampaignName,
+            timestamp: Date.now()
+        };
+
+        localStorage.setItem(HOME_CACHE_KEY, JSON.stringify(cacheData));
+    }, [
+        selectedAdAccount,
+        campaigns,
+        selectedCampaign,
+        adSets,
+        selectedAdSets,
+        showDuplicateBlock,
+        duplicateAdSet,
+        newAdSetName,
+        campaignObjective,
+        showDuplicateCampaignBlock,
+        duplicateCampaign,
+        newCampaignName,
+
+    ]);
 
 
     useEffect(() => {

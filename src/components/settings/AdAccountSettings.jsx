@@ -712,7 +712,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, []);
 
   // Optimized ad account selection handler
-  // Optimized ad account selection handler
   const handleAdAccountSelect = useCallback((accountId) => {
     // If switching to a different account, clear cache and reset form state
     if (selectedAdAccount && accountId !== selectedAdAccount) {
