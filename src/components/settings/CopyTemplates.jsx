@@ -217,12 +217,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   ]);
 
   // const blocker = useBlocker(() => templateChanged);
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      templateChanged &&
-      (currentLocation.pathname !== nextLocation.pathname ||
-        currentLocation.search !== nextLocation.search)
-  );
+  const blocker = useBlocker(templateChanged);
 
 
   useEffect(() => {
