@@ -713,11 +713,16 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
   // Optimized ad account selection handler
   const handleAdAccountSelect = useCallback((accountId) => {
+    // Clear cache from previous account if switching
+    if (selectedAdAccount && accountId !== selectedAdAccount) {
+      localStorage.removeItem(DRAFT_CACHE_KEY);
+    }
+
     // Reset cache restored flag when switching accounts
     cacheRestoredRef.current = false;
     setSelectedAdAccount(accountId);
     setOpenAdAccount(false);
-  }, []);
+  }, [selectedAdAccount]);
 
   // Optimized ad name formula handlers
 
