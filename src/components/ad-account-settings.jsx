@@ -425,29 +425,46 @@ export default function AdAccountSettings({
     }
   });
 
+
   // Auto-populate new ad set name when duplicate ad set is selected
   useEffect(() => {
     if (duplicateAdSet) {
       const selectedAdSet = adSets.find((adset) => adset.id === duplicateAdSet)
       if (selectedAdSet) {
-        setNewAdSetName(selectedAdSet.name + "_Copy")
+        const defaultName = selectedAdSet.name + "_Copy"
+        const isOtherAdSetDefault = adSets.some(
+          adset => adset.id !== duplicateAdSet && newAdSetName === adset.name + "_Copy"
+        )
+
+        if (!newAdSetName || isOtherAdSetDefault) {
+          setNewAdSetName(defaultName)
+        }
       }
     } else {
       setNewAdSetName("")
     }
-  }, [duplicateAdSet, adSets, setNewAdSetName])
+  }, [duplicateAdSet, adSets, newAdSetName, setNewAdSetName])
 
+  // Auto-populate new campaign name when duplicate campaign is selected
   // Auto-populate new campaign name when duplicate campaign is selected
   useEffect(() => {
     if (duplicateCampaign) {
-      const selectedCampaign = campaigns.find((campaign) => campaign.id === duplicateCampaign);
-      if (selectedCampaign) {
-        setNewCampaignName(selectedCampaign.name + "_Copy");
+      const selectedCamp = campaigns.find((campaign) => campaign.id === duplicateCampaign)
+      if (selectedCamp) {
+        const defaultName = selectedCamp.name + "_Copy"
+
+        const isOtherCampaignDefault = campaigns.some(
+          camp => camp.id !== duplicateCampaign && newCampaignName === camp.name + "_Copy"
+        )
+
+        if (!newCampaignName || isOtherCampaignDefault) {
+          setNewCampaignName(defaultName)
+        }
       }
     } else {
-      setNewCampaignName("");
+      setNewCampaignName("")
     }
-  }, [duplicateCampaign, campaigns]);
+  }, [duplicateCampaign, campaigns, newCampaignName, setNewCampaignName])
 
   const selectedDynamicAdSets = useMemo(() =>
     selectedAdSets
@@ -885,7 +902,7 @@ transition-all duration-150 hover:!bg-black
                         {showDuplicateBlock
                           ? "New Ad Set"
                           : selectedCampaign.length > 0 && adSets.length === 0
-                            ? "No ad sets found"
+                            ? "No ad sets exist in this campaign. Select a different campaign"
                             : selectedAdSets.length > 0
                               ? `${selectedAdSets.length} AdSet${selectedAdSets.length > 1 ? "s" : ""} selected`
                               : "Select Ad Sets"}
@@ -908,7 +925,7 @@ transition-all duration-150 hover:!bg-black
                     value={adSetSearchValue}
                     onValueChange={setAdSetSearchValue}
                   />
-                  <CommandEmpty>No ad sets found.</CommandEmpty>
+                  <CommandEmpty>No ad sets exist in this campaign. Select a different campaign</CommandEmpty>
                   <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar px-2" selectOnFocus={false}>
                     <CommandGroup>
                       {!isAdvantagePlusCampaign && (
@@ -1082,7 +1099,7 @@ transition-all duration-150 hover:!bg-black
                           value={duplicateAdSetSearchValue}
                           onValueChange={setDuplicateAdSetSearchValue}
                         />
-                        <CommandEmpty>No ad sets found.</CommandEmpty>
+                        <CommandEmpty>No ad sets exist in this campaign. Select a different campaign</CommandEmpty>
                         <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                           <CommandGroup>
                             {filteredAdSets.length > 0 ? (
