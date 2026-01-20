@@ -797,7 +797,7 @@
 
 // "use client"
 
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import { toast, Toaster } from "sonner"
 import { useNavigate } from "react-router-dom"
 
@@ -818,23 +818,26 @@ import DesktopIcon from '@/assets/Desktop.webp';
 import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
-// Cache key for home page state
-const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
+// Cache key
+const HOME_CACHE_KEY = 'home_page_cache';
 
-// Helper to get cached state
+// Get cached state (only if recent)
 const getCachedState = () => {
     try {
         const cached = localStorage.getItem(HOME_CACHE_KEY);
         if (cached) {
             const data = JSON.parse(cached);
-            const isRecent = Date.now() - data.timestamp < 24 * 60 * 60 * 1000;
-            if (isRecent) return data;
+            if (Date.now() - data.timestamp < 24 * 60 * 60 * 1000) {
+                return data;
+            }
         }
     } catch (e) {
-        console.error('Failed to parse home cache:', e);
+        console.error('Cache parse error:', e);
     }
     return null;
 };
+
+const cachedState = getCachedState();
 
 
 class ErrorBoundary extends React.Component {
@@ -883,7 +886,6 @@ const sortAdSets = (adSets) => {
     });
 };
 
-// Move these functions outside the component - around line 20, before the component
 const sortCampaigns = (campaigns) => {
     const priority = { ACTIVE: 1, PAUSED: 2 };
     return [...campaigns].sort((a, b) => {
@@ -906,8 +908,8 @@ export default function Home() {
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = useState(false)
 
-    // Get cached state once at component initialization
-    const cachedState = getCachedState();
+    // Track if this is initial mount (for cache logic)
+    const isInitialMount = useRef(true);
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
@@ -926,7 +928,7 @@ export default function Home() {
     const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false);
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
 
-    // Ad account selection and setup - initialize from cache
+    // Ad account selection - initialize from cache
     const [selectedAdAccount, setSelectedAdAccount] = useState(cachedState?.selectedAdAccount || "")
     const [campaigns, setCampaigns] = useState(cachedState?.campaigns || [])
     const [selectedCampaign, setSelectedCampaign] = useState(cachedState?.selectedCampaign || [])
@@ -940,32 +942,31 @@ export default function Home() {
     const [duplicateCampaign, setDuplicateCampaign] = useState(cachedState?.duplicateCampaign || "")
     const [newCampaignName, setNewCampaignName] = useState(cachedState?.newCampaignName || "")
 
-
     // Ad creation form - initialize from cache
     const [adName, setAdName] = useState(cachedState?.adName || "Default Ad Name With Blip")
-    const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" });
+    const [adNameFormulaV2, setAdNameFormulaV2] = useState(cachedState?.adNameFormulaV2 || { rawInput: "" });
     const [headlines, setHeadlines] = useState(cachedState?.headlines || [""])
-    const [descriptions, setDescriptions] = useState([""])
+    const [descriptions, setDescriptions] = useState(cachedState?.descriptions || [""])
     const [messages, setMessages] = useState(cachedState?.messages || [""])
-    const [pageId, setPageId] = useState("")
-    const [instagramAccountId, setInstagramAccountId] = useState("")
+    const [pageId, setPageId] = useState(cachedState?.pageId || "")
+    const [instagramAccountId, setInstagramAccountId] = useState(cachedState?.instagramAccountId || "")
     const [link, setLink] = useState(cachedState?.link || [""])
-    const [customLink, setCustomLink] = useState("")
-    const [showCustomLink, setShowCustomLink] = useState(false)
+    const [customLink, setCustomLink] = useState(cachedState?.customLink || "")
+    const [showCustomLink, setShowCustomLink] = useState(cachedState?.showCustomLink || false)
     const [cta, setCta] = useState(cachedState?.cta || "LEARN_MORE")
 
     const [thumbnail, setThumbnail] = useState(null)
     const [selectedTemplate, setSelectedTemplate] = useState(cachedState?.selectedTemplate || "")
-    const [adOrder, setAdOrder] = useState(["adType", "dateType", "fileName", "iteration"]); // Remove "customText"
-    const [selectedItems, setSelectedItems] = useState(["adType", "dateType", "fileName"]); // This is fine
-    const [adValues, setAdValues] = useState({
+    const [adOrder, setAdOrder] = useState(cachedState?.adOrder || ["adType", "dateType", "fileName", "iteration"]);
+    const [selectedItems, setSelectedItems] = useState(cachedState?.selectedItems || ["adType", "dateType", "fileName"]);
+    const [adValues, setAdValues] = useState(cachedState?.adValues || {
         dateType: "MonthYYYY",
-        customTexts: {} // Add this for consistency
+        customTexts: {}
     });
     const [driveFiles, setDriveFiles] = useState([])
-    const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
+    const [launchPaused, setLaunchPaused] = useState(false);
     const [isCarouselAd, setIsCarouselAd] = useState(false);
-    const [adType, setAdType] = useState(cachedState?.adType || 'regular'); // 'regular' | 'carousel' | 'flexible'
+    const [adType, setAdType] = useState(cachedState?.adType || 'regular');
     const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
     const [fileGroups, setFileGroups] = useState([]);
     const [files, setFiles] = useState([])
@@ -1011,7 +1012,6 @@ export default function Home() {
     }, [subscriptionData.planType, selectedAdAccountIds])
 
     useEffect(() => {
-
         if (
             !subscriptionLoading &&
             isTrialExpired &&
@@ -1020,9 +1020,6 @@ export default function Home() {
         ) {
             setShowTrialExpiredPopup(true);
         }
-
-
-
     }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
 
 
@@ -1045,7 +1042,7 @@ export default function Home() {
         }
     }, [isLoggedIn]);
 
-    // Cache ad account settings and form state
+    // Save to cache whenever relevant state changes
     useEffect(() => {
         if (!selectedAdAccount) {
             localStorage.removeItem(HOME_CACHE_KEY);
@@ -1053,7 +1050,7 @@ export default function Home() {
         }
 
         const cacheData = {
-            // Ad account selection states
+            // Ad account selection
             selectedAdAccount,
             campaigns,
             selectedCampaign,
@@ -1068,116 +1065,125 @@ export default function Home() {
             newCampaignName,
             useExistingPosts,
 
-            // Form fields (only cache messages/headlines if no template selected)
+            // Form fields
             adName,
-            messages: selectedTemplate ? null : messages,
-            headlines: selectedTemplate ? null : headlines,
+            adNameFormulaV2,
+            messages,
+            headlines,
+            descriptions,
+            pageId,
+            instagramAccountId,
             link,
+            customLink,
+            showCustomLink,
             cta,
-            adType,
             selectedTemplate,
+            adOrder,
+            selectedItems,
+            adValues,
+            adType,
 
             timestamp: Date.now()
         };
 
         localStorage.setItem(HOME_CACHE_KEY, JSON.stringify(cacheData));
     }, [
-        selectedAdAccount,
-        campaigns,
-        selectedCampaign,
-        adSets,
-        selectedAdSets,
-        showDuplicateBlock,
-        duplicateAdSet,
-        newAdSetName,
-        campaignObjective,
-        showDuplicateCampaignBlock,
-        duplicateCampaign,
-        newCampaignName,
-        useExistingPosts,
-        adName,
-        messages,
-        headlines,
-        link,
-        cta,
-        adType,
-        selectedTemplate
+        selectedAdAccount, campaigns, selectedCampaign, adSets, selectedAdSets,
+        showDuplicateBlock, duplicateAdSet, newAdSetName, campaignObjective,
+        showDuplicateCampaignBlock, duplicateCampaign, newCampaignName, useExistingPosts,
+        adName, adNameFormulaV2, messages, headlines, descriptions, pageId, instagramAccountId,
+        link, customLink, showCustomLink, cta, selectedTemplate, adOrder, selectedItems, adValues, adType
     ]);
 
-    // Load ad account settings - respects cache when no saved settings exist
+    // Load ad account settings
     useEffect(() => {
-        // This part handles resetting when no ad account is selected.
+        // No ad account selected - reset everything
         if (!selectedAdAccount) {
-            // Only reset if we don't have cached values
-            if (!cachedState?.selectedAdAccount) {
-                setPageId("");
-                setInstagramAccountId("");
-                setLink([""]);
-                setCta("LEARN_MORE");
-                setSelectedTemplate(undefined);
-                setMessages([""]);
-                setHeadlines([""]);
-                setDescriptions([""]);
-                setAdOrder(["adType", "dateType", "fileName", "iteration"]);
-                setSelectedItems([]);
-                setAdValues({ dateType: "MonthYYYY", customTexts: {} });
-                setAdNameFormulaV2({ rawInput: "" });
-            }
-            return;
-        }
-
-        // If no saved settings exist for this account, keep cached form values
-        if (!documentExists) {
-            // Still set page/instagram from settings if available
-            setPageId(adAccountSettings.defaultPage?.id || "");
-            setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
-            return;
-        }
-
-        // Saved settings exist - load them
-        setPageId(adAccountSettings.defaultPage?.id || "");
-        setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
-
-        const defaultLink = adAccountSettings.links?.find(link => link.isDefault);
-        const linkToUse = defaultLink?.url || adAccountSettings.links?.[0]?.url || "";
-        setLink([linkToUse]);
-
-        setCta(adAccountSettings.defaultCTA || "LEARN_MORE");
-        setAdNameFormulaV2(adAccountSettings.adNameFormulaV2 || { rawInput: "" });
-
-        const formula = adAccountSettings.adNameFormula;
-        if (!formula || Object.keys(formula).length === 0) {
-            setAdOrder(["adType", "dateType", "fileName", "iteration"]);
-            setSelectedItems([]);
-            setAdValues({ dateType: "MonthYYYY", customTexts: {} });
-        } else {
-            setAdValues({
-                dateType: formula.values?.dateType || "MonthYYYY",
-                customTexts: formula.values?.customTexts || {}
-            });
-            setAdOrder(formula.order || ["adType", "dateType", "fileName", "iteration"]);
-            setSelectedItems(formula.selected || []);
-        }
-
-        // Load Copy templates
-        const templates = adAccountSettings.copyTemplates || {};
-        const keys = Object.keys(templates);
-
-        if (keys.length === 0) {
+            setPageId("");
+            setInstagramAccountId("");
+            setLink([""]);
+            setCta("LEARN_MORE");
             setSelectedTemplate(undefined);
             setMessages([""]);
             setHeadlines([""]);
             setDescriptions([""]);
-        } else {
-            const initialTemplateName = keys.includes(adAccountSettings.defaultTemplateName)
-                ? adAccountSettings.defaultTemplateName
-                : keys[0];
+            setAdOrder(["adType", "dateType", "fileName", "iteration"]);
+            setSelectedItems([]);
+            setAdValues({ dateType: "MonthYYYY", customTexts: {} });
+            setAdNameFormulaV2({ rawInput: "" });
+            return;
+        }
 
-            setSelectedTemplate(initialTemplateName);
-            const selectedTemplateData = templates[initialTemplateName];
-            setMessages(selectedTemplateData?.primaryTexts || [""]);
-            setHeadlines(selectedTemplateData?.headlines || [""]);
-            setDescriptions(selectedTemplateData?.descriptions || [""]);
+        // On initial mount with matching cache, skip loading from settings
+        // This preserves cached form values
+        if (isInitialMount.current && cachedState?.selectedAdAccount === selectedAdAccount) {
+            isInitialMount.current = false;
+            return;
+        }
+
+        // Mark initial mount complete
+        isInitialMount.current = false;
+
+        // From here: user switched accounts - load from saved settings or reset
+
+        // Always load page/instagram from settings
+        setPageId(adAccountSettings.defaultPage?.id || "");
+        setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
+
+        if (documentExists) {
+            // Account has saved settings - load them
+            const defaultLink = adAccountSettings.links?.find(link => link.isDefault);
+            const linkToUse = defaultLink?.url || adAccountSettings.links?.[0]?.url || "";
+            setLink([linkToUse]);
+
+            setCta(adAccountSettings.defaultCTA || "LEARN_MORE");
+            setAdNameFormulaV2(adAccountSettings.adNameFormulaV2 || { rawInput: "" });
+
+            const formula = adAccountSettings.adNameFormula;
+            if (!formula || Object.keys(formula).length === 0) {
+                setAdOrder(["adType", "dateType", "fileName", "iteration"]);
+                setSelectedItems([]);
+                setAdValues({ dateType: "MonthYYYY", customTexts: {} });
+            } else {
+                setAdValues({
+                    dateType: formula.values?.dateType || "MonthYYYY",
+                    customTexts: formula.values?.customTexts || {}
+                });
+                setAdOrder(formula.order || ["adType", "dateType", "fileName", "iteration"]);
+                setSelectedItems(formula.selected || []);
+            }
+
+            const templates = adAccountSettings.copyTemplates || {};
+            const keys = Object.keys(templates);
+
+            if (keys.length === 0) {
+                setSelectedTemplate(undefined);
+                setMessages([""]);
+                setHeadlines([""]);
+                setDescriptions([""]);
+            } else {
+                const initialTemplateName = keys.includes(adAccountSettings.defaultTemplateName)
+                    ? adAccountSettings.defaultTemplateName
+                    : keys[0];
+
+                setSelectedTemplate(initialTemplateName);
+                const selectedTemplateData = templates[initialTemplateName];
+                setMessages(selectedTemplateData?.primaryTexts || [""]);
+                setHeadlines(selectedTemplateData?.headlines || [""]);
+                setDescriptions(selectedTemplateData?.descriptions || [""]);
+            }
+        } else {
+            // Account has NO saved settings - reset to empty defaults
+            setLink([""]);
+            setCta("LEARN_MORE");
+            setSelectedTemplate(undefined);
+            setMessages([""]);
+            setHeadlines([""]);
+            setDescriptions([""]);
+            setAdOrder(["adType", "dateType", "fileName", "iteration"]);
+            setSelectedItems([]);
+            setAdValues({ dateType: "MonthYYYY", customTexts: {} });
+            setAdNameFormulaV2({ rawInput: "" });
         }
 
     }, [selectedAdAccount, adAccountSettings, documentExists]);
@@ -1185,7 +1191,7 @@ export default function Home() {
 
 
     const handleCloseOnboarding = () => {
-        setShowOnboardingPopup(false) // closes instantly
+        setShowOnboardingPopup(false)
 
         fetch(`${API_BASE_URL}/settings/save`, {
             method: "POST",
@@ -1200,6 +1206,7 @@ export default function Home() {
             console.error("Failed to save onboarding flag:", err)
         })
     }
+
     const onItemToggle = (item) => {
         setSelectedItems((prev) =>
             prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
@@ -1212,12 +1219,10 @@ export default function Home() {
         setSelectedAdAccount(adAccountId)
         setCampaigns([])
         setAdSets([])
-        // setSelectedCampaign("")
         setSelectedCampaign([])
         setSelectedAdSets([])
         if (!adAccountId) return
 
-        // setIsAdAccountChanging(true);
         setIsLoading(true)
         try {
             const res = await fetch(
@@ -1226,33 +1231,22 @@ export default function Home() {
             )
             const data = await res.json()
             if (data.campaigns) {
-                const priority = {
-                    ACTIVE: 1,
-                    PAUSED: 2,
-                }
-
                 const sortedCampaigns = sortCampaigns(data.campaigns);
                 setCampaigns(sortedCampaigns);
-
-
-
             }
         } catch (err) {
             toast.error(`Failed to fetch campaigns: ${err.message || "Unknown error occurred"}`)
             console.error("Failed to fetch campaigns:", err)
         } finally {
             setIsLoading(false)
-            // setIsAdAccountChanging(false);
         }
     });
 
     const handleOnboardingImport = async (adAccountId) => {
         try {
-            // Set the selected ad account
             await handleAdAccountChange(adAccountId);
             setAdName("Ad Generated Through Blip");
 
-            // Fetch copy
             const copyRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-copy`, {
                 method: 'POST',
                 credentials: 'include',
@@ -1266,7 +1260,6 @@ export default function Home() {
 
             const copyData = await copyRes.json();
 
-            // Fetch URL
             const urlRes = await fetch(`${API_BASE_URL}/auth/fetch-single-recent-url?adAccountId=${adAccountId}`, {
                 credentials: 'include'
             });
@@ -1277,13 +1270,11 @@ export default function Home() {
 
             const urlData = await urlRes.json();
 
-            // Fetch pages
             const pagesRes = await fetch(`${API_BASE_URL}/auth/fetch-recent-pages?adAccountId=${adAccountId}`, {
                 credentials: 'include'
             });
             const pagesData = await pagesRes.json();
 
-            // Set the imported values to state
             if (copyData && copyData.primaryText) {
                 setMessages([copyData.primaryText]);
             }
@@ -1307,6 +1298,7 @@ export default function Home() {
             toast.error('Failed to import ad data');
         }
     };
+
     const refreshAdSets = useCallback(async () => {
         if (!selectedCampaign) return
         setIsLoading(true)
@@ -1328,7 +1320,6 @@ export default function Home() {
         } finally {
             setIsLoading(false)
             setIsLoadingAdSets(false);
-
         }
     });
 
@@ -1493,7 +1484,6 @@ export default function Home() {
                         />
                     </div>
 
-                    {/* <div className="flex-1 min-w-0"> */}
                     <div className={`flex-1 xl:flex-[45] min-w-0 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
                         <ErrorBoundary>
                             <MediaPreview
@@ -1527,22 +1517,19 @@ export default function Home() {
                 {showOnboardingPopup && (
                     <OnboardingPopup
                         userName={userName}
-                        hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
+                        hasSeenSettingsOnboarding={hasSeenSettingsOnboarding}
                         onClose={handleCloseOnboarding}
-                        adAccounts={adAccounts} // your ad accounts array
+                        adAccounts={adAccounts}
                         onImport={handleOnboardingImport}
-                        hasAnySettings={hasAnyAdAccountSettings}  // PASS THIS
+                        hasAnySettings={hasAnyAdAccountSettings}
                         onGoToSettings={() => {
 
                             try {
-                                // Navigate FIRST, before unmounting the component                                
                                 navigate("/settings")
 
-                                // Then update state and save settings
                                 setHasSeenOnboarding(true)
                                 setShowOnboardingPopup(false)
 
-                                // Save settings after navigation
                                 fetch(`${API_BASE_URL}/settings/save`, {
                                     method: "POST",
                                     credentials: "include",
@@ -1564,13 +1551,11 @@ export default function Home() {
                             setHasDismissedTrialPopup(true);
                         }}
                         onUpgrade={() => {
-                            // Navigate to billing tab in settings
                             navigate("/settings?tab=billing");
                             setShowTrialExpiredPopup(false);
                             setHasDismissedTrialPopup(true);
                         }}
                         joinTeam={() => {
-                            // Navigate to billing tab in settings
                             navigate("/settings?tab=team");
                             setShowTrialExpiredPopup(false);
                             setHasDismissedTrialPopup(true);
