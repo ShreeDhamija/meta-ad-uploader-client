@@ -1024,7 +1024,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 Save & Continue
               </Button>
               <Button
-                className="!rounded-xl bg-red-700 text-white hover:bg-red-800 hover:text-white"
+                className="!rounded-xl bg-rose-500 text-white hover:bg-red-600 hover:text-white"
                 onClick={() => blocker.proceed()}
               >
                 Discard Changes and Proceed

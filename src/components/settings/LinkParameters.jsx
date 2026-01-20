@@ -469,10 +469,11 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             {(() => {
                                 // Determine base URL
                                 let baseUrl = 'landingpagelink';
+                                const defaultLink = links.find(link => link.isDefault);
                                 if (defaultLink) {
-                                    baseUrl = defaultLink;
-                                } else if (links && links.length > 0) {
-                                    baseUrl = links[0];
+                                    baseUrl = defaultLink.url;
+                                } else if (links.length > 0) {
+                                    baseUrl = links[0].url;
                                 }
 
                                 // Build UTM query string
