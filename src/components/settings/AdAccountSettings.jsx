@@ -712,10 +712,22 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, []);
 
   // Optimized ad account selection handler
+  // Optimized ad account selection handler
   const handleAdAccountSelect = useCallback((accountId) => {
-    // Clear cache from previous account if switching
+    // If switching to a different account, clear cache and reset form state
     if (selectedAdAccount && accountId !== selectedAdAccount) {
       localStorage.removeItem(DRAFT_CACHE_KEY);
+
+      // Reset form state immediately to prevent showing stale values
+      setSelectedPage(null);
+      setSelectedInstagram(null);
+      setLinks([]);
+      setUtmPairs([]);
+      setDefaultCTA("LEARN_MORE");
+      setEnhancements(DEFAULT_ENHANCEMENTS);
+      setAdNameFormulaV2({ rawInput: "" });
+      setMultiAdvertiserAds(false);
+      setInitialSettings({});
     }
 
     // Reset cache restored flag when switching accounts
