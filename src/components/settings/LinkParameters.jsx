@@ -464,8 +464,8 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 )} */}
                 {utmPairs.length > 0 && (
                     <div className="mb-3">
-                        <p className="text-xs font-semibold mb-1 text-zinc-700">Saved UTMs</p>
-                        <div className="bg-gray-50 rounded p-2 font-mono text-xs break-all text-gray-700">
+                        <p className="text-xs font-semibold mb-1 text-zinc-700">Link with UTMs</p>
+                        <div className="bg-white rounded-lg p-2 font-mono text-xs break-all text-gray-700">
                             {(() => {
                                 // Determine base URL
                                 let baseUrl = 'landingpagelink';
@@ -476,10 +476,15 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     baseUrl = links[0].url;
                                 }
 
-                                // Build UTM query string
+                                // Add https:// if not present
+                                if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+                                    baseUrl = 'https://' + baseUrl;
+                                }
+
+                                // Build UTM query string without encoding (to preserve {{}} for Facebook parameters)
                                 const utmParams = utmPairs
                                     .filter(pair => pair.key && pair.value)
-                                    .map(pair => `${pair.key}=${encodeURIComponent(pair.value)}`);
+                                    .map(pair => `${pair.key}=${pair.value}`);
 
                                 return `${baseUrl}${utmParams.length > 0 ? '?' + utmParams.join('&') : ''}`;
                             })()}
