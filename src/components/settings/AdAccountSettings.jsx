@@ -870,6 +870,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds]);
 
   // Effect for loading initial settings (with cache restoration)
+  // Effect for loading initial settings (with cache restoration)
   useEffect(() => {
     if (!selectedAdAccount || !adSettings) return;
 
@@ -882,39 +883,41 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       return;
     }
 
-    // Check for cached draft (only if we haven't already restored for this session)
-    if (!cacheRestoredRef.current) {
-      try {
-        const cachedDraft = localStorage.getItem(DRAFT_CACHE_KEY);
-
-        if (cachedDraft) {
-          const draft = JSON.parse(cachedDraft);
-
-          // Only restore if the cached draft is for the currently selected account
-          // and is recent (within 24 hours)
-          const isForCurrentAccount = draft.adAccountId === selectedAdAccount;
-          const isRecent = Date.now() - draft.timestamp < 24 * 60 * 60 * 1000;
-
-          if (isForCurrentAccount && isRecent) {
-            setSelectedPage(draft.selectedPage);
-            setSelectedInstagram(draft.selectedInstagram);
-            setLinks(draft.links);
-            setUtmPairs(draft.utmPairs);
-            setDefaultCTA(draft.defaultCTA);
-            setEnhancements(draft.enhancements);
-            setAdNameFormulaV2(draft.adNameFormulaV2);
-            setMultiAdvertiserAds(draft.multiAdvertiserAds);
-            setInitialSettings(initial); // Keep initial for comparison
-            cacheRestoredRef.current = true;
-            return;
-          }
-        }
-      } catch (e) {
-        console.error('Failed to parse cached draft:', e);
-      }
+    // If cache was already restored, only update initialSettings (for hasChanges comparison)
+    // but don't overwrite the form values
+    if (cacheRestoredRef.current) {
+      setInitialSettings(initial);
+      return;
     }
 
-    // No valid cache or cache already restored, use server values
+    // Try to restore from cache
+    try {
+      const cachedDraft = localStorage.getItem(DRAFT_CACHE_KEY);
+
+      if (cachedDraft) {
+        const draft = JSON.parse(cachedDraft);
+        const isForCurrentAccount = draft.adAccountId === selectedAdAccount;
+        const isRecent = Date.now() - draft.timestamp < 24 * 60 * 60 * 1000;
+
+        if (isForCurrentAccount && isRecent) {
+          setSelectedPage(draft.selectedPage);
+          setSelectedInstagram(draft.selectedInstagram);
+          setLinks(draft.links);
+          setUtmPairs(draft.utmPairs);
+          setDefaultCTA(draft.defaultCTA);
+          setEnhancements(draft.enhancements);
+          setAdNameFormulaV2(draft.adNameFormulaV2);
+          setMultiAdvertiserAds(draft.multiAdvertiserAds);
+          setInitialSettings(initial);
+          cacheRestoredRef.current = true;
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse cached draft:', e);
+    }
+
+    // No valid cache, use server values
     setSelectedPage(initial.defaultPage);
     setSelectedInstagram(initial.defaultInstagram);
     setLinks(initial.links);
