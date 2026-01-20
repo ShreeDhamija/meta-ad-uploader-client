@@ -790,6 +790,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       });
 
       toast.success("Updates saved!");
+      localStorage.removeItem('home_page_cache');
+
 
       if (isFirstEverSave) {
         confetti({
