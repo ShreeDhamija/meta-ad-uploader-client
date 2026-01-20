@@ -906,10 +906,8 @@ export default function Home() {
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = useState(false)
     const [cachedState] = useState(() => getCachedState());
-
-
     // Track if this is initial mount (for cache logic)
-    const isInitialMount = useRef(true);
+    const cacheAppliedForAccount = useRef(null);
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
@@ -1099,6 +1097,7 @@ export default function Home() {
     useEffect(() => {
         // No ad account selected - reset everything
         if (!selectedAdAccount) {
+            cacheAppliedForAccount.current = null;
             setPageId("");
             setInstagramAccountId("");
             setLink([""]);
@@ -1114,24 +1113,24 @@ export default function Home() {
             return;
         }
 
-        // On initial mount with matching cache, skip loading from settings
-        // This preserves cached form values
-        if (isInitialMount.current && cachedState?.selectedAdAccount === selectedAdAccount) {
-            isInitialMount.current = false;
+        // If this account was restored from cache, keep skipping
+        if (cacheAppliedForAccount.current === selectedAdAccount) {
             return;
         }
 
-        // Mark initial mount complete
-        isInitialMount.current = false;
+        // First load with matching cache - mark and skip
+        if (cachedState?.selectedAdAccount === selectedAdAccount && cacheAppliedForAccount.current === null) {
+            cacheAppliedForAccount.current = selectedAdAccount;
+            return;
+        }
 
-        // From here: user switched accounts - load from saved settings or reset
+        // User switched accounts - load from settings
+        cacheAppliedForAccount.current = null;
 
-        // Always load page/instagram from settings
         setPageId(adAccountSettings.defaultPage?.id || "");
         setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
 
         if (documentExists) {
-            // Account has saved settings - load them
             const defaultLink = adAccountSettings.links?.find(link => link.isDefault);
             const linkToUse = defaultLink?.url || adAccountSettings.links?.[0]?.url || "";
             setLink([linkToUse]);
@@ -1173,7 +1172,6 @@ export default function Home() {
                 setDescriptions(selectedTemplateData?.descriptions || [""]);
             }
         } else {
-            // Account has NO saved settings - reset to empty defaults
             setLink([""]);
             setCta("LEARN_MORE");
             setSelectedTemplate(undefined);
