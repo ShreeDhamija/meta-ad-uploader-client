@@ -449,7 +449,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 </div>
 
                 {/* Show summary if pairs exist, otherwise just button */}
-                {/* {utmPairs.length > 0 && (
+                {utmPairs.length > 0 && (
                     <div className="mb-3">
                         <p className="text-xs font-semibold mb-1 text-zinc-700">Saved UTMs</p>
                         <div className="flex flex-wrap gap-2">
@@ -461,8 +461,8 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                         </div>
 
                     </div>
-                )} */}
-                {utmPairs.length > 0 && (
+                )}
+                {/* {utmPairs.length > 0 && (
                     <div className="mb-3">
                         <p className="text-xs font-semibold mb-1 text-zinc-700">Link with UTMs</p>
                         <div className="bg-white rounded-lg p-2 font-mono text-xs break-all text-gray-700">
@@ -490,7 +490,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             })()}
                         </div>
                     </div>
-                )}
+                )} */}
 
 
                 <Button
