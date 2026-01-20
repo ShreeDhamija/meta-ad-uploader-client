@@ -445,7 +445,7 @@ export default function AdAccountSettings({
     }
   }, [duplicateAdSet, adSets, newAdSetName, setNewAdSetName])
 
-  // Auto-populate new campaign name when duplicate campaign is selected
+
   // Auto-populate new campaign name when duplicate campaign is selected
   useEffect(() => {
     if (duplicateCampaign) {
