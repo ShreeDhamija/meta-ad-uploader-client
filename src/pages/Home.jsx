@@ -837,8 +837,6 @@ const getCachedState = () => {
     return null;
 };
 
-const cachedState = getCachedState();
-
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -907,6 +905,8 @@ export default function Home() {
     const { showMessenger, hideMessenger } = useIntercom();
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = useState(false)
+    const [cachedState] = useState(() => getCachedState());
+
 
     // Track if this is initial mount (for cache logic)
     const isInitialMount = useRef(true);
