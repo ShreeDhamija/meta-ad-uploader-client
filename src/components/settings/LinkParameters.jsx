@@ -217,34 +217,6 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     }, [selectedAdAccount]);
 
 
-    // --- API: Setup UTMs (Fetch & Modal) ---
-    // const handleOpenUtmSetup = useCallback(async () => {
-    //     if (!selectedAdAccount) return;
-
-    //     setShowUtmSetupModal(true);
-    //     setIsFetchingUtms(true);
-
-    //     // Copy current real settings to draft
-    //     let currentPairs = utmPairs.length > 0 ? [...utmPairs] : [];
-    //     setTempUtmPairs(currentPairs);
-
-    //     try {
-    //         const res = await fetch(`${API_BASE_URL}/auth/fetch-recent-utms?adAccountId=${selectedAdAccount}`, { credentials: "include" });
-    //         const data = await res.json();
-
-    //         if (data.pairs && data.pairs.length > 0) {
-    //             setTempUtmPairs(data.pairs); // Update Draft
-    //             setUtmFetchSuccess(true);
-    //         } else if (currentPairs.length === 0) {
-    //             setTempUtmPairs(DEFAULT_PREFILL_PAIRS); // Suggest Defaults in Draft
-    //             setUtmFetchError(true);
-    //         }
-    //     } catch (err) {
-    //         if (currentPairs.length === 0) setTempUtmPairs(DEFAULT_PREFILL_PAIRS);
-    //     } finally {
-    //         setIsFetchingUtms(false);
-    //     }
-    // }, [selectedAdAccount, utmPairs]);
 
     // --- API: Setup UTMs (Fetch & Modal) ---
     const handleOpenUtmSetup = useCallback(async () => {
@@ -477,7 +449,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 </div>
 
                 {/* Show summary if pairs exist, otherwise just button */}
-                {utmPairs.length > 0 && (
+                {/* {utmPairs.length > 0 && (
                     <div className="mb-3">
                         <p className="text-xs font-semibold mb-1 text-zinc-700">Saved UTMs</p>
                         <div className="flex flex-wrap gap-2">
@@ -488,6 +460,29 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             ))}
                         </div>
 
+                    </div>
+                )} */}
+                {utmPairs.length > 0 && (
+                    <div className="mb-3">
+                        <p className="text-xs font-semibold mb-1 text-zinc-700">Saved UTMs</p>
+                        <div className="bg-gray-50 rounded p-2 font-mono text-xs break-all text-gray-700">
+                            {(() => {
+                                // Determine base URL
+                                let baseUrl = 'landingpagelink';
+                                if (defaultLink) {
+                                    baseUrl = defaultLink;
+                                } else if (links && links.length > 0) {
+                                    baseUrl = links[0];
+                                }
+
+                                // Build UTM query string
+                                const utmParams = utmPairs
+                                    .filter(pair => pair.key && pair.value)
+                                    .map(pair => `${pair.key}=${encodeURIComponent(pair.value)}`);
+
+                                return `${baseUrl}${utmParams.length > 0 ? '?' + utmParams.join('&') : ''}`;
+                            })()}
+                        </div>
                     </div>
                 )}
 
