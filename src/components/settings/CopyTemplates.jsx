@@ -216,7 +216,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
   ]);
 
-  const blocker = useBlocker(() => templateChanged);
+  // const blocker = useBlocker(() => templateChanged);
+  const blocker = useBlocker(templateChanged);
+
 
   useEffect(() => {
     const handler = (e) => {
@@ -1004,37 +1006,48 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       )}
 
       {blocker.state === "blocked" && (
-        <Dialog className="rounded-xl" open onOpenChange={() => blocker.reset()}>
-          <DialogOverlay className="bg-black/20 fixed inset-[-20px]" />
-          <DialogContent className="rounded-[20px]">
-            <DialogHeader>
-              <DialogTitle>Unsaved Template Changes</DialogTitle>
-              <DialogDescription>
+        <div
+          className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
+          style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+          onClick={() => blocker.reset()}
+        >
+          <div
+            className="bg-white rounded-2xl w-[500px] shadow-xl relative border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-8">
+              <h2 className="text-xl font-semibold mb-2">Unsaved Template Changes</h2>
+              <p className="text-sm text-gray-600 mb-6">
                 You have unsaved changes in your template. What would you like to do?
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="flex gap-2">
-              <Button
-                className="bg-blue-500 text-white !rounded-xl"
-                onClick={async () => {
-                  await handleSaveTemplate();
-                  blocker.proceed();
-                }}
-              >
-                Save & Continue
-              </Button>
-              <Button
-                className="!rounded-xl bg-red-700 text-white hover:bg-red-800 hover:text-white"
-                onClick={() => blocker.proceed()}
-              >
-                Discard Changes and Proceed
-              </Button>
-              <Button variant="ghost" onClick={() => blocker.reset()}>
-                Cancel
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <Button
+                  className="bg-blue-500 text-white rounded-xl hover:bg-blue-600 w-full"
+                  onClick={async () => {
+                    await handleSaveTemplate();
+                    blocker.proceed();
+                  }}
+                >
+                  Save & Continue
+                </Button>
+                <Button
+                  className="rounded-xl bg-rose-500 text-white hover:bg-red-600 w-full"
+                  onClick={() => blocker.proceed()}
+                >
+                  Discard Changes and Proceed
+                </Button>
+                <Button
+                  variant="outline"
+                  className="rounded-xl w-full border-gray-300"
+                  onClick={() => blocker.reset()}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
