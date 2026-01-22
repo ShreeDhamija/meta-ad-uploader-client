@@ -1994,6 +1994,9 @@ export default function AnalyticsSettings() {
                                     <p className="text-lg font-bold text-green-600">{formatTimeSaved(adAccountSettings.adsCreatedCount)} hours</p>
                                 </div>
                             </div>
+                            {/* Spacer to push text to right */}
+                            <div className="flex-1" />
+                            <p className="text-[10px] text-gray-400 self-end">counting since Jan 22</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -2485,11 +2488,12 @@ export default function AnalyticsSettings() {
                         )}
                     </div>
 
-                    <div className="p-4 border-t bg-gray-50">
+                    <div className="p-4 border-t bg-gray-50 flex items-center justify-between">
+                        <p className="text-[10px] text-gray-400">counting since Jan 22</p>
                         <Button
                             variant="outline"
                             onClick={() => setShowStatsPopup(false)}
-                            className="w-full rounded-2xl"
+                            className="rounded-2xl"
                         >
                             Close
                         </Button>
