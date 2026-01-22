@@ -1449,7 +1449,7 @@ export default function AnalyticsSettings() {
                                 <SelectValue placeholder="Conversion Event" />
                             </div>
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl">
+                        <SelectContent className="rounded-xl bg-white">
                             {CONVERSION_EVENTS.map((event) => (
                                 <SelectItem key={event.value} value={event.value} className="rounded-lg">
                                     {event.label}
