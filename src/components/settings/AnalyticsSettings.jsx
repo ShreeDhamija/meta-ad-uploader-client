@@ -762,12 +762,12 @@ export default function AnalyticsSettings() {
             )}
 
             {/* Sub-tabs - Pill Switcher Design */}
-            <div className="flex justify-center w-full mb-6">
-                <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-full w-full max-w-lg border border-gray-200/60">
+            <div className="w-full mb-6">
+                <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-xl w-full border border-gray-200/60">
                     <button
                         onClick={() => setActiveSubTab('anomalies')}
                         className={cn(
-                            "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-full transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
+                            "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
                             activeSubTab === 'anomalies'
                                 ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
@@ -776,7 +776,7 @@ export default function AnalyticsSettings() {
                         <AlertTriangle className="w-4 h-4" />
                         Anomaly Detection
                         {anomalySummary?.total > 0 && (
-                            <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0 rounded-full">
+                            <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0 rounded-xl">
                                 {anomalySummary.total}
                             </Badge>
                         )}
@@ -784,7 +784,7 @@ export default function AnalyticsSettings() {
                     <button
                         onClick={() => setActiveSubTab('recommendations')}
                         className={cn(
-                            "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-full transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
+                            "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
                             activeSubTab === 'recommendations'
                                 ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
@@ -793,53 +793,14 @@ export default function AnalyticsSettings() {
                         <Zap className="w-4 h-4" />
                         Budget Recommendations
                         {recSummary?.total > 0 && (
-                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-full">
+                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-xl">
                                 {recSummary.total}
                             </Badge>
                         )}
                     </button>
                 </div>
             </div>
-            {/* <div className="flex items-center gap-2 border-b border-gray-200">
-                <button
-                    onClick={() => setActiveSubTab('anomalies')}
-                    className={cn(
-                        "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
-                        activeSubTab === 'anomalies'
-                            ? "border-blue-600 text-blue-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                    )}
-                >
-                    <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4" />
-                        Anomaly Detection
-                        {anomalySummary?.total > 0 && (
-                            <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0">
-                                {anomalySummary.total}
-                            </Badge>
-                        )}
-                    </div>
-                </button>
-                <button
-                    onClick={() => setActiveSubTab('recommendations')}
-                    className={cn(
-                        "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
-                        activeSubTab === 'recommendations'
-                            ? "border-blue-600 text-blue-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                    )}
-                >
-                    <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4" />
-                        Budget Recommendations
-                        {recSummary?.total > 0 && (
-                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700">
-                                {recSummary.total}
-                            </Badge>
-                        )}
-                    </div>
-                </button>
-            </div> */}
+
 
             {/* Anomalies Tab Content */}
             {activeSubTab === 'anomalies' && (
