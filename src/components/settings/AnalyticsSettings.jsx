@@ -761,8 +761,46 @@ export default function AnalyticsSettings() {
                 </div>
             )}
 
-            {/* Sub-tabs - Original underline design */}
-            <div className="flex items-center gap-2 border-b border-gray-200">
+            {/* Sub-tabs - Pill Switcher Design */}
+            <div className="flex justify-center w-full mb-6">
+                <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-full w-full max-w-lg border border-gray-200/60">
+                    <button
+                        onClick={() => setActiveSubTab('anomalies')}
+                        className={cn(
+                            "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-full transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
+                            activeSubTab === 'anomalies'
+                                ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+                        )}
+                    >
+                        <AlertTriangle className="w-4 h-4" />
+                        Anomaly Detection
+                        {anomalySummary?.total > 0 && (
+                            <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0 rounded-full">
+                                {anomalySummary.total}
+                            </Badge>
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveSubTab('recommendations')}
+                        className={cn(
+                            "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-full transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)]",
+                            activeSubTab === 'recommendations'
+                                ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
+                        )}
+                    >
+                        <Zap className="w-4 h-4" />
+                        Budget Recommendations
+                        {recSummary?.total > 0 && (
+                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-full">
+                                {recSummary.total}
+                            </Badge>
+                        )}
+                    </button>
+                </div>
+            </div>
+            {/* <div className="flex items-center gap-2 border-b border-gray-200">
                 <button
                     onClick={() => setActiveSubTab('anomalies')}
                     className={cn(
@@ -801,7 +839,7 @@ export default function AnalyticsSettings() {
                         )}
                     </div>
                 </button>
-            </div>
+            </div> */}
 
             {/* Anomalies Tab Content */}
             {activeSubTab === 'anomalies' && (
