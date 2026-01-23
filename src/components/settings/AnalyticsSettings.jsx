@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -83,8 +82,8 @@ const CONVERSION_EVENTS = [
 
 // Default anomaly thresholds
 const DEFAULT_THRESHOLDS = {
-    cpaSpike: 50, // CPA spike percentage threshold
-    overspend: 150, // Overspend percentage threshold
+    cpaSpike: 50,
+    overspend: 150,
 };
 
 // Mini sparkline chart component for 7-day trends
@@ -116,8 +115,6 @@ const MiniSparkline = ({ data, color = "blue", height = 40, showDots = false }) 
     };
 
     const colors = colorMap[color] || colorMap.blue;
-
-    // Area path
     const areaD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
 
     return (
@@ -140,13 +137,11 @@ const SpendCpaChart = ({ spendData, cpaData, height = 60 }) => {
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2;
 
-    // Normalize spend values
     const spendValues = spendData.map(d => d.value);
     const spendMin = Math.min(...spendValues);
     const spendMax = Math.max(...spendValues);
     const spendRange = spendMax - spendMin || 1;
 
-    // Normalize CPA values
     const cpaValues = cpaData.map(d => d.value);
     const cpaMin = Math.min(...cpaValues);
     const cpaMax = Math.max(...cpaValues);
@@ -165,15 +160,12 @@ const SpendCpaChart = ({ spendData, cpaData, height = 60 }) => {
     const spendPathD = spendPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
     const cpaPathD = cpaPoints.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 
-    // Day labels
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].slice(-spendData.length);
 
     return (
         <div className="flex flex-col gap-1">
             <svg width={width} height={height} className="overflow-visible">
-                {/* Spend line (blue) */}
                 <path d={spendPathD} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                {/* CPA line (purple) */}
                 <path d={cpaPathD} fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="4 2" />
             </svg>
             <div className="flex justify-between px-1">
@@ -267,9 +259,9 @@ export default function AnalyticsSettings() {
 
     // Apply recommendation state
     const [applyingId, setApplyingId] = useState(null)
-    const [showApplyDialog, setShowApplyDialog] = useState(false)
-    const [selectedRec, setSelectedRec] = useState(null)
-    const [editedBudget, setEditedBudget] = useState('')
+
+    // Editable budgets - keyed by recommendation id
+    const [editedBudgets, setEditedBudgets] = useState({})
 
     // Get selected conversion event for current ad account
     const selectedConversionEvent = useMemo(() => {
@@ -335,6 +327,7 @@ export default function AnalyticsSettings() {
         setRecSummary(null)
         setAnalysisResults([])
         setLastChecked(null)
+        setEditedBudgets({})
     }
 
     // Handler for conversion event change
@@ -342,7 +335,6 @@ export default function AnalyticsSettings() {
         const newEvents = { ...conversionEvents, [selectedAdAccount]: event };
         setConversionEvents(newEvents);
         localStorage.setItem('analytics_conversion_events', JSON.stringify(newEvents));
-        // Refetch data with new conversion event
         toast.success(`Conversion event updated to ${CONVERSION_EVENTS.find(e => e.value === event)?.label}`);
     };
 
@@ -444,6 +436,12 @@ export default function AnalyticsSettings() {
                 setRecommendations(data.recommendations || [])
                 setRecSummary(data.summary)
                 setAnalysisResults(data.analysisResults || [])
+                // Initialize editable budgets with suggested values
+                const initialBudgets = {};
+                (data.recommendations || []).forEach(rec => {
+                    initialBudgets[rec.id] = rec.suggestedBudget.toFixed(2);
+                });
+                setEditedBudgets(initialBudgets);
             } else {
                 toast.error(data.error || 'Failed to fetch recommendations')
             }
@@ -455,23 +453,15 @@ export default function AnalyticsSettings() {
         }
     }
 
-    const handleApplyRecommendation = (rec) => {
-        setSelectedRec(rec)
-        setEditedBudget(rec.suggestedBudget.toFixed(2))
-        setShowApplyDialog(true)
-    }
-
-    const confirmApplyRecommendation = async () => {
-        if (!selectedRec) return
-
-        const budgetToApply = parseFloat(editedBudget);
+    // Apply recommendation directly (no dialog)
+    const applyRecommendation = async (rec) => {
+        const budgetToApply = parseFloat(editedBudgets[rec.id] || rec.suggestedBudget);
         if (isNaN(budgetToApply) || budgetToApply <= 0) {
             toast.error('Please enter a valid budget amount');
             return;
         }
 
-        setApplyingId(selectedRec.id)
-        setShowApplyDialog(false)
+        setApplyingId(rec.id)
 
         try {
             const response = await fetch(`${API_BASE_URL}/api/analytics/apply-recommendation`, {
@@ -479,8 +469,8 @@ export default function AnalyticsSettings() {
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    entityType: selectedRec.entityType,
-                    entityId: selectedRec.entityId,
+                    entityType: rec.entityType,
+                    entityId: rec.entityId,
                     newBudget: budgetToApply
                 })
             })
@@ -488,7 +478,12 @@ export default function AnalyticsSettings() {
             const data = await response.json()
             if (data.success) {
                 toast.success(`Budget updated to $${budgetToApply.toFixed(2)}/day`)
-                setRecommendations(prev => prev.filter(r => r.id !== selectedRec.id))
+                setRecommendations(prev => prev.filter(r => r.id !== rec.id))
+                setEditedBudgets(prev => {
+                    const newBudgets = { ...prev };
+                    delete newBudgets[rec.id];
+                    return newBudgets;
+                });
             } else {
                 toast.error(data.error || 'Failed to apply recommendation')
             }
@@ -497,13 +492,16 @@ export default function AnalyticsSettings() {
             toast.error('Failed to apply recommendation')
         } finally {
             setApplyingId(null)
-            setSelectedRec(null)
-            setEditedBudget('')
         }
     }
 
     const dismissRecommendation = (recId) => {
         setRecommendations(prev => prev.filter(r => r.id !== recId))
+        setEditedBudgets(prev => {
+            const newBudgets = { ...prev };
+            delete newBudgets[recId];
+            return newBudgets;
+        });
         toast.success('Recommendation dismissed')
     }
 
@@ -550,7 +548,7 @@ export default function AnalyticsSettings() {
 
     return (
         <div className="space-y-6">
-            {/* Ad Account Selector + Conversion Event + Settings */}
+            {/* Ad Account Selector + Settings */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3 flex-wrap">
                     {/* Ad Account Dropdown */}
@@ -685,7 +683,6 @@ export default function AnalyticsSettings() {
                                     <p className="text-lg font-bold text-green-600">{formatTimeSaved(adAccountSettings.adsCreatedCount)} hours</p>
                                 </div>
                             </div>
-                            {/* Spacer to push text to right */}
                             <div className="flex-1" />
                             <p className="text-[10px] text-gray-400 self-end">counting since Jan 22</p>
                         </div>
@@ -755,18 +752,16 @@ export default function AnalyticsSettings() {
                                 </div>
                                 <p className="text-xs text-gray-500">Today's Results</p>
                             </div>
-                            <p className="text-xl font-bold">{quickStats.today.conversions || 0}</p>
-                            {quickStats.trends.conversionsVsYesterday !== null && (
-                                <p className={cn("text-xs mt-1", formatPercent(quickStats.trends.conversionsVsYesterday)?.color)}>
-                                    {formatPercent(quickStats.trends.conversionsVsYesterday)?.text} vs yesterday
-                                </p>
-                            )}
+                            <p className="text-xl font-bold">{quickStats.today.results || 0}</p>
+                            <p className="text-xs text-gray-400 mt-1 truncate">
+                                {CONVERSION_EVENTS.find(e => e.value === selectedConversionEvent)?.label || 'conversions'}
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
             )}
 
-            {/* Sub-tabs */}
+            {/* Sub-tabs - Original underline design */}
             <div className="flex items-center gap-2 border-b border-gray-200">
                 <button
                     onClick={() => setActiveSubTab('anomalies')}
@@ -780,9 +775,9 @@ export default function AnalyticsSettings() {
                     <div className="flex items-center gap-2">
                         <AlertTriangle className="w-4 h-4" />
                         Anomaly Detection
-                        {anomalies.length > 0 && (
+                        {anomalySummary?.total > 0 && (
                             <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0">
-                                {anomalies.length}
+                                {anomalySummary.total}
                             </Badge>
                         )}
                     </div>
@@ -799,9 +794,9 @@ export default function AnalyticsSettings() {
                     <div className="flex items-center gap-2">
                         <Zap className="w-4 h-4" />
                         Budget Recommendations
-                        {recommendations.length > 0 && (
+                        {recSummary?.total > 0 && (
                             <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700">
-                                {recommendations.length}
+                                {recSummary.total}
                             </Badge>
                         )}
                     </div>
@@ -811,6 +806,34 @@ export default function AnalyticsSettings() {
             {/* Anomalies Tab Content */}
             {activeSubTab === 'anomalies' && (
                 <div className="space-y-4">
+                    {/* Slack Integration Toggle */}
+                    <Card className="rounded-2xl border-gray-200 bg-gradient-to-r from-gray-50 to-white">
+                        <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-[#4A154B] flex items-center justify-center">
+                                        <Slack className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-gray-900">Slack Notifications</p>
+                                        <p className="text-xs text-gray-500">Get anomaly alerts sent to your Slack channel</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    {slackEnabled && (
+                                        <Badge variant="outline" className="rounded-full text-xs bg-green-50 text-green-700 border-green-200">
+                                            Connected
+                                        </Badge>
+                                    )}
+                                    <Switch
+                                        checked={slackEnabled}
+                                        onCheckedChange={handleSlackToggle}
+                                    />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {anomaliesLoading ? (
                         <Card className="rounded-2xl">
                             <CardContent className="py-12">
@@ -948,17 +971,32 @@ export default function AnalyticsSettings() {
                                                 <div>
                                                     <p className="font-medium text-gray-900">{rec.entityName}</p>
                                                     <p className="text-sm text-gray-600 mt-0.5">{rec.reason}</p>
-                                                    <div className="flex items-center gap-4 mt-2">
+                                                    {rec.campaignName && rec.entityType === 'adset' && (
+                                                        <p className="text-xs text-gray-400 mt-1">Campaign: {rec.campaignName}</p>
+                                                    )}
+                                                    <div className="flex items-center gap-3 mt-3">
                                                         <span className="text-xs text-gray-500">
                                                             Current: <span className="font-medium">{formatCurrency(rec.currentBudget)}/day</span>
                                                         </span>
                                                         <span className="text-xs">→</span>
-                                                        <span className={cn(
-                                                            "text-xs font-medium",
-                                                            rec.recommendationType === 'increase' ? "text-green-600" : "text-orange-600"
-                                                        )}>
-                                                            Suggested: {formatCurrency(rec.suggestedBudget)}/day ({rec.changePercent > 0 ? '+' : ''}{rec.changePercent}%)
-                                                        </span>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-xs text-gray-500">New:</span>
+                                                            <div className="relative">
+                                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                                                                <input
+                                                                    type="number"
+                                                                    value={editedBudgets[rec.id] || ''}
+                                                                    onChange={(e) => setEditedBudgets(prev => ({ ...prev, [rec.id]: e.target.value }))}
+                                                                    className={cn(
+                                                                        "w-24 pl-5 pr-2 py-1 text-xs font-medium border rounded-lg focus:outline-none focus:ring-2",
+                                                                        rec.recommendationType === 'increase'
+                                                                            ? "border-green-300 focus:ring-green-500 text-green-700"
+                                                                            : "border-orange-300 focus:ring-orange-500 text-orange-700"
+                                                                    )}
+                                                                />
+                                                            </div>
+                                                            <span className="text-xs text-gray-500">/day</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -973,7 +1011,7 @@ export default function AnalyticsSettings() {
                                                 </Button>
                                                 <Button
                                                     size="sm"
-                                                    onClick={() => handleApplyRecommendation(rec)}
+                                                    onClick={() => applyRecommendation(rec)}
                                                     disabled={applyingId === rec.id}
                                                     className={cn(
                                                         "rounded-xl",
@@ -998,81 +1036,6 @@ export default function AnalyticsSettings() {
                 </div>
             )}
 
-            {/* Apply Budget Dialog */}
-            <Dialog open={showApplyDialog} onOpenChange={setShowApplyDialog}>
-                <DialogOverlay className="bg-black/50" />
-                <DialogContent className="sm:max-w-[425px] !rounded-[30px] p-8 space-y-6">
-                    <DialogHeader className="space-y-2">
-                        <DialogTitle className="text-xl">Apply Budget Change</DialogTitle>
-                        <DialogDescription>
-                            {selectedRec && (
-                                <>
-                                    {selectedRec.recommendationType === 'increase' ? 'Increase' : 'Decrease'} budget for <strong>{selectedRec.entityName}</strong>
-                                </>
-                            )}
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    {selectedRec && (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-                                <span className="text-sm text-gray-600">Current Budget</span>
-                                <span className="font-semibold">${selectedRec.currentBudget.toFixed(2)}/day</span>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="newBudget" className="text-sm text-gray-600">New Budget ($/day)</Label>
-                                <div className="relative">
-                                    <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <Input
-                                        id="newBudget"
-                                        type="number"
-                                        step="0.01"
-                                        value={editedBudget}
-                                        onChange={(e) => setEditedBudget(e.target.value)}
-                                        className="pl-9 rounded-xl h-12 text-lg font-semibold"
-                                        placeholder={selectedRec.suggestedBudget.toFixed(2)}
-                                    />
-                                </div>
-                                <p className="text-xs text-gray-400">
-                                    Suggested: ${selectedRec.suggestedBudget.toFixed(2)} ({selectedRec.changePercent > 0 ? '+' : ''}{selectedRec.changePercent}%)
-                                </p>
-                            </div>
-
-                            {editedBudget && parseFloat(editedBudget) !== selectedRec.suggestedBudget && (
-                                <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
-                                    <p className="text-xs text-blue-700">
-                                        You're applying a custom budget of <strong>${parseFloat(editedBudget).toFixed(2)}/day</strong> instead of the suggested ${selectedRec.suggestedBudget.toFixed(2)}/day
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowApplyDialog(false)}
-                            className="rounded-2xl flex-1"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={confirmApplyRecommendation}
-                            disabled={!editedBudget || parseFloat(editedBudget) <= 0}
-                            className={cn(
-                                "rounded-2xl flex-1",
-                                selectedRec?.recommendationType === 'increase'
-                                    ? "bg-green-600 hover:bg-green-700"
-                                    : "bg-orange-600 hover:bg-orange-700"
-                            )}
-                        >
-                            Apply Budget Change
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
             {/* Settings Dialog */}
             <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
                 <DialogOverlay className="bg-black/50" />
@@ -1083,7 +1046,7 @@ export default function AnalyticsSettings() {
                             Analytics Settings
                         </DialogTitle>
                         <DialogDescription>
-                            Configure anomaly detection thresholds and notification preferences
+                            Configure conversion events and anomaly detection thresholds
                         </DialogDescription>
                     </DialogHeader>
 
@@ -1116,7 +1079,6 @@ export default function AnalyticsSettings() {
 
                         <div className="border-t border-gray-200" />
 
-
                         {/* Anomaly Thresholds */}
                         <div className="space-y-4">
                             <h3 className="font-medium text-gray-900 flex items-center gap-2">
@@ -1130,16 +1092,19 @@ export default function AnalyticsSettings() {
                                         CPA Spike Threshold (%)
                                     </Label>
                                     <div className="flex items-center gap-3">
-                                        <Input
+                                        <input
                                             id="cpaThreshold"
                                             type="number"
-                                            max="200"
                                             value={tempThresholds.cpaSpike}
-                                            onChange={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: parseInt(e.target.value) || 50 }))}
-                                            className="rounded-xl w-24"
+                                            onChange={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: e.target.value }))}
+                                            onBlur={(e) => {
+                                                const num = parseInt(e.target.value) || 50;
+                                                setTempThresholds(prev => ({ ...prev, cpaSpike: num }));
+                                            }}
+                                            className="w-24 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         />
                                         <span className="text-sm text-gray-500">
-                                            Alert when CPA increases by more than {tempThresholds.cpaSpike}% vs 7-day average
+                                            Alert when CPA increases by more than this % vs 7-day average
                                         </span>
                                     </div>
                                 </div>
@@ -1149,17 +1114,19 @@ export default function AnalyticsSettings() {
                                         Overspend Threshold (%)
                                     </Label>
                                     <div className="flex items-center gap-3">
-                                        <Input
+                                        <input
                                             id="overspendThreshold"
                                             type="number"
-                                            min="100"
-                                            max="300"
                                             value={tempThresholds.overspend}
-                                            onChange={(e) => setTempThresholds(prev => ({ ...prev, overspend: parseInt(e.target.value) || 150 }))}
-                                            className="rounded-xl w-24"
+                                            onChange={(e) => setTempThresholds(prev => ({ ...prev, overspend: e.target.value }))}
+                                            onBlur={(e) => {
+                                                const num = parseInt(e.target.value) || 150;
+                                                setTempThresholds(prev => ({ ...prev, overspend: num }));
+                                            }}
+                                            className="w-24 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         />
                                         <span className="text-sm text-gray-500">
-                                            Alert when daily spend exceeds {tempThresholds.overspend}% of budget (ABO only)
+                                            Alert when daily spend exceeds this % of budget (ABO only)
                                         </span>
                                     </div>
                                 </div>
@@ -1197,7 +1164,6 @@ export default function AnalyticsSettings() {
                     </div>
 
                     <div className="p-6">
-                        {/* Summary Stats */}
                         <div className="grid grid-cols-2 gap-4 mb-6">
                             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-5 rounded-2xl text-center">
                                 <div className="text-3xl font-bold text-blue-600">{totalAdsAllAccounts}</div>
@@ -1209,7 +1175,6 @@ export default function AnalyticsSettings() {
                             </div>
                         </div>
 
-                        {/* Per Account Breakdown */}
                         {allStats.length > 0 ? (
                             <div className="space-y-2 max-h-60 overflow-y-auto">
                                 <div className="text-sm font-medium text-gray-500 mb-3">By Ad Account</div>
