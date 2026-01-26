@@ -72,7 +72,9 @@ export default function useAdAccountSettings(adAccountId) {
                         copyTemplates: s.copyTemplates,
                         defaultTemplateName: s.defaultTemplateName || "" || {},
                         creativeEnhancements: s.creativeEnhancements || {},
-                        adNameFormulaV2: s.adNameFormulaV2 || { rawInput: "" } // Add this line
+                        adNameFormulaV2: s.adNameFormulaV2 || { rawInput: "" },
+                        adsCreatedCount: s.adsCreatedCount || 0  // ADD THIS LINE
+
 
 
 
