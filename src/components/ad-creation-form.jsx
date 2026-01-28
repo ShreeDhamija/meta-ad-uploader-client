@@ -2330,7 +2330,7 @@ export default function AdCreationForm({
         if (partnerFbPageId) {
           formData.append("partnerFbPageId", partnerFbPageId);
         }
-        console.log("[Partnership] Sending:", { partnerIgAccountId, partnerFbPageId });
+
       }
     };
 
@@ -4259,7 +4259,7 @@ export default function AdCreationForm({
                                       {filteredPartners.map((partner) => (
                                         <CommandItem
                                           key={partner.creatorIgId}
-                                          value={partner.creatorIgId}
+                                          value={`${partner.creatorUsername} ${partner.creatorIgId}`}
                                           onSelect={() => handlePartnerSelect(partner)}
                                           className={cn(
                                             "px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
