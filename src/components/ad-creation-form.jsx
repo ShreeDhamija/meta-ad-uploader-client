@@ -2321,11 +2321,15 @@ export default function AdCreationForm({
       if (selectedForm) {
         formData.append("leadgenFormId", selectedForm);
       }
-      if (isPartnershipAd && partnerIgAccountId && partnerFbPageId) {
+      if (isPartnershipAd && (partnerIgAccountId || partnerFbPageId)) {
         formData.append("isPartnershipAd", "true");
-        formData.append("partnerIgAccountId", partnerIgAccountId);
-        console.log("[Partnership] Sending:", { partnerIgAccountId });
-        formData.append("partnerFbPageId", partnerFbPageId);
+        if (partnerIgAccountId) {
+          formData.append("partnerIgAccountId", partnerIgAccountId);
+        }
+        if (partnerFbPageId) {
+          formData.append("partnerFbPageId", partnerFbPageId);
+        }
+        console.log("[Partnership] Sending:", { partnerIgAccountId, partnerFbPageId });
       }
     };
 
