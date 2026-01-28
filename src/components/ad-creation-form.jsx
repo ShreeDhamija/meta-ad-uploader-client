@@ -333,6 +333,8 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
 
     setIsLoading(true);
     setError(null);
+    onFetchStart?.(); // Call the callback when fetch starts
+
 
     try {
       const response = await axios.get(
@@ -531,7 +533,11 @@ export default function AdCreationForm({
     refetch: refetchPartners
   } = usePartnershipAdPartners(
     isPartnershipAd ? instagramAccountId : null,
-    isPartnershipAd ? selectedPageAccessToken : null
+    isPartnershipAd ? selectedPageAccessToken : null,
+    () => {
+      setPartnerIgAccountId("");
+      setPartnerFbPageId("");
+    }
   );
 
   // Filter partners based on search
@@ -4246,7 +4252,7 @@ export default function AdCreationForm({
                                   maxWidth: "var(--radix-popover-trigger-width)",
                                 }}
                               >
-                                <Command loop={false}>
+                                <Command filter={() => 1} loop={false}>
                                   <CommandInput
                                     placeholder="Search partners..."
                                     value={partnerSearchValue}
@@ -4290,7 +4296,7 @@ export default function AdCreationForm({
                               </Label>
                               <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-xl">
                                 <span className="text-sm text-gray-700">{partnerFbPageId}</span>
-                                <span className="text-xs text-green-600 ml-auto">✓ Auto-filled</span>
+                                <span className="text-xs text-green-600 ml-auto">✓ Auto-Selected</span>
                               </div>
                             </div>
                           )}
