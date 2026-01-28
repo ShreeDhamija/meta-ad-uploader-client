@@ -319,13 +319,14 @@ const extractFolderId = (url) => {
 /**
  * Hook to fetch approved partnership ad partners for a given Instagram account
  */
-const usePartnershipAdPartners = (instagramAccountId, pageId) => {
+const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
   const [partners, setPartners] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchPartners = useCallback(async () => {
-    if (!instagramAccountId || !pageId) {
+    // Skip if missing required params
+    if (!instagramAccountId || !pageAccessToken) {
       setPartners([]);
       return;
     }
@@ -337,33 +338,28 @@ const usePartnershipAdPartners = (instagramAccountId, pageId) => {
       const response = await axios.get(
         `${API_BASE_URL}/auth/partnership-ads/partners`,
         {
-          params: { instagramAccountId, pageId },
+          params: { instagramAccountId, pageAccessToken },
           withCredentials: true
         }
       );
 
-      const approvedPartners = (response.data.data || [])
-        .filter(partner => partner.permission_status === 'Approved')
-        .map(partner => ({
-          id: partner.id,
-          creatorIgId: partner.creator_ig_id,
-          creatorUsername: partner.creator_username,
-          creatorFbPageId: partner.creator_fb_page_id,
-          brandIgId: partner.brand_ig_id,
-          brandUsername: partner.brand_username,
-          permissionStatus: partner.permission_status,
-          permissionUrl: partner.permission_url
-        }));
+      // Map to cleaner format
+      const approvedPartners = (response.data.data || []).map(partner => ({
+        id: partner.id,
+        creatorIgId: partner.creator_ig_id,
+        creatorUsername: partner.creator_username,
+        creatorFbPageId: partner.creator_fb_page_id,
+      }));
 
       setPartners(approvedPartners);
     } catch (err) {
       console.error('Error fetching partnership ad partners:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to fetch partners');
+      setError(err.response?.data?.error || 'Failed to fetch partners');
       setPartners([]);
     } finally {
       setIsLoading(false);
     }
-  }, [instagramAccountId, pageId]);
+  }, [instagramAccountId, pageAccessToken]);
 
   useEffect(() => {
     fetchPartners();
@@ -371,6 +367,7 @@ const usePartnershipAdPartners = (instagramAccountId, pageId) => {
 
   return { partners, isLoading, error, refetch: fetchPartners };
 };
+
 
 
 export default function AdCreationForm({
@@ -520,7 +517,13 @@ export default function AdCreationForm({
   const [openPartnerSelector, setOpenPartnerSelector] = useState(false);
   const [partnerSearchValue, setPartnerSearchValue] = useState("");
 
-  // Fetch partners using the hook
+  // Get the selected page's access token
+  const selectedPageAccessToken = useMemo(() => {
+    const selectedPage = pages.find(p => p.id === pageId);
+    return selectedPage?.access_token || null;
+  }, [pages, pageId]);
+
+  // Fetch partners only when toggle is ON (lazy loading)
   const {
     partners: availablePartners,
     isLoading: isLoadingPartners,
@@ -528,7 +531,7 @@ export default function AdCreationForm({
     refetch: refetchPartners
   } = usePartnershipAdPartners(
     isPartnershipAd ? instagramAccountId : null,
-    isPartnershipAd ? pageId : null
+    isPartnershipAd ? selectedPageAccessToken : null
   );
 
   // Filter partners based on search
@@ -541,12 +544,12 @@ export default function AdCreationForm({
     );
   }, [availablePartners, partnerSearchValue]);
 
-  // Get selected partner info for display
+  // Get selected partner for display
   const selectedPartner = useMemo(() => {
     return availablePartners.find(p => p.creatorIgId === partnerIgAccountId);
   }, [availablePartners, partnerIgAccountId]);
 
-  // Handle partner selection
+  // Handle partner selection - sets both IG and FB IDs
   const handlePartnerSelect = (partner) => {
     setPartnerIgAccountId(partner.creatorIgId);
     setPartnerFbPageId(partner.creatorFbPageId);
@@ -561,6 +564,7 @@ export default function AdCreationForm({
       setPartnerFbPageId("");
     }
   };
+
 
 
   const refreshPage = useCallback(() => {
