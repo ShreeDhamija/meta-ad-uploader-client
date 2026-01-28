@@ -4146,9 +4146,8 @@ export default function AdCreationForm({
                       </PopoverContent>
                     </Popover>
 
-                    {/* Partnership Ad Section */}
-                    <div className="space-y-4 pt-4 border-t border-gray-200">
-                      {/* Partnership Ad Toggle */}
+                    {/* Partnership Ad Toggle */}
+                    <div className="space-y-4 pt-4 border-t border-gray-200 mt-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-gray-600" />
@@ -4170,7 +4169,7 @@ export default function AdCreationForm({
                         </p>
                       )}
 
-                      {/* Partnership Ad Partner Selectors */}
+                      {/* Partner Selector (only shown when toggle is ON) */}
                       {isPartnershipAd && (
                         <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
                           <div className="flex items-center justify-between">
@@ -4195,7 +4194,7 @@ export default function AdCreationForm({
                             </div>
                           )}
 
-                          {/* Partner Selector */}
+                          {/* Partner Instagram Selector */}
                           <div className="space-y-2">
                             <Label className="flex items-center gap-2 text-sm text-gray-600">
                               <InstagramIcon className="w-4 h-4" />
@@ -4277,7 +4276,7 @@ export default function AdCreationForm({
                             </Popover>
                           </div>
 
-                          {/* Partner FB Page ID (Read-only display) */}
+                          {/* Partner FB Page ID (auto-filled, read-only) */}
                           {partnerFbPageId && (
                             <div className="space-y-2">
                               <Label className="flex items-center gap-2 text-sm text-gray-600">
@@ -4293,8 +4292,7 @@ export default function AdCreationForm({
 
                           {availablePartners.length === 0 && !isLoadingPartners && !partnersError && (
                             <p className="text-xs text-gray-500">
-                              No approved partnership ad permissions found for this Instagram account.
-                              Partners need to approve your brand in their Instagram settings first.
+                              No approved partnership ad permissions found. Partners need to approve your brand first.
                             </p>
                           )}
                         </div>
