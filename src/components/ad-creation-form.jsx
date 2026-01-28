@@ -333,7 +333,6 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
 
     setIsLoading(true);
     setError(null);
-    onFetchStart?.(); // Call the callback when fetch starts
 
 
     try {
@@ -526,11 +525,6 @@ export default function AdCreationForm({
   }, [pages, pageId]);
 
   // Fetch partners only when toggle is ON (lazy loading)
-  const resetPartnerFields = useCallback(() => {
-    setPartnerIgAccountId("");
-    setPartnerFbPageId("");
-  }, []);
-
   const {
     partners: availablePartners,
     isLoading: isLoadingPartners,
@@ -538,8 +532,7 @@ export default function AdCreationForm({
     refetch: refetchPartners
   } = usePartnershipAdPartners(
     isPartnershipAd ? instagramAccountId : null,
-    isPartnershipAd ? selectedPageAccessToken : null,
-    resetPartnerFields
+    isPartnershipAd ? selectedPageAccessToken : null
   );
 
   // Filter partners based on search
@@ -4040,6 +4033,8 @@ export default function AdCreationForm({
                                       } else {
                                         setInstagramAccountId("") // Clear if not available
                                       }
+                                      setPartnerIgAccountId("")
+                                      setPartnerFbPageId("")
                                     }}
                                     className={cn(
                                       "px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
@@ -4160,14 +4155,12 @@ export default function AdCreationForm({
                     </Popover>
 
                     {/* Partnership Ad Toggle */}
-                    <div className="space-y-4 pt-4 border-t border-gray-200 mt-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-gray-600" />
-                          <Label htmlFor="partnership-toggle" className="cursor-pointer">
-                            Create Partnership Ad
-                          </Label>
-                        </div>
+                    <div className="space-y-4 pt-4 mt-4">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gray-600" />
+                        <Label htmlFor="partnership-toggle" className="cursor-pointer">
+                          Create Partnership Ad
+                        </Label>
                         <Switch
                           id="partnership-toggle"
                           checked={isPartnershipAd}
@@ -4254,7 +4247,7 @@ export default function AdCreationForm({
                                   maxWidth: "var(--radix-popover-trigger-width)",
                                 }}
                               >
-                                <Command filter={() => 1} loop={false}>
+                                <Command loop={false}>
                                   <CommandInput
                                     placeholder="Search partners..."
                                     value={partnerSearchValue}
@@ -4298,7 +4291,7 @@ export default function AdCreationForm({
                               </Label>
                               <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-xl">
                                 <span className="text-sm text-gray-700">{partnerFbPageId}</span>
-                                <span className="text-xs text-green-600 ml-auto">✓ Auto-Selected</span>
+                                <span className="text-xs text-green-600 ml-auto">✓ Auto-selected</span>
                               </div>
                             </div>
                           )}
