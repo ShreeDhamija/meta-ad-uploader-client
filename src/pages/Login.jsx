@@ -78,7 +78,8 @@ export default function Login() {
             if (refreshUser) {
                 await refreshUser()
             }
-            navigate('/?loggedIn=true')
+            window.location.href = '/?loggedIn=true'
+
         } catch (err) {
             setManualLoginError(err.message)
         } finally {
