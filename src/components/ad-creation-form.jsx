@@ -4290,8 +4290,10 @@ export default function AdCreationForm({
                                 Partner Facebook Page ID
                               </Label>
                               <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-xl">
-                                <span className="text-sm text-gray-700">{partnerFbPageId}</span>
-                                <span className="text-xs text-green-600 ml-auto">✓ Auto-selected</span>
+                                <span className="text-sm text-gray-700">
+                                  @{selectedPartner?.creatorUsername} ({partnerFbPageId})
+                                </span>
+                                <span className="text-xs text-green-600 ml-auto">✓ Auto-filled</span>
                               </div>
                             </div>
                           )}
