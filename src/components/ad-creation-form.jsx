@@ -2324,6 +2324,7 @@ export default function AdCreationForm({
       if (isPartnershipAd && partnerIgAccountId && partnerFbPageId) {
         formData.append("isPartnershipAd", "true");
         formData.append("partnerIgAccountId", partnerIgAccountId);
+        console.log("[Partnership] Sending:", { partnerIgAccountId });
         formData.append("partnerFbPageId", partnerFbPageId);
       }
     };
