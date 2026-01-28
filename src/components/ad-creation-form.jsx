@@ -8,12 +8,13 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import TextareaAutosize from 'react-textarea-autosize'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -315,6 +316,62 @@ const extractFolderId = (url) => {
   return idMatch ? idMatch[0] : null;
 };
 
+/**
+ * Hook to fetch approved partnership ad partners for a given Instagram account
+ */
+const usePartnershipAdPartners = (instagramAccountId, pageId) => {
+  const [partners, setPartners] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchPartners = useCallback(async () => {
+    if (!instagramAccountId || !pageId) {
+      setPartners([]);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/auth/partnership-ads/partners`,
+        {
+          params: { instagramAccountId, pageId },
+          withCredentials: true
+        }
+      );
+
+      const approvedPartners = (response.data.data || [])
+        .filter(partner => partner.permission_status === 'Approved')
+        .map(partner => ({
+          id: partner.id,
+          creatorIgId: partner.creator_ig_id,
+          creatorUsername: partner.creator_username,
+          creatorFbPageId: partner.creator_fb_page_id,
+          brandIgId: partner.brand_ig_id,
+          brandUsername: partner.brand_username,
+          permissionStatus: partner.permission_status,
+          permissionUrl: partner.permission_url
+        }));
+
+      setPartners(approvedPartners);
+    } catch (err) {
+      console.error('Error fetching partnership ad partners:', err);
+      setError(err.response?.data?.error || err.message || 'Failed to fetch partners');
+      setPartners([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [instagramAccountId, pageId]);
+
+  useEffect(() => {
+    fetchPartners();
+  }, [fetchPartners]);
+
+  return { partners, isLoading, error, refetch: fetchPartners };
+};
+
 
 export default function AdCreationForm({
   isLoading,
@@ -456,6 +513,56 @@ export default function AdCreationForm({
   const [loadingForms, setLoadingForms] = useState(false);
 
 
+  // Partnership Ads State
+  const [isPartnershipAd, setIsPartnershipAd] = useState(false);
+  const [partnerIgAccountId, setPartnerIgAccountId] = useState("");
+  const [partnerFbPageId, setPartnerFbPageId] = useState("");
+  const [openPartnerSelector, setOpenPartnerSelector] = useState(false);
+  const [partnerSearchValue, setPartnerSearchValue] = useState("");
+
+  // Fetch partners using the hook
+  const {
+    partners: availablePartners,
+    isLoading: isLoadingPartners,
+    error: partnersError,
+    refetch: refetchPartners
+  } = usePartnershipAdPartners(
+    isPartnershipAd ? instagramAccountId : null,
+    isPartnershipAd ? pageId : null
+  );
+
+  // Filter partners based on search
+  const filteredPartners = useMemo(() => {
+    if (!partnerSearchValue) return availablePartners;
+    const searchLower = partnerSearchValue.toLowerCase();
+    return availablePartners.filter(partner =>
+      partner.creatorUsername.toLowerCase().includes(searchLower) ||
+      partner.creatorIgId.includes(partnerSearchValue)
+    );
+  }, [availablePartners, partnerSearchValue]);
+
+  // Get selected partner info for display
+  const selectedPartner = useMemo(() => {
+    return availablePartners.find(p => p.creatorIgId === partnerIgAccountId);
+  }, [availablePartners, partnerIgAccountId]);
+
+  // Handle partner selection
+  const handlePartnerSelect = (partner) => {
+    setPartnerIgAccountId(partner.creatorIgId);
+    setPartnerFbPageId(partner.creatorFbPageId);
+    setOpenPartnerSelector(false);
+  };
+
+  // Handle partnership toggle
+  const handlePartnershipToggle = (checked) => {
+    setIsPartnershipAd(checked);
+    if (!checked) {
+      setPartnerIgAccountId("");
+      setPartnerFbPageId("");
+    }
+  };
+
+
   const refreshPage = useCallback(() => {
     window.location.reload();
   }, []);
@@ -546,6 +653,10 @@ export default function AdCreationForm({
         selectedShopDestination,
         selectedShopDestinationType,
         selectedForm,
+        //partnership ads
+        isPartnershipAd,
+        partnerIgAccountId,
+        partnerFbPageId,
 
         // For computing adName
         adNameFormulaV2: adNameFormulaV2 ? { ...adNameFormulaV2 } : null,
@@ -1875,6 +1986,10 @@ export default function AdCreationForm({
       selectedShopDestination,
       selectedShopDestinationType,
       selectedForm,
+      //partnership ads
+      isPartnershipAd,
+      partnerIgAccountId,
+      partnerFbPageId,
 
       // Other
       adValues,
@@ -2181,7 +2296,10 @@ export default function AdCreationForm({
         cta,
         launchPaused,
         jobId,
-        selectedForm
+        selectedForm,
+        isPartnershipAd,
+        partnerIgAccountId,
+        partnerFbPageId
       }
     ) => {
       formData.append("adName", adName);
@@ -2198,6 +2316,11 @@ export default function AdCreationForm({
       formData.append("jobId", jobId);
       if (selectedForm) {
         formData.append("leadgenFormId", selectedForm);
+      }
+      if (isPartnershipAd && partnerIgAccountId && partnerFbPageId) {
+        formData.append("isPartnershipAd", "true");
+        formData.append("partnerIgAccountId", partnerIgAccountId);
+        formData.append("partnerFbPageId", partnerFbPageId);
       }
     };
 
@@ -2724,7 +2847,10 @@ export default function AdCreationForm({
             cta,
             launchPaused,
             jobId: frontendJobId,
-            selectedForm
+            selectedForm,
+            isPartnershipAd,
+            partnerIgAccountId,
+            partnerFbPageId
           });
 
           // Append carousel-specific fields
@@ -2812,7 +2938,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               // Append flexible ad fields
@@ -2871,7 +3000,10 @@ export default function AdCreationForm({
               cta,
               launchPaused,
               jobId: frontendJobId,
-              selectedForm
+              selectedForm,
+              isPartnershipAd,
+              partnerIgAccountId,
+              partnerFbPageId
             });
 
             // Append flexible ad fields
@@ -2931,7 +3063,10 @@ export default function AdCreationForm({
             cta,
             launchPaused,
             jobId: frontendJobId,
-            selectedForm
+            selectedForm,
+            isPartnershipAd,
+            partnerIgAccountId,
+            partnerFbPageId
           });
 
           // Append dynamic ad set fields
@@ -3018,7 +3153,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
 
@@ -3105,7 +3243,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               // Append single image file
@@ -3136,7 +3277,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               // Append single drive file
@@ -3168,7 +3312,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               // Append single S3 file
@@ -3220,7 +3367,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               appendMetaImageFile(formData, metaFile);
@@ -3247,7 +3397,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               appendMetaVideoFile(formData, metaFile);
@@ -3988,6 +4141,161 @@ export default function AdCreationForm({
                         </Command>
                       </PopoverContent>
                     </Popover>
+
+                    {/* Partnership Ad Section */}
+                    <div className="space-y-4 pt-4 border-t border-gray-200">
+                      {/* Partnership Ad Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-gray-600" />
+                          <Label htmlFor="partnership-toggle" className="cursor-pointer">
+                            Create Partnership Ad
+                          </Label>
+                        </div>
+                        <Switch
+                          id="partnership-toggle"
+                          checked={isPartnershipAd}
+                          onCheckedChange={handlePartnershipToggle}
+                          disabled={!instagramAccountId}
+                        />
+                      </div>
+
+                      {!instagramAccountId && (
+                        <p className="text-xs text-gray-500">
+                          Select an Instagram account first to enable partnership ads
+                        </p>
+                      )}
+
+                      {/* Partnership Ad Partner Selectors */}
+                      {isPartnershipAd && (
+                        <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium text-gray-700">
+                              Select Partner Creator
+                            </Label>
+                            <RefreshCcw
+                              className={cn(
+                                "h-4 w-4 cursor-pointer transition-all duration-200",
+                                isLoadingPartners
+                                  ? "text-gray-300 animate-[spin_3s_linear_infinite]"
+                                  : "text-gray-500 hover:text-gray-700"
+                              )}
+                              onClick={refetchPartners}
+                            />
+                          </div>
+
+                          {partnersError && (
+                            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded-lg">
+                              <AlertTriangle className="w-4 h-4" />
+                              <span>{partnersError}</span>
+                            </div>
+                          )}
+
+                          {/* Partner Selector */}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2 text-sm text-gray-600">
+                              <InstagramIcon className="w-4 h-4" />
+                              Partner Instagram Account
+                            </Label>
+                            <Popover open={openPartnerSelector} onOpenChange={setOpenPartnerSelector}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={openPartnerSelector}
+                                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
+                                  disabled={isLoadingPartners || availablePartners.length === 0}
+                                >
+                                  {isLoadingPartners ? (
+                                    <div className="flex items-center gap-2">
+                                      <Loader className="h-4 w-4 animate-spin" />
+                                      <span>Loading partners...</span>
+                                    </div>
+                                  ) : selectedPartner ? (
+                                    <div className="flex items-center gap-2">
+                                      <span>@{selectedPartner.creatorUsername}</span>
+                                      <span className="text-xs text-gray-400">
+                                        ({selectedPartner.creatorIgId})
+                                      </span>
+                                    </div>
+                                  ) : availablePartners.length === 0 ? (
+                                    "No approved partners found"
+                                  ) : (
+                                    "Select a partner creator"
+                                  )}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                                align="start"
+                                sideOffset={4}
+                                side="bottom"
+                                avoidCollisions={false}
+                                style={{
+                                  minWidth: "var(--radix-popover-trigger-width)",
+                                  width: "auto",
+                                  maxWidth: "var(--radix-popover-trigger-width)",
+                                }}
+                              >
+                                <Command loop={false}>
+                                  <CommandInput
+                                    placeholder="Search partners..."
+                                    value={partnerSearchValue}
+                                    onValueChange={setPartnerSearchValue}
+                                  />
+                                  <CommandEmpty>No partners found.</CommandEmpty>
+                                  <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                                    <CommandGroup>
+                                      {filteredPartners.map((partner) => (
+                                        <CommandItem
+                                          key={partner.creatorIgId}
+                                          value={partner.creatorIgId}
+                                          onSelect={() => handlePartnerSelect(partner)}
+                                          className={cn(
+                                            "px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                            partnerIgAccountId === partner.creatorIgId && "bg-gray-100 font-semibold",
+                                            "hover:bg-gray-100 flex items-center gap-2"
+                                          )}
+                                        >
+                                          <div className="flex flex-col">
+                                            <span>@{partner.creatorUsername}</span>
+                                            <span className="text-xs text-gray-400">
+                                              ID: {partner.creatorIgId}
+                                            </span>
+                                          </div>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          {/* Partner FB Page ID (Read-only display) */}
+                          {partnerFbPageId && (
+                            <div className="space-y-2">
+                              <Label className="flex items-center gap-2 text-sm text-gray-600">
+                                <FacebookIcon className="w-4 h-4" />
+                                Partner Facebook Page ID
+                              </Label>
+                              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-xl">
+                                <span className="text-sm text-gray-700">{partnerFbPageId}</span>
+                                <span className="text-xs text-green-600 ml-auto">✓ Auto-filled</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {availablePartners.length === 0 && !isLoadingPartners && !partnersError && (
+                            <p className="text-xs text-gray-500">
+                              No approved partnership ad permissions found for this Instagram account.
+                              Partners need to approve your brand in their Instagram settings first.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                 </div>
