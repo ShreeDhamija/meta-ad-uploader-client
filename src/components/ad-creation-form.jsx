@@ -526,6 +526,11 @@ export default function AdCreationForm({
   }, [pages, pageId]);
 
   // Fetch partners only when toggle is ON (lazy loading)
+  const resetPartnerFields = useCallback(() => {
+    setPartnerIgAccountId("");
+    setPartnerFbPageId("");
+  }, []);
+
   const {
     partners: availablePartners,
     isLoading: isLoadingPartners,
@@ -534,10 +539,7 @@ export default function AdCreationForm({
   } = usePartnershipAdPartners(
     isPartnershipAd ? instagramAccountId : null,
     isPartnershipAd ? selectedPageAccessToken : null,
-    () => {
-      setPartnerIgAccountId("");
-      setPartnerFbPageId("");
-    }
+    resetPartnerFields
   );
 
   // Filter partners based on search
