@@ -149,25 +149,17 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
               }}
             />
           ) : file.isDropbox ? (
-            // Dropbox video - check if we have thumbnail or still loading
-            videoThumbs[getFileId(file)] ? (
-              <img
-                src={videoThumbs[getFileId(file)]}
-                alt={file.name}
-                title={file.name}
-                className="w-full h-auto object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                }}
-              />
-            ) : (
-              // Loading state for Dropbox videos
-              <div className="w-full h-32 bg-gray-200 flex flex-col items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-                <span className="mt-2 text-xs text-gray-500">Fetching thumbnail...</span>
-              </div>
-            )
+            // Dropbox video - use icon or fallback thumbnail
+            <img
+              src={file.icon || videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
+              alt={file.name}
+              title={file.name}
+              className="w-full h-auto object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "https://api.withblip.com/thumbnail.jpg";
+              }}
+            />
           ) : (
             // Local video - use generated thumbnail
             videoThumbs[getFileId(file)] ? (

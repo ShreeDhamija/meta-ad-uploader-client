@@ -1539,7 +1539,7 @@ export default function AdCreationForm({
 
       if (!statusData.authenticated) {
         // Need to authenticate first
-        toast.info("Please connect your Dropbox account first");
+        // toast.info("Please connect your Dropbox account first");
 
         // Open OAuth popup
         const width = 600;
