@@ -2617,10 +2617,13 @@ export default function AdCreationForm({
         fileOrder,
         files,
         driveFiles,
+        dropboxFiles,           // ADD
         s3Results,
         s3DriveResults,
+        s3DropboxResults,       // ADD
         S3_UPLOAD_THRESHOLD,
         smallDriveFiles,
+        smallDropboxFiles,      // ADD
         importedFiles
       }
     ) => {
@@ -2628,12 +2631,33 @@ export default function AdCreationForm({
       formData.append("enablePlacementCustomization", false);
       formData.append("fileOrder", JSON.stringify(fileOrder));
 
-      // Add S3 URLs for large files
-      [...s3Results, ...s3DriveResults].forEach((s3File) => {
+      // Add S3 URLs for large files (including Dropbox)
+      [...s3Results, ...s3DriveResults, ...s3DropboxResults].forEach((s3File) => {
         formData.append("s3VideoUrls", s3File.s3Url);
-        formData.append("s3VideoName", s3File.name);
+        formData.append("s3VideoNames", s3File.name);  // Note: was "s3VideoName" - should be "s3VideoNames" for consistency
       });
 
+      // Add small Drive files
+      smallDriveFiles.forEach((driveFile) => {
+        formData.append("driveFiles", JSON.stringify({
+          id: driveFile.id,
+          name: driveFile.name,
+          mimeType: driveFile.mimeType,
+          accessToken: driveFile.accessToken
+        }));
+      });
+
+      // ADD: Small Dropbox files
+      smallDropboxFiles.forEach((dropboxFile) => {
+        formData.append("dropboxFiles", JSON.stringify({
+          dropboxId: dropboxFile.dropboxId,
+          name: dropboxFile.name,
+          directLink: dropboxFile.directLink,
+          mimeType: dropboxFile.mimeType || getMimeFromName(dropboxFile.name)
+        }));
+      });
+
+      // Meta library files
       if (importedFiles && importedFiles.length > 0) {
         const metaImages = importedFiles.filter(f => f.type === 'image');
         const metaVideos = importedFiles.filter(f => f.type === 'video');
@@ -3205,10 +3229,13 @@ export default function AdCreationForm({
             fileOrder: carouselFileOrder,
             files,
             driveFiles,
+            dropboxFiles,           // ADD
             s3Results,
             s3DriveResults,
+            s3DropboxResults,       // ADD
             S3_UPLOAD_THRESHOLD,
             smallDriveFiles,
+            smallDropboxFiles,      // ADD
             importedFiles
           });
 
@@ -3566,8 +3593,8 @@ export default function AdCreationForm({
             const ungroupedDropboxFiles = smallDropboxFiles.filter(dropboxFile =>
               !groupedFileIds.has(dropboxFile.dropboxId)
             );
-            const ungroupedS3Files = [...s3Results, ...s3DriveResults].filter(s3File =>
-              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id))
+            const ungroupedS3Files = [...s3Results, ...s3DriveResults, ...s3DropboxResults].filter(s3File =>
+              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id) || groupedFileIds.has(s3File.dropboxId))
             );
 
             // Pre-compute ad names
