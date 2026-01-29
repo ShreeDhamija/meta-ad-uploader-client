@@ -1494,20 +1494,14 @@ export default function AdCreationForm({
     };
   }, []);
 
-  const handleDropboxClick = useCallback(async () => {
-    // Check if Dropbox SDK is loaded
-    if (!window.Dropbox) {
-      toast.error("Dropbox is still loading. Please try again in a moment.");
-      return;
-    }
-
+  // Separate function for the Chooser
+  const openDropboxChooser = useCallback(() => {
     window.Dropbox.choose({
       success: async (selectedFiles) => {
         const dropboxFilesData = selectedFiles.map((file) => ({
           dropboxId: file.id,
           name: file.name,
           link: file.link,
-          // Convert preview link to direct download link
           directLink: file.link.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '?dl=1'),
           size: file.bytes,
           icon: file.icon,
@@ -1524,8 +1518,65 @@ export default function AdCreationForm({
       multiselect: true,
       extensions: ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mov', '.webm'],
       folderselect: false,
-      sizeLimit: 1024 * 1024 * 1024 // 1GB limit
+      sizeLimit: 1024 * 1024 * 1024
     });
+  }, [setDropboxFiles]);
+
+
+  const handleDropboxClick = useCallback(async () => {
+    // Check if Dropbox SDK is loaded
+    if (!window.Dropbox) {
+      toast.error("Dropbox is still loading. Please try again in a moment.");
+      return;
+    }
+
+    // Check if user is authenticated with Dropbox
+    try {
+      const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, {
+        credentials: 'include'
+      });
+      const statusData = await statusRes.json();
+
+      if (!statusData.authenticated) {
+        // Need to authenticate first
+        toast.info("Please connect your Dropbox account first");
+
+        // Open OAuth popup
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+
+        const popup = window.open(
+          `${API_BASE_URL}/auth/dropbox?popup=true`,
+          'dropbox-auth',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+
+        // Wait for OAuth to complete
+        const handleMessage = (event) => {
+          if (event.data?.type === 'dropbox-auth-success') {
+            window.removeEventListener('message', handleMessage);
+            toast.success("Dropbox connected! Opening file picker...");
+            // Now open the Chooser
+            openDropboxChooser();
+          } else if (event.data?.type === 'dropbox-auth-error') {
+            window.removeEventListener('message', handleMessage);
+            toast.error("Failed to connect Dropbox");
+          }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return;
+      }
+
+      // Already authenticated, open Chooser directly
+      openDropboxChooser();
+
+    } catch (error) {
+      console.error('Error checking Dropbox auth:', error);
+      toast.error("Failed to check Dropbox connection");
+    }
   }, []);
 
 
@@ -5357,34 +5408,6 @@ export default function AdCreationForm({
                   </div>
                 </div>
 
-                {/* <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
-                  <Button type="button" onClick={handleDriveClick} className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px]">
-                    <img
-                      src="https://api.withblip.com/googledrive.png"
-                      alt="Drive Icon"
-                      className="h-4 w-4"
-                    />
-                    Choose Files from Google Drive
-
-                  </Button>
-                  <div className="text-xs text-gray-500 text-left mt-0.5">
-                    Drive files upload 5X faster
-                  </div>
-                </div>
-                <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
-                  <Button
-                    type="button"
-                    onClick={handleDropboxClick}
-                    className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-600 text-white rounded-xl h-[48px]"
-                  >
-                    <img
-                      src="https://api.withblip.com/dropbox-icon.png"
-                      alt="Dropbox Icon"
-                      className="h-4 w-4 mr-2"
-                    />
-                    Choose Files from Dropbox
-                  </Button>
-                </div> */}
                 <div className="flex gap-4 mt-2 mb-4">
                   {/* Google Drive */}
                   <div className="flex-1">
