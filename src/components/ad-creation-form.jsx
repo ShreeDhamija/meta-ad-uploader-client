@@ -26,6 +26,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
 import InstagramIcon from '@/assets/icons/ig.svg?react';
+import DropboxIcon from '@/assets/Dropbox.png';
 import LabelIcon from '@/assets/icons/label.svg?react';
 import TemplateIcon from '@/assets/icons/file.svg?react';
 import LinkIcon from '@/assets/icons/link.svg?react';
@@ -5294,7 +5295,7 @@ export default function AdCreationForm({
                   </div>
                 </div>
 
-                <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
+                {/* <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
                   <Button type="button" onClick={handleDriveClick} className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px]">
                     <img
                       src="https://api.withblip.com/googledrive.png"
@@ -5321,7 +5322,45 @@ export default function AdCreationForm({
                     />
                     Choose Files from Dropbox
                   </Button>
+                </div> */}
+                <div className="flex gap-4 mt-2 mb-4">
+                  {/* Google Drive */}
+                  <div className="flex-1">
+                    <Button
+                      type="button"
+                      onClick={handleDriveClick}
+                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
+                    >
+                      <img
+                        src="https://api.withblip.com/googledrive.png"
+                        alt="Drive Icon"
+                        className="h-4 w-4"
+                      />
+                      Choose Files from Google Drive
+                    </Button>
+
+                    <div className="text-xs text-gray-500 text-left mt-0.5">
+                      Drive files upload 5X faster
+                    </div>
+                  </div>
+
+                  {/* Dropbox */}
+                  <div className="flex-1">
+                    <Button
+                      type="button"
+                      onClick={handleDropboxClick}
+                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
+                    >
+                      <img
+                        src={DropboxIcon}
+                        alt="Dropbox Icon"
+                        className="h-4 w-4"
+                      />
+                      Choose Files from Dropbox
+                    </Button>
+                  </div>
                 </div>
+
 
                 {showFolderInput && (
                   <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]" style={{
@@ -5396,7 +5435,7 @@ export default function AdCreationForm({
               disabled={
                 !isLoggedIn ||
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
-                (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
+                (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
                 (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length) < 2) ||
                 (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length) > 10) ||
@@ -5418,9 +5457,9 @@ export default function AdCreationForm({
               </div>
             )}
             {/* Validation message for Carousel Ads */}
-            {isCarouselAd && (files.length + driveFiles.length) > 0 && (files.length + driveFiles.length) < 2 && (
+            {isCarouselAd && (files.length + driveFiles.length + dropboxFiles.length) > 0 && (files.length + driveFiles.length + dropboxFiles.length) < 2 && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                Carousel ads require at least 2 files. You have {files.length + driveFiles.length}.
+                Carousel ads require at least 2 files. You have {files.length + driveFiles.length + dropboxFiles.length}.
               </div>
             )}
 
