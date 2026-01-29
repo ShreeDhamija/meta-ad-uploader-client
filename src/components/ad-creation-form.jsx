@@ -1504,7 +1504,7 @@ export default function AdCreationForm({
           link: file.link,
           directLink: file.link.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '?dl=1'),
           size: file.bytes,
-          icon: file.icon,
+          // icon: file.icon,
           isDropbox: true,
           mimeType: getMimeFromName(file.name)
         }));
