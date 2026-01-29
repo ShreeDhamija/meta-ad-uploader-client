@@ -305,6 +305,32 @@ const isVideoFile = (file) => {
   return /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(name);
 };
 
+
+const fetchDropboxVideoThumbnail = async (dropboxFile) => {
+  if (!isVideoFile(dropboxFile) || !dropboxFile.isDropbox) return null;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/dropbox/thumbnail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ fileLink: dropboxFile.link })
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.thumbnail) {
+        return data.thumbnail;
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching Dropbox thumbnail:', error);
+    return null;
+  }
+};
+
+
 const getMimeFromName = (name) => {
   const ext = (name || '').split('.').pop().toLowerCase();
   const mimeMap = {
@@ -1541,7 +1567,29 @@ export default function AdCreationForm({
 
 
     if (file.isDropbox) {
-      return 16 / 9; // Default aspect ratio for Dropbox files
+      try {
+        // We need to call our backend to get the metadata
+        const response = await fetch(`${API_BASE_URL}/api/dropbox/video-metadata`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            fileId: file.dropboxId,
+            fileLink: file.link
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.width && data.height) {
+            return data.width / data.height;
+          }
+        }
+        return 16 / 9; // Fallback
+      } catch (error) {
+        console.error('Error getting Dropbox video metadata:', error);
+        return 16 / 9;
+      }
     }
 
 
@@ -1644,151 +1692,164 @@ export default function AdCreationForm({
     });
   }, []);
 
-  const getCloudVideoThumbnail = (cloudFile) => {
-    if (!isVideoFile(cloudFile)) return null;
-    if (cloudFile.isDropbox) {
-      return cloudFile.icon || "https://api.withblip.com/thumbnail.jpg";
-    }
-    // Google Drive files
-    return `https://drive.google.com/thumbnail?id=${cloudFile.id}&sz=w400-h300`;
+  // Rename to be more accurate - this is ONLY for Drive
+  const getDriveVideoThumbnail = (driveFile) => {
+    if (!isVideoFile(driveFile) || !driveFile.isDrive) return null;
+    return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
   };
 
   // Track processing state, not processed files
   const processingRef = useRef(new Set());
 
   useEffect(() => {
-    // Use AbortController for cleanup
     const abortController = new AbortController();
 
     const processThumbnails = async () => {
-      // Filter only unprocessed video files - check both videoThumbs and processing
+      // Filter only unprocessed local video files
       const videoFiles = files.filter(file => {
         const fileId = getFileId(file);
         return isVideoFile(file) &&
-          !videoThumbs[fileId] && // Check actual thumbnails
-          !processingRef.current.has(fileId); // Not currently processing
+          !file.isDrive &&
+          !file.isDropbox &&
+          !videoThumbs[fileId] &&
+          !processingRef.current.has(fileId);
       });
 
-      if (videoFiles.length === 0) {
-        // Handle Drive files only if there are no local files to process
-        const driveThumbs = {};
-        driveFiles.forEach(file => {
-          const fileId = getFileId(file);
-          if (isVideoFile(file) && !videoThumbs[fileId]) {
-            const thumb = getCloudVideoThumbnail(file);
-            if (thumb) {
-              driveThumbs[fileId] = thumb;
-            }
-          }
+      // Process local video files first
+      if (videoFiles.length > 0) {
+        videoFiles.forEach(file => {
+          processingRef.current.add(getFileId(file));
         });
 
-        if (Object.keys(driveThumbs).length > 0) {
-          setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
-        }
-        return;
-      }
+        const MAX_CONCURRENT = 2;
+        const queue = [...videoFiles];
+        let completed = 0;
 
+        const processNext = async () => {
+          if (queue.length === 0 || abortController.signal.aborted) return;
 
+          const file = queue.shift();
+          const fileId = getFileId(file);
 
-      // Mark files as being processed
-      videoFiles.forEach(file => {
-        processingRef.current.add(getFileId(file));
-      });
+          try {
+            const thumb = await generateThumbnail(file);
 
-      // Process with limited concurrency instead of batches
-      const MAX_CONCURRENT = 2; // Process only 2 at a time
-      const queue = [...videoFiles];
-      let completed = 0;
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
+              completed++;
+            }
+          } catch (err) {
+            console.error(`Thumbnail error for ${file.name}:`, err);
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({
+                ...prev,
+                [fileId]: "https://api.withblip.com/thumbnail.jpg"
+              }));
+              completed++;
+            }
+          } finally {
+            processingRef.current.delete(fileId);
 
-      const processNext = async () => {
-        if (queue.length === 0 || abortController.signal.aborted) return;
+            if (videoFiles.length > 10 && completed % 5 === 0) {
+              toast.info(`Generated ${completed}/${videoFiles.length} thumbnails...`);
+            }
 
-        const file = queue.shift();
-        const fileId = getFileId(file);
-
-        try {
-          const thumb = await generateThumbnail(file);
-
-          if (!abortController.signal.aborted) {
-            setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
-            completed++;
-          }
-        } catch (err) {
-          console.error(`Thumbnail error for ${file.name}:`, err);
-          if (!abortController.signal.aborted) {
-            setVideoThumbs(prev => ({
-              ...prev,
-              [fileId]: "https://api.withblip.com/thumbnail.jpg"
-            }));
-            completed++;
-          }
-        } finally {
-          // Remove from processing set once done
-          processingRef.current.delete(fileId);
-
-          // Show progress if many files
-          if (videoFiles.length > 10 && completed % 5 === 0) {
-            toast.info(`Generated ${completed}/${videoFiles.length} thumbnails...`);
-          }
-
-          // Use requestIdleCallback for better performance
-          if (queue.length > 0 && !abortController.signal.aborted) {
-            if ('requestIdleCallback' in window) {
-              requestIdleCallback(() => processNext(), { timeout: 100 });
-            } else {
-              setTimeout(processNext, 0);
+            if (queue.length > 0 && !abortController.signal.aborted) {
+              if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => processNext(), { timeout: 100 });
+              } else {
+                setTimeout(processNext, 0);
+              }
             }
           }
+        };
+
+        const initialPromises = [];
+        for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
+          initialPromises.push(processNext());
         }
-      };
-
-      // Start initial concurrent processes
-      const initialPromises = [];
-      for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
-        initialPromises.push(processNext());
+        await Promise.all(initialPromises);
       }
-      await Promise.all(initialPromises);
 
-      // Handle Drive files after local files are done
-      // Handle Drive files after local files are done
-      const cloudThumbs = {};
+      // Handle Drive video files (synchronous - just URLs)
+      const driveThumbs = {};
       driveFiles.forEach(file => {
         const fileId = getFileId(file);
         if (isVideoFile(file) && !videoThumbs[fileId]) {
-          const thumb = getCloudVideoThumbnail(file);
+          const thumb = getDriveVideoThumbnail(file);
           if (thumb) {
-            cloudThumbs[fileId] = thumb;
+            driveThumbs[fileId] = thumb;
           }
         }
       });
 
-      // Handle Dropbox files
-      dropboxFiles.forEach(file => {
-        const fileId = getFileId(file);
-        if (isVideoFile(file) && !videoThumbs[fileId]) {
-          const thumb = getCloudVideoThumbnail(file);
-          if (thumb) {
-            cloudThumbs[fileId] = thumb;
-          }
-        }
-      });
-
-      if (Object.keys(cloudThumbs).length > 0) {
-        setVideoThumbs(prev => ({ ...prev, ...cloudThumbs }));
+      if (Object.keys(driveThumbs).length > 0) {
+        setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
       }
 
+      // Handle Dropbox video files (async - needs API call)
+      const dropboxVideoFiles = dropboxFiles.filter(file => {
+        const fileId = getFileId(file);
+        return isVideoFile(file) &&
+          !videoThumbs[fileId] &&
+          !processingRef.current.has(fileId);
+      });
 
+      if (dropboxVideoFiles.length > 0 && !abortController.signal.aborted) {
+        // Mark as processing (this triggers loading state in UI)
+        dropboxVideoFiles.forEach(file => {
+          processingRef.current.add(getFileId(file));
+        });
+
+        // Force a re-render to show loading state
+        setVideoThumbs(prev => ({ ...prev }));
+
+        const MAX_DROPBOX_CONCURRENT = 3;
+
+        for (let i = 0; i < dropboxVideoFiles.length; i += MAX_DROPBOX_CONCURRENT) {
+          if (abortController.signal.aborted) break;
+
+          const batch = dropboxVideoFiles.slice(i, i + MAX_DROPBOX_CONCURRENT);
+
+          const results = await Promise.all(
+            batch.map(async (file) => {
+              const fileId = getFileId(file);
+              try {
+                const thumb = await fetchDropboxVideoThumbnail(file);
+                return {
+                  fileId,
+                  thumb: thumb || "https://api.withblip.com/thumbnail.jpg"
+                };
+              } catch (error) {
+                console.error(`Dropbox thumbnail error for ${file.name}:`, error);
+                return {
+                  fileId,
+                  thumb: "https://api.withblip.com/thumbnail.jpg"
+                };
+              } finally {
+                processingRef.current.delete(fileId);
+              }
+            })
+          );
+
+          if (!abortController.signal.aborted) {
+            const newThumbs = {};
+            results.forEach(({ fileId, thumb }) => {
+              newThumbs[fileId] = thumb;
+            });
+            setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+          }
+        }
+      }
     };
 
     processThumbnails();
 
-    // Cleanup on unmount or dependency change
     return () => {
       abortController.abort();
-      // Clear processing set on cleanup
       processingRef.current.clear();
     };
-  }, [files, driveFiles, dropboxFiles, videoThumbs, generateThumbnail, getCloudVideoThumbnail, setVideoThumbs]);
+  }, [files, driveFiles, dropboxFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
   const addField = (setter, values) => {
@@ -2319,6 +2380,7 @@ export default function AdCreationForm({
           if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDropboxFiles[index])]) {
             uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDropboxFiles[index])];
           }
+          uploadResult.dropboxId = largeDropboxFiles[index].dropboxId;  // ✅ Add this if missing
           s3DropboxResults.push(uploadResult);
         } else {
           toast.error(`Failed to upload Dropbox video: ${largeDropboxFiles[index].name}`);
@@ -5437,8 +5499,8 @@ export default function AdCreationForm({
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
                 (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-                (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length) < 2) ||
-                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length) > 10) ||
+                (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
+                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
                 ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
