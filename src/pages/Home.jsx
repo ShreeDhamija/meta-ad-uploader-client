@@ -126,18 +126,6 @@ export default function Home() {
     const cachedState = getCachedState();
 
     // Ad account selection and setup
-    // const [selectedAdAccount, setSelectedAdAccount] = useState("")
-    // const [campaigns, setCampaigns] = useState([])
-    // const [selectedCampaign, setSelectedCampaign] = useState([])
-    // const [adSets, setAdSets] = useState([])
-    // const [selectedAdSets, setSelectedAdSets] = useState([])
-    // const [showDuplicateBlock, setShowDuplicateBlock] = useState(false)
-    // const [duplicateAdSet, setDuplicateAdSet] = useState("")
-    // const [newAdSetName, setNewAdSetName] = useState("")
-    // const [campaignObjective, setCampaignObjective] = useState([])
-    // const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
-    // const [duplicateCampaign, setDuplicateCampaign] = useState("")
-    // const [newCampaignName, setNewCampaignName] = useState("")
     const [selectedAdAccount, setSelectedAdAccount] = useState(cachedState?.selectedAdAccount || "")
     const [campaigns, setCampaigns] = useState(cachedState?.campaigns || [])
     const [selectedCampaign, setSelectedCampaign] = useState(cachedState?.selectedCampaign || [])
@@ -173,6 +161,7 @@ export default function Home() {
         customTexts: {} // Add this for consistency
     });
     const [driveFiles, setDriveFiles] = useState([])
+    const [dropboxFiles, setDropboxFiles] = useState([]);
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [adType, setAdType] = useState('regular'); // 'regular' | 'carousel' | 'flexible'
@@ -658,6 +647,8 @@ export default function Home() {
                             setSelectedTemplate={setSelectedTemplate}
                             driveFiles={driveFiles}
                             setDriveFiles={setDriveFiles}
+                            dropboxFiles={dropboxFiles}
+                            setDropboxFiles={setDropboxFiles}
                             selectedShopDestination={selectedShopDestination}
                             setSelectedShopDestination={setSelectedShopDestination}
                             selectedShopDestinationType={selectedShopDestinationType}
@@ -694,6 +685,8 @@ export default function Home() {
                                 setImportedPosts={setImportedPosts}
                                 driveFiles={driveFiles}
                                 setDriveFiles={setDriveFiles}
+                                dropboxFiles={dropboxFiles}
+                                setDropboxFiles={setDropboxFiles}
                                 importedFiles={importedFiles}
                                 setImportedFiles={setImportedFiles}
                                 videoThumbs={videoThumbs}

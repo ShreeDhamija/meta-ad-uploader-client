@@ -282,7 +282,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
 
 function withUniqueId(file) {
-  if (file.isDrive) return file; // Drive already has unique id
+  if (file.isDrive || file.isDropbox) return file; // Drive/Dropbox already have unique id
   if (file.uniqueId) return file; // already tagged
   file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${uuidv4()}`;
   return file;
@@ -290,7 +290,9 @@ function withUniqueId(file) {
 
 // ADD THIS NEW FUNCTION:
 const getFileId = (file) => {
-  return file.isDrive ? file.id : (file.uniqueId || file.name);
+  if (file.isDrive) return file.id;
+  if (file.isDropbox) return file.dropboxId;
+  return file.uniqueId || file.name;
 };
 
 const isVideoFile = (file) => {
@@ -302,13 +304,22 @@ const isVideoFile = (file) => {
   return /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(name);
 };
 
-const getExtensionFromMime = (mime = "") => {
-  if (mime === "video/quicktime") return ".mov";
-  if (mime.startsWith("video/")) return ".mp4";
-  if (mime.startsWith("image/")) return ".jpg";
-  return "";
+const getMimeFromName = (name) => {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const mimeMap = {
+    'mp4': 'video/mp4',
+    'mov': 'video/quicktime',
+    'webm': 'video/webm',
+    'avi': 'video/x-msvideo',
+    'mkv': 'video/x-matroska',
+    'm4v': 'video/x-m4v',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif'
+  };
+  return mimeMap[ext] || 'application/octet-stream';
 };
-
 
 
 const extractFolderId = (url) => {
@@ -426,6 +437,8 @@ export default function AdCreationForm({
   setSelectedTemplate,
   driveFiles,
   setDriveFiles,
+  dropboxFiles,
+  setDropboxFiles,
   selectedShopDestination,
   setSelectedShopDestination,
   selectedShopDestinationType,
@@ -611,7 +624,7 @@ export default function AdCreationForm({
       }
     }
     else {
-      adCount = files.length + driveFiles.length + importedFiles.length;
+      adCount = files.length + driveFiles.length + importedFiles.length + dropboxFiles.length;
     }
 
 
@@ -630,7 +643,8 @@ export default function AdCreationForm({
 
         // File states
         files: [...files],
-        driveFiles: [...driveFiles],  // These already contain accessToken per file
+        driveFiles: [...driveFiles],
+        dropboxFiles: [...dropboxFiles],  // ADD THIS LINE
         videoThumbs: { ...videoThumbs },
         thumbnail,
         importedPosts: [...importedPosts],
@@ -937,7 +951,37 @@ export default function AdCreationForm({
     }
   }
 
+  async function uploadDropboxFileToS3(file, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/upload-from-dropbox`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileUrl: file.directLink,
+            fileName: file.name,
+            mimeType: file.mimeType || getMimeFromName(file.name),
+            size: file.size
+          })
+        });
 
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "S3 upload failed");
+
+        return {
+          ...file,
+          s3Url: data.s3Url,
+          isS3Upload: true
+        };
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw new Error(`Dropbox S3 upload failed after ${maxRetries} attempts: ${error.message}`);
+        }
+        const delayMs = Math.pow(2, attempt - 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
 
 
 
@@ -1406,6 +1450,58 @@ export default function AdCreationForm({
   }, [openPicker]); // Note: openPicker needs to be memoized too
 
 
+  // Load Dropbox Chooser SDK
+  useEffect(() => {
+    if (document.getElementById('dropboxjs')) return; // Already loaded
+
+    const script = document.createElement('script');
+    script.src = 'https://www.dropbox.com/static/api/2/dropins.js';
+    script.id = 'dropboxjs';
+    script.setAttribute('data-app-key', import.meta.env.VITE_DROPBOX_APP_KEY || 'YOUR_DROPBOX_APP_KEY');
+    script.async = true;
+    document.head.appendChild(script);
+
+    return () => {
+      const existingScript = document.getElementById('dropboxjs');
+      if (existingScript) existingScript.remove();
+    };
+  }, []);
+
+  const handleDropboxClick = useCallback(async () => {
+    // Check if Dropbox SDK is loaded
+    if (!window.Dropbox) {
+      toast.error("Dropbox is still loading. Please try again in a moment.");
+      return;
+    }
+
+    window.Dropbox.choose({
+      success: async (selectedFiles) => {
+        const dropboxFilesData = selectedFiles.map((file) => ({
+          dropboxId: file.id,
+          name: file.name,
+          link: file.link,
+          // Convert preview link to direct download link
+          directLink: file.link.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '?dl=1'),
+          size: file.bytes,
+          icon: file.icon,
+          isDropbox: true,
+          mimeType: getMimeFromName(file.name)
+        }));
+
+        setDropboxFiles(prev => [...prev, ...dropboxFilesData]);
+      },
+      cancel: () => {
+        console.log('Dropbox picker cancelled');
+      },
+      linkType: 'direct',
+      multiselect: true,
+      extensions: ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mov', '.webm'],
+      folderselect: false,
+      sizeLimit: 1024 * 1024 * 1024 // 1GB limit
+    });
+  }, []);
+
+
 
   // Dropzone logic
   const onDrop = useCallback((acceptedFiles) => {
@@ -1441,6 +1537,12 @@ export default function AdCreationForm({
     if (!isVideoFile(file)) {
       return null; // Not a video file
     }
+
+
+    if (file.isDropbox) {
+      return 16 / 9; // Default aspect ratio for Dropbox files
+    }
+
 
     if (file.mimeType) {
       // For Drive files - NEW, RELIABLE METHOD
@@ -1541,9 +1643,13 @@ export default function AdCreationForm({
     });
   }, []);
 
-  const getDriveVideoThumbnail = (driveFile) => {
-    if (!isVideoFile(driveFile)) return null;
-    return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
+  const getCloudVideoThumbnail = (cloudFile) => {
+    if (!isVideoFile(cloudFile)) return null;
+    if (cloudFile.isDropbox) {
+      return cloudFile.icon || "https://api.withblip.com/thumbnail.jpg";
+    }
+    // Google Drive files
+    return `https://drive.google.com/thumbnail?id=${cloudFile.id}&sz=w400-h300`;
   };
 
   // Track processing state, not processed files
@@ -1568,7 +1674,7 @@ export default function AdCreationForm({
         driveFiles.forEach(file => {
           const fileId = getFileId(file);
           if (isVideoFile(file) && !videoThumbs[fileId]) {
-            const thumb = getDriveVideoThumbnail(file);
+            const thumb = getCloudVideoThumbnail(file);
             if (thumb) {
               driveThumbs[fileId] = thumb;
             }
@@ -1643,20 +1749,34 @@ export default function AdCreationForm({
       await Promise.all(initialPromises);
 
       // Handle Drive files after local files are done
-      const driveThumbs = {};
+      // Handle Drive files after local files are done
+      const cloudThumbs = {};
       driveFiles.forEach(file => {
         const fileId = getFileId(file);
         if (isVideoFile(file) && !videoThumbs[fileId]) {
-          const thumb = getDriveVideoThumbnail(file);
+          const thumb = getCloudVideoThumbnail(file);
           if (thumb) {
-            driveThumbs[fileId] = thumb;
+            cloudThumbs[fileId] = thumb;
           }
         }
       });
 
-      if (Object.keys(driveThumbs).length > 0) {
-        setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
+      // Handle Dropbox files
+      dropboxFiles.forEach(file => {
+        const fileId = getFileId(file);
+        if (isVideoFile(file) && !videoThumbs[fileId]) {
+          const thumb = getCloudVideoThumbnail(file);
+          if (thumb) {
+            cloudThumbs[fileId] = thumb;
+          }
+        }
+      });
+
+      if (Object.keys(cloudThumbs).length > 0) {
+        setVideoThumbs(prev => ({ ...prev, ...cloudThumbs }));
       }
+
+
     };
 
     processThumbnails();
@@ -1667,7 +1787,7 @@ export default function AdCreationForm({
       // Clear processing set on cleanup
       processingRef.current.clear();
     };
-  }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+  }, [files, driveFiles, dropboxFiles, videoThumbs, generateThumbnail, getCloudVideoThumbnail, setVideoThumbs]);
 
 
   const addField = (setter, values) => {
@@ -1849,7 +1969,7 @@ export default function AdCreationForm({
 
   useEffect(() => {
     if (isCarouselAd) {
-      const fileCount = files.length + driveFiles.length + importedFiles.length;
+      const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
 
       // Sync messages when apply-to-all is checked
       if (applyTextToAllCards && fileCount > 0 && messages.length !== fileCount) {
@@ -1863,7 +1983,7 @@ export default function AdCreationForm({
         setHeadlines(new Array(fileCount).fill(firstHeadline));
       }
     }
-  }, [files.length, driveFiles.length, importedFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
+  }, [files.length, driveFiles.length, dropboxFiles.length, importedFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
 
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
@@ -1968,6 +2088,7 @@ export default function AdCreationForm({
       // Files
       files,
       driveFiles,
+      dropboxFiles,
       videoThumbs,
       thumbnail,
       importedPosts,
@@ -2039,7 +2160,7 @@ export default function AdCreationForm({
       setProgressMessage('Analyzing video files...');
 
       try {
-        const allFiles = [...files, ...driveFiles];
+        const allFiles = [...files, ...driveFiles, ...dropboxFiles];
         const videoFiles = allFiles.filter(isVideoFile);
 
         if (videoFiles.length > 0) {
@@ -2104,12 +2225,15 @@ export default function AdCreationForm({
     const largeDriveFiles = driveFiles.filter(file =>
       isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
     );
-
+    const largeDropboxFiles = dropboxFiles.filter(file =>
+      isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
+    );
 
     let s3Results = [];
     const s3DriveResults = [];
+    const s3DropboxResults = [];
 
-    const totalLargeFiles = largeFiles.length + largeDriveFiles.length;
+    const totalLargeFiles = largeFiles.length + largeDriveFiles.length + largeDropboxFiles.length;
     if (totalLargeFiles > 0) {
       setProgressMessage(`Uploading videos...`);
 
@@ -2180,6 +2304,27 @@ export default function AdCreationForm({
         }
       });
 
+      // Upload Dropbox files with concurrency control
+      const dropboxUploadPromises = largeDropboxFiles.map(file =>
+        limit(() => uploadDropboxFileToS3(file))
+      );
+
+      const dropboxResults = await Promise.allSettled(dropboxUploadPromises);
+
+      // Process Dropbox file results
+      dropboxResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const uploadResult = result.value;
+          if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDropboxFiles[index])]) {
+            uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDropboxFiles[index])];
+          }
+          s3DropboxResults.push(uploadResult);
+        } else {
+          toast.error(`Failed to upload Dropbox video: ${largeDropboxFiles[index].name}`);
+          console.error("❌ Dropbox to S3 upload failed", result.reason);
+        }
+      });
+
       setProgress(100);
       setProgressMessage('File upload complete! Creating ads...');
       // toast.success("Video files uploaded!");
@@ -2188,6 +2333,10 @@ export default function AdCreationForm({
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
     const smallDriveFiles = driveFiles.filter(file =>
+      !(isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD)
+    );
+
+    const smallDropboxFiles = dropboxFiles.filter(file =>
       !(isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD)
     );
 
@@ -2230,7 +2379,7 @@ export default function AdCreationForm({
 
     // Add carousel validation
     if (isCarouselAd) {
-      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length + (importedFiles?.length || 0);
+      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + s3Results.length + s3DriveResults.length + s3DropboxResults.length + (importedFiles?.length || 0);
       if (totalFiles < 2) {
         toast.error("Carousel ads require at least 2 files");
         setIsLoading(false);
@@ -2442,8 +2591,10 @@ export default function AdCreationForm({
       {
         files,
         smallDriveFiles,
+        smallDropboxFiles,
         s3Results,
         s3DriveResults,
+        s3DropboxResults,
         S3_UPLOAD_THRESHOLD,
         getFileId,
         isVideoFile,
@@ -2456,7 +2607,7 @@ export default function AdCreationForm({
       // Add local files from this group
       group.forEach(fileId => {
         const file = files.find(f => getFileId(f) === fileId);
-        if (file && !file.isDrive && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) {
+        if (file && !file.isDrive && !file.isDropbox && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) {
           formData.append("mediaFiles", file);
 
           if (isVideoFile(file)) {
@@ -2489,11 +2640,33 @@ export default function AdCreationForm({
         }
       });
 
-      // Add S3 files from this group
+      // Add dropbox files from this group
       group.forEach(fileId => {
-        const s3File = [...s3Results, ...s3DriveResults].find(f =>
-          f.uniqueId === fileId || f.id === fileId
+        const dropboxFile = smallDropboxFiles.find(f => f.dropboxId === fileId);
+        if (dropboxFile) {
+          formData.append("dropboxFiles", JSON.stringify({
+            dropboxId: dropboxFile.dropboxId,
+            name: dropboxFile.name,
+            directLink: dropboxFile.directLink,
+            mimeType: dropboxFile.mimeType || getMimeFromName(dropboxFile.name)
+          }));
+
+          if (isVideoFile(dropboxFile)) {
+            groupVideoMetadata.push({
+              dropboxId: dropboxFile.dropboxId,
+              aspectRatio: aspectRatioMap[getFileId(dropboxFile)] || 16 / 9
+            });
+          }
+        }
+      });
+
+      // CONSOLIDATED: Add ALL S3 files from this group (local, drive, and dropbox)
+      group.forEach(fileId => {
+        const allS3Results = [...s3Results, ...s3DriveResults, ...s3DropboxResults];
+        const s3File = allS3Results.find(f =>
+          f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId
         );
+
         if (s3File) {
           formData.append("s3VideoUrls", s3File.s3Url);
           formData.append("s3VideoNames", s3File.name);
@@ -2507,8 +2680,7 @@ export default function AdCreationForm({
         }
       });
 
-
-
+      // Add meta library files from this group
       group.forEach(fileId => {
         const metaFile = (importedFiles || []).find(f =>
           (f.type === 'image' && f.hash === fileId) ||
@@ -2518,17 +2690,14 @@ export default function AdCreationForm({
           if (metaFile.type === 'image') {
             formData.append("metaImageHashes", metaFile.hash);
             formData.append("metaImageNames", metaFile.name);
-            // NEW: Send dimensions for placement categorization
             formData.append("metaImageWidths", String(metaFile.width || 0));
             formData.append("metaImageHeights", String(metaFile.height || 0));
           } else if (metaFile.type === 'video') {
             formData.append("metaVideoIds", metaFile.id);
             formData.append("metaVideoNames", metaFile.name);
-            // NEW: Send dimensions for placement categorization
             formData.append("metaVideoWidths", String(metaFile.width || 0));
             formData.append("metaVideoHeights", String(metaFile.height || 0));
 
-            // NEW: Include in video metadata for aspect ratio tracking
             groupVideoMetadata.push({
               metaVideoId: metaFile.id,
               aspectRatio: (metaFile.width && metaFile.height)
@@ -2550,8 +2719,10 @@ export default function AdCreationForm({
       {
         files,
         smallDriveFiles,
+        smallDropboxFiles,
         s3Results,
         s3DriveResults,
+        s3DropboxResults,   // ADD THIS
         S3_UPLOAD_THRESHOLD,
         importedFiles,
       }
@@ -2573,8 +2744,17 @@ export default function AdCreationForm({
         }));
       });
 
+      smallDropboxFiles.forEach((dropboxFile) => {
+        formData.append("dropboxFiles", JSON.stringify({
+          dropboxId: dropboxFile.dropboxId,
+          name: dropboxFile.name,
+          directLink: dropboxFile.directLink,
+          mimeType: dropboxFile.mimeType || getMimeFromName(dropboxFile.name)
+        }));
+      });
+
       // Add all large file URLs (S3)
-      [...s3Results, ...s3DriveResults].forEach((s3File) => {
+      [...s3Results, ...s3DriveResults, ...s3DropboxResults].forEach((s3File) => {
         formData.append("s3VideoUrls", s3File.s3Url);
         formData.append("s3VideoNames", s3File.name);
       });
@@ -2620,6 +2800,19 @@ export default function AdCreationForm({
       formData.append("driveName", driveFile.name);
     };
 
+
+    /**
+ * Append single dropbox file fields
+ */
+    const appendSingleDropboxFile = (formData, dropboxFile) => {
+      formData.append("enablePlacementCustomization", false);
+      formData.append("dropboxFile", "true");
+      formData.append("dropboxId", dropboxFile.dropboxId);
+      formData.append("dropboxLink", dropboxFile.directLink);
+      formData.append("dropboxName", dropboxFile.name);
+      formData.append("dropboxMimeType", dropboxFile.mimeType || getMimeFromName(dropboxFile.name));
+    };
+
     /**
      * Append single S3 file fields
      */
@@ -2653,8 +2846,10 @@ export default function AdCreationForm({
     const buildCarouselFileOrder = (
       files,
       driveFiles,
+      dropboxFiles,      // ADD THIS
       s3Results,
       s3DriveResults,
+      s3DropboxResults,  // ADD THIS
       S3_UPLOAD_THRESHOLD,
       importedFiles  // ADD THIS PARAMETER
 
@@ -2705,6 +2900,30 @@ export default function AdCreationForm({
           }
         }
       });
+
+      // Process dropbox files
+      dropboxFiles.forEach((dropboxFile) => {
+        if (!isVideoFile(dropboxFile) || dropboxFile.size <= S3_UPLOAD_THRESHOLD) {
+          fileOrder.push({
+            index: fileIndex++,
+            type: 'dropbox',
+            dropboxId: dropboxFile.dropboxId,
+            name: dropboxFile.name
+          });
+        } else {
+          const s3DropboxFile = s3DropboxResults.find(s3f => s3f.dropboxId === dropboxFile.dropboxId);
+          if (s3DropboxFile) {
+            fileOrder.push({
+              index: fileIndex++,
+              type: 's3',
+              url: s3DropboxFile.s3Url,
+              name: dropboxFile.name,
+              dropboxId: dropboxFile.dropboxId
+            });
+          }
+        }
+      });
+
 
       if (importedFiles && importedFiles.length > 0) {
         importedFiles.forEach((metaFile) => {
@@ -2824,15 +3043,18 @@ export default function AdCreationForm({
         const carouselFileOrder = buildCarouselFileOrder(
           files,
           driveFiles,
+          dropboxFiles,      // ADD
           s3Results,
           s3DriveResults,
+          s3DropboxResults,  // ADD
           S3_UPLOAD_THRESHOLD,
           importedFiles
         );
 
+
         // Pre-compute ad name for carousel
         const carouselAdName = computeAdNameFromFormula(
-          files[0] || driveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
+          files[0] || driveFiles[0] || dropboxFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),  // ADD dropboxFiles[0]
           0,
           link[0],
           jobData.formData.adNameFormulaV2,
@@ -2916,13 +3138,14 @@ export default function AdCreationForm({
             const firstFileId = group[0];
             const firstFile = files.find(f => getFileId(f) === firstFileId) ||
               driveFiles.find(f => f.id === firstFileId) ||
+              dropboxFiles.find(f => f.dropboxId === firstFileId) ||  // ADD
               (importedFiles || []).find(f =>
                 (f.type === 'image' && f.hash === firstFileId) ||
                 (f.type === 'video' && f.id === firstFileId)
               );
 
             return computeAdNameFromFormula(
-              firstFile || files[0] || driveFiles[0],
+              firstFile || files[0] || driveFiles[0] || dropboxFiles[0],  // ADD dropboxFiles[0]
               groupIndex,
               link[0],
               jobData.formData.adNameFormulaV2,
@@ -2965,8 +3188,10 @@ export default function AdCreationForm({
               const groupVideoMetadata = appendGroupMediaFiles(formData, group, {
                 files,
                 smallDriveFiles,
+                smallDropboxFiles,  // ADD
                 s3Results,
                 s3DriveResults,
+                s3DropboxResults,   // ADD
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
@@ -2986,7 +3211,7 @@ export default function AdCreationForm({
 
           // Pre-compute ad name once for ungrouped flexible
           const ungroupedFlexibleAdName = computeAdNameFromFormula(
-            files[0] || driveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
+            files[0] || driveFiles[0] || dropboxFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),  // ADD
             0,
             link[0],
             jobData.formData.adNameFormulaV2,
@@ -3023,8 +3248,10 @@ export default function AdCreationForm({
             appendAllMediaFiles(formData, {
               files,
               smallDriveFiles,
+              smallDropboxFiles,  // ADD
               s3Results,
               s3DriveResults,
+              s3DropboxResults,   // ADD
               S3_UPLOAD_THRESHOLD,
               importedFiles
             });
@@ -3049,7 +3276,7 @@ export default function AdCreationForm({
       if (dynamicAdSetIds.length > 0) {
         // Pre-compute ad name for dynamic ads
         const dynamicAdName = computeAdNameFromFormula(
-          files[0] || driveFiles[0],
+          files[0] || driveFiles[0] || dropboxFiles[0],  // ADD dropboxFiles[0]
           0,
           link[0],
           jobData.formData.adNameFormulaV2
@@ -3086,8 +3313,10 @@ export default function AdCreationForm({
           appendAllMediaFiles(formData, {
             files,
             smallDriveFiles,
+            smallDropboxFiles,  // ADD
             s3Results,
             s3DriveResults,
+            s3DropboxResults,   // ADD
             S3_UPLOAD_THRESHOLD,
             importedFiles
           });
@@ -3109,10 +3338,11 @@ export default function AdCreationForm({
           const hasUngroupedFiles = (
             files.some(file => !groupedFileIds.has(getFileId(file)) && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
-            [...s3Results, ...s3DriveResults].some(s3File =>
-              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id))
+            smallDropboxFiles.some(dropboxFile => !groupedFileIds.has(dropboxFile.dropboxId)) ||  // ADD THIS
+            [...s3Results, ...s3DriveResults, ...s3DropboxResults].some(s3File =>  // ADD s3DropboxResults
+              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id) || groupedFileIds.has(s3File.dropboxId))  // ADD dropboxId check
             ) ||
-            (importedFiles && importedFiles.some(f => {  // ✅ FIX: Check if any are actually ungrouped
+            (importedFiles && importedFiles.some(f => {
               const fileId = f.type === 'image' ? f.hash : f.id;
               return !groupedFileIds.has(fileId);
             }))
@@ -3131,14 +3361,17 @@ export default function AdCreationForm({
 
               const firstFileForNaming = files.find(f => getFileId(f) === firstFileId) ||
                 smallDriveFiles.find(f => f.id === firstFileId) ||
-                [...s3Results, ...s3DriveResults].find(f => f.uniqueId === firstFileId || f.id === firstFileId) ||
+                smallDropboxFiles.find(f => f.dropboxId === firstFileId) ||  // ADD THIS
+                [...s3Results, ...s3DriveResults, ...s3DropboxResults].find(f =>   // ADD s3DropboxResults
+                  f.uniqueId === firstFileId || f.id === firstFileId || f.dropboxId === firstFileId  // ADD dropboxId
+                ) ||
                 (importedFiles || []).find(f =>
                   (f.type === 'image' && f.hash === firstFileId) ||
                   (f.type === 'video' && f.id === firstFileId)
                 );
 
               return computeAdNameFromFormula(
-                firstFileForNaming || files[0] || driveFiles[0],
+                firstFileForNaming || files[0] || driveFiles[0] || dropboxFiles[0],  // ADD dropboxFiles[0]
                 localIterationIndex + groupIndex,
                 link[0],
                 jobData.formData.adNameFormulaV2,
@@ -3175,8 +3408,10 @@ export default function AdCreationForm({
               const groupVideoMetadata = appendGroupMediaFiles(formData, group, {
                 files,
                 smallDriveFiles,
+                smallDropboxFiles,  // ADD
                 s3Results,
                 s3DriveResults,
+                s3DropboxResults,   // ADD
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
@@ -3214,6 +3449,9 @@ export default function AdCreationForm({
             const ungroupedDriveFiles = smallDriveFiles.filter(driveFile =>
               !groupedFileIds.has(driveFile.id)
             );
+            const ungroupedDropboxFiles = smallDropboxFiles.filter(dropboxFile =>
+              !groupedFileIds.has(dropboxFile.dropboxId)
+            );
             const ungroupedS3Files = [...s3Results, ...s3DriveResults].filter(s3File =>
               !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id))
             );
@@ -3230,6 +3468,12 @@ export default function AdCreationForm({
             );
 
             localIterationIndex += ungroupedDriveFiles.length;
+
+            const dropboxFileAdNames = ungroupedDropboxFiles.map((dropboxFile, index) =>
+              computeAdNameFromFormula(dropboxFile, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
+            );
+
+            localIterationIndex += ungroupedDropboxFiles.length;
 
             const s3FileAdNames = ungroupedS3Files.map((s3File, index) =>
               computeAdNameFromFormula(s3File, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
@@ -3302,6 +3546,37 @@ export default function AdCreationForm({
               promises.push(createAdApiCall(formData, API_BASE_URL));
               promiseMetadata.push({ fileName: driveFile.name }); // ADD
 
+            });
+
+
+            // Handle small dropbox files
+            ungroupedDropboxFiles.forEach((dropboxFile, index) => {
+              const formData = new FormData();
+
+              appendCommonFields(formData, {
+                adName: dropboxFileAdNames[index],
+                headlinesJSON: commonPrecomputed.headlinesJSON,
+                descriptionsJSON: commonPrecomputed.descriptionsJSON,
+                messagesJSON: commonPrecomputed.messagesJSON,
+                selectedAdAccount,
+                adSetId,
+                pageId,
+                instagramAccountId,
+                linkJSON: commonPrecomputed.linkJSON,
+                cta,
+                launchPaused,
+                jobId: frontendJobId,
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
+              });
+
+              appendSingleDropboxFile(formData, dropboxFile);
+              appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
+
+              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: dropboxFile.name });
             });
 
             // Handle S3 uploaded files
@@ -3576,7 +3851,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -3590,6 +3865,7 @@ export default function AdCreationForm({
     if (!preserveMedia) {
       setFiles([]);
       setDriveFiles([]);
+      setDropboxFiles([]);  // ADD THIS LINE
       setVideoThumbs({});
       setThumbnail(null);
       setFileGroups([]);
@@ -5031,6 +5307,20 @@ export default function AdCreationForm({
                   <div className="text-xs text-gray-500 text-left mt-0.5">
                     Drive files upload 5X faster
                   </div>
+                </div>
+                <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
+                  <Button
+                    type="button"
+                    onClick={handleDropboxClick}
+                    className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-600 text-white rounded-xl h-[48px]"
+                  >
+                    <img
+                      src="https://api.withblip.com/dropbox-icon.png"
+                      alt="Dropbox Icon"
+                      className="h-4 w-4 mr-2"
+                    />
+                    Choose Files from Dropbox
+                  </Button>
                 </div>
 
                 {showFolderInput && (
