@@ -1752,11 +1752,162 @@ export default function AdCreationForm({
   // Track processing state, not processed files
   const processingRef = useRef(new Set());
 
+  // useEffect(() => {
+  //   const abortController = new AbortController();
+
+  //   const processThumbnails = async () => {
+  //     // Filter only unprocessed local video files
+  //     const videoFiles = files.filter(file => {
+  //       const fileId = getFileId(file);
+  //       return isVideoFile(file) &&
+  //         !file.isDrive &&
+  //         !file.isDropbox &&
+  //         !videoThumbs[fileId] &&
+  //         !processingRef.current.has(fileId);
+  //     });
+
+  //     // Process local video files first
+  //     if (videoFiles.length > 0) {
+  //       videoFiles.forEach(file => {
+  //         processingRef.current.add(getFileId(file));
+  //       });
+
+  //       const MAX_CONCURRENT = 2;
+  //       const queue = [...videoFiles];
+  //       let completed = 0;
+
+  //       const processNext = async () => {
+  //         if (queue.length === 0 || abortController.signal.aborted) return;
+
+  //         const file = queue.shift();
+  //         const fileId = getFileId(file);
+
+  //         try {
+  //           const thumb = await generateThumbnail(file);
+
+  //           if (!abortController.signal.aborted) {
+  //             setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
+  //             completed++;
+  //           }
+  //         } catch (err) {
+  //           console.error(`Thumbnail error for ${file.name}:`, err);
+  //           if (!abortController.signal.aborted) {
+  //             setVideoThumbs(prev => ({
+  //               ...prev,
+  //               [fileId]: "https://api.withblip.com/thumbnail.jpg"
+  //             }));
+  //             completed++;
+  //           }
+  //         } finally {
+  //           processingRef.current.delete(fileId);
+
+  //           if (videoFiles.length > 10 && completed % 5 === 0) {
+  //             toast.info(`Generated ${completed}/${videoFiles.length} thumbnails...`);
+  //           }
+
+  //           if (queue.length > 0 && !abortController.signal.aborted) {
+  //             if ('requestIdleCallback' in window) {
+  //               requestIdleCallback(() => processNext(), { timeout: 100 });
+  //             } else {
+  //               setTimeout(processNext, 0);
+  //             }
+  //           }
+  //         }
+  //       };
+
+  //       const initialPromises = [];
+  //       for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
+  //         initialPromises.push(processNext());
+  //       }
+  //       await Promise.all(initialPromises);
+  //     }
+
+  //     // Handle Drive video files (synchronous - just URLs)
+  //     const driveThumbs = {};
+  //     driveFiles.forEach(file => {
+  //       const fileId = getFileId(file);
+  //       if (isVideoFile(file) && !videoThumbs[fileId]) {
+  //         const thumb = getDriveVideoThumbnail(file);
+  //         if (thumb) {
+  //           driveThumbs[fileId] = thumb;
+  //         }
+  //       }
+  //     });
+
+  //     if (Object.keys(driveThumbs).length > 0) {
+  //       setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
+  //     }
+
+  //     // Handle Dropbox video files (async - needs API call)
+  //     const dropboxVideoFiles = dropboxFiles.filter(file => {
+  //       const fileId = getFileId(file);
+  //       return isVideoFile(file) &&
+  //         !videoThumbs[fileId] &&
+  //         !processingRef.current.has(fileId);
+  //     });
+
+  //     if (dropboxVideoFiles.length > 0 && !abortController.signal.aborted) {
+  //       // Mark as processing (this triggers loading state in UI)
+  //       dropboxVideoFiles.forEach(file => {
+  //         processingRef.current.add(getFileId(file));
+  //       });
+
+  //       // Force a re-render to show loading state
+  //       setVideoThumbs(prev => ({ ...prev }));
+
+  //       const MAX_DROPBOX_CONCURRENT = 3;
+
+  //       for (let i = 0; i < dropboxVideoFiles.length; i += MAX_DROPBOX_CONCURRENT) {
+  //         if (abortController.signal.aborted) break;
+
+  //         const batch = dropboxVideoFiles.slice(i, i + MAX_DROPBOX_CONCURRENT);
+
+  //         const results = await Promise.all(
+  //           batch.map(async (file) => {
+  //             const fileId = getFileId(file);
+  //             try {
+  //               const thumb = await fetchDropboxVideoThumbnail(file);
+  //               return {
+  //                 fileId,
+  //                 thumb: thumb || "https://api.withblip.com/thumbnail.jpg"
+  //               };
+  //             } catch (error) {
+  //               console.error(`Dropbox thumbnail error for ${file.name}:`, error);
+  //               return {
+  //                 fileId,
+  //                 thumb: "https://api.withblip.com/thumbnail.jpg"
+  //               };
+  //             } finally {
+  //               processingRef.current.delete(fileId);
+  //             }
+  //           })
+  //         );
+
+  //         if (!abortController.signal.aborted) {
+  //           const newThumbs = {};
+  //           results.forEach(({ fileId, thumb }) => {
+  //             newThumbs[fileId] = thumb;
+  //           });
+  //           setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+  //         }
+  //       }
+  //     }
+  //   };
+
+  //   processThumbnails();
+
+  //   return () => {
+  //     abortController.abort();
+  //     processingRef.current.clear();
+  //   };
+  // }, [files, driveFiles, dropboxFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+
+
   useEffect(() => {
     const abortController = new AbortController();
 
     const processThumbnails = async () => {
-      // Filter only unprocessed local video files
+      // --- 1. LOCAL FILES (No changes) ---
       const videoFiles = files.filter(file => {
         const fileId = getFileId(file);
         return isVideoFile(file) &&
@@ -1766,11 +1917,8 @@ export default function AdCreationForm({
           !processingRef.current.has(fileId);
       });
 
-      // Process local video files first
       if (videoFiles.length > 0) {
-        videoFiles.forEach(file => {
-          processingRef.current.add(getFileId(file));
-        });
+        videoFiles.forEach(file => processingRef.current.add(getFileId(file)));
 
         const MAX_CONCURRENT = 2;
         const queue = [...videoFiles];
@@ -1778,13 +1926,11 @@ export default function AdCreationForm({
 
         const processNext = async () => {
           if (queue.length === 0 || abortController.signal.aborted) return;
-
           const file = queue.shift();
           const fileId = getFileId(file);
 
           try {
             const thumb = await generateThumbnail(file);
-
             if (!abortController.signal.aborted) {
               setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
               completed++;
@@ -1800,17 +1946,9 @@ export default function AdCreationForm({
             }
           } finally {
             processingRef.current.delete(fileId);
-
-            if (videoFiles.length > 10 && completed % 5 === 0) {
-              toast.info(`Generated ${completed}/${videoFiles.length} thumbnails...`);
-            }
-
             if (queue.length > 0 && !abortController.signal.aborted) {
-              if ('requestIdleCallback' in window) {
-                requestIdleCallback(() => processNext(), { timeout: 100 });
-              } else {
-                setTimeout(processNext, 0);
-              }
+              if ('requestIdleCallback' in window) requestIdleCallback(() => processNext(), { timeout: 100 });
+              else setTimeout(processNext, 0);
             }
           }
         };
@@ -1822,73 +1960,84 @@ export default function AdCreationForm({
         await Promise.all(initialPromises);
       }
 
-      // Handle Drive video files (synchronous - just URLs)
+      // --- 2. GOOGLE DRIVE (No changes) ---
       const driveThumbs = {};
       driveFiles.forEach(file => {
         const fileId = getFileId(file);
         if (isVideoFile(file) && !videoThumbs[fileId]) {
           const thumb = getDriveVideoThumbnail(file);
-          if (thumb) {
-            driveThumbs[fileId] = thumb;
-          }
+          if (thumb) driveThumbs[fileId] = thumb;
         }
       });
-
       if (Object.keys(driveThumbs).length > 0) {
         setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
       }
 
-      // Handle Dropbox video files (async - needs API call)
+      // --- 3. DROPBOX (UPDATED: BATCH PROCESSING) ---
       const dropboxVideoFiles = dropboxFiles.filter(file => {
         const fileId = getFileId(file);
+        // Ensure we have a dropboxId to send to the API
         return isVideoFile(file) &&
           !videoThumbs[fileId] &&
           !processingRef.current.has(fileId);
       });
 
       if (dropboxVideoFiles.length > 0 && !abortController.signal.aborted) {
-        // Mark as processing (this triggers loading state in UI)
-        dropboxVideoFiles.forEach(file => {
-          processingRef.current.add(getFileId(file));
-        });
+        // Mark all as processing immediately so UI shows loading
+        dropboxVideoFiles.forEach(file => processingRef.current.add(getFileId(file)));
+        setVideoThumbs(prev => ({ ...prev })); // Force re-render
 
-        // Force a re-render to show loading state
-        setVideoThumbs(prev => ({ ...prev }));
+        // Dropbox allows max 25 items per batch request
+        const BATCH_SIZE = 25;
 
-        const MAX_DROPBOX_CONCURRENT = 3;
-
-        for (let i = 0; i < dropboxVideoFiles.length; i += MAX_DROPBOX_CONCURRENT) {
+        for (let i = 0; i < dropboxVideoFiles.length; i += BATCH_SIZE) {
           if (abortController.signal.aborted) break;
 
-          const batch = dropboxVideoFiles.slice(i, i + MAX_DROPBOX_CONCURRENT);
+          const batch = dropboxVideoFiles.slice(i, i + BATCH_SIZE);
+          // Important: Send the actual dropboxId, not the generic fileId
+          const fileIds = batch.map(f => f.dropboxId);
 
-          const results = await Promise.all(
-            batch.map(async (file) => {
-              const fileId = getFileId(file);
-              try {
-                const thumb = await fetchDropboxVideoThumbnail(file);
-                return {
-                  fileId,
-                  thumb: thumb || "https://api.withblip.com/thumbnail.jpg"
-                };
-              } catch (error) {
-                console.error(`Dropbox thumbnail error for ${file.name}:`, error);
-                return {
-                  fileId,
-                  thumb: "https://api.withblip.com/thumbnail.jpg"
-                };
-              } finally {
-                processingRef.current.delete(fileId);
-              }
-            })
-          );
-
-          if (!abortController.signal.aborted) {
-            const newThumbs = {};
-            results.forEach(({ fileId, thumb }) => {
-              newThumbs[fileId] = thumb;
+          try {
+            const response = await fetch(`${API_BASE_URL}/api/dropbox/thumbnails/batch`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ fileIds }),
+              signal: abortController.signal
             });
-            setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+
+            if (response.ok) {
+              const data = await response.json();
+
+              // Map the returned Dropbox IDs back to your generic file IDs if necessary
+              // Assuming getFileId(file) might return something different than file.dropboxId
+              const newThumbs = {};
+
+              batch.forEach(file => {
+                const dId = file.dropboxId;
+                const genericId = getFileId(file);
+
+                if (data.thumbnails && data.thumbnails[dId]) {
+                  newThumbs[genericId] = data.thumbnails[dId];
+                } else {
+                  // Fallback for failed specific items in the batch
+                  newThumbs[genericId] = "https://api.withblip.com/thumbnail.jpg";
+                }
+              });
+
+              setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+            }
+          } catch (error) {
+            console.error("Dropbox batch error:", error);
+            // On batch failure, set placeholders for this batch
+            const failedThumbs = {};
+            batch.forEach(f => {
+              failedThumbs[getFileId(f)] = "https://api.withblip.com/thumbnail.jpg";
+            });
+            setVideoThumbs(prev => ({ ...prev, ...failedThumbs }));
+          } finally {
+            // Cleanup processing state for this batch
+            batch.forEach(f => processingRef.current.delete(getFileId(f)));
           }
         }
       }
@@ -1901,7 +2050,6 @@ export default function AdCreationForm({
       processingRef.current.clear();
     };
   }, [files, driveFiles, dropboxFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
-
 
   const addField = (setter, values) => {
     const maxFields = isCarouselAd ? 10 : 5;
