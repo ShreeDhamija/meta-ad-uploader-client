@@ -5452,7 +5452,7 @@ export default function AdCreationForm({
                     </Button>
 
                     <div className="text-xs text-gray-500 text-left mt-0.5">
-                      Drive files upload 5X faster
+                      Google Drive & Dropbox files upload 5X faster
                     </div>
                   </div>
 
