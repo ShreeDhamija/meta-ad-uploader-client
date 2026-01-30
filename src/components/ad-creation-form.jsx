@@ -1632,6 +1632,13 @@ export default function AdCreationForm({
 
         if (response.ok) {
           const data = await response.json();
+          console.log('📐 Dropbox metadata response:', {
+            fileName: file.name,
+            dropboxId: file.dropboxId,
+            width: data.width,
+            height: data.height,
+            aspectRatio: data.width && data.height ? data.width / data.height : null
+          });
           if (data.width && data.height) {
             return data.width / data.height;
           }
@@ -2455,6 +2462,12 @@ export default function AdCreationForm({
             results.forEach(result => {
               if (result) {
                 aspectRatioMap[result.key] = result.aspectRatio;
+                console.log('📊 Added to aspectRatioMap:', {
+                  key: result.key,
+                  aspectRatio: result.aspectRatio,
+                  category: result.aspectRatio < 0.75 ? 'portrait' : (result.aspectRatio > 1.05 ? 'landscape' : 'square')
+                });
+
               }
             });
 
@@ -2576,6 +2589,18 @@ export default function AdCreationForm({
       dropboxResults.forEach((result, index) => {
         if (result.status === 'fulfilled') {
           const uploadResult = result.value;
+
+          const fileIdKey = getFileId(largeDropboxFiles[index]);
+          const aspectRatioFromMap = aspectRatioMap[fileIdKey];
+
+          console.log('🔵 S3 Dropbox upload result:', {
+            fileName: largeDropboxFiles[index].name,
+            fileIdKey,
+            aspectRatioFromMap,
+            aspectRatioMapKeys: Object.keys(aspectRatioMap),
+            hasAspectRatio: !!aspectRatioFromMap
+          });
+
           if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDropboxFiles[index])]) {
             uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDropboxFiles[index])];
           }
@@ -2938,6 +2963,19 @@ export default function AdCreationForm({
           }));
 
           if (isVideoFile(dropboxFile)) {
+
+            const fileIdForLookup = getFileId(dropboxFile);
+            const aspectRatio = aspectRatioMap[fileIdForLookup] || 16 / 9;
+
+            console.log('🎬 Building Dropbox videoMetadata:', {
+              dropboxId: dropboxFile.dropboxId,
+              fileName: dropboxFile.name,
+              fileIdForLookup,
+              aspectRatioFromMap: aspectRatioMap[fileIdForLookup],
+              finalAspectRatio: aspectRatio,
+              allAspectRatioMapKeys: Object.keys(aspectRatioMap)
+            });
+
             groupVideoMetadata.push({
               dropboxId: dropboxFile.dropboxId,
               aspectRatio: aspectRatioMap[getFileId(dropboxFile)] || 16 / 9
@@ -2956,6 +2994,17 @@ export default function AdCreationForm({
         if (s3File) {
           formData.append("s3VideoUrls", s3File.s3Url);
           formData.append("s3VideoNames", s3File.name);
+
+          const isVideo = isVideoFile(s3File);
+          console.log('🟣 S3 file in group:', {
+            fileId,
+            s3Url: s3File.s3Url,
+            name: s3File.name,
+            dropboxId: s3File.dropboxId,
+            aspectRatio: s3File.aspectRatio,
+            isVideoResult: isVideo,
+            s3FileKeys: Object.keys(s3File)
+          });
 
           if (isVideoFile(s3File)) {
             groupVideoMetadata.push({
@@ -3717,6 +3766,8 @@ export default function AdCreationForm({
                 currentGroupIndex: groupIndex + 1,
                 videoMetadata: groupVideoMetadata
               });
+              console.log('📤 Sending videoMetadata to server:', JSON.stringify(groupVideoMetadata, null, 2));
+
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
