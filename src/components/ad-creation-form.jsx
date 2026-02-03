@@ -2508,7 +2508,15 @@ export default function AdCreationForm({
 
     // Add flexible ads validation
     if (adType === 'flexible') {
-      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length + (importedFiles?.length || 0);
+      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + (importedFiles?.length || 0);
+      console.log('File counts:', {
+        files: files.length,
+        driveFiles: driveFiles.length,
+        s3Results: s3Results.length,
+        s3DriveResults: s3DriveResults.length,
+        importedFiles: importedFiles?.length || 0,
+        totalFiles
+      });
 
       // If no groups, validate single ad
       if (fileGroups.length === 0) {
