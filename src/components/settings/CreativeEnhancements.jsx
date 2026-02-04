@@ -81,12 +81,19 @@ const ENHANCEMENT_ITEMS = [
 
 // Memoized individual enhancement item component to prevent unnecessary re-renders
 const EnhancementItem = memo(({ item, isChecked, onToggle }) => (
-    <div className="flex items-center justify-between">
-        <div>
-            <p className="font-medium text-[14px]">{item.label}</p>
-            <p className="text-sm text-gray-400">
-                {item.description}
-            </p>
+    <div className="flex flex-col">
+        <div className="flex items-center justify-between">
+            <div>
+                <p className="font-medium text-[14px]">{item.label}</p>
+                <p className="text-sm text-gray-400">
+                    {item.description}
+                </p>
+            </div>
+            <Switch
+                checked={isChecked}
+                onCheckedChange={onToggle}
+                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:ring-transparent .switch"
+            />
         </div>
         {item.warning && (
             <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
@@ -94,11 +101,6 @@ const EnhancementItem = memo(({ item, isChecked, onToggle }) => (
                 {item.warning}
             </p>
         )}
-        <Switch
-            checked={isChecked}
-            onCheckedChange={onToggle}
-            className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:ring-transparent .switch"
-        />
     </div>
 ));
 
