@@ -52,7 +52,7 @@ const ENHANCEMENT_ITEMS = [
         key: "textGeneration",
         label: "Text Generation",
         description: "Text variations, generated with AI based on your original text or previous ads",
-        warning: "This might not be available in some ad accounts",
+        warning: "Text generation might not be available in some ad accounts, which can lead to errors while launching ads",
 
     },
 
@@ -96,7 +96,7 @@ const EnhancementItem = memo(({ item, isChecked, onToggle }) => (
             />
         </div>
         {item.warning && (
-            <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
+            <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
                 <AlertCircle size={14} />
                 {item.warning}
             </p>
