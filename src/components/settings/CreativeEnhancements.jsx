@@ -1,6 +1,8 @@
 import { useCallback, useMemo, memo } from "react";
 import { Switch } from "@/components/ui/switch";
 import EnhanceIcon from '@/assets/icons/enhance.svg?react';
+import { AlertCircle } from 'lucide-react';
+
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -50,6 +52,8 @@ const ENHANCEMENT_ITEMS = [
         key: "textGeneration",
         label: "Text Generation",
         description: "Text variations, generated with AI based on your original text or previous ads",
+        warning: "This might not be available in some ad accounts",
+
     },
 
     //new CE
@@ -84,6 +88,12 @@ const EnhancementItem = memo(({ item, isChecked, onToggle }) => (
                 {item.description}
             </p>
         </div>
+        {item.warning && (
+            <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircle size={14} />
+                {item.warning}
+            </p>
+        )}
         <Switch
             checked={isChecked}
             onCheckedChange={onToggle}

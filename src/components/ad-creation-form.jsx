@@ -2493,7 +2493,7 @@ export default function AdCreationForm({
 
     // Add carousel validation
     if (isCarouselAd) {
-      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + s3Results.length + s3DriveResults.length + s3DropboxResults.length + (importedFiles?.length || 0);
+      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + (importedFiles?.length || 0);
       if (totalFiles < 2) {
         toast.error("Carousel ads require at least 2 files");
         setIsLoading(false);
