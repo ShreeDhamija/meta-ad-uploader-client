@@ -306,29 +306,7 @@ const isVideoFile = (file) => {
 };
 
 
-const fetchDropboxVideoThumbnail = async (dropboxFile) => {
-  if (!isVideoFile(dropboxFile) || !dropboxFile.isDropbox) return null;
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/dropbox/thumbnail`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ fileLink: dropboxFile.link })
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data.thumbnail) {
-        return data.thumbnail;
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error('Error fetching Dropbox thumbnail:', error);
-    return null;
-  }
-};
 
 
 const getMimeFromName = (name) => {
@@ -1498,6 +1476,13 @@ export default function AdCreationForm({
   const openDropboxChooser = useCallback(() => {
     window.Dropbox.choose({
       success: async (selectedFiles) => {
+        console.log('=== DROPBOX CHOOSER RAW RESPONSE ===');
+        selectedFiles.forEach(f => {
+          console.log(`File: ${f.name}`);
+          console.log(`  id: ${f.id}`);
+          console.log(`  link: ${f.link}`);
+        });
+
         const dropboxFilesData = selectedFiles.map((file) => ({
           dropboxId: file.id,
           name: file.name,
@@ -1847,14 +1832,19 @@ export default function AdCreationForm({
 
           const batch = dropboxVideoFiles.slice(i, i + BATCH_SIZE);
           // Important: Send the actual dropboxId, not the generic fileId
-          const fileIds = batch.map(f => f.dropboxId);
+          const filesData = batch.map(f => ({
+            id: f.dropboxId,
+            link: f.link  // Include the original Dropbox link
+          }));
+
+          console.log('Files data:', JSON.stringify(filesData, null, 2));
 
           try {
             const response = await fetch(`${API_BASE_URL}/api/dropbox/thumbnails/batch`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({ fileIds }),
+              body: JSON.stringify({ files: filesData }),
               signal: abortController.signal
             });
 
