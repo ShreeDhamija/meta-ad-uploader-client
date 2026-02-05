@@ -371,7 +371,7 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
       setPartners(approvedPartners);
     } catch (err) {
       console.error('Error fetching partnership ad partners:', err);
-      setError(err.response?.data?.error || 'Failed to fetch partners');
+      setError(err.response?.data?.error || 'Re-authenticate the app and approve additional permissions to make partnership ads');
       setPartners([]);
     } finally {
       setIsLoading(false);
@@ -4726,7 +4726,7 @@ export default function AdCreationForm({
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-gray-600" />
                         <Label htmlFor="partnership-toggle" className="cursor-pointer">
-                          Create Partnership Ad
+                          Add Partnership
                         </Label>
                         <Switch
                           id="partnership-toggle"
@@ -4738,7 +4738,7 @@ export default function AdCreationForm({
 
                       {!instagramAccountId && (
                         <p className="text-xs text-gray-500">
-                          Select an Instagram account first to enable partnership ads
+                          Select an Instagram account to fetch linked partners for
                         </p>
                       )}
 
@@ -5607,7 +5607,7 @@ export default function AdCreationForm({
                   </div>
 
                   {/* Dropbox */}
-                  <div className="flex-1">
+                  {/* <div className="flex-1">
                     <Button
                       type="button"
                       onClick={handleDropboxClick}
@@ -5620,7 +5620,7 @@ export default function AdCreationForm({
                       />
                       Choose Files from Dropbox
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
 
 
