@@ -23,16 +23,8 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExte
     return (
         <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-            onClick={handleBackdropClick}
         >
             <div className="bg-white rounded-3xl p-8 w-[500px] mx-4 relative shadow-2xl">
-                {/* Close Button */}
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 size-6 border border-2 border-red-500 rounded-full flex items-center justify-center text-red-500  transition-colors"
-                >
-                    <X size={15} />
-                </button>
 
                 {/* Rocket Image */}
                 <div className="flex justify-center mb-6 mt-4">

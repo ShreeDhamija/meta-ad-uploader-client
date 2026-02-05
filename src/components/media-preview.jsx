@@ -17,15 +17,16 @@ import { v4 as uuidv4 } from 'uuid';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 function withUniqueId(file) {
-  if (file.isDrive) return file; // Drive already has unique id
+  if (file.isDrive || file.isDropbox) return file; // Drive/Dropbox already have unique id
   if (file.uniqueId) return file; // already tagged
   file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${uuidv4()}`;
   return file;
 }
 
-// Add this helper function at the top with your other helper functions
+// Helper function to get unique file ID
 const getFileId = (file) => {
   if (file.isDrive) return file.id;
+  if (file.isDropbox) return file.dropboxId;
   if (file.isMetaLibrary) return file.type === 'image' ? file.hash : file.id;
   return file.uniqueId || file.name;
 };
@@ -54,7 +55,9 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
   } = useSortable({
     id: file.isMetaLibrary
       ? (file.type === 'image' ? file.hash : file.id)
-      : (file.isDrive ? file.id : file.uniqueId || file.name)
+      : file.isDropbox
+        ? file.dropboxId
+        : (file.isDrive ? file.id : file.uniqueId || file.name)
   });
 
   const style = {
@@ -65,7 +68,9 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
 
   const fileId = file.isMetaLibrary
     ? (file.type === 'image' ? file.hash : file.id)
-    : (file.isDrive ? file.id : file.uniqueId || file.name);
+    : file.isDropbox
+      ? file.dropboxId
+      : (file.isDrive ? file.id : file.uniqueId || file.name);
 
   return (
     <div
@@ -131,13 +136,24 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             }}
           />
         ) : isVideoFile(file) ? (
-
           file.isDrive ? (
             // Google Drive video - use Drive's thumbnail API
             <img
               src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`}
               alt={file.name}
-              title={file.name} // 👈 Add this line
+              title={file.name}
+              className="w-full h-auto object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "https://api.withblip.com/thumbnail.jpg";
+              }}
+            />
+          ) : file.isDropbox ? (
+            // Dropbox video - use icon or fallback thumbnail
+            <img
+              src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
+              alt={file.name}
+              title={file.name}
               className="w-full h-auto object-cover"
               onError={(e) => {
                 e.target.onerror = null;
@@ -150,7 +166,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
               <img
                 src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
                 alt={file.name}
-                title={file.name} // 👈 Add this line
+                title={file.name}
                 className="w-full h-auto object-cover"
                 onError={(e) => {
                   e.target.onerror = null;
@@ -174,12 +190,14 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           // Image files
           <img
             src={
-              (file.isDrive || file.id) // Check both isDrive flag and presence of id (Google Drive files have id)
+              file.isDrive
                 ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`
-                : URL.createObjectURL(file)
+                : file.isDropbox
+                  ? (file.directLink || file.icon)
+                  : URL.createObjectURL(file)
             }
             alt={file.name}
-            title={file.name} // 👈 Add this line
+            title={file.name}
             className="w-full h-auto object-cover"
             onError={(e) => {
               e.target.onerror = null;
@@ -219,6 +237,8 @@ export default function MediaPreview({
   setImportedPosts,
   driveFiles,
   setDriveFiles,
+  dropboxFiles,
+  setDropboxFiles,
   importedFiles,
   setImportedFiles,
   videoThumbs,
@@ -293,13 +313,16 @@ export default function MediaPreview({
         fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w768`)
           .then(res => res.blob())
           .then(blob => reader.readAsDataURL(blob));
+      } else if (file.isDropbox) {
+        // For Dropbox files, use the icon or direct link
+        fetch(file.icon || file.directLink)
+          .then(res => res.blob())
+          .then(blob => reader.readAsDataURL(blob));
       } else {
         reader.readAsDataURL(file);
       }
     });
   };
-
-
 
 
 
@@ -313,9 +336,12 @@ export default function MediaPreview({
         else if (ratio < 0.7) resolve('vertical');
         else resolve('other');
       };
+      img.onerror = () => resolve('other'); // Fallback on error
 
       if (file.isDrive) {
         img.src = `https://drive.google.com/thumbnail?id=${file.id}&sz=w400`;
+      } else if (file.isDropbox) {
+        img.src = file.icon || file.directLink;
       } else {
         img.src = URL.createObjectURL(file);
       }
@@ -346,6 +372,11 @@ export default function MediaPreview({
       !groupedFileIds.has(file.isDrive ? file.id : file.uniqueId || file.name)
     );
 
+    // Ungrouped Dropbox files
+    const ungroupedDropboxFiles = (dropboxFiles || [])
+      .map(file => ({ ...file, isDropbox: true }))
+      .filter(file => !groupedFileIds.has(file.dropboxId));
+
     const ungroupedImportedFiles = importedFiles
       .map(file => ({
         ...file,
@@ -354,9 +385,8 @@ export default function MediaPreview({
       }))
       .filter(file => !groupedFileIds.has(file.type === 'image' ? file.hash : file.id));
 
-    return [...ungroupedLocalFiles, ...ungroupedImportedFiles];
-  }, [files, importedFiles, fileGroups]);
-
+    return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedImportedFiles];
+  }, [files, dropboxFiles, importedFiles, fileGroups]);
 
 
 
@@ -365,7 +395,9 @@ export default function MediaPreview({
   const removeFile = useCallback((file) => {
     const fileId = file.isMetaLibrary
       ? (file.type === 'image' ? file.hash : file.id)
-      : (file.isDrive ? file.id : file.uniqueId || file.name);
+      : file.isDropbox
+        ? file.dropboxId
+        : (file.isDrive ? file.id : file.uniqueId || file.name);
 
     // Remove from selection
     setSelectedFiles(prev => {
@@ -384,12 +416,14 @@ export default function MediaPreview({
       setImportedFiles(prev => prev.filter(f =>
         file.type === 'image' ? f.hash !== file.hash : f.id !== file.id
       ));
+    } else if (file.isDropbox) {
+      setDropboxFiles(prev => prev.filter(f => f.dropboxId !== file.dropboxId));
     } else if (file.isDrive) {
       setDriveFiles(prev => prev.filter(f => f.id !== file.id));
     } else {
       setFiles(prev => prev.filter(f => (f.uniqueId || f.name) !== (file.uniqueId || file.name)));
     }
-  }, [setSelectedFiles, setFileGroups, setDriveFiles, setFiles, setImportedFiles]);
+  }, [setSelectedFiles, setFileGroups, setDropboxFiles, setDriveFiles, setFiles, setImportedFiles]);
 
 
 
@@ -448,6 +482,10 @@ export default function MediaPreview({
         return selectedFileIds.includes(file.id) && !alreadyInLocal;
       }).map(file => ({ ...file, isDrive: true }));
 
+      const selectedDropboxFiles = (dropboxFiles || []).filter(file => {
+        return selectedFileIds.includes(file.dropboxId);
+      }).map(file => ({ ...file, isDropbox: true }));
+
       const selectedMetaFiles = importedFiles.filter(file => {
         const fileId = file.type === 'image' ? file.hash : file.id;
         return selectedFileIds.includes(fileId);
@@ -466,6 +504,10 @@ export default function MediaPreview({
         return !selectedFileIds.includes(file.id) && !alreadyInLocal;
       }).map(file => ({ ...file, isDrive: true }));
 
+      const unselectedDropboxFiles = (dropboxFiles || []).filter(file => {
+        return !selectedFileIds.includes(file.dropboxId);
+      }).map(file => ({ ...file, isDropbox: true }));
+
       const unselectedMetaFiles = importedFiles.filter(file => {
         const fileId = file.type === 'image' ? file.hash : file.id;
         return !selectedFileIds.includes(fileId);
@@ -474,18 +516,22 @@ export default function MediaPreview({
       // Combine files: unselected first, then selected
       const allLocalFiles = [...unselectedLocalFiles, ...selectedLocalFiles];
       const allDriveFiles = [...unselectedDriveFiles, ...selectedDriveFiles];
+      const allDropboxFiles = [...unselectedDropboxFiles, ...selectedDropboxFiles];
       const allMetaFiles = [...unselectedMetaFiles, ...selectedMetaFiles];
 
       // Remove duplicates and set state
       const seenFiles = new Set();
       const newLocalFiles = [];
       const newDriveFiles = [];
+      const newDropboxFiles = [];
 
-      [...allLocalFiles, ...allDriveFiles].forEach(file => {
-        const uniqueKey = file.isDrive ? file.id : file.uniqueId || file.name;
+      [...allLocalFiles, ...allDriveFiles, ...allDropboxFiles].forEach(file => {
+        const uniqueKey = file.isDropbox ? file.dropboxId : (file.isDrive ? file.id : file.uniqueId || file.name);
         if (!seenFiles.has(uniqueKey)) {
           seenFiles.add(uniqueKey);
-          if (file.isDrive) {
+          if (file.isDropbox) {
+            newDropboxFiles.push(file);
+          } else if (file.isDrive) {
             newDriveFiles.push(file);
           } else {
             newLocalFiles.push(file);
@@ -495,6 +541,7 @@ export default function MediaPreview({
 
       setFiles(newLocalFiles);
       setDriveFiles(newDriveFiles);
+      setDropboxFiles(newDropboxFiles);
       setImportedFiles(allMetaFiles.filter((file, index, self) =>
         index === self.findIndex(f =>
           (f.type === 'image' ? f.hash : f.id) === (file.type === 'image' ? file.hash : file.id)
@@ -502,7 +549,7 @@ export default function MediaPreview({
       ));
       setSelectedFiles(new Set());
     }
-  }, [selectedFiles, setFileGroups, files, driveFiles, importedFiles, setFiles, setDriveFiles, setImportedFiles, setSelectedFiles, adType]);
+  }, [selectedFiles, setFileGroups, files, driveFiles, dropboxFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setImportedFiles, setSelectedFiles, adType]);
 
 
 
@@ -581,6 +628,7 @@ export default function MediaPreview({
     const allFiles = [
       ...files,
       ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)),
+      ...(dropboxFiles || []).map(f => ({ ...f, isDropbox: true })),
       ...importedFiles.map(f => ({ ...f, isMetaLibrary: true }))
     ];
 
@@ -590,6 +638,7 @@ export default function MediaPreview({
         .slice(i, i + 10)
         .map(file => {
           if (file.isMetaLibrary) return file.type === 'image' ? file.hash : file.id;
+          if (file.isDropbox) return file.dropboxId;
           return getFileId(file);
         });
       newGroups.push(group);
@@ -598,7 +647,7 @@ export default function MediaPreview({
     setFileGroups(newGroups);
     setSelectedFiles(new Set());
     setIsFlexAutoGrouping(false);
-  }, [files, driveFiles, importedFiles, setFileGroups, setSelectedFiles]);
+  }, [files, driveFiles, dropboxFiles, importedFiles, setFileGroups, setSelectedFiles]);
 
 
 
@@ -618,11 +667,13 @@ export default function MediaPreview({
     const allFiles = [
       ...files,
       ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)),
+      ...(dropboxFiles || []).map(f => ({ ...f, isDropbox: true })),
       ...importedFiles.map(f => ({ ...f, isMetaLibrary: true }))
     ];
 
     const getFileKey = (file) => {
       if (file.isMetaLibrary) return file.type === 'image' ? file.hash : file.id;
+      if (file.isDropbox) return file.dropboxId;
       return file.isDrive ? file.id : file.uniqueId || file.name;
     };
 
@@ -631,21 +682,22 @@ export default function MediaPreview({
 
     if (oldIndex !== -1 && newIndex !== -1) {
       const newAllFiles = arrayMove(allFiles, oldIndex, newIndex);
-      setFiles(newAllFiles.filter(f => !f.isDrive && !f.isMetaLibrary));
+      setFiles(newAllFiles.filter(f => !f.isDrive && !f.isDropbox && !f.isMetaLibrary));
       setDriveFiles(newAllFiles.filter(f => f.isDrive));
+      setDropboxFiles(newAllFiles.filter(f => f.isDropbox));
       setImportedFiles(newAllFiles.filter(f => f.isMetaLibrary).map(f => {
         const { isMetaLibrary, ...rest } = f;
         return rest;
       }));
     }
-  }, [files, driveFiles, importedFiles, setFiles, setDriveFiles, setImportedFiles]);
+  }, [files, driveFiles, dropboxFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setImportedFiles]);
 
 
   const preload = new Image();
 
   return (
     <>
-      {(files.length > 0 || importedPosts.length > 0 || importedFiles.length > 0) ? (
+      {(files.length > 0 || driveFiles.length > 0 || (dropboxFiles?.length || 0) > 0 || importedPosts.length > 0 || importedFiles.length > 0) ? (
         <Card
           className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-2xl"
           style={{ height: "calc(100vh - 140px)" }}
@@ -669,7 +721,7 @@ export default function MediaPreview({
             <div className="flex flex-col items-start">
               <CardTitle className="text-left">Uploads Preview</CardTitle>
               <CardDescription className="text-left">
-                {`${files.length + driveFiles.length + importedFiles.length} file${(files.length + driveFiles.length + importedFiles.length) > 1 ? "s" : ""} selected`}
+                {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length) > 1 ? "s" : ""} selected`}
                 {isCarouselAd && !enablePlacementCustomization && (
                   <span className="block text-xs text-gray-500 mt-1">
                     Drag to change order of carousel cards
@@ -746,6 +798,7 @@ export default function MediaPreview({
                 onClick={() => {
                   setFiles([]);
                   setDriveFiles([]);
+                  setDropboxFiles([]);
                   setSelectedFiles(new Set());
                   setFileGroups([]);
                   setImportedPosts([]);
@@ -798,6 +851,7 @@ export default function MediaPreview({
               <SortableContext
                 items={[
                   ...files.map(file => file.isDrive ? file.id : file.uniqueId || file.name),
+                  ...(dropboxFiles || []).map(file => file.dropboxId),
                   ...importedFiles.map(file => file.type === 'image' ? file.hash : file.id)
                 ]}
                 strategy={verticalListSortingStrategy}
@@ -838,6 +892,13 @@ export default function MediaPreview({
                             file = driveFiles.find(f => f.id === fileId);
                             if (file) {
                               file = { ...file, isDrive: true };
+                            }
+                          }
+                          // Check Dropbox files
+                          if (!file) {
+                            file = (dropboxFiles || []).find(f => f.dropboxId === fileId);
+                            if (file) {
+                              file = { ...file, isDropbox: true };
                             }
                           }
                           if (!file) {
@@ -889,7 +950,7 @@ export default function MediaPreview({
                           onSelect={handleFileSelect}
                           groupNumber={null}
                           enablePlacementCustomization={enablePlacementCustomization}
-                          adType={adType}  // ✅ ADD THIS
+                          adType={adType}
 
                         />
                       );
@@ -920,49 +981,6 @@ export default function MediaPreview({
                       </div>
                     ))}
 
-                    {/* {importedFiles.map((file) => (
-                      <div key={file.type === "image" ? file.hash : file.id} className="relative group">
-                        <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
-                          <img
-                            src={
-                              file.type === "image"
-                                ? file.url
-                                : file.thumbnail_url || "https://api.withblip.com/thumbnail.jpg"
-                            }
-                            alt={file.name}
-                            title={file.name}
-                            className="w-full h-auto object-cover"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-sm h-7 w-7 p-3 z-30"
-                            style={{ opacity: 0.9, backgroundColor: "white" }}
-                            onClick={() =>
-                              setImportedFiles((prev) =>
-                                prev.filter((f) =>
-                                  file.type === "image"
-                                    ? f.hash !== file.hash
-                                    : f.id !== file.id
-                                )
-                              )
-                            }
-                          >
-                            <Trash className="h-2 w-2" />
-                          </Button>
-                        </div>
-                        <p
-                          className="mt-1 ml-1 text-sm truncate max-w-full"
-                          title={file.name}
-                        >
-                          {file.name}
-                        </p>
-                      </div>
-                    ))} */}
                   </div>
                 </div>
               </SortableContext>

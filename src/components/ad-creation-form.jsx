@@ -8,12 +8,13 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import TextareaAutosize from 'react-textarea-autosize'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -25,6 +26,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
 import InstagramIcon from '@/assets/icons/ig.svg?react';
+import DropboxIcon from '@/assets/Dropbox.png';
 import LabelIcon from '@/assets/icons/label.svg?react';
 import TemplateIcon from '@/assets/icons/file.svg?react';
 import LinkIcon from '@/assets/icons/link.svg?react';
@@ -281,7 +283,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
 
 
 function withUniqueId(file) {
-  if (file.isDrive) return file; // Drive already has unique id
+  if (file.isDrive || file.isDropbox) return file; // Drive/Dropbox already have unique id
   if (file.uniqueId) return file; // already tagged
   file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${uuidv4()}`;
   return file;
@@ -289,7 +291,9 @@ function withUniqueId(file) {
 
 // ADD THIS NEW FUNCTION:
 const getFileId = (file) => {
-  return file.isDrive ? file.id : (file.uniqueId || file.name);
+  if (file.isDrive) return file.id;
+  if (file.isDropbox) return file.dropboxId;
+  return file.uniqueId || file.name;
 };
 
 const isVideoFile = (file) => {
@@ -301,19 +305,86 @@ const isVideoFile = (file) => {
   return /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(name);
 };
 
-const getExtensionFromMime = (mime = "") => {
-  if (mime === "video/quicktime") return ".mov";
-  if (mime.startsWith("video/")) return ".mp4";
-  if (mime.startsWith("image/")) return ".jpg";
-  return "";
-};
 
+
+
+
+const getMimeFromName = (name) => {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  const mimeMap = {
+    'mp4': 'video/mp4',
+    'mov': 'video/quicktime',
+    'webm': 'video/webm',
+    'avi': 'video/x-msvideo',
+    'mkv': 'video/x-matroska',
+    'm4v': 'video/x-m4v',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif'
+  };
+  return mimeMap[ext] || 'application/octet-stream';
+};
 
 
 const extractFolderId = (url) => {
   const idMatch = url.match(/[-\w]{25,}/);
   return idMatch ? idMatch[0] : null;
 };
+
+/**
+ * Hook to fetch approved partnership ad partners for a given Instagram account
+ */
+const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
+  const [partners, setPartners] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchPartners = useCallback(async () => {
+    // Skip if missing required params
+    if (!instagramAccountId || !pageAccessToken) {
+      setPartners([]);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/auth/partnership-ads/partners`,
+        {
+          params: { instagramAccountId, pageAccessToken },
+          withCredentials: true
+        }
+      );
+
+      // Map to cleaner format
+      const approvedPartners = (response.data.data || []).map(partner => ({
+        id: partner.id,
+        creatorIgId: partner.creator_ig_id,
+        creatorUsername: partner.creator_username,
+        creatorFbPageId: partner.creator_fb_page_id,
+      }));
+
+      setPartners(approvedPartners);
+    } catch (err) {
+      console.error('Error fetching partnership ad partners:', err);
+      setError(err.response?.data?.error || 'Re-authenticate the app and approve additional permissions to make partnership ads');
+      setPartners([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [instagramAccountId, pageAccessToken]);
+
+  useEffect(() => {
+    fetchPartners();
+  }, [fetchPartners]);
+
+  return { partners, isLoading, error, refetch: fetchPartners };
+};
+
 
 
 export default function AdCreationForm({
@@ -371,6 +442,8 @@ export default function AdCreationForm({
   setSelectedTemplate,
   driveFiles,
   setDriveFiles,
+  dropboxFiles,
+  setDropboxFiles,
   selectedShopDestination,
   setSelectedShopDestination,
   selectedShopDestinationType,
@@ -456,6 +529,63 @@ export default function AdCreationForm({
   const [loadingForms, setLoadingForms] = useState(false);
 
 
+  // Partnership Ads State
+  const [isPartnershipAd, setIsPartnershipAd] = useState(false);
+  const [partnerIgAccountId, setPartnerIgAccountId] = useState("");
+  const [partnerFbPageId, setPartnerFbPageId] = useState("");
+  const [openPartnerSelector, setOpenPartnerSelector] = useState(false);
+  const [partnerSearchValue, setPartnerSearchValue] = useState("");
+
+  // Get the selected page's access token
+  const selectedPageAccessToken = useMemo(() => {
+    const selectedPage = pages.find(p => p.id === pageId);
+    return selectedPage?.access_token || null;
+  }, [pages, pageId]);
+
+  // Fetch partners only when toggle is ON (lazy loading)
+  const {
+    partners: availablePartners,
+    isLoading: isLoadingPartners,
+    error: partnersError,
+    refetch: refetchPartners
+  } = usePartnershipAdPartners(
+    isPartnershipAd ? instagramAccountId : null,
+    isPartnershipAd ? selectedPageAccessToken : null
+  );
+
+  // Filter partners based on search
+  const filteredPartners = useMemo(() => {
+    if (!partnerSearchValue) return availablePartners;
+    const searchLower = partnerSearchValue.toLowerCase();
+    return availablePartners.filter(partner =>
+      partner.creatorUsername.toLowerCase().includes(searchLower) ||
+      partner.creatorIgId.includes(partnerSearchValue)
+    );
+  }, [availablePartners, partnerSearchValue]);
+
+  // Get selected partner for display
+  const selectedPartner = useMemo(() => {
+    return availablePartners.find(p => p.creatorIgId === partnerIgAccountId);
+  }, [availablePartners, partnerIgAccountId]);
+
+  // Handle partner selection - sets both IG and FB IDs
+  const handlePartnerSelect = (partner) => {
+    setPartnerIgAccountId(partner.creatorIgId);
+    setPartnerFbPageId(partner.creatorFbPageId);
+    setOpenPartnerSelector(false);
+  };
+
+  // Handle partnership toggle
+  const handlePartnershipToggle = (checked) => {
+    setIsPartnershipAd(checked);
+    if (!checked) {
+      setPartnerIgAccountId("");
+      setPartnerFbPageId("");
+    }
+  };
+
+
+
   const refreshPage = useCallback(() => {
     window.location.reload();
   }, []);
@@ -499,7 +629,7 @@ export default function AdCreationForm({
       }
     }
     else {
-      adCount = files.length + driveFiles.length + importedFiles.length;
+      adCount = files.length + driveFiles.length + importedFiles.length + dropboxFiles.length;
     }
 
 
@@ -518,7 +648,8 @@ export default function AdCreationForm({
 
         // File states
         files: [...files],
-        driveFiles: [...driveFiles],  // These already contain accessToken per file
+        driveFiles: [...driveFiles],
+        dropboxFiles: [...dropboxFiles],  // ADD THIS LINE
         videoThumbs: { ...videoThumbs },
         thumbnail,
         importedPosts: [...importedPosts],
@@ -546,6 +677,10 @@ export default function AdCreationForm({
         selectedShopDestination,
         selectedShopDestinationType,
         selectedForm,
+        //partnership ads
+        isPartnershipAd,
+        partnerIgAccountId,
+        partnerFbPageId,
 
         // For computing adName
         adNameFormulaV2: adNameFormulaV2 ? { ...adNameFormulaV2 } : null,
@@ -821,7 +956,37 @@ export default function AdCreationForm({
     }
   }
 
+  async function uploadDropboxFileToS3(file, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/upload-from-dropbox`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileUrl: file.directLink,
+            fileName: file.name,
+            mimeType: file.mimeType || getMimeFromName(file.name),
+            size: file.size
+          })
+        });
 
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "S3 upload failed");
+
+        return {
+          ...file,
+          s3Url: data.s3Url,
+          isS3Upload: true
+        };
+      } catch (error) {
+        if (attempt === maxRetries) {
+          throw new Error(`Dropbox S3 upload failed after ${maxRetries} attempts: ${error.message}`);
+        }
+        const delayMs = Math.pow(2, attempt - 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
 
 
 
@@ -1290,6 +1455,116 @@ export default function AdCreationForm({
   }, [openPicker]); // Note: openPicker needs to be memoized too
 
 
+  // Load Dropbox Chooser SDK
+  useEffect(() => {
+    if (document.getElementById('dropboxjs')) return; // Already loaded
+
+    const script = document.createElement('script');
+    script.src = 'https://www.dropbox.com/static/api/2/dropins.js';
+    script.id = 'dropboxjs';
+    script.setAttribute('data-app-key', import.meta.env.VITE_DROPBOX_APP_KEY || 'YOUR_DROPBOX_APP_KEY');
+    script.async = true;
+    document.head.appendChild(script);
+
+    return () => {
+      const existingScript = document.getElementById('dropboxjs');
+      if (existingScript) existingScript.remove();
+    };
+  }, []);
+
+  // Separate function for the Chooser
+  const openDropboxChooser = useCallback(() => {
+    window.Dropbox.choose({
+      success: async (selectedFiles) => {
+        console.log('=== DROPBOX CHOOSER RAW RESPONSE ===');
+        selectedFiles.forEach(f => {
+          console.log(`File: ${f.name}`);
+          console.log(`  id: ${f.id}`);
+          console.log(`  link: ${f.link}`);
+        });
+
+        const dropboxFilesData = selectedFiles.map((file) => ({
+          dropboxId: file.id,
+          name: file.name,
+          link: file.link,
+          directLink: file.link.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '?dl=1'),
+          size: file.bytes,
+          // icon: file.icon,
+          isDropbox: true,
+          mimeType: getMimeFromName(file.name)
+        }));
+
+        setDropboxFiles(prev => [...prev, ...dropboxFilesData]);
+      },
+      cancel: () => {
+        console.log('Dropbox picker cancelled');
+      },
+      linkType: 'direct',
+      multiselect: true,
+      extensions: ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mov', '.webm'],
+      folderselect: false,
+      sizeLimit: 1024 * 1024 * 1024
+    });
+  }, [setDropboxFiles]);
+
+
+  const handleDropboxClick = useCallback(async () => {
+    // Check if Dropbox SDK is loaded
+    if (!window.Dropbox) {
+      toast.error("Dropbox is still loading. Please try again in a moment.");
+      return;
+    }
+
+    // Check if user is authenticated with Dropbox
+    try {
+      const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, {
+        credentials: 'include'
+      });
+      const statusData = await statusRes.json();
+
+      if (!statusData.authenticated) {
+        // Need to authenticate first
+        // toast.info("Please connect your Dropbox account first");
+
+        // Open OAuth popup
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+
+        const popup = window.open(
+          `${API_BASE_URL}/auth/dropbox?popup=true`,
+          'dropbox-auth',
+          `width=${width},height=${height},left=${left},top=${top}`
+        );
+
+        // Wait for OAuth to complete
+        const handleMessage = (event) => {
+          if (event.data?.type === 'dropbox-auth-success') {
+            window.removeEventListener('message', handleMessage);
+            toast.success("Dropbox connected! Opening file picker...");
+            // Now open the Chooser
+            openDropboxChooser();
+          } else if (event.data?.type === 'dropbox-auth-error') {
+            window.removeEventListener('message', handleMessage);
+            toast.error("Failed to connect Dropbox");
+          }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return;
+      }
+
+      // Already authenticated, open Chooser directly
+      openDropboxChooser();
+
+    } catch (error) {
+      console.error('Error checking Dropbox auth:', error);
+      toast.error("Failed to check Dropbox connection");
+    }
+  }, []);
+
+
 
   // Dropzone logic
   const onDrop = useCallback((acceptedFiles) => {
@@ -1325,6 +1600,35 @@ export default function AdCreationForm({
     if (!isVideoFile(file)) {
       return null; // Not a video file
     }
+
+
+    if (file.isDropbox) {
+      try {
+        // We need to call our backend to get the metadata
+        const response = await fetch(`${API_BASE_URL}/api/dropbox/video-metadata`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            fileId: file.dropboxId,
+            fileLink: file.link
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.width && data.height) {
+            return data.width / data.height;
+          }
+        }
+        return 16 / 9; // Fallback
+      } catch (error) {
+        console.error('Error getting Dropbox video metadata:', error);
+        return 16 / 9;
+      }
+    }
+
 
     if (file.mimeType) {
       // For Drive files - NEW, RELIABLE METHOD
@@ -1425,133 +1729,320 @@ export default function AdCreationForm({
     });
   }, []);
 
+  // Rename to be more accurate - this is ONLY for Drive
   const getDriveVideoThumbnail = (driveFile) => {
-    if (!isVideoFile(driveFile)) return null;
+    if (!isVideoFile(driveFile) || !driveFile.isDrive) return null;
     return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
   };
 
   // Track processing state, not processed files
   const processingRef = useRef(new Set());
 
+
+
+  // useEffect(() => {
+  //   const abortController = new AbortController();
+
+  //   const processThumbnails = async () => {
+  //     // --- 1. LOCAL FILES (No changes) ---
+  //     const videoFiles = files.filter(file => {
+  //       const fileId = getFileId(file);
+  //       return isVideoFile(file) &&
+  //         !file.isDrive &&
+  //         !file.isDropbox &&
+  //         !videoThumbs[fileId] &&
+  //         !processingRef.current.has(fileId);
+  //     });
+
+  //     if (videoFiles.length > 0) {
+  //       videoFiles.forEach(file => processingRef.current.add(getFileId(file)));
+
+  //       const MAX_CONCURRENT = 2;
+  //       const queue = [...videoFiles];
+  //       let completed = 0;
+
+  //       const processNext = async () => {
+  //         if (queue.length === 0 || abortController.signal.aborted) return;
+  //         const file = queue.shift();
+  //         const fileId = getFileId(file);
+
+  //         try {
+  //           const thumb = await generateThumbnail(file);
+  //           if (!abortController.signal.aborted) {
+  //             setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
+  //             completed++;
+  //           }
+  //         } catch (err) {
+  //           console.error(`Thumbnail error for ${file.name}:`, err);
+  //           if (!abortController.signal.aborted) {
+  //             setVideoThumbs(prev => ({
+  //               ...prev,
+  //               [fileId]: "https://api.withblip.com/thumbnail.jpg"
+  //             }));
+  //             completed++;
+  //           }
+  //         } finally {
+  //           processingRef.current.delete(fileId);
+  //           if (queue.length > 0 && !abortController.signal.aborted) {
+  //             if ('requestIdleCallback' in window) requestIdleCallback(() => processNext(), { timeout: 100 });
+  //             else setTimeout(processNext, 0);
+  //           }
+  //         }
+  //       };
+
+  //       const initialPromises = [];
+  //       for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
+  //         initialPromises.push(processNext());
+  //       }
+  //       await Promise.all(initialPromises);
+  //     }
+
+  //     // --- 2. GOOGLE DRIVE (No changes) ---
+  //     const driveThumbs = {};
+  //     driveFiles.forEach(file => {
+  //       const fileId = getFileId(file);
+  //       if (isVideoFile(file) && !videoThumbs[fileId]) {
+  //         const thumb = getDriveVideoThumbnail(file);
+  //         if (thumb) driveThumbs[fileId] = thumb;
+  //       }
+  //     });
+  //     if (Object.keys(driveThumbs).length > 0) {
+  //       setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
+  //     }
+
+  //     // --- 3. DROPBOX (UPDATED: BATCH PROCESSING) ---
+  //     const dropboxVideoFiles = dropboxFiles.filter(file => {
+  //       const fileId = getFileId(file);
+  //       // Ensure we have a dropboxId to send to the API
+  //       return isVideoFile(file) &&
+  //         !videoThumbs[fileId] &&
+  //         !processingRef.current.has(fileId);
+  //     });
+
+  //     if (dropboxVideoFiles.length > 0 && !abortController.signal.aborted) {
+  //       // Mark all as processing immediately so UI shows loading
+  //       dropboxVideoFiles.forEach(file => processingRef.current.add(getFileId(file)));
+  //       setVideoThumbs(prev => ({ ...prev })); // Force re-render
+
+  //       // Dropbox allows max 25 items per batch request
+  //       const BATCH_SIZE = 25;
+
+  //       for (let i = 0; i < dropboxVideoFiles.length; i += BATCH_SIZE) {
+  //         if (abortController.signal.aborted) break;
+
+  //         const batch = dropboxVideoFiles.slice(i, i + BATCH_SIZE);
+  //         // Important: Send the actual dropboxId, not the generic fileId
+  //         const filesData = batch.map(f => ({
+  //           id: f.dropboxId,
+  //           link: f.link  // Include the original Dropbox link
+  //         }));
+
+  //         console.log('Files data:', JSON.stringify(filesData, null, 2));
+
+  //         try {
+  //           const response = await fetch(`${API_BASE_URL}/api/dropbox/thumbnails/batch`, {
+  //             method: 'POST',
+  //             headers: { 'Content-Type': 'application/json' },
+  //             credentials: 'include',
+  //             body: JSON.stringify({ files: filesData }),
+  //             signal: abortController.signal
+  //           });
+
+  //           if (response.ok) {
+  //             const data = await response.json();
+
+  //             // Map the returned Dropbox IDs back to your generic file IDs if necessary
+  //             // Assuming getFileId(file) might return something different than file.dropboxId
+  //             const newThumbs = {};
+
+  //             batch.forEach(file => {
+  //               const dId = file.dropboxId;
+  //               const genericId = getFileId(file);
+
+  //               if (data.thumbnails && data.thumbnails[dId]) {
+  //                 newThumbs[genericId] = data.thumbnails[dId];
+  //               } else {
+  //                 // Fallback for failed specific items in the batch
+  //                 newThumbs[genericId] = "https://api.withblip.com/thumbnail.jpg";
+  //               }
+  //             });
+
+  //             setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+  //           }
+  //         } catch (error) {
+  //           console.error("Dropbox batch error:", error);
+  //           // On batch failure, set placeholders for this batch
+  //           const failedThumbs = {};
+  //           batch.forEach(f => {
+  //             failedThumbs[getFileId(f)] = "https://api.withblip.com/thumbnail.jpg";
+  //           });
+  //           setVideoThumbs(prev => ({ ...prev, ...failedThumbs }));
+  //         } finally {
+  //           // Cleanup processing state for this batch
+  //           batch.forEach(f => processingRef.current.delete(getFileId(f)));
+  //         }
+  //       }
+  //     }
+  //   };
+
+  //   processThumbnails();
+
+  //   return () => {
+  //     abortController.abort();
+  //     processingRef.current.clear();
+  //   };
+  // }, [files, driveFiles, dropboxFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+
+
+  // Add this ref near your other refs (near processingRef)
+  const videoThumbsRef = useRef(videoThumbs);
+
+  // Add this small useEffect to keep the ref in sync
   useEffect(() => {
-    // Use AbortController for cleanup
+    videoThumbsRef.current = videoThumbs;
+  }, [videoThumbs]);
+
+  // Replace your entire thumbnail processing useEffect with this:
+  useEffect(() => {
     const abortController = new AbortController();
 
     const processThumbnails = async () => {
-      // Filter only unprocessed video files - check both videoThumbs and processing
+      // --- 1. LOCAL FILES ---
       const videoFiles = files.filter(file => {
         const fileId = getFileId(file);
         return isVideoFile(file) &&
-          !videoThumbs[fileId] && // Check actual thumbnails
-          !processingRef.current.has(fileId); // Not currently processing
+          !file.isDrive &&
+          !file.isDropbox &&
+          !videoThumbsRef.current[fileId] &&
+          !processingRef.current.has(fileId);
       });
 
-      if (videoFiles.length === 0) {
-        // Handle Drive files only if there are no local files to process
-        const driveThumbs = {};
-        driveFiles.forEach(file => {
+      if (videoFiles.length > 0) {
+        videoFiles.forEach(file => processingRef.current.add(getFileId(file)));
+
+        const MAX_CONCURRENT = 2;
+        const queue = [...videoFiles];
+
+        const processNext = async () => {
+          if (queue.length === 0 || abortController.signal.aborted) return;
+          const file = queue.shift();
           const fileId = getFileId(file);
-          if (isVideoFile(file) && !videoThumbs[fileId]) {
-            const thumb = getDriveVideoThumbnail(file);
-            if (thumb) {
-              driveThumbs[fileId] = thumb;
+
+          try {
+            const thumb = await generateThumbnail(file);
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
+            }
+          } catch (err) {
+            console.error(`Thumbnail error for ${file.name}:`, err);
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({
+                ...prev,
+                [fileId]: "https://api.withblip.com/thumbnail.jpg"
+              }));
+            }
+          } finally {
+            processingRef.current.delete(fileId);
+            if (queue.length > 0 && !abortController.signal.aborted) {
+              if ('requestIdleCallback' in window) requestIdleCallback(() => processNext(), { timeout: 100 });
+              else setTimeout(processNext, 0);
             }
           }
-        });
+        };
 
-        if (Object.keys(driveThumbs).length > 0) {
-          setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
+        const initialPromises = [];
+        for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
+          initialPromises.push(processNext());
         }
-        return;
+        await Promise.all(initialPromises);
       }
 
-
-
-      // Mark files as being processed
-      videoFiles.forEach(file => {
-        processingRef.current.add(getFileId(file));
-      });
-
-      // Process with limited concurrency instead of batches
-      const MAX_CONCURRENT = 2; // Process only 2 at a time
-      const queue = [...videoFiles];
-      let completed = 0;
-
-      const processNext = async () => {
-        if (queue.length === 0 || abortController.signal.aborted) return;
-
-        const file = queue.shift();
-        const fileId = getFileId(file);
-
-        try {
-          const thumb = await generateThumbnail(file);
-
-          if (!abortController.signal.aborted) {
-            setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
-            completed++;
-          }
-        } catch (err) {
-          console.error(`Thumbnail error for ${file.name}:`, err);
-          if (!abortController.signal.aborted) {
-            setVideoThumbs(prev => ({
-              ...prev,
-              [fileId]: "https://api.withblip.com/thumbnail.jpg"
-            }));
-            completed++;
-          }
-        } finally {
-          // Remove from processing set once done
-          processingRef.current.delete(fileId);
-
-          // Show progress if many files
-          if (videoFiles.length > 10 && completed % 5 === 0) {
-            toast.info(`Generated ${completed}/${videoFiles.length} thumbnails...`);
-          }
-
-          // Use requestIdleCallback for better performance
-          if (queue.length > 0 && !abortController.signal.aborted) {
-            if ('requestIdleCallback' in window) {
-              requestIdleCallback(() => processNext(), { timeout: 100 });
-            } else {
-              setTimeout(processNext, 0);
-            }
-          }
-        }
-      };
-
-      // Start initial concurrent processes
-      const initialPromises = [];
-      for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
-        initialPromises.push(processNext());
-      }
-      await Promise.all(initialPromises);
-
-      // Handle Drive files after local files are done
+      // --- 2. GOOGLE DRIVE ---
       const driveThumbs = {};
       driveFiles.forEach(file => {
         const fileId = getFileId(file);
-        if (isVideoFile(file) && !videoThumbs[fileId]) {
+        if (isVideoFile(file) && !videoThumbsRef.current[fileId]) {
           const thumb = getDriveVideoThumbnail(file);
-          if (thumb) {
-            driveThumbs[fileId] = thumb;
-          }
+          if (thumb) driveThumbs[fileId] = thumb;
         }
       });
-
       if (Object.keys(driveThumbs).length > 0) {
         setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
+      }
+
+      // --- 3. DROPBOX ---
+      const dropboxVideoFiles = dropboxFiles.filter(file => {
+        const fileId = getFileId(file);
+        return isVideoFile(file) &&
+          !videoThumbsRef.current[fileId] &&
+          !processingRef.current.has(fileId);
+      });
+
+      if (dropboxVideoFiles.length > 0 && !abortController.signal.aborted) {
+        dropboxVideoFiles.forEach(file => processingRef.current.add(getFileId(file)));
+
+        const BATCH_SIZE = 25;
+
+        for (let i = 0; i < dropboxVideoFiles.length; i += BATCH_SIZE) {
+          if (abortController.signal.aborted) break;
+
+          const batch = dropboxVideoFiles.slice(i, i + BATCH_SIZE);
+          const filesData = batch.map(f => ({
+            id: f.dropboxId,
+            link: f.link
+          }));
+
+          try {
+            const response = await fetch(`${API_BASE_URL}/api/dropbox/thumbnails/batch`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ files: filesData }),
+              signal: abortController.signal
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+
+              const newThumbs = {};
+              batch.forEach(file => {
+                const dId = file.dropboxId;
+                const genericId = getFileId(file);
+
+                if (data.thumbnails && data.thumbnails[dId]) {
+                  newThumbs[genericId] = data.thumbnails[dId];
+                } else {
+                  newThumbs[genericId] = "https://api.withblip.com/thumbnail.jpg";
+                }
+              });
+
+              setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+            }
+          } catch (error) {
+            if (error.name === 'AbortError') {
+              console.log("Dropbox fetch aborted (expected during cleanup)");
+              return;
+            }
+            console.error("Dropbox batch error:", error);
+            const failedThumbs = {};
+            batch.forEach(f => {
+              failedThumbs[getFileId(f)] = "https://api.withblip.com/thumbnail.jpg";
+            });
+            setVideoThumbs(prev => ({ ...prev, ...failedThumbs }));
+          } finally {
+            batch.forEach(f => processingRef.current.delete(getFileId(f)));
+          }
+        }
       }
     };
 
     processThumbnails();
 
-    // Cleanup on unmount or dependency change
     return () => {
       abortController.abort();
-      // Clear processing set on cleanup
       processingRef.current.clear();
     };
-  }, [files, driveFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+  }, [files, driveFiles, dropboxFiles, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
   const addField = (setter, values) => {
@@ -1733,7 +2224,7 @@ export default function AdCreationForm({
 
   useEffect(() => {
     if (isCarouselAd) {
-      const fileCount = files.length + driveFiles.length + importedFiles.length;
+      const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
 
       // Sync messages when apply-to-all is checked
       if (applyTextToAllCards && fileCount > 0 && messages.length !== fileCount) {
@@ -1747,7 +2238,7 @@ export default function AdCreationForm({
         setHeadlines(new Array(fileCount).fill(firstHeadline));
       }
     }
-  }, [files.length, driveFiles.length, importedFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
+  }, [files.length, driveFiles.length, dropboxFiles.length, importedFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
 
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
@@ -1852,6 +2343,7 @@ export default function AdCreationForm({
       // Files
       files,
       driveFiles,
+      dropboxFiles,
       videoThumbs,
       thumbnail,
       importedPosts,
@@ -1875,6 +2367,10 @@ export default function AdCreationForm({
       selectedShopDestination,
       selectedShopDestinationType,
       selectedForm,
+      //partnership ads
+      isPartnershipAd,
+      partnerIgAccountId,
+      partnerFbPageId,
 
       // Other
       adValues,
@@ -1898,7 +2394,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -1919,7 +2415,7 @@ export default function AdCreationForm({
       setProgressMessage('Analyzing video files...');
 
       try {
-        const allFiles = [...files, ...driveFiles];
+        const allFiles = [...files, ...driveFiles, ...dropboxFiles];
         const videoFiles = allFiles.filter(isVideoFile);
 
         if (videoFiles.length > 0) {
@@ -1984,12 +2480,15 @@ export default function AdCreationForm({
     const largeDriveFiles = driveFiles.filter(file =>
       isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
     );
-
+    const largeDropboxFiles = dropboxFiles.filter(file =>
+      isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
+    );
 
     let s3Results = [];
     const s3DriveResults = [];
+    const s3DropboxResults = [];
 
-    const totalLargeFiles = largeFiles.length + largeDriveFiles.length;
+    const totalLargeFiles = largeFiles.length + largeDriveFiles.length + largeDropboxFiles.length;
     if (totalLargeFiles > 0) {
       setProgressMessage(`Uploading videos...`);
 
@@ -2060,6 +2559,28 @@ export default function AdCreationForm({
         }
       });
 
+      // Upload Dropbox files with concurrency control
+      const dropboxUploadPromises = largeDropboxFiles.map(file =>
+        limit(() => uploadDropboxFileToS3(file))
+      );
+
+      const dropboxResults = await Promise.allSettled(dropboxUploadPromises);
+
+      // Process Dropbox file results
+      dropboxResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const uploadResult = result.value;
+          if (enablePlacementCustomization && aspectRatioMap[getFileId(largeDropboxFiles[index])]) {
+            uploadResult.aspectRatio = aspectRatioMap[getFileId(largeDropboxFiles[index])];
+          }
+          uploadResult.dropboxId = largeDropboxFiles[index].dropboxId;  // ✅ Add this if missing
+          s3DropboxResults.push(uploadResult);
+        } else {
+          toast.error(`Failed to upload Dropbox video: ${largeDropboxFiles[index].name}`);
+          console.error("❌ Dropbox to S3 upload failed", result.reason);
+        }
+      });
+
       setProgress(100);
       setProgressMessage('File upload complete! Creating ads...');
       // toast.success("Video files uploaded!");
@@ -2068,6 +2589,10 @@ export default function AdCreationForm({
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
     const smallDriveFiles = driveFiles.filter(file =>
+      !(isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD)
+    );
+
+    const smallDropboxFiles = dropboxFiles.filter(file =>
       !(isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD)
     );
 
@@ -2110,7 +2635,7 @@ export default function AdCreationForm({
 
     // Add carousel validation
     if (isCarouselAd) {
-      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length + (importedFiles?.length || 0);
+      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + (importedFiles?.length || 0);
       if (totalFiles < 2) {
         toast.error("Carousel ads require at least 2 files");
         setIsLoading(false);
@@ -2125,7 +2650,15 @@ export default function AdCreationForm({
 
     // Add flexible ads validation
     if (adType === 'flexible') {
-      const totalFiles = files.length + driveFiles.length + s3Results.length + s3DriveResults.length + (importedFiles?.length || 0);
+      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + (importedFiles?.length || 0);
+      console.log('File counts:', {
+        files: files.length,
+        driveFiles: driveFiles.length,
+        s3Results: s3Results.length,
+        s3DriveResults: s3DriveResults.length,
+        importedFiles: importedFiles?.length || 0,
+        totalFiles
+      });
 
       // If no groups, validate single ad
       if (fileGroups.length === 0) {
@@ -2181,7 +2714,10 @@ export default function AdCreationForm({
         cta,
         launchPaused,
         jobId,
-        selectedForm
+        selectedForm,
+        isPartnershipAd,
+        partnerIgAccountId,
+        partnerFbPageId
       }
     ) => {
       formData.append("adName", adName);
@@ -2198,6 +2734,16 @@ export default function AdCreationForm({
       formData.append("jobId", jobId);
       if (selectedForm) {
         formData.append("leadgenFormId", selectedForm);
+      }
+      if (isPartnershipAd && (partnerIgAccountId || partnerFbPageId)) {
+        formData.append("isPartnershipAd", "true");
+        if (partnerIgAccountId) {
+          formData.append("partnerIgAccountId", partnerIgAccountId);
+        }
+        if (partnerFbPageId) {
+          formData.append("partnerFbPageId", partnerFbPageId);
+        }
+
       }
     };
 
@@ -2221,10 +2767,13 @@ export default function AdCreationForm({
         fileOrder,
         files,
         driveFiles,
+        dropboxFiles,           // ADD
         s3Results,
         s3DriveResults,
+        s3DropboxResults,       // ADD
         S3_UPLOAD_THRESHOLD,
         smallDriveFiles,
+        smallDropboxFiles,      // ADD
         importedFiles
       }
     ) => {
@@ -2232,12 +2781,33 @@ export default function AdCreationForm({
       formData.append("enablePlacementCustomization", false);
       formData.append("fileOrder", JSON.stringify(fileOrder));
 
-      // Add S3 URLs for large files
-      [...s3Results, ...s3DriveResults].forEach((s3File) => {
+      // Add S3 URLs for large files (including Dropbox)
+      [...s3Results, ...s3DriveResults, ...s3DropboxResults].forEach((s3File) => {
         formData.append("s3VideoUrls", s3File.s3Url);
-        formData.append("s3VideoName", s3File.name);
+        formData.append("s3VideoNames", s3File.name);  // Note: was "s3VideoName" - should be "s3VideoNames" for consistency
       });
 
+      // Add small Drive files
+      smallDriveFiles.forEach((driveFile) => {
+        formData.append("driveFiles", JSON.stringify({
+          id: driveFile.id,
+          name: driveFile.name,
+          mimeType: driveFile.mimeType,
+          accessToken: driveFile.accessToken
+        }));
+      });
+
+      // ADD: Small Dropbox files
+      smallDropboxFiles.forEach((dropboxFile) => {
+        formData.append("dropboxFiles", JSON.stringify({
+          dropboxId: dropboxFile.dropboxId,
+          name: dropboxFile.name,
+          directLink: dropboxFile.directLink,
+          mimeType: dropboxFile.mimeType || getMimeFromName(dropboxFile.name)
+        }));
+      });
+
+      // Meta library files
       if (importedFiles && importedFiles.length > 0) {
         const metaImages = importedFiles.filter(f => f.type === 'image');
         const metaVideos = importedFiles.filter(f => f.type === 'video');
@@ -2309,8 +2879,10 @@ export default function AdCreationForm({
       {
         files,
         smallDriveFiles,
+        smallDropboxFiles,
         s3Results,
         s3DriveResults,
+        s3DropboxResults,
         S3_UPLOAD_THRESHOLD,
         getFileId,
         isVideoFile,
@@ -2323,7 +2895,7 @@ export default function AdCreationForm({
       // Add local files from this group
       group.forEach(fileId => {
         const file = files.find(f => getFileId(f) === fileId);
-        if (file && !file.isDrive && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) {
+        if (file && !file.isDrive && !file.isDropbox && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) {
           formData.append("mediaFiles", file);
 
           if (isVideoFile(file)) {
@@ -2356,11 +2928,33 @@ export default function AdCreationForm({
         }
       });
 
-      // Add S3 files from this group
+      // Add dropbox files from this group
       group.forEach(fileId => {
-        const s3File = [...s3Results, ...s3DriveResults].find(f =>
-          f.uniqueId === fileId || f.id === fileId
+        const dropboxFile = smallDropboxFiles.find(f => f.dropboxId === fileId);
+        if (dropboxFile) {
+          formData.append("dropboxFiles", JSON.stringify({
+            dropboxId: dropboxFile.dropboxId,
+            name: dropboxFile.name,
+            directLink: dropboxFile.directLink,
+            mimeType: dropboxFile.mimeType || getMimeFromName(dropboxFile.name)
+          }));
+
+          if (isVideoFile(dropboxFile)) {
+            groupVideoMetadata.push({
+              dropboxId: dropboxFile.dropboxId,
+              aspectRatio: aspectRatioMap[getFileId(dropboxFile)] || 16 / 9
+            });
+          }
+        }
+      });
+
+      // CONSOLIDATED: Add ALL S3 files from this group (local, drive, and dropbox)
+      group.forEach(fileId => {
+        const allS3Results = [...s3Results, ...s3DriveResults, ...s3DropboxResults];
+        const s3File = allS3Results.find(f =>
+          f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId
         );
+
         if (s3File) {
           formData.append("s3VideoUrls", s3File.s3Url);
           formData.append("s3VideoNames", s3File.name);
@@ -2374,8 +2968,7 @@ export default function AdCreationForm({
         }
       });
 
-
-
+      // Add meta library files from this group
       group.forEach(fileId => {
         const metaFile = (importedFiles || []).find(f =>
           (f.type === 'image' && f.hash === fileId) ||
@@ -2385,17 +2978,14 @@ export default function AdCreationForm({
           if (metaFile.type === 'image') {
             formData.append("metaImageHashes", metaFile.hash);
             formData.append("metaImageNames", metaFile.name);
-            // NEW: Send dimensions for placement categorization
             formData.append("metaImageWidths", String(metaFile.width || 0));
             formData.append("metaImageHeights", String(metaFile.height || 0));
           } else if (metaFile.type === 'video') {
             formData.append("metaVideoIds", metaFile.id);
             formData.append("metaVideoNames", metaFile.name);
-            // NEW: Send dimensions for placement categorization
             formData.append("metaVideoWidths", String(metaFile.width || 0));
             formData.append("metaVideoHeights", String(metaFile.height || 0));
 
-            // NEW: Include in video metadata for aspect ratio tracking
             groupVideoMetadata.push({
               metaVideoId: metaFile.id,
               aspectRatio: (metaFile.width && metaFile.height)
@@ -2417,8 +3007,10 @@ export default function AdCreationForm({
       {
         files,
         smallDriveFiles,
+        smallDropboxFiles,
         s3Results,
         s3DriveResults,
+        s3DropboxResults,   // ADD THIS
         S3_UPLOAD_THRESHOLD,
         importedFiles,
       }
@@ -2440,8 +3032,17 @@ export default function AdCreationForm({
         }));
       });
 
+      smallDropboxFiles.forEach((dropboxFile) => {
+        formData.append("dropboxFiles", JSON.stringify({
+          dropboxId: dropboxFile.dropboxId,
+          name: dropboxFile.name,
+          directLink: dropboxFile.directLink,
+          mimeType: dropboxFile.mimeType || getMimeFromName(dropboxFile.name)
+        }));
+      });
+
       // Add all large file URLs (S3)
-      [...s3Results, ...s3DriveResults].forEach((s3File) => {
+      [...s3Results, ...s3DriveResults, ...s3DropboxResults].forEach((s3File) => {
         formData.append("s3VideoUrls", s3File.s3Url);
         formData.append("s3VideoNames", s3File.name);
       });
@@ -2487,6 +3088,19 @@ export default function AdCreationForm({
       formData.append("driveName", driveFile.name);
     };
 
+
+    /**
+ * Append single dropbox file fields
+ */
+    const appendSingleDropboxFile = (formData, dropboxFile) => {
+      formData.append("enablePlacementCustomization", false);
+      formData.append("dropboxFile", "true");
+      formData.append("dropboxId", dropboxFile.dropboxId);
+      formData.append("dropboxLink", dropboxFile.directLink);
+      formData.append("dropboxName", dropboxFile.name);
+      formData.append("dropboxMimeType", dropboxFile.mimeType || getMimeFromName(dropboxFile.name));
+    };
+
     /**
      * Append single S3 file fields
      */
@@ -2520,8 +3134,10 @@ export default function AdCreationForm({
     const buildCarouselFileOrder = (
       files,
       driveFiles,
+      dropboxFiles,      // ADD THIS
       s3Results,
       s3DriveResults,
+      s3DropboxResults,  // ADD THIS
       S3_UPLOAD_THRESHOLD,
       importedFiles  // ADD THIS PARAMETER
 
@@ -2572,6 +3188,30 @@ export default function AdCreationForm({
           }
         }
       });
+
+      // Process dropbox files
+      dropboxFiles.forEach((dropboxFile) => {
+        if (!isVideoFile(dropboxFile) || dropboxFile.size <= S3_UPLOAD_THRESHOLD) {
+          fileOrder.push({
+            index: fileIndex++,
+            type: 'dropbox',
+            dropboxId: dropboxFile.dropboxId,
+            name: dropboxFile.name
+          });
+        } else {
+          const s3DropboxFile = s3DropboxResults.find(s3f => s3f.dropboxId === dropboxFile.dropboxId);
+          if (s3DropboxFile) {
+            fileOrder.push({
+              index: fileIndex++,
+              type: 's3',
+              url: s3DropboxFile.s3Url,
+              name: dropboxFile.name,
+              dropboxId: dropboxFile.dropboxId
+            });
+          }
+        }
+      });
+
 
       if (importedFiles && importedFiles.length > 0) {
         importedFiles.forEach((metaFile) => {
@@ -2691,15 +3331,18 @@ export default function AdCreationForm({
         const carouselFileOrder = buildCarouselFileOrder(
           files,
           driveFiles,
+          dropboxFiles,      // ADD
           s3Results,
           s3DriveResults,
+          s3DropboxResults,  // ADD
           S3_UPLOAD_THRESHOLD,
           importedFiles
         );
 
+
         // Pre-compute ad name for carousel
         const carouselAdName = computeAdNameFromFormula(
-          files[0] || driveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
+          files[0] || driveFiles[0] || dropboxFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),  // ADD dropboxFiles[0]
           0,
           link[0],
           jobData.formData.adNameFormulaV2,
@@ -2724,7 +3367,10 @@ export default function AdCreationForm({
             cta,
             launchPaused,
             jobId: frontendJobId,
-            selectedForm
+            selectedForm,
+            isPartnershipAd,
+            partnerIgAccountId,
+            partnerFbPageId
           });
 
           // Append carousel-specific fields
@@ -2733,10 +3379,13 @@ export default function AdCreationForm({
             fileOrder: carouselFileOrder,
             files,
             driveFiles,
+            dropboxFiles,           // ADD
             s3Results,
             s3DriveResults,
+            s3DropboxResults,       // ADD
             S3_UPLOAD_THRESHOLD,
             smallDriveFiles,
+            smallDropboxFiles,      // ADD
             importedFiles
           });
 
@@ -2780,13 +3429,14 @@ export default function AdCreationForm({
             const firstFileId = group[0];
             const firstFile = files.find(f => getFileId(f) === firstFileId) ||
               driveFiles.find(f => f.id === firstFileId) ||
+              dropboxFiles.find(f => f.dropboxId === firstFileId) ||  // ADD
               (importedFiles || []).find(f =>
                 (f.type === 'image' && f.hash === firstFileId) ||
                 (f.type === 'video' && f.id === firstFileId)
               );
 
             return computeAdNameFromFormula(
-              firstFile || files[0] || driveFiles[0],
+              firstFile || files[0] || driveFiles[0] || dropboxFiles[0],  // ADD dropboxFiles[0]
               groupIndex,
               link[0],
               jobData.formData.adNameFormulaV2,
@@ -2812,7 +3462,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               // Append flexible ad fields
@@ -2826,8 +3479,10 @@ export default function AdCreationForm({
               const groupVideoMetadata = appendGroupMediaFiles(formData, group, {
                 files,
                 smallDriveFiles,
+                smallDropboxFiles,  // ADD
                 s3Results,
                 s3DriveResults,
+                s3DropboxResults,   // ADD
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
@@ -2847,7 +3502,7 @@ export default function AdCreationForm({
 
           // Pre-compute ad name once for ungrouped flexible
           const ungroupedFlexibleAdName = computeAdNameFromFormula(
-            files[0] || driveFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
+            files[0] || driveFiles[0] || dropboxFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),  // ADD
             0,
             link[0],
             jobData.formData.adNameFormulaV2,
@@ -2871,7 +3526,10 @@ export default function AdCreationForm({
               cta,
               launchPaused,
               jobId: frontendJobId,
-              selectedForm
+              selectedForm,
+              isPartnershipAd,
+              partnerIgAccountId,
+              partnerFbPageId
             });
 
             // Append flexible ad fields
@@ -2881,8 +3539,10 @@ export default function AdCreationForm({
             appendAllMediaFiles(formData, {
               files,
               smallDriveFiles,
+              smallDropboxFiles,  // ADD
               s3Results,
               s3DriveResults,
+              s3DropboxResults,   // ADD
               S3_UPLOAD_THRESHOLD,
               importedFiles
             });
@@ -2907,7 +3567,7 @@ export default function AdCreationForm({
       if (dynamicAdSetIds.length > 0) {
         // Pre-compute ad name for dynamic ads
         const dynamicAdName = computeAdNameFromFormula(
-          files[0] || driveFiles[0],
+          files[0] || driveFiles[0] || dropboxFiles[0],  // ADD dropboxFiles[0]
           0,
           link[0],
           jobData.formData.adNameFormulaV2
@@ -2931,7 +3591,10 @@ export default function AdCreationForm({
             cta,
             launchPaused,
             jobId: frontendJobId,
-            selectedForm
+            selectedForm,
+            isPartnershipAd,
+            partnerIgAccountId,
+            partnerFbPageId
           });
 
           // Append dynamic ad set fields
@@ -2941,8 +3604,10 @@ export default function AdCreationForm({
           appendAllMediaFiles(formData, {
             files,
             smallDriveFiles,
+            smallDropboxFiles,  // ADD
             s3Results,
             s3DriveResults,
+            s3DropboxResults,   // ADD
             S3_UPLOAD_THRESHOLD,
             importedFiles
           });
@@ -2964,10 +3629,11 @@ export default function AdCreationForm({
           const hasUngroupedFiles = (
             files.some(file => !groupedFileIds.has(getFileId(file)) && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
-            [...s3Results, ...s3DriveResults].some(s3File =>
-              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id))
+            smallDropboxFiles.some(dropboxFile => !groupedFileIds.has(dropboxFile.dropboxId)) ||  // ADD THIS
+            [...s3Results, ...s3DriveResults, ...s3DropboxResults].some(s3File =>  // ADD s3DropboxResults
+              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id) || groupedFileIds.has(s3File.dropboxId))  // ADD dropboxId check
             ) ||
-            (importedFiles && importedFiles.some(f => {  // ✅ FIX: Check if any are actually ungrouped
+            (importedFiles && importedFiles.some(f => {
               const fileId = f.type === 'image' ? f.hash : f.id;
               return !groupedFileIds.has(fileId);
             }))
@@ -2986,14 +3652,17 @@ export default function AdCreationForm({
 
               const firstFileForNaming = files.find(f => getFileId(f) === firstFileId) ||
                 smallDriveFiles.find(f => f.id === firstFileId) ||
-                [...s3Results, ...s3DriveResults].find(f => f.uniqueId === firstFileId || f.id === firstFileId) ||
+                smallDropboxFiles.find(f => f.dropboxId === firstFileId) ||  // ADD THIS
+                [...s3Results, ...s3DriveResults, ...s3DropboxResults].find(f =>   // ADD s3DropboxResults
+                  f.uniqueId === firstFileId || f.id === firstFileId || f.dropboxId === firstFileId  // ADD dropboxId
+                ) ||
                 (importedFiles || []).find(f =>
                   (f.type === 'image' && f.hash === firstFileId) ||
                   (f.type === 'video' && f.id === firstFileId)
                 );
 
               return computeAdNameFromFormula(
-                firstFileForNaming || files[0] || driveFiles[0],
+                firstFileForNaming || files[0] || driveFiles[0] || dropboxFiles[0],  // ADD dropboxFiles[0]
                 localIterationIndex + groupIndex,
                 link[0],
                 jobData.formData.adNameFormulaV2,
@@ -3018,7 +3687,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
 
@@ -3027,8 +3699,10 @@ export default function AdCreationForm({
               const groupVideoMetadata = appendGroupMediaFiles(formData, group, {
                 files,
                 smallDriveFiles,
+                smallDropboxFiles,  // ADD
                 s3Results,
                 s3DriveResults,
+                s3DropboxResults,   // ADD
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
@@ -3066,8 +3740,11 @@ export default function AdCreationForm({
             const ungroupedDriveFiles = smallDriveFiles.filter(driveFile =>
               !groupedFileIds.has(driveFile.id)
             );
-            const ungroupedS3Files = [...s3Results, ...s3DriveResults].filter(s3File =>
-              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id))
+            const ungroupedDropboxFiles = smallDropboxFiles.filter(dropboxFile =>
+              !groupedFileIds.has(dropboxFile.dropboxId)
+            );
+            const ungroupedS3Files = [...s3Results, ...s3DriveResults, ...s3DropboxResults].filter(s3File =>
+              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id) || groupedFileIds.has(s3File.dropboxId))
             );
 
             // Pre-compute ad names
@@ -3082,6 +3759,12 @@ export default function AdCreationForm({
             );
 
             localIterationIndex += ungroupedDriveFiles.length;
+
+            const dropboxFileAdNames = ungroupedDropboxFiles.map((dropboxFile, index) =>
+              computeAdNameFromFormula(dropboxFile, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
+            );
+
+            localIterationIndex += ungroupedDropboxFiles.length;
 
             const s3FileAdNames = ungroupedS3Files.map((s3File, index) =>
               computeAdNameFromFormula(s3File, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
@@ -3105,7 +3788,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               // Append single image file
@@ -3136,7 +3822,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               // Append single drive file
@@ -3148,6 +3837,37 @@ export default function AdCreationForm({
               promises.push(createAdApiCall(formData, API_BASE_URL));
               promiseMetadata.push({ fileName: driveFile.name }); // ADD
 
+            });
+
+
+            // Handle small dropbox files
+            ungroupedDropboxFiles.forEach((dropboxFile, index) => {
+              const formData = new FormData();
+
+              appendCommonFields(formData, {
+                adName: dropboxFileAdNames[index],
+                headlinesJSON: commonPrecomputed.headlinesJSON,
+                descriptionsJSON: commonPrecomputed.descriptionsJSON,
+                messagesJSON: commonPrecomputed.messagesJSON,
+                selectedAdAccount,
+                adSetId,
+                pageId,
+                instagramAccountId,
+                linkJSON: commonPrecomputed.linkJSON,
+                cta,
+                launchPaused,
+                jobId: frontendJobId,
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
+              });
+
+              appendSingleDropboxFile(formData, dropboxFile);
+              appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
+
+              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promiseMetadata.push({ fileName: dropboxFile.name });
             });
 
             // Handle S3 uploaded files
@@ -3168,7 +3888,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               // Append single S3 file
@@ -3220,7 +3943,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               appendMetaImageFile(formData, metaFile);
@@ -3247,7 +3973,10 @@ export default function AdCreationForm({
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
-                selectedForm
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId
               });
 
               appendMetaVideoFile(formData, metaFile);
@@ -3413,7 +4142,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -3427,6 +4156,7 @@ export default function AdCreationForm({
     if (!preserveMedia) {
       setFiles([]);
       setDriveFiles([]);
+      setDropboxFiles([]);  // ADD THIS LINE
       setVideoThumbs({});
       setThumbnail(null);
       setFileGroups([]);
@@ -3870,6 +4600,8 @@ export default function AdCreationForm({
                                       } else {
                                         setInstagramAccountId("") // Clear if not available
                                       }
+                                      setPartnerIgAccountId("")
+                                      setPartnerFbPageId("")
                                     }}
                                     className={cn(
                                       "px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
@@ -3988,6 +4720,159 @@ export default function AdCreationForm({
                         </Command>
                       </PopoverContent>
                     </Popover>
+
+                    {/* Partnership Ad Toggle */}
+                    <div className="space-y-4 pt-4 mt-4">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-gray-600" />
+                        <Label htmlFor="partnership-toggle" className="cursor-pointer">
+                          Add Partnership
+                        </Label>
+                        <Switch
+                          id="partnership-toggle"
+                          checked={isPartnershipAd}
+                          onCheckedChange={handlePartnershipToggle}
+                          disabled={!instagramAccountId}
+                        />
+                      </div>
+
+                      {!instagramAccountId && (
+                        <p className="text-xs text-gray-500">
+                          Select an Instagram account to fetch linked partners for
+                        </p>
+                      )}
+
+                      {/* Partner Selector (only shown when toggle is ON) */}
+                      {isPartnershipAd && (
+                        <div className="space-y-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-sm font-medium text-gray-700">
+                              Select Partner Creator
+                            </Label>
+                            <RefreshCcw
+                              className={cn(
+                                "h-4 w-4 cursor-pointer transition-all duration-200",
+                                isLoadingPartners
+                                  ? "text-gray-300 animate-[spin_3s_linear_infinite]"
+                                  : "text-gray-500 hover:text-gray-700"
+                              )}
+                              onClick={refetchPartners}
+                            />
+                          </div>
+
+                          {partnersError && (
+                            <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded-lg">
+                              <AlertTriangle className="w-4 h-4" />
+                              <span>{partnersError}</span>
+                            </div>
+                          )}
+
+                          {/* Partner Instagram Selector */}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2 text-sm text-gray-600">
+                              <InstagramIcon className="w-4 h-4" />
+                              Partner Instagram Account
+                            </Label>
+                            <Popover open={openPartnerSelector} onOpenChange={setOpenPartnerSelector}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={openPartnerSelector}
+                                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
+                                  disabled={isLoadingPartners || availablePartners.length === 0}
+                                >
+                                  {isLoadingPartners ? (
+                                    <div className="flex items-center gap-2">
+                                      <Loader className="h-4 w-4 animate-spin" />
+                                      <span>Loading partners...</span>
+                                    </div>
+                                  ) : selectedPartner ? (
+                                    <div className="flex items-center gap-2">
+                                      <span>@{selectedPartner.creatorUsername}</span>
+                                      <span className="text-xs text-gray-400">
+                                        ({selectedPartner.creatorIgId})
+                                      </span>
+                                    </div>
+                                  ) : availablePartners.length === 0 ? (
+                                    "No approved partners found"
+                                  ) : (
+                                    "Select a partner creator"
+                                  )}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent
+                                className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                                align="start"
+                                sideOffset={4}
+                                side="bottom"
+                                avoidCollisions={false}
+                                style={{
+                                  minWidth: "var(--radix-popover-trigger-width)",
+                                  width: "auto",
+                                  maxWidth: "var(--radix-popover-trigger-width)",
+                                }}
+                              >
+                                <Command loop={false}>
+                                  <CommandInput
+                                    placeholder="Search partners..."
+                                    value={partnerSearchValue}
+                                    onValueChange={setPartnerSearchValue}
+                                  />
+                                  <CommandEmpty>No partners found.</CommandEmpty>
+                                  <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                                    <CommandGroup>
+                                      {filteredPartners.map((partner) => (
+                                        <CommandItem
+                                          key={partner.creatorIgId}
+                                          value={`${partner.creatorUsername} ${partner.creatorIgId}`}
+                                          onSelect={() => handlePartnerSelect(partner)}
+                                          className={cn(
+                                            "px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                            partnerIgAccountId === partner.creatorIgId && "bg-gray-100 font-semibold",
+                                            "hover:bg-gray-100 flex items-center gap-2"
+                                          )}
+                                        >
+                                          <div className="flex flex-col">
+                                            <span>@{partner.creatorUsername}</span>
+                                            <span className="text-xs text-gray-400">
+                                              ID: {partner.creatorIgId}
+                                            </span>
+                                          </div>
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          {/* Partner FB Page ID (auto-filled, read-only) */}
+                          {partnerFbPageId && (
+                            <div className="space-y-2">
+                              <Label className="flex items-center gap-2 text-sm text-gray-600">
+                                <FacebookIcon className="w-4 h-4" />
+                                Partner Facebook Page ID
+                              </Label>
+                              <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-xl">
+                                <span className="text-sm text-gray-700">
+                                  @{selectedPartner?.creatorUsername} ({partnerFbPageId})
+                                </span>
+                                <span className="text-xs text-green-600 ml-auto">✓ Auto-filled</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {availablePartners.length === 0 && !isLoadingPartners && !partnersError && (
+                            <p className="text-xs text-gray-500">
+                              No approved partnership ad permissions found. Partners need to approve your brand first.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                 </div>
@@ -4700,20 +5585,44 @@ export default function AdCreationForm({
                   </div>
                 </div>
 
-                <div style={{ marginTop: "10px", marginBottom: "1rem" }}>
-                  <Button type="button" onClick={handleDriveClick} className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px]">
-                    <img
-                      src="https://api.withblip.com/googledrive.png"
-                      alt="Drive Icon"
-                      className="h-4 w-4"
-                    />
-                    Choose Files from Google Drive
+                <div className="flex gap-2 mt-2 mb-4">
+                  {/* Google Drive */}
+                  <div className="flex-1">
+                    <Button
+                      type="button"
+                      onClick={handleDriveClick}
+                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
+                    >
+                      <img
+                        src="https://api.withblip.com/googledrive.png"
+                        alt="Drive Icon"
+                        className="h-4 w-4"
+                      />
+                      Choose Files from Google Drive
+                    </Button>
 
-                  </Button>
-                  <div className="text-xs text-gray-500 text-left mt-0.5">
-                    Drive files upload 5X faster
+                    <div className="text-xs text-gray-500 text-left mt-0.5">
+                      Google Drive Files upload 5X faster
+                    </div>
                   </div>
+
+                  {/* Dropbox */}
+                  {/* <div className="flex-1">
+                    <Button
+                      type="button"
+                      onClick={handleDropboxClick}
+                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
+                    >
+                      <img
+                        src={DropboxIcon}
+                        alt="Dropbox Icon"
+                        className="h-4 w-4"
+                      />
+                      Choose Files from Dropbox
+                    </Button>
+                  </div> */}
                 </div>
+
 
                 {showFolderInput && (
                   <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]" style={{
@@ -4788,10 +5697,10 @@ export default function AdCreationForm({
               disabled={
                 !isLoggedIn ||
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
-                (files.length === 0 && driveFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
+                (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-                (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length) < 2) ||
-                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length) > 10) ||
+                (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
+                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
                 ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
                 ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
@@ -4810,9 +5719,9 @@ export default function AdCreationForm({
               </div>
             )}
             {/* Validation message for Carousel Ads */}
-            {isCarouselAd && (files.length + driveFiles.length) > 0 && (files.length + driveFiles.length) < 2 && (
+            {isCarouselAd && (files.length + driveFiles.length + dropboxFiles.length) > 0 && (files.length + driveFiles.length + dropboxFiles.length) < 2 && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                Carousel ads require at least 2 files. You have {files.length + driveFiles.length}.
+                Carousel ads require at least 2 files. You have {files.length + driveFiles.length + dropboxFiles.length}.
               </div>
             )}
 

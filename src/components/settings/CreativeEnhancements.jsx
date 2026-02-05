@@ -1,6 +1,8 @@
 import { useCallback, useMemo, memo } from "react";
 import { Switch } from "@/components/ui/switch";
 import EnhanceIcon from '@/assets/icons/enhance.svg?react';
+import { AlertCircle } from 'lucide-react';
+
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -50,6 +52,8 @@ const ENHANCEMENT_ITEMS = [
         key: "textGeneration",
         label: "Text Generation",
         description: "Text variations, generated with AI based on your original text or previous ads",
+        warning: "Text generation might not be available in some ad accounts, which can lead to errors while launching ads",
+
     },
 
     //new CE
@@ -77,18 +81,26 @@ const ENHANCEMENT_ITEMS = [
 
 // Memoized individual enhancement item component to prevent unnecessary re-renders
 const EnhancementItem = memo(({ item, isChecked, onToggle }) => (
-    <div className="flex items-center justify-between">
-        <div>
-            <p className="font-medium text-[14px]">{item.label}</p>
-            <p className="text-sm text-gray-400">
-                {item.description}
-            </p>
+    <div className="flex flex-col">
+        <div className="flex items-center justify-between">
+            <div>
+                <p className="font-medium text-[14px]">{item.label}</p>
+                <p className="text-sm text-gray-400">
+                    {item.description}
+                </p>
+            </div>
+            <Switch
+                checked={isChecked}
+                onCheckedChange={onToggle}
+                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:ring-transparent .switch"
+            />
         </div>
-        <Switch
-            checked={isChecked}
-            onCheckedChange={onToggle}
-            className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:ring-transparent .switch"
-        />
+        {item.warning && (
+            <p className="text-xs text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircle size={14} />
+                {item.warning}
+            </p>
+        )}
     </div>
 ));
 

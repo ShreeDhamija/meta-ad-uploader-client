@@ -129,19 +129,13 @@ export default function OnboardingPopup({ userName, onClose, onGoToSettings, has
                                         >
                                             Import
                                         </Button>
-                                        {/* <Button
-                                            onClick={onClose}
-                                            disabled={isImporting}
-                                            className="bg-[#FAF9F7] border-2 border-[#F72585] text-[#F72585] hover:bg-[#FAF9F7] hover:opacity-80 text-base px-8 py-2.5 rounded-full shadow-none"
-                                        >
-                                            Skip
-                                        </Button> */}
                                     </div>
 
                                     {isImporting && (
                                         <div className="flex flex-row items-center justify-center gap-2 mt-4">
                                             <Loader className="w-6 h-6 animate-spin text-[#F72585]" />
-                                            <p className="text-sm text-gray-600">Importing data...</p>
+                                            <p className="text-sm text-gray-600">Importing data from acebook can take a few seconds... </p>
+                                            <p className="text-sm text-gray-600">It's the last time you'll have to be patient, I promise </p>
                                         </div>
                                     )}
                                 </div>

@@ -11,18 +11,24 @@ import Cat from "../assets/Cat.webp?url"
 import Moon from "../assets/Moon.webp?url"
 import Meteor from "../assets/Meteor.webp?url"
 import Check from "../assets/icons/check.svg"
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const IS_STAGING = import.meta.env.VITE_ENV === 'staging' || API_BASE_URL.includes('staging');
 
 export default function Login() {
-    const { isLoggedIn } = useAuth()
+    const { isLoggedIn, refreshUser } = useAuth()
     const navigate = useNavigate()
     const location = useLocation()
     const [email, setEmail] = useState("")
     const [isValidEmail, setIsValidEmail] = useState(false)
     useIntercom(true, true);
 
-    // Check if we're on the signup page
+    // Manual login state
+    const [manualUsername, setManualUsername] = useState("")
+    const [manualPassword, setManualPassword] = useState("")
+    const [manualLoginError, setManualLoginError] = useState("")
+    const [isLoggingIn, setIsLoggingIn] = useState(false)
+
     const isSignupPage = location.pathname === '/signup'
 
     useEffect(() => {
@@ -37,15 +43,47 @@ export default function Login() {
     }, [email])
 
     const handleFacebookLogin = () => {
-        console.log("API_BASE_URL:", API_BASE_URL);
-
         if (isSignupPage) {
-            // Signup flow with email
             const encodedEmail = encodeURIComponent(email)
             window.location.href = `${API_BASE_URL}/auth/facebook?state=signup&user_email=${encodedEmail}`;
         } else {
-            // Login flow without email
             window.location.href = `${API_BASE_URL}/auth/facebook?state=login`;
+        }
+    }
+
+    const handleManualLogin = async (e) => {
+        e.preventDefault()
+        setManualLoginError("")
+        setIsLoggingIn(true)
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/manual-login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    username: manualUsername,
+                    password: manualPassword
+                })
+            })
+
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed')
+            }
+
+            if (refreshUser) {
+                await refreshUser()
+            }
+            window.location.href = '/?loggedIn=true'
+
+        } catch (err) {
+            setManualLoginError(err.message)
+        } finally {
+            setIsLoggingIn(false)
         }
     }
 
@@ -63,17 +101,17 @@ export default function Login() {
 
             <img src={Meteor}
                 alt=""
-                className="md:hidden absolute top-0 -translate-y-1/2  w-28 h-auto pointer-events-none"
+                className="md:hidden absolute top-0 -translate-y-1/2 w-28 h-auto pointer-events-none"
             />
 
             <img src={Cat}
                 alt=""
-                className="md:hidden absolute bottom-[-10px] left-[-50px]  w-[200px] h-auto pointer-events-none"
+                className="md:hidden absolute bottom-[-10px] left-[-50px] w-[200px] h-auto pointer-events-none"
             />
 
             <img src={Book}
                 alt=""
-                className="md:hidden absolute bottom-[-10px] right-[-20px]  w-[150px] h-auto pointer-events-none"
+                className="md:hidden absolute bottom-[-10px] right-[-20px] w-[150px] h-auto pointer-events-none"
             />
             <div className="flex w-full md:w-auto rounded-xl overflow-hidden md:p-6 overflow-visible">
 
@@ -83,20 +121,18 @@ export default function Login() {
                         <img
                             src="https://api.withblip.com/logo.webp"
                             alt="Hero"
-                            className=" shadom-sm w-[48px] h-[48px] mx-auto rounded-md mb-2"
+                            className="shadow-sm w-[48px] h-[48px] mx-auto rounded-md mb-2"
                         />
                         <h2 className="text-2xl font-bold tracking-tight">Welcome To Blip</h2>
                         <p className="text-sm font-bold text-zinc-700">
                             {isSignupPage ? 'Start your 7 Day Free Trial!' : ''}
                         </p>
                         <p className="text-sm text-muted-foreground">
-                            {isSignupPage ? 'You are so close to ditching Ads Manager forever' : 'Login with your facebook account'}
+                            {isSignupPage ? 'You are so close to ditching Ads Manager forever' : 'Login to your account'}
                         </p>
-
                     </div>
 
                     {isSignupPage ? (
-                        // Signup flow with email field
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
@@ -132,22 +168,67 @@ export default function Login() {
                             </div>
                         </div>
                     ) : (
-                        // Login flow - just the button
-                        <Button
-                            onClick={handleFacebookLogin}
-                            variant="secondary"
-                            className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
-                        >
-                            <img
-                                src="https://api.withblip.com/facebooklogo.png"
-                                alt="Facebook"
-                                className="w-5 h-5"
-                            />
-                            Login with Facebook
-                        </Button>
+                        <div className="space-y-4">
+                            {IS_STAGING && (
+                                <>
+                                    <form onSubmit={handleManualLogin} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Input
+                                                type="text"
+                                                placeholder="Username"
+                                                value={manualUsername}
+                                                onChange={(e) => setManualUsername(e.target.value)}
+                                                className="rounded-xl"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Input
+                                                type="password"
+                                                placeholder="Password"
+                                                value={manualPassword}
+                                                onChange={(e) => setManualPassword(e.target.value)}
+                                                className="rounded-xl"
+                                                required
+                                            />
+                                        </div>
+
+                                        {manualLoginError && (
+                                            <p className="text-sm text-red-500 text-center">{manualLoginError}</p>
+                                        )}
+
+                                        <Button
+                                            type="submit"
+                                            disabled={isLoggingIn || !manualUsername || !manualPassword}
+                                            className="w-full bg-zinc-800 hover:bg-zinc-900 text-white rounded-xl h-[40px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {isLoggingIn ? 'Logging in...' : 'Login'}
+                                        </Button>
+                                    </form>
+
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex-1 h-px bg-zinc-200" />
+                                        <span className="text-sm text-muted-foreground">or</span>
+                                        <div className="flex-1 h-px bg-zinc-200" />
+                                    </div>
+                                </>
+                            )}
+
+                            <Button
+                                onClick={handleFacebookLogin}
+                                variant="secondary"
+                                className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[40px]"
+                            >
+                                <img
+                                    src="https://api.withblip.com/facebooklogo.png"
+                                    alt="Facebook"
+                                    className="w-5 h-5"
+                                />
+                                Login with Facebook
+                            </Button>
+                        </div>
                     )}
-
-
 
                     {isSignupPage ? (
                         <p className="text-sm text-center text-muted-foreground">
@@ -179,18 +260,14 @@ export default function Login() {
                     </p>
 
                 </div>
-
-
-            </div >
-
+            </div>
 
             <div className="hidden md:block w-[490px] h-[700px] overflow-visible">
                 <img src={SignUpImg}
                     alt="Login Visual"
                     className="w-full h-full object-cover"
-
                 />
             </div>
-        </div >
+        </div>
     )
 }
