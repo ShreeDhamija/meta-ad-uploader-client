@@ -1034,7 +1034,7 @@ export default function MediaPreview({
                 <img
                   src={RocketImg}
                   alt="Upload illustration"
-                  className="w-[204px] h-[260px] max-w-xs mx-auto"
+                  className="w-[204px] h-[350px] max-w-xs mx-auto"
                 />
               </div>
 
