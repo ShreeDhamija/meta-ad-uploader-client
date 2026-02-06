@@ -5607,7 +5607,7 @@ export default function AdCreationForm({
                   </div>
 
                   {/* Dropbox */}
-                  {/* <div className="flex-1">
+                  <div className="flex-1">
                     <Button
                       type="button"
                       onClick={handleDropboxClick}
@@ -5620,7 +5620,7 @@ export default function AdCreationForm({
                       />
                       Choose Files from Dropbox
                     </Button>
-                  </div> */}
+                  </div>
                 </div>
 
 
