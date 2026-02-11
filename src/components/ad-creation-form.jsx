@@ -956,6 +956,42 @@ export default function AdCreationForm({
     }
   }
 
+  // async function uploadDropboxFileToS3(file, maxRetries = 3) {
+  //   for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  //     try {
+  //       const res = await fetch(`${API_BASE_URL}/api/upload-from-dropbox`, {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({
+  //           fileUrl: file.directLink,
+  //           fileName: file.name,
+  //           mimeType: file.mimeType || getMimeFromName(file.name),
+  //           size: file.size
+  //         })
+  //       });
+
+  //       const data = await res.json();
+  //       if (!res.ok) throw new Error(data.error || "S3 upload failed");
+
+  //       return {
+  //         ...file,
+  //         s3Url: data.s3Url,
+  //         isS3Upload: true
+  //       };
+  //     } catch (error) {
+  //       if (attempt === maxRetries) {
+  //         throw new Error(`Dropbox S3 upload failed after ${maxRetries} attempts: ${error.message}`);
+  //       }
+  //       const delayMs = Math.pow(2, attempt - 1) * 1000;
+  //       await new Promise(resolve => setTimeout(resolve, delayMs));
+  //     }
+  //   }
+  // }
+
+
+
+  // CTA options
+
   async function uploadDropboxFileToS3(file, maxRetries = 3) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -963,10 +999,10 @@ export default function AdCreationForm({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            fileUrl: file.directLink,
+            fileId: file.dropboxId, // ✅ Send the ID
             fileName: file.name,
             mimeType: file.mimeType || getMimeFromName(file.name),
-            size: file.size
+            accessToken: file.accessToken // ✅ Send the Token
           })
         });
 
@@ -988,9 +1024,6 @@ export default function AdCreationForm({
     }
   }
 
-
-
-  // CTA options
   const ctaOptions = [
     { value: "LEARN_MORE", label: "Learn More" },
     { value: "SHOP_NOW", label: "Shop Now" },
@@ -1473,25 +1506,113 @@ export default function AdCreationForm({
   }, []);
 
   // Separate function for the Chooser
-  const openDropboxChooser = useCallback(() => {
+  // const openDropboxChooser = useCallback(() => {
+  //   window.Dropbox.choose({
+  //     success: async (selectedFiles) => {
+  //       console.log('=== DROPBOX CHOOSER RAW RESPONSE ===');
+  //       selectedFiles.forEach(f => {
+  //         console.log(`File: ${f.name}`);
+  //         console.log(`  id: ${f.id}`);
+  //         console.log(`  link: ${f.link}`);
+  //       });
+
+  //       const dropboxFilesData = selectedFiles.map((file) => ({
+  //         dropboxId: file.id,
+  //         name: file.name,
+  //         link: file.link,
+  //         directLink: file.link.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '?dl=1'),
+  //         size: file.bytes,
+  //         // icon: file.icon,
+  //         isDropbox: true,
+  //         mimeType: getMimeFromName(file.name)
+  //       }));
+
+  //       setDropboxFiles(prev => [...prev, ...dropboxFilesData]);
+  //     },
+  //     cancel: () => {
+  //       console.log('Dropbox picker cancelled');
+  //     },
+  //     linkType: 'direct',
+  //     multiselect: true,
+  //     extensions: ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mov', '.webm'],
+  //     folderselect: false,
+  //     sizeLimit: 1024 * 1024 * 1024
+  //   });
+  // }, [setDropboxFiles]);
+
+
+  // const handleDropboxClick = useCallback(async () => {
+  //   // Check if Dropbox SDK is loaded
+  //   if (!window.Dropbox) {
+  //     toast.error("Dropbox is still loading. Please try again in a moment.");
+  //     return;
+  //   }
+
+  //   // Check if user is authenticated with Dropbox
+  //   try {
+  //     const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, {
+  //       credentials: 'include'
+  //     });
+  //     const statusData = await statusRes.json();
+
+  //     if (!statusData.authenticated) {
+  //       // Need to authenticate first
+  //       // toast.info("Please connect your Dropbox account first");
+
+  //       // Open OAuth popup
+  //       const width = 600;
+  //       const height = 700;
+  //       const left = window.screenX + (window.outerWidth - width) / 2;
+  //       const top = window.screenY + (window.outerHeight - height) / 2;
+
+  //       const popup = window.open(
+  //         `${API_BASE_URL}/auth/dropbox?popup=true`,
+  //         'dropbox-auth',
+  //         `width=${width},height=${height},left=${left},top=${top}`
+  //       );
+
+  //       // Wait for OAuth to complete
+  //       const handleMessage = (event) => {
+  //         if (event.data?.type === 'dropbox-auth-success') {
+  //           window.removeEventListener('message', handleMessage);
+  //           toast.success("Dropbox connected! Opening file picker...");
+  //           // Now open the Chooser
+  //           openDropboxChooser();
+  //         } else if (event.data?.type === 'dropbox-auth-error') {
+  //           window.removeEventListener('message', handleMessage);
+  //           toast.error("Failed to connect Dropbox");
+  //         }
+  //       };
+
+  //       window.addEventListener('message', handleMessage);
+  //       return;
+  //     }
+
+  //     // Already authenticated, open Chooser directly
+  //     openDropboxChooser();
+
+  //   } catch (error) {
+  //     console.error('Error checking Dropbox auth:', error);
+  //     toast.error("Failed to check Dropbox connection");
+  //   }
+  // }, []);
+
+  // ✅ CHANGE: Accept accessToken as an argument so we can attach it to files
+  const openDropboxChooser = useCallback((accessToken) => {
     window.Dropbox.choose({
       success: async (selectedFiles) => {
         console.log('=== DROPBOX CHOOSER RAW RESPONSE ===');
-        selectedFiles.forEach(f => {
-          console.log(`File: ${f.name}`);
-          console.log(`  id: ${f.id}`);
-          console.log(`  link: ${f.link}`);
-        });
+        // Log for debugging
+        selectedFiles.forEach(f => console.log(`File: ${f.name} ID: ${f.id}`));
 
         const dropboxFilesData = selectedFiles.map((file) => ({
-          dropboxId: file.id,
+          dropboxId: file.id, // ✅ We use this ID for the backend now
           name: file.name,
-          link: file.link,
-          directLink: file.link.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '?dl=1'),
+          link: file.link, // Kept for UI, but not used for upload
           size: file.bytes,
-          // icon: file.icon,
           isDropbox: true,
-          mimeType: getMimeFromName(file.name)
+          mimeType: getMimeFromName(file.name),
+          accessToken: accessToken // ✅ Attach token to file object
         }));
 
         setDropboxFiles(prev => [...prev, ...dropboxFilesData]);
@@ -1499,14 +1620,13 @@ export default function AdCreationForm({
       cancel: () => {
         console.log('Dropbox picker cancelled');
       },
-      linkType: 'direct',
+      linkType: 'preview', // Changed to preview (safer default), though 'direct' is fine too
       multiselect: true,
       extensions: ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mov', '.webm'],
       folderselect: false,
       sizeLimit: 1024 * 1024 * 1024
     });
   }, [setDropboxFiles]);
-
 
   const handleDropboxClick = useCallback(async () => {
     // Check if Dropbox SDK is loaded
@@ -1515,55 +1635,51 @@ export default function AdCreationForm({
       return;
     }
 
-    // Check if user is authenticated with Dropbox
     try {
       const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, {
         credentials: 'include'
       });
       const statusData = await statusRes.json();
 
-      if (!statusData.authenticated) {
-        // Need to authenticate first
-        // toast.info("Please connect your Dropbox account first");
-
-        // Open OAuth popup
-        const width = 600;
-        const height = 700;
-        const left = window.screenX + (window.outerWidth - width) / 2;
-        const top = window.screenY + (window.outerHeight - height) / 2;
-
-        const popup = window.open(
-          `${API_BASE_URL}/auth/dropbox?popup=true`,
-          'dropbox-auth',
-          `width=${width},height=${height},left=${left},top=${top}`
-        );
-
-        // Wait for OAuth to complete
-        const handleMessage = (event) => {
-          if (event.data?.type === 'dropbox-auth-success') {
-            window.removeEventListener('message', handleMessage);
-            toast.success("Dropbox connected! Opening file picker...");
-            // Now open the Chooser
-            openDropboxChooser();
-          } else if (event.data?.type === 'dropbox-auth-error') {
-            window.removeEventListener('message', handleMessage);
-            toast.error("Failed to connect Dropbox");
-          }
-        };
-
-        window.addEventListener('message', handleMessage);
+      // ✅ CHECK: If authenticated, pass the token immediately
+      if (statusData.authenticated && statusData.accessToken) {
+        openDropboxChooser(statusData.accessToken);
         return;
       }
 
-      // Already authenticated, open Chooser directly
-      openDropboxChooser();
+      // If not authenticated, open Popup
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+
+      const popup = window.open(
+        `${API_BASE_URL}/auth/dropbox?popup=true`,
+        'dropbox-auth',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
+
+      const handleMessage = (event) => {
+        // ✅ CHANGE: Extract accessToken from success message
+        if (event.data?.type === 'dropbox-auth-success') {
+          window.removeEventListener('message', handleMessage);
+          toast.success("Dropbox connected! Opening file picker...");
+
+          // Pass the new token to the chooser
+          openDropboxChooser(event.data.accessToken);
+        } else if (event.data?.type === 'dropbox-auth-error') {
+          window.removeEventListener('message', handleMessage);
+          toast.error("Failed to connect Dropbox");
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
 
     } catch (error) {
       console.error('Error checking Dropbox auth:', error);
       toast.error("Failed to check Dropbox connection");
     }
-  }, []);
-
+  }, [openDropboxChooser]);
 
 
   // Dropzone logic
@@ -1739,159 +1855,6 @@ export default function AdCreationForm({
   const processingRef = useRef(new Set());
 
 
-
-  // useEffect(() => {
-  //   const abortController = new AbortController();
-
-  //   const processThumbnails = async () => {
-  //     // --- 1. LOCAL FILES (No changes) ---
-  //     const videoFiles = files.filter(file => {
-  //       const fileId = getFileId(file);
-  //       return isVideoFile(file) &&
-  //         !file.isDrive &&
-  //         !file.isDropbox &&
-  //         !videoThumbs[fileId] &&
-  //         !processingRef.current.has(fileId);
-  //     });
-
-  //     if (videoFiles.length > 0) {
-  //       videoFiles.forEach(file => processingRef.current.add(getFileId(file)));
-
-  //       const MAX_CONCURRENT = 2;
-  //       const queue = [...videoFiles];
-  //       let completed = 0;
-
-  //       const processNext = async () => {
-  //         if (queue.length === 0 || abortController.signal.aborted) return;
-  //         const file = queue.shift();
-  //         const fileId = getFileId(file);
-
-  //         try {
-  //           const thumb = await generateThumbnail(file);
-  //           if (!abortController.signal.aborted) {
-  //             setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
-  //             completed++;
-  //           }
-  //         } catch (err) {
-  //           console.error(`Thumbnail error for ${file.name}:`, err);
-  //           if (!abortController.signal.aborted) {
-  //             setVideoThumbs(prev => ({
-  //               ...prev,
-  //               [fileId]: "https://api.withblip.com/thumbnail.jpg"
-  //             }));
-  //             completed++;
-  //           }
-  //         } finally {
-  //           processingRef.current.delete(fileId);
-  //           if (queue.length > 0 && !abortController.signal.aborted) {
-  //             if ('requestIdleCallback' in window) requestIdleCallback(() => processNext(), { timeout: 100 });
-  //             else setTimeout(processNext, 0);
-  //           }
-  //         }
-  //       };
-
-  //       const initialPromises = [];
-  //       for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
-  //         initialPromises.push(processNext());
-  //       }
-  //       await Promise.all(initialPromises);
-  //     }
-
-  //     // --- 2. GOOGLE DRIVE (No changes) ---
-  //     const driveThumbs = {};
-  //     driveFiles.forEach(file => {
-  //       const fileId = getFileId(file);
-  //       if (isVideoFile(file) && !videoThumbs[fileId]) {
-  //         const thumb = getDriveVideoThumbnail(file);
-  //         if (thumb) driveThumbs[fileId] = thumb;
-  //       }
-  //     });
-  //     if (Object.keys(driveThumbs).length > 0) {
-  //       setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
-  //     }
-
-  //     // --- 3. DROPBOX (UPDATED: BATCH PROCESSING) ---
-  //     const dropboxVideoFiles = dropboxFiles.filter(file => {
-  //       const fileId = getFileId(file);
-  //       // Ensure we have a dropboxId to send to the API
-  //       return isVideoFile(file) &&
-  //         !videoThumbs[fileId] &&
-  //         !processingRef.current.has(fileId);
-  //     });
-
-  //     if (dropboxVideoFiles.length > 0 && !abortController.signal.aborted) {
-  //       // Mark all as processing immediately so UI shows loading
-  //       dropboxVideoFiles.forEach(file => processingRef.current.add(getFileId(file)));
-  //       setVideoThumbs(prev => ({ ...prev })); // Force re-render
-
-  //       // Dropbox allows max 25 items per batch request
-  //       const BATCH_SIZE = 25;
-
-  //       for (let i = 0; i < dropboxVideoFiles.length; i += BATCH_SIZE) {
-  //         if (abortController.signal.aborted) break;
-
-  //         const batch = dropboxVideoFiles.slice(i, i + BATCH_SIZE);
-  //         // Important: Send the actual dropboxId, not the generic fileId
-  //         const filesData = batch.map(f => ({
-  //           id: f.dropboxId,
-  //           link: f.link  // Include the original Dropbox link
-  //         }));
-
-  //         console.log('Files data:', JSON.stringify(filesData, null, 2));
-
-  //         try {
-  //           const response = await fetch(`${API_BASE_URL}/api/dropbox/thumbnails/batch`, {
-  //             method: 'POST',
-  //             headers: { 'Content-Type': 'application/json' },
-  //             credentials: 'include',
-  //             body: JSON.stringify({ files: filesData }),
-  //             signal: abortController.signal
-  //           });
-
-  //           if (response.ok) {
-  //             const data = await response.json();
-
-  //             // Map the returned Dropbox IDs back to your generic file IDs if necessary
-  //             // Assuming getFileId(file) might return something different than file.dropboxId
-  //             const newThumbs = {};
-
-  //             batch.forEach(file => {
-  //               const dId = file.dropboxId;
-  //               const genericId = getFileId(file);
-
-  //               if (data.thumbnails && data.thumbnails[dId]) {
-  //                 newThumbs[genericId] = data.thumbnails[dId];
-  //               } else {
-  //                 // Fallback for failed specific items in the batch
-  //                 newThumbs[genericId] = "https://api.withblip.com/thumbnail.jpg";
-  //               }
-  //             });
-
-  //             setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
-  //           }
-  //         } catch (error) {
-  //           console.error("Dropbox batch error:", error);
-  //           // On batch failure, set placeholders for this batch
-  //           const failedThumbs = {};
-  //           batch.forEach(f => {
-  //             failedThumbs[getFileId(f)] = "https://api.withblip.com/thumbnail.jpg";
-  //           });
-  //           setVideoThumbs(prev => ({ ...prev, ...failedThumbs }));
-  //         } finally {
-  //           // Cleanup processing state for this batch
-  //           batch.forEach(f => processingRef.current.delete(getFileId(f)));
-  //         }
-  //       }
-  //     }
-  //   };
-
-  //   processThumbnails();
-
-  //   return () => {
-  //     abortController.abort();
-  //     processingRef.current.clear();
-  //   };
-  // }, [files, driveFiles, dropboxFiles, videoThumbs, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
   // Add this ref near your other refs (near processingRef)
