@@ -261,17 +261,18 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
                             <span className="text-sm text-gray-500">
                                 {selectedAdIds.size} selected
                             </span>
-                            {viewMode === 'list' && (
-                                <Button
-                                    size="sm"
-                                    onClick={() => fetchAds(null, datePreset)}
-                                    disabled={isLoading}
-                                    className="px-3 py-5 bg-white text-black text-xs border border-gray-300 rounded-xl hover:bg-white"
-                                >
-                                    <RefreshCw className={`h-2 w-2 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-                                    Refresh Ads
-                                </Button>
-                            )}
+
+                            <Button
+                                size="sm"
+                                onClick={() => fetchAds(null, datePreset)}
+                                disabled={isLoading || viewMode === 'search'}
+                                className={`px-3 py-5 bg-white text-black border border-gray-300 rounded-xl hover:bg-white ${viewMode === 'search' ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
+                            >
+                                <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+                                Refresh Ads
+                            </Button>
+
                         </div>
 
                         {/* Duplication Mode Toggle + View Mode Buttons */}
@@ -288,7 +289,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
                             </div>
 
                             {/* View Mode Toggle Buttons */}
-                            <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden h-8">
+                            <div className="flex items-center border border-gray-300 rounded-xl overflow-hidden h-8">
                                 <button
                                     type="button"
                                     onClick={() => handleViewModeChange('list')}
@@ -324,13 +325,13 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     onKeyDown={handleSearchKeyDown}
-                                    className="flex-1 h-9 text-sm rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                                    className="flex-1 h-9 text-sm rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                                 />
                                 <Button
                                     size="sm"
                                     onClick={searchAds}
                                     disabled={isSearching || !searchQuery.trim()}
-                                    className="px-4 h-9 bg-blue-500 hover:bg-blue-600 text-white rounded-xl"
+                                    className="px-4 h-9 bg-black text-white rounded-xl"
                                 >
                                     {isSearching ? (
                                         <Loader className="h-4 w-4 animate-spin" />
