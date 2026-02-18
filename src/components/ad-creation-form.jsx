@@ -4377,76 +4377,78 @@ export default function AdCreationForm({
             <ConfigIcon className="w-5 h-5" />
             Select ad preferences
           </div>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="ad-type" className="text-sm whitespace-nowrap">
-              Ad Type:
-            </Label>
-            <Select
-              value={
-                adType === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))
-                  ? 'regular'
-                  : adType
-              }
-              onValueChange={(value) => {
-                if (value === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))) {
-                  setAdType('regular');
-                  return;
+          {!useExistingPosts && (
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="ad-type" className="text-sm whitespace-nowrap">
+                Ad Type:
+              </Label>
+              <Select
+                value={
+                  adType === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))
+                    ? 'regular'
+                    : adType
                 }
-
-                setAdType(value);
-
-                // Reset link states when switching away from carousel
-                if (value !== 'carousel' && link.length > 1) {
-                  setLink([link[0] || ""]);
-                  setLinkCustomStates({});
-                  setShowCustomLink(false);
-                }
-
-                // Reset the "apply to all" states and restore from template
-                if (value !== 'carousel') {
-                  setApplyTextToAllCards(false);
-                  setApplyHeadlinesToAllCards(false);
-
-                  if (selectedTemplate && copyTemplates[selectedTemplate]) {
-                    const tpl = copyTemplates[selectedTemplate];
-                    setMessages(tpl.primaryTexts || [""]);
-                    setHeadlines(tpl.headlines || [""]);
-                    setDescriptions(tpl.descriptions || [""]);
+                onValueChange={(value) => {
+                  if (value === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))) {
+                    setAdType('regular');
+                    return;
                   }
-                }
-              }}
-              disabled={!isLoggedIn}
-            >
-              <SelectTrigger className="w-[180px] bg-white border-gray-400 rounded-xl font-medium">
-                <SelectValue placeholder="Select ad type" />
-              </SelectTrigger>
-              <SelectContent className="bg-white rounded-xl gap-4" >
-                <SelectItem
-                  value="regular"
-                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
-                >
-                  Image / Video
-                </SelectItem>
 
-                <SelectItem
-                  value="carousel"
-                  className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
-                >
-                  Carousel
-                </SelectItem>
+                  setAdType(value);
 
-                {campaignObjective.length > 0 && campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)) && (
+                  // Reset link states when switching away from carousel
+                  if (value !== 'carousel' && link.length > 1) {
+                    setLink([link[0] || ""]);
+                    setLinkCustomStates({});
+                    setShowCustomLink(false);
+                  }
+
+                  // Reset the "apply to all" states and restore from template
+                  if (value !== 'carousel') {
+                    setApplyTextToAllCards(false);
+                    setApplyHeadlinesToAllCards(false);
+
+                    if (selectedTemplate && copyTemplates[selectedTemplate]) {
+                      const tpl = copyTemplates[selectedTemplate];
+                      setMessages(tpl.primaryTexts || [""]);
+                      setHeadlines(tpl.headlines || [""]);
+                      setDescriptions(tpl.descriptions || [""]);
+                    }
+                  }
+                }}
+                disabled={!isLoggedIn}
+              >
+                <SelectTrigger className="w-[180px] bg-white border-gray-400 rounded-xl font-medium">
+                  <SelectValue placeholder="Select ad type" />
+                </SelectTrigger>
+                <SelectContent className="bg-white rounded-xl gap-4" >
                   <SelectItem
-                    value="flexible"
+                    value="regular"
                     className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
                   >
-                    Flexible
-
+                    Image / Video
                   </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
+
+                  <SelectItem
+                    value="carousel"
+                    className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                  >
+                    Carousel
+                  </SelectItem>
+
+                  {campaignObjective.length > 0 && campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)) && (
+                    <SelectItem
+                      value="flexible"
+                      className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                    >
+                      Flexible
+
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardTitle>
       </CardHeader>
 

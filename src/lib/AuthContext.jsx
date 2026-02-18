@@ -49,9 +49,12 @@ export const AuthProvider = ({ children }) => {
   const handleLogout = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
         credentials: "include",
+
       })
       if (res.ok) {
+        localStorage.removeItem(HOME_CACHE_KEY);
         toast.info("Logged out successfully!")
         setIsLoggedIn(false)
         setUserName("")
