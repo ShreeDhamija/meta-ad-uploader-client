@@ -49,7 +49,9 @@ export const AuthProvider = ({ children }) => {
   const handleLogout = async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: 'POST',
         credentials: "include",
+
       })
       if (res.ok) {
         toast.info("Logged out successfully!")

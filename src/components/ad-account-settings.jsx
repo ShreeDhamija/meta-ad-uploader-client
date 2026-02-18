@@ -119,51 +119,6 @@ export default function AdAccountSettings({
 
 
 
-  // const handleAdAccountChange = useCallback(async (value) => {
-  //   const adAccountId = value
-  //   setSelectedAdAccount(adAccountId)
-  //   setCampaigns([])
-  //   setAdSets([])
-  //   setSelectedCampaign([])
-  //   setSelectedAdSets([])
-  //   if (!adAccountId) return
-
-  //   setIsAdAccountChanging(true);
-  //   setIsLoadingCampaigns(true);
-  //   setIsLoading(true)
-
-  //   const maxRetries = 3;
-  //   const retryDelay = 1000; // 1 second
-
-  //   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-  //     try {
-  //       const res = await fetch(
-  //         `${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${adAccountId}`,
-  //         { credentials: "include" },
-  //       )
-  //       const data = await res.json()
-  //       if (data.campaigns) {
-  //         const sortedCampaigns = sortCampaigns(data.campaigns);
-  //         setCampaigns(sortedCampaigns);
-  //       }
-  //       break; // Success - exit the retry loop
-  //     } catch (err) {
-  //       if (attempt === maxRetries) {
-  //         // Last attempt failed
-  //         toast.error(`Failed to fetch campaigns: ${err.message || "Unknown error occurred"}`)
-  //         console.error("Failed to fetch campaigns:", err)
-  //       } else {
-  //         // Wait before retrying
-  //         await new Promise(resolve => setTimeout(resolve, retryDelay));
-  //       }
-  //     }
-  //   }
-
-  //   setIsLoading(false)
-  //   setIsAdAccountChanging(false);
-  //   setIsLoadingCampaigns(false);
-
-  // }, [])
 
 
   const handleAdAccountChange = useCallback(async (value) => {
