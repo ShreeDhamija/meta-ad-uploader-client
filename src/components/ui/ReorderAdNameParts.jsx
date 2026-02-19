@@ -90,7 +90,7 @@ export default function ReorderAdNameParts({
       const remaining = stripped.replace(/[\s/\-._]/g, '')
 
       if (remaining.length > 0) {
-        setDateFormatError(`Invalid date format: "${fmt}" — unknown token "${remaining}"`)
+        setDateFormatError(`Invalid date token "${remaining}"`)
         return
       }
 

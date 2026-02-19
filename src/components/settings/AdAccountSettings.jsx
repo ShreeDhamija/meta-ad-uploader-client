@@ -588,13 +588,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               </h3>
             </div>
 
-            {/* <p className="text-xs text-gray-500">
-              Type
-              <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-sm text-black">
-                /
-              </span>
-              to see list of variables you can use. You can also save custom text.
-            </p> */}
+
 
             <ReorderAdNameParts
               formulaInput={adNameFormulaV2?.rawInput || ""}
