@@ -264,7 +264,7 @@ export default function ReorderAdNameParts({
               align="end"
               className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
             >
-              <p className="font-medium mb-1.5">Type / to insert variables</p>
+              <p className="font-medium mb-1.5">Pick the Custom Date Variable <br></br>and replace 'custom' with any combination of the below tokens</p>
               <p className="text-gray-400 mb-2">
                 Date formats are fully customizable. Tokens:
               </p>
