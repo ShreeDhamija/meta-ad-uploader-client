@@ -83,14 +83,13 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                                 : "Pick date"}
                         </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={handleDateSelect}
-                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                            initialFocus
-                        />
+                    <PopoverContent className="w-auto p-0 bg-white rounded-xl shadow-lg border" align="start">                        <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={handleDateSelect}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        initialFocus
+                    />
                     </PopoverContent>
                 </Popover>
 

@@ -661,7 +661,7 @@ export default function AdCreationForm({
       adCount = files.length + driveFiles.length + importedFiles.length + dropboxFiles.length;
     }
 
-
+    console.log("📅 [1] captureFormDataAsJob schedule:", { adScheduleStartTime, adScheduleEndTime });
     return {
       id: uuidv4(),
       createdAt: Date.now(),
@@ -2096,7 +2096,7 @@ export default function AdCreationForm({
     // Fallback if user never customized the placeholder
     const fmt = formatStr === 'custom'
       ? 'MMDDYYYY'
-      : formatStr;
+      : formatStr.toUpperCase();
 
     // Order matters — replace longer tokens first to avoid partial matches
     return fmt
@@ -2346,6 +2346,7 @@ export default function AdCreationForm({
       adScheduleEndTime,
       adSets
     } = jobData.formData;
+    console.log("📅 [2] handleCreateAd destructured:", { adScheduleStartTime, adScheduleEndTime });
 
 
     setIsCreatingAds(true);
@@ -2724,6 +2725,14 @@ export default function AdCreationForm({
       if (adScheduleEndTime) {
         formData.append("adScheduleEndTime", adScheduleEndTime);
       }
+      // At the end of appendCommonFields, after the if blocks that append
+      console.log("📅 [3] appendCommonFields appending:", {
+        start: adScheduleStartTime,
+        end: adScheduleEndTime,
+        formDataHasStart: formData.has("adScheduleStartTime"),
+        formDataHasEnd: formData.has("adScheduleEndTime"),
+      });
+
     };
 
     /**
@@ -5740,177 +5749,141 @@ export default function AdCreationForm({
 
           </div>
 
-          {/* <div className="flex items-center space-x-2">
-            <Label className="text-sm font-medium">Ad Status:</Label>
-
-            <RadioGroup
-              value={launchPaused ? "paused" : "active"}
-              onValueChange={(value) => setLaunchPaused(value === "paused")}
-              disabled={!isLoggedIn}
-              className="flex items-center space-x-2"
-            >
-
-              <div
-                className={cn(
-                  "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                  !launchPaused
-                    ? "bg-green-50 border border-green-300"
-                    : "border border-transparent"
-                )}
-              >
-                <RadioGroupItem
-                  value="active"
-                  id="statusActive"
-                  className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
-                />
-                <Label
-                  htmlFor="statusActive"
-                  className={cn(
-                    "text-sm font-medium leading-none cursor-pointer",
-                    !launchPaused ? "text-green-600" : "text-gray-600"
-                  )}
-                >
-                  Active
-                </Label>
-              </div>
 
 
-              <div
-                className={cn(
-                  "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                  launchPaused
-                    ? "bg-red-50 border border-red-300"
-                    : "border border-transparent"
-                )}
-              >
-                <RadioGroupItem
-                  value="paused"
-                  id="statusPaused"
-                  className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
-
-                />
-                <Label
-                  htmlFor="statusPaused"
-                  className={cn(
-                    "text-sm font-medium leading-none cursor-pointer",
-                    launchPaused ? "text-red-600" : "text-gray-600"
-                  )}
-                >
-                  Paused
-                </Label>
-              </div>
-            </RadioGroup>
-          </div> */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center space-x-2">
-              <Label className="text-sm font-medium">Ad Status:</Label>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Label className="text-sm font-medium">Ad Status:</Label>
 
-              <RadioGroup
-                value={launchPaused ? "paused" : "active"}
-                onValueChange={(value) => setLaunchPaused(value === "paused")}
-                disabled={!isLoggedIn}
-                className="flex items-center space-x-2"
-              >
-                <div
-                  className={cn(
-                    "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                    !launchPaused
-                      ? "bg-green-50 border border-green-300"
-                      : "border border-transparent"
-                  )}
+                <RadioGroup
+                  value={launchPaused ? "paused" : "active"}
+                  onValueChange={(value) => setLaunchPaused(value === "paused")}
+                  disabled={!isLoggedIn}
+                  className="flex items-center space-x-2"
                 >
-                  <RadioGroupItem
-                    value="active"
-                    id="statusActive"
-                    className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
-                  />
-                  <Label
-                    htmlFor="statusActive"
+                  <div
                     className={cn(
-                      "text-sm font-medium leading-none cursor-pointer",
-                      !launchPaused ? "text-green-600" : "text-gray-600"
+                      "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                      !launchPaused
+                        ? "bg-green-50 border border-green-300"
+                        : "border border-transparent"
                     )}
                   >
-                    Active
-                  </Label>
-                </div>
-
-                <div
-                  className={cn(
-                    "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                    launchPaused
-                      ? "bg-red-50 border border-red-300"
-                      : "border border-transparent"
-                  )}
-                >
-                  <RadioGroupItem
-                    value="paused"
-                    id="statusPaused"
-                    className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
-                  />
-                  <Label
-                    htmlFor="statusPaused"
-                    className={cn(
-                      "text-sm font-medium leading-none cursor-pointer",
-                      launchPaused ? "text-red-600" : "text-gray-600"
-                    )}
-                  >
-                    Paused
-                  </Label>
-                </div>
-              </RadioGroup>
-
-              {/* Schedule Button + Popover */}
-              <Popover open={showSchedule} onOpenChange={setShowSchedule}>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      "ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors",
-                      (adScheduleStartTime || adScheduleEndTime)
-                        ? "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
-                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                    )}
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    {(adScheduleStartTime || adScheduleEndTime) ? "Scheduled" : "Schedule"}
-                  </button>
-                </PopoverTrigger>
-
-                <PopoverContent className="w-auto p-4" align="start">
-                  <div className="space-y-4">
-                    <p className="text-sm font-medium text-gray-700">Ad Schedule</p>
-
-                    {/* START DATE/TIME */}
-                    <ScheduleDateTimePicker
-                      label="Start Time"
-                      value={adScheduleStartTime}
-                      onChange={(iso) => setAdScheduleStartTime(iso)}
-                      onClear={() => setAdScheduleStartTime(null)}
+                    <RadioGroupItem
+                      value="active"
+                      id="statusActive"
+                      className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
                     />
-
-                    {/* END DATE/TIME */}
-                    <ScheduleDateTimePicker
-                      label="End Time"
-                      value={adScheduleEndTime}
-                      onChange={(iso) => setAdScheduleEndTime(iso)}
-                      onClear={() => setAdScheduleEndTime(null)}
-                    />
-
-                    {(adScheduleStartTime && adScheduleEndTime) &&
-                      new Date(adScheduleEndTime) <= new Date(adScheduleStartTime) && (
-                        <p className="text-xs text-red-500">End time must be after start time</p>
+                    <Label
+                      htmlFor="statusActive"
+                      className={cn(
+                        "text-sm font-medium leading-none cursor-pointer",
+                        !launchPaused ? "text-green-600" : "text-gray-600"
                       )}
+                    >
+                      Active
+                    </Label>
                   </div>
-                </PopoverContent>
-              </Popover>
+
+                  <div
+                    className={cn(
+                      "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                      launchPaused
+                        ? "bg-red-50 border border-red-300"
+                        : "border border-transparent"
+                    )}
+                  >
+                    <RadioGroupItem
+                      value="paused"
+                      id="statusPaused"
+                      className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
+                    />
+                    <Label
+                      htmlFor="statusPaused"
+                      className={cn(
+                        "text-sm font-medium leading-none cursor-pointer",
+                        launchPaused ? "text-red-600" : "text-gray-600"
+                      )}
+                    >
+                      Paused
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Schedule — pushed to the right, only for sales/app promo */}
+              {campaignObjective.length > 0 &&
+                campaignObjective.every(obj =>
+                  ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)
+                ) && (
+                  <div className="flex items-center gap-2">
+                    <Popover open={showSchedule} onOpenChange={setShowSchedule}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors",
+                            (adScheduleStartTime || adScheduleEndTime)
+                              ? "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                          )}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          {(adScheduleStartTime || adScheduleEndTime) ? "Scheduled" : "Schedule"}
+                        </button>
+                      </PopoverTrigger>
+
+                      <PopoverContent className="w-auto p-4 bg-white rounded-xl shadow-lg border" align="end">
+                        <div className="space-y-4">
+                          <p className="text-sm font-medium text-gray-700">Ad Schedule</p>
+
+                          <ScheduleDateTimePicker
+                            label="Start Time"
+                            value={adScheduleStartTime}
+                            onChange={(iso) => setAdScheduleStartTime(iso)}
+                            onClear={() => setAdScheduleStartTime(null)}
+                          />
+
+                          <ScheduleDateTimePicker
+                            label="End Time"
+                            value={adScheduleEndTime}
+                            onChange={(iso) => setAdScheduleEndTime(iso)}
+                            onClear={() => setAdScheduleEndTime(null)}
+                          />
+
+                          {(adScheduleStartTime && adScheduleEndTime) &&
+                            new Date(adScheduleEndTime) <= new Date(adScheduleStartTime) && (
+                              <p className="text-xs text-red-500">End time must be after start time</p>
+                            )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* Clear-all X button — only visible when something is scheduled */}
+                    {(adScheduleStartTime || adScheduleEndTime) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdScheduleStartTime(null);
+                          setAdScheduleEndTime(null);
+                        }}
+                        className="p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="Clear schedule"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
             </div>
 
-            {/* Schedule summary below the row */}
+            {/* Schedule summary — right-aligned */}
             {formatScheduleLabel() && (
-              <p className="text-xs text-blue-600 ml-[calc(4.5rem)]">{formatScheduleLabel()}</p>
+              <p className="text-xs text-blue-600 text-right">{formatScheduleLabel()}</p>
             )}
           </div>
+
 
           <div
             className={cn(

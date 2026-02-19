@@ -71,7 +71,7 @@ export default function ReorderAdNameParts({
     }
 
     for (const match of dateMatches) {
-      const fmt = match[1]
+      const fmt = match[1].toUpperCase()
 
       // Skip the "custom" placeholder — handled by fallback at compute time
       if (fmt === "custom") continue
