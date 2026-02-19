@@ -66,7 +66,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                         <button
                             type="button"
                             className={cn(
-                                "inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border transition-colors w-[160px] justify-start",
+                                "inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border transition-colors w-[160px] justify-start",
                                 selectedDate
                                     ? "border-gray-300 text-gray-900"
                                     : "border-dashed border-gray-300 text-gray-400"
@@ -95,7 +95,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
 
                 {/* Time Input */}
                 <div className={cn(
-                    "inline-flex items-center gap-1.5 px-3 pr-4 py-1.5 rounded-md border text-sm w-[110px]",
+                    "inline-flex items-center gap-1.5 px-3 pr-4 py-1.5 rounded-lg border text-sm w-[110px]",
                     selectedDate ? "border-gray-300" : "border-gray-200 opacity-50 pointer-events-none"
                 )}>
                     <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
