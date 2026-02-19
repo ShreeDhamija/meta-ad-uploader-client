@@ -19,6 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
+import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostSelectorInline from "@/components/PostIDSelector"
 import { MetaMediaLibraryModal } from "@/components/MetaMediaLibraryModal";
@@ -385,6 +386,13 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
   return { partners, isLoading, error, refetch: fetchPartners };
 };
 
+const buildISOString = (date, time) => {
+  if (!date) return null;
+  const [hours, minutes] = (time || "00:00").split(":").map(Number);
+  const d = new Date(date);
+  d.setHours(hours, minutes, 0, 0);
+  return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+};
 
 
 export default function AdCreationForm({
@@ -536,6 +544,25 @@ export default function AdCreationForm({
   const [openPartnerSelector, setOpenPartnerSelector] = useState(false);
   const [partnerSearchValue, setPartnerSearchValue] = useState("");
 
+  const [adScheduleStartTime, setAdScheduleStartTime] = useState(null);
+  const [adScheduleEndTime, setAdScheduleEndTime] = useState(null);
+
+
+
+  const formatScheduleLabel = () => {
+    if (!adScheduleStartTime && !adScheduleEndTime) return null;
+    const fmt = (iso) => {
+      if (!iso) return null;
+      const d = new Date(iso);
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
+        " " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    };
+    const parts = [];
+    if (adScheduleStartTime) parts.push(`Start: ${fmt(adScheduleStartTime)}`);
+    if (adScheduleEndTime) parts.push(`End: ${fmt(adScheduleEndTime)}`);
+    return parts.join(" · ");
+  };
+
   // Get the selected page's access token
   const selectedPageAccessToken = useMemo(() => {
     const selectedPage = pages.find(p => p.id === pageId);
@@ -685,6 +712,8 @@ export default function AdCreationForm({
         // For computing adName
         adNameFormulaV2: adNameFormulaV2 ? { ...adNameFormulaV2 } : null,
         adValues,
+        adScheduleStartTime,
+        adScheduleEndTime,
 
         // Reference data needed for processing
         adSets: [...adSets],
@@ -956,41 +985,6 @@ export default function AdCreationForm({
     }
   }
 
-  // async function uploadDropboxFileToS3(file, maxRetries = 3) {
-  //   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-  //     try {
-  //       const res = await fetch(`${API_BASE_URL}/api/upload-from-dropbox`, {
-  //         method: "POST",
-  //         headers: { "Content-Type": "application/json" },
-  //         body: JSON.stringify({
-  //           fileUrl: file.directLink,
-  //           fileName: file.name,
-  //           mimeType: file.mimeType || getMimeFromName(file.name),
-  //           size: file.size
-  //         })
-  //       });
-
-  //       const data = await res.json();
-  //       if (!res.ok) throw new Error(data.error || "S3 upload failed");
-
-  //       return {
-  //         ...file,
-  //         s3Url: data.s3Url,
-  //         isS3Upload: true
-  //       };
-  //     } catch (error) {
-  //       if (attempt === maxRetries) {
-  //         throw new Error(`Dropbox S3 upload failed after ${maxRetries} attempts: ${error.message}`);
-  //       }
-  //       const delayMs = Math.pow(2, attempt - 1) * 1000;
-  //       await new Promise(resolve => setTimeout(resolve, delayMs));
-  //     }
-  //   }
-  // }
-
-
-
-  // CTA options
 
   async function uploadDropboxFileToS3(file, maxRetries = 3) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -1505,97 +1499,7 @@ export default function AdCreationForm({
     };
   }, []);
 
-  // Separate function for the Chooser
-  // const openDropboxChooser = useCallback(() => {
-  //   window.Dropbox.choose({
-  //     success: async (selectedFiles) => {
-  //       console.log('=== DROPBOX CHOOSER RAW RESPONSE ===');
-  //       selectedFiles.forEach(f => {
-  //         console.log(`File: ${f.name}`);
-  //         console.log(`  id: ${f.id}`);
-  //         console.log(`  link: ${f.link}`);
-  //       });
 
-  //       const dropboxFilesData = selectedFiles.map((file) => ({
-  //         dropboxId: file.id,
-  //         name: file.name,
-  //         link: file.link,
-  //         directLink: file.link.replace('www.dropbox.com', 'dl.dropboxusercontent.com').replace('?dl=0', '?dl=1'),
-  //         size: file.bytes,
-  //         // icon: file.icon,
-  //         isDropbox: true,
-  //         mimeType: getMimeFromName(file.name)
-  //       }));
-
-  //       setDropboxFiles(prev => [...prev, ...dropboxFilesData]);
-  //     },
-  //     cancel: () => {
-  //       console.log('Dropbox picker cancelled');
-  //     },
-  //     linkType: 'direct',
-  //     multiselect: true,
-  //     extensions: ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mov', '.webm'],
-  //     folderselect: false,
-  //     sizeLimit: 1024 * 1024 * 1024
-  //   });
-  // }, [setDropboxFiles]);
-
-
-  // const handleDropboxClick = useCallback(async () => {
-  //   // Check if Dropbox SDK is loaded
-  //   if (!window.Dropbox) {
-  //     toast.error("Dropbox is still loading. Please try again in a moment.");
-  //     return;
-  //   }
-
-  //   // Check if user is authenticated with Dropbox
-  //   try {
-  //     const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, {
-  //       credentials: 'include'
-  //     });
-  //     const statusData = await statusRes.json();
-
-  //     if (!statusData.authenticated) {
-  //       // Need to authenticate first
-  //       // toast.info("Please connect your Dropbox account first");
-
-  //       // Open OAuth popup
-  //       const width = 600;
-  //       const height = 700;
-  //       const left = window.screenX + (window.outerWidth - width) / 2;
-  //       const top = window.screenY + (window.outerHeight - height) / 2;
-
-  //       const popup = window.open(
-  //         `${API_BASE_URL}/auth/dropbox?popup=true`,
-  //         'dropbox-auth',
-  //         `width=${width},height=${height},left=${left},top=${top}`
-  //       );
-
-  //       // Wait for OAuth to complete
-  //       const handleMessage = (event) => {
-  //         if (event.data?.type === 'dropbox-auth-success') {
-  //           window.removeEventListener('message', handleMessage);
-  //           toast.success("Dropbox connected! Opening file picker...");
-  //           // Now open the Chooser
-  //           openDropboxChooser();
-  //         } else if (event.data?.type === 'dropbox-auth-error') {
-  //           window.removeEventListener('message', handleMessage);
-  //           toast.error("Failed to connect Dropbox");
-  //         }
-  //       };
-
-  //       window.addEventListener('message', handleMessage);
-  //       return;
-  //     }
-
-  //     // Already authenticated, open Chooser directly
-  //     openDropboxChooser();
-
-  //   } catch (error) {
-  //     console.error('Error checking Dropbox auth:', error);
-  //     toast.error("Failed to check Dropbox connection");
-  //   }
-  // }, []);
 
   // ✅ CHANGE: Accept accessToken as an argument so we can attach it to files
   const openDropboxChooser = useCallback((accessToken) => {
@@ -2436,6 +2340,8 @@ export default function AdCreationForm({
 
       // Other
       adValues,
+      adScheduleStartTime,
+      adScheduleEndTime,
       adSets
     } = jobData.formData;
 
@@ -2779,7 +2685,9 @@ export default function AdCreationForm({
         selectedForm,
         isPartnershipAd,
         partnerIgAccountId,
-        partnerFbPageId
+        partnerFbPageId,
+        adScheduleStartTime,
+        adScheduleEndTime,
       }
     ) => {
       formData.append("adName", adName);
@@ -2806,6 +2714,13 @@ export default function AdCreationForm({
           formData.append("partnerFbPageId", partnerFbPageId);
         }
 
+      }
+
+      if (adScheduleStartTime) {
+        formData.append("adScheduleStartTime", adScheduleStartTime);
+      }
+      if (adScheduleEndTime) {
+        formData.append("adScheduleEndTime", adScheduleEndTime);
       }
     };
 
@@ -3432,7 +3347,9 @@ export default function AdCreationForm({
             selectedForm,
             isPartnershipAd,
             partnerIgAccountId,
-            partnerFbPageId
+            partnerFbPageId,
+            adScheduleStartTime,
+            adScheduleEndTime,
           });
 
           // Append carousel-specific fields
@@ -3527,7 +3444,9 @@ export default function AdCreationForm({
                 selectedForm,
                 isPartnershipAd,
                 partnerIgAccountId,
-                partnerFbPageId
+                partnerFbPageId,
+                adScheduleStartTime,
+                adScheduleEndTime,
               });
 
               // Append flexible ad fields
@@ -3591,7 +3510,9 @@ export default function AdCreationForm({
               selectedForm,
               isPartnershipAd,
               partnerIgAccountId,
-              partnerFbPageId
+              partnerFbPageId,
+              adScheduleStartTime,
+              adScheduleEndTime,
             });
 
             // Append flexible ad fields
@@ -3656,7 +3577,9 @@ export default function AdCreationForm({
             selectedForm,
             isPartnershipAd,
             partnerIgAccountId,
-            partnerFbPageId
+            partnerFbPageId,
+            adScheduleStartTime,
+            adScheduleEndTime,
           });
 
           // Append dynamic ad set fields
@@ -3752,7 +3675,9 @@ export default function AdCreationForm({
                 selectedForm,
                 isPartnershipAd,
                 partnerIgAccountId,
-                partnerFbPageId
+                partnerFbPageId,
+                adScheduleStartTime,
+                adScheduleEndTime,
               });
 
 
@@ -3853,7 +3778,9 @@ export default function AdCreationForm({
                 selectedForm,
                 isPartnershipAd,
                 partnerIgAccountId,
-                partnerFbPageId
+                partnerFbPageId,
+                adScheduleStartTime,
+                adScheduleEndTime,
               });
 
               // Append single image file
@@ -3887,7 +3814,9 @@ export default function AdCreationForm({
                 selectedForm,
                 isPartnershipAd,
                 partnerIgAccountId,
-                partnerFbPageId
+                partnerFbPageId,
+                adScheduleStartTime,
+                adScheduleEndTime,
               });
 
               // Append single drive file
@@ -3922,7 +3851,9 @@ export default function AdCreationForm({
                 selectedForm,
                 isPartnershipAd,
                 partnerIgAccountId,
-                partnerFbPageId
+                partnerFbPageId,
+                adScheduleStartTime,
+                adScheduleEndTime,
               });
 
               appendSingleDropboxFile(formData, dropboxFile);
@@ -3953,7 +3884,9 @@ export default function AdCreationForm({
                 selectedForm,
                 isPartnershipAd,
                 partnerIgAccountId,
-                partnerFbPageId
+                partnerFbPageId,
+                adScheduleStartTime,
+                adScheduleEndTime,
               });
 
               // Append single S3 file
@@ -4008,7 +3941,9 @@ export default function AdCreationForm({
                 selectedForm,
                 isPartnershipAd,
                 partnerIgAccountId,
-                partnerFbPageId
+                partnerFbPageId,
+                adScheduleStartTime,
+                adScheduleEndTime,
               });
 
               appendMetaImageFile(formData, metaFile);
@@ -4038,7 +3973,9 @@ export default function AdCreationForm({
                 selectedForm,
                 isPartnershipAd,
                 partnerIgAccountId,
-                partnerFbPageId
+                partnerFbPageId,
+                adScheduleStartTime,
+                adScheduleEndTime,
               });
 
               appendMetaVideoFile(formData, metaFile);
@@ -5801,7 +5738,7 @@ export default function AdCreationForm({
 
           </div>
 
-          <div className="flex items-center space-x-2">
+          {/* <div className="flex items-center space-x-2">
             <Label className="text-sm font-medium">Ad Status:</Label>
 
             <RadioGroup
@@ -5861,6 +5798,116 @@ export default function AdCreationForm({
                 </Label>
               </div>
             </RadioGroup>
+          </div> */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center space-x-2">
+              <Label className="text-sm font-medium">Ad Status:</Label>
+
+              <RadioGroup
+                value={launchPaused ? "paused" : "active"}
+                onValueChange={(value) => setLaunchPaused(value === "paused")}
+                disabled={!isLoggedIn}
+                className="flex items-center space-x-2"
+              >
+                <div
+                  className={cn(
+                    "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                    !launchPaused
+                      ? "bg-green-50 border border-green-300"
+                      : "border border-transparent"
+                  )}
+                >
+                  <RadioGroupItem
+                    value="active"
+                    id="statusActive"
+                    className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
+                  />
+                  <Label
+                    htmlFor="statusActive"
+                    className={cn(
+                      "text-sm font-medium leading-none cursor-pointer",
+                      !launchPaused ? "text-green-600" : "text-gray-600"
+                    )}
+                  >
+                    Active
+                  </Label>
+                </div>
+
+                <div
+                  className={cn(
+                    "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                    launchPaused
+                      ? "bg-red-50 border border-red-300"
+                      : "border border-transparent"
+                  )}
+                >
+                  <RadioGroupItem
+                    value="paused"
+                    id="statusPaused"
+                    className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
+                  />
+                  <Label
+                    htmlFor="statusPaused"
+                    className={cn(
+                      "text-sm font-medium leading-none cursor-pointer",
+                      launchPaused ? "text-red-600" : "text-gray-600"
+                    )}
+                  >
+                    Paused
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {/* Schedule Button + Popover */}
+              <Popover open={showSchedule} onOpenChange={setShowSchedule}>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors",
+                      (adScheduleStartTime || adScheduleEndTime)
+                        ? "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                        : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                    )}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    {(adScheduleStartTime || adScheduleEndTime) ? "Scheduled" : "Schedule"}
+                  </button>
+                </PopoverTrigger>
+
+                <PopoverContent className="w-auto p-4" align="start">
+                  <div className="space-y-4">
+                    <p className="text-sm font-medium text-gray-700">Ad Schedule</p>
+
+                    {/* START DATE/TIME */}
+                    <ScheduleDateTimePicker
+                      label="Start Time"
+                      value={adScheduleStartTime}
+                      onChange={(iso) => setAdScheduleStartTime(iso)}
+                      onClear={() => setAdScheduleStartTime(null)}
+                    />
+
+                    {/* END DATE/TIME */}
+                    <ScheduleDateTimePicker
+                      label="End Time"
+                      value={adScheduleEndTime}
+                      onChange={(iso) => setAdScheduleEndTime(iso)}
+                      onClear={() => setAdScheduleEndTime(null)}
+                    />
+
+                    {(adScheduleStartTime && adScheduleEndTime) &&
+                      new Date(adScheduleEndTime) <= new Date(adScheduleStartTime) && (
+                        <p className="text-xs text-red-500">End time must be after start time</p>
+                      )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Schedule summary below the row */}
+            {formatScheduleLabel() && (
+              <p className="text-xs text-blue-600 ml-[calc(4.5rem)]">{formatScheduleLabel()}</p>
+            )}
           </div>
 
           <div
