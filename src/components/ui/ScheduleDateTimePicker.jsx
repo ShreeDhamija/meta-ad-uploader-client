@@ -3,7 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Clock, Calendar as CalendarIcon } from "lucide-react";
 
-function ScheduleDateTimePicker({ label, value, onChange, onClear }) {
+export function ScheduleDateTimePicker({ label, value, onChange, onClear }) {
     // Parse existing value back into date + time
     const existingDate = value ? new Date(value) : null;
     const existingTime = existingDate
