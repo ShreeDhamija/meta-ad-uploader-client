@@ -9,7 +9,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
     // Parse existing value back into date + time
     const existingDate = value ? new Date(value) : null;
     const existingTime = existingDate
-        ? `${String(existingDate.getUTCHours()).padStart(2, "0")}:${String(existingDate.getUTCMinutes()).padStart(2, "0")}`
+        ? `${String(existingDate.getHours()).padStart(2, "0")}:${String(existingDate.getMinutes()).padStart(2, "0")}`
         : "00:00";
 
     const [selectedDate, setSelectedDate] = useState(existingDate);
@@ -30,7 +30,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
         if (date) {
             const [h, m] = time.split(":").map(Number);
             const d = new Date(date);
-            d.setUTCHours(h, m, 0, 0);
+            d.setHours(h, m, 0, 0);
             onChange(d.toISOString().replace(/\.\d{3}Z$/, "Z"));
         }
     };
@@ -40,11 +40,10 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
         if (selectedDate) {
             const [h, m] = newTime.split(":").map(Number);
             const d = new Date(selectedDate);
-            d.setUTCHours(h, m, 0, 0);
+            d.setHours(h, m, 0, 0);
             onChange(d.toISOString().replace(/\.\d{3}Z$/, "Z"));
         }
     };
-
     return (
         <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -83,19 +82,20 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                                 : "Pick date"}
                         </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-white rounded-xl shadow-lg border" align="start">                        <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={handleDateSelect}
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                        initialFocus
-                    />
+                    <PopoverContent className="w-auto p-0 bg-white rounded-xl shadow-lg border overflow-hidden" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={handleDateSelect}
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                            initialFocus
+                        />
                     </PopoverContent>
                 </Popover>
 
                 {/* Time Input */}
                 <div className={cn(
-                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-sm w-[100px]",
+                    "inline-flex items-center gap-1.5 px-3 pr-4 py-1.5 rounded-md border text-sm w-[110px]",
                     selectedDate ? "border-gray-300" : "border-gray-200 opacity-50 pointer-events-none"
                 )}>
                     <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />

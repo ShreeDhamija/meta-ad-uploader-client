@@ -5860,27 +5860,27 @@ export default function AdCreationForm({
                       </PopoverContent>
                     </Popover>
 
-                    {/* Clear-all X button — only visible when something is scheduled */}
-                    {(adScheduleStartTime || adScheduleEndTime) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAdScheduleStartTime(null);
-                          setAdScheduleEndTime(null);
-                        }}
-                        className="p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        title="Clear schedule"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+
                   </div>
                 )}
             </div>
 
             {/* Schedule summary — right-aligned */}
             {formatScheduleLabel() && (
-              <p className="text-xs text-blue-600 text-right">{formatScheduleLabel()}</p>
+              <div className="flex items-center justify-end gap-1.5">
+                <p className="text-xs text-blue-600">{formatScheduleLabel()}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdScheduleStartTime(null);
+                    setAdScheduleEndTime(null);
+                  }}
+                  className="p-0.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  title="Clear schedule"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
             )}
           </div>
 
