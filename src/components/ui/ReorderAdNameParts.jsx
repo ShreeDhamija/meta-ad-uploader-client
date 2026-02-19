@@ -264,7 +264,7 @@ export default function ReorderAdNameParts({
               align="end"
               className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
             >
-              <p className="font-medium mb-1.5">To customize the date Pick the Custom Date Variable and replace 'custom' <br></br>with any combination of the below tokens</p>
+              <p className="font-medium mb-1.5">Select the Custom Date Variable and replace 'custom' with any combination of the tokens below.</p>
 
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
                 <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
