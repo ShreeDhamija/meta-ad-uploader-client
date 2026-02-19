@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Info } from "lucide-react"
@@ -240,8 +241,14 @@ export default function ReorderAdNameParts({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-1.5 text-sm text-gray-500">
-        <span>Type / to see list of variables you can use. You can also save custom text.</span>
+      <div className="flex items-center justify-between">
+        <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
+          Type
+          <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-sm text-black">
+            /
+          </span>
+          to see list of variables you can use. You can also save custom text.
+        </Label>
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -254,26 +261,26 @@ export default function ReorderAdNameParts({
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              align="start"
-              className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl"
+              align="end"
+              className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
             >
               <p className="font-medium mb-1.5">Type / to insert variables</p>
-              <p className="text-muted-foreground mb-2">
+              <p className="text-gray-400 mb-2">
                 Date formats are fully customizable. Tokens:
               </p>
               <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
-                <span className="font-semibold">D</span><span className="text-muted-foreground">Day (1–31)</span>
-                <span className="font-semibold">DD</span><span className="text-muted-foreground">Day, zero-padded (01–31)</span>
-                <span className="font-semibold">M</span><span className="text-muted-foreground">Month (1–12)</span>
-                <span className="font-semibold">MM</span><span className="text-muted-foreground">Month, zero-padded (01–12)</span>
-                <span className="font-semibold">MMM</span><span className="text-muted-foreground">Month name (Jan, Feb…)</span>
-                <span className="font-semibold">YY</span><span className="text-muted-foreground">Year, 2-digit (25)</span>
-                <span className="font-semibold">YYYY</span><span className="text-muted-foreground">Year, 4-digit (2025)</span>
+                <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
+                <span className="font-semibold">DD</span><span className="text-gray-400">Day, zero-padded (01–31)</span>
+                <span className="font-semibold">M</span><span className="text-gray-400">Month (1–12)</span>
+                <span className="font-semibold">MM</span><span className="text-gray-400">Month, zero-padded (01–12)</span>
+                <span className="font-semibold">MMM</span><span className="text-gray-400">Month name (Jan, Feb…)</span>
+                <span className="font-semibold">YY</span><span className="text-gray-400">Year, 2-digit (25)</span>
+                <span className="font-semibold">YYYY</span><span className="text-gray-400">Year, 4-digit (2025)</span>
               </div>
-              <p className="text-muted-foreground mt-2">
+              <p className="text-gray-400 mt-2">
                 Use any separator: <span className="font-mono">/ - . _</span> or space
               </p>
-              <p className="mt-1.5 text-muted-foreground italic">
+              <p className="mt-1.5 text-gray-400 italic">
                 {"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}
               </p>
             </TooltipContent>
