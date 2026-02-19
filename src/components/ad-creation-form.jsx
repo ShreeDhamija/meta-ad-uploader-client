@@ -2095,27 +2095,125 @@ export default function AdCreationForm({
 
 
 
+  // const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "") => {
+
+  //   if (!adNameFormulaV2?.rawInput) {
+  //     // Fallback to old computation if no V2 formula
+  //     return computeAdName(file, adValues.dateType, iterationIndex);
+  //   }
+
+  //   const formulaToUse = formula || adNameFormulaV2;
+  //   if (!formulaToUse?.rawInput) {
+  //     // Fallback to old computation if no V2 formula
+  //     return computeAdName(file, adValues.dateType, iterationIndex);
+  //   }
+
+  //   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  //     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  //   const now = new Date();
+  //   const monthAbbrev = monthNames[now.getMonth()];
+  //   const date = String(now.getDate()).padStart(2, "0");
+  //   const year = now.getFullYear();
+  //   const monthYear = `${monthAbbrev}${year}`;
+  //   const monthDayYear = `${monthAbbrev}${date}${year}`;
+
+  //   let fileName = "";
+  //   if (file && file.name) {
+  //     fileName = file.name.replace(/\.[^/.]+$/, "");
+  //   }
+
+  //   let fileType = "";
+
+  //   if (file) {
+  //     if (isVideoFile(file)) {
+  //       fileType = "Video";
+  //     } else {
+  //       fileType = "Static";
+  //     }
+  //   }
+
+
+  //   // Extract URL slug
+  //   let urlSlug = "";
+  //   if (link) {
+  //     try {
+  //       // Remove protocol and get the path
+  //       const urlWithoutProtocol = link.replace(/^https?:\/\//, "");
+  //       const lastSlashIndex = urlWithoutProtocol.lastIndexOf("/");
+
+  //       // If there's a slash and something after it
+  //       if (lastSlashIndex > 0 && lastSlashIndex < urlWithoutProtocol.length - 1) {
+  //         urlSlug = urlWithoutProtocol.substring(lastSlashIndex + 1);
+  //       }
+  //     } catch (e) {
+  //       // If URL parsing fails, keep urlSlug as empty string
+  //       urlSlug = "";
+  //     }
+  //   }
+
+  //   let adTypeLabel = "";
+  //   if (adType) {
+  //     try {
+  //       if (adType === 'flexible')
+  //         adTypeLabel = 'FLEX';
+  //       else if (adType === 'carousel')
+  //         adTypeLabel = 'CAR';
+  //       else adTypeLabel = fileType;
+  //     }
+  //     catch (e) {
+  //       adTypeLabel = "";
+  //     }
+  //   }
+
+  //   // Replace variables in the formula
+  //   let adName = formulaToUse.rawInput
+  //     .replace(/\{\{File Name\}\}/g, fileName)
+  //     .replace(/\{\{File Type\}\}/g, fileType)
+  //     .replace(/\{\{Date \(MonthYYYY\)\}\}/g, monthYear)
+  //     .replace(/\{\{Date \(MonthDDYYYY\)\}\}/g, monthDayYear)
+  //     .replace(/\{\{Iteration\}\}/g, String(iterationIndex + 1).padStart(2, "0"))
+  //     .replace(/\{\{URL Slug\}\}/g, urlSlug)
+  //     .replace(/\{\{Ad Type\}\}/g, adTypeLabel);
+
+  //   return adName.trim() || "Ad Generated Through Blip";
+  // }, [adNameFormulaV2]);
+
+
+  const formatDate = (formatStr) => {
+    const now = new Date();
+    const day = now.getDate();
+    const month = now.getMonth(); // 0-indexed
+    const year = now.getFullYear();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    // Fallback if user never customized the placeholder
+    const fmt = formatStr === 'custom'
+      ? 'MMDDYYYY'
+      : formatStr;
+
+    // Order matters — replace longer tokens first to avoid partial matches
+    return fmt
+      .replace(/YYYY/g, String(year))
+      .replace(/YY/g, String(year).slice(-2))
+      .replace(/MMM/g, monthNames[month])
+      .replace(/MM/g, String(month + 1).padStart(2, '0'))
+      .replace(/M/g, String(month + 1))
+      .replace(/DD/g, String(day).padStart(2, '0'))
+      .replace(/D/g, String(day));
+  };
+
+
   const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "") => {
 
     if (!adNameFormulaV2?.rawInput) {
-      // Fallback to old computation if no V2 formula
       return computeAdName(file, adValues.dateType, iterationIndex);
     }
 
     const formulaToUse = formula || adNameFormulaV2;
     if (!formulaToUse?.rawInput) {
-      // Fallback to old computation if no V2 formula
       return computeAdName(file, adValues.dateType, iterationIndex);
     }
-
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const now = new Date();
-    const monthAbbrev = monthNames[now.getMonth()];
-    const date = String(now.getDate()).padStart(2, "0");
-    const year = now.getFullYear();
-    const monthYear = `${monthAbbrev}${year}`;
-    const monthDayYear = `${monthAbbrev}${date}${year}`;
 
     let fileName = "";
     if (file && file.name) {
@@ -2123,7 +2221,6 @@ export default function AdCreationForm({
     }
 
     let fileType = "";
-
     if (file) {
       if (isVideoFile(file)) {
         fileType = "Video";
@@ -2132,21 +2229,16 @@ export default function AdCreationForm({
       }
     }
 
-
     // Extract URL slug
     let urlSlug = "";
     if (link) {
       try {
-        // Remove protocol and get the path
         const urlWithoutProtocol = link.replace(/^https?:\/\//, "");
         const lastSlashIndex = urlWithoutProtocol.lastIndexOf("/");
-
-        // If there's a slash and something after it
         if (lastSlashIndex > 0 && lastSlashIndex < urlWithoutProtocol.length - 1) {
           urlSlug = urlWithoutProtocol.substring(lastSlashIndex + 1);
         }
       } catch (e) {
-        // If URL parsing fails, keep urlSlug as empty string
         urlSlug = "";
       }
     }
@@ -2159,18 +2251,25 @@ export default function AdCreationForm({
         else if (adType === 'carousel')
           adTypeLabel = 'CAR';
         else adTypeLabel = fileType;
-      }
-      catch (e) {
+      } catch (e) {
         adTypeLabel = "";
       }
     }
 
-    // Replace variables in the formula
+    // Legacy formats (backward compat — no migration needed)
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const monthAbbrev = monthNames[now.getMonth()];
+    const date = String(now.getDate()).padStart(2, "0");
+    const year = now.getFullYear();
+
     let adName = formulaToUse.rawInput
       .replace(/\{\{File Name\}\}/g, fileName)
       .replace(/\{\{File Type\}\}/g, fileType)
-      .replace(/\{\{Date \(MonthYYYY\)\}\}/g, monthYear)
-      .replace(/\{\{Date \(MonthDDYYYY\)\}\}/g, monthDayYear)
+      .replace(/\{\{Date \(MonthYYYY\)\}\}/g, `${monthAbbrev}${year}`)
+      .replace(/\{\{Date \(MonthDDYYYY\)\}\}/g, `${monthAbbrev}${date}${year}`)
+      .replace(/\{\{Date\(([^)]+)\)\}\}/g, (match, fmt) => formatDate(fmt))
       .replace(/\{\{Iteration\}\}/g, String(iterationIndex + 1).padStart(2, "0"))
       .replace(/\{\{URL Slug\}\}/g, urlSlug)
       .replace(/\{\{Ad Type\}\}/g, adTypeLabel);
