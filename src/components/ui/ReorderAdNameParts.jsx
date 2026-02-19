@@ -1,243 +1,3 @@
-
-// "use client"
-
-// import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-// import { Button } from "@/components/ui/button"
-// import { Input } from "@/components/ui/input"
-// import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
-// import { cn } from "@/lib/utils"
-
-// const AVAILABLE_VARIABLES = [
-//   { id: 'fileName', label: 'File Name' },
-//   { id: 'fileType', label: 'File Type', note: '(Static/Video)' },
-//   { id: 'dateMonthYYYY', label: 'Date (MonthYYYY)' },
-//   { id: 'dateMonthDDYYYY', label: 'Date (MonthDDYYYY)' },
-//   { id: 'iteration', label: 'Iteration', note: '(1/2/3..)' },
-//   { id: 'slug', label: 'URL Slug', note: '(Text after last / )' },
-//   { id: 'adType', label: 'Ad Type', note: 'CAR/FLEX' },
-// ]
-
-// export default function ReorderAdNameParts({
-//   formulaInput = "",
-//   onFormulaChange,
-//   variant = "default"
-// }) {
-//   const [inputValue, setInputValue] = useState(formulaInput)
-//   const [showDropdown, setShowDropdown] = useState(false) // Add this
-//   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 }) // Add this
-//   const inputRef = useRef(null)
-//   const dropdownRef = useRef(null)
-//   const commandInputRef = useRef(null)
-
-//   // Sync with parent's formulaInput prop
-//   useEffect(() => {
-//     setInputValue(formulaInput)
-//   }, [formulaInput])
-
-//   const getCursorPosition = useCallback((input, cursorIndex) => {
-//     // Create a temporary span to measure text width
-//     const span = document.createElement('span')
-//     span.style.font = window.getComputedStyle(input).font
-//     span.style.visibility = 'hidden'
-//     span.style.position = 'absolute'
-//     span.style.whiteSpace = 'pre'
-
-//     // Get text up to cursor position
-//     const textBeforeCursor = inputValue.substring(0, cursorIndex)
-//     span.textContent = textBeforeCursor
-
-//     document.body.appendChild(span)
-//     const textWidth = span.offsetWidth
-//     document.body.removeChild(span)
-
-//     // Get input's position and padding
-//     const inputRect = input.getBoundingClientRect()
-//     const inputStyles = window.getComputedStyle(input)
-//     const paddingLeft = parseInt(inputStyles.paddingLeft)
-
-//     return {
-//       top: input.offsetHeight + 4, // Position below the input, plus 4px gap
-//       left: paddingLeft + textWidth, // Position relative to the input's left edge
-//     }
-//   }, [inputValue])
-
-
-
-//   const handleInputChange = useCallback((e) => {
-//     const newValue = e.target.value
-//     const cursorPosition = e.target.selectionStart
-
-//     setInputValue(newValue)
-
-//     if (onFormulaChange) {
-//       onFormulaChange(newValue)
-//     }
-
-//     // Check if user just typed '/'
-//     if (newValue[cursorPosition - 1] === '/') {
-//       const position = getCursorPosition(e.target, cursorPosition)
-//       setDropdownPosition(position)
-//       setShowDropdown(true)
-//       setTimeout(() => {
-//         commandInputRef.current?.focus()
-//       }, 0)
-//     } else {
-//       setShowDropdown(false)
-//     }
-//   }, [getCursorPosition, onFormulaChange]) // Add onFormulaChange to dependencies
-
-
-//   const handleKeyDown = useCallback((e) => {
-//     if (showDropdown) {
-//       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-//         e.preventDefault()
-//         return
-//       }
-//       if (e.key === 'Escape') {
-//         e.preventDefault()
-//         setShowDropdown(false)
-//         setTimeout(() => {
-//           inputRef.current?.focus()
-//         }, 0)
-//         return
-//       }
-//     }
-
-//     if (e.key === 'Delete' || e.key === 'Backspace') {
-//       const cursorPosition = e.target.selectionStart
-//       const textBeforeCursor = inputValue.substring(0, cursorPosition)
-
-//       if (textBeforeCursor.endsWith('}}')) {
-//         const match = textBeforeCursor.match(/\{\{[^}]+\}\}$/);
-//         if (match) {
-//           e.preventDefault()
-//           const beforeVariable = inputValue.substring(0, cursorPosition - match[0].length)
-//           const afterCursor = inputValue.substring(cursorPosition)
-//           const newValue = beforeVariable + afterCursor
-
-//           setInputValue(newValue)
-
-//           // Update parent state
-//           if (onFormulaChange) {
-//             onFormulaChange(newValue)
-//           }
-
-//           setTimeout(() => {
-//             const newCursorPos = cursorPosition - match[0].length
-//             inputRef.current?.setSelectionRange(newCursorPos, newCursorPos)
-//           }, 0)
-//         }
-//       }
-//     }
-//   }, [inputValue, showDropdown, onFormulaChange])
-
-//   const handleVariableSelect = useCallback((variable) => {
-//     const input = inputRef.current
-//     if (!input) return
-
-//     const cursorPosition = input.selectionStart
-
-//     // Find the last "/" before cursor position
-//     const textBeforeCursor = inputValue.substring(0, cursorPosition)
-//     const lastSlashIndex = textBeforeCursor.lastIndexOf('/')
-
-//     if (lastSlashIndex !== -1) {
-//       const beforeSlash = inputValue.substring(0, lastSlashIndex)
-//       const afterCursor = inputValue.substring(cursorPosition)
-//       const variableText = `{{${variable.label}}}`
-
-//       const newValue = beforeSlash + variableText + afterCursor
-//       setInputValue(newValue)
-
-
-//       // Update parent state
-//       if (onFormulaChange) {
-//         onFormulaChange(newValue)
-//       }
-
-
-//       // Position cursor after the inserted variable
-//       setTimeout(() => {
-//         const newCursorPos = lastSlashIndex + variableText.length
-//         input.setSelectionRange(newCursorPos, newCursorPos)
-//         input.focus()
-//       }, 0)
-//     }
-
-//     setShowDropdown(false)
-//   }, [inputValue, onFormulaChange]) // Add onFormulaChange to dependencies
-
-
-//   useEffect(() => {
-//     const handleClickOutside = (event) => {
-//       if (showDropdown &&
-//         inputRef.current &&
-//         !inputRef.current.contains(event.target) &&
-//         dropdownRef.current &&  // Change from commandInputRef to dropdownRef
-//         !dropdownRef.current.contains(event.target)) {
-//         setShowDropdown(false)
-//       }
-//     }
-
-//     document.addEventListener('mousedown', handleClickOutside)
-//     return () => {
-//       document.removeEventListener('mousedown', handleClickOutside)
-//     }
-//   }, [showDropdown])
-
-
-//   return (
-//     <div className="space-y-3">
-//       <div className="relative">
-//         <Input
-//           ref={inputRef}
-//           value={inputValue}
-//           onChange={handleInputChange}
-//           onKeyDown={handleKeyDown}  // This was missing!
-//           placeholder="Enter custom text or variables."
-//           className={cn(
-//             "w-full bg-white rounded-xl",
-//             variant === "home" && "border border-gray-300 shadow"
-//           )}
-//         />
-
-//         {showDropdown && (
-//           <div
-//             ref={dropdownRef}  // Add this ref to the container
-//             className="absolute z-50 w-64"
-//             style={{
-//               top: `${dropdownPosition.top}px`,
-//               left: `${dropdownPosition.left}px`
-//             }}
-//           >
-//             <Command ref={commandInputRef} className="rounded-xl border shadow-md bg-white focus-visible:outline-none focus-visible:ring-0">
-//               <CommandList>
-//                 <CommandGroup heading="Pick Variable">
-//                   {AVAILABLE_VARIABLES.map((variable) => (
-//                     <CommandItem
-//                       key={variable.id}
-//                       onSelect={() => handleVariableSelect(variable)}
-//                       className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
-//                       onMouseDown={(e) => e.preventDefault()}
-//                     >
-//                       <span className="flex items-center">
-//                         <span>{variable.label}</span>
-//                         {variable.note && (
-//                           <span className="text-gray-400 text-xs ml-1">{variable.note}</span>
-//                         )}
-//                       </span>
-//                     </CommandItem>
-//                   ))}
-//                 </CommandGroup>
-//               </CommandList>
-//             </Command>
-//           </div>
-//         )}
-//       </div>
-//     </div>
-//   )
-// }
-
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
@@ -480,69 +240,22 @@ export default function ReorderAdNameParts({
 
   return (
     <div className="space-y-3">
-      <div className="relative flex items-center gap-2">
-        <div className="relative flex-1">
-          <Input
-            ref={inputRef}
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter custom text or variables."
-            className={cn(
-              "w-full bg-white rounded-xl",
-              variant === "home" && "border border-gray-300 shadow",
-              dateFormatError && "border-red-400 focus-visible:ring-red-400"
-            )}
-          />
-
-          {showDropdown && (
-            <div
-              ref={dropdownRef}
-              className="absolute z-50 w-64"
-              style={{
-                top: `${dropdownPosition.top}px`,
-                left: `${dropdownPosition.left}px`
-              }}
-            >
-              <Command ref={commandInputRef} className="rounded-xl border shadow-md bg-white focus-visible:outline-none focus-visible:ring-0">
-                <CommandList>
-                  <CommandGroup heading="Pick Variable">
-                    {AVAILABLE_VARIABLES.map((variable) => (
-                      <CommandItem
-                        key={variable.id}
-                        onSelect={() => handleVariableSelect(variable)}
-                        className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
-                        onMouseDown={(e) => e.preventDefault()}
-                      >
-                        <span className="flex items-center">
-                          <span>{variable.label}</span>
-                          {variable.note && (
-                            <span className="text-gray-400 text-xs ml-1">{variable.note}</span>
-                          )}
-                        </span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </div>
-          )}
-        </div>
-
+      <div className="flex items-center gap-1.5 text-sm text-gray-500">
+        <span>Type / to see list of variables you can use. You can also save custom text.</span>
         <TooltipProvider delayDuration={200}>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <Info className="w-4 h-4" />
+                <Info className="w-3.5 h-3.5" />
               </button>
             </TooltipTrigger>
             <TooltipContent
               side="top"
-              align="end"
-              className="max-w-xs p-3 text-xs leading-relaxed"
+              align="start"
+              className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl"
             >
               <p className="font-medium mb-1.5">Type / to insert variables</p>
               <p className="text-muted-foreground mb-2">
@@ -568,8 +281,58 @@ export default function ReorderAdNameParts({
         </TooltipProvider>
       </div>
 
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter custom text or variables."
+          className={cn(
+            "w-full bg-white rounded-xl",
+            variant === "home" && "border border-gray-300 shadow",
+            dateFormatError && "border-red-400 focus-visible:ring-red-400"
+          )}
+        />
+
+        {showDropdown && (
+          <div
+            ref={dropdownRef}
+            className="absolute z-50 w-64"
+            style={{
+              top: `${dropdownPosition.top}px`,
+              left: `${dropdownPosition.left}px`
+            }}
+          >
+            <Command ref={commandInputRef} className="rounded-xl border shadow-md bg-white focus-visible:outline-none focus-visible:ring-0">
+              <CommandList>
+                <CommandGroup heading="Pick Variable">
+                  {AVAILABLE_VARIABLES.map((variable) => (
+                    <CommandItem
+                      key={variable.id}
+                      onSelect={() => handleVariableSelect(variable)}
+                      className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
+                      <span className="flex items-center">
+                        <span>{variable.label}</span>
+                        {variable.note && (
+                          <span className="text-gray-400 text-xs ml-1">{variable.note}</span>
+                        )}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </div>
+        )}
+      </div>
+
       {dateFormatError && (
-        <p className="text-red-500 text-xs mt-1">{dateFormatError}</p>
+        <p className="text-red-500 text-xs mt-1">
+          {dateFormatError} — hover on <Info className="w-3 h-3 inline-block align-text-top mx-0.5" /> to see valid formats
+        </p>
       )}
     </div>
   )
