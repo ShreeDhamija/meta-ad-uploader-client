@@ -1,20 +1,20 @@
-
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
-// import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from "@dnd-kit/core"
-// import { arrayMove, SortableContext, useSortable, horizontalListSortingStrategy, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-// import { ChevronsUpDown, GripVertical, Trash2 } from "lucide-react"
+import { Label } from "@/components/ui/label"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const AVAILABLE_VARIABLES = [
   { id: 'fileName', label: 'File Name' },
   { id: 'fileType', label: 'File Type', note: '(Static/Video)' },
-  { id: 'dateMonthYYYY', label: 'Date (MonthYYYY)' },
-  { id: 'dateMonthDDYYYY', label: 'Date (MonthDDYYYY)' },
+  { id: 'dateDefault', label: 'Date', note: '(DD/MM/YYYY)' },
+  { id: 'dateMonthName', label: 'Date', note: '(DD-MMM-YYYY)' },
+  { id: 'dateCustom', label: 'Date (custom)', note: 'Enter your own format' },
   { id: 'iteration', label: 'Iteration', note: '(1/2/3..)' },
   { id: 'slug', label: 'URL Slug', note: '(Text after last / )' },
   { id: 'adType', label: 'Ad Type', note: 'CAR/FLEX' },
@@ -26,8 +26,9 @@ export default function ReorderAdNameParts({
   variant = "default"
 }) {
   const [inputValue, setInputValue] = useState(formulaInput)
-  const [showDropdown, setShowDropdown] = useState(false) // Add this
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 }) // Add this
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+  const [dateFormatError, setDateFormatError] = useState("")
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
   const commandInputRef = useRef(null)
@@ -38,14 +39,12 @@ export default function ReorderAdNameParts({
   }, [formulaInput])
 
   const getCursorPosition = useCallback((input, cursorIndex) => {
-    // Create a temporary span to measure text width
     const span = document.createElement('span')
     span.style.font = window.getComputedStyle(input).font
     span.style.visibility = 'hidden'
     span.style.position = 'absolute'
     span.style.whiteSpace = 'pre'
 
-    // Get text up to cursor position
     const textBeforeCursor = inputValue.substring(0, cursorIndex)
     span.textContent = textBeforeCursor
 
@@ -53,31 +52,78 @@ export default function ReorderAdNameParts({
     const textWidth = span.offsetWidth
     document.body.removeChild(span)
 
-    // Get input's position and padding
     const inputRect = input.getBoundingClientRect()
     const inputStyles = window.getComputedStyle(input)
     const paddingLeft = parseInt(inputStyles.paddingLeft)
 
     return {
-      top: input.offsetHeight + 4, // Position below the input, plus 4px gap
-      left: paddingLeft + textWidth, // Position relative to the input's left edge
+      top: input.offsetHeight + 4,
+      left: paddingLeft + textWidth,
     }
   }, [inputValue])
 
+  const validateDateFormats = useCallback((value) => {
+    const dateMatches = [...value.matchAll(/\{\{Date\(([^)]+)\)\}\}/g)]
 
+    if (dateMatches.length === 0) {
+      setDateFormatError("")
+      return
+    }
+
+    for (const match of dateMatches) {
+      const fmt = match[1].toUpperCase()
+
+      // Skip the "custom" placeholder — handled by fallback at compute time
+      if (fmt === "custom") continue
+
+      // Strip valid tokens (longest first to avoid partial matches)
+      const stripped = fmt
+        .replace(/YYYY/g, '')
+        .replace(/YY/g, '')
+        .replace(/MMM/g, '')
+        .replace(/MM/g, '')
+        .replace(/DD/g, '')
+        .replace(/D/g, '')
+        .replace(/M/g, '')
+
+      // After removing tokens, only separators and spaces should remain
+      const remaining = stripped.replace(/[\s/\-._]/g, '')
+
+      if (remaining.length > 0) {
+        setDateFormatError(`Invalid date token "${remaining}"`)
+        return
+      }
+
+      // Must have at least one valid date token
+      const hasToken = /YYYY|YY|MMM|MM|M|DD|D/.test(fmt)
+      if (!hasToken) {
+        setDateFormatError(`Date format "${fmt}" has no date tokens`)
+        return
+      }
+    }
+
+    setDateFormatError("")
+  }, [])
 
   const handleInputChange = useCallback((e) => {
     const newValue = e.target.value
     const cursorPosition = e.target.selectionStart
 
     setInputValue(newValue)
+    validateDateFormats(newValue)
 
     if (onFormulaChange) {
       onFormulaChange(newValue)
     }
 
-    // Check if user just typed '/'
-    if (newValue[cursorPosition - 1] === '/') {
+    // Check if cursor is inside a {{ }} block
+    const textBefore = newValue.substring(0, cursorPosition)
+    const lastOpen = textBefore.lastIndexOf('{{')
+    const lastClose = textBefore.lastIndexOf('}}')
+    const insideVariable = lastOpen > lastClose
+
+    // Only show dropdown for '/' if NOT inside a variable block
+    if (newValue[cursorPosition - 1] === '/' && !insideVariable) {
       const position = getCursorPosition(e.target, cursorPosition)
       setDropdownPosition(position)
       setShowDropdown(true)
@@ -87,7 +133,7 @@ export default function ReorderAdNameParts({
     } else {
       setShowDropdown(false)
     }
-  }, [getCursorPosition, onFormulaChange]) // Add onFormulaChange to dependencies
+  }, [getCursorPosition, onFormulaChange, validateDateFormats])
 
 
   const handleKeyDown = useCallback((e) => {
@@ -119,8 +165,8 @@ export default function ReorderAdNameParts({
           const newValue = beforeVariable + afterCursor
 
           setInputValue(newValue)
+          validateDateFormats(newValue)
 
-          // Update parent state
           if (onFormulaChange) {
             onFormulaChange(newValue)
           }
@@ -132,7 +178,7 @@ export default function ReorderAdNameParts({
         }
       }
     }
-  }, [inputValue, showDropdown, onFormulaChange])
+  }, [inputValue, showDropdown, onFormulaChange, validateDateFormats])
 
   const handleVariableSelect = useCallback((variable) => {
     const input = inputRef.current
@@ -140,26 +186,30 @@ export default function ReorderAdNameParts({
 
     const cursorPosition = input.selectionStart
 
-    // Find the last "/" before cursor position
     const textBeforeCursor = inputValue.substring(0, cursorPosition)
     const lastSlashIndex = textBeforeCursor.lastIndexOf('/')
 
     if (lastSlashIndex !== -1) {
       const beforeSlash = inputValue.substring(0, lastSlashIndex)
       const afterCursor = inputValue.substring(cursorPosition)
-      const variableText = `{{${variable.label}}}`
+
+      const variableText = (() => {
+        switch (variable.id) {
+          case 'dateDefault': return '{{Date(DD/MM/YYYY)}}'
+          case 'dateMonthName': return '{{Date(DD-MMM-YYYY)}}'
+          case 'dateCustom': return '{{Date(custom)}}'
+          default: return `{{${variable.label}}}`
+        }
+      })()
 
       const newValue = beforeSlash + variableText + afterCursor
       setInputValue(newValue)
+      validateDateFormats(newValue)
 
-
-      // Update parent state
       if (onFormulaChange) {
         onFormulaChange(newValue)
       }
 
-
-      // Position cursor after the inserted variable
       setTimeout(() => {
         const newCursorPos = lastSlashIndex + variableText.length
         input.setSelectionRange(newCursorPos, newCursorPos)
@@ -168,7 +218,7 @@ export default function ReorderAdNameParts({
     }
 
     setShowDropdown(false)
-  }, [inputValue, onFormulaChange]) // Add onFormulaChange to dependencies
+  }, [inputValue, onFormulaChange, validateDateFormats])
 
 
   useEffect(() => {
@@ -176,7 +226,7 @@ export default function ReorderAdNameParts({
       if (showDropdown &&
         inputRef.current &&
         !inputRef.current.contains(event.target) &&
-        dropdownRef.current &&  // Change from commandInputRef to dropdownRef
+        dropdownRef.current &&
         !dropdownRef.current.contains(event.target)) {
         setShowDropdown(false)
       }
@@ -191,22 +241,70 @@ export default function ReorderAdNameParts({
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
+          Type
+          <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-sm text-black">
+            /
+          </span>
+          to see list of variables you can use. You can also save custom text.
+        </Label>
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <Info className="w-3.5 h-3.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent
+              side="top"
+              align="end"
+              className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
+            >
+              <p className="font-medium mb-1.5">Type / to insert variables</p>
+              <p className="text-gray-400 mb-2">
+                Date formats are fully customizable. Tokens:
+              </p>
+              <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
+                <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
+                <span className="font-semibold">DD</span><span className="text-gray-400">Day, zero-padded (01–31)</span>
+                <span className="font-semibold">M</span><span className="text-gray-400">Month (1–12)</span>
+                <span className="font-semibold">MM</span><span className="text-gray-400">Month, zero-padded (01–12)</span>
+                <span className="font-semibold">MMM</span><span className="text-gray-400">Month name (Jan, Feb…)</span>
+                <span className="font-semibold">YY</span><span className="text-gray-400">Year, 2-digit (25)</span>
+                <span className="font-semibold">YYYY</span><span className="text-gray-400">Year, 4-digit (2025)</span>
+              </div>
+              <p className="text-gray-400 mt-2">
+                Use any separator: <span className="font-mono">/ - . _</span> or space
+              </p>
+              <p className="mt-1.5 text-gray-400 italic">
+                {"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
       <div className="relative">
         <Input
           ref={inputRef}
           value={inputValue}
           onChange={handleInputChange}
-          onKeyDown={handleKeyDown}  // This was missing!
+          onKeyDown={handleKeyDown}
           placeholder="Enter custom text or variables."
           className={cn(
             "w-full bg-white rounded-xl",
-            variant === "home" && "border border-gray-300 shadow"
+            variant === "home" && "border border-gray-300 shadow",
+            dateFormatError && "border-red-400 focus-visible:ring-red-400"
           )}
         />
 
         {showDropdown && (
           <div
-            ref={dropdownRef}  // Add this ref to the container
+            ref={dropdownRef}
             className="absolute z-50 w-64"
             style={{
               top: `${dropdownPosition.top}px`,
@@ -237,7 +335,12 @@ export default function ReorderAdNameParts({
           </div>
         )}
       </div>
+
+      {dateFormatError && (
+        <p className="text-red-500 text-xs mt-1">
+          {dateFormatError} — hover on <Info className="w-3 h-3 inline-block align-text-top mx-0.5" /> to see valid formats
+        </p>
+      )}
     </div>
   )
 }
-
