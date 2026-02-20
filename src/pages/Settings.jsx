@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
-import AnalyticsSettings from "@/components/settings/AnalyticsSettings" // NEW IMPORT
+import AnalyticsDashboard from "@/components/settings/AnalyticsDashboard" // NEW IMPORT
 import useSubscription from "@/lib/useSubscriptionSettings"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
@@ -227,7 +227,7 @@ export default function Settings() {
                                         />
                                     )}
                                     {/* NEW: Analytics tab content */}
-                                    {activeTab === "analytics" && <AnalyticsSettings />}
+                                    {activeTab === "analytics" && <AnalyticsDashboard />}
                                     {activeTab === "billing" && <BillingSettings />}
                                     {activeTab === "team" && <TeamSettings />}
 
