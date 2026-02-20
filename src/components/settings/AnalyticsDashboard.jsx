@@ -697,11 +697,11 @@ import {
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
 
-import KPIChart from "./KPIChart"
-import WeeklyChart from "./WeeklyChart"
-import RecommendationCards from "./RecommendationCards"
-import PoorPerformingAds from "./PoorPerformingAds"
-import AnomalyCards from "./AnomalyCards"
+import KPIChart from "./analytics/KPIChart"
+import WeeklyChart from "./analytics/WeeklyChart"
+import RecommendationCards from "./analytics/RecommendationCards"
+import PoorPerformingAds from "./analytics/PoorPerformingAds"
+import AnomalyCards from "./analytics/AnomalyCards"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
