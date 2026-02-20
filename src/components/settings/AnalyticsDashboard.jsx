@@ -1355,6 +1355,48 @@ export default function AnalyticsDashboard() {
                                 </div>
                             </div>
                         </div>
+                        <div className="space-y-4">
+                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                <div className="w-5 h-5 rounded bg-[#4A154B] flex items-center justify-center">
+                                    <Slack className="w-3 h-3 text-white" />
+                                </div>
+                                Slack Alerts
+                            </h3>
+
+                            <div className="pl-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-gray-700">Enable anomaly alerts</p>
+                                        <p className="text-xs text-gray-500">
+                                            Get notified in Slack when CPA spikes or overspend is detected
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        checked={slackAlertsEnabled}
+                                        onCheckedChange={setSlackAlertsEnabled}
+                                    />
+                                </div>
+
+                                {slackAlertsEnabled && !slackConnected && (
+
+                                    <a href={`${API_BASE_URL}/api/slack/install?adAccountId=${selectedAdAccount}`}
+                                        className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl text-sm font-medium text-white transition-colors"
+                                        style={{ backgroundColor: '#4A154B' }}
+                                    >
+                                        <Slack className="w-4 h-4" />
+                                        Connect to Slack
+                                    </a>
+                                )}
+
+                                {slackAlertsEnabled && slackConnected && (
+                                    <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-xl">
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        Connected to Slack
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                     </div>
 
                     <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
