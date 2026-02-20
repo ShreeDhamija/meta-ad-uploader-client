@@ -41,7 +41,10 @@ export default function useAdAccountSettings(adAccountId) {
                         copyTemplates: {},
                         defaultTemplateName: "",
                         creativeEnhancements: {},
-                        adNameFormulaV2: { rawInput: "" } // Add this line
+                        adNameFormulaV2: { rawInput: "" },
+                        anomalyThresholds: { cpaSpike: 50, overspend: 150 },
+                        targetCPA: s.targetCPA || null,
+                        targetROAS: s.targetROAS || null,
 
                     });
                 } else {
@@ -73,8 +76,10 @@ export default function useAdAccountSettings(adAccountId) {
                         defaultTemplateName: s.defaultTemplateName || "" || {},
                         creativeEnhancements: s.creativeEnhancements || {},
                         adNameFormulaV2: s.adNameFormulaV2 || { rawInput: "" },
-                        adsCreatedCount: s.adsCreatedCount || 0  // ADD THIS LINE
-
+                        adsCreatedCount: s.adsCreatedCount || 0,
+                        anomalyThresholds: s.anomalyThresholds || { cpaSpike: 50, overspend: 150 },
+                        targetCPA: s.targetCPA || null,
+                        targetROAS: s.targetROAS || null,
 
 
 
