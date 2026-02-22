@@ -212,10 +212,12 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
         })
     }
 
+    // Lines 215-218, change to:
     useEffect(() => {
-        const selectedAds = ads.filter(ad => selectedAdIds.has(ad.id))
-        onImport(selectedAds)
-    }, [selectedAdIds, ads, onImport])
+        if (isLoading || isSearching) return;
+        const selectedAds = ads.filter(ad => selectedAdIds.has(ad.id));
+        onImport(selectedAds);
+    }, [selectedAdIds, ads, onImport, isLoading, isSearching]);
 
     const loadMore = () => {
         if (nextCursor && !isLoadingMore) {
