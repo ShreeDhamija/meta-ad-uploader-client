@@ -30,6 +30,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
     const renderCount = useRef(0);
     const prevAdAccountId = useRef(adAccountId);
     const prevOnImport = useRef(onImport);
+    const importedAdsRef = useRef(new Map())
 
     useEffect(() => {
         renderCount.current += 1;
@@ -200,22 +201,27 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
         }
     }
 
+
     const toggleAdSelection = (adId) => {
         setSelectedAdIds(prev => {
             const newSet = new Set(prev)
             if (newSet.has(adId)) {
                 newSet.delete(adId)
+                importedAdsRef.current.delete(adId)
             } else {
                 newSet.add(adId)
+                const ad = ads.find(a => a.id === adId)
+                if (ad) importedAdsRef.current.set(adId, ad)
             }
             return newSet
         })
     }
 
+    // Lines 215-218, change to:
     useEffect(() => {
-        const selectedAds = ads.filter(ad => selectedAdIds.has(ad.id))
-        onImport(selectedAds)
-    }, [selectedAdIds, ads, onImport])
+        if (isLoading || isSearching) return
+        onImport(Array.from(importedAdsRef.current.values()))
+    }, [selectedAdIds, onImport, isLoading, isSearching])
 
     const loadMore = () => {
         if (nextCursor && !isLoadingMore) {

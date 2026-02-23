@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
-import AnalyticsSettings from "@/components/settings/AnalyticsSettings" // NEW IMPORT
+import AnalyticsDashboard from "@/components/settings/AnalyticsDashboard" // NEW IMPORT
 import useSubscription from "@/lib/useSubscriptionSettings"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
@@ -22,6 +22,7 @@ import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import DesktopIcon from '@/assets/Desktop.webp';
 import "../settings.css"
+import { toast } from "sonner"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function Settings() {
@@ -108,6 +109,31 @@ export default function Settings() {
             setShowAdAccountPopup(true)
         }
     }, [subscriptionData.planType, selectedAdAccountIds])
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const slackStatus = params.get('slack');
+        const reason = params.get('reason');
+
+        if (slackStatus === 'connected') {
+            toast.success('Slack connected successfully!')
+        } else if (slackStatus === 'error') {
+            const messages = {
+                missing_params: 'Slack connection failed: missing parameters',
+                user_not_found: 'Slack connection failed: user not found',
+                exchange_failed: 'Slack connection failed: could not complete authorization',
+            };
+            toast.error(messages[reason] || `Slack connection failed: ${reason || 'unknown error'}`)
+        }
+
+        // Clean up URL params so it doesn't re-toast on refresh
+        if (slackStatus) {
+            const url = new URL(window.location);
+            url.searchParams.delete('slack');
+            url.searchParams.delete('reason');
+            window.history.replaceState({}, '', url);
+        }
+    }, [])
 
     if (authLoading) return null
     if (!isLoggedIn) return <Navigate to="/login" />
@@ -210,7 +236,7 @@ export default function Settings() {
                 <main className="flex-1 py-6 pr-6">
                     <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
                         <div className="flex-1 overflow-auto">
-                            <div className="w-full max-w-3xl mx-auto p-16">
+                            <div className={cn("w-full mx-auto p-16", activeTab === "analytics" ? "max-w-[80rem]" : "max-w-3xl")}>
                                 <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
                                 <h1 className="text-xl font-semibold mb-1 text-left">
                                     {tabTitleMap[activeTab]}
@@ -227,7 +253,7 @@ export default function Settings() {
                                         />
                                     )}
                                     {/* NEW: Analytics tab content */}
-                                    {activeTab === "analytics" && <AnalyticsSettings />}
+                                    {activeTab === "analytics" && <AnalyticsDashboard />}
                                     {activeTab === "billing" && <BillingSettings />}
                                     {activeTab === "team" && <TeamSettings />}
 
