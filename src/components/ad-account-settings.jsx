@@ -966,7 +966,7 @@ transition-all duration-150 hover:!bg-black
                                           <span className="truncate leading-[1.25]">{adset.name || adset.id}</span>
                                           <span className="flex items-center">
                                             {adset.totalAds != null && (
-                                              <span className="text-xs text-gray-600 mr-1.5">{adset.totalAds}</span>
+                                              <span className="text-xs text-gray-400 mr-1.5">({adset.totalAds} Ads)</span>
                                             )}
                                             {adset.status === "ACTIVE" && (
                                               <span className="ml-0 w-2 h-2 rounded-full bg-green-500" />
