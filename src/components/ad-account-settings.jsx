@@ -964,9 +964,14 @@ transition-all duration-150 hover:!bg-black
                                         </Checkbox>
                                         <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
                                           <span className="truncate leading-[1.25]">{adset.name || adset.id}</span>
-                                          {adset.status === "ACTIVE" && (
-                                            <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
-                                          )}
+                                          <span className="flex items-center">
+                                            {adset.totalAds != null && (
+                                              <span className="text-xs text-gray-600 mr-1.5">{adset.totalAds}</span>
+                                            )}
+                                            {adset.status === "ACTIVE" && (
+                                              <span className="ml-0 w-2 h-2 rounded-full bg-green-500" />
+                                            )}
+                                          </span>
                                         </Label>
                                       </div>
                                     </CommandItem>
