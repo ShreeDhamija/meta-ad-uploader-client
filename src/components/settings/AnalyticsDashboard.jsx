@@ -117,7 +117,7 @@ export default function AnalyticsDashboard() {
         }
     }, [adAccountSettingsLoading, adAccountSettings])
 
-    // ── Check Slack connection (per-user, runs once) ────────
+    // ── Check Slack connection (per-user, runs once) 
     useEffect(() => {
         const checkSlack = async () => {
             try {
@@ -130,7 +130,7 @@ export default function AnalyticsDashboard() {
         checkSlack()
     }, [])
 
-    // ── Derived ─────────────────────────────────────────────
+
     const filteredAdAccounts = useMemo(() => {
         if (!searchValue) return adAccounts || [];
         const lower = searchValue.toLowerCase();
@@ -148,7 +148,7 @@ export default function AnalyticsDashboard() {
     const recsCount = recommendations?.recommendations?.length || 0
     const poorAdsCount = poorAds?.ads?.length || 0
 
-    // ── Auto-detect mode from account info ──────────────────
+    // Auto-detect mode from account info 
     const fetchAccountInfo = useCallback(async (accountId) => {
         try {
             const res = await fetch(
@@ -165,7 +165,7 @@ export default function AnalyticsDashboard() {
         }
     }, [])
 
-    // ── Fetch functions ─────────────────────────────────────
+    // ── Fetch functions
     const fetchRecommendations = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
         const key = `recs-${selectedAdAccount}-${metricMode}`
@@ -760,7 +760,9 @@ export default function AnalyticsDashboard() {
                                         </p>
                                         <a
                                             href={`${API_BASE_URL}/api/analytics/slack/install`}
-                                            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-xl text-sm font-medium text-white transition-colors hover:opacity-90"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center justify-center gap-2 w-full py-4 px-4 rounded-xl text-sm font-medium text-white transition-colors hover:opacity-90"
                                             style={{ backgroundColor: SLACK_PURPLE }}
                                         >
                                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
