@@ -178,7 +178,6 @@ export default function Settings() {
                             {/* Tab Buttons - UPDATED: Added analytics to the array */}
                             <div className="space-y-2">
                                 {["adaccount", ...(import.meta.env.VITE_APP_ENV === "staging" ? ["analytics"] : []), "billing", "team"].map((tab) => {
-                                    {/* {["adaccount", "analytics", "billing", "team"].map((tab) => { */ }
                                     const Icon = tabIconMap[tab];
                                     return (
                                         <button
