@@ -398,6 +398,8 @@ const buildISOString = (date, time) => {
 export default function AdCreationForm({
   isLoading,
   setIsLoading,
+  adAccounts,
+  setAdAccounts,
   pages,
   setPages,
   pagesLoading,
@@ -4288,7 +4290,10 @@ export default function AdCreationForm({
                           {job.selectedAdSets && job.selectedAdSets.length > 0 && job.selectedAdAccount && (
                             <button
                               onClick={() => {
-                                const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?act=${job.selectedAdAccount}&selected_adset_ids=${job.selectedAdSets[0]}`;
+                                // Find the business_id from your ad accounts list
+                                const account = adAccounts.find(a => a.id === job.selectedAdAccount);
+                                const bizId = account?.business_id || '';
+                                const url = `https://adsmanager.facebook.com/adsmanager/manage/ads/edit/standalone?act=${job.selectedAdAccount}&business_id=${bizId}&global_scope_id=${bizId}`;
                                 window.open(url, '_blank');
                               }}
                               className="text-gray-500 hover:text-blue-500 transition-colors"

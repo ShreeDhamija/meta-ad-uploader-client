@@ -595,6 +595,8 @@ export default function Home() {
                         <AdCreationForm
                             isLoading={isLoading}
                             setIsLoading={setIsLoading}
+                            adAccounts={adAccounts}
+                            setAdAccounts={setAdAccounts}
                             pages={pages}
                             setPages={setPages}
                             pagesLoading={pagesLoading}
