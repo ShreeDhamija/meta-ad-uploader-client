@@ -22,6 +22,7 @@ import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import DesktopIcon from '@/assets/Desktop.webp';
 import "../settings.css"
+import { toast } from "sonner"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function Settings() {
@@ -108,6 +109,31 @@ export default function Settings() {
             setShowAdAccountPopup(true)
         }
     }, [subscriptionData.planType, selectedAdAccountIds])
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const slackStatus = params.get('slack');
+        const reason = params.get('reason');
+
+        if (slackStatus === 'connected') {
+            toast.success('Slack connected successfully!')
+        } else if (slackStatus === 'error') {
+            const messages = {
+                missing_params: 'Slack connection failed: missing parameters',
+                user_not_found: 'Slack connection failed: user not found',
+                exchange_failed: 'Slack connection failed: could not complete authorization',
+            };
+            toast.error(messages[reason] || `Slack connection failed: ${reason || 'unknown error'}`)
+        }
+
+        // Clean up URL params so it doesn't re-toast on refresh
+        if (slackStatus) {
+            const url = new URL(window.location);
+            url.searchParams.delete('slack');
+            url.searchParams.delete('reason');
+            window.history.replaceState({}, '', url);
+        }
+    }, [])
 
     if (authLoading) return null
     if (!isLoggedIn) return <Navigate to="/login" />
