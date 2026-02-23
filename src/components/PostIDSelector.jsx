@@ -201,17 +201,7 @@ function PostSelectorInline({ adAccountId, onImport, usePostID, setUsePostID }) 
         }
     }
 
-    // const toggleAdSelection = (adId) => {
-    //     setSelectedAdIds(prev => {
-    //         const newSet = new Set(prev)
-    //         if (newSet.has(adId)) {
-    //             newSet.delete(adId)
-    //         } else {
-    //             newSet.add(adId)
-    //         }
-    //         return newSet
-    //     })
-    // }
+
     const toggleAdSelection = (adId) => {
         setSelectedAdIds(prev => {
             const newSet = new Set(prev)
