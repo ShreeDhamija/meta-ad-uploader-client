@@ -157,8 +157,19 @@
 //             )
 //             const data = await res.json()
 //             if (res.ok && data.suggestedMode) {
-//                 setMetricMode(data.suggestedMode)
-//                 setModeAutoDetected(true)
+//                 try {
+//                     const cached = localStorage.getItem(`blip_metric_mode_${accountId}`)
+//                     if (cached === 'cpr' || cached === 'roas') {
+//                         setMetricMode(cached)
+//                         setModeAutoDetected(false)
+//                     } else {
+//                         setMetricMode(data.suggestedMode)
+//                         setModeAutoDetected(true)
+//                     }
+//                 } catch (e) {
+//                     setMetricMode(data.suggestedMode)
+//                     setModeAutoDetected(true)
+//                 }
 //             }
 //         } catch (err) {
 //             console.error('Account info error:', err)
@@ -299,6 +310,10 @@
 //         setSelectedAdAccount(accountId)
 //         setOpenAdAccount(false)
 //         setModeAutoDetected(false)
+//         try {
+//             const cached = localStorage.getItem(`blip_metric_mode_${accountId}`)
+//             if (cached === 'cpr' || cached === 'roas') setMetricMode(cached)
+//         } catch (e) {}
 //         setRecommendations(null); setAnomalies(null); setPoorAds(null)
 //         setDailyInsights(null); setWeeklyInsights(null)
 //         fetchedRef.current = {}
@@ -353,6 +368,9 @@
 //     const handleModeChange = (mode) => {
 //         setMetricMode(mode)
 //         setModeAutoDetected(false)
+//         if (selectedAdAccount) {
+//             try { localStorage.setItem(`blip_metric_mode_${selectedAdAccount}`, mode) } catch (e) {}
+//         }
 //         setRecommendations(null)
 //         setPoorAds(null)
 //         const prefix = `recs-${selectedAdAccount}`
@@ -635,10 +653,11 @@
 //                                     </strong>
 //                                     <span>
 //                                         compare each campaign/adset's {metricMode === 'cpr' ? 'CPA' : 'ROAS'} against
+//                                         the spend-weighted account average over 3-day windows.
 //                                         {(metricMode === 'cpr' && targetCPA) || (metricMode === 'roas' && targetROAS)
-//                                             ? ' your target KPI (or account average if target is less strict)'
-//                                             : ' the spend-weighted account average'
-//                                         } over 3-day windows.
+//                                             ? ' Your target KPI acts as a safety override — blocking scale recs if still worse than target, and softening reduce/pause if beating target.'
+//                                             : ''
+//                                         }
 //                                     </span>
 //                                 </div>
 
@@ -692,7 +711,7 @@
 //                                 Target KPI
 //                             </h3>
 //                             <p className="text-xs text-gray-500 pl-6">
-//                                 Sets a benchmark for recommendations. If your target is stricter than the account average, recommendations will use the target instead.
+//                                 Acts as a safety override on budget recommendations. Scale recommendations are blocked if the KPI is still &gt;20% worse than your target, and reduce/pause actions are softened if the KPI is &gt;20% better than your target.
 //                             </p>
 //                             <div className="space-y-4 pl-6">
 //                                 <div className="space-y-2">
