@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { toast } from "sonner"
 import Papa from "papaparse";
+import { useAuth } from "@/lib/AuthContext" // <--- Add this
 import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload } from 'lucide-react';
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
@@ -176,6 +177,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [descriptions, setDescriptions] = useState(["", "", "", "", ""])
   const [addDescriptions, setAddDescriptions] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+  const { userEmail } = useAuth() // <--- Add this
+  const allowedEmail = "shree@withblip.com"
   const isEditingDefault = useMemo(() =>
     defaultName === editingTemplate, [defaultName, editingTemplate]
   )
@@ -770,22 +773,35 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         </div>
 
         <div className="flex items-center gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            className="hidden"
-            accept=".csv"
-            onChange={handleImportCsv}
-          />
-          <Button
-            variant="ghost"
-            className="flex items-center text-xs rounded-xl px-3 py-1 bg-white border border-gray-200 text-zinc-800 hover:bg-gray-50"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing}
-          >
-            <Upload className="w-4 h-4 mr-2" />
-            Import CSV
-          </Button>
+
+          {/* RESTRICTED SECTION START */}
+          {userEmail === allowedEmail && (
+            <>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept=".csv"
+                onChange={handleImportCsv}
+              />
+              <Button
+                variant="ghost"
+                className="flex items-center text-xs rounded-xl px-3 py-1 bg-white border border-gray-200 text-zinc-800 hover:bg-gray-50"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <Loader className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                Import CSV
+              </Button>
+            </>
+          )}
+          {/* RESTRICTED SECTION END */}
+
+          {/* This button remains visible to everyone */}
           <Button
             variant="ghost"
             className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
