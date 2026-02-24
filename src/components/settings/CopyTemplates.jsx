@@ -649,32 +649,56 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     );
   };
 
-  const handleImportCsv = useCallback((e) => {
-    const file = e.target.files?.[0]
+
+  const handleImportCsv = useCallback((event) => {
+    const file = event.target.files?.[0]
     if (!file) return
 
     setIsProcessing(true)
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      // FIX: This strips the "Table 1" line if present so headers are read correctly
+      beforeFirstChunk: (chunk) => {
+        return chunk.trim().startsWith("Table 1")
+          ? chunk.substring(chunk.indexOf("\n") + 1)
+          : chunk;
+      },
       complete: async (results) => {
+        console.log("CSV Parse Results:", results); // <--- CHECK CONSOLE IF FAILS
+
+        if (results.data.length === 0) {
+          toast.error("No data found in CSV");
+          setIsProcessing(false);
+          return;
+        }
+
         try {
           const newTemplates = {}
-          let count = 0
+          let successCount = 0
 
+          // Loop through every row found
           for (const row of results.data) {
-            const name = row['Ad Name']?.trim()
+            // Trim keys to avoid issues with "Ad Name " vs "Ad Name"
+            const cleanRow = {};
+            Object.keys(row).forEach(key => {
+              cleanRow[key.trim()] = row[key];
+            });
+
+            const name = cleanRow['Ad Name']?.trim()
             if (!name) continue
 
-            // Helper to extract 1-5 columns
+            // Helper to extract 1-5 columns safely
             const getFields = (prefix) => [1, 2, 3, 4, 5]
-              .map(i => row[`${prefix} ${i}`])
-              .filter(t => t && t.trim())
+              .map(i => cleanRow[`${prefix} ${i}`])
+              .filter(t => t && t.trim().length > 0)
 
             const pTexts = getFields('Primary Text')
             const hLines = getFields('Headline')
             const descs = getFields('Description')
 
+            // Skip if row has no content
             if (pTexts.length === 0 && hLines.length === 0) continue
 
             const templateData = {
@@ -685,31 +709,41 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               addDescriptions: descs.length > 0
             }
 
-            // Save to API
+            // 1. SAVE TO DB (API CALL)
+            // We await this so if it fails, we know. 
             await saveCopyTemplate(selectedAdAccount, name, templateData, false)
+
+            // 2. Add to batch for local state
             newTemplates[name] = templateData
-            count++
+            successCount++
           }
 
-          // Update State
-          setAdSettings(prev => ({
-            ...prev,
-            copyTemplates: { ...prev.copyTemplates, ...newTemplates }
-          }))
+          if (successCount === 0) {
+            toast.warning("Found rows but could not map columns. Check CSV headers.")
+            console.warn("Row mapping failed. Available keys:", Object.keys(results.data[0] || {}));
+          } else {
+            // Update Parent State
+            setAdSettings(prev => ({
+              ...prev,
+              copyTemplates: { ...prev.copyTemplates, ...newTemplates }
+            }))
 
-          dispatch({
-            type: "SET_ALL",
-            payload: {
-              templates: { ...templates, ...newTemplates },
-              defaultName: defaultName
-            }
-          })
+            // Update Local State
+            dispatch({
+              type: "SET_ALL",
+              payload: {
+                templates: { ...templates, ...newTemplates },
+                defaultName: defaultName
+              }
+            })
 
-          onTemplateUpdate()
-          toast.success(`Imported ${count} templates`)
+            onTemplateUpdate()
+            toast.success(`Successfully saved ${successCount} templates`)
+          }
+
         } catch (err) {
-          console.error(err)
-          toast.error("Failed to import CSV")
+          console.error("Import Error:", err)
+          toast.error("Failed to save imported templates")
         } finally {
           setIsProcessing(false)
           if (fileInputRef.current) fileInputRef.current.value = ''
