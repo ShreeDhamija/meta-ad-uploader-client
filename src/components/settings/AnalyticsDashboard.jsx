@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
@@ -86,6 +87,8 @@ export default function AnalyticsDashboard() {
 
     // Track what we've already fetched for this account+mode combo
     const fetchedRef = useRef({})
+    const modeCache = useRef({})
+
 
     // ── Ad account settings hook ────────────────────────────
     const { settings: adAccountSettings, loading: adAccountSettingsLoading } = useAdAccountSettings(selectedAdAccount)
@@ -150,6 +153,23 @@ export default function AnalyticsDashboard() {
     const poorAdsCount = poorAds?.ads?.length || 0
 
     // Auto-detect mode from account info 
+    // const fetchAccountInfo = useCallback(async (accountId) => {
+    //     try {
+    //         const res = await fetch(
+    //             `${API_BASE_URL}/api/analytics/account-info?adAccountId=${accountId}`,
+    //             { credentials: 'include' }
+    //         )
+    //         const data = await res.json()
+    //         if (res.ok && data.suggestedMode) {
+    //             setMetricMode(data.suggestedMode)
+    //             setModeAutoDetected(true)
+    //         }
+    //     } catch (err) {
+    //         console.error('Account info error:', err)
+    //     }
+    // }, [])
+
+    // Auto-detect mode from account info 
     const fetchAccountInfo = useCallback(async (accountId) => {
         try {
             const res = await fetch(
@@ -157,14 +177,16 @@ export default function AnalyticsDashboard() {
                 { credentials: 'include' }
             )
             const data = await res.json()
+
+            // NEW: Only auto-set if the user hasn't manually selected a mode for this account yet
+            if (modeCache.current[accountId]) return;
+
             if (res.ok && data.suggestedMode) {
                 setMetricMode(data.suggestedMode)
                 setModeAutoDetected(true)
             }
         } catch (err) {
-            // console.error('Account info error:', err)
-            setMetricMode(data.suggestedMode)
-            setModeAutoDetected(true)
+            console.error('Account info error:', err)
         }
     }, [])
 
@@ -277,17 +299,6 @@ export default function AnalyticsDashboard() {
             setSelectedAdAccount(adAccounts[0].id)
         }
     }, [adAccountsLoading, adAccounts, selectedAdAccount])
-    //     // Restore cached metric mode when account changes
-    useEffect(() => {
-        if (!selectedAdAccount) return
-        try {
-            const cached = localStorage.getItem(`blip_metric_mode_${selectedAdAccount}`)
-            if (cached === 'cpr' || cached === 'roas') {
-                setMetricMode(cached)
-                setModeAutoDetected(false)
-            }
-        } catch (e) { }
-    }, [selectedAdAccount])
 
     useEffect(() => {
         if (selectedAdAccount) {
@@ -309,10 +320,28 @@ export default function AnalyticsDashboard() {
     }, [chartDays, fetchDailyInsights])
 
     // ── Handlers ────────────────────────────────────────────
+    // const handleAdAccountSelect = (accountId) => {
+    //     setSelectedAdAccount(accountId)
+    //     setOpenAdAccount(false)
+    //     setModeAutoDetected(false)
+    //     setRecommendations(null); setAnomalies(null); setPoorAds(null)
+    //     setDailyInsights(null); setWeeklyInsights(null)
+    //     fetchedRef.current = {}
+    // }
+
     const handleAdAccountSelect = (accountId) => {
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
-        setModeAutoDetected(false)
+
+        // NEW: Restore cached mode for this account, or default to 'cpr'
+        if (modeCache.current[accountId]) {
+            setMetricMode(modeCache.current[accountId])
+            setModeAutoDetected(false)
+        } else {
+            setMetricMode("cpr")
+            setModeAutoDetected(false)
+        }
+
         setRecommendations(null); setAnomalies(null); setPoorAds(null)
         setDailyInsights(null); setWeeklyInsights(null)
         fetchedRef.current = {}
@@ -370,8 +399,26 @@ export default function AnalyticsDashboard() {
         }
     }
 
+    // const handleModeChange = (mode) => {
+    //     setMetricMode(mode)
+    //     setModeAutoDetected(false)
+    //     setRecommendations(null)
+    //     setPoorAds(null)
+    //     const prefix = `recs-${selectedAdAccount}`
+    //     const poorPrefix = `poor-${selectedAdAccount}`
+    //     Object.keys(fetchedRef.current).forEach(k => {
+    //         if (k.startsWith(prefix) || k.startsWith(poorPrefix)) delete fetchedRef.current[k]
+    //     })
+    // }
+
     const handleModeChange = (mode) => {
         setMetricMode(mode)
+
+        // NEW: Save preference to cache
+        if (selectedAdAccount) {
+            modeCache.current[selectedAdAccount] = mode
+        }
+
         setModeAutoDetected(false)
         setRecommendations(null)
         setPoorAds(null)
