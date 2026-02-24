@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -54,6 +54,30 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
 
         return { chartData, campaigns, avgValue }
     }, [data, mode])
+
+    const [hiddenCampaigns, setHiddenCampaigns] = useState(new Set())
+
+    const handleLegendClick = useCallback((entry) => {
+        setHiddenCampaigns(prev => {
+            const next = new Set(prev)
+            if (next.has(entry.value)) next.delete(entry.value)
+            else next.add(entry.value)
+            return next
+        })
+    }, [])
+
+    // Recalculate average for visible campaigns only (Y-axis normalizes automatically via hide prop)
+    const visibleAvg = useMemo(() => {
+        if (!data?.dailyInsights?.length || campaigns.length === 0) return avgValue
+        if (hiddenCampaigns.size === 0) return avgValue
+        const metric = mode === 'roas' ? 'roas' : 'cpa'
+        let sum = 0, count = 0
+        for (const row of data.dailyInsights) {
+            if (hiddenCampaigns.has(row.campaignName)) continue
+            if (row[metric] !== null && row[metric] !== undefined) { sum += row[metric]; count++ }
+        }
+        return count > 0 ? sum / count : 0
+    }, [data, mode, hiddenCampaigns, campaigns, avgValue])
 
     const metricLabel = mode === 'roas' ? 'ROAS' : 'CPA'
     const formatValue = mode === 'roas'
@@ -126,14 +150,14 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                                 formatter={(value, name) => [formatValue(value), name]}
                                 labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                             />
-                            {avgValue > 0 && (
+                            {visibleAvg > 0 && (
                                 <ReferenceLine
-                                    y={avgValue}
+                                    y={visibleAvg}
                                     stroke="#9ca3af"
                                     strokeDasharray="6 4"
                                     strokeWidth={1.5}
                                     label={{
-                                        value: `Avg: ${formatValue(avgValue)}`,
+                                        value: `Avg: ${formatValue(visibleAvg)}`,
                                         position: 'right',
                                         fill: '#9ca3af',
                                         fontSize: 10,
@@ -150,12 +174,23 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                                     dot={false}
                                     activeDot={{ r: 4, strokeWidth: 0 }}
                                     connectNulls
+                                    hide={hiddenCampaigns.has(name)}
                                 />
                             ))}
                             <Legend
                                 wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }}
                                 iconType="plainline"
                                 iconSize={16}
+                                onClick={handleLegendClick}
+                                formatter={(value) => (
+                                    <span style={{
+                                        color: hiddenCampaigns.has(value) ? '#d1d5db' : undefined,
+                                        textDecoration: hiddenCampaigns.has(value) ? 'line-through' : undefined,
+                                        cursor: 'pointer',
+                                    }}>
+                                        {value}
+                                    </span>
+                                )}
                             />
                         </LineChart>
                     </ResponsiveContainer>

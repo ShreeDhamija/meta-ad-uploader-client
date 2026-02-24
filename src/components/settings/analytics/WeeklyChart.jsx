@@ -99,7 +99,6 @@ export default function WeeklyChart({ data, loading }) {
                             <Line
                                 yAxisId="freq" type="monotone" dataKey="frequency" name="Frequency"
                                 stroke="#a855f7" strokeWidth={2} dot={false}
-                                strokeDasharray="6 3"
                                 activeDot={{ r: 4, strokeWidth: 0, fill: '#a855f7' }}
                                 connectNulls
                             />

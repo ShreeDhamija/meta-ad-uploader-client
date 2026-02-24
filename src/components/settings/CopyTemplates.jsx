@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { toast } from "sonner"
-import { CirclePlus, CircleCheck, Trash2, Download, X, Loader } from 'lucide-react'
+import Papa from "papaparse";
+import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload } from 'lucide-react';
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
 import TextareaAutosize from 'react-textarea-autosize'
@@ -167,6 +168,7 @@ function reducer(state, action) {
 export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSettings, onTemplateUpdate }) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const justSavedRef = useRef(false)
+  const fileInputRef = useRef(null)
   const { templates, defaultName, selectedName, editingTemplate } = state
   const [templateName, setTemplateName] = useState("")
   const [primaryTexts, setPrimaryTexts] = useState(["", "", "", "", ""])
@@ -218,6 +220,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
   // const blocker = useBlocker(() => templateChanged);
   const blocker = useBlocker(templateChanged);
+
+
 
 
   useEffect(() => {
@@ -645,6 +649,75 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     );
   };
 
+  const handleImportCsv = useCallback((e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsProcessing(true)
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        try {
+          const newTemplates = {}
+          let count = 0
+
+          for (const row of results.data) {
+            const name = row['Ad Name']?.trim()
+            if (!name) continue
+
+            // Helper to extract 1-5 columns
+            const getFields = (prefix) => [1, 2, 3, 4, 5]
+              .map(i => row[`${prefix} ${i}`])
+              .filter(t => t && t.trim())
+
+            const pTexts = getFields('Primary Text')
+            const hLines = getFields('Headline')
+            const descs = getFields('Description')
+
+            if (pTexts.length === 0 && hLines.length === 0) continue
+
+            const templateData = {
+              name,
+              primaryTexts: pTexts,
+              headlines: hLines,
+              descriptions: descs,
+              addDescriptions: descs.length > 0
+            }
+
+            // Save to API
+            await saveCopyTemplate(selectedAdAccount, name, templateData, false)
+            newTemplates[name] = templateData
+            count++
+          }
+
+          // Update State
+          setAdSettings(prev => ({
+            ...prev,
+            copyTemplates: { ...prev.copyTemplates, ...newTemplates }
+          }))
+
+          dispatch({
+            type: "SET_ALL",
+            payload: {
+              templates: { ...templates, ...newTemplates },
+              defaultName: defaultName
+            }
+          })
+
+          onTemplateUpdate()
+          toast.success(`Imported ${count} templates`)
+        } catch (err) {
+          console.error(err)
+          toast.error("Failed to import CSV")
+        } finally {
+          setIsProcessing(false)
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        }
+      }
+    })
+  }, [selectedAdAccount, templates, defaultName, onTemplateUpdate, setAdSettings])
+
   return (
     <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
       <div className="flex items-start justify-between mb-6">
@@ -661,13 +734,30 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             Then save as a template to easily add to your ads in the future
           </p>
         </div>
-        <div className="flex items-center">
+
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".csv"
+            onChange={handleImportCsv}
+          />
+          <Button
+            variant="ghost"
+            className="flex items-center text-xs rounded-xl px-3 py-1 bg-white border border-gray-200 text-zinc-800 hover:bg-gray-50"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Import CSV
+          </Button>
           <Button
             variant="ghost"
             className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
             onClick={() => setShowImportPopup(true)}
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-4 h-4 mr-2" />
             Auto Import Copy Variants
           </Button>
         </div>
