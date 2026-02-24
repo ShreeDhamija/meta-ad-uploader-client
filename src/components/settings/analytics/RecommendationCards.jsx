@@ -216,9 +216,9 @@ export default function RecommendationCards({ data, loading, mode, adAccountId, 
                                                     <p className="font-medium text-gray-900 truncate">
                                                         {rec.type === 'scale_winner' ? rec.adName : (rec.adsetName || rec.campaignName)}
                                                     </p>
-                                                    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 rounded-full", cfg.badgeBg)}>
+                                                    {/* <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 rounded-full", cfg.badgeBg)}>
                                                         {cfg.label}
-                                                    </Badge>
+                                                    </Badge> */}
                                                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-gray-100 text-gray-500 border-gray-200">
                                                         {rec.level}
                                                     </Badge>
@@ -295,13 +295,6 @@ export default function RecommendationCards({ data, loading, mode, adAccountId, 
                                         {/* Action buttons */}
                                         <div className="flex items-center gap-2 flex-shrink-0">
                                             <Button
-                                                variant="ghost" size="sm"
-                                                onClick={() => handleDismiss(rec)}
-                                                className="text-gray-400 hover:text-gray-600 h-8 w-8 p-0"
-                                            >
-                                                <XCircle className="w-4 h-4" />
-                                            </Button>
-                                            <Button
                                                 size="sm"
                                                 onClick={() => rec.type === 'pause'
                                                     ? setConfirmDialog({ rec, action: 'pause' })
@@ -313,8 +306,16 @@ export default function RecommendationCards({ data, loading, mode, adAccountId, 
                                                 {applying ? (
                                                     <Loader2 className="w-4 h-4 animate-spin" />
                                                 ) : (
-                                                    rec.type === 'pause' ? 'Pause' : 'Apply'
+                                                    cfg.label
+
                                                 )}
+                                            </Button>
+                                            <Button
+                                                variant="ghost" size="sm"
+                                                onClick={() => handleDismiss(rec)}
+                                                className="text-gray-400 hover:text-gray-600 h-8 w-8 p-0"
+                                            >
+                                                <XCircle className="w-4 h-4" />
                                             </Button>
                                         </div>
                                     </div>
