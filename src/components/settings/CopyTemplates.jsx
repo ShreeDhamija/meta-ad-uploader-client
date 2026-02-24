@@ -178,7 +178,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [addDescriptions, setAddDescriptions] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const { userEmail } = useAuth() // <--- Add this
-  const allowedEmail = "shree@withblip.com"
+  const allowedEmail = "jb@anglercofishing.com"
   const isEditingDefault = useMemo(() =>
     defaultName === editingTemplate, [defaultName, editingTemplate]
   )
@@ -669,7 +669,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           : chunk;
       },
       complete: async (results) => {
-        console.log("CSV Parse Results:", results); // <--- CHECK CONSOLE IF FAILS
 
         if (results.data.length === 0) {
           toast.error("No data found in CSV");
