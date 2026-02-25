@@ -467,6 +467,31 @@ export default function MetaMediaLibraryModal({
     const [igVideos, setIgVideos] = useState([]);
     const [loadingIg, setLoadingIg] = useState(false);
     const [selectedIgPosts, setSelectedIgPosts] = useState([]);
+    // Pagination state
+    const [metaImagesPagination, setMetaImagesPagination] = useState({ hasMore: false, nextCursor: null });
+    const [metaVideosPagination, setMetaVideosPagination] = useState({ hasMore: false, nextCursor: null });
+    const [igPagination, setIgPagination] = useState({ hasMore: false, nextCursor: null });
+    const [loadingMoreMetaImages, setLoadingMoreMetaImages] = useState(false);
+    const [loadingMoreMetaVideos, setLoadingMoreMetaVideos] = useState(false);
+    const [loadingMoreIg, setLoadingMoreIg] = useState(false);
+
+    const mapMetaImages = (rawImages) => rawImages.map(img => ({
+        type: 'image',
+        hash: img.hash,
+        name: img.name,
+        width: img.width,
+        height: img.height,
+        previewUrl: img.url,
+    }));
+
+    const mapMetaVideos = (rawVideos) => rawVideos.map(vid => ({
+        type: 'video',
+        id: vid.id,
+        name: vid.title || `Video ${vid.id}`,
+        width: vid.width,
+        height: vid.height,
+        previewUrl: vid.thumbnail_url,
+    }));
 
     const fetchMetaLibrary = useCallback(async () => {
         if (!adAccountId) return;
@@ -476,29 +501,15 @@ export default function MetaMediaLibraryModal({
                 params: { adAccountId },
                 withCredentials: true,
             });
-            const rawImages = imgRes.data?.data || [];
-            setMetaImages(rawImages.map(img => ({
-                type: 'image',
-                hash: img.hash,
-                name: img.name,
-                width: img.width,
-                height: img.height,
-                previewUrl: img.url,
-            })));
+            setMetaImages(mapMetaImages(imgRes.data?.data || []));
+            setMetaImagesPagination(imgRes.data?.pagination || { hasMore: false, nextCursor: null });
 
             const vidRes = await axios.get(`${API_BASE_URL}/auth/library-videos`, {
                 params: { adAccountId },
                 withCredentials: true,
             });
-            const rawVideos = vidRes.data?.data || [];
-            setMetaVideos(rawVideos.map(vid => ({
-                type: 'video',
-                id: vid.id,
-                name: vid.title || `Video ${vid.id}`,
-                width: vid.width,
-                height: vid.height,
-                previewUrl: vid.thumbnail_url,
-            })));
+            setMetaVideos(mapMetaVideos(vidRes.data?.data || []));
+            setMetaVideosPagination(vidRes.data?.pagination || { hasMore: false, nextCursor: null });
         } catch (err) {
             console.error('Error fetching Meta library:', err);
             toast.error('Failed to load Meta media library');
@@ -506,6 +517,42 @@ export default function MetaMediaLibraryModal({
             setLoadingMeta(false);
         }
     }, [adAccountId]);
+
+    const loadMoreMetaImages = useCallback(async () => {
+        if (!metaImagesPagination.nextCursor) return;
+        setLoadingMoreMetaImages(true);
+        try {
+            const res = await axios.get(`${API_BASE_URL}/auth/library-images`, {
+                params: { adAccountId, after: metaImagesPagination.nextCursor },
+                withCredentials: true,
+            });
+            setMetaImages(prev => [...prev, ...mapMetaImages(res.data?.data || [])]);
+            setMetaImagesPagination(res.data?.pagination || { hasMore: false, nextCursor: null });
+        } catch (err) {
+            console.error('Error loading more images:', err);
+            toast.error('Failed to load more images');
+        } finally {
+            setLoadingMoreMetaImages(false);
+        }
+    }, [adAccountId, metaImagesPagination.nextCursor]);
+
+    const loadMoreMetaVideos = useCallback(async () => {
+        if (!metaVideosPagination.nextCursor) return;
+        setLoadingMoreMetaVideos(true);
+        try {
+            const res = await axios.get(`${API_BASE_URL}/auth/library-videos`, {
+                params: { adAccountId, after: metaVideosPagination.nextCursor },
+                withCredentials: true,
+            });
+            setMetaVideos(prev => [...prev, ...mapMetaVideos(res.data?.data || [])]);
+            setMetaVideosPagination(res.data?.pagination || { hasMore: false, nextCursor: null });
+        } catch (err) {
+            console.error('Error loading more videos:', err);
+            toast.error('Failed to load more videos');
+        } finally {
+            setLoadingMoreMetaVideos(false);
+        }
+    }, [adAccountId, metaVideosPagination.nextCursor]);
 
     const fetchInstagramPosts = useCallback(async () => {
         if (!instagramAccountId) {
@@ -521,6 +568,7 @@ export default function MetaMediaLibraryModal({
             });
             setIgImages(res.data?.images || []);
             setIgVideos(res.data?.videos || []);
+            setIgPagination(res.data?.pagination || { hasMore: false, nextCursor: null });
         } catch (err) {
             console.error('Error fetching IG posts:', err);
             toast.error(err.response?.data?.error || 'Failed to load Instagram posts');
@@ -528,6 +576,25 @@ export default function MetaMediaLibraryModal({
             setLoadingIg(false);
         }
     }, [instagramAccountId]);
+
+    const loadMoreIg = useCallback(async () => {
+        if (!igPagination.nextCursor) return;
+        setLoadingMoreIg(true);
+        try {
+            const res = await axios.get(`${API_BASE_URL}/auth/instagram-media`, {
+                params: { igUserId: instagramAccountId, after: igPagination.nextCursor },
+                withCredentials: true,
+            });
+            setIgImages(prev => [...prev, ...(res.data?.images || [])]);
+            setIgVideos(prev => [...prev, ...(res.data?.videos || [])]);
+            setIgPagination(res.data?.pagination || { hasMore: false, nextCursor: null });
+        } catch (err) {
+            console.error('Error loading more IG posts:', err);
+            toast.error('Failed to load more Instagram posts');
+        } finally {
+            setLoadingMoreIg(false);
+        }
+    }, [instagramAccountId, igPagination.nextCursor]);
 
     const openModal = () => {
         setIsOpen(true);
@@ -749,6 +816,35 @@ export default function MetaMediaLibraryModal({
                                         );
                                     })}
                                 </div>
+                                {/* Load More for images */}
+                                {mediaSource === 'meta_library' && metaImagesPagination.hasMore && (
+                                    <div className="flex justify-center pt-4">
+                                        <Button
+                                            type="button"
+                                            onClick={loadMoreMetaImages}
+                                            disabled={loadingMoreMetaImages}
+                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                                        >
+                                            {loadingMoreMetaImages ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
+                                            ) : "Load More"}
+                                        </Button>
+                                    </div>
+                                )}
+                                {mediaSource === 'instagram' && igPagination.hasMore && (
+                                    <div className="flex justify-center pt-4">
+                                        <Button
+                                            type="button"
+                                            onClick={loadMoreIg}
+                                            disabled={loadingMoreIg}
+                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                                        >
+                                            {loadingMoreIg ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
+                                            ) : "Load More"}
+                                        </Button>
+                                    </div>
+                                )}
                             </ScrollArea>
                         )}
                     </TabsContent>
@@ -808,6 +904,35 @@ export default function MetaMediaLibraryModal({
                                         );
                                     })}
                                 </div>
+                                {/* Load More for videos */}
+                                {mediaSource === 'meta_library' && metaVideosPagination.hasMore && (
+                                    <div className="flex justify-center pt-4">
+                                        <Button
+                                            type="button"
+                                            onClick={loadMoreMetaVideos}
+                                            disabled={loadingMoreMetaVideos}
+                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                                        >
+                                            {loadingMoreMetaVideos ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
+                                            ) : "Load More"}
+                                        </Button>
+                                    </div>
+                                )}
+                                {mediaSource === 'instagram' && igPagination.hasMore && (
+                                    <div className="flex justify-center pt-4">
+                                        <Button
+                                            type="button"
+                                            onClick={loadMoreIg}
+                                            disabled={loadingMoreIg}
+                                            className="w-full rounded-xl bg-zinc-700 text-white hover:bg-zinc-800 hover:text-white"
+                                        >
+                                            {loadingMoreIg ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Loading...</>
+                                            ) : "Load More"}
+                                        </Button>
+                                    </div>
+                                )}
                             </ScrollArea>
                         )}
                     </TabsContent>
