@@ -432,7 +432,7 @@ import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
 import { Loader2, Image as ImageIcon, Video, FolderOpen } from "lucide-react";
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function MetaMediaLibraryModal({
     adAccountId,
