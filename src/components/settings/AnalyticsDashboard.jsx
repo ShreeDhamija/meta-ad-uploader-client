@@ -152,22 +152,6 @@ export default function AnalyticsDashboard() {
     const recsCount = recommendations?.recommendations?.length || 0
     const poorAdsCount = poorAds?.ads?.length || 0
 
-    // Auto-detect mode from account info 
-    // const fetchAccountInfo = useCallback(async (accountId) => {
-    //     try {
-    //         const res = await fetch(
-    //             `${API_BASE_URL}/api/analytics/account-info?adAccountId=${accountId}`,
-    //             { credentials: 'include' }
-    //         )
-    //         const data = await res.json()
-    //         if (res.ok && data.suggestedMode) {
-    //             setMetricMode(data.suggestedMode)
-    //             setModeAutoDetected(true)
-    //         }
-    //     } catch (err) {
-    //         console.error('Account info error:', err)
-    //     }
-    // }, [])
 
     // Auto-detect mode from account info 
     const fetchAccountInfo = useCallback(async (accountId) => {
@@ -319,15 +303,7 @@ export default function AnalyticsDashboard() {
         if (selectedAdAccount) fetchDailyInsights()
     }, [chartDays, fetchDailyInsights])
 
-    // ── Handlers ────────────────────────────────────────────
-    // const handleAdAccountSelect = (accountId) => {
-    //     setSelectedAdAccount(accountId)
-    //     setOpenAdAccount(false)
-    //     setModeAutoDetected(false)
-    //     setRecommendations(null); setAnomalies(null); setPoorAds(null)
-    //     setDailyInsights(null); setWeeklyInsights(null)
-    //     fetchedRef.current = {}
-    // }
+
 
     const handleAdAccountSelect = (accountId) => {
         setSelectedAdAccount(accountId)
@@ -399,17 +375,7 @@ export default function AnalyticsDashboard() {
         }
     }
 
-    // const handleModeChange = (mode) => {
-    //     setMetricMode(mode)
-    //     setModeAutoDetected(false)
-    //     setRecommendations(null)
-    //     setPoorAds(null)
-    //     const prefix = `recs-${selectedAdAccount}`
-    //     const poorPrefix = `poor-${selectedAdAccount}`
-    //     Object.keys(fetchedRef.current).forEach(k => {
-    //         if (k.startsWith(prefix) || k.startsWith(poorPrefix)) delete fetchedRef.current[k]
-    //     })
-    // }
+
 
     const handleModeChange = (mode) => {
         setMetricMode(mode)
@@ -572,9 +538,9 @@ export default function AnalyticsDashboard() {
                         className="rounded-2xl h-11 px-4"
                     >
                         <Settings2 className="w-4 h-4 mr-2" />
-                        Settings
+                        Budget and Anomaly Preferences
                     </Button>
-                    <Button
+                    {/* <Button
                         variant="outline" size="sm"
                         onClick={handleRefresh}
                         disabled={isAnyLoading}
@@ -582,7 +548,7 @@ export default function AnalyticsDashboard() {
                     >
                         <RefreshCw className={cn("w-4 h-4 mr-2", isAnyLoading && "animate-spin")} />
                         Refresh
-                    </Button>
+                    </Button> */}
                 </div>
             </div>
 
@@ -669,6 +635,7 @@ export default function AnalyticsDashboard() {
                     loading={recsLoading}
                     mode={metricMode}
                     adAccountId={selectedAdAccount}
+                    adAccounts={adAccounts}          // ← ADD THIS
                     onApplied={() => fetchRecommendations(true)}
                 />
             )}
