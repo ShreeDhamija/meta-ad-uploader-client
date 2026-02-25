@@ -428,33 +428,11 @@
 //     );
 // }
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import axios from 'axios';
-import { toast } from 'react-toastify'; // adjust if you use a different toast lib
+import { toast } from 'react-toastify';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
-
-/**
- * MetaMediaLibraryModal
- *
- * Usage in parent:
- * <MetaMediaLibraryModal
- *   adAccountId={selectedAdAccount}
- *   isLoggedIn={isLoggedIn}
- *   importedFiles={importedFiles}
- *   setImportedFiles={setImportedFiles}
- *   instagramAccountId={instagramAccountId}
- *   selectedIgOrganicPosts={selectedIgOrganicPosts}
- *   setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
- * />
- *
- * importedFiles shape (Meta Library):
- *   { type: 'image', hash, name, width, height, previewUrl }
- *   { type: 'video', id, name, width, height, previewUrl }
- *
- * selectedIgOrganicPosts shape (IG Posts):
- *   { source_instagram_media_id, ad_name, caption, media_type, previewUrl, permalink }
- */
 
 export default function MetaMediaLibraryModal({
     adAccountId,
@@ -465,42 +443,30 @@ export default function MetaMediaLibraryModal({
     selectedIgOrganicPosts = [],
     setSelectedIgOrganicPosts = () => { },
 }) {
-    // ─── Modal visibility ────────────────────────────────────────────
     const [isOpen, setIsOpen] = useState(false);
-
-    // ─── Source switcher: 'meta_library' | 'instagram' ───────────────
     const [mediaSource, setMediaSource] = useState('meta_library');
-
-    // ─── Tab: 'images' | 'videos' ───────────────────────────────────
     const [activeTab, setActiveTab] = useState('images');
 
-    // ─── Meta Media Library state ────────────────────────────────────
     const [metaImages, setMetaImages] = useState([]);
     const [metaVideos, setMetaVideos] = useState([]);
     const [loadingMeta, setLoadingMeta] = useState(false);
-    const [selectedMetaFiles, setSelectedMetaFiles] = useState([]); // working selection inside modal
+    const [selectedMetaFiles, setSelectedMetaFiles] = useState([]);
 
-    // ─── Instagram Posts state ───────────────────────────────────────
     const [igImages, setIgImages] = useState([]);
     const [igVideos, setIgVideos] = useState([]);
     const [loadingIg, setLoadingIg] = useState(false);
-    const [selectedIgPosts, setSelectedIgPosts] = useState([]); // working selection inside modal
+    const [selectedIgPosts, setSelectedIgPosts] = useState([]);
 
-    // ─────────────────────────────────────────────────────────────────
-    //  FETCH: Meta Media Library
-    // ─────────────────────────────────────────────────────────────────
     const fetchMetaLibrary = useCallback(async () => {
         if (!adAccountId) return;
         setLoadingMeta(true);
         try {
-            // Fetch images
             const imgRes = await axios.get(`${API_BASE_URL}/auth/library-images`, {
                 params: { adAccountId },
                 withCredentials: true,
             });
             setMetaImages(imgRes.data?.images || imgRes.data || []);
 
-            // Fetch videos
             const vidRes = await axios.get(`${API_BASE_URL}/auth/library-videos`, {
                 params: { adAccountId },
                 withCredentials: true,
@@ -514,9 +480,6 @@ export default function MetaMediaLibraryModal({
         }
     }, [adAccountId]);
 
-    // ─────────────────────────────────────────────────────────────────
-    //  FETCH: Instagram Posts
-    // ─────────────────────────────────────────────────────────────────
     const fetchInstagramPosts = useCallback(async () => {
         if (!instagramAccountId) {
             toast.error('Please select an Instagram account first');
@@ -539,14 +502,10 @@ export default function MetaMediaLibraryModal({
         }
     }, [instagramAccountId]);
 
-    // ─────────────────────────────────────────────────────────────────
-    //  Open modal → auto-fetch current source
-    // ─────────────────────────────────────────────────────────────────
     const openModal = () => {
         setIsOpen(true);
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
-
         if (mediaSource === 'meta_library') {
             fetchMetaLibrary();
         } else {
@@ -554,12 +513,9 @@ export default function MetaMediaLibraryModal({
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────
-    //  Source switcher handler
-    // ─────────────────────────────────────────────────────────────────
     const handleSourceChange = (source) => {
         setMediaSource(source);
-        setActiveTab('images'); // reset tab on switch
+        setActiveTab('images');
         setSelectedMetaFiles([]);
         setSelectedIgPosts([]);
 
@@ -579,180 +535,67 @@ export default function MetaMediaLibraryModal({
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────
-    //  Selection helpers — Meta Library
-    // ─────────────────────────────────────────────────────────────────
     const getMetaFileId = (file) => (file.type === 'image' ? file.hash : file.id);
 
     const isMetaSelected = (file) =>
         selectedMetaFiles.some((f) => getMetaFileId(f) === getMetaFileId(file));
 
     const toggleMetaFile = (file) => {
-        setSelectedMetaFiles((prev) => {
-            if (prev.some((f) => getMetaFileId(f) === getMetaFileId(file))) {
-                return prev.filter((f) => getMetaFileId(f) !== getMetaFileId(file));
-            }
-            return [...prev, file];
-        });
+        setSelectedMetaFiles((prev) =>
+            prev.some((f) => getMetaFileId(f) === getMetaFileId(file))
+                ? prev.filter((f) => getMetaFileId(f) !== getMetaFileId(file))
+                : [...prev, file]
+        );
     };
 
-    // ─────────────────────────────────────────────────────────────────
-    //  Selection helpers — Instagram Posts
-    // ─────────────────────────────────────────────────────────────────
     const isIgSelected = (post) => selectedIgPosts.some((p) => p.id === post.id);
 
     const toggleIgPost = (post) => {
-        setSelectedIgPosts((prev) => {
-            if (prev.some((p) => p.id === post.id)) {
-                return prev.filter((p) => p.id !== post.id);
-            }
-            return [...prev, post];
-        });
+        setSelectedIgPosts((prev) =>
+            prev.some((p) => p.id === post.id)
+                ? prev.filter((p) => p.id !== post.id)
+                : [...prev, post]
+        );
     };
 
-    // ─────────────────────────────────────────────────────────────────
-    //  Import / Confirm
-    // ─────────────────────────────────────────────────────────────────
     const handleImport = () => {
         if (mediaSource === 'meta_library') {
-            // Merge into parent importedFiles, avoiding duplicates
             const existingIds = new Set(importedFiles.map(getMetaFileId));
             const newFiles = selectedMetaFiles.filter((f) => !existingIds.has(getMetaFileId(f)));
             setImportedFiles((prev) => [...prev, ...newFiles]);
             toast.success(`Imported ${newFiles.length} file${newFiles.length !== 1 ? 's' : ''} from Meta library`);
         } else {
-            // Map IG posts into the shape the ad creation flow expects
             const mapped = selectedIgPosts.map((post) => ({
                 source_instagram_media_id: post.id,
-                ad_name: post.caption
-                    ? post.caption.substring(0, 60)
-                    : `IG Post ${post.id}`,
+                ad_name: post.caption ? post.caption.substring(0, 60) : `IG Post ${post.id}`,
                 caption: post.caption || '',
-                media_type: post.type, // 'image' | 'video'
+                media_type: post.type,
                 previewUrl: post.previewUrl || post.thumbnail_url || post.media_url,
                 permalink: post.permalink,
             }));
-
-            // Merge into parent, avoiding duplicates
-            const existingIds = new Set(
-                selectedIgOrganicPosts.map((p) => p.source_instagram_media_id)
-            );
-            const newPosts = mapped.filter(
-                (p) => !existingIds.has(p.source_instagram_media_id)
-            );
+            const existingIds = new Set(selectedIgOrganicPosts.map((p) => p.source_instagram_media_id));
+            const newPosts = mapped.filter((p) => !existingIds.has(p.source_instagram_media_id));
             setSelectedIgOrganicPosts((prev) => [...prev, ...newPosts]);
             toast.success(`Imported ${newPosts.length} Instagram post${newPosts.length !== 1 ? 's' : ''}`);
         }
-
         setIsOpen(false);
     };
 
-    // ─────────────────────────────────────────────────────────────────
-    //  Which items to display based on source + tab
-    // ─────────────────────────────────────────────────────────────────
     const isLoading = mediaSource === 'meta_library' ? loadingMeta : loadingIg;
-
     const displayItems =
         mediaSource === 'meta_library'
-            ? activeTab === 'images'
-                ? metaImages
-                : metaVideos
-            : activeTab === 'images'
-                ? igImages
-                : igVideos;
-
+            ? activeTab === 'images' ? metaImages : metaVideos
+            : activeTab === 'images' ? igImages : igVideos;
     const selectionCount =
-        mediaSource === 'meta_library'
-            ? selectedMetaFiles.length
-            : selectedIgPosts.length;
+        mediaSource === 'meta_library' ? selectedMetaFiles.length : selectedIgPosts.length;
 
-    // ─────────────────────────────────────────────────────────────────
-    //  Render helpers
-    // ─────────────────────────────────────────────────────────────────
-    const renderMetaItem = (file) => {
-        const selected = isMetaSelected(file);
-        const preview =
-            file.previewUrl ||
-            file.thumbnail_url ||
-            file.url ||
-            file.media_url ||
-            '';
-
-        return (
-            <div
-                key={getMetaFileId(file)}
-                className={`mml-grid-item ${selected ? 'mml-selected' : ''}`}
-                onClick={() => toggleMetaFile(file)}
-            >
-                <div className="mml-thumb-wrapper">
-                    {file.type === 'video' && (
-                        <div className="mml-video-badge">▶</div>
-                    )}
-                    {preview ? (
-                        <img src={preview} alt={file.name} loading="lazy" />
-                    ) : (
-                        <div className="mml-no-preview">No Preview</div>
-                    )}
-                    {selected && (
-                        <div className="mml-check">✓</div>
-                    )}
-                </div>
-                <p className="mml-item-name" title={file.name}>
-                    {file.name}
-                </p>
-            </div>
-        );
-    };
-
-    const renderIgItem = (post) => {
-        const selected = isIgSelected(post);
-        const preview = post.previewUrl || post.thumbnail_url || post.media_url || '';
-
-        return (
-            <div
-                key={post.id}
-                className={`mml-grid-item ${selected ? 'mml-selected' : ''}`}
-                onClick={() => toggleIgPost(post)}
-            >
-                <div className="mml-thumb-wrapper">
-                    {post.type === 'video' && (
-                        <div className="mml-video-badge">▶</div>
-                    )}
-                    {preview ? (
-                        <img src={preview} alt={post.name} loading="lazy" />
-                    ) : (
-                        <div className="mml-no-preview">No Preview</div>
-                    )}
-                    {selected && (
-                        <div className="mml-check">✓</div>
-                    )}
-                </div>
-                <p className="mml-item-name" title={post.caption || post.name}>
-                    {post.caption
-                        ? post.caption.length > 50
-                            ? post.caption.substring(0, 50) + '…'
-                            : post.caption
-                        : post.name}
-                </p>
-                {post.like_count !== undefined && (
-                    <p className="mml-item-meta">
-                        ♥ {post.like_count} &nbsp;💬 {post.comments_count || 0}
-                    </p>
-                )}
-            </div>
-        );
-    };
-
-    // ─────────────────────────────────────────────────────────────────
-    //  Component
-    // ─────────────────────────────────────────────────────────────────
     if (!isOpen) {
         return (
             <button
                 type="button"
-                className="mml-open-btn"
                 onClick={openModal}
                 disabled={!isLoggedIn}
+                className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 Import from Library
             </button>
@@ -760,383 +603,162 @@ export default function MetaMediaLibraryModal({
     }
 
     return (
-        <div className="mml-overlay" onClick={() => setIsOpen(false)}>
-            <div className="mml-modal" onClick={(e) => e.stopPropagation()}>
-                {/* ── Header ──────────────────────────────────── */}
-                <div className="mml-header">
-                    <h3>
-                        {mediaSource === 'meta_library'
-                            ? 'Meta Media Library'
-                            : 'Instagram Posts'}
+        <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
+            onClick={() => setIsOpen(false)}
+        >
+            <div
+                className="bg-white rounded-xl w-[90vw] max-w-[860px] max-h-[80vh] flex flex-col overflow-hidden shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+                    <h3 className="text-base font-semibold text-gray-900">
+                        {mediaSource === 'meta_library' ? 'Meta Media Library' : 'Instagram Posts'}
                     </h3>
                     <button
-                        className="mml-close-btn"
                         onClick={() => setIsOpen(false)}
+                        className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md px-2 py-1 text-lg transition-colors"
                     >
                         ✕
                     </button>
                 </div>
 
-                {/* ── Tabs ────────────────────────────────────── */}
-                <div className="mml-tabs">
+                {/* Tabs */}
+                <div className="flex px-5 border-b border-gray-200">
                     <button
-                        className={`mml-tab ${activeTab === 'images' ? 'mml-tab-active' : ''}`}
                         onClick={() => setActiveTab('images')}
+                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === 'images'
+                            ? 'text-blue-600 border-blue-600'
+                            : 'text-gray-500 border-transparent hover:text-gray-700'
+                            }`}
                     >
                         {mediaSource === 'instagram' ? 'Posts (Image)' : 'Images'}
                     </button>
                     <button
-                        className={`mml-tab ${activeTab === 'videos' ? 'mml-tab-active' : ''}`}
                         onClick={() => setActiveTab('videos')}
+                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === 'videos'
+                            ? 'text-blue-600 border-blue-600'
+                            : 'text-gray-500 border-transparent hover:text-gray-700'
+                            }`}
                     >
                         {mediaSource === 'instagram' ? 'Reels / Videos' : 'Videos'}
                     </button>
                 </div>
 
-                {/* ── Grid body ───────────────────────────────── */}
-                <div className="mml-body">
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-5 min-h-[300px]">
                     {isLoading ? (
-                        <div className="mml-loading">
-                            <div className="mml-spinner" />
-                            <p>Loading…</p>
+                        <div className="flex flex-col items-center justify-center h-[200px] text-gray-500 gap-3">
+                            <div className="w-7 h-7 border-[3px] border-gray-200 border-t-blue-600 rounded-full animate-spin" />
+                            <p className="text-sm">Loading…</p>
                         </div>
                     ) : displayItems.length === 0 ? (
-                        <div className="mml-empty">
-                            <p>
-                                {mediaSource === 'instagram' && !instagramAccountId
-                                    ? 'No Instagram account selected. Please select one first.'
-                                    : `No ${activeTab} found.`}
-                            </p>
+                        <div className="flex items-center justify-center h-[200px] text-gray-500 text-sm">
+                            {mediaSource === 'instagram' && !instagramAccountId
+                                ? 'No Instagram account selected. Please select one first.'
+                                : `No ${activeTab} found.`}
                         </div>
                     ) : (
-                        <div className="mml-grid">
-                            {displayItems.map((item) =>
-                                mediaSource === 'meta_library'
-                                    ? renderMetaItem(item)
-                                    : renderIgItem(item)
-                            )}
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
+                            {displayItems.map((item) => {
+                                const isMeta = mediaSource === 'meta_library';
+                                const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
+                                const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
+                                const isVideo = item.type === 'video';
+                                const itemId = isMeta ? getMetaFileId(item) : item.id;
+                                const label = isMeta
+                                    ? item.name
+                                    : item.caption
+                                        ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
+                                        : item.name;
+
+                                return (
+                                    <div
+                                        key={itemId}
+                                        onClick={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
+                                        className={`cursor-pointer rounded-lg border-2 p-1 transition-all ${selected
+                                            ? 'border-blue-600 bg-blue-50'
+                                            : 'border-transparent hover:border-gray-300 hover:bg-gray-50'
+                                            }`}
+                                    >
+                                        <div className="relative w-full aspect-square rounded-md overflow-hidden bg-gray-100">
+                                            {isVideo && (
+                                                <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded z-10">
+                                                    ▶
+                                                </span>
+                                            )}
+                                            {preview ? (
+                                                <img
+                                                    src={preview}
+                                                    alt={label}
+                                                    loading="lazy"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+                                                    No Preview
+                                                </div>
+                                            )}
+                                            {selected && (
+                                                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold z-10">
+                                                    ✓
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <p className="mt-1.5 text-[11px] text-gray-700 truncate" title={label}>
+                                            {label}
+                                        </p>
+
+                                        {!isMeta && item.like_count !== undefined && (
+                                            <p className="mt-0.5 text-[10px] text-gray-400">
+                                                ♥ {item.like_count} &nbsp;💬 {item.comments_count || 0}
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
 
-                {/* ── Footer ──────────────────────────────────── */}
-                <div className="mml-footer">
-                    <div className="mml-footer-left">
+                {/* Footer */}
+                <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                    <div>
                         {selectionCount > 0 && (
-                            <span className="mml-selection-count">
+                            <span className="text-sm text-blue-600 font-medium">
                                 {selectionCount} selected
                             </span>
                         )}
                     </div>
 
-                    <div className="mml-footer-right">
+                    <div className="flex items-center gap-2">
                         <select
-                            className="mml-source-dropdown"
                             value={mediaSource}
                             onChange={(e) => handleSourceChange(e.target.value)}
+                            className="px-2.5 py-1.5 text-xs border border-gray-300 rounded-md bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
                         >
                             <option value="meta_library">Meta Media Library</option>
                             <option value="instagram">Instagram Posts</option>
                         </select>
 
                         <button
-                            className="mml-cancel-btn"
                             onClick={() => setIsOpen(false)}
+                            className="px-3.5 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                             Cancel
                         </button>
                         <button
-                            className="mml-import-btn"
                             onClick={handleImport}
                             disabled={selectionCount === 0}
+                            className="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Import{selectionCount > 0 ? ` (${selectionCount})` : ''}
                         </button>
                     </div>
                 </div>
             </div>
-
-            {/* ── Scoped Styles ───────────────────────────── */}
-            <style>{`
-                .mml-overlay {
-                    position: fixed;
-                    inset: 0;
-                    background: rgba(0, 0, 0, 0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 9999;
-                }
-                .mml-modal {
-                    background: #fff;
-                    border-radius: 12px;
-                    width: 90vw;
-                    max-width: 860px;
-                    max-height: 80vh;
-                    display: flex;
-                    flex-direction: column;
-                    overflow: hidden;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-                }
-
-                /* Header */
-                .mml-header {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 16px 20px;
-                    border-bottom: 1px solid #e5e7eb;
-                }
-                .mml-header h3 {
-                    margin: 0;
-                    font-size: 16px;
-                    font-weight: 600;
-                    color: #111;
-                }
-                .mml-close-btn {
-                    background: none;
-                    border: none;
-                    font-size: 18px;
-                    cursor: pointer;
-                    color: #6b7280;
-                    padding: 4px 8px;
-                    border-radius: 6px;
-                    transition: background 0.15s;
-                }
-                .mml-close-btn:hover {
-                    background: #f3f4f6;
-                }
-
-                /* Tabs */
-                .mml-tabs {
-                    display: flex;
-                    gap: 0;
-                    padding: 0 20px;
-                    border-bottom: 1px solid #e5e7eb;
-                }
-                .mml-tab {
-                    background: none;
-                    border: none;
-                    padding: 10px 16px;
-                    font-size: 13px;
-                    font-weight: 500;
-                    color: #6b7280;
-                    cursor: pointer;
-                    border-bottom: 2px solid transparent;
-                    transition: all 0.15s;
-                }
-                .mml-tab:hover {
-                    color: #111;
-                }
-                .mml-tab-active {
-                    color: #2563eb;
-                    border-bottom-color: #2563eb;
-                }
-
-                /* Body / Grid */
-                .mml-body {
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 16px 20px;
-                    min-height: 300px;
-                }
-                .mml-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-                    gap: 12px;
-                }
-                .mml-grid-item {
-                    cursor: pointer;
-                    border-radius: 8px;
-                    border: 2px solid transparent;
-                    padding: 4px;
-                    transition: all 0.15s;
-                }
-                .mml-grid-item:hover {
-                    border-color: #d1d5db;
-                    background: #f9fafb;
-                }
-                .mml-selected {
-                    border-color: #2563eb !important;
-                    background: #eff6ff !important;
-                }
-                .mml-thumb-wrapper {
-                    position: relative;
-                    width: 100%;
-                    aspect-ratio: 1;
-                    border-radius: 6px;
-                    overflow: hidden;
-                    background: #f3f4f6;
-                }
-                .mml-thumb-wrapper img {
-                    width: 100%;
-                    height: 100%;
-                    object-fit: cover;
-                    display: block;
-                }
-                .mml-video-badge {
-                    position: absolute;
-                    top: 6px;
-                    left: 6px;
-                    background: rgba(0,0,0,0.6);
-                    color: #fff;
-                    font-size: 10px;
-                    padding: 2px 6px;
-                    border-radius: 4px;
-                    z-index: 2;
-                }
-                .mml-check {
-                    position: absolute;
-                    top: 6px;
-                    right: 6px;
-                    width: 22px;
-                    height: 22px;
-                    border-radius: 50%;
-                    background: #2563eb;
-                    color: #fff;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 12px;
-                    font-weight: 700;
-                    z-index: 2;
-                }
-                .mml-no-preview {
-                    width: 100%;
-                    height: 100%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: #9ca3af;
-                    font-size: 12px;
-                }
-                .mml-item-name {
-                    margin: 6px 0 0;
-                    font-size: 11px;
-                    color: #374151;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                }
-                .mml-item-meta {
-                    margin: 2px 0 0;
-                    font-size: 10px;
-                    color: #9ca3af;
-                }
-
-                /* Loading / Empty */
-                .mml-loading, .mml-empty {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    height: 200px;
-                    color: #6b7280;
-                    gap: 12px;
-                }
-                .mml-spinner {
-                    width: 28px;
-                    height: 28px;
-                    border: 3px solid #e5e7eb;
-                    border-top-color: #2563eb;
-                    border-radius: 50%;
-                    animation: mml-spin 0.7s linear infinite;
-                }
-                @keyframes mml-spin {
-                    to { transform: rotate(360deg); }
-                }
-
-                /* Footer */
-                .mml-footer {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 12px 20px;
-                    border-top: 1px solid #e5e7eb;
-                    background: #f9fafb;
-                    border-radius: 0 0 12px 12px;
-                }
-                .mml-footer-left {
-                    display: flex;
-                    align-items: center;
-                }
-                .mml-selection-count {
-                    font-size: 13px;
-                    color: #2563eb;
-                    font-weight: 500;
-                }
-                .mml-footer-right {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                }
-                .mml-source-dropdown {
-                    padding: 6px 10px;
-                    font-size: 12px;
-                    border: 1px solid #d1d5db;
-                    border-radius: 6px;
-                    background: #fff;
-                    color: #374151;
-                    cursor: pointer;
-                    outline: none;
-                    transition: border-color 0.15s;
-                }
-                .mml-source-dropdown:focus {
-                    border-color: #2563eb;
-                }
-                .mml-cancel-btn {
-                    padding: 8px 14px;
-                    font-size: 13px;
-                    border: 1px solid #d1d5db;
-                    border-radius: 6px;
-                    background: #fff;
-                    color: #374151;
-                    cursor: pointer;
-                    transition: background 0.15s;
-                }
-                .mml-cancel-btn:hover {
-                    background: #f3f4f6;
-                }
-                .mml-import-btn {
-                    padding: 8px 16px;
-                    font-size: 13px;
-                    font-weight: 500;
-                    border: none;
-                    border-radius: 6px;
-                    background: #2563eb;
-                    color: #fff;
-                    cursor: pointer;
-                    transition: background 0.15s;
-                }
-                .mml-import-btn:hover:not(:disabled) {
-                    background: #1d4ed8;
-                }
-                .mml-import-btn:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-
-                /* Open trigger button */
-                .mml-open-btn {
-                    padding: 8px 16px;
-                    font-size: 13px;
-                    font-weight: 500;
-                    border: 1px solid #d1d5db;
-                    border-radius: 6px;
-                    background: #fff;
-                    color: #374151;
-                    cursor: pointer;
-                    transition: all 0.15s;
-                }
-                .mml-open-btn:hover:not(:disabled) {
-                    background: #f3f4f6;
-                    border-color: #9ca3af;
-                }
-                .mml-open-btn:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-            `}</style>
         </div>
     );
 }
