@@ -4200,7 +4200,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -5764,7 +5764,7 @@ export default function AdCreationForm({
               disabled={
                 !isLoggedIn ||
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
-                (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
+                (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
                 (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
                 (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||

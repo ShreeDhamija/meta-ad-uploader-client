@@ -665,7 +665,7 @@ export default function MetaMediaLibraryModal({
                         <SelectTrigger className="w-[200px] rounded-xl">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                             <SelectItem value="meta_library">Meta Media Library</SelectItem>
                             <SelectItem value="instagram">Instagram Posts</SelectItem>
                         </SelectContent>
