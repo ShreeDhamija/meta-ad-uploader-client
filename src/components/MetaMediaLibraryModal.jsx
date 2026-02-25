@@ -431,7 +431,7 @@
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
-
+import { Loader2, Image as ImageIcon, Video, FolderOpen } from "lucide-react";
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
 
 export default function MetaMediaLibraryModal({
@@ -465,13 +465,29 @@ export default function MetaMediaLibraryModal({
                 params: { adAccountId },
                 withCredentials: true,
             });
-            setMetaImages(imgRes.data?.images || imgRes.data || []);
+            const rawImages = imgRes.data?.data || [];
+            setMetaImages(rawImages.map(img => ({
+                type: 'image',
+                hash: img.hash,
+                name: img.name,
+                width: img.width,
+                height: img.height,
+                previewUrl: img.url,
+            })));
 
             const vidRes = await axios.get(`${API_BASE_URL}/auth/library-videos`, {
                 params: { adAccountId },
                 withCredentials: true,
             });
-            setMetaVideos(vidRes.data?.videos || vidRes.data || []);
+            const rawVideos = vidRes.data?.data || [];
+            setMetaVideos(rawVideos.map(vid => ({
+                type: 'video',
+                id: vid.id,
+                name: vid.title || `Video ${vid.id}`,
+                width: vid.width,
+                height: vid.height,
+                previewUrl: vid.thumbnail_url,
+            })));
         } catch (err) {
             console.error('Error fetching Meta library:', err);
             toast.error('Failed to load Meta media library');
@@ -595,8 +611,10 @@ export default function MetaMediaLibraryModal({
                 type="button"
                 onClick={openModal}
                 disabled={!isLoggedIn}
-                className="px-4 py-2 text-sm font-medium border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-xl flex items-center gap-2 bg-zinc-700 hover:bg-zinc-800 text-white hover:text-white"
+
             >
+                <FolderOpen className="h-4 w-4 text-white hover:text-white" />
                 Import from Library
             </button>
         );
