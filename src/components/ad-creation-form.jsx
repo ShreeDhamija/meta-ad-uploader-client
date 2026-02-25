@@ -22,7 +22,8 @@ import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostSelectorInline from "@/components/PostIDSelector"
-import { MetaMediaLibraryModal } from "@/components/MetaMediaLibraryModal";
+// import { MetaMediaLibraryModal } from "@/components/MetaMediaLibraryModal";
+import MetaMediaLibraryModal from "@/components/MetaMediaLibraryModal";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';

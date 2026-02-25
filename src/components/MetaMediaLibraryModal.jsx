@@ -437,7 +437,7 @@ const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '';
 export default function MetaMediaLibraryModal({
     adAccountId,
     isLoggedIn,
-    importedFiles,
+    importedFiles = [],
     setImportedFiles,
     instagramAccountId,
     selectedIgOrganicPosts = [],
