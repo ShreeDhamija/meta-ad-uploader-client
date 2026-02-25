@@ -230,7 +230,7 @@ export default function PoorPerformingAds({ data, loading, mode, adAccountId, on
 
                                     {/* Ad info */}
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
                                             <p className="font-medium text-gray-900 truncate text-sm">{ad.adName}</p>
                                             {daysOld && (
                                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-gray-100 text-gray-500 border-gray-200 flex-shrink-0">
