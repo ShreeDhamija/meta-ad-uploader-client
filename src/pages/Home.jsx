@@ -180,6 +180,7 @@ export default function Home() {
     const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState(new Set());
     const [useExistingPosts, setUseExistingPosts] = useState(false);
+    const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([]);
 
     const [showMobileBanner, setShowMobileBanner] = useState(true);
 
@@ -635,6 +636,8 @@ export default function Home() {
                             setImportedPosts={setImportedPosts}
                             importedFiles={importedFiles}
                             setImportedFiles={setImportedFiles}
+                            selectedIgOrganicPosts={selectedIgOrganicPosts}
+                            setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                             videoThumbs={videoThumbs}
                             setVideoThumbs={setVideoThumbs}
                             selectedAdSets={selectedAdSets}

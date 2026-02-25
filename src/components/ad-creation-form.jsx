@@ -438,6 +438,8 @@ export default function AdCreationForm({
   setImportedPosts,
   importedFiles,
   setImportedFiles,
+  selectedIgOrganicPosts,
+  setSelectedIgOrganicPosts,
   videoThumbs,
   setVideoThumbs,
   selectedAdSets,
@@ -659,6 +661,9 @@ export default function AdCreationForm({
         adCount = selectedAdSets.length || 1;
       }
     }
+    else if (selectedIgOrganicPosts.length > 0) {
+      adCount += selectedIgOrganicPosts.length * (selectedAdSets.length || 1);
+    }
     else {
       adCount = files.length + driveFiles.length + importedFiles.length + dropboxFiles.length;
     }
@@ -685,6 +690,8 @@ export default function AdCreationForm({
         thumbnail,
         importedPosts: [...importedPosts],
         importedFiles: [...importedFiles],  // ADD THIS
+        selectedIgOrganicPosts: [...selectedIgOrganicPosts],
+
 
 
 
@@ -2318,6 +2325,9 @@ export default function AdCreationForm({
       thumbnail,
       importedPosts,
       importedFiles,
+      selectedIgOrganicPosts,   // ADD THIS
+
+
       selectedAdSets,
       duplicateAdSet,
       newAdSetName,
@@ -2367,7 +2377,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -3310,6 +3320,41 @@ export default function AdCreationForm({
         });
 
       }
+
+
+      // ============================================================================
+      // SECTION: INSTAGRAM ORGANIC POST ADS
+      // ============================================================================
+      if (selectedIgOrganicPosts && selectedIgOrganicPosts.length > 0) {
+        const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+
+        adSetIdsToUse.forEach((adSetId) => {
+          selectedIgOrganicPosts.forEach((igPost) => {
+            const formData = new FormData();
+
+            formData.append("adName", igPost.ad_name || `IG Post ${igPost.source_instagram_media_id}`);
+            formData.append("adAccountId", selectedAdAccount);
+            formData.append("adSetId", adSetId);
+            formData.append("pageId", pageId);
+            formData.append("instagramAccountId", instagramAccountId || "");
+            formData.append("launchPaused", launchPaused);
+            formData.append("jobId", frontendJobId);
+            formData.append("cta", cta || "LEARN_MORE");  // placeholder CTA
+            formData.append("link", JSON.stringify(link));
+
+            // IG post specific
+            formData.append("sourceInstagramMediaId", igPost.source_instagram_media_id);
+            formData.append("adType", "instagram_post");
+
+            if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
+            if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
+
+            promises.push(createAdApiCall(formData, API_BASE_URL));
+            promiseMetadata.push({ fileName: igPost.ad_name });
+          });
+        });
+      }
+
 
       if (isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
@@ -5569,11 +5614,22 @@ export default function AdCreationForm({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="block">Upload Media</Label>
+                    {/* <MetaMediaLibraryModal
+                      adAccountId={selectedAdAccount}
+                      isLoggedIn={isLoggedIn}
+                      importedFiles={importedFiles}
+                      setImportedFiles={setImportedFiles}
+                      instagramAccountId={instagramAccountId}
+                    /> */}
+
                     <MetaMediaLibraryModal
                       adAccountId={selectedAdAccount}
                       isLoggedIn={isLoggedIn}
                       importedFiles={importedFiles}
                       setImportedFiles={setImportedFiles}
+                      instagramAccountId={instagramAccountId}
+                      selectedIgOrganicPosts={selectedIgOrganicPosts}
+                      setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                     />
                   </div>
                   <div
