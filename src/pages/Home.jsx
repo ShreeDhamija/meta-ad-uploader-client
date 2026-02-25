@@ -706,6 +706,8 @@ export default function Home() {
                                 duplicateAdSet={duplicateAdSet}
                                 selectedFiles={selectedFiles}
                                 setSelectedFiles={setSelectedFiles}
+                                selectedIgOrganicPosts={selectedIgOrganicPosts}
+                                setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
 
                             />
                         </ErrorBoundary>

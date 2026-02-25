@@ -432,6 +432,17 @@ import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
 import { Loader2, Image as ImageIcon, Video, FolderOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function MetaMediaLibraryModal({
@@ -575,6 +586,13 @@ export default function MetaMediaLibraryModal({
     };
 
     const handleImport = () => {
+        console.log('handleImport debug:', {
+            mediaSource,
+            selectedIgPosts,
+            selectedIgPostsLength: selectedIgPosts.length,
+            selectedMetaFilesLength: selectedMetaFiles.length,
+        });
+
         if (mediaSource === 'meta_library') {
             const existingIds = new Set(importedFiles.map(getMetaFileId));
             const newFiles = selectedMetaFiles.filter((f) => !existingIds.has(getMetaFileId(f)));
@@ -607,176 +625,221 @@ export default function MetaMediaLibraryModal({
 
     if (!isOpen) {
         return (
-            <button
+            <Button
                 type="button"
-                onClick={openModal}
+                size="sm"
                 disabled={!isLoggedIn}
                 className="rounded-xl flex items-center gap-2 bg-zinc-700 hover:bg-zinc-800 text-white hover:text-white"
-
+                onClick={() => {
+                    if (!adAccountId) {
+                        toast.error("Please select an ad account");
+                        return;
+                    }
+                    openModal();
+                }}
             >
                 <FolderOpen className="h-4 w-4 text-white hover:text-white" />
-                Import from Library
-            </button>
+                Import From Meta Media Library
+            </Button>
         );
     }
 
+    // NEW:
     return (
-        <div
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]"
-            onClick={() => setIsOpen(false)}
-        >
+        <>
+            {/* Overlay */}
             <div
-                className="bg-white rounded-xl w-[90vw] max-w-[860px] max-h-[80vh] flex flex-col overflow-hidden shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-            >
+                className="fixed inset-0 bg-black/50 z-50"
+                onClick={() => setIsOpen(false)}
+            />
+
+            {/* Modal */}
+            <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl max-h-[80vh] rounded-3xl bg-white p-6 shadow-lg flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-                    <h3 className="text-base font-semibold text-gray-900">
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4" />
                         {mediaSource === 'meta_library' ? 'Meta Media Library' : 'Instagram Posts'}
-                    </h3>
-                    <button
-                        onClick={() => setIsOpen(false)}
-                        className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md px-2 py-1 text-lg transition-colors"
-                    >
-                        ✕
-                    </button>
+                    </h2>
+                    <Select value={mediaSource} onValueChange={handleSourceChange}>
+                        <SelectTrigger className="w-[200px] rounded-xl">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="meta_library">Meta Media Library</SelectItem>
+                            <SelectItem value="instagram">Instagram Posts</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex px-5 border-b border-gray-200">
-                    <button
-                        onClick={() => setActiveTab('images')}
-                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === 'images'
-                            ? 'text-blue-600 border-blue-600'
-                            : 'text-gray-500 border-transparent hover:text-gray-700'
-                            }`}
-                    >
-                        {mediaSource === 'instagram' ? 'Posts (Image)' : 'Images'}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('videos')}
-                        className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${activeTab === 'videos'
-                            ? 'text-blue-600 border-blue-600'
-                            : 'text-gray-500 border-transparent hover:text-gray-700'
-                            }`}
-                    >
-                        {mediaSource === 'instagram' ? 'Reels / Videos' : 'Videos'}
-                    </button>
-                </div>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
+                    <TabsList className="grid w-full grid-cols-2 rounded-2xl p-1">
+                        <TabsTrigger value="images" className="rounded-xl flex items-center gap-2">
+                            <ImageIcon className="h-4 w-4" />
+                            {mediaSource === 'instagram' ? 'Posts (Image)' : 'Images'} ({mediaSource === 'meta_library' ? metaImages.length : igImages.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="videos" className="rounded-xl flex items-center gap-2">
+                            <Video className="h-4 w-4" />
+                            {mediaSource === 'instagram' ? 'Reels / Videos' : 'Videos'} ({mediaSource === 'meta_library' ? metaVideos.length : igVideos.length})
+                        </TabsTrigger>
+                    </TabsList>
 
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-5 min-h-[300px]">
-                    {isLoading ? (
-                        <div className="flex flex-col items-center justify-center h-[200px] text-gray-500 gap-3">
-                            <div className="w-7 h-7 border-[3px] border-gray-200 border-t-blue-600 rounded-full animate-spin" />
-                            <p className="text-sm">Loading…</p>
-                        </div>
-                    ) : displayItems.length === 0 ? (
-                        <div className="flex items-center justify-center h-[200px] text-gray-500 text-sm">
-                            {mediaSource === 'instagram' && !instagramAccountId
-                                ? 'No Instagram account selected. Please select one first.'
-                                : `No ${activeTab} found.`}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
-                            {displayItems.map((item) => {
-                                const isMeta = mediaSource === 'meta_library';
-                                const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
-                                const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
-                                const isVideo = item.type === 'video';
-                                const itemId = isMeta ? getMetaFileId(item) : item.id;
-                                const label = isMeta
-                                    ? item.name
-                                    : item.caption
-                                        ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
-                                        : item.name;
+                    <TabsContent value="images" className="mt-4 flex-1 overflow-hidden">
+                        {isLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                            </div>
+                        ) : displayItems.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                                <ImageIcon className="h-12 w-12 mb-2 opacity-50" />
+                                <p>{mediaSource === 'instagram' && !instagramAccountId
+                                    ? 'No Instagram account selected. Please select one first.'
+                                    : 'No images found.'}</p>
+                            </div>
+                        ) : (
+                            <ScrollArea className="h-[400px] pr-4 outline-none focus:outline-none">
+                                <div className="grid grid-cols-5 gap-3">
+                                    {displayItems.map((item) => {
+                                        const isMeta = mediaSource === 'meta_library';
+                                        const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
+                                        const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
+                                        const itemId = isMeta ? getMetaFileId(item) : item.id;
+                                        const label = isMeta
+                                            ? item.name
+                                            : item.caption
+                                                ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
+                                                : item.name;
 
-                                return (
-                                    <div
-                                        key={itemId}
-                                        onClick={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
-                                        className={`cursor-pointer rounded-lg border-2 p-1 transition-all ${selected
-                                            ? 'border-blue-600 bg-blue-50'
-                                            : 'border-transparent hover:border-gray-300 hover:bg-gray-50'
-                                            }`}
-                                    >
-                                        <div className="relative w-full aspect-square rounded-md overflow-hidden bg-gray-100">
-                                            {isVideo && (
-                                                <span className="absolute top-1.5 left-1.5 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded z-10">
-                                                    ▶
-                                                </span>
-                                            )}
-                                            {preview ? (
-                                                <img
-                                                    src={preview}
-                                                    alt={label}
-                                                    loading="lazy"
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
-                                                    No Preview
+                                        return (
+                                            <label key={itemId} className="relative cursor-pointer group">
+                                                <div className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${selected
+                                                    ? 'border-primary ring-2 ring-primary/30'
+                                                    : 'border-gray-200 hover:border-primary/50'
+                                                    }`}>
+                                                    {preview ? (
+                                                        <img
+                                                            src={preview}
+                                                            alt={label}
+                                                            loading="lazy"
+                                                            className="h-full w-full object-cover"
+                                                            onError={(e) => {
+                                                                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E";
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
+                                                            No Preview
+                                                        </div>
+                                                    )}
+                                                    <Checkbox
+                                                        checked={selected}
+                                                        onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
+                                                        className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
+                                                    />
                                                 </div>
-                                            )}
-                                            {selected && (
-                                                <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-bold z-10">
-                                                    ✓
+                                                <p className="mt-1 text-xs text-gray-700 truncate text-center px-1">
+                                                    {label || 'Untitled'}
+                                                </p>
+                                                {!isMeta && item.like_count !== undefined && (
+                                                    <p className="mt-0.5 text-[10px] text-gray-400 text-center">
+                                                        ♥ {item.like_count} &nbsp;💬 {item.comments_count || 0}
+                                                    </p>
+                                                )}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </ScrollArea>
+                        )}
+                    </TabsContent>
+
+                    <TabsContent value="videos" className="mt-4 flex-1 overflow-hidden">
+                        {isLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                            </div>
+                        ) : (mediaSource === 'meta_library' ? metaVideos : igVideos).length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                                <Video className="h-12 w-12 mb-2 opacity-50" />
+                                <p>No videos found.</p>
+                            </div>
+                        ) : (
+                            <ScrollArea className="h-[400px] pr-4 outline-none focus:outline-none">
+                                <div className="grid grid-cols-5 gap-3">
+                                    {(mediaSource === 'meta_library' ? metaVideos : igVideos).map((item) => {
+                                        const isMeta = mediaSource === 'meta_library';
+                                        const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
+                                        const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
+                                        const itemId = isMeta ? getMetaFileId(item) : item.id;
+                                        const label = isMeta
+                                            ? item.name
+                                            : item.caption
+                                                ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
+                                                : item.name;
+
+                                        return (
+                                            <label key={itemId} className="relative cursor-pointer group">
+                                                <div className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all bg-gray-800 ${selected
+                                                    ? 'border-primary ring-2 ring-primary/30'
+                                                    : 'border-gray-200 hover:border-primary/50'
+                                                    }`}>
+                                                    {preview ? (
+                                                        <img
+                                                            src={preview}
+                                                            alt={label}
+                                                            loading="lazy"
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-full w-full flex items-center justify-center">
+                                                            <Video className="h-8 w-8 text-gray-400" />
+                                                        </div>
+                                                    )}
+                                                    <Checkbox
+                                                        checked={selected}
+                                                        onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
+                                                        className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
+                                                    />
                                                 </div>
-                                            )}
-                                        </div>
-
-                                        <p className="mt-1.5 text-[11px] text-gray-700 truncate" title={label}>
-                                            {label}
-                                        </p>
-
-                                        {!isMeta && item.like_count !== undefined && (
-                                            <p className="mt-0.5 text-[10px] text-gray-400">
-                                                ♥ {item.like_count} &nbsp;💬 {item.comments_count || 0}
-                                            </p>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
+                                                <p className="mt-1 text-xs text-gray-700 truncate text-center px-1">
+                                                    {label || 'Untitled'}
+                                                </p>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </ScrollArea>
+                        )}
+                    </TabsContent>
+                </Tabs>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between px-5 py-3 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                <div className="flex justify-between items-center gap-3 mt-4 pt-4 border-t">
                     <div>
                         {selectionCount > 0 && (
-                            <span className="text-sm text-blue-600 font-medium">
+                            <span className="text-sm text-primary font-medium">
                                 {selectionCount} selected
                             </span>
                         )}
                     </div>
-
-                    <div className="flex items-center gap-2">
-                        <select
-                            value={mediaSource}
-                            onChange={(e) => handleSourceChange(e.target.value)}
-                            className="px-2.5 py-1.5 text-xs border border-gray-300 rounded-md bg-white text-gray-700 cursor-pointer focus:outline-none focus:border-blue-500"
-                        >
-                            <option value="meta_library">Meta Media Library</option>
-                            <option value="instagram">Instagram Posts</option>
-                        </select>
-
-                        <button
+                    <div className="flex gap-3">
+                        <Button
+                            variant="outline"
                             onClick={() => setIsOpen(false)}
-                            className="px-3.5 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 hover:bg-gray-100 transition-colors"
+                            className="rounded-xl"
                         >
                             Cancel
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                             onClick={handleImport}
                             disabled={selectionCount === 0}
-                            className="px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="rounded-xl"
                         >
-                            Import{selectionCount > 0 ? ` (${selectionCount})` : ''}
-                        </button>
+                            Import ({selectionCount})
+                        </Button>
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
