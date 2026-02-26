@@ -805,6 +805,7 @@ export default function MediaPreview({
                   setFileGroups([]);
                   setImportedPosts([]);
                   setImportedFiles([]);
+                  setSelectedIgOrganicPosts([]);
                 }}
                 className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
               >
