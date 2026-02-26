@@ -268,10 +268,20 @@ export default function MediaPreview({
     return selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize;
   }, [selectedFiles.size, adType]);
 
+  // const canAIGroup = useMemo(() => {
+  //   const imageFiles = files.filter(file => !isVideoFile(file));
+  //   return imageFiles.length >= 2;
+  // }, [files]);
+
   const canAIGroup = useMemo(() => {
-    const imageFiles = files.filter(file => !isVideoFile(file));
+    const allFiles = [
+      ...files,
+      ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)).map(f => ({ ...f, isDrive: true })),
+      ...(dropboxFiles || []).map(f => ({ ...f, isDropbox: true })),
+    ];
+    const imageFiles = allFiles.filter(file => !isVideoFile(file));
     return imageFiles.length >= 2;
-  }, [files]);
+  }, [files, driveFiles, dropboxFiles]);
 
 
 
@@ -556,38 +566,106 @@ export default function MediaPreview({
 
 
 
+  // const handleAIGroup = useCallback(async () => {
+  //   try {
+  //     setIsAIGrouping(true);
+
+  //     const processedImages = await Promise.all(
+  //       files.map(async (file, index) => {
+  //         const base64 = await compressAndConvertToBase64(file);
+  //         const aspectRatio = await getAspectRatio(file);
+
+
+  //         return {
+  //           base64,
+  //           mimeType: file.type || 'image/jpeg',
+  //           aspectRatio,
+  //           index,
+  //           fileId: file.isDrive ? file.id : (file.uniqueId || file.name)
+  //         };
+  //       })
+  //     );
+
+
+
+  //     const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         // Add credentials if needed
+  //       },
+  //       credentials: 'include', // Important for cookies
+  //       body: JSON.stringify({ images: processedImages })
+  //     });
+
+
+  //     const responseText = await response.text();
+
+  //     if (!response.ok) {
+  //       throw new Error(`Grouping failed: ${responseText}`);
+  //     }
+
+  //     const result = JSON.parse(responseText);
+
+  //     // Convert AI indices to actual fileIds
+  //     const newGroups = result.groups.map(indexGroup =>
+  //       indexGroup.map(idx => {
+  //         const file = files[idx];
+  //         return file.isDrive ? file.id : file.uniqueId || file.name;
+  //       })
+  //     );
+
+  //     // Apply to UI
+  //     setFileGroups(newGroups);
+  //     setSelectedFiles(new Set()); // clear any manual selection
+
+
+  //     // Rest of your code...
+  //   } catch (error) {
+  //     console.error('AI grouping error:', error);
+  //     alert(`Failed to group images: ${error.message}`);
+  //   } finally {
+  //     setIsAIGrouping(false);
+  //   }
+  // }, [files, setFileGroups, setSelectedFiles]);
+
   const handleAIGroup = useCallback(async () => {
     try {
       setIsAIGrouping(true);
 
+      // Combine all file sources (same pattern used by handleFlexibleAutoGroup)
+      const allFiles = [
+        ...files,
+        ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)).map(f => ({ ...f, isDrive: true })),
+        ...(dropboxFiles || []).map(f => ({ ...f, isDropbox: true })),
+      ];
+
+      // Only process image files
+      const imageFiles = allFiles.filter(file => !isVideoFile(file));
+
       const processedImages = await Promise.all(
-        files.map(async (file, index) => {
+        imageFiles.map(async (file, index) => {
           const base64 = await compressAndConvertToBase64(file);
           const aspectRatio = await getAspectRatio(file);
 
-
           return {
             base64,
-            mimeType: file.type || 'image/jpeg',
+            mimeType: file.type || file.mimeType || 'image/jpeg',
             aspectRatio,
             index,
-            fileId: file.isDrive ? file.id : (file.uniqueId || file.name)
+            fileId: getFileId(file)
           };
         })
       );
-
-
 
       const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Add credentials if needed
         },
-        credentials: 'include', // Important for cookies
+        credentials: 'include',
         body: JSON.stringify({ images: processedImages })
       });
-
 
       const responseText = await response.text();
 
@@ -597,29 +675,23 @@ export default function MediaPreview({
 
       const result = JSON.parse(responseText);
 
-      // Convert AI indices to actual fileIds
+      // Convert AI indices to actual fileIds using imageFiles (not files)
       const newGroups = result.groups.map(indexGroup =>
         indexGroup.map(idx => {
-          const file = files[idx];
-          return file.isDrive ? file.id : file.uniqueId || file.name;
+          const file = imageFiles[idx];
+          return getFileId(file);
         })
       );
 
-      // Apply to UI
       setFileGroups(newGroups);
-      setSelectedFiles(new Set()); // clear any manual selection
-
-
-      // Rest of your code...
+      setSelectedFiles(new Set());
     } catch (error) {
       console.error('AI grouping error:', error);
       alert(`Failed to group images: ${error.message}`);
     } finally {
       setIsAIGrouping(false);
     }
-  }, [files, setFileGroups, setSelectedFiles]);
-
-
+  }, [files, driveFiles, dropboxFiles, setFileGroups, setSelectedFiles]);
 
 
   const handleFlexibleAutoGroup = useCallback(async () => {
