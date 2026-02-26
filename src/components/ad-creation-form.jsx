@@ -650,9 +650,13 @@ export default function AdCreationForm({
       adCount = selectedAdSets.length || 1;
     } else if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
       const groupedFileIds = new Set(fileGroups.flat());
-      const ungroupedFiles = [...files, ...driveFiles].filter(f =>
-        !groupedFileIds.has(getFileId(f))
-      );
+      // const ungroupedFiles = [...files, ...driveFiles].filter(f =>
+      //   !groupedFileIds.has(getFileId(f))
+      // );
+      const ungroupedFiles = [
+        ...files,
+        ...driveFiles.map(f => ({ ...f, isDrive: true }))
+      ].filter(f => !groupedFileIds.has(getFileId(f)));
       adCount = fileGroups.length + ungroupedFiles.length;
     }
     else if (adType === 'flexible') {
