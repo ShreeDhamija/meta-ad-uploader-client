@@ -1850,22 +1850,28 @@ export default function AdCreationForm({
       }
 
       // --- 3. DROPBOX ---
-      const dropboxVideoFiles = dropboxFiles.filter(file => {
+      // const dropboxFilesNeedingThumbsyticsDashboard = dropboxFiles.filter(file => {
+      //   const fileId = getFileId(file);
+      //   return isVideoFile(file) &&
+      //     !videoThumbsRef.current[fileId] &&
+      //     !processingRef.current.has(fileId);
+      // });
+
+      const dropboxFilesNeedingThumbs = dropboxFiles.filter(file => {
         const fileId = getFileId(file);
-        return isVideoFile(file) &&
-          !videoThumbsRef.current[fileId] &&
+        return !videoThumbsRef.current[fileId] &&
           !processingRef.current.has(fileId);
       });
 
-      if (dropboxVideoFiles.length > 0 && !abortController.signal.aborted) {
-        dropboxVideoFiles.forEach(file => processingRef.current.add(getFileId(file)));
+      if (dropboxFilesNeedingThumbsyticsDashboard.length > 0 && !abortController.signal.aborted) {
+        dropboxFilesNeedingThumbsyticsDashboard.forEach(file => processingRef.current.add(getFileId(file)));
 
         const BATCH_SIZE = 25;
 
-        for (let i = 0; i < dropboxVideoFiles.length; i += BATCH_SIZE) {
+        for (let i = 0; i < dropboxFilesNeedingThumbsyticsDashboard.length; i += BATCH_SIZE) {
           if (abortController.signal.aborted) break;
 
-          const batch = dropboxVideoFiles.slice(i, i + BATCH_SIZE);
+          const batch = dropboxFilesNeedingThumbsyticsDashboard.slice(i, i + BATCH_SIZE);
           const filesData = batch.map(f => ({
             id: f.dropboxId,
             link: f.link

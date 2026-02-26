@@ -193,7 +193,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
               file.isDrive
                 ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`
                 : file.isDropbox
-                  ? (file.directLink || file.icon)
+                  ? (videoThumbs[getFileId(file)] || file.directLink || file.icon)
                   : URL.createObjectURL(file)
             }
             alt={file.name}
