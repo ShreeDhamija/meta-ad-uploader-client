@@ -404,7 +404,7 @@ export default function MetaMediaLibraryModal({
                                 }
                             }}
                             disabled={mediaSource === 'instagram' ? loadingIg : loadingMeta}
-                            className="rounded-xl h-8 px-3 flex items-center gap-1.5"
+                            className="rounded-xl h-9 px-3 flex items-center gap-1.5"
                         >
                             {(mediaSource === 'instagram' ? loadingIg : loadingMeta) ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
