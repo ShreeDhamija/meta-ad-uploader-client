@@ -286,8 +286,84 @@ export default function MediaPreview({
 
 
   // Add these before your component or import from a utils file
+  // const compressAndConvertToBase64 = async (file) => {
+  //   return new Promise((resolve) => {
+  //     const reader = new FileReader();
+  //     const img = new Image();
+
+  //     reader.onload = (e) => {
+  //       img.onload = () => {
+  //         const canvas = document.createElement('canvas');
+  //         const ctx = canvas.getContext('2d');
+
+  //         // Calculate new dimensions (max 768px)
+  //         const maxDim = 768;
+  //         let width = img.width;
+  //         let height = img.height;
+
+  //         if (width > height && width > maxDim) {
+  //           height = (height * maxDim) / width;
+  //           width = maxDim;
+  //         } else if (height > maxDim) {
+  //           width = (width * maxDim) / height;
+  //           height = maxDim;
+  //         }
+
+  //         canvas.width = width;
+  //         canvas.height = height;
+  //         ctx.drawImage(img, 0, 0, width, height);
+
+  //         // Convert to base64 (remove data URL prefix)
+  //         const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+  //         resolve(base64);
+  //       };
+  //       img.src = e.target.result;
+  //     };
+
+  //     if (file.isDrive) {
+  //       // For Drive files, fetch the thumbnail
+  //       fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w768`)
+  //         .then(res => res.blob())
+  //         .then(blob => reader.readAsDataURL(blob));
+  //     } else if (file.isDropbox) {
+  //       // For Dropbox files, use the icon or direct link
+  //       fetch(file.icon || file.directLink)
+  //         .then(res => res.blob())
+  //         .then(blob => reader.readAsDataURL(blob));
+  //     } else {
+  //       reader.readAsDataURL(file);
+  //     }
+  //   });
+  // };
+
   const compressAndConvertToBase64 = async (file) => {
-    return new Promise((resolve) => {
+    return new Promise(async (resolve, reject) => {
+      // 1. Determine if we need to fetch via Proxy
+      let blobToProcess = file;
+
+      if (file.isDrive || file.isDropbox) {
+        try {
+          const provider = file.isDrive ? 'google' : 'dropbox';
+          // Dropbox IDs usually start with 'id:', ensuring we pass the ID correctly
+          // const fileId = file.id;
+          const fileId = file.isDrive ? file.id : file.dropboxId;
+          // Fetch from YOUR backend
+          const res = await fetch(`${API_BASE_URL}/api/proxy/cloud-image?fileId=${encodeURIComponent(fileId)}&provider=${provider}`, {
+            credentials: 'include', // Important to send session cookies for auth
+          });
+
+          if (!res.ok) {
+            throw new Error(`Failed to fetch cloud image: ${res.statusText}`);
+          }
+
+          blobToProcess = await res.blob();
+        } catch (err) {
+          console.error("Error fetching cloud file:", err);
+          return reject(err);
+        }
+      }
+
+      // 2. Standard Canvas Resizing Logic (Same as before)
       const reader = new FileReader();
       const img = new Image();
 
@@ -296,8 +372,7 @@ export default function MediaPreview({
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
 
-          // Calculate new dimensions (max 768px)
-          const maxDim = 768;
+          const maxDim = 1024; // Increased slightly for better AI analysis
           let width = img.width;
           let height = img.height;
 
@@ -313,30 +388,19 @@ export default function MediaPreview({
           canvas.height = height;
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Convert to base64 (remove data URL prefix)
+          // Convert to base64
           const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
           resolve(base64);
         };
+        img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
         img.src = e.target.result;
       };
+      reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
 
-      if (file.isDrive) {
-        // For Drive files, fetch the thumbnail
-        fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w768`)
-          .then(res => res.blob())
-          .then(blob => reader.readAsDataURL(blob));
-      } else if (file.isDropbox) {
-        // For Dropbox files, use the icon or direct link
-        fetch(file.icon || file.directLink)
-          .then(res => res.blob())
-          .then(blob => reader.readAsDataURL(blob));
-      } else {
-        reader.readAsDataURL(file);
-      }
+      // Read the blob (either local file or downloaded blob)
+      reader.readAsDataURL(blobToProcess);
     });
   };
-
-
 
 
   const getAspectRatio = async (file) => {
