@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
-import { Loader2, Image as ImageIcon, Video, FolderOpen } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -160,7 +160,8 @@ export default function MetaMediaLibraryModal({
         }
 
         if (forceRefresh) {
-            clearIgCache();
+            sessionStorage.removeItem(IG_CACHE_KEY);
+
         }
 
         // Check cache first
@@ -387,7 +388,7 @@ export default function MetaMediaLibraryModal({
                                 }
                             }}
                             disabled={mediaSource === 'instagram' ? loadingIg : loadingMeta}
-                            className="rounded-xl h-10 px-3 flex items-center gap-1.5"
+                            className="rounded-xl h-8 px-3 flex items-center gap-1.5"
                         >
                             {(mediaSource === 'instagram' ? loadingIg : loadingMeta) ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -436,41 +437,104 @@ export default function MetaMediaLibraryModal({
                                                 ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
                                                 : item.name;
 
+                                        // return (
+                                        //     <label key={itemId} className="relative cursor-pointer group">
+                                        //         <div className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${selected
+                                        //             ? 'border-primary ring-2 ring-primary/30'
+                                        //             : 'border-gray-200 hover:border-primary/50'
+                                        //             }`}>
+                                        //             {preview ? (
+                                        //                 <img
+                                        //                     src={preview}
+                                        //                     alt={label}
+                                        //                     loading="lazy"
+                                        //                     className="h-full w-full object-cover"
+                                        //                     onError={(e) => {
+                                        //                         e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E";
+                                        //                     }}
+                                        //                 />
+                                        //             ) : (
+                                        //                 <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
+                                        //                     No Preview
+                                        //                 </div>
+                                        //             )}
+                                        //             <Checkbox
+                                        //                 checked={selected}
+                                        //                 onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
+                                        //                 className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
+                                        //             />
+                                        //         </div>
+                                        //         <p className="mt-1 text-xs text-gray-700 truncate text-center px-1">
+                                        //             {label || 'Untitled'}
+                                        //         </p>
+                                        //         {!isMeta && item.like_count !== undefined && (
+                                        //             <p className="mt-0.5 text-[10px] text-gray-400 text-center">
+                                        //                 ♥ {item.like_count} &nbsp;💬 {item.comments_count || 0}
+                                        //             </p>
+                                        //         )}
+                                        //     </label>
+                                        // );
+
                                         return (
                                             <label key={itemId} className="relative cursor-pointer group">
-                                                <div className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${selected
+                                                <div className={`rounded-xl overflow-hidden border transition-all ${selected
                                                     ? 'border-primary ring-2 ring-primary/30'
                                                     : 'border-gray-200 hover:border-primary/50'
                                                     }`}>
-                                                    {preview ? (
-                                                        <img
-                                                            src={preview}
-                                                            alt={label}
-                                                            loading="lazy"
-                                                            className="h-full w-full object-cover"
-                                                            onError={(e) => {
-                                                                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E";
-                                                            }}
+                                                    <div className="relative aspect-square bg-gray-800">
+                                                        {preview ? (
+                                                            <img
+                                                                src={preview}
+                                                                alt={label}
+                                                                loading="lazy"
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
+                                                                No Preview
+                                                            </div>
+                                                        )}
+                                                        <Checkbox
+                                                            checked={selected}
+                                                            onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
+                                                            className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
                                                         />
-                                                    ) : (
-                                                        <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
-                                                            No Preview
+                                                    </div>
+                                                    {!isMeta ? (
+                                                        <div className="bg-white border-t border-gray-200 px-2.5 py-2">
+                                                            {item.like_count !== undefined && (
+                                                                <div className="flex items-center gap-3 text-black mb-1">
+                                                                    <span className="flex items-center gap-1 text-xs font-medium">
+                                                                        <Heart className="h-3.5 w-3.5" /> {item.like_count}
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1 text-xs font-medium">
+                                                                        <MessageCircle className="h-3.5 w-3.5" /> {item.comments_count || 0}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            {item.caption && (
+                                                                <p className="text-xs text-gray-700 line-clamp-3 text-left">
+                                                                    {item.caption}
+                                                                </p>
+                                                            )}
+                                                            {item.permalink && (
+
+                                                                <a href={item.permalink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-xs text-blue-500 font-medium mt-1 inline-block"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    View Post
+                                                                </a>
+                                                            )}
                                                         </div>
+                                                    ) : (
+                                                        <p className="mt-1 text-xs text-gray-700 truncate text-center px-1 py-1">
+                                                            {label || 'Untitled'}
+                                                        </p>
                                                     )}
-                                                    <Checkbox
-                                                        checked={selected}
-                                                        onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
-                                                        className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
-                                                    />
                                                 </div>
-                                                <p className="mt-1 text-xs text-gray-700 truncate text-center px-1">
-                                                    {label || 'Untitled'}
-                                                </p>
-                                                {!isMeta && item.like_count !== undefined && (
-                                                    <p className="mt-0.5 text-[10px] text-gray-400 text-center">
-                                                        ♥ {item.like_count} &nbsp;💬 {item.comments_count || 0}
-                                                    </p>
-                                                )}
                                             </label>
                                         );
                                     })}
@@ -532,38 +596,101 @@ export default function MetaMediaLibraryModal({
                                                 ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
                                                 : item.name;
 
+                                        // return (
+                                        //     <label key={itemId} className="relative cursor-pointer group">
+                                        //         <div className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all bg-gray-800 ${selected
+                                        //             ? 'border-primary ring-2 ring-primary/30'
+                                        //             : 'border-gray-200 hover:border-primary/50'
+                                        //             }`}>
+                                        //             {preview ? (
+                                        //                 <img
+                                        //                     src={preview}
+                                        //                     alt={label}
+                                        //                     loading="lazy"
+                                        //                     className="h-full w-full object-cover"
+                                        //                 />
+                                        //             ) : (
+                                        //                 <div className="h-full w-full flex items-center justify-center">
+                                        //                     <Video className="h-8 w-8 text-gray-400" />
+                                        //                 </div>
+                                        //             )}
+                                        //             <Checkbox
+                                        //                 checked={selected}
+                                        //                 onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
+                                        //                 className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
+                                        //             />
+                                        //         </div>
+                                        //         <p className="mt-1 text-xs text-gray-700 truncate text-center px-1">
+                                        //             {label || 'Untitled'}
+                                        //         </p>
+                                        //         {!isMeta && item.like_count !== undefined && (
+                                        //             <p className="mt-0.5 text-[10px] text-gray-400 text-center">
+                                        //                 ♥ {item.like_count} &nbsp;💬 {item.comments_count || 0}
+                                        //             </p>
+                                        //         )}
+                                        //     </label>
+                                        // );
+
                                         return (
                                             <label key={itemId} className="relative cursor-pointer group">
-                                                <div className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all bg-gray-800 ${selected
+                                                <div className={`rounded-xl overflow-hidden border transition-all ${selected
                                                     ? 'border-primary ring-2 ring-primary/30'
                                                     : 'border-gray-200 hover:border-primary/50'
                                                     }`}>
-                                                    {preview ? (
-                                                        <img
-                                                            src={preview}
-                                                            alt={label}
-                                                            loading="lazy"
-                                                            className="h-full w-full object-cover"
+                                                    <div className="relative aspect-square bg-gray-800">
+                                                        {preview ? (
+                                                            <img
+                                                                src={preview}
+                                                                alt={label}
+                                                                loading="lazy"
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="h-full w-full flex items-center justify-center">
+                                                                <Video className="h-8 w-8 text-gray-400" />
+                                                            </div>
+                                                        )}
+                                                        <Checkbox
+                                                            checked={selected}
+                                                            onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
+                                                            className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
                                                         />
-                                                    ) : (
-                                                        <div className="h-full w-full flex items-center justify-center">
-                                                            <Video className="h-8 w-8 text-gray-400" />
+                                                    </div>
+                                                    {!isMeta ? (
+                                                        <div className="bg-white border-t border-gray-200 px-2.5 py-2">
+                                                            {item.like_count !== undefined && (
+                                                                <div className="flex items-center gap-3 text-black mb-1">
+                                                                    <span className="flex items-center gap-1 text-xs font-medium">
+                                                                        <Heart className="h-3.5 w-3.5" /> {item.like_count}
+                                                                    </span>
+                                                                    <span className="flex items-center gap-1 text-xs font-medium">
+                                                                        <MessageCircle className="h-3.5 w-3.5" /> {item.comments_count || 0}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            {item.caption && (
+                                                                <p className="text-xs text-gray-700 line-clamp-3 text-left">
+                                                                    {item.caption}
+                                                                </p>
+                                                            )}
+                                                            {item.permalink && (
+
+                                                                <a href={item.permalink}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-xs text-blue-500 font-medium mt-1 inline-block"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    View Post
+                                                                </a>
+                                                            )}
                                                         </div>
+                                                    ) : (
+                                                        <p className="mt-1 text-xs text-gray-700 truncate text-center px-1 py-1">
+                                                            {label || 'Untitled'}
+                                                        </p>
                                                     )}
-                                                    <Checkbox
-                                                        checked={selected}
-                                                        onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
-                                                        className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
-                                                    />
                                                 </div>
-                                                <p className="mt-1 text-xs text-gray-700 truncate text-center px-1">
-                                                    {label || 'Untitled'}
-                                                </p>
-                                                {!isMeta && item.like_count !== undefined && (
-                                                    <p className="mt-0.5 text-[10px] text-gray-400 text-center">
-                                                        ♥ {item.like_count} &nbsp;💬 {item.comments_count || 0}
-                                                    </p>
-                                                )}
                                             </label>
                                         );
                                     })}
@@ -628,7 +755,7 @@ export default function MetaMediaLibraryModal({
                         </Button>
                     </div>
                 </div>
-            </div>
+            </div >
         </>
     );
 }

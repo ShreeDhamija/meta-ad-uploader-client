@@ -815,29 +815,33 @@ export default function MediaPreview({
           </CardHeader>
 
           {/* Placement Customization Checkbox - only show when carousel is disabled */}
-          {!isCarouselAd && hasOnlyNonDynamicCreativeAdSets && (adType !== 'flexible') && (
-            <div className="px-6 pb-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="placementCustomization"
-                  checked={enablePlacementCustomization}
-                  onCheckedChange={handlePlacementCustomizationChange}
-                  className="border-gray-400 rounded-md"
-                />
-                <label
-                  htmlFor="placementCustomization"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Group media for placement customized ad.
-                </label>
+          {!isCarouselAd &&
+            hasOnlyNonDynamicCreativeAdSets &&
+            adType !== 'flexible' &&
+            importedPosts.length === 0 &&
+            selectedIgOrganicPosts.length === 0 && (
+              <div className="px-6 pb-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="placementCustomization"
+                    checked={enablePlacementCustomization}
+                    onCheckedChange={handlePlacementCustomizationChange}
+                    className="border-gray-400 rounded-md"
+                  />
+                  <label
+                    htmlFor="placementCustomization"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Group media for placement customized ad.
+                  </label>
+                </div>
+                {enablePlacementCustomization && (
+                  <span className="block text-xs text-gray-500 mt-1">
+                    AI Auto Group only works for images
+                  </span>
+                )}
               </div>
-              {enablePlacementCustomization && (
-                <span className="block text-xs text-gray-500 mt-1">
-                  AI Auto Group only works for images
-                </span>
-              )}
-            </div>
-          )}
+            )}
 
           <CardContent
             className="flex-1 overflow-y-auto min-h-0 pr-2"
