@@ -1857,24 +1857,32 @@ export default function AdCreationForm({
       //     !processingRef.current.has(fileId);
       // });
 
+      // --- 3. DROPBOX ---
+      // We filter by dropboxId directly to avoid 'isDropbox' flag dependency issues
       const dropboxFilesNeedingThumbs = dropboxFiles.filter(file => {
-        const fileId = getFileId(file);
+        // FORCE the use of dropboxId. 
+        // If we use getFileId(file) here, it might return the file name 
+        // if the 'isDropbox' flag is missing from the state object.
+        const fileId = file.dropboxId;
+
         return !videoThumbsRef.current[fileId] &&
           !processingRef.current.has(fileId);
       });
 
-      if (dropboxFilesNeedingThumbsyticsDashboard.length > 0 && !abortController.signal.aborted) {
-        dropboxFilesNeedingThumbsyticsDashboard.forEach(file => processingRef.current.add(getFileId(file)));
+      if (dropboxFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        // Track by dropboxId
+        dropboxFilesNeedingThumbs.forEach(file => processingRef.current.add(file.dropboxId));
 
         const BATCH_SIZE = 25;
 
-        for (let i = 0; i < dropboxFilesNeedingThumbsyticsDashboard.length; i += BATCH_SIZE) {
+        for (let i = 0; i < dropboxFilesNeedingThumbs.length; i += BATCH_SIZE) {
           if (abortController.signal.aborted) break;
 
-          const batch = dropboxFilesNeedingThumbsyticsDashboard.slice(i, i + BATCH_SIZE);
+          const batch = dropboxFilesNeedingThumbs.slice(i, i + BATCH_SIZE);
+
           const filesData = batch.map(f => ({
             id: f.dropboxId,
-            link: f.link
+            link: f.link // or f.directLink, depending on your object structure
           }));
 
           try {
@@ -1892,30 +1900,31 @@ export default function AdCreationForm({
               const newThumbs = {};
               batch.forEach(file => {
                 const dId = file.dropboxId;
-                const genericId = getFileId(file);
 
+                // CRITICAL FIX: Save using the dropboxId as the key.
+                // This matches what the UI component looks for.
                 if (data.thumbnails && data.thumbnails[dId]) {
-                  newThumbs[genericId] = data.thumbnails[dId];
+                  newThumbs[dId] = data.thumbnails[dId];
                 } else {
-                  newThumbs[genericId] = "https://api.withblip.com/thumbnail.jpg";
+                  newThumbs[dId] = file.icon || "https://api.withblip.com/thumbnail.jpg";
                 }
               });
 
               setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
             }
           } catch (error) {
-            if (error.name === 'AbortError') {
-              console.log("Dropbox fetch aborted (expected during cleanup)");
-              return;
-            }
+            if (error.name === 'AbortError') return;
             console.error("Dropbox batch error:", error);
+
+            // Error handling: Save fallback using dropboxId key
             const failedThumbs = {};
             batch.forEach(f => {
-              failedThumbs[getFileId(f)] = "https://api.withblip.com/thumbnail.jpg";
+              failedThumbs[f.dropboxId] = "https://api.withblip.com/thumbnail.jpg";
             });
             setVideoThumbs(prev => ({ ...prev, ...failedThumbs }));
           } finally {
-            batch.forEach(f => processingRef.current.delete(getFileId(f)));
+            // Cleanup using dropboxId key
+            batch.forEach(f => processingRef.current.delete(f.dropboxId));
           }
         }
       }
@@ -5904,5 +5913,4 @@ export default function AdCreationForm({
     </Card >
   )
 }
-
 
