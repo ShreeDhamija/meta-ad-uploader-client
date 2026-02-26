@@ -4,10 +4,7 @@ import { useState, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
-import {
-    TrendingUp, TrendingDown, Pause, Loader2, XCircle, Activity, Star,
-    ArrowUpRight, ArrowDownRight,
-} from "lucide-react"
+import { TrendingUp, TrendingDown, Pause, Loader2, XCircle, Activity, Star, ArrowUpRight, ArrowDownRight, Eye } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogOverlay,
@@ -46,7 +43,8 @@ const FILTER_TABS = [
     { key: 'pause', label: 'Pause' },
 ]
 
-export default function RecommendationCards({ data, loading, mode, adAccountId, onApplied }) {
+export default function RecommendationCards({ data, loading, mode, adAccountId, adAccounts, onApplied }) {
+
     const [filter, setFilter] = useState('all')
     const [applyingId, setApplyingId] = useState(null)
     const [dismissed, setDismissed] = useState(new Set())
@@ -216,9 +214,9 @@ export default function RecommendationCards({ data, loading, mode, adAccountId, 
                                                     <p className="font-medium text-gray-900 truncate">
                                                         {rec.type === 'scale_winner' ? rec.adName : (rec.adsetName || rec.campaignName)}
                                                     </p>
-                                                    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 rounded-full", cfg.badgeBg)}>
+                                                    {/* <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 rounded-full", cfg.badgeBg)}>
                                                         {cfg.label}
-                                                    </Badge>
+                                                    </Badge> */}
                                                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-gray-100 text-gray-500 border-gray-200">
                                                         {rec.level}
                                                     </Badge>
@@ -294,27 +292,43 @@ export default function RecommendationCards({ data, loading, mode, adAccountId, 
 
                                         {/* Action buttons */}
                                         <div className="flex items-center gap-2 flex-shrink-0">
+                                            {rec.type === 'scale_winner' ? (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const account = adAccounts?.find(a => a.id === adAccountId);
+                                                        const bizId = account?.business_id || '';
+                                                        const url = `https://adsmanager.facebook.com/adsmanager/manage/ads/edit/standalone?act=${adAccountId}&business_id=${bizId}&global_scope_id=${bizId}&selected_adset_ids=${rec.adsetId}&selected_ad_ids=${rec.adId}`;
+                                                        window.open(url, '_blank');
+                                                    }}
+                                                    className={cn("rounded-xl text-xs", cfg.btnClass)}
+                                                >
+                                                    <Eye className="w-4 h-4 mr-1" />
+                                                    View Ad
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => rec.type === 'pause'
+                                                        ? setConfirmDialog({ rec, action: 'pause' })
+                                                        : handleApply(rec)
+                                                    }
+                                                    disabled={applying}
+                                                    className={cn("rounded-xl text-xs", cfg.btnClass)}
+                                                >
+                                                    {applying ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        cfg.label
+                                                    )}
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="ghost" size="sm"
                                                 onClick={() => handleDismiss(rec)}
                                                 className="text-gray-400 hover:text-gray-600 h-8 w-8 p-0"
                                             >
                                                 <XCircle className="w-4 h-4" />
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                onClick={() => rec.type === 'pause'
-                                                    ? setConfirmDialog({ rec, action: 'pause' })
-                                                    : handleApply(rec)
-                                                }
-                                                disabled={applying}
-                                                className={cn("rounded-xl text-xs", cfg.btnClass)}
-                                            >
-                                                {applying ? (
-                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                ) : (
-                                                    rec.type === 'pause' ? 'Pause' : 'Apply'
-                                                )}
                                             </Button>
                                         </div>
                                     </div>

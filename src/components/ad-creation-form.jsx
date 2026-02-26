@@ -22,7 +22,8 @@ import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostSelectorInline from "@/components/PostIDSelector"
-import { MetaMediaLibraryModal } from "@/components/MetaMediaLibraryModal";
+// import { MetaMediaLibraryModal } from "@/components/MetaMediaLibraryModal";
+import MetaMediaLibraryModal from "@/components/MetaMediaLibraryModal";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -438,6 +439,8 @@ export default function AdCreationForm({
   setImportedPosts,
   importedFiles,
   setImportedFiles,
+  selectedIgOrganicPosts,
+  setSelectedIgOrganicPosts,
   videoThumbs,
   setVideoThumbs,
   selectedAdSets,
@@ -659,6 +662,9 @@ export default function AdCreationForm({
         adCount = selectedAdSets.length || 1;
       }
     }
+    else if (selectedIgOrganicPosts.length > 0) {
+      adCount += selectedIgOrganicPosts.length * (selectedAdSets.length || 1);
+    }
     else {
       adCount = files.length + driveFiles.length + importedFiles.length + dropboxFiles.length;
     }
@@ -685,6 +691,8 @@ export default function AdCreationForm({
         thumbnail,
         importedPosts: [...importedPosts],
         importedFiles: [...importedFiles],  // ADD THIS
+        selectedIgOrganicPosts: [...selectedIgOrganicPosts],
+
 
 
 
@@ -2003,89 +2011,6 @@ export default function AdCreationForm({
 
 
 
-  // const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "") => {
-
-  //   if (!adNameFormulaV2?.rawInput) {
-  //     // Fallback to old computation if no V2 formula
-  //     return computeAdName(file, adValues.dateType, iterationIndex);
-  //   }
-
-  //   const formulaToUse = formula || adNameFormulaV2;
-  //   if (!formulaToUse?.rawInput) {
-  //     // Fallback to old computation if no V2 formula
-  //     return computeAdName(file, adValues.dateType, iterationIndex);
-  //   }
-
-  //   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  //     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  //   const now = new Date();
-  //   const monthAbbrev = monthNames[now.getMonth()];
-  //   const date = String(now.getDate()).padStart(2, "0");
-  //   const year = now.getFullYear();
-  //   const monthYear = `${monthAbbrev}${year}`;
-  //   const monthDayYear = `${monthAbbrev}${date}${year}`;
-
-  //   let fileName = "";
-  //   if (file && file.name) {
-  //     fileName = file.name.replace(/\.[^/.]+$/, "");
-  //   }
-
-  //   let fileType = "";
-
-  //   if (file) {
-  //     if (isVideoFile(file)) {
-  //       fileType = "Video";
-  //     } else {
-  //       fileType = "Static";
-  //     }
-  //   }
-
-
-  //   // Extract URL slug
-  //   let urlSlug = "";
-  //   if (link) {
-  //     try {
-  //       // Remove protocol and get the path
-  //       const urlWithoutProtocol = link.replace(/^https?:\/\//, "");
-  //       const lastSlashIndex = urlWithoutProtocol.lastIndexOf("/");
-
-  //       // If there's a slash and something after it
-  //       if (lastSlashIndex > 0 && lastSlashIndex < urlWithoutProtocol.length - 1) {
-  //         urlSlug = urlWithoutProtocol.substring(lastSlashIndex + 1);
-  //       }
-  //     } catch (e) {
-  //       // If URL parsing fails, keep urlSlug as empty string
-  //       urlSlug = "";
-  //     }
-  //   }
-
-  //   let adTypeLabel = "";
-  //   if (adType) {
-  //     try {
-  //       if (adType === 'flexible')
-  //         adTypeLabel = 'FLEX';
-  //       else if (adType === 'carousel')
-  //         adTypeLabel = 'CAR';
-  //       else adTypeLabel = fileType;
-  //     }
-  //     catch (e) {
-  //       adTypeLabel = "";
-  //     }
-  //   }
-
-  //   // Replace variables in the formula
-  //   let adName = formulaToUse.rawInput
-  //     .replace(/\{\{File Name\}\}/g, fileName)
-  //     .replace(/\{\{File Type\}\}/g, fileType)
-  //     .replace(/\{\{Date \(MonthYYYY\)\}\}/g, monthYear)
-  //     .replace(/\{\{Date \(MonthDDYYYY\)\}\}/g, monthDayYear)
-  //     .replace(/\{\{Iteration\}\}/g, String(iterationIndex + 1).padStart(2, "0"))
-  //     .replace(/\{\{URL Slug\}\}/g, urlSlug)
-  //     .replace(/\{\{Ad Type\}\}/g, adTypeLabel);
-
-  //   return adName.trim() || "Ad Generated Through Blip";
-  // }, [adNameFormulaV2]);
-
 
   const formatDate = (formatStr) => {
     const now = new Date();
@@ -2318,6 +2243,9 @@ export default function AdCreationForm({
       thumbnail,
       importedPosts,
       importedFiles,
+      selectedIgOrganicPosts,   // ADD THIS
+
+
       selectedAdSets,
       duplicateAdSet,
       newAdSetName,
@@ -2367,7 +2295,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -3311,6 +3239,42 @@ export default function AdCreationForm({
 
       }
 
+
+      // ============================================================================
+      // SECTION: INSTAGRAM ORGANIC POST ADS
+      // ============================================================================
+      if (selectedIgOrganicPosts && selectedIgOrganicPosts.length > 0) {
+        const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+
+        adSetIdsToUse.forEach((adSetId) => {
+          selectedIgOrganicPosts.forEach((igPost, postIndex) => {
+            const formData = new FormData();
+
+            const adName = computeAdNameFromFormula(null, postIndex, link[0], jobData.formData.adNameFormulaV2, null);
+            formData.append("adName", adName);
+            formData.append("adAccountId", selectedAdAccount);
+            formData.append("adSetId", adSetId);
+            formData.append("pageId", pageId);
+            formData.append("instagramAccountId", instagramAccountId || "");
+            formData.append("launchPaused", launchPaused);
+            formData.append("jobId", frontendJobId);
+            formData.append("cta", cta || "LEARN_MORE");  // placeholder CTA
+            formData.append("link", JSON.stringify(link));
+
+            // IG post specific
+            formData.append("sourceInstagramMediaId", igPost.source_instagram_media_id);
+            formData.append("adType", "instagram_post");
+
+            if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
+            if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
+
+            promises.push(createAdApiCall(formData, API_BASE_URL));
+            promiseMetadata.push({ fileName: igPost.ad_name });
+          });
+        });
+      }
+
+
       if (isCarouselAd && dynamicAdSetIds.length === 0) {
         if (selectedAdSets.length === 0 && !duplicateAdSet) {
           toast.error("Please select at least one ad set for carousel");
@@ -4154,7 +4118,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) {
+    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -4429,7 +4393,7 @@ export default function AdCreationForm({
             <ConfigIcon className="w-5 h-5" />
             Select ad preferences
           </div>
-          {!useExistingPosts && (
+          {!(useExistingPosts || selectedIgOrganicPosts.length > 0) && (
             <div className="flex items-center space-x-2">
               <Label htmlFor="ad-type" className="text-sm whitespace-nowrap">
                 Ad Type:
@@ -4924,7 +4888,7 @@ export default function AdCreationForm({
                   <div className="mt-1">
                     <Label className="text-xs text-gray-500">
                       Ad Name Preview: {
-                        (files.length > 0 || driveFiles.length > 0)
+                        (files.length > 0 || driveFiles.length > 0 || importedFiles.length > 0 || importedPosts.length > 0 || selectedIgOrganicPosts.length > 0)
                           ? computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], null, adType)
                           : "Upload a file to see example"
                       }
@@ -4934,251 +4898,203 @@ export default function AdCreationForm({
 
 
 
+                {selectedIgOrganicPosts.length === 0 ? (
+                  <div className="space-y-3">
 
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Label className="flex items-center gap-2 mb-0">
-                        <TemplateIcon className="w-4 h-4" />
-                        {Object.keys(copyTemplates).length === 0
-                          ? "Select a Copy Template"
-                          : "Select a Copy Template"}
-                      </Label>
-                      {Object.keys(copyTemplates).length === 0 && (<Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                        className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
-                      >
-                        <CogIcon className="w-3 h-3 text-white" />
-                        Set Up Templates
-                      </Button>
-                      )}
-                    </div>
 
-                    <Select
-                      value={selectedTemplate}
-                      onValueChange={setSelectedTemplate}
-                      disabled={Object.keys(copyTemplates).length === 0}
-                    >
-                      <SelectTrigger
-                        className="border border-gray-400 rounded-xl bg-white shadow"
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="flex items-center gap-2 mb-0">
+                          <TemplateIcon className="w-4 h-4" />
+                          {Object.keys(copyTemplates).length === 0
+                            ? "Select a Copy Template"
+                            : "Select a Copy Template"}
+                        </Label>
+                        {Object.keys(copyTemplates).length === 0 && (<Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+                          className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
+                        >
+                          <CogIcon className="w-3 h-3 text-white" />
+                          Set Up Templates
+                        </Button>
+                        )}
+                      </div>
+
+                      <Select
+                        value={selectedTemplate}
+                        onValueChange={setSelectedTemplate}
                         disabled={Object.keys(copyTemplates).length === 0}
                       >
-                        <SelectValue
-                          placeholder={
-                            Object.keys(copyTemplates).length === 0
-                              ? "No templates available for selected ad account"
-                              : "Choose a Template"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
-                        {Object.entries(copyTemplates)
-                          .sort(([a], [b]) => {
-                            if (a === defaultTemplateName) return -1;
-                            if (b === defaultTemplateName) return 1;
-                            return a.localeCompare(b);
-                          })
-                          .map(([templateName]) => (
-                            <SelectItem
-                              key={templateName}
-                              value={templateName}
-                              className="text-sm px-4 py-2 rounded-xl hover:bg-gray-100"
-                            >
-                              {templateName}
-                            </SelectItem>
+                        <SelectTrigger
+                          className="border border-gray-400 rounded-xl bg-white shadow"
+                          disabled={Object.keys(copyTemplates).length === 0}
+                        >
+                          <SelectValue
+                            placeholder={
+                              Object.keys(copyTemplates).length === 0
+                                ? "No templates available for selected ad account"
+                                : "Choose a Template"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
+                          {Object.entries(copyTemplates)
+                            .sort(([a], [b]) => {
+                              if (a === defaultTemplateName) return -1;
+                              if (b === defaultTemplateName) return 1;
+                              return a.localeCompare(b);
+                            })
+                            .map(([templateName]) => (
+                              <SelectItem
+                                key={templateName}
+                                value={templateName}
+                                className="text-sm px-4 py-2 rounded-xl hover:bg-gray-100"
+                              >
+                                {templateName}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+
+                    <div className="space-y-2">
+                      {/* Primary text Section */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center justify-between">
+                          <span>
+                            Primary Text
+                            {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
+                          </span>
+                          {isCarouselAd && (
+                            <div className="flex items-center space-x-1 ">
+                              <Checkbox
+                                id="apply-text-all"
+                                checked={applyTextToAllCards}
+                                onCheckedChange={(checked) => {
+                                  setApplyTextToAllCards(checked);
+                                  if (checked && messages.length > 0) {
+                                    const firstMessage = messages[0];
+                                    const fileCount = files.length + driveFiles.length + importedFiles.length;
+                                    if (fileCount > 0) {
+                                      setMessages(new Array(fileCount).fill(firstMessage));
+                                    }
+
+                                  } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
+                                    const tpl = copyTemplates[selectedTemplate];
+                                    setMessages(tpl.primaryTexts || [""]);
+                                  }
+                                }}
+                                className="border-gray-300 w-4 h-4 rounded-md"
+                              />
+                              <label htmlFor="apply-text-all" className="text-xs font-medium">
+                                Apply To All Cards
+                              </label>
+                            </div>
+                          )}
+                        </Label>
+                        <div className="space-y-3">
+                          {messages.map((value, index) => (
+                            <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? 'hidden' : ''}`}>
+                              <TextareaAutosize
+                                value={value}
+                                onChange={(e) => {
+                                  if (isCarouselAd && applyTextToAllCards) {
+                                    // Update all positions with the same value
+                                    setMessages(new Array(messages.length).fill(e.target.value));
+                                  } else {
+                                    updateField(setMessages, messages, index, e.target.value);
+                                  }
+                                }}
+                                placeholder={isCarouselAd ? `Text for card ${index + 1}` : "Add text option"}
+                                disabled={!isLoggedIn}
+                                minRows={2}
+                                maxRows={10}
+                                className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                                style={{
+                                  scrollbarWidth: 'thin',
+                                  scrollbarColor: '#c7c7c7 transparent'
+                                }}
+                              />
+                              {messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                                  size="icon"
+                                  onClick={() => removeField(setMessages, messages, index)}
+                                >
+                                  <Trash2
+                                    className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                                  <span className="sr-only">Remove</span>
+                                </Button>
+                              )}
+                            </div>
                           ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                          {messages.length < (isCarouselAd ? 10 : 5) && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                              onClick={() => addField(setMessages, messages)}
+                            >
+                              <Plus className="mr-2 h-4 w-4 text-white" />
+                              {isCarouselAd ? 'Add card text' : 'Add text option'}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-
-                  <div className="space-y-2">
-                    {/* Primary text Section */}
+                    {/* Headlines Section */}
                     <div className="space-y-2">
                       <Label className="flex items-center justify-between">
                         <span>
-                          Primary Text
+                          Headlines
                           {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
                         </span>
                         {isCarouselAd && (
-                          <div className="flex items-center space-x-1 ">
+                          <div className="flex items-center space-x-1">
                             <Checkbox
-                              id="apply-text-all"
-                              checked={applyTextToAllCards}
+                              id="apply-headlines-all"
+                              checked={applyHeadlinesToAllCards}
                               onCheckedChange={(checked) => {
-                                setApplyTextToAllCards(checked);
-                                if (checked && messages.length > 0) {
-                                  const firstMessage = messages[0];
-                                  const fileCount = files.length + driveFiles.length + importedFiles.length;
+                                setApplyHeadlinesToAllCards(checked);
+                                if (checked && headlines.length > 0) {
+                                  const firstHeadline = headlines[0];
+                                  const fileCount = files.length + driveFiles.length + importedFiles.length; // ← Use file count!
                                   if (fileCount > 0) {
-                                    setMessages(new Array(fileCount).fill(firstMessage));
+                                    setHeadlines(new Array(fileCount).fill(firstHeadline));
                                   }
-
                                 } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
                                   const tpl = copyTemplates[selectedTemplate];
-                                  setMessages(tpl.primaryTexts || [""]);
+                                  setHeadlines(tpl.headlines || [""]);
                                 }
                               }}
                               className="border-gray-300 w-4 h-4 rounded-md"
                             />
-                            <label htmlFor="apply-text-all" className="text-xs font-medium">
+                            <label htmlFor="apply-headlines-all" className="text-xs font-medium">
                               Apply To All Cards
                             </label>
                           </div>
                         )}
                       </Label>
                       <div className="space-y-3">
-                        {messages.map((value, index) => (
-                          <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? 'hidden' : ''}`}>
+                        {headlines.map((value, index) => (
+                          <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
                             <TextareaAutosize
                               value={value}
                               onChange={(e) => {
-                                if (isCarouselAd && applyTextToAllCards) {
-                                  // Update all positions with the same value
-                                  setMessages(new Array(messages.length).fill(e.target.value));
+                                if (isCarouselAd && applyHeadlinesToAllCards) {
+                                  const newHeadlines = new Array(headlines.length).fill(e.target.value);
+                                  setHeadlines(newHeadlines);
                                 } else {
-                                  updateField(setMessages, messages, index, e.target.value);
+                                  updateField(setHeadlines, headlines, index, e.target.value);
                                 }
                               }}
-                              placeholder={isCarouselAd ? `Text for card ${index + 1}` : "Add text option"}
-                              disabled={!isLoggedIn}
-                              minRows={2}
-                              maxRows={10}
-                              className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
-                              style={{
-                                scrollbarWidth: 'thin',
-                                scrollbarColor: '#c7c7c7 transparent'
-                              }}
-                            />
-                            {messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                                size="icon"
-                                onClick={() => removeField(setMessages, messages, index)}
-                              >
-                                <Trash2
-                                  className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                                <span className="sr-only">Remove</span>
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                        {messages.length < (isCarouselAd ? 10 : 5) && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                            onClick={() => addField(setMessages, messages)}
-                          >
-                            <Plus className="mr-2 h-4 w-4 text-white" />
-                            {isCarouselAd ? 'Add card text' : 'Add text option'}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Headlines Section */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center justify-between">
-                      <span>
-                        Headlines
-                        {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
-                      </span>
-                      {isCarouselAd && (
-                        <div className="flex items-center space-x-1">
-                          <Checkbox
-                            id="apply-headlines-all"
-                            checked={applyHeadlinesToAllCards}
-                            onCheckedChange={(checked) => {
-                              setApplyHeadlinesToAllCards(checked);
-                              if (checked && headlines.length > 0) {
-                                const firstHeadline = headlines[0];
-                                const fileCount = files.length + driveFiles.length + importedFiles.length; // ← Use file count!
-                                if (fileCount > 0) {
-                                  setHeadlines(new Array(fileCount).fill(firstHeadline));
-                                }
-                              } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
-                                const tpl = copyTemplates[selectedTemplate];
-                                setHeadlines(tpl.headlines || [""]);
-                              }
-                            }}
-                            className="border-gray-300 w-4 h-4 rounded-md"
-                          />
-                          <label htmlFor="apply-headlines-all" className="text-xs font-medium">
-                            Apply To All Cards
-                          </label>
-                        </div>
-                      )}
-                    </Label>
-                    <div className="space-y-3">
-                      {headlines.map((value, index) => (
-                        <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
-                          <TextareaAutosize
-                            value={value}
-                            onChange={(e) => {
-                              if (isCarouselAd && applyHeadlinesToAllCards) {
-                                const newHeadlines = new Array(headlines.length).fill(e.target.value);
-                                setHeadlines(newHeadlines);
-                              } else {
-                                updateField(setHeadlines, headlines, index, e.target.value);
-                              }
-                            }}
-                            minRows={1}
-                            maxRows={10}
-                            className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
-                            style={{
-                              scrollbarWidth: 'thin',
-                              scrollbarColor: '#c7c7c7 transparent'
-                            }}
-                            placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Enter headline"}
-                            disabled={!isLoggedIn}
-                          />
-                          {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                              size="icon"
-                              onClick={() => removeField(setHeadlines, headlines, index)}
-                            >
-                              <Trash2
-                                className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
-                              <span className="sr-only">Remove</span>
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      {headlines.length < (isCarouselAd ? 10 : 5) && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                          onClick={() => addField(setHeadlines, headlines)}
-                        >
-                          <Plus className="mr-2 h-4 w-4 text-white" />
-                          {isCarouselAd ? 'Add card headline' : 'Add headline option'}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Descriptions Section - only show if template has descriptions */}
-
-                  {descriptions.some(d => d.trim()) && (
-                    <div className="space-y-2">
-                      <Label>Descriptions</Label>
-                      <div className="space-y-3">
-                        {descriptions.map((value, index) => (
-                          <div key={index} className="flex items-center gap-2">
-                            <TextareaAutosize
-                              value={value}
-                              onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
                               minRows={1}
                               maxRows={10}
                               className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
@@ -5186,38 +5102,95 @@ export default function AdCreationForm({
                                 scrollbarWidth: 'thin',
                                 scrollbarColor: '#c7c7c7 transparent'
                               }}
-                              placeholder="Enter description"
+                              placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Enter headline"}
                               disabled={!isLoggedIn}
                             />
-                            {descriptions.length > 1 && (
+                            {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
                               <Button
                                 type="button"
                                 variant="ghost"
                                 className="border border-gray-400 rounded-xl bg-white shadow-sm"
                                 size="icon"
-                                onClick={() => removeField(setDescriptions, descriptions, index)}
+                                onClick={() => removeField(setHeadlines, headlines, index)}
                               >
-                                <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                                <Trash2
+                                  className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
                                 <span className="sr-only">Remove</span>
                               </Button>
                             )}
                           </div>
                         ))}
-                        {descriptions.length < 5 && (
+                        {headlines.length < (isCarouselAd ? 10 : 5) && (
                           <Button
                             type="button"
                             size="sm"
-                            className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                            onClick={() => addField(setDescriptions, descriptions)}
+                            className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                            onClick={() => addField(setHeadlines, headlines)}
                           >
                             <Plus className="mr-2 h-4 w-4 text-white" />
-                            Add description option
+                            {isCarouselAd ? 'Add card headline' : 'Add headline option'}
                           </Button>
                         )}
                       </div>
                     </div>
-                  )}
-                </div>
+
+                    {/* Descriptions Section - only show if template has descriptions */}
+
+                    {descriptions.some(d => d.trim()) && (
+                      <div className="space-y-2">
+                        <Label>Descriptions</Label>
+                        <div className="space-y-3">
+                          {descriptions.map((value, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <TextareaAutosize
+                                value={value}
+                                onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
+                                minRows={1}
+                                maxRows={10}
+                                className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                                style={{
+                                  scrollbarWidth: 'thin',
+                                  scrollbarColor: '#c7c7c7 transparent'
+                                }}
+                                placeholder="Enter description"
+                                disabled={!isLoggedIn}
+                              />
+                              {descriptions.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                                  size="icon"
+                                  onClick={() => removeField(setDescriptions, descriptions, index)}
+                                >
+                                  <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                                  <span className="sr-only">Remove</span>
+                                </Button>
+                              )}
+                            </div>
+                          ))}
+                          {descriptions.length < 5 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                              onClick={() => addField(setDescriptions, descriptions)}
+                            >
+                              <Plus className="mr-2 h-4 w-4 text-white" />
+                              Add description option
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                    <p className="text-sm text-blue-700">
+                      Ad copy will be sourced from the selected Instagram posts.
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <div className="space-y-2">
@@ -5569,11 +5542,15 @@ export default function AdCreationForm({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="block">Upload Media</Label>
+
                     <MetaMediaLibraryModal
                       adAccountId={selectedAdAccount}
                       isLoggedIn={isLoggedIn}
                       importedFiles={importedFiles}
                       setImportedFiles={setImportedFiles}
+                      instagramAccountId={instagramAccountId}
+                      selectedIgOrganicPosts={selectedIgOrganicPosts}
+                      setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                     />
                   </div>
                   <div
@@ -5707,7 +5684,7 @@ export default function AdCreationForm({
               disabled={
                 !isLoggedIn ||
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
-                (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0) ||
+                (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
                 (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
                 (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
                 (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||

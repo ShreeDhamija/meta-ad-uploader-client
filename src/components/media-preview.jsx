@@ -252,7 +252,9 @@ export default function MediaPreview({
   adSets,
   duplicateAdSet,
   selectedFiles,
-  setSelectedFiles
+  setSelectedFiles,
+  selectedIgOrganicPosts = [],
+  setSelectedIgOrganicPosts
 }) {
   // const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isAIGrouping, setIsAIGrouping] = useState(false);
@@ -697,7 +699,7 @@ export default function MediaPreview({
 
   return (
     <>
-      {(files.length > 0 || driveFiles.length > 0 || (dropboxFiles?.length || 0) > 0 || importedPosts.length > 0 || importedFiles.length > 0) ? (
+      {(files.length > 0 || driveFiles.length > 0 || (dropboxFiles?.length || 0) > 0 || importedPosts.length > 0 || importedFiles.length > 0 || selectedIgOrganicPosts.length > 0) ? (
         <Card
           className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-2xl"
           style={{ height: "calc(100vh - 140px)" }}
@@ -803,6 +805,7 @@ export default function MediaPreview({
                   setFileGroups([]);
                   setImportedPosts([]);
                   setImportedFiles([]);
+                  setSelectedIgOrganicPosts([]);
                 }}
                 className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
               >
@@ -812,29 +815,33 @@ export default function MediaPreview({
           </CardHeader>
 
           {/* Placement Customization Checkbox - only show when carousel is disabled */}
-          {!isCarouselAd && hasOnlyNonDynamicCreativeAdSets && (adType !== 'flexible') && (
-            <div className="px-6 pb-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="placementCustomization"
-                  checked={enablePlacementCustomization}
-                  onCheckedChange={handlePlacementCustomizationChange}
-                  className="border-gray-400 rounded-md"
-                />
-                <label
-                  htmlFor="placementCustomization"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                >
-                  Group media for placement customized ad.
-                </label>
+          {!isCarouselAd &&
+            hasOnlyNonDynamicCreativeAdSets &&
+            adType !== 'flexible' &&
+            importedPosts.length === 0 &&
+            selectedIgOrganicPosts.length === 0 && (
+              <div className="px-6 pb-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="placementCustomization"
+                    checked={enablePlacementCustomization}
+                    onCheckedChange={handlePlacementCustomizationChange}
+                    className="border-gray-400 rounded-md"
+                  />
+                  <label
+                    htmlFor="placementCustomization"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Group media for placement customized ad.
+                  </label>
+                </div>
+                {enablePlacementCustomization && (
+                  <span className="block text-xs text-gray-500 mt-1">
+                    AI Auto Group only works for images
+                  </span>
+                )}
               </div>
-              {enablePlacementCustomization && (
-                <span className="block text-xs text-gray-500 mt-1">
-                  AI Auto Group only works for images
-                </span>
-              )}
-            </div>
-          )}
+            )}
 
           <CardContent
             className="flex-1 overflow-y-auto min-h-0 pr-2"
@@ -980,6 +987,35 @@ export default function MediaPreview({
                         </p>
                       </div>
                     ))}
+
+                    {selectedIgOrganicPosts.map((post) => (
+                      <div key={`ig-${post.source_instagram_media_id}`} className="relative group" title={post.ad_name}>
+                        <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
+                          <img
+                            src={post.previewUrl || "https://api.withblip.com/thumbnail.jpg"}
+                            alt={post.ad_name}
+                            className="w-full h-auto object-cover"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-sm h-7 w-7 p-3 z-30"
+                            style={{ opacity: 0.9, backgroundColor: "white" }}
+                            onClick={() => setSelectedIgOrganicPosts(prev => prev.filter(p => p.source_instagram_media_id !== post.source_instagram_media_id))}
+                          >
+                            <Trash className="h-2 w-2" />
+                          </Button>
+                        </div>
+                        {/* <p className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full">
+                          {post.ad_name}
+                        </p> */}
+                      </div>
+                    ))}
+
 
                   </div>
                 </div>
