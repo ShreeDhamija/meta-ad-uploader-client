@@ -1006,9 +1006,9 @@ export default function MediaPreview({
                             <Trash className="h-2 w-2" />
                           </Button>
                         </div>
-                        <p className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full">
+                        {/* <p className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full">
                           {post.ad_name}
-                        </p>
+                        </p> */}
                       </div>
                     ))}
 

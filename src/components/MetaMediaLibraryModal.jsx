@@ -159,6 +159,10 @@ export default function MetaMediaLibraryModal({
             return;
         }
 
+        if (forceRefresh) {
+            clearIgCache();
+        }
+
         // Check cache first
         if (!forceRefresh) {
             const cached = getIgCache(instagramAccountId);
@@ -361,14 +365,14 @@ export default function MetaMediaLibraryModal({
                         <FolderOpen className="h-4 w-4" />
                         {mediaSource === 'meta_library' ? 'Meta Media Library' : 'Instagram Posts'}
                     </h2>
-                    <div className="flex items-center gap-0">
+                    <div className="flex items-center gap-2">
                         <Select value={mediaSource} onValueChange={handleSourceChange}>
-                            <SelectTrigger className="w-[200px] rounded-xl rounded-r-none border-r-0">
+                            <SelectTrigger className="w-[200px] rounded-xl">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-white rounded-xl">
-                                <SelectItem value="instagram">Instagram Posts</SelectItem>
-                                <SelectItem value="meta_library">Meta Media Library</SelectItem>
+                            <SelectContent className="bg-white rounded-lg">
+                                <SelectItem value="instagram" className="rounded-lg cursor-pointer">Instagram Posts</SelectItem>
+                                <SelectItem value="meta_library" className="rounded-lg cursor-pointer">Meta Media Library</SelectItem>
                             </SelectContent>
                         </Select>
                         <Button
@@ -383,12 +387,12 @@ export default function MetaMediaLibraryModal({
                                 }
                             }}
                             disabled={mediaSource === 'instagram' ? loadingIg : loadingMeta}
-                            className="rounded-xl rounded-l-none h-10"
+                            className="rounded-xl h-10 px-3 flex items-center gap-1.5"
                         >
                             {(mediaSource === 'instagram' ? loadingIg : loadingMeta) ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                                '↻'
+                                <>↻ Refresh</>
                             )}
                         </Button>
                     </div>
