@@ -54,7 +54,6 @@ export const AuthProvider = ({ children }) => {
 
       })
       if (res.ok) {
-        localStorage.removeItem(HOME_CACHE_KEY);
         toast.info("Logged out successfully!")
         setIsLoggedIn(false)
         setUserName("")
