@@ -128,9 +128,7 @@ export default function BillingSettings() {
                         value: data.amount_total,
                         customer_name: data.customer_name,
                         customer_email: data.customer_email,
-                        // currency: data.currency,
-                        // planType: data.planType,
-                        // discount: data.discount,
+
                     });
 
                 } else {
