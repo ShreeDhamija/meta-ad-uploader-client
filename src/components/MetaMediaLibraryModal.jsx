@@ -38,7 +38,7 @@ export default function MetaMediaLibraryModal({
     setSelectedIgOrganicPosts = () => { },
 }) {
     const [isOpen, setIsOpen] = useState(false);
-    const [mediaSource, setMediaSource] = useState('meta_library');
+    const [mediaSource, setMediaSource] = useState('instagram');
     const [activeTab, setActiveTab] = useState('images');
 
     const [metaImages, setMetaImages] = useState([]);
@@ -111,8 +111,13 @@ export default function MetaMediaLibraryModal({
                 params: { adAccountId, after: metaImagesPagination.nextCursor },
                 withCredentials: true,
             });
-            setMetaImages(prev => [...prev, ...mapMetaImages(res.data?.data || [])]);
-            setMetaImagesPagination(res.data?.pagination || { hasMore: false, nextCursor: null });
+            const newData = res.data?.data || [];
+            const newPagination = res.data?.pagination || { hasMore: false, nextCursor: null };
+            setMetaImages(prev => [...prev, ...mapMetaImages(newData)]);
+            setMetaImagesPagination(newPagination);
+            if (!newPagination.hasMore) {
+                toast.info('No more images to load');
+            }
         } catch (err) {
             console.error('Error loading more images:', err);
             toast.error('Failed to load more images');
@@ -129,8 +134,13 @@ export default function MetaMediaLibraryModal({
                 params: { adAccountId, after: metaVideosPagination.nextCursor },
                 withCredentials: true,
             });
-            setMetaVideos(prev => [...prev, ...mapMetaVideos(res.data?.data || [])]);
-            setMetaVideosPagination(res.data?.pagination || { hasMore: false, nextCursor: null });
+            const newData = res.data?.data || [];
+            const newPagination = res.data?.pagination || { hasMore: false, nextCursor: null };
+            setMetaVideos(prev => [...prev, ...mapMetaVideos(newData)]);
+            setMetaVideosPagination(newPagination);
+            if (!newPagination.hasMore) {
+                toast.info('No more videos to load');
+            }
         } catch (err) {
             console.error('Error loading more videos:', err);
             toast.error('Failed to load more videos');
@@ -139,28 +149,7 @@ export default function MetaMediaLibraryModal({
         }
     }, [adAccountId, metaVideosPagination.nextCursor]);
 
-    // const fetchInstagramPosts = useCallback(async () => {
-    //     if (!instagramAccountId) {
-    //         toast.error('Please select an Instagram account first');
-    //         setMediaSource('meta_library');
-    //         return;
-    //     }
-    //     setLoadingIg(true);
-    //     try {
-    //         const res = await axios.get(`${API_BASE_URL}/auth/instagram-media`, {
-    //             params: { igUserId: instagramAccountId },
-    //             withCredentials: true,
-    //         });
-    //         setIgImages(res.data?.images || []);
-    //         setIgVideos(res.data?.videos || []);
-    //         setIgPagination(res.data?.pagination || { hasMore: false, nextCursor: null });
-    //     } catch (err) {
-    //         console.error('Error fetching IG posts:', err);
-    //         toast.error(err.response?.data?.error || 'Failed to load Instagram posts');
-    //     } finally {
-    //         setLoadingIg(false);
-    //     }
-    // }, [instagramAccountId]);
+
 
 
     const fetchInstagramPosts = useCallback(async (forceRefresh = false) => {
@@ -212,10 +201,6 @@ export default function MetaMediaLibraryModal({
                 params: { igUserId: instagramAccountId, after: igPagination.nextCursor },
                 withCredentials: true,
             });
-            // setIgImages(prev => [...prev, ...(res.data?.images || [])]);
-            // setIgVideos(prev => [...prev, ...(res.data?.videos || [])]);
-            // setIgPagination(res.data?.pagination || { hasMore: false, nextCursor: null });
-
 
             const newImages = res.data?.images || [];
             const newVideos = res.data?.videos || [];
@@ -232,7 +217,9 @@ export default function MetaMediaLibraryModal({
                 return updated;
             });
             setIgPagination(newPagination);
-
+            if (!newPagination.hasMore) {
+                toast.info('No more posts to load');
+            }
 
         } catch (err) {
             console.error('Error loading more IG posts:', err);
@@ -374,31 +361,37 @@ export default function MetaMediaLibraryModal({
                         <FolderOpen className="h-4 w-4" />
                         {mediaSource === 'meta_library' ? 'Meta Media Library' : 'Instagram Posts'}
                     </h2>
-                    <Select value={mediaSource} onValueChange={handleSourceChange}>
-                        <SelectTrigger className="w-[200px] rounded-xl">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white rounded-lg">
-                            <SelectItem value="instagram">Instagram Posts</SelectItem>
-                            <SelectItem value="meta_library">Meta Media Library</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {mediaSource === 'instagram' && (
+                    <div className="flex items-center gap-0">
+                        <Select value={mediaSource} onValueChange={handleSourceChange}>
+                            <SelectTrigger className="w-[200px] rounded-xl rounded-r-none border-r-0">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white rounded-xl">
+                                <SelectItem value="instagram">Instagram Posts</SelectItem>
+                                <SelectItem value="meta_library">Meta Media Library</SelectItem>
+                            </SelectContent>
+                        </Select>
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => fetchInstagramPosts(true)}
-                            disabled={loadingIg}
-                            className="rounded-xl"
+                            onClick={() => {
+                                if (mediaSource === 'instagram') {
+                                    fetchInstagramPosts(true);
+                                } else {
+                                    fetchMetaLibrary();
+                                }
+                            }}
+                            disabled={mediaSource === 'instagram' ? loadingIg : loadingMeta}
+                            className="rounded-xl rounded-l-none h-10"
                         >
-                            {loadingIg ? (
+                            {(mediaSource === 'instagram' ? loadingIg : loadingMeta) ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
-                                '↻ Refresh'
+                                '↻'
                             )}
                         </Button>
-                    )}
+                    </div>
                 </div>
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
