@@ -425,7 +425,7 @@ export default function MetaMediaLibraryModal({
                             </div>
                         ) : (
                             <ScrollArea className="h-[400px] pr-4 outline-none focus:outline-none">
-                                <div className="grid grid-cols-5 gap-3">
+                                <div className="grid grid-cols-4 gap-3">
                                     {displayItems.map((item) => {
                                         const isMeta = mediaSource === 'meta_library';
                                         const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
@@ -437,43 +437,7 @@ export default function MetaMediaLibraryModal({
                                                 ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
                                                 : item.name;
 
-                                        // return (
-                                        //     <label key={itemId} className="relative cursor-pointer group">
-                                        //         <div className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all ${selected
-                                        //             ? 'border-primary ring-2 ring-primary/30'
-                                        //             : 'border-gray-200 hover:border-primary/50'
-                                        //             }`}>
-                                        //             {preview ? (
-                                        //                 <img
-                                        //                     src={preview}
-                                        //                     alt={label}
-                                        //                     loading="lazy"
-                                        //                     className="h-full w-full object-cover"
-                                        //                     onError={(e) => {
-                                        //                         e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E";
-                                        //                     }}
-                                        //                 />
-                                        //             ) : (
-                                        //                 <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
-                                        //                     No Preview
-                                        //                 </div>
-                                        //             )}
-                                        //             <Checkbox
-                                        //                 checked={selected}
-                                        //                 onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
-                                        //                 className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
-                                        //             />
-                                        //         </div>
-                                        //         <p className="mt-1 text-xs text-gray-700 truncate text-center px-1">
-                                        //             {label || 'Untitled'}
-                                        //         </p>
-                                        //         {!isMeta && item.like_count !== undefined && (
-                                        //             <p className="mt-0.5 text-[10px] text-gray-400 text-center">
-                                        //                 ♥ {item.like_count} &nbsp;💬 {item.comments_count || 0}
-                                        //             </p>
-                                        //         )}
-                                        //     </label>
-                                        // );
+
 
                                         return (
                                             <label key={itemId} className="relative cursor-pointer group">
@@ -584,7 +548,7 @@ export default function MetaMediaLibraryModal({
                             </div>
                         ) : (
                             <ScrollArea className="h-[400px] pr-4 outline-none focus:outline-none">
-                                <div className="grid grid-cols-5 gap-3">
+                                <div className="grid grid-cols-4 gap-3">
                                     {(mediaSource === 'meta_library' ? metaVideos : igVideos).map((item) => {
                                         const isMeta = mediaSource === 'meta_library';
                                         const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
@@ -596,40 +560,6 @@ export default function MetaMediaLibraryModal({
                                                 ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
                                                 : item.name;
 
-                                        // return (
-                                        //     <label key={itemId} className="relative cursor-pointer group">
-                                        //         <div className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all bg-gray-800 ${selected
-                                        //             ? 'border-primary ring-2 ring-primary/30'
-                                        //             : 'border-gray-200 hover:border-primary/50'
-                                        //             }`}>
-                                        //             {preview ? (
-                                        //                 <img
-                                        //                     src={preview}
-                                        //                     alt={label}
-                                        //                     loading="lazy"
-                                        //                     className="h-full w-full object-cover"
-                                        //                 />
-                                        //             ) : (
-                                        //                 <div className="h-full w-full flex items-center justify-center">
-                                        //                     <Video className="h-8 w-8 text-gray-400" />
-                                        //                 </div>
-                                        //             )}
-                                        //             <Checkbox
-                                        //                 checked={selected}
-                                        //                 onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
-                                        //                 className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
-                                        //             />
-                                        //         </div>
-                                        //         <p className="mt-1 text-xs text-gray-700 truncate text-center px-1">
-                                        //             {label || 'Untitled'}
-                                        //         </p>
-                                        //         {!isMeta && item.like_count !== undefined && (
-                                        //             <p className="mt-0.5 text-[10px] text-gray-400 text-center">
-                                        //                 ♥ {item.like_count} &nbsp;💬 {item.comments_count || 0}
-                                        //             </p>
-                                        //         )}
-                                        //     </label>
-                                        // );
 
                                         return (
                                             <label key={itemId} className="relative cursor-pointer group">

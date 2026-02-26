@@ -4888,7 +4888,7 @@ export default function AdCreationForm({
                   <div className="mt-1">
                     <Label className="text-xs text-gray-500">
                       Ad Name Preview: {
-                        (files.length > 0 || driveFiles.length > 0)
+                        (files.length > 0 || driveFiles.length > 0 || importedFiles.length > 0 || importedPosts.length > 0 || selectedIgOrganicPosts.length > 0)
                           ? computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], null, adType)
                           : "Upload a file to see example"
                       }
