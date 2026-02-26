@@ -220,9 +220,13 @@ export default function MetaMediaLibraryModal({
             const newPagination = res.data?.pagination || { hasMore: false, nextCursor: null, tagsNextCursor: null };
 
             setIgImages(prev => {
-                const updated = [...prev, ...newImages];
+                const existingIds = new Set(prev.map(p => p.id));
+                const dedupedImages = newImages.filter(p => !existingIds.has(p.id));
+                const updated = [...prev, ...dedupedImages];
                 setIgVideos(prevVids => {
-                    const updatedVids = [...prevVids, ...newVideos];
+                    const existingVidIds = new Set(prevVids.map(p => p.id));
+                    const dedupedVideos = newVideos.filter(p => !existingVidIds.has(p.id));
+                    const updatedVids = [...prevVids, ...dedupedVideos];
                     setIgCache(instagramAccountId, updated, updatedVids, newPagination);
                     return updatedVids;
                 });
@@ -328,10 +332,15 @@ export default function MetaMediaLibraryModal({
     };
 
     const isLoading = mediaSource === 'meta_library' ? loadingMeta : loadingIg;
-    const displayItems =
-        mediaSource === 'meta_library'
-            ? activeTab === 'images' ? metaImages : metaVideos
-            : activeTab === 'images' ? igImages : igVideos;
+    const displayItems = (() => {
+        if (mediaSource === 'meta_library') {
+            return activeTab === 'images' ? metaImages : metaVideos;
+        }
+        const items = activeTab === 'images' ? igImages : igVideos;
+        return filterCollaborators ? items.filter(item => item.collaborators && item.collaborators.length > 0) : items;
+    })();
+
+
     const selectionCount =
         mediaSource === 'meta_library' ? selectedMetaFiles.length : selectedIgPosts.length;
 
@@ -568,7 +577,7 @@ export default function MetaMediaLibraryModal({
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                             </div>
-                        ) : (mediaSource === 'meta_library' ? metaVideos : filterCollaborators ? igVideos.filter(item => item.collaborators && item.collaborators.length > 0) : igVideos).length === 0 ? (
+                        ) : displayItems.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <Video className="h-12 w-12 mb-2 opacity-50" />
                                 <p>No videos found.</p>
@@ -576,7 +585,7 @@ export default function MetaMediaLibraryModal({
                         ) : (
                             <ScrollArea className="h-[400px] pr-4 outline-none focus:outline-none">
                                 <div className="grid grid-cols-4 gap-3">
-                                    {(mediaSource === 'meta_library' ? metaVideos : filterCollaborators ? igVideos.filter(item => item.collaborators && item.collaborators.length > 0) : igVideos).map((item) => {
+                                    {displayItems.map((item) => {
                                         const isMeta = mediaSource === 'meta_library';
                                         const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
                                         const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
