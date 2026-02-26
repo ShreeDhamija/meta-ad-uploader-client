@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
-import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -53,10 +53,11 @@ export default function MetaMediaLibraryModal({
     // Pagination state
     const [metaImagesPagination, setMetaImagesPagination] = useState({ hasMore: false, nextCursor: null });
     const [metaVideosPagination, setMetaVideosPagination] = useState({ hasMore: false, nextCursor: null });
-    const [igPagination, setIgPagination] = useState({ hasMore: false, nextCursor: null });
+    const [igPagination, setIgPagination] = useState({ hasMore: false, nextCursor: null, tagsNextCursor: null });
     const [loadingMoreMetaImages, setLoadingMoreMetaImages] = useState(false);
     const [loadingMoreMetaVideos, setLoadingMoreMetaVideos] = useState(false);
     const [loadingMoreIg, setLoadingMoreIg] = useState(false);
+    const [filterCollaborators, setFilterCollaborators] = useState(false);
 
     const mapMetaImages = (rawImages) => rawImages.map(img => ({
         type: 'image',
@@ -161,7 +162,6 @@ export default function MetaMediaLibraryModal({
 
         if (forceRefresh) {
             sessionStorage.removeItem(IG_CACHE_KEY);
-
         }
 
         // Check cache first
@@ -183,7 +183,7 @@ export default function MetaMediaLibraryModal({
             });
             const images = res.data?.images || [];
             const videos = res.data?.videos || [];
-            const pagination = res.data?.pagination || { hasMore: false, nextCursor: null };
+            const pagination = res.data?.pagination || { hasMore: false, nextCursor: null, tagsNextCursor: null };
 
             setIgImages(images);
             setIgVideos(videos);
@@ -199,21 +199,28 @@ export default function MetaMediaLibraryModal({
 
 
     const loadMoreIg = useCallback(async () => {
-        if (!igPagination.nextCursor) return;
+        if (!igPagination.nextCursor && !igPagination.tagsNextCursor) return;
         setLoadingMoreIg(true);
         try {
+            const params = { igUserId: instagramAccountId };
+            if (igPagination.nextCursor) {
+                params.after = igPagination.nextCursor;
+            }
+            if (igPagination.tagsNextCursor) {
+                params.tagsAfter = igPagination.tagsNextCursor;
+            }
+
             const res = await axios.get(`${API_BASE_URL}/auth/instagram-media`, {
-                params: { igUserId: instagramAccountId, after: igPagination.nextCursor },
+                params,
                 withCredentials: true,
             });
 
             const newImages = res.data?.images || [];
             const newVideos = res.data?.videos || [];
-            const newPagination = res.data?.pagination || { hasMore: false, nextCursor: null };
+            const newPagination = res.data?.pagination || { hasMore: false, nextCursor: null, tagsNextCursor: null };
 
             setIgImages(prev => {
                 const updated = [...prev, ...newImages];
-                // Update cache with full list
                 setIgVideos(prevVids => {
                     const updatedVids = [...prevVids, ...newVideos];
                     setIgCache(instagramAccountId, updated, updatedVids, newPagination);
@@ -232,7 +239,7 @@ export default function MetaMediaLibraryModal({
         } finally {
             setLoadingMoreIg(false);
         }
-    }, [instagramAccountId, igPagination.nextCursor]);
+    }, [instagramAccountId, igPagination.nextCursor, igPagination.tagsNextCursor]);
 
     const openModal = () => {
         setIsOpen(true);
@@ -410,6 +417,19 @@ export default function MetaMediaLibraryModal({
                             {mediaSource === 'instagram' ? 'Reels / Videos' : 'Videos'} ({mediaSource === 'meta_library' ? metaVideos.length : igVideos.length})
                         </TabsTrigger>
                     </TabsList>
+                    {mediaSource === 'instagram' && (
+                        <div className="flex items-center gap-2 mt-3 mb-1 px-1">
+                            <Checkbox
+                                id="collab-filter"
+                                checked={filterCollaborators}
+                                onCheckedChange={(checked) => setFilterCollaborators(!!checked)}
+                                className="rounded-md h-4 w-4 border-gray-300"
+                            />
+                            <label htmlFor="collab-filter" className="text-xs font-medium text-gray-700 flex items-center gap-1 cursor-pointer">
+                                <Users className="h-3.5 w-3.5" /> Show only posts with collaborators
+                            </label>
+                        </div>
+                    )}
 
                     <TabsContent value="images" className="mt-4 flex-1 overflow-hidden">
                         {isLoading ? (
@@ -548,7 +568,7 @@ export default function MetaMediaLibraryModal({
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
                             </div>
-                        ) : (mediaSource === 'meta_library' ? metaVideos : igVideos).length === 0 ? (
+                        ) : (mediaSource === 'meta_library' ? metaVideos : filterCollaborators ? igVideos.filter(item => item.collaborators && item.collaborators.length > 0) : igVideos).length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-12 text-gray-500">
                                 <Video className="h-12 w-12 mb-2 opacity-50" />
                                 <p>No videos found.</p>
@@ -556,7 +576,7 @@ export default function MetaMediaLibraryModal({
                         ) : (
                             <ScrollArea className="h-[400px] pr-4 outline-none focus:outline-none">
                                 <div className="grid grid-cols-4 gap-3">
-                                    {(mediaSource === 'meta_library' ? metaVideos : igVideos).map((item) => {
+                                    {(mediaSource === 'meta_library' ? metaVideos : filterCollaborators ? igVideos.filter(item => item.collaborators && item.collaborators.length > 0) : igVideos).map((item) => {
                                         const isMeta = mediaSource === 'meta_library';
                                         const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
                                         const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
