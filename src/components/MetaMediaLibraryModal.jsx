@@ -481,6 +481,13 @@ export default function MetaMediaLibraryModal({
                                                                     {item.caption}
                                                                 </p>
                                                             )}
+                                                            {item.collaborators && item.collaborators.length > 0 && (
+                                                                <p className="text-xs text-purple-600 font-medium mt-1">
+                                                                    {item.collaborators.map(c => `Collaborator: @${c.username}`).join(', ')}
+                                                                </p>
+                                                            )}
+
+
                                                             {item.permalink && (
 
                                                                 <a href={item.permalink}
@@ -603,6 +610,14 @@ export default function MetaMediaLibraryModal({
                                                                     {item.caption}
                                                                 </p>
                                                             )}
+
+                                                            {item.collaborators && item.collaborators.length > 0 && (
+                                                                <p className="text-xs text-purple-600 font-medium mt-1">
+                                                                    {item.collaborators.map(c => `Collaborator: @${c.username}`).join(', ')}
+                                                                </p>
+                                                            )}
+
+
                                                             {item.permalink && (
 
                                                                 <a href={item.permalink}
