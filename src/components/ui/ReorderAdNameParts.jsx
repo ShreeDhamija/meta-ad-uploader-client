@@ -74,7 +74,7 @@ export default function ReorderAdNameParts({
       const fmt = match[1].toUpperCase()
 
       // Skip the "custom" placeholder — handled by fallback at compute time
-      if (fmt === "custom") continue
+      if (fmt === "CUSTOM" || "CUSTOM".startsWith(fmt)) continue
 
       // Strip valid tokens (longest first to avoid partial matches)
       const stripped = fmt
