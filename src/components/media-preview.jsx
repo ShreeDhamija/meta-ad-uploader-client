@@ -88,7 +88,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           style={{
             zIndex: isCarouselAd ? 4 : 5,
             top: '-6px',
-            left: isCarouselAd ? '30px' : '-6px',
+            left: '-6px',
             right: '-6px',
             bottom: '-10px'
           }}
@@ -113,10 +113,10 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           {...listeners}
           variant="ghost"
           size="icon"
-          className="absolute top-1.5 left-1.5 border border-gray-400 rounded-lg bg-white shadow-sm w-6 h-6 z-10 cursor-move"
+          className="absolute top-1.5 left-1.5 border border-gray-400 rounded-lg bg-white shadow-sm w-5 h-5 z-10 cursor-move"
           style={{ opacity: 1, backgroundColor: "white" }}
         >
-          <GripVertical className="h-3 w-3 text-gray-600" />
+          <GripVertical className="h-2 w-2 text-gray-600" />
         </Button>
       )}
 
@@ -211,7 +211,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           type="button"
           variant="ghost"
           className={`absolute border rounded-lg bg-white shadow-sm z-30 ${isCarouselAd
-            ? 'bottom-1.5 right-1.5 border-gray-300 h-6 w-6 p-2'
+            ? 'bottom-12 right-1.5 border-gray-300 h-6 w-6 p-2'
             : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
             }`}
           style={{ opacity: 0.9, backgroundColor: "white" }}
