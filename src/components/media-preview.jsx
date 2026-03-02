@@ -97,7 +97,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
 
       {/* Selection checkbox for placement customization - only show when NOT grouped */}
       {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
-        <div className={`absolute z-20 ${isCarouselAd ? 'top-2 right-2' : 'top-2 left-2'}`}>
+        <div className={`absolute z-20 ${isCarouselAd ? 'top-2 right-2' : 'top-1 left-1'}`}>
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onSelect(fileId)}
@@ -211,7 +211,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           type="button"
           variant="ghost"
           className={`absolute border rounded-lg bg-white shadow-sm z-30 ${isCarouselAd
-            ? 'bottom-14 right-1.5 border-gray-300 h-6 w-6 p-2'
+            ? 'bottom-16 right-1.5 border-gray-300 h-6 w-6 p-2'
             : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
             }`}
           style={{ opacity: 0.9, backgroundColor: "white" }}
