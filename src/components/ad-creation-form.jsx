@@ -5384,7 +5384,7 @@ export default function AdCreationForm({
                                 variant="outline"
                                 disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate}
                                 onClick={handleUpdateSelectedTemplate}
-                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-300"
+                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200"
                               >
                                 {isUpdatingTemplate ? (
                                   <>
