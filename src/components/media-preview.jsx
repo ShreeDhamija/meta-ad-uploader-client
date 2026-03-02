@@ -268,10 +268,7 @@ export default function MediaPreview({
     return selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize;
   }, [selectedFiles.size, adType]);
 
-  // const canAIGroup = useMemo(() => {
-  //   const imageFiles = files.filter(file => !isVideoFile(file));
-  //   return imageFiles.length >= 2;
-  // }, [files]);
+
 
   const canAIGroup = useMemo(() => {
     const allFiles = [
@@ -284,57 +281,6 @@ export default function MediaPreview({
   }, [files, driveFiles, dropboxFiles]);
 
 
-
-  // Add these before your component or import from a utils file
-  // const compressAndConvertToBase64 = async (file) => {
-  //   return new Promise((resolve) => {
-  //     const reader = new FileReader();
-  //     const img = new Image();
-
-  //     reader.onload = (e) => {
-  //       img.onload = () => {
-  //         const canvas = document.createElement('canvas');
-  //         const ctx = canvas.getContext('2d');
-
-  //         // Calculate new dimensions (max 768px)
-  //         const maxDim = 768;
-  //         let width = img.width;
-  //         let height = img.height;
-
-  //         if (width > height && width > maxDim) {
-  //           height = (height * maxDim) / width;
-  //           width = maxDim;
-  //         } else if (height > maxDim) {
-  //           width = (width * maxDim) / height;
-  //           height = maxDim;
-  //         }
-
-  //         canvas.width = width;
-  //         canvas.height = height;
-  //         ctx.drawImage(img, 0, 0, width, height);
-
-  //         // Convert to base64 (remove data URL prefix)
-  //         const base64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-  //         resolve(base64);
-  //       };
-  //       img.src = e.target.result;
-  //     };
-
-  //     if (file.isDrive) {
-  //       // For Drive files, fetch the thumbnail
-  //       fetch(`https://drive.google.com/thumbnail?id=${file.id}&sz=w768`)
-  //         .then(res => res.blob())
-  //         .then(blob => reader.readAsDataURL(blob));
-  //     } else if (file.isDropbox) {
-  //       // For Dropbox files, use the icon or direct link
-  //       fetch(file.icon || file.directLink)
-  //         .then(res => res.blob())
-  //         .then(blob => reader.readAsDataURL(blob));
-  //     } else {
-  //       reader.readAsDataURL(file);
-  //     }
-  //   });
-  // };
 
   const compressAndConvertToBase64 = async (file) => {
     return new Promise(async (resolve, reject) => {
@@ -628,70 +574,6 @@ export default function MediaPreview({
   }, [selectedFiles, setFileGroups, files, driveFiles, dropboxFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setImportedFiles, setSelectedFiles, adType]);
 
 
-
-
-  // const handleAIGroup = useCallback(async () => {
-  //   try {
-  //     setIsAIGrouping(true);
-
-  //     const processedImages = await Promise.all(
-  //       files.map(async (file, index) => {
-  //         const base64 = await compressAndConvertToBase64(file);
-  //         const aspectRatio = await getAspectRatio(file);
-
-
-  //         return {
-  //           base64,
-  //           mimeType: file.type || 'image/jpeg',
-  //           aspectRatio,
-  //           index,
-  //           fileId: file.isDrive ? file.id : (file.uniqueId || file.name)
-  //         };
-  //       })
-  //     );
-
-
-
-  //     const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         // Add credentials if needed
-  //       },
-  //       credentials: 'include', // Important for cookies
-  //       body: JSON.stringify({ images: processedImages })
-  //     });
-
-
-  //     const responseText = await response.text();
-
-  //     if (!response.ok) {
-  //       throw new Error(`Grouping failed: ${responseText}`);
-  //     }
-
-  //     const result = JSON.parse(responseText);
-
-  //     // Convert AI indices to actual fileIds
-  //     const newGroups = result.groups.map(indexGroup =>
-  //       indexGroup.map(idx => {
-  //         const file = files[idx];
-  //         return file.isDrive ? file.id : file.uniqueId || file.name;
-  //       })
-  //     );
-
-  //     // Apply to UI
-  //     setFileGroups(newGroups);
-  //     setSelectedFiles(new Set()); // clear any manual selection
-
-
-  //     // Rest of your code...
-  //   } catch (error) {
-  //     console.error('AI grouping error:', error);
-  //     alert(`Failed to group images: ${error.message}`);
-  //   } finally {
-  //     setIsAIGrouping(false);
-  //   }
-  // }, [files, setFileGroups, setSelectedFiles]);
 
   const handleAIGroup = useCallback(async () => {
     try {
