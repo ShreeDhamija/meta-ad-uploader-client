@@ -567,7 +567,8 @@ export default function AdCreationForm({
   const [adScheduleEndTime, setAdScheduleEndTime] = useState(null);
   const [showSchedule, setShowSchedule] = useState(false);
 
-  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [isSavingNew, setIsSavingNew] = useState(false);
+  const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false);
   const [newTemplateNameInput, setNewTemplateNameInput] = useState("");
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false);
 
@@ -2255,18 +2256,26 @@ export default function AdCreationForm({
 
   // Check if current copy combo already exists in another template
   // Has the user changed anything from the currently selected template's saved values?
-  const hasUnsavedTemplateChanges = useMemo(() => {
+  const hasUnsavedTemplateChangesRaw = useMemo(() => {
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return false;
     const tpl = copyTemplates[selectedTemplate];
-    const currentPrimary = JSON.stringify(messages.filter(t => t.trim()));
-    const currentHeadlines = JSON.stringify(headlines.filter(t => t.trim()));
-    const currentDescs = JSON.stringify((descriptions || []).filter(t => t.trim()));
     return (
-      currentPrimary !== JSON.stringify(tpl.primaryTexts || []) ||
-      currentHeadlines !== JSON.stringify(tpl.headlines || []) ||
-      currentDescs !== JSON.stringify(tpl.descriptions || [])
+      JSON.stringify(messages.filter(t => t.trim())) !== JSON.stringify(tpl.primaryTexts || []) ||
+      JSON.stringify(headlines.filter(t => t.trim())) !== JSON.stringify(tpl.headlines || []) ||
+      JSON.stringify((descriptions || []).filter(t => t.trim())) !== JSON.stringify(tpl.descriptions || [])
     );
   }, [messages, headlines, descriptions, copyTemplates, selectedTemplate]);
+
+  const [hasUnsavedTemplateChanges, setHasUnsavedTemplateChanges] = useState(false);
+
+  useEffect(() => {
+    if (!hasUnsavedTemplateChangesRaw) {
+      setHasUnsavedTemplateChanges(false);
+      return;
+    }
+    const timer = setTimeout(() => setHasUnsavedTemplateChanges(true), 800);
+    return () => clearTimeout(timer);
+  }, [hasUnsavedTemplateChangesRaw]);
 
   // Has the user typed anything at all (for no-template state)?
   const hasAnyContent = useMemo(() =>
@@ -2293,7 +2302,7 @@ export default function AdCreationForm({
   const handleSaveAsNewTemplate = async () => {
     const name = newTemplateNameInput.trim();
     if (!name || copyTemplates[name]) return;
-    setIsSavingTemplate(true);
+    setIsSavingNew(true);
     try {
       const templateData = {
         name,
@@ -2311,13 +2320,13 @@ export default function AdCreationForm({
       console.error(err);
       toast.error("Failed to save template");
     } finally {
-      setIsSavingTemplate(false);
+      setIsSavingNew(false);
     }
   };
 
   const handleUpdateSelectedTemplate = async () => {
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return;
-    setIsSavingTemplate(true);
+    setIsUpdatingTemplate(true);
     try {
       const templateData = {
         name: selectedTemplate,
@@ -2333,7 +2342,7 @@ export default function AdCreationForm({
       console.error(err);
       toast.error("Failed to update template");
     } finally {
-      setIsSavingTemplate(false);
+      setIsUpdatingTemplate(false);
     }
   };
 
@@ -5334,11 +5343,11 @@ export default function AdCreationForm({
                               type="button"
                               size="sm"
                               variant="outline"
-                              disabled={isSavingTemplate || !!existingDuplicateTemplate}
+                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
                               onClick={() => setShowSaveNewDialog(true)}
                               className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
                             >
-                              {isSavingTemplate ? (
+                              {isSavingNew ? (
                                 <Loader className="w-3 h-3 animate-spin" />
                               ) : existingDuplicateTemplate ? (
                                 `Already exists as "${existingDuplicateTemplate}"`
@@ -5356,11 +5365,11 @@ export default function AdCreationForm({
                               type="button"
                               size="sm"
                               variant="outline"
-                              disabled={isSavingTemplate || !!existingDuplicateTemplate}
+                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
                               onClick={() => setShowSaveNewDialog(true)}
                               className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
                             >
-                              {isSavingTemplate ? (
+                              {isSavingNew ? (
                                 <Loader className="w-3 h-3 animate-spin" />
                               ) : existingDuplicateTemplate ? (
                                 `Already exists as "${existingDuplicateTemplate}"`
@@ -5373,12 +5382,15 @@ export default function AdCreationForm({
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                disabled={isSavingTemplate || !!existingDuplicateTemplate}
+                                disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate}
                                 onClick={handleUpdateSelectedTemplate}
-                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700"
+                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-150"
                               >
-                                {isSavingTemplate ? (
-                                  <Loader className="w-3 h-3 animate-spin" />
+                                {isUpdatingTemplate ? (
+                                  <>
+                                    <Loader className="w-3 h-3 animate-spin mr-1" />
+                                    Updating Template...
+                                  </>
                                 ) : (
                                   "Update Selected Template"
                                 )}
@@ -6367,7 +6379,7 @@ export default function AdCreationForm({
         >
           {/* Overlay */}
           <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-black/30"
             onClick={() => { setShowSaveNewDialog(false); setNewTemplateNameInput(""); }}
             style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
           />
@@ -6405,8 +6417,12 @@ export default function AdCreationForm({
                 disabled={!newTemplateNameInput.trim() || !!copyTemplates[newTemplateNameInput.trim()] || isSavingTemplate}
                 onClick={handleSaveAsNewTemplate}
               >
-                {isSavingTemplate ? (
-                  <Loader className="w-4 h-4 animate-spin" />
+                {isSavingNew ? (
+                  <>
+                    <Loader className="w-3 h-3 animate-spin mr-1" />
+                    Saving Template...
+                  </>
+
                 ) : (
                   "Save"
                 )}
