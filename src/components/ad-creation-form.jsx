@@ -490,7 +490,8 @@ export default function AdCreationForm({
   selectedFiles,
   setSelectedFiles,
   useExistingPosts,
-  refetchCopyTemplates
+  refetchCopyTemplates,
+  preferredTemplateRef
 }) {
   // Local state
   const [showPostSelector, setShowPostSelector] = useState(false);
@@ -2250,31 +2251,48 @@ export default function AdCreationForm({
 
 
 
+
+
   // Check if current copy combo already exists in another template
+  // Has the user changed anything from the currently selected template's saved values?
+  const hasUnsavedTemplateChanges = useMemo(() => {
+    if (!selectedTemplate || !copyTemplates[selectedTemplate]) return false;
+    const tpl = copyTemplates[selectedTemplate];
+    const currentPrimary = JSON.stringify(messages.filter(t => t.trim()));
+    const currentHeadlines = JSON.stringify(headlines.filter(t => t.trim()));
+    const currentDescs = JSON.stringify((descriptions || []).filter(t => t.trim()));
+    return (
+      currentPrimary !== JSON.stringify(tpl.primaryTexts || []) ||
+      currentHeadlines !== JSON.stringify(tpl.headlines || []) ||
+      currentDescs !== JSON.stringify(tpl.descriptions || [])
+    );
+  }, [messages, headlines, descriptions, copyTemplates, selectedTemplate]);
+
+  // Has the user typed anything at all (for no-template state)?
+  const hasAnyContent = useMemo(() =>
+    messages.some(t => t.trim()) || headlines.some(t => t.trim()),
+    [messages, headlines]
+  );
+
+  // Does this exact combo already exist in another template?
   const existingDuplicateTemplate = useMemo(() => {
     const currentPrimary = JSON.stringify(messages.filter(t => t.trim()).sort());
-    const currentHeadlines = JSON.stringify(headlines.filter(t => t.trim()).sort());
+    const currentHL = JSON.stringify(headlines.filter(t => t.trim()).sort());
     const currentDescs = JSON.stringify((descriptions || []).filter(t => t.trim()).sort());
-
     for (const [name, tpl] of Object.entries(copyTemplates)) {
-      if (name === selectedTemplate) continue; // skip the currently selected one
-      const tplPrimary = JSON.stringify((tpl.primaryTexts || []).filter(t => t.trim()).sort());
-      const tplHeadlines = JSON.stringify((tpl.headlines || []).filter(t => t.trim()).sort());
-      const tplDescs = JSON.stringify((tpl.descriptions || []).filter(t => t.trim()).sort());
-      if (currentPrimary === tplPrimary && currentHeadlines === tplHeadlines && currentDescs === tplDescs) {
-        return name;
-      }
+      if (name === selectedTemplate) continue;
+      if (
+        currentPrimary === JSON.stringify((tpl.primaryTexts || []).filter(t => t.trim()).sort()) &&
+        currentHL === JSON.stringify((tpl.headlines || []).filter(t => t.trim()).sort()) &&
+        currentDescs === JSON.stringify((tpl.descriptions || []).filter(t => t.trim()).sort())
+      ) return name;
     }
     return null;
   }, [messages, headlines, descriptions, copyTemplates, selectedTemplate]);
 
   const handleSaveAsNewTemplate = async () => {
     const name = newTemplateNameInput.trim();
-    if (!name) return;
-    if (copyTemplates[name]) {
-      toast.error("A template with this name already exists");
-      return;
-    }
+    if (!name || copyTemplates[name]) return;
     setIsSavingTemplate(true);
     try {
       const templateData = {
@@ -2284,12 +2302,11 @@ export default function AdCreationForm({
         descriptions: (descriptions || []).filter(t => t.trim()),
       };
       await saveCopyTemplate(selectedAdAccount, name, templateData, false);
+      preferredTemplateRef.current = name;
       await refetchCopyTemplates();
-
       toast.success("Template saved!");
       setShowSaveNewDialog(false);
       setNewTemplateNameInput("");
-      setSelectedTemplate(name);
     } catch (err) {
       console.error(err);
       toast.error("Failed to save template");
@@ -2309,8 +2326,8 @@ export default function AdCreationForm({
         descriptions: (descriptions || []).filter(t => t.trim()),
       };
       await saveCopyTemplate(selectedAdAccount, selectedTemplate, templateData, false);
+      preferredTemplateRef.current = selectedTemplate;
       await refetchCopyTemplates();
-
       toast.success("Template updated!");
     } catch (err) {
       console.error(err);
@@ -2319,7 +2336,6 @@ export default function AdCreationForm({
       setIsSavingTemplate(false);
     }
   };
-
 
   const handleCreateAd = async (jobData) => {
 
@@ -5294,12 +5310,26 @@ export default function AdCreationForm({
                       <div className="flex items-center gap-2">
                         <Label className="flex items-center gap-2 mb-0">
                           <TemplateIcon className="w-4 h-4" />
-                          {Object.keys(copyTemplates).length === 0
-                            ? "Select a Copy Template"
-                            : "Select a Copy Template"}
+                          Select a Copy Template
                         </Label>
-                        {(messages.some(t => t.trim()) || headlines.some(t => t.trim())) && (
-                          <div className="flex items-center gap-2 ml-auto animate-in slide-in-from-bottom-2 duration-300">
+
+                        {/* No templates + no content → Setup button */}
+                        {Object.keys(copyTemplates).length === 0 && !hasAnyContent && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+                            className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
+                          >
+                            <CogIcon className="w-3 h-3 text-white" />
+                            Set Up Templates
+                          </Button>
+                        )}
+
+                        {/* No templates + content typed → Save as New only */}
+                        {Object.keys(copyTemplates).length === 0 && hasAnyContent && (
+                          <div className="ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
                             <Button
                               type="button"
                               size="sm"
@@ -5308,9 +5338,35 @@ export default function AdCreationForm({
                               onClick={() => setShowSaveNewDialog(true)}
                               className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
                             >
-                              {existingDuplicateTemplate
-                                ? `Already exists as "${existingDuplicateTemplate}"`
-                                : "Save as New Template"}
+                              {isSavingTemplate ? (
+                                <Loader className="w-3 h-3 animate-spin" />
+                              ) : existingDuplicateTemplate ? (
+                                `Already exists as "${existingDuplicateTemplate}"`
+                              ) : (
+                                "Save as New Template"
+                              )}
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Has templates + changes detected → both buttons */}
+                        {Object.keys(copyTemplates).length > 0 && hasUnsavedTemplateChanges && (
+                          <div className="flex items-center gap-2 ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isSavingTemplate || !!existingDuplicateTemplate}
+                              onClick={() => setShowSaveNewDialog(true)}
+                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
+                            >
+                              {isSavingTemplate ? (
+                                <Loader className="w-3 h-3 animate-spin" />
+                              ) : existingDuplicateTemplate ? (
+                                `Already exists as "${existingDuplicateTemplate}"`
+                              ) : (
+                                "Save as New Template"
+                              )}
                             </Button>
                             {selectedTemplate && copyTemplates[selectedTemplate] && (
                               <Button
@@ -5321,7 +5377,11 @@ export default function AdCreationForm({
                                 onClick={handleUpdateSelectedTemplate}
                                 className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700"
                               >
-                                {isSavingTemplate ? "Saving..." : "Update Selected Template"}
+                                {isSavingTemplate ? (
+                                  <Loader className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  "Update Selected Template"
+                                )}
                               </Button>
                             )}
                           </div>
@@ -6300,40 +6360,61 @@ export default function AdCreationForm({
 
         </form>
       </CardContent>
-      <Dialog open={showSaveNewDialog} onOpenChange={setShowSaveNewDialog}>
-        <DialogContent className="sm:max-w-[400px] rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Save as New Template</DialogTitle>
-            <DialogDescription>Give your new copy template a name.</DialogDescription>
-          </DialogHeader>
-          <Input
-            value={newTemplateNameInput}
-            onChange={(e) => setNewTemplateNameInput(e.target.value)}
-            placeholder="e.g. Summer Sale Copy"
-            className="rounded-xl"
-            onKeyDown={(e) => e.key === "Enter" && handleSaveAsNewTemplate()}
+      {showSaveNewDialog && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{ position: 'fixed', top: -20, left: 0, right: 0, bottom: 0 }}
+        >
+          {/* Overlay */}
+          <div
+            className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"
+            onClick={() => { setShowSaveNewDialog(false); setNewTemplateNameInput(""); }}
+            style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
           />
-          {copyTemplates[newTemplateNameInput.trim()] && (
-            <p className="text-xs text-red-500">A template with this name already exists.</p>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
+          {/* Dialog */}
+          <div
+            className="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-[400px] p-6 space-y-4"
+            style={{ animation: 'templateBtnIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div>
+              <h3 className="text-lg font-semibold">Save as New Template</h3>
+              <p className="text-sm text-gray-500 mt-1">Give your new copy template a name.</p>
+            </div>
+            <Input
+              value={newTemplateNameInput}
+              onChange={(e) => setNewTemplateNameInput(e.target.value)}
+              placeholder="e.g. Summer Sale Copy"
               className="rounded-xl"
-              onClick={() => setShowSaveNewDialog(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-blue-600 text-white rounded-xl hover:bg-blue-700"
-              disabled={!newTemplateNameInput.trim() || !!copyTemplates[newTemplateNameInput.trim()] || isSavingTemplate}
-              onClick={handleSaveAsNewTemplate}
-            >
-              {isSavingTemplate ? "Saving..." : "Save"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && !copyTemplates[newTemplateNameInput.trim()] && handleSaveAsNewTemplate()}
+            />
+            {copyTemplates[newTemplateNameInput.trim()] && (
+              <p className="text-xs text-red-500">A template with this name already exists.</p>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => { setShowSaveNewDialog(false); setNewTemplateNameInput(""); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-blue-600 text-white rounded-xl hover:bg-blue-700 min-w-[80px]"
+                disabled={!newTemplateNameInput.trim() || !!copyTemplates[newTemplateNameInput.trim()] || isSavingTemplate}
+                onClick={handleSaveAsNewTemplate}
+              >
+                {isSavingTemplate ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card >
 
   )

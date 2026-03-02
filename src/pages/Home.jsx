@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react"
+import React, { useState, useEffect, useCallback, useRef } from "react"
 import { toast, Toaster } from "sonner"
 import { useNavigate } from "react-router-dom"
 
@@ -108,6 +108,7 @@ export default function Home() {
     const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false);
     const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false);
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
+    const preferredTemplateRef = useRef(null);
 
     const getCachedState = () => {
         try {
@@ -350,9 +351,14 @@ export default function Home() {
             setHeadlines([""]);
             setDescriptions([""]);
         } else {
-            const initialTemplateName = keys.includes(adAccountSettings.defaultTemplateName)
-                ? adAccountSettings.defaultTemplateName
-                : keys[0];
+            const preferredName = preferredTemplateRef.current;
+            const initialTemplateName = preferredName && keys.includes(preferredName)
+                ? preferredName
+                : keys.includes(adAccountSettings.defaultTemplateName)
+                    ? adAccountSettings.defaultTemplateName
+                    : keys[0];
+
+            preferredTemplateRef.current = null; // consume it
 
             setSelectedTemplate(initialTemplateName);
             const selectedTemplateData = templates[initialTemplateName];
@@ -678,6 +684,8 @@ export default function Home() {
                             setSelectedFiles={setSelectedFiles}
                             useExistingPosts={useExistingPosts}
                             refetchCopyTemplates={refetchCopyTemplates}
+                            preferredTemplateRef={preferredTemplateRef}
+
 
                         />
                     </div>
