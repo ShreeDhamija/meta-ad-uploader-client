@@ -113,10 +113,10 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           {...listeners}
           variant="ghost"
           size="icon"
-          className="absolute top-1.5 left-1.5 border border-gray-400 rounded-lg bg-white shadow-sm w-4 h-4 z-10 cursor-move"
+          className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-sm w-4.5 h-4.5 z-10 cursor-move"
           style={{ opacity: 1, backgroundColor: "white" }}
         >
-          <GripVertical className="h-1.5 w-1.5 text-gray-600" />
+          <GripVertical className="h-2 w-2 text-gray-600" />
         </Button>
       )}
 
