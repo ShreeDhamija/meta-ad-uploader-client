@@ -42,7 +42,8 @@ const isVideoFile = (file) => {
 
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
-  file, index, isCarouselAd, videoThumbs, onRemove, isSelected, onSelect, groupNumber, enablePlacementCustomization, adType
+
+  file, index, isCarouselAd, videoThumbs, onRemove, isSelected, onSelect, groupNumber, enablePlacementCustomization, adType, cardIndex
 }) {
   const {
     attributes,
@@ -79,15 +80,15 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       className={`relative group ${isDragging ? 'opacity-50' : ''}`}
     >
       {/* Selection overlay for placement customization - only show when NOT grouped */}
-      {(enablePlacementCustomization || adType === 'flexible') && (
+      {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
         <div
           className={`absolute rounded-2xl cursor-pointer transition-all ${isSelected ? 'bg-blue-200 bg-opacity-20 border-2 border-blue-300' : ' '
             }`}
           onClick={() => onSelect(fileId)}
           style={{
-            zIndex: 5,
+            zIndex: isCarouselAd ? 4 : 5,
             top: '-6px',
-            left: '-6px',
+            left: isCarouselAd ? '30px' : '-6px',
             right: '-6px',
             bottom: '-10px'
           }}
@@ -95,8 +96,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       )}
 
       {/* Selection checkbox for placement customization - only show when NOT grouped */}
-      {(enablePlacementCustomization || adType === 'flexible') && (
-        <div className="absolute top-2 left-2 z-20">
+      {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
+        <div className={`absolute z-20 ${isCarouselAd ? 'top-2 right-2' : 'top-2 left-2'}`}>
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onSelect(fileId)}
@@ -105,7 +106,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
         </div>
       )}
 
-      {isCarouselAd && !enablePlacementCustomization && (
+      {/* {isCarouselAd && !enablePlacementCustomization && ( */}
+      {isCarouselAd && (
         <Button
           ref={setActivatorNodeRef}
           {...listeners}
@@ -208,22 +210,25 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
         <Button
           type="button"
           variant="ghost"
-          className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-sm h-7 w-7 p-3 z-30"
+          className={`absolute border rounded-lg bg-white shadow-sm z-30 ${isCarouselAd
+            ? 'bottom-1.5 right-1.5 border-gray-300 h-6 w-6 p-2'
+            : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
+            }`}
           style={{ opacity: 0.9, backgroundColor: "white" }}
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
           }}
         >
-          <Trash className="h-2 w-2" />
+          <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
           <span className="sr-only">Remove</span>
         </Button>
       </div>
       <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
 
-      {isCarouselAd && !enablePlacementCustomization && (
-        <span className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
-          Card {index + 1}
+      {isCarouselAd && (
+        <span className="text-[10px] px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
+          Card {(cardIndex !== undefined ? cardIndex : index) + 1}
         </span>
       )}
     </div>
@@ -264,9 +269,9 @@ export default function MediaPreview({
 
   // Memoized computations
   const canGroupFiles = useMemo(() => {
-    const maxGroupSize = adType === 'flexible' ? 10 : 3;
+    const maxGroupSize = (adType === 'flexible' || isCarouselAd) ? 10 : 3;
     return selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize;
-  }, [selectedFiles.size, adType]);
+  }, [selectedFiles.size, adType, isCarouselAd]);
 
 
 
@@ -473,9 +478,13 @@ export default function MediaPreview({
   }, [setSelectedFiles]);
 
   const handleGroupAds = useCallback(() => {
-    if (adType === 'flexible') {
+    if (adType === 'flexible' || isCarouselAd) {
       if (selectedFiles.size > 10) {
-        alert("Flexible ad groups can contain maximum 10 files");
+        alert(isCarouselAd ? "Carousel ads can have maximum 10 cards" : "Flexible ad groups can contain maximum 10 files");
+        return;
+      }
+      if (isCarouselAd && selectedFiles.size < 2) {
+        alert("Carousel ads need at least 2 cards");
         return;
       }
 
@@ -484,6 +493,7 @@ export default function MediaPreview({
       setSelectedFiles(new Set());
       return;
     }
+
 
     if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
       const newGroup = Array.from(selectedFiles);
@@ -571,7 +581,7 @@ export default function MediaPreview({
       ));
       setSelectedFiles(new Set());
     }
-  }, [selectedFiles, setFileGroups, files, driveFiles, dropboxFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setImportedFiles, setSelectedFiles, adType]);
+  }, [selectedFiles, setFileGroups, files, driveFiles, dropboxFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setImportedFiles, setSelectedFiles, adType, isCarouselAd]);
 
 
 
@@ -678,6 +688,20 @@ export default function MediaPreview({
   }, [setFileGroups]);
 
 
+  const handleGroupDragEnd = useCallback((groupIndex, event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setFileGroups(prev => {
+      const newGroups = [...prev];
+      const group = [...newGroups[groupIndex]];
+      const oldIdx = group.indexOf(String(active.id));
+      const newIdx = group.indexOf(String(over.id));
+      if (oldIdx === -1 || newIdx === -1) return prev;
+      newGroups[groupIndex] = arrayMove(group, oldIdx, newIdx);
+      return newGroups;
+    });
+  }, [setFileGroups]);
+
 
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
@@ -742,9 +766,12 @@ export default function MediaPreview({
               <CardTitle className="text-left">Uploads Preview</CardTitle>
               <CardDescription className="text-left">
                 {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length) > 1 ? "s" : ""} selected`}
-                {isCarouselAd && !enablePlacementCustomization && (
+                {isCarouselAd && (
                   <span className="block text-xs text-gray-500 mt-1">
-                    Drag to change order of carousel cards
+                    {fileGroups.length > 0
+                      ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
+                      : 'Select files to group into separate carousel ads, or drag to reorder cards'
+                    }
                   </span>
                 )}
               </CardDescription>
@@ -752,7 +779,7 @@ export default function MediaPreview({
 
             <div className="flex gap-2">
 
-              {(enablePlacementCustomization || adType === 'flexible') && (
+              {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
                 <>
                   <Button
                     variant="outline"
@@ -765,7 +792,7 @@ export default function MediaPreview({
                     Group Ads
                   </Button>
 
-                  {adType !== 'flexible' && (
+                  {adType !== 'flexible' && !isCarouselAd && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -871,7 +898,7 @@ export default function MediaPreview({
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
-              onDragEnd={isCarouselAd && !enablePlacementCustomization ? handleDragEnd : () => { }}
+              onDragEnd={isCarouselAd ? handleDragEnd : () => { }}
             >
               <SortableContext
                 items={[
@@ -902,60 +929,120 @@ export default function MediaPreview({
                       >
                         Ungroup
                       </Button>
-                      {/* Add this new group label */}
+                      {/* Group label */}
                       <div className={`absolute bottom-2 right-2 z-20 text-white text-xs px-2 py-1 rounded-xl font-semibold ${groupIndex % 2 === 0
                         ? 'bg-blue-500'
                         : 'bg-orange-500'
                         }`}>
-                        Group {groupIndex + 1}
+                        {isCarouselAd ? `Carousel Ad ${groupIndex + 1}` : `Group ${groupIndex + 1}`}
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
-                        {group.map(fileId => {
-                          let file = files.find(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
-                          if (!file) {
-                            file = driveFiles.find(f => f.id === fileId);
-                            if (file) {
-                              file = { ...file, isDrive: true };
+                      {isCarouselAd ? (
+                        /* Per-group DndContext for carousel reordering */
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={(event) => handleGroupDragEnd(groupIndex, event)}
+                        >
+                          <SortableContext
+                            items={group}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
+                              {group.map((fileId, cardIdx) => {
+                                let file = files.find(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
+                                if (!file) {
+                                  file = driveFiles.find(f => f.id === fileId);
+                                  if (file) {
+                                    file = { ...file, isDrive: true };
+                                  }
+                                }
+                                if (!file) {
+                                  file = (dropboxFiles || []).find(f => f.dropboxId === fileId);
+                                  if (file) {
+                                    file = { ...file, isDropbox: true };
+                                  }
+                                }
+                                if (!file) {
+                                  const metaFile = importedFiles.find(f =>
+                                    (f.type === 'image' ? f.hash : f.id) === fileId
+                                  );
+                                  if (metaFile) {
+                                    file = { ...metaFile, isMetaLibrary: true, name: metaFile.name };
+                                  }
+                                }
+                                if (!file) {
+                                  console.warn(`File not found for ID: ${fileId}`);
+                                  return null;
+                                }
+                                return (
+                                  <SortableMediaItem
+                                    key={fileId}
+                                    file={file}
+                                    index={cardIdx}
+                                    cardIndex={cardIdx}
+                                    isCarouselAd={isCarouselAd}
+                                    videoThumbs={videoThumbs}
+                                    onRemove={() => removeFile(file)}
+                                    isSelected={false}
+                                    onSelect={handleFileSelect}
+                                    groupNumber={groupIndex + 1}
+                                    enablePlacementCustomization={enablePlacementCustomization}
+                                    adType={adType}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
+                      ) : (
+                        /* Original non-DnD group rendering for placement customization / flexible */
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
+                          {group.map((fileId) => {
+                            let file = files.find(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
+                            if (!file) {
+                              file = driveFiles.find(f => f.id === fileId);
+                              if (file) {
+                                file = { ...file, isDrive: true };
+                              }
                             }
-                          }
-                          // Check Dropbox files
-                          if (!file) {
-                            file = (dropboxFiles || []).find(f => f.dropboxId === fileId);
-                            if (file) {
-                              file = { ...file, isDropbox: true };
+                            if (!file) {
+                              file = (dropboxFiles || []).find(f => f.dropboxId === fileId);
+                              if (file) {
+                                file = { ...file, isDropbox: true };
+                              }
                             }
-                          }
-                          if (!file) {
-                            const metaFile = importedFiles.find(f =>
-                              (f.type === 'image' ? f.hash : f.id) === fileId
-                            );
-                            if (metaFile) {
-                              file = { ...metaFile, isMetaLibrary: true, name: metaFile.name };
+                            if (!file) {
+                              const metaFile = importedFiles.find(f =>
+                                (f.type === 'image' ? f.hash : f.id) === fileId
+                              );
+                              if (metaFile) {
+                                file = { ...metaFile, isMetaLibrary: true, name: metaFile.name };
+                              }
                             }
-                          }
-                          if (!file) {
-                            console.warn(`File not found for ID: ${fileId}`);
-                            return null;
-                          }
-                          const index = files.findIndex(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
-                          return file ? (
-                            <SortableMediaItem
-                              key={fileId}
-                              file={file}
-                              index={index}
-                              isCarouselAd={isCarouselAd}
-                              videoThumbs={videoThumbs}
-                              onRemove={() => removeFile(file)}
-                              isSelected={false}
-                              onSelect={handleFileSelect}
-                              groupNumber={groupIndex + 1}
-                              enablePlacementCustomization={enablePlacementCustomization}
-                              adType={adType}
-                            />
-                          ) : null;
-                        })}
-                      </div>
+                            if (!file) {
+                              console.warn(`File not found for ID: ${fileId}`);
+                              return null;
+                            }
+                            const index = files.findIndex(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
+                            return file ? (
+                              <SortableMediaItem
+                                key={fileId}
+                                file={file}
+                                index={index}
+                                isCarouselAd={isCarouselAd}
+                                videoThumbs={videoThumbs}
+                                onRemove={() => removeFile(file)}
+                                isSelected={false}
+                                onSelect={handleFileSelect}
+                                groupNumber={groupIndex + 1}
+                                enablePlacementCustomization={enablePlacementCustomization}
+                                adType={adType}
+                              />
+                            ) : null;
+                          })}
+                        </div>
+                      )}
                     </div>
                   ))}
 
@@ -968,6 +1055,7 @@ export default function MediaPreview({
                           key={fileId}
                           file={file}
                           index={index}
+                          cardIndex={index}
                           isCarouselAd={isCarouselAd}
                           videoThumbs={videoThumbs}
                           onRemove={() => removeFile(file)}

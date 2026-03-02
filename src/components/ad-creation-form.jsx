@@ -645,14 +645,13 @@ export default function AdCreationForm({
 
     if (importedPosts.length > 0) {
       adCount = importedPosts.length * (selectedAdSets.length || 1);
-    } else if (isCarouselAd || isDynamicAdSet()) {
-      // Carousel and dynamic ads are always 1 ad per selected adset
+    } else if (isCarouselAd) {
+      const carouselGroupCount = (fileGroups && fileGroups.length > 0) ? fileGroups.length : 1;
+      adCount = carouselGroupCount * (selectedAdSets.length || 1);
+    } else if (isDynamicAdSet()) {
       adCount = selectedAdSets.length || 1;
     } else if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
       const groupedFileIds = new Set(fileGroups.flat());
-      // const ungroupedFiles = [...files, ...driveFiles].filter(f =>
-      //   !groupedFileIds.has(getFileId(f))
-      // );
       const ungroupedFiles = [
         ...files,
         ...driveFiles.map(f => ({ ...f, isDrive: true }))
@@ -2555,16 +2554,32 @@ export default function AdCreationForm({
 
     // Add carousel validation
     if (isCarouselAd) {
-      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + (importedFiles?.length || 0);
-      if (totalFiles < 2) {
-        toast.error("Carousel ads require at least 2 files");
-        setIsLoading(false);
-        return;
-      }
-      if (totalFiles > 10) {
-        toast.error("Carousel ads can have maximum 10 cards");
-        setIsLoading(false);
-        return;
+      if (fileGroups && fileGroups.length > 0) {
+        for (let i = 0; i < fileGroups.length; i++) {
+          const group = fileGroups[i];
+          if (group.length < 2) {
+            toast.error(`Carousel group ${i + 1} needs at least 2 cards`);
+            setIsLoading(false);
+            return;
+          }
+          if (group.length > 10) {
+            toast.error(`Carousel group ${i + 1} can have maximum 10 cards`);
+            setIsLoading(false);
+            return;
+          }
+        }
+      } else {
+        const totalFiles = files.length + driveFiles.length + dropboxFiles.length + (importedFiles?.length || 0);
+        if (totalFiles < 2) {
+          toast.error("Carousel ads require at least 2 files");
+          setIsLoading(false);
+          return;
+        }
+        if (totalFiles > 10) {
+          toast.error("Carousel ads can have maximum 10 cards");
+          setIsLoading(false);
+          return;
+        }
       }
     }
 
@@ -3174,7 +3189,172 @@ export default function AdCreationForm({
     };
 
 
+    /**
+     * Build file order metadata for a single carousel group
+     * Iterates in group order so card positions match the group's drag order
+     */
+    const buildCarouselFileOrderForGroup = (
+      group,
+      files,
+      driveFiles,
+      dropboxFiles,
+      s3Results,
+      s3DriveResults,
+      s3DropboxResults,
+      S3_UPLOAD_THRESHOLD,
+      importedFiles
+    ) => {
+      const fileOrder = [];
+      let fileIndex = 0;
 
+      group.forEach((fileId) => {
+        // Check local files
+        const localFile = files.find(f => getFileId(f) === fileId);
+        if (localFile) {
+          if (isVideoFile(localFile) && localFile.size > S3_UPLOAD_THRESHOLD) {
+            const s3File = s3Results.find(s3f => s3f.uniqueId === fileId || s3f.name === localFile.name);
+            if (s3File) {
+              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: localFile.name });
+            }
+          } else {
+            fileOrder.push({ index: fileIndex++, type: 'local', name: localFile.name });
+          }
+          return;
+        }
+
+        // Check drive files
+        const driveFile = driveFiles.find(f => f.id === fileId);
+        if (driveFile) {
+          if (isVideoFile(driveFile) && driveFile.size > S3_UPLOAD_THRESHOLD) {
+            const s3File = s3DriveResults.find(s3f => s3f.id === fileId);
+            if (s3File) {
+              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: driveFile.name, driveId: driveFile.id });
+            }
+          } else {
+            fileOrder.push({ index: fileIndex++, type: 'drive', id: driveFile.id, name: driveFile.name });
+          }
+          return;
+        }
+
+        // Check dropbox files
+        const dropboxFile = dropboxFiles.find(f => f.dropboxId === fileId);
+        if (dropboxFile) {
+          if (isVideoFile(dropboxFile) && dropboxFile.size > S3_UPLOAD_THRESHOLD) {
+            const s3File = s3DropboxResults.find(s3f => s3f.dropboxId === fileId);
+            if (s3File) {
+              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: dropboxFile.name, dropboxId: dropboxFile.dropboxId });
+            }
+          } else {
+            fileOrder.push({ index: fileIndex++, type: 'dropbox', dropboxId: dropboxFile.dropboxId, name: dropboxFile.name });
+          }
+          return;
+        }
+
+        // Check S3 results (for files that were already uploaded)
+        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults];
+        const s3File = allS3.find(f => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId);
+        if (s3File) {
+          fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: s3File.name });
+          return;
+        }
+
+        // Check meta library files
+        if (importedFiles) {
+          const metaFile = importedFiles.find(f =>
+            (f.type === 'image' && f.hash === fileId) ||
+            (f.type === 'video' && f.id === fileId)
+          );
+          if (metaFile) {
+            if (metaFile.type === 'image') {
+              fileOrder.push({ index: fileIndex++, type: 'metaImage', hash: metaFile.hash, name: metaFile.name });
+            } else {
+              fileOrder.push({ index: fileIndex++, type: 'metaVideo', id: metaFile.id, name: metaFile.name });
+            }
+          }
+        }
+      });
+
+      return fileOrder;
+    };
+
+    /**
+ * Append media files from a specific carousel group to formData
+ */
+    const appendCarouselGroupMediaFiles = (
+      formData,
+      group,
+      {
+        files,
+        smallDriveFiles,
+        smallDropboxFiles,
+        s3Results,
+        s3DriveResults,
+        s3DropboxResults,
+        S3_UPLOAD_THRESHOLD,
+        importedFiles
+      }
+    ) => {
+      group.forEach(fileId => {
+        // Local files
+        const localFile = files.find(f => getFileId(f) === fileId);
+        if (localFile && !localFile.isDrive && !localFile.isDropbox) {
+          if (!isVideoFile(localFile) || localFile.size <= S3_UPLOAD_THRESHOLD) {
+            formData.append("mediaFiles", localFile);
+          }
+          return;
+        }
+
+        // Drive files
+        const driveFile = smallDriveFiles.find(f => f.id === fileId);
+        if (driveFile) {
+          formData.append("driveFiles", JSON.stringify({
+            id: driveFile.id,
+            name: driveFile.name,
+            mimeType: driveFile.mimeType,
+            accessToken: driveFile.accessToken
+          }));
+          return;
+        }
+
+        // Dropbox files
+        const dropboxFile = smallDropboxFiles.find(f => f.dropboxId === fileId);
+        if (dropboxFile) {
+          formData.append("dropboxFiles", JSON.stringify({
+            dropboxId: dropboxFile.dropboxId,
+            name: dropboxFile.name,
+            directLink: dropboxFile.directLink,
+            mimeType: dropboxFile.mimeType || getMimeFromName(dropboxFile.name)
+          }));
+          return;
+        }
+
+        // S3 files
+        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults];
+        const s3File = allS3.find(f => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId);
+        if (s3File) {
+          formData.append("s3VideoUrls", s3File.s3Url);
+          formData.append("s3VideoNames", s3File.name);
+          return;
+        }
+
+        // Meta library files
+        if (importedFiles) {
+          const metaFile = importedFiles.find(f =>
+            (f.type === 'image' && f.hash === fileId) ||
+            (f.type === 'video' && f.id === fileId)
+          );
+          if (metaFile) {
+            if (metaFile.type === 'image') {
+              formData.append("metaImageHashes", metaFile.hash);
+              formData.append("metaImageNames", metaFile.name);
+            } else {
+              formData.append("metaVideoIds", metaFile.id);
+              formData.append("metaVideoNames", metaFile.name);
+            }
+          }
+        }
+      });
+    };
 
     const createAdApiCall = async (formData, API_BASE_URL) => {
       const maxRetries = 5;
@@ -3300,93 +3480,163 @@ export default function AdCreationForm({
           return;
         }
 
-        // Pre-compute file order once for carousel
-        const carouselFileOrder = buildCarouselFileOrder(
-          files,
-          driveFiles,
-          dropboxFiles,      // ADD
-          s3Results,
-          s3DriveResults,
-          s3DropboxResults,  // ADD
-          S3_UPLOAD_THRESHOLD,
-          importedFiles
-        );
+        // Determine groups: if user grouped files, use those. Otherwise treat all files as 1 group.
+        const carouselGroups = (fileGroups && fileGroups.length > 0)
+          ? fileGroups
+          : [null]; // null = all files (backward compat)
 
+        const totalCarouselGroups = carouselGroups.length;
 
-        // Pre-compute ad name for carousel
-        const carouselAdName = computeAdNameFromFormula(
-          files[0] || driveFiles[0] || dropboxFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),  // ADD dropboxFiles[0]
-          0,
-          link[0],
-          jobData.formData.adNameFormulaV2,
-          adType
-        );
+        carouselGroups.forEach((group, groupIndex) => {
+          // Build file order for this group
+          let groupFileOrder;
+          if (group) {
+            // Grouped: build order from group's fileId array (respects drag order)
+            groupFileOrder = buildCarouselFileOrderForGroup(
+              group,
+              files,
+              driveFiles,
+              dropboxFiles,
+              s3Results,
+              s3DriveResults,
+              s3DropboxResults,
+              S3_UPLOAD_THRESHOLD,
+              importedFiles
+            );
+          } else {
+            // Ungrouped: build order from all files (original behavior)
+            groupFileOrder = buildCarouselFileOrder(
+              files,
+              driveFiles,
+              dropboxFiles,
+              s3Results,
+              s3DriveResults,
+              s3DropboxResults,
+              S3_UPLOAD_THRESHOLD,
+              importedFiles
+            );
+          }
 
-        // For carousel, process each selected ad set separately
-        nonDynamicAdSetIds.forEach((adSetId) => {
-          const formData = new FormData();
+          // Compute ad name for this group
+          const firstFile = group
+            ? (() => {
+              const firstId = group[0];
+              return files.find(f => getFileId(f) === firstId) ||
+                driveFiles.find(f => f.id === firstId) ||
+                dropboxFiles.find(f => f.dropboxId === firstId) ||
+                (importedFiles || []).find(f =>
+                  (f.type === 'image' && f.hash === firstId) ||
+                  (f.type === 'video' && f.id === firstId)
+                ) ||
+                files[0];
+            })()
+            : files[0] || driveFiles[0] || dropboxFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null);
 
-          // Append common fields
-          appendCommonFields(formData, {
-            adName: carouselAdName,
-            headlinesJSON: commonPrecomputed.headlinesJSON,
-            descriptionsJSON: commonPrecomputed.descriptionsJSON,
-            messagesJSON: commonPrecomputed.messagesJSON,
-            selectedAdAccount,
-            adSetId,
-            pageId,
-            instagramAccountId,
-            linkJSON: commonPrecomputed.linkJSON,
-            cta,
-            launchPaused,
-            jobId: frontendJobId,
-            selectedForm,
-            isPartnershipAd,
-            partnerIgAccountId,
-            partnerFbPageId,
-            adScheduleStartTime,
-            adScheduleEndTime,
-          });
+          const carouselAdName = computeAdNameFromFormula(
+            firstFile,
+            groupIndex,
+            link[0],
+            jobData.formData.adNameFormulaV2,
+            adType
+          );
 
-          // Append carousel-specific fields
-          appendCarouselFields(formData, {
-            isCarouselAd,
-            fileOrder: carouselFileOrder,
-            files,
-            driveFiles,
-            dropboxFiles,           // ADD
-            s3Results,
-            s3DriveResults,
-            s3DropboxResults,       // ADD
-            S3_UPLOAD_THRESHOLD,
-            smallDriveFiles,
-            smallDropboxFiles,      // ADD
-            importedFiles
-          });
+          // For each ad set, create a formData
+          nonDynamicAdSetIds.forEach((adSetId) => {
+            const formData = new FormData();
 
-          // Append shop destination
-          appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
+            // Common fields
+            appendCommonFields(formData, {
+              adName: carouselAdName,
+              headlinesJSON: commonPrecomputed.headlinesJSON,
+              descriptionsJSON: commonPrecomputed.descriptionsJSON,
+              messagesJSON: commonPrecomputed.messagesJSON,
+              selectedAdAccount,
+              adSetId,
+              pageId,
+              instagramAccountId,
+              linkJSON: commonPrecomputed.linkJSON,
+              cta,
+              launchPaused,
+              jobId: frontendJobId,
+              selectedForm,
+              isPartnershipAd,
+              partnerIgAccountId,
+              partnerFbPageId,
+              adScheduleStartTime,
+              adScheduleEndTime,
+            });
 
-          // Add media files to formData
-          files.forEach((file) => {
-            if (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) {
-              formData.append("mediaFiles", file);
+            // Carousel-specific fields
+            formData.append("isCarouselAd", true);
+            formData.append("enablePlacementCustomization", false);
+            formData.append("fileOrder", JSON.stringify(groupFileOrder));
+
+            // Group index for SSE progress
+            formData.append("totalGroups", String(totalCarouselGroups));
+            formData.append("currentGroupIndex", String(groupIndex + 1));
+
+            // Append media files
+            if (group) {
+              // Grouped: only this group's files
+              appendCarouselGroupMediaFiles(formData, group, {
+                files,
+                smallDriveFiles,
+                smallDropboxFiles,
+                s3Results,
+                s3DriveResults,
+                s3DropboxResults,
+                S3_UPLOAD_THRESHOLD,
+                importedFiles
+              });
+            } else {
+              // Ungrouped: all files (backward compat)
+              files.forEach((file) => {
+                if (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD) {
+                  formData.append("mediaFiles", file);
+                }
+              });
+
+              smallDriveFiles.forEach((driveFile) => {
+                formData.append("driveFiles", JSON.stringify({
+                  id: driveFile.id,
+                  name: driveFile.name,
+                  mimeType: driveFile.mimeType,
+                  accessToken: driveFile.accessToken
+                }));
+              });
+
+              smallDropboxFiles.forEach((dropboxFile) => {
+                formData.append("dropboxFiles", JSON.stringify({
+                  dropboxId: dropboxFile.dropboxId,
+                  name: dropboxFile.name,
+                  directLink: dropboxFile.directLink,
+                  mimeType: dropboxFile.mimeType || getMimeFromName(dropboxFile.name)
+                }));
+              });
+
+              [...s3Results, ...s3DriveResults, ...s3DropboxResults].forEach((s3File) => {
+                formData.append("s3VideoUrls", s3File.s3Url);
+                formData.append("s3VideoNames", s3File.name);
+              });
+
+              if (importedFiles && importedFiles.length > 0) {
+                importedFiles.filter(f => f.type === 'image').forEach((metaFile) => {
+                  formData.append("metaImageHashes", metaFile.hash);
+                  formData.append("metaImageNames", metaFile.name);
+                });
+                importedFiles.filter(f => f.type === 'video').forEach((metaFile) => {
+                  formData.append("metaVideoIds", metaFile.id);
+                  formData.append("metaVideoNames", metaFile.name);
+                });
+              }
             }
-          });
 
-          driveFiles.forEach((driveFile) => {
-            if (!isVideoFile(driveFile) || driveFile.size <= S3_UPLOAD_THRESHOLD) {
-              formData.append("driveFiles", JSON.stringify({
-                id: driveFile.id,
-                name: driveFile.name,
-                mimeType: driveFile.mimeType,
-                accessToken: driveFile.accessToken
-              }));
-            }
-          });
-          promises.push(createAdApiCall(formData, API_BASE_URL));
-          promiseMetadata.push(null); // ADD - keeps array indices aligned
+            // Shop destination
+            appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
+            promises.push(createAdApiCall(formData, API_BASE_URL));
+            promiseMetadata.push({ fileName: group ? `Carousel Ad ${groupIndex + 1}` : carouselAdName });
+          });
         });
       }
 
