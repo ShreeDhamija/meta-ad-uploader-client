@@ -1128,7 +1128,7 @@ export default function AdCreationForm({
 
     // ✅ Call the reset function to clear the previous job's state.
     resetProgress();
-    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length, errors: [] });
+    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0, errors: [] });
 
     const jobToProcess = jobQueue[0];
 
