@@ -525,11 +525,18 @@ export default function AdCreationForm({
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
   const [preserveMedia, setPreserveMedia] = useState(false);
+  // const [liveProgress, setLiveProgress] = useState({
+  //   completed: 0,
+  //   succeeded: 0,
+  //   failed: 0,
+  //   total: 0
+  // });
   const [liveProgress, setLiveProgress] = useState({
     completed: 0,
     succeeded: 0,
     failed: 0,
-    total: 0
+    total: 0,
+    errors: []   // ← ADD
   });
 
   // const [isCarouselAd, setIsCarouselAd] = useState(false);
@@ -672,7 +679,7 @@ export default function AdCreationForm({
       adCount = files.length + driveFiles.length + importedFiles.length + dropboxFiles.length;
     }
 
-    console.log("📅 [1] captureFormDataAsJob schedule:", { adScheduleStartTime, adScheduleEndTime });
+
     return {
       id: uuidv4(),
       createdAt: Date.now(),
@@ -1121,7 +1128,7 @@ export default function AdCreationForm({
 
     // ✅ Call the reset function to clear the previous job's state.
     resetProgress();
-    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: 0 });
+    setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length, errors: [] });
 
     const jobToProcess = jobQueue[0];
 
@@ -1520,7 +1527,7 @@ export default function AdCreationForm({
   const openDropboxChooser = useCallback((accessToken) => {
     window.Dropbox.choose({
       success: async (selectedFiles) => {
-        console.log('=== DROPBOX CHOOSER RAW RESPONSE ===');
+
         // Log for debugging
         selectedFiles.forEach(f => console.log(`File: ${f.name} ID: ${f.id}`));
 
@@ -2294,7 +2301,7 @@ export default function AdCreationForm({
       adScheduleEndTime,
       adSets
     } = jobData.formData;
-    console.log("📅 [2] handleCreateAd destructured:", { adScheduleStartTime, adScheduleEndTime });
+
 
 
     setIsCreatingAds(true);
@@ -2522,6 +2529,8 @@ export default function AdCreationForm({
       try {
         const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim());
         finalAdSetIds = [newAdSetId];
+        jobData.formData.selectedAdSets = [newAdSetId];
+
       } catch (error) {
         const errorMessage = error.response?.data?.error || error.message || "Unknown error";
         setIsLoading(false);
@@ -2586,14 +2595,7 @@ export default function AdCreationForm({
     // Add flexible ads validation
     if (adType === 'flexible') {
       const totalFiles = files.length + driveFiles.length + dropboxFiles.length + (importedFiles?.length || 0);
-      console.log('File counts:', {
-        files: files.length,
-        driveFiles: driveFiles.length,
-        s3Results: s3Results.length,
-        s3DriveResults: s3DriveResults.length,
-        importedFiles: importedFiles?.length || 0,
-        totalFiles
-      });
+
 
       // If no groups, validate single ad
       if (fileGroups.length === 0) {
@@ -2690,12 +2692,7 @@ export default function AdCreationForm({
         formData.append("adScheduleEndTime", adScheduleEndTime);
       }
       // At the end of appendCommonFields, after the if blocks that append
-      console.log("📅 [3] appendCommonFields appending:", {
-        start: adScheduleStartTime,
-        end: adScheduleEndTime,
-        formDataHasStart: formData.has("adScheduleStartTime"),
-        formDataHasEnd: formData.has("adScheduleEndTime"),
-      });
+
 
     };
 
@@ -4243,7 +4240,7 @@ export default function AdCreationForm({
       }
 
 
-      setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length });
+      setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length, errors: [] });
 
       try {
         setJobId(frontendJobId);
@@ -4268,11 +4265,23 @@ export default function AdCreationForm({
               return result;
             })
             .catch(error => {
-              // 1. Update Live Counter
+              let errorMsg = 'Unknown error';
+              if (error.response?.data?.error) {
+                errorMsg = error.response.data.error;
+              } else if (error.response?.data) {
+                errorMsg = error.response.data;
+              } else if (error.message) {
+                errorMsg = error.message;
+              }
+
               setLiveProgress(prev => ({
                 ...prev,
                 completed: prev.completed + 1,
-                failed: prev.failed + 1
+                failed: prev.failed + 1,
+                errors: [...prev.errors, {
+                  fileName: promiseMetadata[index]?.fileName || null,
+                  error: errorMsg
+                }]
               }));
 
               responses[index] = { status: 'rejected', reason: error };
@@ -4408,6 +4417,7 @@ export default function AdCreationForm({
       setEnablePlacementCustomization(false);
       setImportedPosts([]);  // ADD THIS
       setImportedFiles([]);
+      setSelectedIgOrganicPosts([]);
 
     }
 
@@ -4629,6 +4639,44 @@ export default function AdCreationForm({
                         </div>
                       )}
                     </div>
+                    {/* Live error details */}
+                    {liveProgress.errors && liveProgress.errors.length > 0 && (
+                      <div className="mt-2">
+                        <details className="text-xs" open>
+                          <summary className="cursor-pointer text-[#FF0000]">
+                            View error details
+                          </summary>
+                          <ul className="mt-1 ml-4 list-disc space-y-0.5 text-[#FF0000]">
+                            {(() => {
+                              const errorGroups = liveProgress.errors.reduce((acc, item) => {
+                                const key = item.error;
+                                if (!acc[key]) {
+                                  acc[key] = { error: item.error, fileNames: [] };
+                                }
+                                if (item.fileName) {
+                                  acc[key].fileNames.push(item.fileName);
+                                }
+                                return acc;
+                              }, {});
+
+                              return Object.values(errorGroups).map((group, idx) => (
+                                <li key={idx} className="break-words">
+                                  {group.fileNames.length > 0 && (
+                                    <span className="font-medium">{group.fileNames.join(', ')}: </span>
+                                  )}
+                                  {group.error}
+                                  {group.fileNames.length === 0 && liveProgress.errors.filter(e => e.error === group.error).length > 1 && (
+                                    <span className="ml-1 text-red-500 font-medium">
+                                      (×{liveProgress.errors.filter(e => e.error === group.error).length})
+                                    </span>
+                                  )}
+                                </li>
+                              ));
+                            })()}
+                          </ul>
+                        </details>
+                      </div>
+                    )}
                   </div>
                 )}
 
