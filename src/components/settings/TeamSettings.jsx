@@ -449,18 +449,8 @@ export default function TeamSettings() {
                                         ))}
                                     </div>
                                 )}
-                                {/* Team cost row */}
-                                {/* <div className="flex items-center justify-between pt-3">
-                                    <span className="text-sm text-gray-600">Team cost</span>
-                                    <span className="text-sm font-bold text-black">
-                                        {(teamData.members?.length || 0) > 0 && (
-                                            <span className="text-sm text-gray-700">
-                                                (500 + {(teamData.members?.length || 0)} × 20 =)&nbsp;
-                                            </span>
-                                        )}
-                                        ${500 + ((teamData.members?.length || 0) * 20)}/month
-                                    </span>
-                                </div> */}
+
+
 
                                 {/* Delete Team Button */}
                                 <div className="pt-3">

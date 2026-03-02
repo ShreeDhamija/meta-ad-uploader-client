@@ -783,6 +783,8 @@ export default function Home() {
                         }}
                         canExtendTrial={canExtendTrial()}
                         onExtendTrial={handleExtendTrial}
+                        isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                        isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
                     />
                 )}
 

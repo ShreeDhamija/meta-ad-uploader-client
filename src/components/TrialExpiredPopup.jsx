@@ -3,7 +3,8 @@ import { X, MessageCircle } from 'lucide-react';
 import Rocket2 from '@/assets/rocket2.webp';
 import { useState } from "react"
 
-const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExtendTrial, onExtendTrial }) => {
+const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExtendTrial, onExtendTrial, isTeamOwner, isTeamMember // new props
+}) => {
 
     const [extending, setExtending] = useState(false);
 
@@ -63,7 +64,7 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExte
                     </button>
                 </div>
 
-                {canExtendTrial && (
+                {canExtendTrial && !isTeamMember && (
                     <>
                         <p className="text-gray-500 text-center mb-2 text-sm">
                             Didn't get a chance to try Blip properly?
@@ -77,7 +78,20 @@ const TrialExpiredPopup = ({ onClose, onUpgrade, joinTeam, onChatWithUs, canExte
                                 {extending ? 'Extending...' : 'Extend Your Trial'}
                             </button>
                         </div>
+                        {isTeamOwner && (
+                            <p className="text-gray-400 text-center text-xs -mt-2 mb-4">
+                                This will extend the trial for all your team members
+                            </p>
+                        )}
                     </>
+                )}
+
+                {isTeamMember && canExtendTrial && (
+                    <div className="flex justify-center mb-4">
+                        <p className="text-gray-400 text-center text-sm w-[300px]">
+                            Your team owner can extend your trial
+                        </p>
+                    </div>
                 )}
 
                 {/* Need Help Label */}
