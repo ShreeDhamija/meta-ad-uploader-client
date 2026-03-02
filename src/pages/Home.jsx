@@ -172,7 +172,7 @@ export default function Home() {
     const [importedFiles, setImportedFiles] = useState([]);
     const [videoThumbs, setVideoThumbs] = useState({})
     const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading } = useAppData()
-    const { settings: adAccountSettings, documentExists } = useAdAccountSettings(selectedAdAccount)
+    const { settings: adAccountSettings, documentExists, refetchCopyTemplates } = useAdAccountSettings(selectedAdAccount)
     const [hasAnyAdAccountSettings, setHasAnyAdAccountSettings] = useState(false);
     const [selectedShopDestination, setSelectedShopDestination] = useState("")
     const [selectedShopDestinationType, setSelectedShopDestinationType] = useState("")
@@ -677,6 +677,8 @@ export default function Home() {
                             selectedFiles={selectedFiles}
                             setSelectedFiles={setSelectedFiles}
                             useExistingPosts={useExistingPosts}
+                            refetchCopyTemplates={refetchCopyTemplates}
+
                         />
                     </div>
 

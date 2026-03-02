@@ -5,10 +5,20 @@ import axios from "axios"
 import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogOverlay
+} from "@/components/ui/dialog";
 import TextareaAutosize from 'react-textarea-autosize'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -479,7 +489,8 @@ export default function AdCreationForm({
   campaignObjective,
   selectedFiles,
   setSelectedFiles,
-  useExistingPosts
+  useExistingPosts,
+  refetchCopyTemplates
 }) {
   // Local state
   const [showPostSelector, setShowPostSelector] = useState(false);
@@ -525,12 +536,7 @@ export default function AdCreationForm({
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
   const [preserveMedia, setPreserveMedia] = useState(false);
-  // const [liveProgress, setLiveProgress] = useState({
-  //   completed: 0,
-  //   succeeded: 0,
-  //   failed: 0,
-  //   total: 0
-  // });
+
   const [liveProgress, setLiveProgress] = useState({
     completed: 0,
     succeeded: 0,
@@ -559,6 +565,10 @@ export default function AdCreationForm({
   const [adScheduleStartTime, setAdScheduleStartTime] = useState(null);
   const [adScheduleEndTime, setAdScheduleEndTime] = useState(null);
   const [showSchedule, setShowSchedule] = useState(false);
+
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [newTemplateNameInput, setNewTemplateNameInput] = useState("");
+  const [showSaveNewDialog, setShowSaveNewDialog] = useState(false);
 
 
 
@@ -1859,20 +1869,11 @@ export default function AdCreationForm({
         setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
       }
 
-      // --- 3. DROPBOX ---
-      // const dropboxFilesNeedingThumbsyticsDashboard = dropboxFiles.filter(file => {
-      //   const fileId = getFileId(file);
-      //   return isVideoFile(file) &&
-      //     !videoThumbsRef.current[fileId] &&
-      //     !processingRef.current.has(fileId);
-      // });
+
 
       // --- 3. DROPBOX ---
       // We filter by dropboxId directly to avoid 'isDropbox' flag dependency issues
       const dropboxFilesNeedingThumbs = dropboxFiles.filter(file => {
-        // FORCE the use of dropboxId. 
-        // If we use getFileId(file) here, it might return the file name 
-        // if the 'isDropbox' flag is missing from the state object.
         const fileId = file.dropboxId;
 
         return !videoThumbsRef.current[fileId] &&
@@ -2248,6 +2249,76 @@ export default function AdCreationForm({
   }, [shouldShowLeadFormSelector, pageId]);
 
 
+
+  // Check if current copy combo already exists in another template
+  const existingDuplicateTemplate = useMemo(() => {
+    const currentPrimary = JSON.stringify(messages.filter(t => t.trim()).sort());
+    const currentHeadlines = JSON.stringify(headlines.filter(t => t.trim()).sort());
+    const currentDescs = JSON.stringify((descriptions || []).filter(t => t.trim()).sort());
+
+    for (const [name, tpl] of Object.entries(copyTemplates)) {
+      if (name === selectedTemplate) continue; // skip the currently selected one
+      const tplPrimary = JSON.stringify((tpl.primaryTexts || []).filter(t => t.trim()).sort());
+      const tplHeadlines = JSON.stringify((tpl.headlines || []).filter(t => t.trim()).sort());
+      const tplDescs = JSON.stringify((tpl.descriptions || []).filter(t => t.trim()).sort());
+      if (currentPrimary === tplPrimary && currentHeadlines === tplHeadlines && currentDescs === tplDescs) {
+        return name;
+      }
+    }
+    return null;
+  }, [messages, headlines, descriptions, copyTemplates, selectedTemplate]);
+
+  const handleSaveAsNewTemplate = async () => {
+    const name = newTemplateNameInput.trim();
+    if (!name) return;
+    if (copyTemplates[name]) {
+      toast.error("A template with this name already exists");
+      return;
+    }
+    setIsSavingTemplate(true);
+    try {
+      const templateData = {
+        name,
+        primaryTexts: messages.filter(t => t.trim()),
+        headlines: headlines.filter(t => t.trim()),
+        descriptions: (descriptions || []).filter(t => t.trim()),
+      };
+      await saveCopyTemplate(selectedAdAccount, name, templateData, false);
+      await refetchCopyTemplates();
+
+      toast.success("Template saved!");
+      setShowSaveNewDialog(false);
+      setNewTemplateNameInput("");
+      setSelectedTemplate(name);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save template");
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
+  const handleUpdateSelectedTemplate = async () => {
+    if (!selectedTemplate || !copyTemplates[selectedTemplate]) return;
+    setIsSavingTemplate(true);
+    try {
+      const templateData = {
+        name: selectedTemplate,
+        primaryTexts: messages.filter(t => t.trim()),
+        headlines: headlines.filter(t => t.trim()),
+        descriptions: (descriptions || []).filter(t => t.trim()),
+      };
+      await saveCopyTemplate(selectedAdAccount, selectedTemplate, templateData, false);
+      await refetchCopyTemplates();
+
+      toast.success("Template updated!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update template");
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
 
 
   const handleCreateAd = async (jobData) => {
@@ -5227,16 +5298,33 @@ export default function AdCreationForm({
                             ? "Select a Copy Template"
                             : "Select a Copy Template"}
                         </Label>
-                        {Object.keys(copyTemplates).length === 0 && (<Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                          className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
-                        >
-                          <CogIcon className="w-3 h-3 text-white" />
-                          Set Up Templates
-                        </Button>
+                        {(messages.some(t => t.trim()) || headlines.some(t => t.trim())) && (
+                          <div className="flex items-center gap-2 ml-auto animate-in slide-in-from-bottom-2 duration-300">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isSavingTemplate || !!existingDuplicateTemplate}
+                              onClick={() => setShowSaveNewDialog(true)}
+                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
+                            >
+                              {existingDuplicateTemplate
+                                ? `Already exists as "${existingDuplicateTemplate}"`
+                                : "Save as New Template"}
+                            </Button>
+                            {selectedTemplate && copyTemplates[selectedTemplate] && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={isSavingTemplate || !!existingDuplicateTemplate}
+                                onClick={handleUpdateSelectedTemplate}
+                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700"
+                              >
+                                {isSavingTemplate ? "Saving..." : "Update Selected Template"}
+                              </Button>
+                            )}
+                          </div>
                         )}
                       </div>
 
@@ -6212,7 +6300,42 @@ export default function AdCreationForm({
 
         </form>
       </CardContent>
+      <Dialog open={showSaveNewDialog} onOpenChange={setShowSaveNewDialog}>
+        <DialogContent className="sm:max-w-[400px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Save as New Template</DialogTitle>
+            <DialogDescription>Give your new copy template a name.</DialogDescription>
+          </DialogHeader>
+          <Input
+            value={newTemplateNameInput}
+            onChange={(e) => setNewTemplateNameInput(e.target.value)}
+            placeholder="e.g. Summer Sale Copy"
+            className="rounded-xl"
+            onKeyDown={(e) => e.key === "Enter" && handleSaveAsNewTemplate()}
+          />
+          {copyTemplates[newTemplateNameInput.trim()] && (
+            <p className="text-xs text-red-500">A template with this name already exists.</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              onClick={() => setShowSaveNewDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="bg-blue-600 text-white rounded-xl hover:bg-blue-700"
+              disabled={!newTemplateNameInput.trim() || !!copyTemplates[newTemplateNameInput.trim()] || isSavingTemplate}
+              onClick={handleSaveAsNewTemplate}
+            >
+              {isSavingTemplate ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card >
+
   )
 }
 

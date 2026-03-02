@@ -11,6 +11,25 @@ export default function useAdAccountSettings(adAccountId) {
         defaultAdName: "",
     });
 
+    const refetchCopyTemplates = async () => {
+        if (!adAccountId) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/settings/ad-account?adAccountId=${adAccountId}`, {
+                credentials: "include",
+            });
+            const data = await res.json();
+            if (data.settings) {
+                setSettings(prev => ({
+                    ...prev,
+                    copyTemplates: data.settings.copyTemplates || {},
+                    defaultTemplateName: data.settings.defaultTemplateName || "",
+                }));
+            }
+        } catch (err) {
+            console.error("Failed to refetch copy templates:", err);
+        }
+    };
+
 
     useEffect(() => {
         if (!adAccountId) return;
@@ -99,5 +118,7 @@ export default function useAdAccountSettings(adAccountId) {
         setSettings,
         documentExists,
         isFirstEverSave,
+        refetchCopyTemplates, // ← new
+
     };
 }
