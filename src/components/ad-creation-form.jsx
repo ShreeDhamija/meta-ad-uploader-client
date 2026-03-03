@@ -1691,7 +1691,7 @@ export default function AdCreationForm({
         return 16 / 9;
       }
       try {
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?fields=videoMediaMetadata`, {
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?fields=videoMediaMetadata&supportsAllDrives=true`, {
           headers: { 'Authorization': `Bearer ${file.accessToken}` }
         });
         if (!response.ok) {
