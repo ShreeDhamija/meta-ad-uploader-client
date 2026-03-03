@@ -1,3 +1,59 @@
+// import { useEffect, useState } from "react";
+// const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+// export default function useGlobalSettings() {
+//     const [loading, setLoading] = useState(true);
+//     const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+//     const [hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding] = useState(false);
+//     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
+
+//     const fetchSettings = async () => {
+//         try {
+//             const res = await fetch(`${API_BASE_URL}/settings/global`, {
+//                 credentials: "include",
+//             });
+//             const data = await res.json();
+
+
+
+//             setHasSeenOnboarding(data?.settings?.hasSeenOnboarding || false);
+//             setHasSeenSettingsOnboarding(data?.settings?.hasSeenSettingsOnboarding || false);
+//             setSelectedAdAccountIds(data?.settings?.selectedAdAccountIds || [])
+
+//         } catch (err) {
+//             console.error("Failed to fetch global settings:", err);
+//             setHasSeenOnboarding(false);
+//             setSelectedAdAccountIds([]);
+//             setHasSeenSettingsOnboarding(false);
+//         } finally {
+//             setLoading(false);
+//         }
+//     };
+
+//     useEffect(() => {
+//         fetchSettings();
+
+//         // Listen for updates and refetch
+//         const handleUpdate = () => fetchSettings();
+//         window.addEventListener('globalSettingsUpdated', handleUpdate);
+
+//         return () => window.removeEventListener('globalSettingsUpdated', handleUpdate);
+//     }, []);
+
+
+
+
+//     return {
+//         loading,
+//         hasSeenOnboarding,
+//         hasSeenSettingsOnboarding,
+//         setHasSeenSettingsOnboarding,
+//         selectedAdAccountIds, // Changed from selectedAdAccountId
+
+
+//     };
+// }
+
 import { useEffect, useState } from "react";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -5,6 +61,7 @@ export default function useGlobalSettings() {
     const [loading, setLoading] = useState(true);
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
     const [hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding] = useState(false);
+    const [hasSeenAnalyticsOnboarding, setHasSeenAnalyticsOnboarding] = useState(false);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
 
     const fetchSettings = async () => {
@@ -14,10 +71,9 @@ export default function useGlobalSettings() {
             });
             const data = await res.json();
 
-
-
             setHasSeenOnboarding(data?.settings?.hasSeenOnboarding || false);
             setHasSeenSettingsOnboarding(data?.settings?.hasSeenSettingsOnboarding || false);
+            setHasSeenAnalyticsOnboarding(data?.settings?.hasSeenAnalyticsOnboarding || false);
             setSelectedAdAccountIds(data?.settings?.selectedAdAccountIds || [])
 
         } catch (err) {
@@ -25,6 +81,7 @@ export default function useGlobalSettings() {
             setHasSeenOnboarding(false);
             setSelectedAdAccountIds([]);
             setHasSeenSettingsOnboarding(false);
+            setHasSeenAnalyticsOnboarding(false);
         } finally {
             setLoading(false);
         }
@@ -40,16 +97,12 @@ export default function useGlobalSettings() {
         return () => window.removeEventListener('globalSettingsUpdated', handleUpdate);
     }, []);
 
-
-
-
     return {
         loading,
         hasSeenOnboarding,
         hasSeenSettingsOnboarding,
         setHasSeenSettingsOnboarding,
-        selectedAdAccountIds, // Changed from selectedAdAccountId
-
-
+        hasSeenAnalyticsOnboarding,
+        selectedAdAccountIds,
     };
 }

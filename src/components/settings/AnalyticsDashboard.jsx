@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
@@ -11,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import {
     AlertTriangle, RefreshCw, Loader2, ChevronsUpDown,
-    Target, Settings2, Activity, Zap, Eye, CheckCircle2,
+    Target, Settings2, Activity, Zap, Eye, CheckCircle2, BarChart3,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -20,6 +19,7 @@ import {
 } from "@/components/ui/dialog"
 import { useAppData } from "@/lib/AppContext"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
+import useGlobalSettings from "@/lib/useGlobalSettings"
 import { saveSettings } from "@/lib/saveSettings"
 import { cn } from "@/lib/utils"
 
@@ -28,6 +28,8 @@ import WeeklyChart from "./analytics/WeeklyChart"
 import RecommendationCards from "./analytics/RecommendationCards"
 import PoorPerformingAds from "./analytics/PoorPerformingAds"
 import AnomalyCards from "./analytics/AnomalyCards"
+import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
+import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -41,6 +43,10 @@ const SLACK_PURPLE = '#4A154B';
 
 export default function AnalyticsDashboard() {
     const { adAccounts, adAccountsLoading } = useAppData()
+    const { loading: globalSettingsLoading, hasSeenAnalyticsOnboarding } = useGlobalSettings()
+
+    // ── Onboarding state ────────────────────────────────────
+    const [showOnboarding, setShowOnboarding] = useState(false)
 
     // ── Core state ──────────────────────────────────────────
     const [selectedAdAccount, setSelectedAdAccount] = useState(null)
@@ -50,6 +56,9 @@ export default function AnalyticsDashboard() {
     const [modeAutoDetected, setModeAutoDetected] = useState(false)
     const [activeTab, setActiveTab] = useState("recommendations")
     const [chartDays, setChartDays] = useState(14)
+
+    // ── Aggregate KPI dialog ────────────────────────────────
+    const [showAggregateDialog, setShowAggregateDialog] = useState(false)
 
     // ── Settings ────────────────────────────────────────────
     const [showSettingsDialog, setShowSettingsDialog] = useState(false)
@@ -61,6 +70,12 @@ export default function AnalyticsDashboard() {
     const [targetROAS, setTargetROAS] = useState(null)
     const [tempTargetCPA, setTempTargetCPA] = useState("")
     const [tempTargetROAS, setTempTargetROAS] = useState("")
+
+    // ── Mode/Event preferences in settings dialog ───────────
+    const [tempAnalyticsMode, setTempAnalyticsMode] = useState("roas")
+    const [tempConversionEvent, setTempConversionEvent] = useState(null)
+    const [conversionEvents, setConversionEvents] = useState([])
+    const [conversionEventsLoading, setConversionEventsLoading] = useState(false)
 
     // ── Slack state ─────────────────────────────────────────
     const [slackConnected, setSlackConnected] = useState(false)
@@ -93,7 +108,14 @@ export default function AnalyticsDashboard() {
     // ── Ad account settings hook ────────────────────────────
     const { settings: adAccountSettings, loading: adAccountSettingsLoading } = useAdAccountSettings(selectedAdAccount)
 
-    // Sync settings from hook
+    // ── Show onboarding on first visit ──────────────────────
+    useEffect(() => {
+        if (!globalSettingsLoading && !adAccountsLoading && adAccounts?.length > 0 && !hasSeenAnalyticsOnboarding) {
+            setShowOnboarding(true)
+        }
+    }, [globalSettingsLoading, adAccountsLoading, adAccounts, hasSeenAnalyticsOnboarding])
+
+    // Sync settings from hook (including analyticsMode + conversionEvent)
     useEffect(() => {
         if (!adAccountSettingsLoading && adAccountSettings) {
             if (adAccountSettings.anomalyThresholds) {
@@ -118,8 +140,16 @@ export default function AnalyticsDashboard() {
                 setTargetROAS(null)
                 setTempTargetROAS("")
             }
+
+            // Load saved analytics mode preference
+            if (adAccountSettings.analyticsMode) {
+                const savedMode = adAccountSettings.analyticsMode === 'roas' ? 'roas' : 'cpr'
+                setMetricMode(savedMode)
+                modeCache.current[selectedAdAccount] = savedMode
+                setModeAutoDetected(false)
+            }
         }
-    }, [adAccountSettingsLoading, adAccountSettings])
+    }, [adAccountSettingsLoading, adAccountSettings, selectedAdAccount])
 
     // ── Check Slack connection (per-user, runs once) 
     useEffect(() => {
@@ -153,7 +183,7 @@ export default function AnalyticsDashboard() {
     const poorAdsCount = poorAds?.ads?.length || 0
 
 
-    // Auto-detect mode from account info 
+    // Auto-detect mode from account info (fallback if no saved preference)
     const fetchAccountInfo = useCallback(async (accountId) => {
         try {
             const res = await fetch(
@@ -162,7 +192,7 @@ export default function AnalyticsDashboard() {
             )
             const data = await res.json()
 
-            // NEW: Only auto-set if the user hasn't manually selected a mode for this account yet
+            // Only auto-set if the user hasn't manually selected or saved a mode for this account
             if (modeCache.current[accountId]) return;
 
             if (res.ok && data.suggestedMode) {
@@ -171,6 +201,25 @@ export default function AnalyticsDashboard() {
             }
         } catch (err) {
             console.error('Account info error:', err)
+        }
+    }, [])
+
+    // ── Fetch conversion events for settings dialog ─────────
+    const fetchConversionEvents = useCallback(async (accountId) => {
+        setConversionEventsLoading(true)
+        try {
+            const res = await fetch(
+                `${API_BASE_URL}/api/analytics/conversion-events?adAccountId=${accountId}`,
+                { credentials: 'include' }
+            )
+            const data = await res.json()
+            if (res.ok) {
+                setConversionEvents(data.events || [])
+            }
+        } catch (err) {
+            console.error('Failed to fetch conversion events:', err)
+        } finally {
+            setConversionEventsLoading(false)
         }
     }, [])
 
@@ -309,7 +358,7 @@ export default function AnalyticsDashboard() {
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
 
-        // NEW: Restore cached mode for this account, or default to 'cpr'
+        // Restore cached mode for this account, or default to 'cpr'
         if (modeCache.current[accountId]) {
             setMetricMode(modeCache.current[accountId])
             setModeAutoDetected(false)
@@ -338,14 +387,11 @@ export default function AnalyticsDashboard() {
         const newTargetCPA = tempTargetCPA ? parseFloat(tempTargetCPA) : null
         const newTargetROAS = tempTargetROAS ? parseFloat(tempTargetROAS) : null
 
+        // Map mode back: 'cpr' -> 'cpa' for storage
+        const modeForStorage = tempAnalyticsMode === 'roas' ? 'roas' : 'cpa'
+
         try {
             console.log('[Settings] Saving for account:', selectedAdAccount)
-            console.log('[Settings] Payload:', JSON.stringify({
-                anomalyThresholds: tempThresholds,
-                targetCPA: newTargetCPA,
-                targetROAS: newTargetROAS,
-                slackAlertsEnabled: tempSlackAlertsEnabled,
-            }))
 
             await saveSettings({
                 adAccountId: selectedAdAccount,
@@ -354,21 +400,28 @@ export default function AnalyticsDashboard() {
                     targetCPA: newTargetCPA,
                     targetROAS: newTargetROAS,
                     slackAlertsEnabled: tempSlackAlertsEnabled,
+                    analyticsMode: modeForStorage,
+                    conversionEvent: modeForStorage === 'cpa' ? tempConversionEvent : null,
                 }
             })
 
-            // Only update local state after successful save
+            // Update local state after successful save
             setAnomalyThresholds(tempThresholds)
             setTargetCPA(newTargetCPA)
             setTargetROAS(newTargetROAS)
             setSlackAlertsEnabled(tempSlackAlertsEnabled)
             setShowSettingsDialog(false)
 
+            // Apply mode change
+            const newMode = tempAnalyticsMode === 'roas' ? 'roas' : 'cpr'
+            if (newMode !== metricMode) {
+                handleModeChange(newMode)
+            }
+
             // Invalidate recs + anomalies cache
             delete fetchedRef.current[`anomalies-${selectedAdAccount}`]
             delete fetchedRef.current[`recs-${selectedAdAccount}-${metricMode}`]
             toast.success('Settings saved')
-            console.log('[Settings] Save successful')
         } catch (err) {
             console.error('[Settings] Save FAILED:', err.message)
             toast.error(`Failed to save settings: ${err.message}`)
@@ -380,7 +433,7 @@ export default function AnalyticsDashboard() {
     const handleModeChange = (mode) => {
         setMetricMode(mode)
 
-        // NEW: Save preference to cache
+        // Save preference to cache
         if (selectedAdAccount) {
             modeCache.current[selectedAdAccount] = mode
         }
@@ -398,7 +451,6 @@ export default function AnalyticsDashboard() {
     const handleSlackDisconnect = async () => {
         setSlackDisconnecting(true)
         try {
-            console.log('[Slack] Disconnecting...')
             const res = await fetch(`${API_BASE_URL}/api/analytics/slack/disconnect`, {
                 method: 'POST', credentials: 'include',
             })
@@ -408,14 +460,11 @@ export default function AnalyticsDashboard() {
                 setSlackAlertsEnabled(false)
                 setTempSlackAlertsEnabled(false)
                 toast.success('Slack disconnected')
-                console.log('[Slack] Disconnect successful')
             } else {
                 const data = await res.json().catch(() => ({}))
-                console.error('[Slack] Disconnect failed:', res.status, data)
                 toast.error(`Disconnect failed: ${data.error || res.status}`)
             }
         } catch (err) {
-            console.error('[Slack] Disconnect error:', err.message)
             toast.error('Failed to disconnect Slack')
         } finally {
             setSlackDisconnecting(false)
@@ -427,13 +476,24 @@ export default function AnalyticsDashboard() {
         setTempTargetCPA(targetCPA ? String(targetCPA) : "")
         setTempTargetROAS(targetROAS ? String(targetROAS) : "")
         setTempSlackAlertsEnabled(slackAlertsEnabled)
+        // Load current mode/event into settings temp state
+        setTempAnalyticsMode(metricMode === 'roas' ? 'roas' : 'cpa')
+        setTempConversionEvent(adAccountSettings?.conversionEvent || null)
         setShowSettingsDialog(true)
+        // Pre-fetch conversion events for settings
+        if (selectedAdAccount) fetchConversionEvents(selectedAdAccount)
+    }
+
+    const handleOnboardingComplete = () => {
+        setShowOnboarding(false)
+        // Reload settings for the currently selected account
+        // The useAdAccountSettings hook will re-trigger since global settings changed
     }
 
     const isAnyLoading = recsLoading || anomaliesLoading || poorAdsLoading || dailyLoading || weeklyLoading
 
     // ── Loading / Empty states ──────────────────────────────
-    if (adAccountsLoading) {
+    if (adAccountsLoading || globalSettingsLoading) {
         return (
             <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -457,6 +517,21 @@ export default function AnalyticsDashboard() {
 
     return (
         <div className="space-y-6">
+            {/* ── Analytics Onboarding Popup ── */}
+            <AnalyticsOnboarding
+                open={showOnboarding}
+                onComplete={handleOnboardingComplete}
+                adAccounts={adAccounts}
+            />
+
+            {/* ── Aggregate KPI Dialog ── */}
+            <AggregateKPIDialog
+                open={showAggregateDialog}
+                onOpenChange={setShowAggregateDialog}
+                adAccounts={adAccounts}
+                mode={metricMode}
+            />
+
             {/* ── Header: Account Selector + Mode Toggle + Actions ── */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-3 flex-wrap">
@@ -532,6 +607,17 @@ export default function AnalyticsDashboard() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* Aggregate View Button */}
+                    {adAccounts?.length > 1 && (
+                        <Button
+                            variant="outline" size="sm"
+                            onClick={() => setShowAggregateDialog(true)}
+                            className="rounded-2xl h-11 px-4"
+                        >
+                            <BarChart3 className="w-4 h-4 mr-2" />
+                            All Accounts
+                        </Button>
+                    )}
                     <Button
                         variant="outline" size="sm"
                         onClick={openSettingsDialog}
@@ -540,15 +626,6 @@ export default function AnalyticsDashboard() {
                         <Settings2 className="w-4 h-4 mr-2" />
                         Budget and Anomaly Preferences
                     </Button>
-                    {/* <Button
-                        variant="outline" size="sm"
-                        onClick={handleRefresh}
-                        disabled={isAnyLoading}
-                        className="rounded-2xl h-11 px-4"
-                    >
-                        <RefreshCw className={cn("w-4 h-4 mr-2", isAnyLoading && "animate-spin")} />
-                        Refresh
-                    </Button> */}
                 </div>
             </div>
 
@@ -635,7 +712,7 @@ export default function AnalyticsDashboard() {
                     loading={recsLoading}
                     mode={metricMode}
                     adAccountId={selectedAdAccount}
-                    adAccounts={adAccounts}          // ← ADD THIS
+                    adAccounts={adAccounts}
                     onApplied={() => fetchRecommendations(true)}
                 />
             )}
@@ -720,11 +797,97 @@ export default function AnalyticsDashboard() {
                             Analytics Settings
                         </DialogTitle>
                         <DialogDescription>
-                            Configure recommendations, anomaly detection, and alerts
+                            Configure optimization mode, recommendations, anomaly detection, and alerts
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-6">
+
+                        {/* ── Analytics Mode ─────────────────────── */}
+                        <div className="space-y-4">
+                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-purple-500" />
+                                Optimization Focus
+                            </h3>
+                            <div className="space-y-4 pl-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm text-gray-700">
+                                            {tempAnalyticsMode === 'roas'
+                                                ? 'Optimizing for Return on Ad Spend'
+                                                : 'Optimizing for Cost Per Action'}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className={cn("text-xs font-medium", tempAnalyticsMode === 'cpa' ? "text-green-600" : "text-gray-400")}>CPA</span>
+                                        <Switch
+                                            checked={tempAnalyticsMode === 'roas'}
+                                            onCheckedChange={(checked) => {
+                                                setTempAnalyticsMode(checked ? 'roas' : 'cpa')
+                                                if (!checked && selectedAdAccount) {
+                                                    fetchConversionEvents(selectedAdAccount)
+                                                }
+                                            }}
+                                        />
+                                        <span className={cn("text-xs font-medium", tempAnalyticsMode === 'roas' ? "text-blue-600" : "text-gray-400")}>ROAS</span>
+                                    </div>
+                                </div>
+
+                                {/* Conversion event selector for CPA mode */}
+                                {tempAnalyticsMode === 'cpa' && (
+                                    <div className="space-y-2">
+                                        <Label className="text-sm text-gray-600">Conversion Event</Label>
+                                        {conversionEventsLoading ? (
+                                            <div className="flex items-center gap-2 py-2">
+                                                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                                <span className="text-xs text-gray-400">Loading events...</span>
+                                            </div>
+                                        ) : conversionEvents.length > 0 ? (
+                                            <div className="max-h-[150px] overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 custom-scrollbar">
+                                                {conversionEvents.filter(e => e.totalAdsets > 0 || e.activeAdsets > 0).concat(
+                                                    conversionEvents.filter(e => e.totalAdsets === 0 && e.activeAdsets === 0)
+                                                ).map((evt) => {
+                                                    const isSelected = tempConversionEvent === evt.event
+                                                    return (
+                                                        <button
+                                                            key={evt.event}
+                                                            onClick={() => setTempConversionEvent(evt.event)}
+                                                            className={cn(
+                                                                "w-full flex items-center justify-between px-3.5 py-2 text-left transition-colors",
+                                                                isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                                                            )}
+                                                        >
+                                                            <div>
+                                                                <p className={cn(
+                                                                    "text-sm",
+                                                                    isSelected ? "font-medium text-blue-700" : "text-gray-700"
+                                                                )}>
+                                                                    {evt.label}
+                                                                </p>
+                                                                {evt.activeAdsets > 0 && (
+                                                                    <p className="text-[10px] text-gray-400">
+                                                                        {evt.activeAdsets} active ad set{evt.activeAdsets !== 1 ? 's' : ''}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            {isSelected && (
+                                                                <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                                            )}
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-gray-400 py-2">
+                                                Events will be auto-detected from your ad sets.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="border-t border-gray-200" />
 
                         {/* ── Target KPI ─────────────────────────── */}
                         <div className="space-y-4">
