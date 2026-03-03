@@ -30,6 +30,7 @@ import PoorPerformingAds from "./analytics/PoorPerformingAds"
 import AnomalyCards from "./analytics/AnomalyCards"
 import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
+import AdAccountAudit from "./analytics/AdAccountAudit"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -45,10 +46,10 @@ export default function AnalyticsDashboard() {
     const { adAccounts, adAccountsLoading } = useAppData()
     const { loading: globalSettingsLoading, hasSeenAnalyticsOnboarding } = useGlobalSettings()
 
-    // ── Onboarding state ────────────────────────────────────
+    // ── Onboarding state 
     const [showOnboarding, setShowOnboarding] = useState(false)
 
-    // ── Core state ──────────────────────────────────────────
+    // ── Core state 
     const [selectedAdAccount, setSelectedAdAccount] = useState(null)
     const [openAdAccount, setOpenAdAccount] = useState(false)
     const [searchValue, setSearchValue] = useState("")
@@ -57,34 +58,34 @@ export default function AnalyticsDashboard() {
     const [activeTab, setActiveTab] = useState("recommendations")
     const [chartDays, setChartDays] = useState(14)
 
-    // ── Aggregate KPI dialog ────────────────────────────────
+    // ── Aggregate KPI dialog 
     const [showAggregateDialog, setShowAggregateDialog] = useState(false)
 
-    // ── Settings ────────────────────────────────────────────
+    // ── Settings 
     const [showSettingsDialog, setShowSettingsDialog] = useState(false)
     const [anomalyThresholds, setAnomalyThresholds] = useState(DEFAULT_THRESHOLDS)
     const [tempThresholds, setTempThresholds] = useState(DEFAULT_THRESHOLDS)
 
-    // ── Target KPI (lives in settings dialog, feeds recommendations) ──
+    // ── Target KPI (lives in settings dialog, feeds recommendations) 
     const [targetCPA, setTargetCPA] = useState(null)
     const [targetROAS, setTargetROAS] = useState(null)
     const [tempTargetCPA, setTempTargetCPA] = useState("")
     const [tempTargetROAS, setTempTargetROAS] = useState("")
 
-    // ── Mode/Event preferences in settings dialog ───────────
+    // ── Mode/Event preferences in settings dialog 
     const [tempAnalyticsMode, setTempAnalyticsMode] = useState("roas")
     const [tempConversionEvent, setTempConversionEvent] = useState(null)
     const [conversionEvents, setConversionEvents] = useState([])
     const [conversionEventsLoading, setConversionEventsLoading] = useState(false)
 
-    // ── Slack state ─────────────────────────────────────────
+    // ── Slack state 
     const [slackConnected, setSlackConnected] = useState(false)
     const [slackChannelName, setSlackChannelName] = useState(null)
     const [slackAlertsEnabled, setSlackAlertsEnabled] = useState(false)
     const [tempSlackAlertsEnabled, setTempSlackAlertsEnabled] = useState(false)
     const [slackDisconnecting, setSlackDisconnecting] = useState(false)
 
-    // ── Data state ──────────────────────────────────────────
+    // ── Data state 
     const [recommendations, setRecommendations] = useState(null)
     const [recsLoading, setRecsLoading] = useState(false)
 
@@ -100,6 +101,8 @@ export default function AnalyticsDashboard() {
     const [weeklyInsights, setWeeklyInsights] = useState(null)
     const [weeklyLoading, setWeeklyLoading] = useState(false)
 
+
+    const [auditOpen, setAuditOpen] = useState(false)
     // Track what we've already fetched for this account+mode combo
     const fetchedRef = useRef({})
     const modeCache = useRef({})
@@ -615,7 +618,7 @@ export default function AnalyticsDashboard() {
                             className="rounded-2xl h-11 px-4"
                         >
                             <BarChart3 className="w-4 h-4 mr-2" />
-                            All Accounts
+                            Aggregate View
                         </Button>
                     )}
                     <Button
@@ -624,7 +627,11 @@ export default function AnalyticsDashboard() {
                         className="rounded-2xl h-11 px-4"
                     >
                         <Settings2 className="w-4 h-4 mr-2" />
-                        Budget and Anomaly Preferences
+                        Preferences
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} className="rounded-2xl text-xs gap-1.5">
+                        <FileBarChart2 className="w-3.5 h-3.5" />
+                        Audit Account
                     </Button>
                 </div>
             </div>
@@ -785,7 +792,16 @@ export default function AnalyticsDashboard() {
                     </div>
                 </CardContent>
             </Card>
-
+            <AdAccountAudit
+                open={auditOpen}
+                onOpenChange={setAuditOpen}
+                adAccountId={selectedAdAccount}
+                adAccountName={selectedAdAccountName}
+                kpiType={metricMode === 'roas' ? 'roas' : 'cpa'}
+                conversionEvent={adAccountSettings?.conversionEvent}
+                targetCPA={adAccountSettings?.targetCPA}
+                targetROAS={adAccountSettings?.targetROAS}
+            />
 
             {/* ── Settings Dialog ─────────────────────────────────── */}
             <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
