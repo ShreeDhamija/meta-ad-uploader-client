@@ -2484,6 +2484,8 @@ export default function AdCreationForm({
         console.error('Error getting video aspect ratios:', error);
         // Continue anyway with defaults
       }
+      console.log("📊 1. Aspect Ratio Map:", JSON.stringify(aspectRatioMap, null, 2));
+
 
       if (importedFiles && importedFiles.length > 0) {
         importedFiles.forEach(file => {
@@ -2575,6 +2577,15 @@ export default function AdCreationForm({
           }
 
           s3DriveResults.push(uploadResult);
+          // 🔴 ADD THIS LOG
+          console.log(`☁️ 2. Drive Upload Result for [${largeDriveFiles[index].name}]:`, {
+            filesId: largeDriveFiles[index].id,
+            resultObject: uploadResult,
+            hasIdInResult: !!uploadResult.id, // IF THIS IS FALSE, THAT IS THE BUG
+            hasAspectRatio: !!uploadResult.aspectRatio
+          });
+
+
         } else {
           toast.error(`Failed to upload Drive video: ${largeDriveFiles[index].name}`);
           console.error("❌ Drive to S3 upload failed", result.reason);
@@ -2911,6 +2922,9 @@ export default function AdCreationForm({
       }
 
       if (videoMetadata && videoMetadata.length > 0) {
+
+        console.log("📦 4. FINAL METADATA JSON:", JSON.stringify(videoMetadata, null, 2));
+
         formData.append("videoMetadata", JSON.stringify(videoMetadata));
       }
     };
@@ -2936,6 +2950,13 @@ export default function AdCreationForm({
       }
     ) => {
       const groupVideoMetadata = [];
+
+      console.log("[DBG][appendGroupMediaFiles] START", {
+        group,
+        smallDriveFiles: smallDriveFiles.map(f => ({ id: f.id, name: f.name })),
+        s3DriveResults: s3DriveResults.map(f => ({ id: f.id, driveId: f.driveId, uniqueId: f.uniqueId, s3Url: f.s3Url, aspectRatio: f.aspectRatio })),
+      });
+
 
       // Add local files from this group
       group.forEach(fileId => {
@@ -2996,20 +3017,45 @@ export default function AdCreationForm({
       // CONSOLIDATED: Add ALL S3 files from this group (local, drive, and dropbox)
       group.forEach(fileId => {
         const allS3Results = [...s3Results, ...s3DriveResults, ...s3DropboxResults];
+        console.log(`🔍 3. Searching for Group File ID: ${fileId}`);
+
+        console.log("[DBG][s3 loop] trying fileId", fileId, {
+          candidates: allS3Results.map(f => ({
+            id: f.id,
+            driveId: f.driveId,
+            dropboxId: f.dropboxId,
+            uniqueId: f.uniqueId,
+            s3Url: f.s3Url,
+            aspectRatio: f.aspectRatio
+          }))
+        });
+
+
         const s3File = allS3Results.find(f =>
           f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId
         );
 
+        console.log("[DBG][s3 loop] match result", { fileId, s3File });
+
+
         if (s3File) {
           formData.append("s3VideoUrls", s3File.s3Url);
           formData.append("s3VideoNames", s3File.name);
+          console.log("   ✅ Match FOUND:", s3File); // Check if this log appears for drive files
+
 
           if (isVideoFile(s3File)) {
             groupVideoMetadata.push({
               s3Url: s3File.s3Url,
               aspectRatio: s3File.aspectRatio || 16 / 9
             });
+
+            console.log("[DBG][s3 loop] pushed metadata", groupVideoMetadata[groupVideoMetadata.length - 1]);
+
           }
+        } else {
+          // 🔴 ADD THIS LOG
+          console.warn("   ❌ Match FAILED for ID:", fileId);
         }
       });
 
@@ -3041,7 +3087,9 @@ export default function AdCreationForm({
         }
       });
 
+      console.log("[DBG][appendGroupMediaFiles] END", { group, groupVideoMetadata });
       return groupVideoMetadata;
+
     };
 
     /**
