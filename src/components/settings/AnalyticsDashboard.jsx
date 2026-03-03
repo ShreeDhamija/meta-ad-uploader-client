@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import {
     AlertTriangle, RefreshCw, Loader2, ChevronsUpDown,
-    Target, Settings2, Activity, Zap, Eye, CheckCircle2, BarChart3,
+    Target, Settings2, Activity, Zap, Eye, CheckCircle2, BarChart3, FileBarChart2
 } from "lucide-react"
 import { toast } from "sonner"
 import {
