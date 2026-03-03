@@ -629,7 +629,7 @@ export default function AnalyticsDashboard() {
                         <Settings2 className="w-4 h-4 mr-2" />
                         Preferences
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} className="rounded-2xl text-xs gap-1.5">
+                    <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} className="rounded-2xl h-11 px-4">
                         <FileBarChart2 className="w-3.5 h-3.5" />
                         Audit Account
                     </Button>
