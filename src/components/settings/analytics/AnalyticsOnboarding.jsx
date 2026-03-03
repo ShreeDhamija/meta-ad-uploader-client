@@ -74,11 +74,11 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                     [accountId]: { loading: false, events: data.events || [], error: null },
                 }))
 
-                // Auto-select the top event if user switches to CPA
+                // Auto-select the top event if user is in CPA mode and hasn't picked one yet
                 if (data.events?.length > 0) {
                     setAccountConfigs(prev => {
                         const current = prev[accountId]
-                        if (current && !current.conversionEvent) {
+                        if (current && current.mode === 'cpa' && !current.conversionEvent) {
                             return {
                                 ...prev,
                                 [accountId]: { ...current, conversionEvent: data.events[0].event },
@@ -86,20 +86,6 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                         }
                         return prev
                     })
-                }
-
-                // Also apply suggested mode
-                if (data.suggestedMode) {
-                    setAccountConfigs(prev => ({
-                        ...prev,
-                        [accountId]: {
-                            ...prev[accountId],
-                            mode: data.suggestedMode === 'roas' ? 'roas' : 'cpa',
-                            conversionEvent: data.suggestedMode !== 'roas' && data.events?.[0]
-                                ? data.events[0].event
-                                : prev[accountId]?.conversionEvent || null,
-                        },
-                    }))
                 }
             } else {
                 setEventsCache(prev => ({
@@ -118,10 +104,14 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
 
     const handleToggleMode = (accountId, isRoas) => {
         const mode = isRoas ? 'roas' : 'cpa'
-        setAccountConfigs(prev => ({
-            ...prev,
-            [accountId]: { ...prev[accountId], mode },
-        }))
+        setAccountConfigs(prev => {
+            const updated = { ...prev[accountId], mode }
+            // Auto-select top event when switching to CPA if cache is already loaded
+            if (!isRoas && !updated.conversionEvent && eventsCache[accountId]?.events?.length > 0) {
+                updated.conversionEvent = eventsCache[accountId].events[0].event
+            }
+            return { ...prev, [accountId]: updated }
+        })
 
         // Fetch events when switching to CPA
         if (!isRoas) {
