@@ -1268,10 +1268,45 @@ export default function AdCreationForm({
   useEffect(() => {
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return;
     const tpl = copyTemplates[selectedTemplate];
-    setMessages(tpl.primaryTexts || [""]);
-    setHeadlines(tpl.headlines || [""]);
-    setDescriptions(tpl.descriptions || [""]);
-  }, [selectedTemplate, copyTemplates]);
+    const templateMessages = tpl.primaryTexts || [""];
+    const templateHeadlines = tpl.headlines || [""];
+    const templateDescriptions = tpl.descriptions || [""];
+    const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
+
+    if (isCarouselAd) {
+      if (applyTextToAllCards && fileCount > 0) {
+        const firstMessage = templateMessages[0] || "";
+        setMessages(new Array(fileCount).fill(firstMessage));
+      } else {
+        setMessages(templateMessages);
+      }
+
+      if (applyHeadlinesToAllCards && fileCount > 0) {
+        const firstHeadline = templateHeadlines[0] || "";
+        setHeadlines(new Array(fileCount).fill(firstHeadline));
+      } else {
+        setHeadlines(templateHeadlines);
+      }
+
+      // Carousel "Primary Text" is a single field.
+      setDescriptions([templateDescriptions[0] || ""]);
+      return;
+    }
+
+    setMessages(templateMessages);
+    setHeadlines(templateHeadlines);
+    setDescriptions(templateDescriptions);
+  }, [
+    selectedTemplate,
+    copyTemplates,
+    isCarouselAd,
+    applyTextToAllCards,
+    applyHeadlinesToAllCards,
+    files.length,
+    driveFiles.length,
+    dropboxFiles.length,
+    importedFiles.length
+  ]);
 
 
 
@@ -2146,22 +2181,33 @@ export default function AdCreationForm({
 
 
   useEffect(() => {
-    if (isCarouselAd) {
-      const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
+    if (!isCarouselAd) return;
+    const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
 
-      // Sync messages when apply-to-all is checked
-      if (applyTextToAllCards && fileCount > 0 && messages.length !== fileCount) {
-        const firstMessage = messages[0] || "";
+    if (applyTextToAllCards && fileCount > 0) {
+      const firstMessage = messages[0] || "";
+      if (messages.length !== fileCount || messages.some((message) => message !== firstMessage)) {
         setMessages(new Array(fileCount).fill(firstMessage));
       }
+    }
 
-      // Sync headlines when apply-to-all is checked
-      if (applyHeadlinesToAllCards && fileCount > 0 && headlines.length !== fileCount) {
-        const firstHeadline = headlines[0] || "";
+    if (applyHeadlinesToAllCards && fileCount > 0) {
+      const firstHeadline = headlines[0] || "";
+      if (headlines.length !== fileCount || headlines.some((headline) => headline !== firstHeadline)) {
         setHeadlines(new Array(fileCount).fill(firstHeadline));
       }
     }
-  }, [files.length, driveFiles.length, dropboxFiles.length, importedFiles.length, isCarouselAd, applyTextToAllCards, applyHeadlinesToAllCards]);
+  }, [
+    files.length,
+    driveFiles.length,
+    dropboxFiles.length,
+    importedFiles.length,
+    isCarouselAd,
+    applyTextToAllCards,
+    applyHeadlinesToAllCards,
+    messages,
+    headlines
+  ]);
 
 
   const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
@@ -3515,7 +3561,12 @@ export default function AdCreationForm({
       const promiseMetadata = []; // ADD THIS
 
       // Pre-compute common JSON strings and values
-      const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
+      const commonPrecomputed = preComputeCommonValues(
+        headlines,
+        isCarouselAd ? [descriptions[0] || ""] : descriptions,
+        messages,
+        link
+      );
       let globalFileIndex = 0;
 
       // ============================================================================
@@ -5482,7 +5533,7 @@ export default function AdCreationForm({
                                   setApplyTextToAllCards(checked);
                                   if (checked && messages.length > 0) {
                                     const firstMessage = messages[0];
-                                    const fileCount = files.length + driveFiles.length + importedFiles.length;
+                                    const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
                                     if (fileCount > 0) {
                                       setMessages(new Array(fileCount).fill(firstMessage));
                                     }
@@ -5569,7 +5620,7 @@ export default function AdCreationForm({
                                 setApplyHeadlinesToAllCards(checked);
                                 if (checked && headlines.length > 0) {
                                   const firstHeadline = headlines[0];
-                                  const fileCount = files.length + driveFiles.length + importedFiles.length; // ← Use file count!
+                                  const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
                                   if (fileCount > 0) {
                                     setHeadlines(new Array(fileCount).fill(firstHeadline));
                                   }
@@ -6531,4 +6582,3 @@ export default function AdCreationForm({
 
   )
 }
-

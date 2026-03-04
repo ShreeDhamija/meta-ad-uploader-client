@@ -87,6 +87,12 @@ const ENHANCEMENT_ITEMS = [
         label: "Profile End Card",
         description: "Add an end card showing your Page profile to encourage people to visit your Page",
     },
+    {
+        key: "dynamicDescriptions",
+        label: "Dynamic Descriptions",
+        description: "Uses in item information for catalog ads and dyanmically chosen descriptions for carousel",
+    },
+
 
 ];
 
