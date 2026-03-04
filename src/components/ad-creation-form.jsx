@@ -1268,45 +1268,18 @@ export default function AdCreationForm({
   useEffect(() => {
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return;
     const tpl = copyTemplates[selectedTemplate];
-    const templateMessages = tpl.primaryTexts || [""];
-    const templateHeadlines = tpl.headlines || [""];
-    const templateDescriptions = tpl.descriptions || [""];
-    const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
+    setMessages(tpl.primaryTexts || [""]);
+    setHeadlines(tpl.headlines || [""]);
+    setDescriptions(tpl.descriptions || [""]);
+  }, [selectedTemplate, copyTemplates]);
 
-    if (isCarouselAd) {
-      if (applyTextToAllCards && fileCount > 0) {
-        const firstMessage = templateMessages[0] || "";
-        setMessages(new Array(fileCount).fill(firstMessage));
-      } else {
-        setMessages(templateMessages);
-      }
-
-      if (applyHeadlinesToAllCards && fileCount > 0) {
-        const firstHeadline = templateHeadlines[0] || "";
-        setHeadlines(new Array(fileCount).fill(firstHeadline));
-      } else {
-        setHeadlines(templateHeadlines);
-      }
-
-      // Carousel "Primary Text" is a single field.
-      setDescriptions([templateDescriptions[0] || ""]);
-      return;
+  useEffect(() => {
+    if (!isCarouselAd) return;
+    // Carousel "Primary Text" is a single input, so keep one description value in state.
+    if (descriptions.length !== 1) {
+      setDescriptions([descriptions[0] || ""]);
     }
-
-    setMessages(templateMessages);
-    setHeadlines(templateHeadlines);
-    setDescriptions(templateDescriptions);
-  }, [
-    selectedTemplate,
-    copyTemplates,
-    isCarouselAd,
-    applyTextToAllCards,
-    applyHeadlinesToAllCards,
-    files.length,
-    driveFiles.length,
-    dropboxFiles.length,
-    importedFiles.length
-  ]);
+  }, [isCarouselAd, descriptions]);
 
 
 
@@ -3561,12 +3534,7 @@ export default function AdCreationForm({
       const promiseMetadata = []; // ADD THIS
 
       // Pre-compute common JSON strings and values
-      const commonPrecomputed = preComputeCommonValues(
-        headlines,
-        isCarouselAd ? [descriptions[0] || ""] : descriptions,
-        messages,
-        link
-      );
+      const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
       let globalFileIndex = 0;
 
       // ============================================================================
