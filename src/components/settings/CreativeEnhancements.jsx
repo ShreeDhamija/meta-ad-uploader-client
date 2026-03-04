@@ -77,6 +77,17 @@ const ENHANCEMENT_ITEMS = [
         label: "Image Animations",
         description: "Add common movements such as panning, zooming, rotating & more to eligible images",
     },
+    {
+        key: "highlightCard",
+        label: "Highlight Carousel Card",
+        description: "Automatically highlight the best performing carousel card to show first",
+    },
+    {
+        key: "profileEndCard",
+        label: "Profile End Card",
+        description: "Add an end card showing your Page profile to encourage people to visit your Page",
+    },
+
 ];
 
 // Memoized individual enhancement item component to prevent unnecessary re-renders

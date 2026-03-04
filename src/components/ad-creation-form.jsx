@@ -5470,7 +5470,7 @@ export default function AdCreationForm({
                       <div className="space-y-2">
                         <Label className="flex items-center justify-between">
                           <span>
-                            Primary Text
+                            {isCarouselAd ? "Headline" : "Primary Text"}
                             {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
                           </span>
                           {isCarouselAd && (
@@ -5513,7 +5513,7 @@ export default function AdCreationForm({
                                     updateField(setMessages, messages, index, e.target.value);
                                   }
                                 }}
-                                placeholder={isCarouselAd ? `Text for card ${index + 1}` : "Add text option"}
+                                placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Add text option"}
                                 disabled={!isLoggedIn}
                                 minRows={2}
                                 maxRows={10}
@@ -5546,7 +5546,7 @@ export default function AdCreationForm({
                               onClick={() => addField(setMessages, messages)}
                             >
                               <Plus className="mr-2 h-4 w-4 text-white" />
-                              {isCarouselAd ? 'Add card text' : 'Add text option'}
+                              {isCarouselAd ? 'Add card headline' : 'Add text option'}
                             </Button>
                           )}
                         </div>
@@ -5557,7 +5557,7 @@ export default function AdCreationForm({
                     <div className="space-y-2">
                       <Label className="flex items-center justify-between">
                         <span>
-                          Headlines
+                          {isCarouselAd ? "Description" : "Headlines"}
                           {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
                         </span>
                         {isCarouselAd && (
@@ -5606,7 +5606,7 @@ export default function AdCreationForm({
                                 scrollbarWidth: 'thin',
                                 scrollbarColor: '#c7c7c7 transparent'
                               }}
-                              placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Enter headline"}
+                              placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
                               disabled={!isLoggedIn}
                             />
                             {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
@@ -5632,7 +5632,7 @@ export default function AdCreationForm({
                             onClick={() => addField(setHeadlines, headlines)}
                           >
                             <Plus className="mr-2 h-4 w-4 text-white" />
-                            {isCarouselAd ? 'Add card headline' : 'Add headline option'}
+                            {isCarouselAd ? 'Add card description' : 'Add headline option'}
                           </Button>
                         )}
                       </div>
@@ -5640,7 +5640,76 @@ export default function AdCreationForm({
 
                     {/* Descriptions Section - only show if template has descriptions */}
 
-                    {descriptions.some(d => d.trim()) && (
+
+                    {(isCarouselAd || descriptions.some(d => d.trim())) && (
+                      <div className="space-y-2">
+                        <Label>{isCarouselAd ? "Primary Text" : "Descriptions"}</Label>
+                        <div className="space-y-3">
+                          {isCarouselAd ? (
+                            <div className="flex items-center gap-2">
+                              <TextareaAutosize
+                                value={descriptions[0] || ''}
+                                onChange={(e) => setDescriptions([e.target.value])}
+                                minRows={2}
+                                maxRows={10}
+                                className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                                style={{
+                                  scrollbarWidth: 'thin',
+                                  scrollbarColor: '#c7c7c7 transparent'
+                                }}
+                                placeholder="Enter primary text"
+                                disabled={!isLoggedIn}
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              {descriptions.map((value, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                  <TextareaAutosize
+                                    value={value}
+                                    onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
+                                    minRows={1}
+                                    maxRows={10}
+                                    className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                                    style={{
+                                      scrollbarWidth: 'thin',
+                                      scrollbarColor: '#c7c7c7 transparent'
+                                    }}
+                                    placeholder="Enter description"
+                                    disabled={!isLoggedIn}
+                                  />
+                                  {descriptions.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                                      size="icon"
+                                      onClick={() => removeField(setDescriptions, descriptions, index)}
+                                    >
+                                      <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                                      <span className="sr-only">Remove</span>
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                              {descriptions.length < 5 && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                                  onClick={() => addField(setDescriptions, descriptions)}
+                                >
+                                  <Plus className="mr-2 h-4 w-4 text-white" />
+                                  Add description option
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* {descriptions.some(d => d.trim()) && (
                       <div className="space-y-2">
                         <Label>Descriptions</Label>
                         <div className="space-y-3">
@@ -5686,7 +5755,7 @@ export default function AdCreationForm({
                           )}
                         </div>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 ) : (
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
