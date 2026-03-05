@@ -768,14 +768,21 @@ const setIgCache = (igUserId, images, videos, pagination) => {
 };
 
 // Shared card info section used by both images and videos tabs
-const IgCardInfo = ({ item }) => (
-    <div className="bg-white border-t border-gray-200 px-2.5 py-2 h-28 overflow-hidden">
-        {/* Partnership pill */}
-        {item.source === 'partnership' && (
-            <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700 mb-1">
-                Paid Partnership
-            </span>
-        )}
+const IgCardInfo = ({ item, instagramAccountId }) => (
+    <div className="bg-white border-t border-gray-200 px-2.5 py-2 h-32 flex flex-col">
+        {/* Source pills */}
+        <div className="flex items-center gap-1 mb-1">
+            {item.source === 'partnership' && (
+                <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
+                    Paid Partnership
+                </span>
+            )}
+            {item.source === 'tagged' && (
+                <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-blue-100 text-blue-700">
+                    Tagged
+                </span>
+            )}
+        </div>
         {item.like_count !== undefined && (
             <div className="flex items-center gap-3 text-black mb-1">
                 <span className="flex items-center gap-1 text-xs font-medium">
@@ -791,16 +798,21 @@ const IgCardInfo = ({ item }) => (
                 {item.caption}
             </p>
         )}
-        {item.collaborators && item.collaborators.length > 0 && (
-            <p className="text-xs text-purple-600 font-medium mt-1 truncate">
-                {item.username ? `@${item.username}` : ''} · Collaborator{item.collaborators.length > 1 ? 's' : ''}: {item.collaborators.map(c => `@${c.username}`).join(', ')}
-            </p>
-        )}
+        {item.collaborators && item.collaborators.length > 0 && (() => {
+            const others = item.collaborators.filter(c => c.id !== instagramAccountId && c.username !== item._myUsername);
+            return others.length > 0 ? (
+                <p className="text-xs text-purple-600 font-medium mt-1 truncate">
+                    {others.map(c => `@${c.username}`).join(', ')}
+                </p>
+            ) : null;
+        })()}
+        {/* Spacer pushes View Post to bottom */}
+        <div className="flex-1" />
         {item.permalink && (
             <a href={item.permalink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-blue-500 font-medium mt-1 inline-block"
+                className="text-xs text-blue-500 font-medium inline-block"
                 onClick={(e) => e.stopPropagation()}
             >
                 View Post
@@ -1160,7 +1172,8 @@ export default function MetaMediaLibraryModal({
             />
 
             {/* Modal */}
-            <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-3xl max-h-[80vh] rounded-3xl bg-white p-6 shadow-lg flex flex-col">
+            <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-5xl max-h-[90vh] rounded-3xl bg-white p-6 shadow-lg flex flex-col">
+
                 {/* Header */}
                 <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -1238,7 +1251,7 @@ export default function MetaMediaLibraryModal({
                                     : 'No images found.'}</p>
                             </div>
                         ) : (
-                            <ScrollArea className="h-[400px] pr-4 outline-none focus:outline-none">
+                            <ScrollArea className="h-[520px] pr-4 outline-none focus:outline-none">
                                 <div className="grid grid-cols-4 gap-3">
                                     {displayItems.map((item) => {
                                         const isMeta = mediaSource === 'meta_library';
@@ -1279,7 +1292,8 @@ export default function MetaMediaLibraryModal({
                                                         />
                                                     </div>
                                                     {!isMeta ? (
-                                                        <IgCardInfo item={item} />
+                                                        <IgCardInfo item={item} instagramAccountId={instagramAccountId} />
+
                                                     ) : (
                                                         <p className="mt-1 text-xs text-gray-700 truncate text-center px-1 py-1">
                                                             {label || 'Untitled'}
@@ -1334,7 +1348,7 @@ export default function MetaMediaLibraryModal({
                                 <p>No videos found.</p>
                             </div>
                         ) : (
-                            <ScrollArea className="h-[400px] pr-4 outline-none focus:outline-none">
+                            <ScrollArea className="h-[520px] pr-4 outline-none focus:outline-none">
                                 <div className="grid grid-cols-4 gap-3">
                                     {displayItems.map((item) => {
                                         const isMeta = mediaSource === 'meta_library';
@@ -1374,7 +1388,8 @@ export default function MetaMediaLibraryModal({
                                                         />
                                                     </div>
                                                     {!isMeta ? (
-                                                        <IgCardInfo item={item} />
+                                                        <IgCardInfo item={item} instagramAccountId={instagramAccountId} />
+
                                                     ) : (
                                                         <p className="mt-1 text-xs text-gray-700 truncate text-center px-1 py-1">
                                                             {label || 'Untitled'}
