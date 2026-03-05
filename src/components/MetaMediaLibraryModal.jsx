@@ -773,12 +773,12 @@ const IgCardInfo = ({ item, instagramAccountId }) => (
         {/* Source pills */}
         <div className="flex items-center gap-1 mb-1">
             {item.source === 'partnership' && (
-                <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">
+                <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-100 text-amber-700">
                     Paid Partnership
                 </span>
             )}
             {item.source === 'tagged' && (
-                <span className="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-blue-100 text-blue-700">
+                <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700">
                     Tagged
                 </span>
             )}
@@ -798,8 +798,14 @@ const IgCardInfo = ({ item, instagramAccountId }) => (
                 {item.caption}
             </p>
         )}
+        {/* Show who tagged/collaborated */}
+        {item.taggedBy && (
+            <p className="text-xs text-purple-600 font-medium mt-1 truncate">
+                @{item.taggedBy}
+            </p>
+        )}
         {item.collaborators && item.collaborators.length > 0 && (() => {
-            const others = item.collaborators.filter(c => c.id !== instagramAccountId && c.username !== item._myUsername);
+            const others = item.collaborators.filter(c => c.id !== instagramAccountId);
             return others.length > 0 ? (
                 <p className="text-xs text-purple-600 font-medium mt-1 truncate">
                     {others.map(c => `@${c.username}`).join(', ')}
@@ -1251,60 +1257,63 @@ export default function MetaMediaLibraryModal({
                                     : 'No images found.'}</p>
                             </div>
                         ) : (
-                            <ScrollArea className="h-[520px] pr-4 outline-none focus:outline-none">
-                                <div className="grid grid-cols-4 gap-3">
-                                    {displayItems.map((item) => {
-                                        const isMeta = mediaSource === 'meta_library';
-                                        const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
-                                        const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
-                                        const itemId = isMeta ? getMetaFileId(item) : item.id;
-                                        const label = isMeta
-                                            ? item.name
-                                            : item.caption
-                                                ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
-                                                : item.name;
+                            <>
+                                <ScrollArea className="h-[520px] pr-4 outline-none focus:outline-none">
+                                    <div className="grid grid-cols-4 gap-3">
+                                        {displayItems.map((item) => {
+                                            const isMeta = mediaSource === 'meta_library';
+                                            const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
+                                            const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
+                                            const itemId = isMeta ? getMetaFileId(item) : item.id;
+                                            const label = isMeta
+                                                ? item.name
+                                                : item.caption
+                                                    ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
+                                                    : item.name;
 
 
 
-                                        return (
-                                            <label key={itemId} className="relative cursor-pointer group">
-                                                <div className={`rounded-xl overflow-hidden border transition-all ${selected
-                                                    ? 'border-primary ring-2 ring-primary/30'
-                                                    : 'border-gray-200 hover:border-primary/50'
-                                                    }`}>
-                                                    <div className="relative aspect-square bg-gray-800">
-                                                        {preview ? (
-                                                            <img
-                                                                src={preview}
-                                                                alt={label}
-                                                                loading="lazy"
-                                                                className="h-full w-full object-cover"
+                                            return (
+                                                <label key={itemId} className="relative cursor-pointer group">
+                                                    <div className={`rounded-xl overflow-hidden border transition-all ${selected
+                                                        ? 'border-primary ring-2 ring-primary/30'
+                                                        : 'border-gray-200 hover:border-primary/50'
+                                                        }`}>
+                                                        <div className="relative aspect-square bg-gray-800">
+                                                            {preview ? (
+                                                                <img
+                                                                    src={preview}
+                                                                    alt={label}
+                                                                    loading="lazy"
+                                                                    className="h-full w-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
+                                                                    No Preview
+                                                                </div>
+                                                            )}
+                                                            <Checkbox
+                                                                checked={selected}
+                                                                onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
+                                                                className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
                                                             />
-                                                        ) : (
-                                                            <div className="h-full w-full flex items-center justify-center text-gray-400 text-xs">
-                                                                No Preview
-                                                            </div>
-                                                        )}
-                                                        <Checkbox
-                                                            checked={selected}
-                                                            onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
-                                                            className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
-                                                        />
-                                                    </div>
-                                                    {!isMeta ? (
-                                                        <IgCardInfo item={item} instagramAccountId={instagramAccountId} />
+                                                        </div>
+                                                        {!isMeta ? (
+                                                            <IgCardInfo item={item} instagramAccountId={instagramAccountId} />
 
-                                                    ) : (
-                                                        <p className="mt-1 text-xs text-gray-700 truncate text-center px-1 py-1">
-                                                            {label || 'Untitled'}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
-                                {/* Load More for images */}
+                                                        ) : (
+                                                            <p className="mt-1 text-xs text-gray-700 truncate text-center px-1 py-1">
+                                                                {label || 'Untitled'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+                                    {/* Load More for images */}
+
+                                </ScrollArea>
                                 {mediaSource === 'meta_library' && metaImagesPagination.hasMore && (
                                     <div className="flex justify-center pt-4">
                                         <Button
@@ -1333,7 +1342,7 @@ export default function MetaMediaLibraryModal({
                                         </Button>
                                     </div>
                                 )}
-                            </ScrollArea>
+                            </>
                         )}
                     </TabsContent>
 
@@ -1348,58 +1357,61 @@ export default function MetaMediaLibraryModal({
                                 <p>No videos found.</p>
                             </div>
                         ) : (
-                            <ScrollArea className="h-[520px] pr-4 outline-none focus:outline-none">
-                                <div className="grid grid-cols-4 gap-3">
-                                    {displayItems.map((item) => {
-                                        const isMeta = mediaSource === 'meta_library';
-                                        const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
-                                        const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
-                                        const itemId = isMeta ? getMetaFileId(item) : item.id;
-                                        const label = isMeta
-                                            ? item.name
-                                            : item.caption
-                                                ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
-                                                : item.name;
+                            <>
+                                <ScrollArea className="h-[520px] pr-4 outline-none focus:outline-none">
+                                    <div className="grid grid-cols-4 gap-3">
+                                        {displayItems.map((item) => {
+                                            const isMeta = mediaSource === 'meta_library';
+                                            const selected = isMeta ? isMetaSelected(item) : isIgSelected(item);
+                                            const preview = item.previewUrl || item.thumbnail_url || item.url || item.media_url || '';
+                                            const itemId = isMeta ? getMetaFileId(item) : item.id;
+                                            const label = isMeta
+                                                ? item.name
+                                                : item.caption
+                                                    ? item.caption.length > 50 ? item.caption.substring(0, 50) + '…' : item.caption
+                                                    : item.name;
 
 
-                                        return (
-                                            <label key={itemId} className="relative cursor-pointer group">
-                                                <div className={`rounded-xl overflow-hidden border transition-all ${selected
-                                                    ? 'border-primary ring-2 ring-primary/30'
-                                                    : 'border-gray-200 hover:border-primary/50'
-                                                    }`}>
-                                                    <div className="relative aspect-square bg-gray-800">
-                                                        {preview ? (
-                                                            <img
-                                                                src={preview}
-                                                                alt={label}
-                                                                loading="lazy"
-                                                                className="h-full w-full object-cover"
+                                            return (
+                                                <label key={itemId} className="relative cursor-pointer group">
+                                                    <div className={`rounded-xl overflow-hidden border transition-all ${selected
+                                                        ? 'border-primary ring-2 ring-primary/30'
+                                                        : 'border-gray-200 hover:border-primary/50'
+                                                        }`}>
+                                                        <div className="relative aspect-square bg-gray-800">
+                                                            {preview ? (
+                                                                <img
+                                                                    src={preview}
+                                                                    alt={label}
+                                                                    loading="lazy"
+                                                                    className="h-full w-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div className="h-full w-full flex items-center justify-center">
+                                                                    <Video className="h-8 w-8 text-gray-400" />
+                                                                </div>
+                                                            )}
+                                                            <Checkbox
+                                                                checked={selected}
+                                                                onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
+                                                                className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
                                                             />
-                                                        ) : (
-                                                            <div className="h-full w-full flex items-center justify-center">
-                                                                <Video className="h-8 w-8 text-gray-400" />
-                                                            </div>
-                                                        )}
-                                                        <Checkbox
-                                                            checked={selected}
-                                                            onCheckedChange={() => isMeta ? toggleMetaFile(item) : toggleIgPost(item)}
-                                                            className="absolute top-2 right-2 rounded-md h-5 w-5 bg-white/80 border-gray-300"
-                                                        />
-                                                    </div>
-                                                    {!isMeta ? (
-                                                        <IgCardInfo item={item} instagramAccountId={instagramAccountId} />
+                                                        </div>
+                                                        {!isMeta ? (
+                                                            <IgCardInfo item={item} instagramAccountId={instagramAccountId} />
 
-                                                    ) : (
-                                                        <p className="mt-1 text-xs text-gray-700 truncate text-center px-1 py-1">
-                                                            {label || 'Untitled'}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </label>
-                                        );
-                                    })}
-                                </div>
+                                                        ) : (
+                                                            <p className="mt-1 text-xs text-gray-700 truncate text-center px-1 py-1">
+                                                                {label || 'Untitled'}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </label>
+                                            );
+                                        })}
+                                    </div>
+
+                                </ScrollArea>
                                 {/* Load More for videos */}
                                 {mediaSource === 'meta_library' && metaVideosPagination.hasMore && (
                                     <div className="flex justify-center pt-4">
@@ -1429,7 +1441,7 @@ export default function MetaMediaLibraryModal({
                                         </Button>
                                     </div>
                                 )}
-                            </ScrollArea>
+                            </>
                         )}
                     </TabsContent>
                 </Tabs>
