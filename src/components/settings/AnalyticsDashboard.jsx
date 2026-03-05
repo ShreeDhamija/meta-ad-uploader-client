@@ -238,6 +238,10 @@ export default function AnalyticsDashboard() {
             let url = `${API_BASE_URL}/api/analytics/recommendations?adAccountId=${selectedAdAccount}&mode=${metricMode}`
             if (metricMode === 'cpr' && targetCPA) url += `&targetCPA=${targetCPA}`
             if (metricMode === 'roas' && targetROAS) url += `&targetROAS=${targetROAS}`
+            // ADDED: pass the user's stored conversion event preference
+            if (adAccountSettings?.conversionEvent) {
+                url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
+            }
 
             const res = await fetch(url, { credentials: 'include' })
             const data = await res.json()
@@ -247,7 +251,7 @@ export default function AnalyticsDashboard() {
             console.error('Recommendations error:', err)
             toast.error('Failed to fetch recommendations')
         } finally { setRecsLoading(false) }
-    }, [selectedAdAccount, metricMode, targetCPA, targetROAS])
+    }, [selectedAdAccount, metricMode, targetCPA, targetROAS, adAccountSettings?.conversionEvent])
 
     const fetchAnomalies = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
@@ -278,10 +282,13 @@ export default function AnalyticsDashboard() {
 
         setPoorAdsLoading(true)
         try {
-            const res = await fetch(
-                `${API_BASE_URL}/api/analytics/poor-performing-ads?adAccountId=${selectedAdAccount}&mode=${metricMode}`,
-                { credentials: 'include' }
-            )
+            let url = `${API_BASE_URL}/api/analytics/poor-performing-ads?adAccountId=${selectedAdAccount}&mode=${metricMode}`
+            // ADDED: pass the user's stored conversion event preference
+            if (adAccountSettings?.conversionEvent) {
+                url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
+            }
+
+            const res = await fetch(url, { credentials: 'include' })
             const data = await res.json()
             if (res.ok) setPoorAds(data)
             else toast.error(data.error || 'Failed to fetch poor performing ads')
@@ -289,7 +296,8 @@ export default function AnalyticsDashboard() {
             console.error('Poor ads error:', err)
             toast.error('Failed to fetch poor performing ads')
         } finally { setPoorAdsLoading(false) }
-    }, [selectedAdAccount, metricMode])
+    }, [selectedAdAccount, metricMode, adAccountSettings?.conversionEvent])
+
 
     const fetchDailyInsights = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
@@ -636,7 +644,7 @@ export default function AnalyticsDashboard() {
                 </div>
             </div>
 
-            {/* ── Charts Row ─────────────────────────────────────── */}
+            {/* ── Charts Row  */}
             {selectedAdAccount && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <KPIChart
@@ -653,7 +661,7 @@ export default function AnalyticsDashboard() {
                 </div>
             )}
 
-            {/* ── Tab Switcher ───────────────────────────────────── */}
+            {/* ── Tab Switcher   */}
             <div className="w-full">
                 <div className="grid grid-cols-3 p-1 bg-gray-100 rounded-2xl w-full border border-gray-200/60">
                     <button
@@ -712,7 +720,7 @@ export default function AnalyticsDashboard() {
                 </div>
             </div>
 
-            {/* ── Tab Content ────────────────────────────────────── */}
+            {/* ── Tab Content  ─ */}
             {activeTab === 'recommendations' && (
                 <RecommendationCards
                     data={recommendations}
@@ -742,7 +750,7 @@ export default function AnalyticsDashboard() {
                 />
             )}
 
-            {/* ── Info Footer ────────────────────────────────────── */}
+            {/* ── Info Footer  ─ */}
             <Card className="rounded-2xl bg-gray-50 border-gray-200">
                 <CardContent className="p-4">
                     <div className="flex items-start gap-3">
@@ -803,7 +811,7 @@ export default function AnalyticsDashboard() {
                 targetROAS={adAccountSettings?.targetROAS}
             />
 
-            {/* ── Settings Dialog ─────────────────────────────────── */}
+            {/* ── Settings Dialog  */}
             <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
                 <DialogOverlay className="bg-black/50" />
                 <DialogContent className="sm:max-w-[520px] !rounded-[30px] p-8 space-y-6 max-h-[90vh] overflow-y-auto">
@@ -819,7 +827,7 @@ export default function AnalyticsDashboard() {
 
                     <div className="space-y-6">
 
-                        {/* ── Analytics Mode ─────────────────────── */}
+                        {/* ── Analytics Mode  */}
                         <div className="space-y-4">
                             <h3 className="font-medium text-gray-900 flex items-center gap-2">
                                 <Activity className="w-4 h-4 text-purple-500" />

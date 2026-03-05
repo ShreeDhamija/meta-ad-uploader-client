@@ -34,6 +34,12 @@ const TYPE_CONFIG = {
         iconColor: 'text-blue-600', badgeBg: 'bg-blue-100 text-blue-700 border-blue-200',
         btnClass: 'bg-blue-600 hover:bg-blue-700', Icon: Star, label: 'Winner',
     },
+    consolidate: {
+        color: 'purple', bgClass: 'border-purple-200 bg-purple-50/30', iconBg: 'bg-purple-100',
+        iconColor: 'text-purple-600', badgeBg: 'bg-purple-100 text-purple-700 border-purple-200',
+        btnClass: 'bg-purple-600 hover:bg-purple-700', Icon: Activity, label: 'Consolidate',
+    },
+
 }
 
 const FILTER_TABS = [
@@ -41,6 +47,7 @@ const FILTER_TABS = [
     { key: 'scale', label: 'Scale' },
     { key: 'reduce', label: 'Reduce' },
     { key: 'pause', label: 'Pause' },
+    { key: 'consolidate', label: 'Consolidate' }
 ]
 
 export default function RecommendationCards({ data, loading, mode, adAccountId, adAccounts, onApplied }) {
@@ -57,9 +64,11 @@ export default function RecommendationCards({ data, loading, mode, adAccountId, 
             if (dismissed.has(recKey(r))) return false
             if (filter === 'all') return true
             if (filter === 'scale') return r.type === 'scale' || r.type === 'scale_winner'
+            if (filter === 'consolidate') return r.type === 'consolidate'
             return r.type === filter
         })
     }, [data, filter, dismissed])
+
 
     function recKey(r) {
         return `${r.adId || r.adsetId || r.campaignId}-${r.type}`
