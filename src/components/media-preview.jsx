@@ -291,6 +291,10 @@ export default function MediaPreview({
     return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedImportedFiles];
   }, [files, dropboxFiles, importedFiles, fileGroups]);
 
+  const totalFileCount = useMemo(() => {
+    return files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length;
+  }, [files, driveFiles, dropboxFiles, importedFiles]);
+
   const canGroupFiles = useMemo(() => {
     const maxGroupSize = (adType === 'flexible' || isCarouselAd) ? 10 : 3;
     if (selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize) return true;
