@@ -437,7 +437,7 @@ export default function MetaMediaLibraryModal({
                     }}
                 >
                     {isStaging ? "Import From Meta" : "Import From"}
-                    <img src={Meta} className="h-2 w-auto" alt="Meta" />
+                    {!isStaging && <img src={Meta} className="h-2 w-auto" alt="Meta" />}
                 </Button>
             </div>
         );
