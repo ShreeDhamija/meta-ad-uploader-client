@@ -6399,8 +6399,8 @@ export default function AdCreationForm({
             )}
 
             {adLimitWarning && (
-              <div className="flex items-center gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl">
-                <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" />
+              <div className="flex items-start gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl mt-2">
+                <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5 mr-0.5" />
                 <span className="text-xs text-orange-700">
                   This might push your ad set past the 50 ads limit! Only Sales campaigns using Advantage+ Audience can contain a maximum of 150 Ads.
                 </span>
