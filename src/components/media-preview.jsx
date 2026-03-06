@@ -268,10 +268,36 @@ export default function MediaPreview({
   const sensors = useSensors(useSensor(PointerSensor));
 
   // Memoized computations
+  const ungroupedFiles = useMemo(() => {
+    const groupedFileIds = new Set(fileGroups.flat());
+
+    const ungroupedLocalFiles = files.filter(file =>
+      !groupedFileIds.has(file.isDrive ? file.id : file.uniqueId || file.name)
+    );
+
+    // Ungrouped Dropbox files
+    const ungroupedDropboxFiles = (dropboxFiles || [])
+      .map(file => ({ ...file, isDropbox: true }))
+      .filter(file => !groupedFileIds.has(file.dropboxId));
+
+    const ungroupedImportedFiles = importedFiles
+      .map(file => ({
+        ...file,
+        isMetaLibrary: true,
+        name: file.name,
+      }))
+      .filter(file => !groupedFileIds.has(file.type === 'image' ? file.hash : file.id));
+
+    return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedImportedFiles];
+  }, [files, dropboxFiles, importedFiles, fileGroups]);
+
   const canGroupFiles = useMemo(() => {
     const maxGroupSize = (adType === 'flexible' || isCarouselAd) ? 10 : 3;
-    return selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize;
-  }, [selectedFiles.size, adType, isCarouselAd]);
+    if (selectedFiles.size >= 2 && selectedFiles.size <= maxGroupSize) return true;
+    // Exactly 2 total files and fewer than 2 selected — allow one-click grouping
+    if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size < 2) return true;
+    return false;
+  }, [selectedFiles.size, adType, isCarouselAd, enablePlacementCustomization, totalFileCount, ungroupedFiles.length]);
 
 
 
@@ -392,28 +418,7 @@ export default function MediaPreview({
     return false;
   }, [selectedAdSets, adSets, duplicateAdSet]);
 
-  const ungroupedFiles = useMemo(() => {
-    const groupedFileIds = new Set(fileGroups.flat());
 
-    const ungroupedLocalFiles = files.filter(file =>
-      !groupedFileIds.has(file.isDrive ? file.id : file.uniqueId || file.name)
-    );
-
-    // Ungrouped Dropbox files
-    const ungroupedDropboxFiles = (dropboxFiles || [])
-      .map(file => ({ ...file, isDropbox: true }))
-      .filter(file => !groupedFileIds.has(file.dropboxId));
-
-    const ungroupedImportedFiles = importedFiles
-      .map(file => ({
-        ...file,
-        isMetaLibrary: true,
-        name: file.name,
-      }))
-      .filter(file => !groupedFileIds.has(file.type === 'image' ? file.hash : file.id));
-
-    return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedImportedFiles];
-  }, [files, dropboxFiles, importedFiles, fileGroups]);
 
 
 
@@ -494,6 +499,13 @@ export default function MediaPreview({
       return;
     }
 
+    // Auto-group when exactly 2 total files exist and not enough are selected
+    if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size < 2) {
+      const newGroup = ungroupedFiles.map(f => getFileId(f));
+      setFileGroups(prev => [...prev, newGroup]);
+      setSelectedFiles(new Set());
+      return;
+    }
 
     if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
       const newGroup = Array.from(selectedFiles);
