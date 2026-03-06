@@ -436,6 +436,7 @@ export default function MetaMediaLibraryModal({
                         openModal();
                     }}
                 >
+                    {isStaging && <FolderOpen className="h-4 w-4" />}
                     {isStaging ? "Import From Meta" : "Import From"}
                     {!isStaging && <img src={Meta} className="h-2 w-auto" alt="Meta" />}
                 </Button>
