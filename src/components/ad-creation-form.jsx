@@ -4792,7 +4792,7 @@ export default function AdCreationForm({
                           )}
                         </div>
 
-                        <div className="flex gap-1 flex-shrink-0 ml-2" >
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                           {job.status === 'retry' && (
                             <button
                               onClick={refreshPage}
@@ -4806,16 +4806,25 @@ export default function AdCreationForm({
                           {job.selectedAdSets && job.selectedAdSets.length > 0 && job.selectedAdAccount && (
                             <button
                               onClick={() => {
-                                // Find the business_id from your ad accounts list
                                 const account = adAccounts.find(a => a.id === job.selectedAdAccount);
                                 const bizId = account?.business_id || '';
                                 const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?act=${job.selectedAdAccount}&selected_adset_ids=${job.selectedAdSets[0]}&business_id=${bizId}&global_scope_id=${bizId}`;
                                 window.open(url, '_blank');
                               }}
-                              className="text-gray-500 hover:text-blue-500 transition-colors"
+                              className="text-gray-500 hover:text-blue-500 transition-colors p-1"
                               title="View in Ads Manager"
                             >
                               <Eye className="w-4 h-4" />
+                            </button>
+                          )}
+
+                          {(job.status === 'error' || job.status === 'partial-success') && job.formData && (
+                            <button
+                              onClick={() => handleRetryJob(job)}
+                              className="text-gray-500 hover:text-blue-500 transition-colors p-1"
+                              title="Restore to form"
+                            >
+                              <RotateCcw className="h-4 w-4" />
                             </button>
                           )}
 
@@ -4826,15 +4835,6 @@ export default function AdCreationForm({
                             className="text-gray-400 hover:text-gray-600 p-1"
                             title="Remove job"
                           >
-                            {(job.status === 'error' || job.status === 'partial-success') && job.formData && (
-                              <button
-                                onClick={() => handleRetryJob(job)}
-                                className="text-gray-500 hover:text-blue-500 transition-colors p-1"
-                                title="Restore to form"
-                              >
-                                <RotateCcw className="h-4 w-4" />
-                              </button>
-                            )}
                             <CircleX className="h-4 w-4 text-gray-500" />
                           </button>
                         </div>
