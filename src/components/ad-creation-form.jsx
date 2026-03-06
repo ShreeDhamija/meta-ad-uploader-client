@@ -761,6 +761,51 @@ export default function AdCreationForm({
     };
   };
 
+  const addCompletedJob = useCallback((completedJob) => {
+    setCompletedJobs(prev => {
+      const updated = [...prev, completedJob];
+      return updated.map((j, i) =>
+        i < updated.length - 3 ? { ...j, formData: null } : j
+      );
+    });
+  }, []);
+
+  const handleRetryJob = useCallback((job) => {
+    const d = job.formData;
+    if (!d) return;
+
+    setHeadlines(d.headlines || ['']);
+    setDescriptions(d.descriptions || ['']);
+    setMessages(d.messages || ['']);
+    setLink(d.link || ['']);
+    setCta(d.cta || '');
+
+    setFiles(d.files || []);
+    setDriveFiles(d.driveFiles || []);
+    setDropboxFiles(d.dropboxFiles || []);
+    setImportedPosts(d.importedPosts || []);
+    setImportedFiles(d.importedFiles || []);
+    setSelectedIgOrganicPosts(d.selectedIgOrganicPosts || []);
+    setVideoThumbs(d.videoThumbs || {});
+    setThumbnail(d.thumbnail || null);
+
+    setAdType(d.adType || 'standard');
+    setIsCarouselAd(d.isCarouselAd || false);
+    setEnablePlacementCustomization(d.enablePlacementCustomization || false);
+    setFileGroups(d.fileGroups || []);
+    setSelectedFiles(new Set());
+    setLaunchPaused(d.launchPaused || false);
+
+    setSelectedShopDestination(d.selectedShopDestination || null);
+    setSelectedShopDestinationType(d.selectedShopDestinationType || null);
+
+    if (d.adNameFormulaV2) setAdNameFormulaV2(d.adNameFormulaV2);
+
+    setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
+
+    toast.success('Form restored — review and resubmit when ready.');
+  }, [setHeadlines, setDescriptions, setMessages, setLink, setCta, setFiles, setDriveFiles, setDropboxFiles, setImportedPosts, setImportedFiles, setSelectedIgOrganicPosts, setVideoThumbs, setThumbnail, setAdType, setIsCarouselAd, setEnablePlacementCustomization, setFileGroups, setSelectedFiles, setLaunchPaused, setSelectedShopDestination, setSelectedShopDestinationType, setAdNameFormulaV2]);
+
 
   const adLimitWarning = useMemo(() => {
     if (selectedAdSets.length === 0) return null;
@@ -772,7 +817,7 @@ export default function AdCreationForm({
       newAdsPerAdSet = importedPosts.length;
     } else if (isCarouselAd) {
       newAdsPerAdSet = (fileGroups.length > 0) ? fileGroups.length : 1;
-    } else if (enablePlacementCustomization && fileGroups.length > 0) {
+    } else if (enablePlacementCustomization) {
       const groupedFileIds = new Set(fileGroups.flat());
       const ungroupedCount = [
         ...files,
@@ -1200,13 +1245,21 @@ export default function AdCreationForm({
 
     handleCreateAd(jobToProcess).catch(err => {
       console.error("Critical error during job initialization:", err);
+      // const failedJob = {
+      //   id: jobToProcess.id,
+      //   message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
+      //   completedAt: Date.now(),
+      //   status: 'error'
+      // };
       const failedJob = {
         id: jobToProcess.id,
         message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
         completedAt: Date.now(),
-        status: 'error'
+        status: 'error',
+        formData: jobToProcess.formData,
       };
-      setCompletedJobs(prev => [...prev, failedJob]);
+      addCompletedJob(failedJob);
+      // setCompletedJobs(prev => [...prev, failedJob]);
       setJobQueue(prev => prev.slice(1));
       setCurrentJob(null);
       setIsProcessingQueue(false);
@@ -1254,12 +1307,28 @@ export default function AdCreationForm({
           selectedAdSets: currentJob.formData.selectedAdSets,      // ADD THIS
           selectedAdAccount: currentJob.formData.selectedAdAccount  // ADD THIS
         };
-        setCompletedJobs(prev => [...prev, completedJob]);
+        // setCompletedJobs(prev => [...prev, completedJob]);
+        addCompletedJob(completedJob);
+
 
         if (currentJob.formData.duplicateAdSet) {
           refreshAdSets();
         }
       } else if (status === 'partial-success') {
+        // const completedJob = {
+        //   id: currentJob.id,
+        //   message: trackedMessage,
+        //   completedAt: Date.now(),
+        //   status: 'partial-success',
+        //   successCount: metaData.successCount,
+        //   failureCount: metaData.failureCount,
+        //   totalCount: metaData.totalCount,
+        //   errorMessages: metaData.errorMessages,
+        //   selectedAdSets: currentJob.formData.selectedAdSets,      // ADD THIS
+        //   selectedAdAccount: currentJob.formData.selectedAdAccount  // ADD THIS
+
+        // };
+        // setCompletedJobs(prev => [...prev, completedJob]);
         const completedJob = {
           id: currentJob.id,
           message: trackedMessage,
@@ -1269,33 +1338,50 @@ export default function AdCreationForm({
           failureCount: metaData.failureCount,
           totalCount: metaData.totalCount,
           errorMessages: metaData.errorMessages,
-          selectedAdSets: currentJob.formData.selectedAdSets,      // ADD THIS
-          selectedAdAccount: currentJob.formData.selectedAdAccount  // ADD THIS
-
+          selectedAdSets: currentJob.formData.selectedAdSets,
+          selectedAdAccount: currentJob.formData.selectedAdAccount,
+          formData: currentJob.formData,
         };
-        setCompletedJobs(prev => [...prev, completedJob]);
+        addCompletedJob(completedJob);
         toast.warning(trackedMessage);
         if (currentJob.formData.duplicateAdSet) {
           refreshAdSets();
         }
       } else if (status === 'job-not-found') {
         // Handle retry case
+        // const failedJob = {
+        //   id: currentJob.id,
+        //   message: `Job timed out. Refresh page to try again`,
+        //   completedAt: Date.now(),
+        //   status: 'retry',
+        //   jobData: currentJob
+        // };
+        // setCompletedJobs(prev => [...prev, failedJob]);
         const failedJob = {
           id: currentJob.id,
           message: `Job timed out. Refresh page to try again`,
           completedAt: Date.now(),
           status: 'retry',
-          jobData: currentJob
+          jobData: currentJob,
+          formData: currentJob.formData,
         };
-        setCompletedJobs(prev => [...prev, failedJob]);
+        addCompletedJob(failedJob);
       } else {
+        // const failedJob = {
+        //   id: currentJob.id,
+        //   message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
+        //   completedAt: Date.now(),
+        //   status: 'error'
+        // };
+        // setCompletedJobs(prev => [...prev, failedJob]);
         const failedJob = {
           id: currentJob.id,
           message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
           completedAt: Date.now(),
-          status: 'error'
+          status: 'error',
+          formData: currentJob.formData,
         };
-        setCompletedJobs(prev => [...prev, failedJob]);
+        addCompletedJob(failedJob);
         toast.error(`Job failed: ${trackedMessage || 'An unknown error occurred.'}`);
       }
 
@@ -4740,6 +4826,15 @@ export default function AdCreationForm({
                             className="text-gray-400 hover:text-gray-600 p-1"
                             title="Remove job"
                           >
+                            {(job.status === 'error' || job.status === 'partial-success') && job.formData && (
+                              <button
+                                onClick={() => handleRetryJob(job)}
+                                className="text-gray-500 hover:text-blue-500 transition-colors p-1"
+                                title="Restore to form"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </button>
+                            )}
                             <CircleX className="h-4 w-4 text-gray-500" />
                           </button>
                         </div>
@@ -6304,8 +6399,11 @@ export default function AdCreationForm({
             )}
 
             {adLimitWarning && (
-              <div className="text-xs text-white text-left p-2 bg-yellow-500 rounded-xl">
-                This will push {adLimitWarning.join(', ')} past 50 ads. Consider using fewer files or a different ad set.
+              <div className="flex items-center gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl">
+                <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" />
+                <span className="text-xs text-orange-700">
+                  This might push your ad set past the 50 ads limit! Only Sales campaigns using Advantage+ Audience can contain a maximum of 150 Ads.
+                </span>
               </div>
             )}
 
