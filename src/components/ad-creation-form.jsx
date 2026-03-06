@@ -4757,7 +4757,7 @@ export default function AdCreationForm({
                   return (
                     <div key={job.id} className="p-3.5 border-b border-gray-100">
                       {/* Main job row */}
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start gap-3">
                         <div className="flex-shrink-0">
                           {job.status === 'error' ? (
                             <CircleX className="w-6 h-6 text-red-500" />
@@ -4792,7 +4792,7 @@ export default function AdCreationForm({
                           )}
                         </div>
 
-                        <div className="flex gap-1 flex-shrink-0">
+                        <div className="flex gap-1 flex-shrink-0 ml-2" >
                           {job.status === 'retry' && (
                             <button
                               onClick={refreshPage}
