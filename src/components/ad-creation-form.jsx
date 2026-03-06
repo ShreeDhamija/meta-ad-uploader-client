@@ -6245,6 +6245,12 @@ export default function AdCreationForm({
               Publish Ads
             </Button>
 
+            {selectedIgOrganicPosts.some(p => p.source === 'tagged') && (
+              <div className="text-xs text-white text-left p-2 bg-yellow-500 rounded-xl">
+                Some selected media is tagged content — use the creator's Facebook and Instagram accounts to run these ads.
+              </div>
+            )}
+
             {/* Validation message */}
             {showShopDestinationSelector && !selectedShopDestination && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
