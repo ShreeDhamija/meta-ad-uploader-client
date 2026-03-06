@@ -5728,56 +5728,10 @@ export default function AdCreationForm({
                       </div>
                     )}
 
-                    {/* {descriptions.some(d => d.trim()) && (
-                      <div className="space-y-2">
-                        <Label>Descriptions</Label>
-                        <div className="space-y-3">
-                          {descriptions.map((value, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                              <TextareaAutosize
-                                value={value}
-                                onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
-                                minRows={1}
-                                maxRows={10}
-                                className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
-                                style={{
-                                  scrollbarWidth: 'thin',
-                                  scrollbarColor: '#c7c7c7 transparent'
-                                }}
-                                placeholder="Enter description"
-                                disabled={!isLoggedIn}
-                              />
-                              {descriptions.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                                  size="icon"
-                                  onClick={() => removeField(setDescriptions, descriptions, index)}
-                                >
-                                  <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                                  <span className="sr-only">Remove</span>
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                          {descriptions.length < 5 && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                              onClick={() => addField(setDescriptions, descriptions)}
-                            >
-                              <Plus className="mr-2 h-4 w-4 text-white" />
-                              Add description option
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )} */}
+
                   </div>
                 ) : (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl">
                     <p className="text-sm text-blue-700">
                       Ad copy will be sourced from the selected Instagram posts.
                     </p>
