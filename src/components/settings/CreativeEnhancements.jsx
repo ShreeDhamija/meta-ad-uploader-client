@@ -92,6 +92,11 @@ const ENHANCEMENT_ITEMS = [
         label: "Dynamic Descriptions",
         description: "Uses in item information for catalog ads and dyanmically chosen descriptions for carousel",
     },
+    {
+        key: "flexMedia",
+        label: "Flex Media",
+        description: "if you want to show media you chose for a specific aspect ratio across all placements",
+    },
 
 
 ];
