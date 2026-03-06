@@ -761,6 +761,51 @@ export default function AdCreationForm({
     };
   };
 
+
+  const adLimitWarning = useMemo(() => {
+    if (selectedAdSets.length === 0) return null;
+
+    // Calculate how many ads this job will create per ad set
+    let newAdsPerAdSet = 0;
+
+    if (importedPosts.length > 0) {
+      newAdsPerAdSet = importedPosts.length;
+    } else if (isCarouselAd) {
+      newAdsPerAdSet = (fileGroups.length > 0) ? fileGroups.length : 1;
+    } else if (enablePlacementCustomization && fileGroups.length > 0) {
+      const groupedFileIds = new Set(fileGroups.flat());
+      const ungroupedCount = [
+        ...files,
+        ...driveFiles.map(f => ({ ...f, isDrive: true })),
+        ...(dropboxFiles || []).map(f => ({ ...f, isDropbox: true })),
+        ...importedFiles.map(f => ({ ...f, isMetaLibrary: true })),
+      ].filter(f => {
+        const id = f.isMetaLibrary ? (f.type === 'image' ? f.hash : f.id)
+          : f.isDropbox ? f.dropboxId
+            : f.isDrive ? f.id : f.uniqueId || f.name;
+        return !groupedFileIds.has(id);
+      }).length;
+      // ungrouped files pair up as placement groups of 2
+      newAdsPerAdSet = fileGroups.length + Math.ceil(ungroupedCount / 2);
+    } else if (adType === 'flexible') {
+      newAdsPerAdSet = fileGroups.length > 0 ? fileGroups.length : 1;
+    } else if (selectedIgOrganicPosts.length > 0) {
+      newAdsPerAdSet = selectedIgOrganicPosts.length;
+    } else {
+      newAdsPerAdSet = files.length + driveFiles.length + importedFiles.length + (dropboxFiles?.length || 0);
+    }
+
+    // Find any ad set that would exceed 50
+    const overLimitAdSets = selectedAdSets
+      .map(id => adSets.find(a => a.id === id))
+      .filter(adset => adset && (adset.totalAds || 0) + newAdsPerAdSet > 50);
+
+    if (overLimitAdSets.length === 0) return null;
+
+    return overLimitAdSets.map(a => a.name || a.id);
+  }, [selectedAdSets, adSets, importedPosts, isCarouselAd, fileGroups, enablePlacementCustomization, files, driveFiles, dropboxFiles, importedFiles, adType, selectedIgOrganicPosts]);
+
+
   // Add this helper function
   const uploadChunkWithRetry = async (url, chunk, fileType, partNumber, maxRetries = 3) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -6257,6 +6302,13 @@ export default function AdCreationForm({
                 Please select a shop destination
               </div>
             )}
+
+            {adLimitWarning && (
+              <div className="text-xs text-white text-left p-2 bg-yellow-500 rounded-xl">
+                This will push {adLimitWarning.join(', ')} past 50 ads. Consider using fewer files or a different ad set.
+              </div>
+            )}
+
             {/* Validation message for Carousel Ads */}
             {isCarouselAd && (files.length + driveFiles.length + dropboxFiles.length) > 0 && (files.length + driveFiles.length + dropboxFiles.length) < 2 && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
