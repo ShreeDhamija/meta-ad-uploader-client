@@ -742,6 +742,7 @@ import axios from 'axios';
 import { toast } from "sonner"
 import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Meta from "@/assets/icons/Meta2.svg";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -1149,22 +1150,28 @@ export default function MetaMediaLibraryModal({
 
     if (!isOpen) {
         return (
-            <Button
-                type="button"
-                size="sm"
-                disabled={!isLoggedIn}
-                className="rounded-xl flex items-center gap-2 bg-zinc-700 hover:bg-zinc-800 text-white hover:text-white"
-                onClick={() => {
-                    if (!adAccountId) {
-                        toast.error("Please select an ad account");
-                        return;
-                    }
-                    openModal();
-                }}
-            >
-                <FolderOpen className="h-4 w-4 text-white hover:text-white" />
-                Import From Meta
-            </Button>
+            <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-blue-400 to-purple-400 shadow-sm">
+                <Button
+                    type="button"
+                    size="sm"
+                    className="rounded-[14px] h-9 px-3 flex items-center gap-1.5 bg-white text-black w-full hover:bg-white hover:shadow-md"
+                    onClick={() => {
+                        if (!adAccountId) {
+                            toast.error("Please select an ad account");
+                            return;
+                        }
+                        openModal();
+                    }}
+                >
+                    Import From
+                    <img
+                        src={Meta}
+                        className="h-2 w-auto"
+                        alt="Meta"
+                    />
+
+                </Button>
+            </div>
         );
     }
 
@@ -1191,9 +1198,9 @@ export default function MetaMediaLibraryModal({
                             <SelectTrigger className="w-[200px] rounded-xl">
                                 <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-white rounded-lg">
-                                <SelectItem value="instagram" className="rounded-lg cursor-pointer">Instagram Posts</SelectItem>
-                                <SelectItem value="meta_library" className="rounded-lg cursor-pointer">Meta Media Library</SelectItem>
+                            <SelectContent className="bg-white rounded-xl">
+                                <SelectItem value="instagram" className="rounded-xl cursor-pointer">Instagram Posts</SelectItem>
+                                <SelectItem value="meta_library" className="rounded-xl cursor-pointer">Meta Media Library</SelectItem>
                             </SelectContent>
                         </Select>
                         <Button

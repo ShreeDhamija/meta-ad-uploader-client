@@ -185,46 +185,46 @@ export default function Home() {
 
     const [showMobileBanner, setShowMobileBanner] = useState(true);
 
-    if (authLoading) return null
+    // if (authLoading) return null
 
 
-    useEffect(() => {
-        if (!authLoading && !isLoggedIn) {
-            navigate("/login");
-        }
-    }, [authLoading, isLoggedIn]);
-
-
-
-    useEffect(() => {
-        if (!isLoggedIn || loading) return
-        if (!hasSeenOnboarding) {
-            setShowOnboardingPopup(true)
-        }
-    }, [isLoggedIn, loading, hasSeenOnboarding])
-
-    useEffect(() => {
-        if (loading || subscriptionLoading) return;
-
-        if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
-            setShowAdAccountPopup(true)
-        }
-    }, [subscriptionData.planType, selectedAdAccountIds])
-
-    useEffect(() => {
-
-        if (
-            !subscriptionLoading &&
-            isTrialExpired &&
-            !userHasActiveAccess &&
-            !hasDismissedTrialPopup
-        ) {
-            setShowTrialExpiredPopup(true);
-        }
+    // useEffect(() => {
+    //     if (!authLoading && !isLoggedIn) {
+    //         navigate("/login");
+    //     }
+    // }, [authLoading, isLoggedIn]);
 
 
 
-    }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
+    // useEffect(() => {
+    //     if (!isLoggedIn || loading) return
+    //     if (!hasSeenOnboarding) {
+    //         setShowOnboardingPopup(true)
+    //     }
+    // }, [isLoggedIn, loading, hasSeenOnboarding])
+
+    // useEffect(() => {
+    //     if (loading || subscriptionLoading) return;
+
+    //     if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
+    //         setShowAdAccountPopup(true)
+    //     }
+    // }, [subscriptionData.planType, selectedAdAccountIds])
+
+    // useEffect(() => {
+
+    //     if (
+    //         !subscriptionLoading &&
+    //         isTrialExpired &&
+    //         !userHasActiveAccess &&
+    //         !hasDismissedTrialPopup
+    //     ) {
+    //         setShowTrialExpiredPopup(true);
+    //     }
+
+
+
+    // }, [subscriptionLoading, isTrialExpired, userHasActiveAccess, hasDismissedTrialPopup]);
 
 
     // Cache ad account settings state
