@@ -16,6 +16,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const ENV = import.meta.env.VITE_APP_ENV;
+const isStaging = ENV === "staging";
 const IG_CACHE_KEY = 'ig_media_cache';
 
 const getIgCache = (igUserId) => {
@@ -409,14 +411,23 @@ export default function MetaMediaLibraryModal({
 
     const selectionCount =
         mediaSource === 'meta_library' ? selectedMetaFiles.length : selectedIgPosts.length;
-
     if (!isOpen) {
         return (
-            <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-blue-400 to-purple-400 shadow-sm">
+            <div
+                className={
+                    isStaging
+                        ? "rounded-2xl"
+                        : "p-[1.5px] rounded-2xl bg-gradient-to-r from-blue-400 to-purple-400 shadow-sm"
+                }
+            >
                 <Button
                     type="button"
                     size="sm"
-                    className="rounded-[14px] h-9 px-3 flex items-center gap-1.5 bg-white text-black w-full hover:bg-white hover:shadow-md"
+                    className={
+                        isStaging
+                            ? "rounded-[14px] h-9 px-3 flex items-center gap-1.5 bg-black text-white w-full hover:bg-black"
+                            : "rounded-[14px] h-9 px-3 flex items-center gap-1.5 bg-white text-black w-full hover:bg-white hover:shadow-md"
+                    }
                     onClick={() => {
                         if (!adAccountId) {
                             toast.error("Please select an ad account");
@@ -425,13 +436,8 @@ export default function MetaMediaLibraryModal({
                         openModal();
                     }}
                 >
-                    Import From
-                    <img
-                        src={Meta}
-                        className="h-2 w-auto"
-                        alt="Meta"
-                    />
-
+                    {isStaging ? "Import From Meta" : "Import From"}
+                    <img src={Meta} className="h-2 w-auto" alt="Meta" />
                 </Button>
             </div>
         );
