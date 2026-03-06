@@ -504,7 +504,7 @@ export default function MediaPreview({
     }
 
     // Auto-group when exactly 2 total files exist and not enough are selected
-    if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size < 2) {
+    if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size === 0) {
       const newGroup = ungroupedFiles.map(f => getFileId(f));
       setFileGroups(prev => [...prev, newGroup]);
       setSelectedFiles(new Set());
