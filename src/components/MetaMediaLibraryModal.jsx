@@ -454,7 +454,7 @@ export default function MetaMediaLibraryModal({
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                         {mediaSource === 'meta_library'
                             ? <FolderOpen className="h-4 w-4" />
-                            : <img src={Instagram} className="h-4 w-4 object-contain" alt="Instagram" />
+                            : <img src={Instagram} className="h-5 w-5 object-contain" alt="Instagram" />
                         }
                         {mediaSource === 'meta_library' ? 'Meta Media Library' : 'Instagram Posts'}
                     </h2>
