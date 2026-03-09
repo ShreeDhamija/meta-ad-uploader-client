@@ -2496,6 +2496,41 @@ export default function AdCreationForm({
     }
   };
 
+
+
+  const duplicateIndices = useMemo(() => {
+    if (isCarouselAd) return { messages: new Set(), headlines: new Set(), descriptions: new Set() };
+
+    const findDupes = (arr) => {
+      const dupes = new Set();
+      const seen = {};
+      arr.forEach((val, i) => {
+        const trimmed = val.trim().toLowerCase();
+        if (!trimmed) return;
+        if (trimmed in seen) {
+          dupes.add(i);
+        } else {
+          seen[trimmed] = i;
+        }
+      });
+      return dupes;
+    };
+
+    return {
+      messages: findDupes(messages),
+      headlines: findDupes(headlines),
+      descriptions: findDupes(descriptions),
+    };
+  }, [messages, headlines, descriptions, isCarouselAd]);
+
+  const hasDuplicates = useMemo(() =>
+    duplicateIndices.messages.size > 0 ||
+    duplicateIndices.headlines.size > 0 ||
+    duplicateIndices.descriptions.size > 0,
+    [duplicateIndices]
+  );
+
+
   const handleCreateAd = async (jobData) => {
 
     const {
@@ -5529,7 +5564,7 @@ export default function AdCreationForm({
                               type="button"
                               size="sm"
                               variant="outline"
-                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
+                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate || hasDuplicates}
                               onClick={() => setShowSaveNewDialog(true)}
                               className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
                             >
@@ -5551,7 +5586,7 @@ export default function AdCreationForm({
                               type="button"
                               size="sm"
                               variant="outline"
-                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
+                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate || hasDuplicates}
                               onClick={() => setShowSaveNewDialog(true)}
                               className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
                             >
@@ -5568,7 +5603,7 @@ export default function AdCreationForm({
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate}
+                                disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate || hasDuplicates}
                                 onClick={handleUpdateSelectedTemplate}
                                 className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200"
                               >
@@ -5662,26 +5697,33 @@ export default function AdCreationForm({
                         <div className="space-y-3">
                           {messages.map((value, index) => (
                             <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? 'hidden' : ''}`}>
-                              <TextareaAutosize
-                                value={value}
-                                onChange={(e) => {
-                                  if (isCarouselAd && applyTextToAllCards) {
-                                    // Update all positions with the same value
-                                    setMessages(new Array(messages.length).fill(e.target.value));
-                                  } else {
-                                    updateField(setMessages, messages, index, e.target.value);
-                                  }
-                                }}
-                                placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Add text option"}
-                                disabled={!isLoggedIn}
-                                minRows={2}
-                                maxRows={10}
-                                className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
-                                style={{
-                                  scrollbarWidth: 'thin',
-                                  scrollbarColor: '#c7c7c7 transparent'
-                                }}
-                              />
+                              <div className="flex flex-col w-full">
+                                <TextareaAutosize
+                                  value={value}
+                                  onChange={(e) => {
+                                    if (isCarouselAd && applyTextToAllCards) {
+                                      setMessages(new Array(messages.length).fill(e.target.value));
+                                    } else {
+                                      updateField(setMessages, messages, index, e.target.value);
+                                    }
+                                  }}
+                                  placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Add text option"}
+                                  disabled={!isLoggedIn}
+                                  minRows={2}
+                                  maxRows={10}
+                                  className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.messages.has(index)
+                                    ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                    : ""
+                                    }`}
+                                  style={{
+                                    scrollbarWidth: 'thin',
+                                    scrollbarColor: '#c7c7c7 transparent'
+                                  }}
+                                />
+                                {duplicateIndices.messages.has(index) && (
+                                  <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
+                                )}
+                              </div>
                               {messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
                                 <Button
                                   type="button"
@@ -5748,26 +5790,34 @@ export default function AdCreationForm({
                       <div className="space-y-3">
                         {headlines.map((value, index) => (
                           <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
-                            <TextareaAutosize
-                              value={value}
-                              onChange={(e) => {
-                                if (isCarouselAd && applyHeadlinesToAllCards) {
-                                  const newHeadlines = new Array(headlines.length).fill(e.target.value);
-                                  setHeadlines(newHeadlines);
-                                } else {
-                                  updateField(setHeadlines, headlines, index, e.target.value);
-                                }
-                              }}
-                              minRows={1}
-                              maxRows={10}
-                              className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
-                              style={{
-                                scrollbarWidth: 'thin',
-                                scrollbarColor: '#c7c7c7 transparent'
-                              }}
-                              placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
-                              disabled={!isLoggedIn}
-                            />
+                            <div className="flex flex-col w-full">
+                              <TextareaAutosize
+                                value={value}
+                                onChange={(e) => {
+                                  if (isCarouselAd && applyHeadlinesToAllCards) {
+                                    const newHeadlines = new Array(headlines.length).fill(e.target.value);
+                                    setHeadlines(newHeadlines);
+                                  } else {
+                                    updateField(setHeadlines, headlines, index, e.target.value);
+                                  }
+                                }}
+                                minRows={1}
+                                maxRows={10}
+                                className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.headlines.has(index)
+                                  ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                  : ""
+                                  }`}
+                                style={{
+                                  scrollbarWidth: 'thin',
+                                  scrollbarColor: '#c7c7c7 transparent'
+                                }}
+                                placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
+                                disabled={!isLoggedIn}
+                              />
+                              {duplicateIndices.headlines.has(index) && (
+                                <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
+                              )}
+                            </div>
                             {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
                               <Button
                                 type="button"
@@ -5824,19 +5874,27 @@ export default function AdCreationForm({
                             <>
                               {descriptions.map((value, index) => (
                                 <div key={index} className="flex items-center gap-2">
-                                  <TextareaAutosize
-                                    value={value}
-                                    onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
-                                    minRows={1}
-                                    maxRows={10}
-                                    className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
-                                    style={{
-                                      scrollbarWidth: 'thin',
-                                      scrollbarColor: '#c7c7c7 transparent'
-                                    }}
-                                    placeholder="Enter description"
-                                    disabled={!isLoggedIn}
-                                  />
+                                  <div className="flex flex-col w-full">
+                                    <TextareaAutosize
+                                      value={value}
+                                      onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
+                                      minRows={1}
+                                      maxRows={10}
+                                      className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.descriptions.has(index)
+                                        ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                        : ""
+                                        }`}
+                                      style={{
+                                        scrollbarWidth: 'thin',
+                                        scrollbarColor: '#c7c7c7 transparent'
+                                      }}
+                                      placeholder="Enter description"
+                                      disabled={!isLoggedIn}
+                                    />
+                                    {duplicateIndices.descriptions.has(index) && (
+                                      <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
+                                    )}
+                                  </div>
                                   {descriptions.length > 1 && (
                                     <Button
                                       type="button"
@@ -6378,22 +6436,19 @@ export default function AdCreationForm({
                 ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
                 ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
                 (selectedFiles.size > 0) ||
-                (shouldShowLeadFormSelector && !selectedForm)
-
+                (shouldShowLeadFormSelector && !selectedForm) ||
+                (!isCarouselAd && hasDuplicates)
               }
             >
               Publish Ads
             </Button>
 
-            {/* {selectedIgOrganicPosts.some(p => p.source === 'tagged') && (
-              <div className="p-2 pl-3 bg-orange-50 border border-orange-200 rounded-2xl mt-2">
-                <span className="text-xs text-orange-700">
-                  Some selected media is tagged content — use the creator's Facebook and Instagram accounts to run these ads.
-                </span>
+            {!isCarouselAd && hasDuplicates && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Duplicate values found in your text fields — this can lead to errors when making ads. Please remove duplicates before publishing.
               </div>
-            )} */}
+            )}
 
-            {/* Validation message */}
             {showShopDestinationSelector && !selectedShopDestination && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a shop destination
@@ -6409,14 +6464,12 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {/* Validation message for Carousel Ads */}
             {isCarouselAd && (files.length + driveFiles.length + dropboxFiles.length) > 0 && (files.length + driveFiles.length + dropboxFiles.length) < 2 && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Carousel ads require at least 2 files. You have {files.length + driveFiles.length + dropboxFiles.length}.
               </div>
             )}
 
-            {/* Validation message for missing link */}
             {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (importedPosts.length === 0) && (!useExistingPosts) && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please provide a link URL
@@ -6434,8 +6487,6 @@ export default function AdCreationForm({
             )}
 
           </div>
-
-
 
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">

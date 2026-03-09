@@ -217,6 +217,14 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     };
   }, [primaryTexts, headlines, descriptions]);
 
+  const hasDuplicates = useMemo(() =>
+    duplicateIndices.primaryTexts.size > 0 ||
+    duplicateIndices.headlines.size > 0 ||
+    duplicateIndices.descriptions.size > 0,
+    [duplicateIndices]
+  );
+
+
   const templateChanged = useMemo(() => {
     // Brand new template → trigger warning as soon as any field has content
     if (!currentTemplate?.id && !currentTemplate?.name) {
@@ -985,8 +993,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   value={text}
                   onChange={(e) => handleChange(i, setDescriptions, descriptions, e.target.value)}
                   className={`rounded-xl bg-white ${duplicateIndices.descriptions.has(i)
-                      ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                      : ""
+                    ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                    : ""
                     }`}
                   disabled={isProcessing}
                 />
@@ -1019,8 +1027,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || !(primaryTexts.some(t => t.trim()) || headlines.some(t => t.trim()))}
-
+          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || hasDuplicates || !(primaryTexts.some(t => t.trim()) || headlines.some(t => t.trim()))}
         >
           {nameAlreadyExists
             ? "This template name already exists"
@@ -1048,11 +1055,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           )}
         </div>
 
-        {templateChanged && !nameAlreadyExists && (
+        {hasDuplicates ? (
+          <p className="text-xs text-white bg-rose-500 rounded-xl border text-left mt-1 p-2">
+            Please remove duplicate values above to save the template.
+          </p>
+        ) : templateChanged && !nameAlreadyExists ? (
           <p className="text-xs text-white bg-rose-500 rounded-xl border text-left mt-1 p-2">
             Your templates have unsaved changes.
           </p>
-        )}
+        ) : null}
       </div>
 
       {showImportPopup && (
