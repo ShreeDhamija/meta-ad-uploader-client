@@ -1620,8 +1620,9 @@ export default function AdCreationForm({
         };
 
         setDriveFiles((prev) => [...prev, newFile]);
-        setShowFolderInput(false);
         setFolderLinkValue("");
+        toast.success(`Successfully imported: ${data.name}`);
+
 
         // toast.success("File imported successfully!", { id: toastId });
       } catch (error) {
