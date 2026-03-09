@@ -369,7 +369,7 @@ EnhancementItem.displayName = 'EnhancementItem';
 
 const SectionHeader = memo(({ title }) => (
     <div className="mx-[-4px]">
-        <div className="bg-gray-100 rounded-xl px-3 py-2">
+        <div className="bg-gray-200 rounded-xl px-3 py-2">
             <p className="font-semibold text-[14px] text-zinc-700">{title}</p>
         </div>
     </div>
