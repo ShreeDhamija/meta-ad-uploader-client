@@ -1565,21 +1565,91 @@ export default function AdCreationForm({
 
 
 
-  const handleImportFromFolder = useCallback(() => {
-    const folderId = extractFolderId(folderLinkValue);
+  // const handleImportFromFolder = useCallback(() => {
+  //   const folderId = extractFolderId(folderLinkValue);
 
-    if (!folderId) {
-      toast.error('Invalid Google Drive folder link');
-      return;
-    }
+  //   if (!folderId) {
+  //     toast.error('Invalid Google Drive folder link');
+  //     return;
+  //   }
 
+  //   if (!googleAuthStatus.accessToken) {
+  //     toast.error('Not authenticated with Google Drive');
+  //     return;
+  //   }
+
+  //   createPicker(googleAuthStatus.accessToken, folderId);
+  // }, [folderLinkValue, googleAuthStatus.accessToken, createPicker]);
+
+
+  const handleImportFromFolder = useCallback(async () => {
     if (!googleAuthStatus.accessToken) {
       toast.error('Not authenticated with Google Drive');
       return;
     }
 
+    const link = folderLinkValue || "";
+
+    // 1. Check if the URL is a direct FILE link (matches /file/d/ID)
+    const fileMatch = link.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+    const fileId = fileMatch ? fileMatch[1] : null;
+
+    if (fileId) {
+      // It's a file! Fetch it directly and bypass the Picker
+      try {
+        // Optional: If you use a toast library like react-hot-toast, you can show a loading state
+        // const toastId = toast.loading("Importing file...");
+
+        const response = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size,thumbnailLink`,
+          { headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` } }
+        );
+
+        if (!response.ok) throw new Error("File not found or permission denied.");
+
+        const data = await response.json();
+
+        // Format the object EXACTLY how your Picker callback formats it
+        const newFile = {
+          id: data.id,
+          name: data.name,
+          mimeType: data.mimeType,
+          size: parseInt(data.size || "0", 10), // API returns size as string
+          accessToken: googleAuthStatus.accessToken,
+          pickerThumbnail: data.thumbnailLink || null // Automatically hooks into our new thumbnail logic!
+        };
+
+        setDriveFiles((prev) => [...prev, newFile]);
+        setShowFolderInput(false);
+        setFolderLinkValue("");
+
+        // toast.success("File imported successfully!", { id: toastId });
+      } catch (error) {
+        console.error("Direct file import error:", error);
+        toast.error("Failed to import file. Make sure you have access to it.");
+      }
+      return; // Stop execution here so we don't open the folder picker
+    }
+
+    // 2. If it's NOT a file link, assume it's a FOLDER link
+    const folderId = extractFolderId(link);
+
+    if (!folderId) {
+      toast.error('Invalid Google Drive link');
+      return;
+    }
+
+    // Open the picker pointing to the folder
     createPicker(googleAuthStatus.accessToken, folderId);
-  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker]);
+
+  }, [
+    folderLinkValue,
+    googleAuthStatus.accessToken,
+    createPicker,
+    setDriveFiles,
+    setShowFolderInput,
+    setFolderLinkValue
+  ]);
 
   const openPicker = useCallback((token) => {
     if (!window.google || !window.google.picker) {
