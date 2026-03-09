@@ -193,6 +193,29 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
+  // Detect duplicate values within each field type
+  const duplicateIndices = useMemo(() => {
+    const findDupes = (arr) => {
+      const dupes = new Set();
+      const seen = {};
+      arr.forEach((val, i) => {
+        const trimmed = val.trim().toLowerCase();
+        if (!trimmed) return;
+        if (trimmed in seen) {
+          dupes.add(i); // mark the 2nd (and 3rd, etc.) occurrence
+        } else {
+          seen[trimmed] = i;
+        }
+      });
+      return dupes;
+    };
+
+    return {
+      primaryTexts: findDupes(primaryTexts),
+      headlines: findDupes(headlines),
+      descriptions: findDupes(descriptions),
+    };
+  }, [primaryTexts, headlines, descriptions]);
 
   const templateChanged = useMemo(() => {
     // Brand new template → trigger warning as soon as any field has content
@@ -859,15 +882,23 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <label className="text-[14px] text-gray-700">Primary Text</label>
         {primaryTexts.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
-            <TextareaAutosize
-              placeholder={`Enter Primary Text ${i + 1}`}
-              value={text}
-              onChange={(e) => handleChange(i, setPrimaryTexts, primaryTexts, e.target.value)}
-              className="rounded-xl bg-white px-3 py-2 w-full text-sm resize-none focus:outline-none"
-              minRows={2}
-              maxRows={10}
-              disabled={isProcessing}
-            />
+            <div className="flex flex-col w-full">
+              <TextareaAutosize
+                placeholder={`Enter Primary Text ${i + 1}`}
+                value={text}
+                onChange={(e) => handleChange(i, setPrimaryTexts, primaryTexts, e.target.value)}
+                className={`rounded-xl bg-white px-3 py-2 w-full text-sm resize-none focus:outline-none ${duplicateIndices.primaryTexts.has(i)
+                  ? "border border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                  : ""
+                  }`}
+                minRows={2}
+                maxRows={10}
+                disabled={isProcessing}
+              />
+              {duplicateIndices.primaryTexts.has(i) && (
+                <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
+              )}
+            </div>
 
             {primaryTexts.length > 1 && (
               <Trash2
@@ -893,13 +924,21 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <label className="text-[14px] text-gray-700">Headline</label>
         {headlines.map((text, i) => (
           <div key={i} className="flex items-center gap-2">
-            <Input
-              placeholder={`Enter Headline ${i + 1}`}
-              value={text}
-              onChange={(e) => handleChange(i, setHeadlines, headlines, e.target.value)}
-              className="rounded-xl bg-white"
-              disabled={isProcessing}
-            />
+            <div className="flex flex-col w-full">
+              <Input
+                placeholder={`Enter Headline ${i + 1}`}
+                value={text}
+                onChange={(e) => handleChange(i, setHeadlines, headlines, e.target.value)}
+                className={`rounded-xl bg-white ${duplicateIndices.headlines.has(i)
+                  ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                  : ""
+                  }`}
+                disabled={isProcessing}
+              />
+              {duplicateIndices.headlines.has(i) && (
+                <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
+              )}
+            </div>
             {headlines.length > 1 && (
               <Trash2
                 className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
@@ -940,13 +979,21 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           <label className="text-[14px] text-gray-700">Description</label>
           {descriptions.map((text, i) => (
             <div key={i} className="flex items-center gap-2">
-              <Input
-                placeholder={`Enter Description ${i + 1}`}
-                value={text}
-                onChange={(e) => handleChange(i, setDescriptions, descriptions, e.target.value)}
-                className="rounded-xl bg-white"
-                disabled={isProcessing}
-              />
+              <div className="flex flex-col w-full">
+                <Input
+                  placeholder={`Enter Description ${i + 1}`}
+                  value={text}
+                  onChange={(e) => handleChange(i, setDescriptions, descriptions, e.target.value)}
+                  className={`rounded-xl bg-white ${duplicateIndices.descriptions.has(i)
+                      ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                      : ""
+                    }`}
+                  disabled={isProcessing}
+                />
+                {duplicateIndices.descriptions.has(i) && (
+                  <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
+                )}
+              </div>
               {descriptions.length > 1 && (
                 <Trash2
                   className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
