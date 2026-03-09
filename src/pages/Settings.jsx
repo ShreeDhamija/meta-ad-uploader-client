@@ -236,7 +236,7 @@ export default function Settings() {
                 <main className="flex-1 py-6 pr-6">
                     <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
                         <div className="flex-1 overflow-auto">
-                            <div className={cn("w-full mx-auto p-16", activeTab === "analytics" ? "max-w-[80rem]" : "max-w-3xl")}>
+                            <div className={cn("w-full mx-auto p-16", activeTab === "analytics" ? "max-w-[80rem]" : "max-w-4xl")}>
                                 <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
                                 <h1 className="text-xl font-semibold mb-1 text-left">
                                     {tabTitleMap[activeTab]}

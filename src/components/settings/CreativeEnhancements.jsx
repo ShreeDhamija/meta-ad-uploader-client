@@ -289,19 +289,14 @@ const ENHANCEMENT_SECTIONS = [
                 description: "Add common movements such as panning, zooming, rotating & more to eligible images",
             },
             {
-                key: "profileEndCard",
-                label: "Profile End Card",
-                description: "Add an end card showing your Page profile to encourage people to visit your Page",
+                key: "flexMedia",
+                label: "Flex Media",
+                description: "Adds media you chose for a specific aspect ratio across all placements",
             },
             {
                 key: "dynamicDescriptions",
                 label: "Dynamic Descriptions",
                 description: "Uses in item information for catalog ads and dynamically chosen descriptions for carousel",
-            },
-            {
-                key: "flexMedia",
-                label: "Flex Media",
-                description: "Adds media you chose for a specific aspect ratio across all placements",
             },
         ],
     },
@@ -332,6 +327,11 @@ const ENHANCEMENT_SECTIONS = [
                 key: "highlightCard",
                 label: "Highlight Carousel Card",
                 description: "Automatically highlight the best performing carousel card to show first",
+            },
+            {
+                key: "profileEndCard",
+                label: "Profile End Card",
+                description: "Add an end card showing your Page profile to encourage people to visit your Page",
             },
         ],
     },
@@ -369,8 +369,8 @@ EnhancementItem.displayName = 'EnhancementItem';
 
 const SectionHeader = memo(({ title }) => (
     <div className="mx-[-4px]">
-        <div className="bg-gray-200 rounded-lg px-3 py-2">
-            <p className="font-medium text-[14px] text-zinc-700">{title}</p>
+        <div className="bg-gray-200 rounded-xl px-3 py-2">
+            <p className="font-semibold text-[14px] text-zinc-700">{title}</p>
         </div>
     </div>
 ));
