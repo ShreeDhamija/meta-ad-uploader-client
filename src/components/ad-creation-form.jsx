@@ -1521,13 +1521,21 @@ export default function AdCreationForm({
       .setAppId(102886794705)
       .setCallback((data) => {
         if (data.action === "picked") {
-          const selected = data.docs.map((doc) => ({
-            id: doc.id,
-            name: doc.name,
-            mimeType: doc.mimeType,
-            size: doc.sizeBytes,
-            accessToken: token
-          }));
+          const selected = data.docs.map((doc) => {
+            // Safely grab the Picker's thumbnail if it exists
+            const thumb = doc.thumbnails && doc.thumbnails.length > 0
+              ? doc.thumbnails[doc.thumbnails.length - 1].url
+              : null;
+
+            return {
+              id: doc.id,
+              name: doc.name,
+              mimeType: doc.mimeType,
+              size: doc.sizeBytes,
+              accessToken: token,
+              pickerThumbnail: thumb // Save it here
+            };
+          });
 
           setDriveFiles((prev) => [...prev, ...selected]);
         }
@@ -1923,10 +1931,40 @@ export default function AdCreationForm({
   }, []);
 
   // Rename to be more accurate - this is ONLY for Drive
-  const getDriveVideoThumbnail = (driveFile) => {
-    if (!isVideoFile(driveFile) || !driveFile.isDrive) return null;
-    return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
-  };
+  // const getDriveVideoThumbnail = (driveFile) => {
+  //   if (!isVideoFile(driveFile) || !driveFile.isDrive) return null;
+  //   return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
+  // };
+
+  const getDriveVideoThumbnail = useCallback(async (file, signal) => {
+    // 1. FASTEST: If Picker already gave us the thumbnail, use it instantly!
+    if (file.pickerThumbnail) {
+      return file.pickerThumbnail.replace(/=s\d+$/, '=w400-h300');
+    }
+
+    // 2. SAFEST FALLBACK: If Picker didn't have it, fetch from the API
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${file.id}?fields=thumbnailLink`,
+        {
+          headers: { Authorization: `Bearer ${file.accessToken}` },
+          signal: signal
+        }
+      );
+
+      if (!response.ok) throw new Error('Failed to fetch Drive thumbnail');
+
+      const data = await response.json();
+      if (data.thumbnailLink) {
+        return data.thumbnailLink.replace(/=s\d+$/, '=w400-h300');
+      }
+
+      return "https://api.withblip.com/thumbnail.jpg";
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      return "https://api.withblip.com/thumbnail.jpg";
+    }
+  }, []);
 
   // Track processing state, not processed files
   const processingRef = useRef(new Set());
@@ -1998,16 +2036,58 @@ export default function AdCreationForm({
       }
 
       // --- 2. GOOGLE DRIVE ---
-      const driveThumbs = {};
-      driveFiles.forEach(file => {
+      // const driveThumbs = {};
+      // driveFiles.forEach(file => {
+      //   const fileId = getFileId(file);
+      //   if (isVideoFile(file) && !videoThumbsRef.current[fileId]) {
+      //     const thumb = getDriveVideoThumbnail(file);
+      //     if (thumb) driveThumbs[fileId] = thumb;
+      //   }
+      // });
+      // if (Object.keys(driveThumbs).length > 0) {
+      //   setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
+      // }
+
+      // --- 2. GOOGLE DRIVE ---
+      const driveFilesNeedingThumbs = driveFiles.filter(file => {
         const fileId = getFileId(file);
-        if (isVideoFile(file) && !videoThumbsRef.current[fileId]) {
-          const thumb = getDriveVideoThumbnail(file);
-          if (thumb) driveThumbs[fileId] = thumb;
-        }
+        return isVideoFile(file) &&
+          !videoThumbsRef.current[fileId] &&
+          !processingRef.current.has(fileId);
       });
-      if (Object.keys(driveThumbs).length > 0) {
-        setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
+
+      if (driveFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        // Track processing to prevent duplicate fetches
+        driveFilesNeedingThumbs.forEach(file => processingRef.current.add(getFileId(file)));
+
+        const MAX_DRIVE_CONCURRENT = 3; // Fast, but avoids Google API rate limits
+        const driveQueue = [...driveFilesNeedingThumbs];
+
+        const processNextDrive = async () => {
+          if (driveQueue.length === 0 || abortController.signal.aborted) return;
+
+          const file = driveQueue.shift();
+          const fileId = getFileId(file);
+
+          try {
+            const thumbUrl = await getDriveVideoThumbnail(file, abortController.signal);
+
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({ ...prev, [fileId]: thumbUrl }));
+            }
+          } finally {
+            processingRef.current.delete(fileId);
+            if (driveQueue.length > 0 && !abortController.signal.aborted) {
+              processNextDrive(); // Process next in queue
+            }
+          }
+        };
+
+        // Kick off the concurrent workers
+        const drivePromises = [];
+        for (let i = 0; i < Math.min(MAX_DRIVE_CONCURRENT, driveFilesNeedingThumbs.length); i++) {
+          drivePromises.push(processNextDrive());
+        }
       }
 
 
