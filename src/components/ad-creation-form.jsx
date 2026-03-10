@@ -6075,7 +6075,7 @@ export default function AdCreationForm({
                       <span>Ad Copy</span>
                       {selectedIgOrganicPosts.length > 1 && (
                         <div className="flex items-center gap-1 ml-auto">
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-gray-700">
                             {activeIgCaptionIndex + 1}/{selectedIgOrganicPosts.length}
                           </span>
                           <button
@@ -6083,8 +6083,8 @@ export default function AdCreationForm({
                             disabled={activeIgCaptionIndex === 0}
                             onClick={() => setActiveIgCaptionIndex((prev) => prev - 1)}
                             className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === 0
-                                ? 'text-gray-300 cursor-not-allowed'
-                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                               }`}
                           >
                             <ChevronLeft className="w-3.5 h-3.5" />
@@ -6094,8 +6094,8 @@ export default function AdCreationForm({
                             disabled={activeIgCaptionIndex === selectedIgOrganicPosts.length - 1}
                             onClick={() => setActiveIgCaptionIndex((prev) => prev + 1)}
                             className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === selectedIgOrganicPosts.length - 1
-                                ? 'text-gray-300 cursor-not-allowed'
-                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                               }`}
                           >
                             <ChevronRight className="w-3.5 h-3.5" />
@@ -6108,14 +6108,14 @@ export default function AdCreationForm({
                       disabled
                       minRows={2}
                       maxRows={10}
-                      className="border border-gray-200 rounded-xl bg-gray-100 shadow w-full px-3 py-2 text-sm resize-none focus:outline-none text-gray-500 cursor-not-allowed"
+                      className="border border-gray-200 shadom-sm rounded-xl bg-gray-100 w-full px-3 py-2 text-sm resize-none focus:outline-none text-gray-500 cursor-not-allowed"
                       style={{
                         scrollbarWidth: 'thin',
                         scrollbarColor: '#c7c7c7 transparent'
                       }}
                       placeholder="No caption available"
                     />
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl">
+                    <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-2xl">
                       <p className="text-xs text-blue-700">
                         Ad copy will be sourced from the selected Instagram posts.
                       </p>
