@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -571,6 +571,8 @@ export default function AdCreationForm({
   const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false);
   const [newTemplateNameInput, setNewTemplateNameInput] = useState("");
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false);
+
+  const [activeIgCaptionIndex, setActiveIgCaptionIndex] = useState(0);
 
 
 
@@ -6068,9 +6070,32 @@ export default function AdCreationForm({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <Label className="text-xs text-gray-500">Primary Text</Label>
+                    <Label className="flex items-center gap-2">
+                      <span>Primary Text</span>
+                      {selectedIgOrganicPosts.length > 1 && (
+                        <div className="flex items-center gap-1 ml-auto">
+                          <span className="text-xs text-gray-400">
+                            {activeIgCaptionIndex + 1}/{selectedIgOrganicPosts.length}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveIgCaptionIndex((prev) => (prev - 1 + selectedIgOrganicPosts.length) % selectedIgOrganicPosts.length)}
+                            className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveIgCaptionIndex((prev) => (prev + 1) % selectedIgOrganicPosts.length)}
+                            className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </Label>
                     <TextareaAutosize
-                      value={selectedIgOrganicPosts[0]?.caption || ''}
+                      value={selectedIgOrganicPosts[activeIgCaptionIndex]?.caption || ''}
                       disabled
                       minRows={2}
                       maxRows={10}
@@ -6081,9 +6106,11 @@ export default function AdCreationForm({
                       }}
                       placeholder="No caption available"
                     />
-                    <p className="text-xs text-blue-700">
-                      Ad copy will be sourced from the selected Instagram posts.
-                    </p>
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl">
+                      <p className="text-xs text-blue-700">
+                        Ad copy will be sourced from the selected Instagram posts.
+                      </p>
+                    </div>
                   </div>
                 )
                 }
