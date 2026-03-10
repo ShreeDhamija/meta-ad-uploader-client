@@ -6071,7 +6071,8 @@ export default function AdCreationForm({
                 ) : (
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
-                      <span>Primary Text</span>
+                      <TemplateIcon className="w-4 h-4" />
+                      <span>Ad Copy</span>
                       {selectedIgOrganicPosts.length > 1 && (
                         <div className="flex items-center gap-1 ml-auto">
                           <span className="text-xs text-gray-400">
@@ -6079,15 +6080,23 @@ export default function AdCreationForm({
                           </span>
                           <button
                             type="button"
-                            onClick={() => setActiveIgCaptionIndex((prev) => (prev - 1 + selectedIgOrganicPosts.length) % selectedIgOrganicPosts.length)}
-                            className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                            disabled={activeIgCaptionIndex === 0}
+                            onClick={() => setActiveIgCaptionIndex((prev) => prev - 1)}
+                            className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === 0
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                              }`}
                           >
                             <ChevronLeft className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
-                            onClick={() => setActiveIgCaptionIndex((prev) => (prev + 1) % selectedIgOrganicPosts.length)}
-                            className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                            disabled={activeIgCaptionIndex === selectedIgOrganicPosts.length - 1}
+                            onClick={() => setActiveIgCaptionIndex((prev) => prev + 1)}
+                            className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === selectedIgOrganicPosts.length - 1
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                              }`}
                           >
                             <ChevronRight className="w-3.5 h-3.5" />
                           </button>
