@@ -1763,7 +1763,7 @@ export default function AdCreationForm({
       cancel: () => {
         console.log('Dropbox picker cancelled');
       },
-      linkType: 'preview', // Changed to preview (safer default), though 'direct' is fine too
+      linkType: 'direct', // Changed to preview (safer default), though 'direct' is fine too
       multiselect: true,
       extensions: ['.jpg', '.jpeg', '.png', '.gif', '.mp4', '.mov', '.webm'],
       folderselect: false,
