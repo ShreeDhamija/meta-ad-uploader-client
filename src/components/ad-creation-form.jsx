@@ -1247,12 +1247,7 @@ export default function AdCreationForm({
 
     handleCreateAd(jobToProcess).catch(err => {
       console.error("Critical error during job initialization:", err);
-      // const failedJob = {
-      //   id: jobToProcess.id,
-      //   message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
-      //   completedAt: Date.now(),
-      //   status: 'error'
-      // };
+
       const failedJob = {
         id: jobToProcess.id,
         message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
@@ -1317,20 +1312,7 @@ export default function AdCreationForm({
           refreshAdSets();
         }
       } else if (status === 'partial-success') {
-        // const completedJob = {
-        //   id: currentJob.id,
-        //   message: trackedMessage,
-        //   completedAt: Date.now(),
-        //   status: 'partial-success',
-        //   successCount: metaData.successCount,
-        //   failureCount: metaData.failureCount,
-        //   totalCount: metaData.totalCount,
-        //   errorMessages: metaData.errorMessages,
-        //   selectedAdSets: currentJob.formData.selectedAdSets,      // ADD THIS
-        //   selectedAdAccount: currentJob.formData.selectedAdAccount  // ADD THIS
 
-        // };
-        // setCompletedJobs(prev => [...prev, completedJob]);
         const completedJob = {
           id: currentJob.id,
           message: trackedMessage,
@@ -1350,15 +1332,7 @@ export default function AdCreationForm({
           refreshAdSets();
         }
       } else if (status === 'job-not-found') {
-        // Handle retry case
-        // const failedJob = {
-        //   id: currentJob.id,
-        //   message: `Job timed out. Refresh page to try again`,
-        //   completedAt: Date.now(),
-        //   status: 'retry',
-        //   jobData: currentJob
-        // };
-        // setCompletedJobs(prev => [...prev, failedJob]);
+
         const failedJob = {
           id: currentJob.id,
           message: `Job timed out. Refresh page to try again`,
@@ -1369,13 +1343,7 @@ export default function AdCreationForm({
         };
         addCompletedJob(failedJob);
       } else {
-        // const failedJob = {
-        //   id: currentJob.id,
-        //   message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
-        //   completedAt: Date.now(),
-        //   status: 'error'
-        // };
-        // setCompletedJobs(prev => [...prev, failedJob]);
+
         const failedJob = {
           id: currentJob.id,
           message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
@@ -1990,11 +1958,7 @@ export default function AdCreationForm({
     });
   }, []);
 
-  // Rename to be more accurate - this is ONLY for Drive
-  // const getDriveVideoThumbnail = (driveFile) => {
-  //   if (!isVideoFile(driveFile) || !driveFile.isDrive) return null;
-  //   return `https://drive.google.com/thumbnail?id=${driveFile.id}&sz=w400-h300`;
-  // };
+
 
   const getDriveVideoThumbnail = useCallback(async (file, signal) => {
     // 1. FASTEST: If Picker already gave us the thumbnail, use it instantly!
@@ -2095,18 +2059,7 @@ export default function AdCreationForm({
         await Promise.all(initialPromises);
       }
 
-      // --- 2. GOOGLE DRIVE ---
-      // const driveThumbs = {};
-      // driveFiles.forEach(file => {
-      //   const fileId = getFileId(file);
-      //   if (isVideoFile(file) && !videoThumbsRef.current[fileId]) {
-      //     const thumb = getDriveVideoThumbnail(file);
-      //     if (thumb) driveThumbs[fileId] = thumb;
-      //   }
-      // });
-      // if (Object.keys(driveThumbs).length > 0) {
-      //   setVideoThumbs(prev => ({ ...prev, ...driveThumbs }));
-      // }
+
 
       // --- 2. GOOGLE DRIVE ---
       const driveFilesNeedingThumbs = driveFiles.filter(file => {
