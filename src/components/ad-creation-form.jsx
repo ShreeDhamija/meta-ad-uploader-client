@@ -1565,21 +1565,6 @@ export default function AdCreationForm({
 
 
 
-  // const handleImportFromFolder = useCallback(() => {
-  //   const folderId = extractFolderId(folderLinkValue);
-
-  //   if (!folderId) {
-  //     toast.error('Invalid Google Drive folder link');
-  //     return;
-  //   }
-
-  //   if (!googleAuthStatus.accessToken) {
-  //     toast.error('Not authenticated with Google Drive');
-  //     return;
-  //   }
-
-  //   createPicker(googleAuthStatus.accessToken, folderId);
-  // }, [folderLinkValue, googleAuthStatus.accessToken, createPicker]);
 
 
   const handleImportFromFolder = useCallback(async () => {
@@ -1766,6 +1751,7 @@ export default function AdCreationForm({
           dropboxId: file.id, // ✅ We use this ID for the backend now
           name: file.name,
           link: file.link, // Kept for UI, but not used for upload
+          directLink: file.link, // ✅ ADD THIS LINE
           size: file.bytes,
           isDropbox: true,
           mimeType: getMimeFromName(file.name),
