@@ -6067,12 +6067,26 @@ export default function AdCreationForm({
 
                   </div>
                 ) : (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl">
-                    <p className="text-sm text-blue-700">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-gray-500">Primary Text</Label>
+                    <TextareaAutosize
+                      value={selectedIgOrganicPosts[0]?.caption || ''}
+                      disabled
+                      minRows={2}
+                      maxRows={10}
+                      className="border border-gray-200 rounded-xl bg-gray-100 shadow w-full px-3 py-2 text-sm resize-none focus:outline-none text-gray-500 cursor-not-allowed"
+                      style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: '#c7c7c7 transparent'
+                      }}
+                      placeholder="No caption available"
+                    />
+                    <p className="text-xs text-blue-700">
                       Ad copy will be sourced from the selected Instagram posts.
                     </p>
                   </div>
-                )}
+                )
+                }
 
                 <div className="space-y-3">
                   <div className="space-y-2">
