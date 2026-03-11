@@ -1056,25 +1056,20 @@ function PostSelectorInline({
                                                 variant="outline"
                                                 role="combobox"
                                                 aria-expanded={openBrowseCampaign}
-                                                disabled={campaigns.length === 0 || isLoadingCampaigns}
+                                                disabled={campaigns.length === 0}
                                                 className="w-full justify-between  border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white h-9 text-sm"
                                             >
                                                 <div className="w-full overflow-hidden flex items-center gap-2">
-                                                    {isLoadingCampaigns ? (
-                                                        <>
-                                                            <Loader className="h-3.5 w-3.5 animate-spin" />
-                                                            <span className="block truncate flex-1 text-left text-gray-500">Loading...</span>
-                                                        </>
-                                                    ) : (
-                                                        <span className="block truncate flex-1 text-left">
-                                                            {campaigns.length === 0
-                                                                ? "No campaigns available"
-                                                                : adsetBrowseCampaignId
-                                                                    ? campaigns.find(c => c.id === adsetBrowseCampaignId)?.name || adsetBrowseCampaignId
-                                                                    : "Select a campaign"
-                                                            }
-                                                        </span>
-                                                    )}
+
+                                                    <span className="block truncate flex-1 text-left">
+                                                        {campaigns.length === 0
+                                                            ? "No campaigns available"
+                                                            : adsetBrowseCampaignId
+                                                                ? campaigns.find(c => c.id === adsetBrowseCampaignId)?.name || adsetBrowseCampaignId
+                                                                : "Select a campaign"
+                                                        }
+                                                    </span>
+
                                                 </div>
                                                 <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
                                             </Button>
