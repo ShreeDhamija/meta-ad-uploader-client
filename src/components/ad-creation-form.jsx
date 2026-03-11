@@ -4935,7 +4935,7 @@ export default function AdCreationForm({
                               onClick={() => {
                                 const account = adAccounts.find(a => a.id === job.selectedAdAccount);
                                 const bizId = account?.business_id || '';
-                                const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?${job.selectedAdAccount}&selected_adset_ids=${job.selectedAdSets[0]}&business_id=${bizId}&global_scope_id=${bizId}`;
+                                const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?${job.selectedAdAccount.replace('_', '=')}&selected_adset_ids=${job.selectedAdSets[0]}&business_id=${bizId}&global_scope_id=${bizId}`;
                                 window.open(url, '_blank');
                               }}
                               className="text-gray-500 hover:text-blue-500 transition-colors p-1"
