@@ -563,11 +563,10 @@ function PostSelectorInline({
     onImport,
     usePostID,
     setUsePostID,
-    // New props for adset browse view - reuse from parent
     campaigns = [],
     selectedAdAccount,
-    refreshCampaigns,
-    isLoadingCampaigns = false,
+    importedPosts = [],  // add this
+
 }) {
     const renderCount = useRef(0);
     const prevAdAccountId = useRef(adAccountId);
@@ -809,6 +808,13 @@ function PostSelectorInline({
         setHasFetched(false)
         setError(null)
     }, [adAccountId])
+
+    useEffect(() => {
+        if (importedPosts && importedPosts.length === 0) {
+            setSelectedAdIds(new Set())
+            importedAdsRef.current.clear()
+        }
+    }, [importedPosts])
 
     const handleDatePresetChange = (newPreset) => {
         setDatePreset(newPreset)
@@ -1334,12 +1340,12 @@ function PostSelectorInline({
 
                     {ads.length > 0 && (
                         <ScrollArea className="flex-1 pr-4 outline-none focus:outline-none">
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                                 {ads.map((ad) => (
                                     <label
                                         key={ad.id}
                                         className={cn(
-                                            "grid gap-2 items-center p-3 rounded-lg border cursor-pointer transition-colors",
+                                            "grid gap-2 items-center p-3 rounded-xl border cursor-pointer transition-colors",
                                             viewMode === 'adset'
                                                 ? "grid-cols-[auto_48px_1fr_110px_110px]"
                                                 : "grid-cols-[auto_48px_1fr_120px_110px]",

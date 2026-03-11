@@ -5214,11 +5214,10 @@ export default function AdCreationForm({
                   onImport={setImportedPosts}
                   usePostID={usePostID}
                   setUsePostID={setUsePostID}
-                  //new props
                   campaigns={campaigns}
                   selectedAdAccount={selectedAdAccount}
-                // refreshCampaigns={refreshCampaigns}    // the refresh function from AdAccountSettings
-                // isLoadingCampaigns={isLoadingCampaigns}
+                  importedPosts={importedPosts}  // add this
+
                 />
               </div>
 
