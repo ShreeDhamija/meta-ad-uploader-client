@@ -1049,17 +1049,6 @@ function PostSelectorInline({
                                 <div className="space-y-1.5">
                                     <div className="flex items-center justify-between">
                                         <Label className="text-xs text-gray-700">Select a Campaign to find ads in</Label>
-                                        {refreshCampaigns && (
-                                            <RefreshCcw
-                                                className={cn(
-                                                    "h-3.5 w-3.5 cursor-pointer transition-all duration-200",
-                                                    isLoadingCampaigns
-                                                        ? "text-gray-300 animate-[spin_3s_linear_infinite]"
-                                                        : "text-gray-500 hover:text-gray-700"
-                                                )}
-                                                onClick={refreshCampaigns}
-                                            />
-                                        )}
                                     </div>
                                     <Popover open={openBrowseCampaign} onOpenChange={setOpenBrowseCampaign}>
                                         <PopoverTrigger asChild>
