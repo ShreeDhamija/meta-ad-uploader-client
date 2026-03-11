@@ -5217,8 +5217,8 @@ export default function AdCreationForm({
                   //new props
                   campaigns={campaigns}
                   selectedAdAccount={selectedAdAccount}
-                  // refreshCampaigns={refreshCampaigns}    // the refresh function from AdAccountSettings
-                  isLoadingCampaigns={isLoadingCampaigns}
+                // refreshCampaigns={refreshCampaigns}    // the refresh function from AdAccountSettings
+                // isLoadingCampaigns={isLoadingCampaigns}
                 />
               </div>
 
