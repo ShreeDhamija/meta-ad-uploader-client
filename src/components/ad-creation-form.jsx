@@ -4935,7 +4935,7 @@ export default function AdCreationForm({
                               onClick={() => {
                                 const account = adAccounts.find(a => a.id === job.selectedAdAccount);
                                 const bizId = account?.business_id || '';
-                                const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?act=${job.selectedAdAccount}&selected_adset_ids=${job.selectedAdSets[0]}&business_id=${bizId}&global_scope_id=${bizId}`;
+                                const url = `https://adsmanager.facebook.com/adsmanager/manage/adsets/edit/standalone?${job.selectedAdAccount}&selected_adset_ids=${job.selectedAdSets[0]}&business_id=${bizId}&global_scope_id=${bizId}`;
                                 window.open(url, '_blank');
                               }}
                               className="text-gray-500 hover:text-blue-500 transition-colors p-1"
@@ -6711,7 +6711,7 @@ export default function AdCreationForm({
                           )}
                         >
                           <Clock className="w-3.5 h-3.5" />
-                          {(adScheduleStartTime || adScheduleEndTime) ? "Scheduled" : "Schedule"}
+                          {(adScheduleStartTime || adScheduleEndTime) ? "Scheduled" : "Ad Schedule"}
                         </button>
                       </PopoverTrigger>
 
