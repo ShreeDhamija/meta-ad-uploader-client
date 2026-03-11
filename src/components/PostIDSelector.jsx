@@ -801,6 +801,13 @@ function PostSelectorInline({
         if (adAccountId && viewMode === 'list') {
             fetchAds(null, datePreset)
         }
+        // Reset adset browse state when ad account changes
+        setAdsetBrowseCampaignId('')
+        setAdsetBrowseAdSets([])
+        setAdsetBrowseSelectedAdSetId('')
+        setAds([])
+        setHasFetched(false)
+        setError(null)
     }, [adAccountId])
 
     const handleDatePresetChange = (newPreset) => {
@@ -1035,7 +1042,7 @@ function PostSelectorInline({
                                 {/* Campaign Selector */}
                                 <div className="space-y-1.5">
                                     <div className="flex items-center justify-between">
-                                        <Label className="text-xs text-gray-500">Campaign</Label>
+                                        <Label className="text-xs text-gray-700">Select a Campaign to find ads in</Label>
                                         {refreshCampaigns && (
                                             <RefreshCcw
                                                 className={cn(
@@ -1055,7 +1062,7 @@ function PostSelectorInline({
                                                 role="combobox"
                                                 aria-expanded={openBrowseCampaign}
                                                 disabled={campaigns.length === 0 || isLoadingCampaigns}
-                                                className="w-full justify-between border border-gray-300 rounded-xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:!bg-white h-9 text-sm"
+                                                className="w-full justify-between  border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white h-9 text-sm"
                                             >
                                                 <div className="w-full overflow-hidden flex items-center gap-2">
                                                     {isLoadingCampaigns ? (
@@ -1121,7 +1128,7 @@ function PostSelectorInline({
 
                                 {/* Ad Set Selector */}
                                 <div className="space-y-1.5">
-                                    <Label className="text-xs text-gray-500">Ad Set</Label>
+                                    <Label className="text-xs text-gray-700">Select an Ad Set to find ads in</Label>
                                     <Popover open={openBrowseAdSet} onOpenChange={setOpenBrowseAdSet}>
                                         <PopoverTrigger asChild>
                                             <Button
@@ -1129,7 +1136,7 @@ function PostSelectorInline({
                                                 role="combobox"
                                                 aria-expanded={openBrowseAdSet}
                                                 disabled={!adsetBrowseCampaignId || adsetBrowseAdSets.length === 0 || isLoadingBrowseAdSets}
-                                                className="w-full justify-between border border-gray-300 rounded-xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:!bg-white h-9 text-sm"
+                                                className="w-full justify-between  border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white h-9 text-sm"
                                             >
                                                 <div className="w-full overflow-hidden flex items-center gap-2">
                                                     {isLoadingBrowseAdSets ? (
