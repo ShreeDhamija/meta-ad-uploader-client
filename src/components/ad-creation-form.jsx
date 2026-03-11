@@ -32,7 +32,6 @@ import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostSelectorInline from "@/components/PostIDSelector"
-// import { MetaMediaLibraryModal } from "@/components/MetaMediaLibraryModal";
 import MetaMediaLibraryModal from "@/components/MetaMediaLibraryModal";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
@@ -5215,6 +5214,11 @@ export default function AdCreationForm({
                   onImport={setImportedPosts}
                   usePostID={usePostID}
                   setUsePostID={setUsePostID}
+                  //new props
+                  campaigns={campaigns}
+                  selectedAdAccount={selectedAdAccount}
+                  // refreshCampaigns={refreshCampaigns}    // the refresh function from AdAccountSettings
+                  isLoadingCampaigns={isLoadingCampaigns}
                 />
               </div>
 
