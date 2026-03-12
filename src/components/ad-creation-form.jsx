@@ -5621,6 +5621,8 @@ export default function AdCreationForm({
                       setAdNameFormulaV2({ rawInput: newRawInput });
                     }}
                     variant="home"
+                    customVariables={adAccountSettings.customVariables || []}
+
                   />
                   <div className="mt-1">
                     <Label className="text-xs text-gray-500">

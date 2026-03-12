@@ -996,22 +996,14 @@ export default function ReorderAdNameParts({
         <div className="flex items-center gap-1.5">
           {/* Setup custom variables button — settings variant only */}
           {variant === "default" && (
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setShowSetupDialog(true)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <Settings2 className="w-3.5 h-3.5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-xs rounded-lg">
-                  Set up custom variables
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setShowSetupDialog(true)}
+              className="text-xs h-7 px-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-900 text-white"
+            >
+              Custom Variables
+            </Button>
           )}
 
           {/* Info tooltip */}
@@ -1143,7 +1135,7 @@ export default function ReorderAdNameParts({
           <DropdownMenuContent
             align="start"
             sideOffset={0}
-            className="rounded-xl min-w-[160px]"
+            className="rounded-xl min-w-[160px] bg-white"
             onCloseAutoFocus={(e) => {
               e.preventDefault()
               inputRef.current?.focus()
@@ -1159,7 +1151,7 @@ export default function ReorderAdNameParts({
                   <DropdownMenuSubTrigger className="cursor-pointer rounded-lg">
                     {cat.name}
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="rounded-xl min-w-[140px]">
+                  <DropdownMenuSubContent className="rounded-xl min-w-[140px] bg-white">
                     {/* Option to insert just the category name */}
                     <DropdownMenuItem
                       className="cursor-pointer rounded-lg text-gray-400 text-xs"
