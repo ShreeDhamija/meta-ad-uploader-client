@@ -344,19 +344,22 @@ export default function RecommendationCards({
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             {/* Entity name */}
-                                                            <div className="flex items-center gap-2 min-w-0">
-                                                                <p className="font-medium text-gray-900 text-sm break-words line-clamp-2 min-w-0">
-                                                                    {rec.type === 'scale_winner' ? rec.adName : (rec.adsetName || rec.campaignName)}
-                                                                </p>
-                                                                {rec.type === 'scale_winner' ? (
-                                                                    <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white border-blue-600 flex-shrink-0 whitespace-nowrap">
+                                                            <div className="min-w-0">
+                                                                {rec.type === 'scale_winner' && (
+                                                                    <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white border-blue-600 whitespace-nowrap mb-1">
                                                                         Scale Winner
                                                                     </Badge>
-                                                                ) : (
-                                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-gray-100 text-gray-500 border-gray-200 flex-shrink-0">
-                                                                        {rec.level}
-                                                                    </Badge>
                                                                 )}
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                    <p className="font-medium text-gray-900 text-sm break-words line-clamp-2 min-w-0">
+                                                                        {rec.type === 'scale_winner' ? rec.adName : (rec.adsetName || rec.campaignName)}
+                                                                    </p>
+                                                                    {rec.type !== 'scale_winner' && (
+                                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-gray-100 text-gray-500 border-gray-200 flex-shrink-0">
+                                                                            {rec.level}
+                                                                        </Badge>
+                                                                    )}
+                                                                </div>
                                                             </div>
 
                                                             {/* Message with bolded figures */}

@@ -94,6 +94,8 @@ export default function AnalyticsDashboard() {
 
     const [weeklyInsights, setWeeklyInsights] = useState(null)
     const [weeklyLoading, setWeeklyLoading] = useState(false)
+    const [savingSettings, setSavingSettings] = useState(false)
+
 
 
     const [auditOpen, setAuditOpen] = useState(false)
@@ -395,10 +397,9 @@ export default function AnalyticsDashboard() {
     }
 
     const handleSaveSettings = async () => {
+        setSavingSettings(true)
         const newTargetCPA = tempTargetCPA ? parseFloat(tempTargetCPA) : null
         const newTargetROAS = tempTargetROAS ? parseFloat(tempTargetROAS) : null
-
-        // Map mode back: 'cpr' -> 'cpa' for storage
         const modeForStorage = tempAnalyticsMode === 'roas' ? 'roas' : 'cpa'
 
         try {
@@ -416,31 +417,28 @@ export default function AnalyticsDashboard() {
                 }
             })
 
-            // Update local state after successful save
             setAnomalyThresholds(tempThresholds)
             setTargetCPA(newTargetCPA)
             setTargetROAS(newTargetROAS)
             setSlackAlertsEnabled(tempSlackAlertsEnabled)
             setShowSettingsDialog(false)
 
-            // Apply mode change
             const newMode = tempAnalyticsMode === 'roas' ? 'roas' : 'cpr'
             if (newMode !== metricMode) {
                 handleModeChange(newMode)
             }
 
-            // Invalidate caches
             delete fetchedRef.current[`anomalies-${selectedAdAccount}`]
             delete fetchedRef.current[`recs-${selectedAdAccount}-${metricMode}`]
             delete fetchedRef.current[`daily-${selectedAdAccount}-${chartDays}`]
 
-            // Re-fetch daily insights to reflect new conversion event filter
             fetchDailyInsights(true)
-
             toast.success('Settings saved')
         } catch (err) {
             console.error('[Settings] Save FAILED:', err.message)
             toast.error(`Failed to save settings: ${err.message}`)
+        } finally {
+            setSavingSettings(false)
         }
     }
 
@@ -1070,9 +1068,11 @@ export default function AnalyticsDashboard() {
 
                                 <button
                                     onClick={handleSaveSettings}
-                                    className="rounded-xl bg-white text-blue-600 hover:bg-gray-100 px-6 h-9 text-sm font-medium transition-colors"
+                                    disabled={savingSettings}
+                                    className="rounded-xl bg-white text-blue-600 hover:bg-gray-100 px-6 h-9 text-sm font-medium transition-colors disabled:opacity-70 flex items-center gap-2"
                                 >
-                                    Save Settings
+                                    {savingSettings && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                                    {savingSettings ? 'Saving...' : 'Save Settings'}
                                 </button>
                                 <button
                                     onClick={() => setShowSettingsDialog(false)}
