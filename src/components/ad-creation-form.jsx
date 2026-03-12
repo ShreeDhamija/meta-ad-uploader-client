@@ -5734,7 +5734,7 @@ export default function AdCreationForm({
                             }
                           />
                         </SelectTrigger>
-                        <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
+                        <SelectContent className="bg-white shadow-lg rounded-xl max-h-[450px] p-0 pr-2">
                           {Object.entries(copyTemplates)
                             .sort(([a], [b]) => {
                               if (a === defaultTemplateName) return -1;
