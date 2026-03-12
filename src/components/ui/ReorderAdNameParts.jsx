@@ -594,6 +594,8 @@ export default function ReorderAdNameParts({
   variant = "default",
   customVariables = [],
   onCustomVariablesChange,
+  hideInfoTooltip = false,   // ← add this
+
 }) {
   const [inputValue, setInputValue] = useState(formulaInput)
 
@@ -980,7 +982,7 @@ export default function ReorderAdNameParts({
           <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-sm text-black">
             /
           </span>
-          to see list of variables you can use.
+          to see a list of variables
           {customVariables.length > 0 && (
             <>
               {" "}Type
@@ -990,7 +992,8 @@ export default function ReorderAdNameParts({
               for custom variables.
             </>
           )}
-          {" "}You can also save custom text.
+          <br />
+          You can also save custom text.
         </Label>
 
         <div className="flex items-center gap-1.5">
@@ -1000,58 +1003,61 @@ export default function ReorderAdNameParts({
               type="button"
               size="sm"
               onClick={() => setShowSetupDialog(true)}
-              className="text-xs h-7 px-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-900 text-white"
+              className="text-xs h-7 px-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-900 text-white"
             >
               Custom Variables
             </Button>
           )}
 
           {/* Info tooltip */}
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+          {!hideInfoTooltip && (
+
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <Info className="w-3.5 h-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  align="end"
+                  className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
                 >
-                  <Info className="w-3.5 h-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                align="end"
-                className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
-              >
-                <p className="font-medium mb-1.5">
-                  Select the Custom Date option & replace &apos;custom&apos; with any
-                  combination of the tokens below.
-                </p>
-                <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
-                  <span className="font-semibold">D</span>
-                  <span className="text-gray-400">Day (1–31)</span>
-                  <span className="font-semibold">DD</span>
-                  <span className="text-gray-400">Day, zero-padded (01–31)</span>
-                  <span className="font-semibold">M</span>
-                  <span className="text-gray-400">Month (1–12)</span>
-                  <span className="font-semibold">MM</span>
-                  <span className="text-gray-400">Month, zero-padded (01–12)</span>
-                  <span className="font-semibold">MMM</span>
-                  <span className="text-gray-400">Month name (Jan, Feb…)</span>
-                  <span className="font-semibold">YY</span>
-                  <span className="text-gray-400">Year, 2-digit (25)</span>
-                  <span className="font-semibold">YYYY</span>
-                  <span className="text-gray-400">Year, 4-digit (2025)</span>
-                </div>
-                <p className="text-gray-400 mt-2">
-                  Use any separator:{" "}
-                  <span className="font-mono">/ - . _</span> or space
-                </p>
-                <p className="mt-1.5 text-gray-400 italic">
-                  {"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+                  <p className="font-medium mb-1.5">
+                    Select the Custom Date option & replace &apos;custom&apos; with any
+                    combination of the tokens below.
+                  </p>
+                  <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
+                    <span className="font-semibold">D</span>
+                    <span className="text-gray-400">Day (1–31)</span>
+                    <span className="font-semibold">DD</span>
+                    <span className="text-gray-400">Day, zero-padded (01–31)</span>
+                    <span className="font-semibold">M</span>
+                    <span className="text-gray-400">Month (1–12)</span>
+                    <span className="font-semibold">MM</span>
+                    <span className="text-gray-400">Month, zero-padded (01–12)</span>
+                    <span className="font-semibold">MMM</span>
+                    <span className="text-gray-400">Month name (Jan, Feb…)</span>
+                    <span className="font-semibold">YY</span>
+                    <span className="text-gray-400">Year, 2-digit (25)</span>
+                    <span className="font-semibold">YYYY</span>
+                    <span className="text-gray-400">Year, 4-digit (2025)</span>
+                  </div>
+                  <p className="text-gray-400 mt-2">
+                    Use any separator:{" "}
+                    <span className="font-mono">/ - . _</span> or space
+                  </p>
+                  <p className="mt-1.5 text-gray-400 italic">
+                    {"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       </div>
 
@@ -1233,11 +1239,11 @@ export default function ReorderAdNameParts({
 
       {/* Home variant: category-only warnings */}
       {categoryWarnings.length > 0 && (
-        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
           <p className="text-xs text-amber-700">
             {categoryWarnings.length === 1
-              ? `"${categoryWarnings[0]}" is a category — click on it in the input to pick a specific value. If left unselected, it will be empty in the ad name.`
+              ? `click on "${categoryWarnings[0]}" in the input to pick a specific value. If left unselected, it will be empty in the ad name.`
               : `${categoryWarnings.map(w => `"${w}"`).join(", ")} are categories — click on them in the input to pick specific values. If left unselected, they will be empty in the ad name.`
             }
           </p>

@@ -5,7 +5,8 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ChevronsUpDown, Loader, CirclePlus } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ChevronsUpDown, Loader, CirclePlus, Info } from "lucide-react"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
 import PageSelectors from "./PageSelectors"
@@ -601,9 +602,37 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               <h3 className="font-medium text-[14px] text-zinc-950">
                 Set up your default ad naming conventions
               </h3>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    align="end"
+                    className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
+                  >
+                    <p className="font-medium mb-1.5">Select the Custom Date option & replace 'custom' with any combination of the tokens below.</p>
+                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
+                      <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
+                      <span className="font-semibold">DD</span><span className="text-gray-400">Day, zero-padded (01–31)</span>
+                      <span className="font-semibold">M</span><span className="text-gray-400">Month (1–12)</span>
+                      <span className="font-semibold">MM</span><span className="text-gray-400">Month, zero-padded (01–12)</span>
+                      <span className="font-semibold">MMM</span><span className="text-gray-400">Month name (Jan, Feb…)</span>
+                      <span className="font-semibold">YY</span><span className="text-gray-400">Year, 2-digit (25)</span>
+                      <span className="font-semibold">YYYY</span><span className="text-gray-400">Year, 4-digit (2025)</span>
+                    </div>
+                    <p className="text-gray-400 mt-2">Use any separator: <span className="font-mono">/ - . _</span> or space</p>
+                    <p className="mt-1.5 text-gray-400 italic">{"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
-
-
 
             <ReorderAdNameParts
               formulaInput={adNameFormulaV2?.rawInput || ""}
@@ -611,6 +640,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               variant="default"
               customVariables={customVariables}
               onCustomVariablesChange={setCustomVariables}
+              hideInfoTooltip
             />
           </div>
 
