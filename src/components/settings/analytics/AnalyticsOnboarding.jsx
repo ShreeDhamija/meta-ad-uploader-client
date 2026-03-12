@@ -186,6 +186,8 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
             <DialogOverlay className="bg-black/50" />
             <DialogContent
                 className="sm:max-w-[560px] !rounded-[30px] !p-0 flex flex-col max-h-[90vh] overflow-hidden !gap-0"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+
             >
                 {/* Scrollable area: header + cards */}
                 <div className="p-8 pb-4 space-y-5 flex-1 overflow-y-auto min-h-0">
@@ -330,18 +332,10 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
 
                 {/* Change 3: sticky blue bottom bar */}
                 <div className="flex-shrink-0 bg-blue-600 px-8 py-2.5 flex items-center justify-center gap-6 rounded-b-[30px]">
-
-                    <button
-                        onClick={onComplete}
-                        disabled={saving}
-                        className="text-white text-sm font-medium hover:underline disabled:opacity-50"
-                    >
-                        Skip For Now
-                    </button>
                     <Button
                         onClick={handleSave}
                         disabled={saving}
-                        className="rounded-lg bg-white text-blue-600 hover:bg-gray-100 px-6 h-9 font-medium"
+                        className="rounded-xl bg-white text-blue-600 hover:bg-gray-100 px-6 h-9 font-medium"
 
                     >
                         {saving ? (
@@ -350,9 +344,17 @@ export default function AnalyticsOnboarding({ open, onComplete, adAccounts }) {
                                 Saving...
                             </>
                         ) : (
-                            'Save Changes'
+                            'Save Preferences'
                         )}
                     </Button>
+                    <button
+                        onClick={onComplete}
+                        disabled={saving}
+                        className="text-white text-sm font-medium hover:underline disabled:opacity-50"
+                    >
+                        Skip For Now
+                    </button>
+
                 </div>
             </DialogContent>
         </Dialog>

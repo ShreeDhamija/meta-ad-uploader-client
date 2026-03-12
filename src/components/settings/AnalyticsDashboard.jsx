@@ -16,6 +16,7 @@ import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import { saveSettings } from "@/lib/saveSettings"
 import { cn } from "@/lib/utils"
+import { Switch } from "@/components/ui/switch"
 
 import KPIChart from "./analytics/KPIChart"
 import WeeklyChart from "./analytics/WeeklyChart"
@@ -581,7 +582,7 @@ export default function AnalyticsDashboard() {
                                                     setShowAggregateDialog(true)
                                                     setOpenAdAccount(false)
                                                 }}
-                                                className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-2"
+                                                className="mx-3 my-2 px-4 py-2.5 cursor-pointer rounded-xl bg-gray-50 border border-gray-200 transition-colors duration-150 hover:bg-blue-50 hover:border-blue-200 flex items-center gap-2 font-medium text-gray-700"
                                             >
                                                 <BarChart3 className="w-4 h-4 text-gray-500" />
                                                 Aggregate View
@@ -796,6 +797,7 @@ export default function AnalyticsDashboard() {
                 <>
                     <div
                         className="fixed inset-0 bg-black/50 z-50"
+                        style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
                         onClick={() => setShowSettingsDialog(false)}
                     />
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -843,27 +845,17 @@ export default function AnalyticsDashboard() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className={cn("text-xs font-medium", tempAnalyticsMode === 'cpa' ? "text-green-600" : "text-gray-400")}>CPA</span>
-                                                <button
-                                                    type="button"
-                                                    role="switch"
-                                                    aria-checked={tempAnalyticsMode === 'roas'}
-                                                    onClick={() => {
-                                                        const next = tempAnalyticsMode === 'roas' ? 'cpa' : 'roas'
+                                                <Switch
+                                                    checked={tempAnalyticsMode === 'roas'}
+                                                    onCheckedChange={(checked) => {
+                                                        const next = checked ? 'roas' : 'cpa'
                                                         setTempAnalyticsMode(next)
                                                         if (next === 'cpa' && selectedAdAccount) {
                                                             fetchConversionEvents(selectedAdAccount)
                                                         }
                                                     }}
-                                                    className={cn(
-                                                        "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                                                        tempAnalyticsMode === 'roas' ? "bg-blue-600" : "bg-gray-300"
-                                                    )}
-                                                >
-                                                    <span className={cn(
-                                                        "inline-block h-4 w-4 rounded-full bg-white transition-transform",
-                                                        tempAnalyticsMode === 'roas' ? "translate-x-6" : "translate-x-1"
-                                                    )} />
-                                                </button>
+                                                    className="data-[state=unchecked]:bg-green-500"
+                                                />
                                                 <span className={cn("text-xs font-medium", tempAnalyticsMode === 'roas' ? "text-blue-600" : "text-gray-400")}>ROAS</span>
                                             </div>
                                         </div>
@@ -1060,21 +1052,10 @@ export default function AnalyticsDashboard() {
                                                             Get notified when CPA spikes or overspend is detected
                                                         </p>
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        role="switch"
-                                                        aria-checked={tempSlackAlertsEnabled}
-                                                        onClick={() => setTempSlackAlertsEnabled(prev => !prev)}
-                                                        className={cn(
-                                                            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-                                                            tempSlackAlertsEnabled ? "bg-blue-600" : "bg-gray-300"
-                                                        )}
-                                                    >
-                                                        <span className={cn(
-                                                            "inline-block h-4 w-4 rounded-full bg-white transition-transform",
-                                                            tempSlackAlertsEnabled ? "translate-x-6" : "translate-x-1"
-                                                        )} />
-                                                    </button>
+                                                    <Switch
+                                                        checked={tempSlackAlertsEnabled}
+                                                        onCheckedChange={setTempSlackAlertsEnabled}
+                                                    />
                                                 </div>
                                             </>
                                         )}
