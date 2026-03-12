@@ -84,9 +84,12 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   // const [copyTemplates, setCopyTemplates] = useState({})
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" }) // Add this line
+  const [customVariables, setCustomVariables] = useState([])
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
   const [isReauthOpen, setIsReauthOpen] = useState(false)
+
+
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
   // Add a ref to track template-only updates
   const skipFormResetRef = useRef(false);
@@ -148,7 +151,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
       adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput ||
-      multiAdvertiserAds !== initialSettings.multiAdvertiserAds  // ADD THIS LINE
+      multiAdvertiserAds !== initialSettings.multiAdvertiserAds,
+      JSON.stringify(customVariables) !== JSON.stringify(initialSettings.customVariables)
 
 
 
@@ -185,7 +189,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       defaultUTMs: utms,
       creativeEnhancements: adSettings.creativeEnhancements || DEFAULT_ENHANCEMENTS,
       adNameFormulaV2: adSettings.adNameFormulaV2 || { rawInput: "" },
-      multiAdvertiserAds: adSettings.multiAdvertiserAds || false  // ADD THIS
+      multiAdvertiserAds: adSettings.multiAdvertiserAds || false,
+      customVariables: adSettings.customVariables || [],
 
     };
   }, []);
@@ -205,6 +210,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       setEnhancements(DEFAULT_ENHANCEMENTS);
       setAdNameFormulaV2({ rawInput: "" });
       setMultiAdvertiserAds(false);
+      setCustomVariables([]);  // ← ADD THIS
       setInitialSettings({});
     }
 
@@ -233,6 +239,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setEnhancements(initialSettings.creativeEnhancements);
     setAdNameFormulaV2(initialSettings.adNameFormulaV2);
     setMultiAdvertiserAds(initialSettings.multiAdvertiserAds);
+    setCustomVariables(initialSettings.customVariables);
 
     // Clear the cached draft
     localStorage.removeItem(DRAFT_CACHE_KEY);
@@ -258,7 +265,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       adNameFormulaV2: {
         rawInput: adNameFormulaV2?.rawInput || ""
       },
-      multiAdvertiserAds: multiAdvertiserAds  // ADD THIS
+      multiAdvertiserAds: multiAdvertiserAds,
+      customVariables: customVariables,
 
     };
 
@@ -289,7 +297,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         defaultUTMs: utmPairs, // <--- Direct state reference
         creativeEnhancements: enhancements,
         adNameFormulaV2: adNameFormulaV2,
-        multiAdvertiserAds: multiAdvertiserAds  // ADD THIS
+        multiAdvertiserAds: multiAdvertiserAds,
+        customVariables: customVariables,
 
       };
 
@@ -314,7 +323,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     enhancements,
     adNameFormulaV2,
     multiAdvertiserAds,
-    isFirstEverSave
+    isFirstEverSave,
+    customVariables
   ]);
 
 
@@ -345,6 +355,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         enhancements,
         adNameFormulaV2,
         multiAdvertiserAds,
+        customVariables,        // ← ADD THIS
         timestamp: Date.now()
       };
 
@@ -363,9 +374,10 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         // Ignore parse errors
       }
     }
-  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds]);
+  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, customVariables]);
 
-  // Effect for loading initial settings (with cache restoration)
+
+
   // Effect for loading initial settings (with cache restoration)
   useEffect(() => {
     if (!selectedAdAccount || !adSettings) return;
@@ -404,6 +416,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           setEnhancements(draft.enhancements);
           setAdNameFormulaV2(draft.adNameFormulaV2);
           setMultiAdvertiserAds(draft.multiAdvertiserAds);
+          setCustomVariables(draft.customVariables || []);  // ← ADD THIS
           setInitialSettings(initial);
           cacheRestoredRef.current = true;
           return;
@@ -423,6 +436,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setAdNameFormulaV2(initial.adNameFormulaV2);
     setInitialSettings(initial);
     setMultiAdvertiserAds(initial.multiAdvertiserAds);
+    setCustomVariables(initial.customVariables || []);  // ← ADD THIS
+
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
 
 
@@ -594,6 +609,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               formulaInput={adNameFormulaV2?.rawInput || ""}
               onFormulaChange={handleFormulaInputChange}
               variant="default"
+              customVariables={customVariables}
+              onCustomVariablesChange={setCustomVariables}
             />
           </div>
 

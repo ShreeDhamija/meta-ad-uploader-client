@@ -67,6 +67,7 @@ export default function useAdAccountSettings(adAccountId) {
                         analyticsMode: null,
                         conversionEvent: null,
                         multiAdvertiserAds: false,
+                        customVariables: [],
                     });
                 } else {
                     setDocumentExists(true);
@@ -103,7 +104,8 @@ export default function useAdAccountSettings(adAccountId) {
                         slackAlertsEnabled: s.slackAlertsEnabled || false,
                         analyticsMode: s.analyticsMode || null,
                         conversionEvent: s.conversionEvent || null,
-                        multiAdvertiserAds: s.multiAdvertiserAds ?? false
+                        multiAdvertiserAds: s.multiAdvertiserAds ?? false,
+                        customVariables: Array.isArray(s.customVariables) ? s.customVariables : [],
 
                     });
                 }
