@@ -329,6 +329,32 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   ]);
 
 
+  const handleCustomVariablesSave = useCallback(async (newVariables) => {
+    setCustomVariables(newVariables);
+
+    if (!selectedAdAccount) return;
+
+    try {
+      await saveSettings({
+        adAccountId: selectedAdAccount,
+        adAccountSettings: {
+          customVariables: newVariables,
+        },
+        merge: true,  // see note below
+      });
+      toast.success("Custom variables saved!");
+
+      // Update initialSettings so hasChanges doesn't flag this as dirty
+      setInitialSettings(prev => ({
+        ...prev,
+        customVariables: newVariables,
+      }));
+    } catch (err) {
+      toast.error("Failed to save custom variables: " + err.message);
+    }
+  }, [selectedAdAccount]);
+
+
 
 
   // Effect for dirty state tracking
@@ -639,7 +665,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               onFormulaChange={handleFormulaInputChange}
               variant="default"
               customVariables={customVariables}
-              onCustomVariablesChange={setCustomVariables}
+              onCustomVariablesChange={handleCustomVariablesSave}
               hideInfoTooltip
             />
           </div>

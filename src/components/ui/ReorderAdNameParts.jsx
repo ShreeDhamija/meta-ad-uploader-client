@@ -565,17 +565,17 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
           </Button>
         </div>
 
-        <DialogFooter className="pt-2 border-t">
+        <DialogFooter className="pt-2 flex gap-3">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="rounded-xl"
+            className="rounded-xl flex-1"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
-            className="rounded-xl bg-blue-500 hover:bg-blue-600 text-white"
+            className="rounded-xl flex-1 bg-blue-500 hover:bg-blue-600 text-white"
             disabled={!hasValidCategories}
           >
             Save Variables
@@ -1000,10 +1000,10 @@ export default function ReorderAdNameParts({
           {/* Setup custom variables button — settings variant only */}
           {variant === "default" && (
             <Button
-              type="button"
+              variant="outline"
               size="sm"
+              className="rounded-xl px-3 whitespace-nowrap"
               onClick={() => setShowSetupDialog(true)}
-              className="text-xs h-7 px-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-900 text-white"
             >
               Custom Variables
             </Button>
