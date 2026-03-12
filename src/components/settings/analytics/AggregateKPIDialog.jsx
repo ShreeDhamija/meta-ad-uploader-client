@@ -124,7 +124,7 @@ export default function AggregateKPIDialog({ open, onOpenChange, adAccounts }) {
             <DialogContent className="sm:max-w-[960px] !rounded-[30px] p-8 space-y-5 max-h-[95vh] overflow-y-auto">
                 <DialogHeader className="space-y-1">
                     <div className="flex items-center gap-4">
-                        <DialogTitle className="text-sm font-semibold text-gray-400">
+                        <DialogTitle className="text-sm font-medium text-gray-600">
                             Account Overview — Last {days} Days
                         </DialogTitle>
                         <div className="flex p-0.5 bg-gray-100 rounded-lg border border-gray-200/60">
