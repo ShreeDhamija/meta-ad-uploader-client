@@ -152,12 +152,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
       adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput ||
-      multiAdvertiserAds !== initialSettings.multiAdvertiserAds,
-      JSON.stringify(customVariables) !== JSON.stringify(initialSettings.customVariables)
-
-
-
-
+      multiAdvertiserAds !== initialSettings.multiAdvertiserAds
     );
   }, [
     selectedPage,
@@ -170,7 +165,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     initialSettings,
     multiAdvertiserAds,  // ADD THIS
     selectedAdAccount,
-    areUtmPairsEqual
+    areUtmPairsEqual,
+
+
   ]);
 
   // Memoized initial settings calculation
