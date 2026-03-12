@@ -2365,6 +2365,13 @@ export default function AdCreationForm({
       .replace(/\{\{Iteration\}\}/g, String(iterationIndex + 1).padStart(2, "0"))
       .replace(/\{\{URL Slug\}\}/g, urlSlug)
       .replace(/\{\{Ad Type\}\}/g, adTypeLabel);
+    adName = adName.replace(/\{\{([^:}]+):([^}]+)\}\}/g, (match, category, value) => value);
+    adName = adName.replace(/\{\{([^}]+)\}\}/g, (match, content) => {
+      // Don't touch built-in variables that weren't already replaced
+      // (shouldn't happen, but safety check)
+      return "";
+    });
+
 
     return adName.trim() || "Ad Generated Through Blip";
   }, [adNameFormulaV2]);

@@ -352,6 +352,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Command, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -360,7 +371,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Info, Plus, X, ChevronRight, Settings2, AlertTriangle } from "lucide-react"
+import { Info, Plus, X, Settings2, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -376,9 +387,6 @@ const AVAILABLE_VARIABLES = [
   { id: 'adType', label: 'Ad Type', note: 'CAR/FLEX' },
 ]
 
-let _cvId = 0
-const generateCvId = () => `cv_${Date.now()}_${++_cvId}`
-
 // ─── Custom Variables Setup Dialog ───────────────────────────────────────────
 
 function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
@@ -390,61 +398,59 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
   useEffect(() => {
     if (open) {
       const copy = variables.length > 0
-        ? variables.map(v => ({ ...v, values: [...v.values] }))
-        : [{ id: generateCvId(), name: "", values: [] }]
+        ? variables.map((v, i) => ({ ...v, values: [...v.values], _editKey: i }))
+        : [{ name: "", values: [], _editKey: 0 }]
       setEditing(copy)
       setNewValueInputs({})
     }
   }, [open, variables])
 
   const addCategory = useCallback(() => {
-    const newId = generateCvId()
-    setEditing(prev => [...prev, { id: newId, name: "", values: [] }])
-    // Focus the new name input after render
+    const newKey = Date.now()
+    setEditing(prev => [...prev, { name: "", values: [], _editKey: newKey }])
     setTimeout(() => {
-      nameInputRefs.current[newId]?.focus()
+      nameInputRefs.current[newKey]?.focus()
     }, 50)
   }, [])
 
-  const removeCategory = useCallback((id) => {
-    setEditing(prev => prev.filter(c => c.id !== id))
+  const removeCategory = useCallback((editKey) => {
+    setEditing(prev => prev.filter(c => c._editKey !== editKey))
   }, [])
 
-  const updateCategoryName = useCallback((id, name) => {
-    setEditing(prev => prev.map(c => c.id === id ? { ...c, name } : c))
+  const updateCategoryName = useCallback((editKey, name) => {
+    setEditing(prev => prev.map(c => c._editKey === editKey ? { ...c, name } : c))
   }, [])
 
-  const addValue = useCallback((categoryId) => {
-    const val = (newValueInputs[categoryId] || "").trim()
+  const addValue = useCallback((editKey) => {
+    const val = (newValueInputs[editKey] || "").trim()
     if (!val) return
 
     setEditing(prev => prev.map(c => {
-      if (c.id !== categoryId) return c
-      if (c.values.includes(val)) return c // no duplicates
+      if (c._editKey !== editKey) return c
+      if (c.values.includes(val)) return c
       return { ...c, values: [...c.values, val] }
     }))
-    setNewValueInputs(prev => ({ ...prev, [categoryId]: "" }))
+    setNewValueInputs(prev => ({ ...prev, [editKey]: "" }))
   }, [newValueInputs])
 
-  const removeValue = useCallback((categoryId, valueIndex) => {
+  const removeValue = useCallback((editKey, valueIndex) => {
     setEditing(prev => prev.map(c => {
-      if (c.id !== categoryId) return c
+      if (c._editKey !== editKey) return c
       return { ...c, values: c.values.filter((_, i) => i !== valueIndex) }
     }))
   }, [])
 
-  const handleValueKeyDown = useCallback((e, categoryId) => {
+  const handleValueKeyDown = useCallback((e, editKey) => {
     if (e.key === "Enter") {
       e.preventDefault()
-      addValue(categoryId)
+      addValue(editKey)
     }
   }, [addValue])
 
   const handleSave = useCallback(() => {
-    // Filter out categories with empty names
     const cleaned = editing
       .filter(c => c.name.trim().length > 0)
-      .map(c => ({ ...c, name: c.name.trim() }))
+      .map(c => ({ name: c.name.trim(), values: c.values }))
     onSave(cleaned)
     onOpenChange(false)
   }, [editing, onSave, onOpenChange])
@@ -459,48 +465,46 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
             Set Up Custom Variables
           </DialogTitle>
           <DialogDescription className="text-sm text-gray-500">
-            Create variable categories with values you can use in your ad naming formula.
+            Create variable categories with values you can use in your ad naming formula. Type{" "}
+            <span className="inline-block mx-0.5 px-1 py-0.5 bg-gray-100 border border-gray-200 rounded text-black text-xs font-mono">@</span>{" "}
+            in the formula input to use them.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-2 pr-1 custom-scrollbar">
-          {editing.map((category, catIndex) => (
+          {editing.map((category) => (
             <div
-              key={category.id}
+              key={category._editKey}
               className="bg-gray-50 rounded-xl p-4 space-y-3 relative group"
             >
-              {/* Remove category button */}
               {editing.length > 1 && (
                 <button
                   type="button"
-                  onClick={() => removeCategory(category.id)}
+                  onClick={() => removeCategory(category._editKey)}
                   className="absolute top-3 right-3 text-gray-300 hover:text-red-400 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
 
-              {/* Category name */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-500">
                   Variable Name
                 </Label>
                 <Input
-                  ref={(el) => { nameInputRefs.current[category.id] = el }}
+                  ref={(el) => { nameInputRefs.current[category._editKey] = el }}
                   value={category.name}
-                  onChange={(e) => updateCategoryName(category.id, e.target.value)}
+                  onChange={(e) => updateCategoryName(category._editKey, e.target.value)}
                   placeholder="e.g. Category, URL Type, Region..."
                   className="bg-white rounded-lg h-9 text-sm"
                 />
               </div>
 
-              {/* Values */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-gray-500">
                   Values
                 </Label>
 
-                {/* Existing value tags */}
                 {category.values.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {category.values.map((val, vi) => (
@@ -511,7 +515,7 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
                         {val}
                         <button
                           type="button"
-                          onClick={() => removeValue(category.id, vi)}
+                          onClick={() => removeValue(category._editKey, vi)}
                           className="text-gray-300 hover:text-red-400 transition-colors"
                         >
                           <X className="w-3 h-3" />
@@ -521,17 +525,16 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
                   </div>
                 )}
 
-                {/* Add value input */}
                 <div className="flex items-center gap-2">
                   <Input
-                    value={newValueInputs[category.id] || ""}
+                    value={newValueInputs[category._editKey] || ""}
                     onChange={(e) =>
                       setNewValueInputs(prev => ({
                         ...prev,
-                        [category.id]: e.target.value,
+                        [category._editKey]: e.target.value,
                       }))
                     }
-                    onKeyDown={(e) => handleValueKeyDown(e, category.id)}
+                    onKeyDown={(e) => handleValueKeyDown(e, category._editKey)}
                     placeholder="Type a value and press Enter"
                     className="bg-white rounded-lg h-9 text-sm flex-1"
                   />
@@ -539,9 +542,9 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => addValue(category.id)}
+                    onClick={() => addValue(category._editKey)}
                     className="h-9 w-9 p-0 rounded-lg shrink-0"
-                    disabled={!(newValueInputs[category.id] || "").trim()}
+                    disabled={!(newValueInputs[category._editKey] || "").trim()}
                   >
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -550,7 +553,6 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
             </div>
           ))}
 
-          {/* Add category button */}
           <Button
             type="button"
             variant="ghost"
@@ -595,18 +597,17 @@ export default function ReorderAdNameParts({
 }) {
   const [inputValue, setInputValue] = useState(formulaInput)
 
-  // Slash (/) dropdown state — existing built-in variables
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+  // Slash (/) dropdown — built-in variables
+  const [showSlashDropdown, setShowSlashDropdown] = useState(false)
+  const [slashDropdownPos, setSlashDropdownPos] = useState({ top: 0, left: 0 })
 
-  // At (@) dropdown state — custom variables nested picker
+  // At (@) dropdown — custom variables via shadcn DropdownMenu
   const [showAtDropdown, setShowAtDropdown] = useState(false)
-  const [atDropdownPosition, setAtDropdownPosition] = useState({ top: 0, left: 0 })
-  const [hoveredCategory, setHoveredCategory] = useState(null)
+  const [atDropdownPos, setAtDropdownPos] = useState({ top: 0, left: 0 })
 
-  // Inline category value dropdown (when cursor is inside {{CategoryName}})
+  // Inline category value dropdown (cursor inside {{CategoryName}})
   const [inlineDropdown, setInlineDropdown] = useState(null)
-  // Shape: { category: {id, name, values}, startIndex, endIndex, position: {top, left} }
+  // Shape: { category: {name, values}, startIndex, endIndex, position }
 
   // Setup dialog
   const [showSetupDialog, setShowSetupDialog] = useState(false)
@@ -615,8 +616,7 @@ export default function ReorderAdNameParts({
   const [dateFormatError, setDateFormatError] = useState("")
 
   const inputRef = useRef(null)
-  const dropdownRef = useRef(null)
-  const atDropdownRef = useRef(null)
+  const slashDropdownRef = useRef(null)
   const inlineDropdownRef = useRef(null)
   const commandInputRef = useRef(null)
 
@@ -625,19 +625,18 @@ export default function ReorderAdNameParts({
     setInputValue(formulaInput)
   }, [formulaInput])
 
-  // ── Derived: warnings for home variant ──
+  // ── Warning detection for home variant ──
+  // Finds any {{CategoryName}} tokens (no colon) that match a custom variable
+  // category — these need a specific value selected before ad creation.
 
   const categoryWarnings = useMemo(() => {
     if (variant !== "home" || !customVariables.length) return []
 
     const warnings = []
-    // Match {{SomeText}} that does NOT contain a colon (category-only references)
     const regex = /\{\{([^:}]+)\}\}/g
     let match
     while ((match = regex.exec(inputValue)) !== null) {
       const content = match[1].trim()
-      // Only warn if it matches a known custom variable category name
-      // and is NOT a built-in variable
       const isBuiltIn = AVAILABLE_VARIABLES.some(
         v => v.label === content || content.startsWith("Date(")
       )
@@ -681,20 +680,15 @@ export default function ReorderAdNameParts({
       const fmt = match[1].toUpperCase()
       if (fmt === "CUSTOM" || "CUSTOM".startsWith(fmt)) continue
       const stripped = fmt
-        .replace(/YYYY/g, "")
-        .replace(/YY/g, "")
-        .replace(/MMM/g, "")
-        .replace(/MM/g, "")
-        .replace(/DD/g, "")
-        .replace(/D/g, "")
-        .replace(/M/g, "")
+        .replace(/YYYY/g, "").replace(/YY/g, "")
+        .replace(/MMM/g, "").replace(/MM/g, "")
+        .replace(/DD/g, "").replace(/D/g, "").replace(/M/g, "")
       const remaining = stripped.replace(/[\s/\-._]/g, "")
       if (remaining.length > 0) {
         setDateFormatError(`Invalid date token "${remaining}"`)
         return
       }
-      const hasToken = /YYYY|YY|MMM|MM|M|DD|D/.test(fmt)
-      if (!hasToken) {
+      if (!/YYYY|YY|MMM|MM|M|DD|D/.test(fmt)) {
         setDateFormatError(`Date format "${fmt}" has no date tokens`)
         return
       }
@@ -709,6 +703,9 @@ export default function ReorderAdNameParts({
   }, [onFormulaChange, validateDateFormats])
 
   // ── Detect cursor inside a category-only {{CategoryName}} ──
+  // Returns dropdown config if cursor is inside a {{CategoryName}} block,
+  // or null otherwise. This is how clicking inside a category-only variable
+  // in the input triggers a value picker.
 
   const detectInlineCategory = useCallback((cursorPos) => {
     if (!customVariables.length) return null
@@ -729,7 +726,7 @@ export default function ReorderAdNameParts({
 
     const content = inputValue.substring(lastOpen + 2, cursorPos + closeAfter).trim()
 
-    // Must be a category-only reference (no colon) matching a known category
+    // Must be category-only (no colon) and match a known custom variable
     if (content.includes(":")) return null
 
     const matchingCat = customVariables.find(c => c.name === content)
@@ -746,8 +743,7 @@ export default function ReorderAdNameParts({
   }, [inputValue, customVariables, getCursorPosition])
 
   const handleCursorCheck = useCallback(() => {
-    // Don't show inline dropdown if @ dropdown or / dropdown is open
-    if (showDropdown || showAtDropdown) {
+    if (showSlashDropdown || showAtDropdown) {
       setInlineDropdown(null)
       return
     }
@@ -756,7 +752,7 @@ export default function ReorderAdNameParts({
     const cursorPos = input.selectionStart
     const result = detectInlineCategory(cursorPos)
     setInlineDropdown(result)
-  }, [detectInlineCategory, showDropdown, showAtDropdown])
+  }, [detectInlineCategory, showSlashDropdown, showAtDropdown])
 
   // ── Input change handler ──
 
@@ -765,11 +761,8 @@ export default function ReorderAdNameParts({
     const cursorPosition = e.target.selectionStart
 
     emitChange(newValue)
-
-    // Close inline dropdown on typing
     setInlineDropdown(null)
 
-    // Check if cursor is inside a {{ }} block
     const textBefore = newValue.substring(0, cursorPosition)
     const lastOpen = textBefore.lastIndexOf("{{")
     const lastClose = textBefore.lastIndexOf("}}")
@@ -780,8 +773,8 @@ export default function ReorderAdNameParts({
     // "/" trigger for built-in variables (only outside variable blocks)
     if (charTyped === "/" && !insideVariable) {
       const position = getCursorPosition(e.target, cursorPosition)
-      setDropdownPosition(position)
-      setShowDropdown(true)
+      setSlashDropdownPos(position)
+      setShowSlashDropdown(true)
       setShowAtDropdown(false)
       setTimeout(() => commandInputRef.current?.focus(), 0)
       return
@@ -790,49 +783,43 @@ export default function ReorderAdNameParts({
     // "@" trigger for custom variables (only outside variable blocks)
     if (charTyped === "@" && !insideVariable && customVariables.length > 0) {
       const position = getCursorPosition(e.target, cursorPosition)
-      setAtDropdownPosition(position)
+      setAtDropdownPos(position)
       setShowAtDropdown(true)
-      setShowDropdown(false)
-      setHoveredCategory(customVariables[0]?.id || null)
+      setShowSlashDropdown(false)
       return
     }
 
-    // Close dropdowns otherwise
-    setShowDropdown(false)
+    setShowSlashDropdown(false)
     setShowAtDropdown(false)
   }, [getCursorPosition, emitChange, customVariables])
 
   // ── Keyboard handler ──
 
   const handleKeyDown = useCallback((e) => {
-    if (showDropdown) {
+    if (showSlashDropdown) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         e.preventDefault()
         return
       }
       if (e.key === "Escape") {
         e.preventDefault()
-        setShowDropdown(false)
+        setShowSlashDropdown(false)
         setTimeout(() => inputRef.current?.focus(), 0)
         return
       }
     }
 
-    if (showAtDropdown) {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        setShowAtDropdown(false)
-        setTimeout(() => inputRef.current?.focus(), 0)
-        return
-      }
+    if (showAtDropdown && e.key === "Escape") {
+      e.preventDefault()
+      setShowAtDropdown(false)
+      setTimeout(() => inputRef.current?.focus(), 0)
+      return
     }
 
-    if (inlineDropdown) {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        setInlineDropdown(null)
-        return
-      }
+    if (inlineDropdown && e.key === "Escape") {
+      e.preventDefault()
+      setInlineDropdown(null)
+      return
     }
 
     // Backspace/Delete: remove whole variable block
@@ -855,7 +842,7 @@ export default function ReorderAdNameParts({
         }
       }
     }
-  }, [inputValue, showDropdown, showAtDropdown, inlineDropdown, emitChange])
+  }, [inputValue, showSlashDropdown, showAtDropdown, inlineDropdown, emitChange])
 
   // ── Built-in variable select (/ dropdown) ──
 
@@ -873,14 +860,10 @@ export default function ReorderAdNameParts({
 
       const variableText = (() => {
         switch (variable.id) {
-          case "dateDefault":
-            return "{{Date(DD/MM/YYYY)}}"
-          case "dateMonthName":
-            return "{{Date(DD-MMM-YYYY)}}"
-          case "dateCustom":
-            return "{{Date(custom)}}"
-          default:
-            return `{{${variable.label}}}`
+          case "dateDefault": return "{{Date(DD/MM/YYYY)}}"
+          case "dateMonthName": return "{{Date(DD-MMM-YYYY)}}"
+          case "dateCustom": return "{{Date(custom)}}"
+          default: return `{{${variable.label}}}`
         }
       })()
 
@@ -894,12 +877,12 @@ export default function ReorderAdNameParts({
       }, 0)
     }
 
-    setShowDropdown(false)
+    setShowSlashDropdown(false)
   }, [inputValue, emitChange])
 
-  // ── Custom variable select (@ dropdown) ──
+  // ── Custom variable helpers for @ dropdown ──
 
-  const handleCustomCategorySelect = useCallback((category) => {
+  const insertAtVariable = useCallback((variableText) => {
     const input = inputRef.current
     if (!input) return
 
@@ -907,52 +890,29 @@ export default function ReorderAdNameParts({
     const textBeforeCursor = inputValue.substring(0, cursorPosition)
     const lastAtIndex = textBeforeCursor.lastIndexOf("@")
 
-    if (lastAtIndex !== -1) {
-      const beforeAt = inputValue.substring(0, lastAtIndex)
-      const afterCursor = inputValue.substring(cursorPosition)
-      const variableText = `{{${category.name}}}`
-      const newValue = beforeAt + variableText + afterCursor
-      emitChange(newValue)
+    if (lastAtIndex === -1) return
 
-      setTimeout(() => {
-        const newCursorPos = lastAtIndex + variableText.length
-        input.setSelectionRange(newCursorPos, newCursorPos)
-        input.focus()
-      }, 0)
-    }
+    const beforeAt = inputValue.substring(0, lastAtIndex)
+    const afterCursor = inputValue.substring(cursorPosition)
+    const newValue = beforeAt + variableText + afterCursor
+    emitChange(newValue)
+
+    setTimeout(() => {
+      const newCursorPos = lastAtIndex + variableText.length
+      input.setSelectionRange(newCursorPos, newCursorPos)
+      input.focus()
+    }, 0)
 
     setShowAtDropdown(false)
-    setHoveredCategory(null)
   }, [inputValue, emitChange])
 
-  const handleCustomValueSelect = useCallback((categoryId, value) => {
-    const input = inputRef.current
-    if (!input) return
+  const handleCustomCategorySelect = useCallback((categoryName) => {
+    insertAtVariable(`{{${categoryName}}}`)
+  }, [insertAtVariable])
 
-    const category = customVariables.find(c => c.id === categoryId)
-    if (!category) return
-
-    const cursorPosition = input.selectionStart
-    const textBeforeCursor = inputValue.substring(0, cursorPosition)
-    const lastAtIndex = textBeforeCursor.lastIndexOf("@")
-
-    if (lastAtIndex !== -1) {
-      const beforeAt = inputValue.substring(0, lastAtIndex)
-      const afterCursor = inputValue.substring(cursorPosition)
-      const variableText = `{{${category.name}:${value}}}`
-      const newValue = beforeAt + variableText + afterCursor
-      emitChange(newValue)
-
-      setTimeout(() => {
-        const newCursorPos = lastAtIndex + variableText.length
-        input.setSelectionRange(newCursorPos, newCursorPos)
-        input.focus()
-      }, 0)
-    }
-
-    setShowAtDropdown(false)
-    setHoveredCategory(null)
-  }, [inputValue, customVariables, emitChange])
+  const handleCustomValueSelect = useCallback((categoryName, value) => {
+    insertAtVariable(`{{${categoryName}:${value}}}`)
+  }, [insertAtVariable])
 
   // ── Inline category value select (clicking inside {{CategoryName}}) ──
 
@@ -967,7 +927,6 @@ export default function ReorderAdNameParts({
     const variableText = `{{${category.name}:${value}}}`
     const newValue = before + variableText + after
     emitChange(newValue)
-
     setInlineDropdown(null)
 
     setTimeout(() => {
@@ -989,24 +948,14 @@ export default function ReorderAdNameParts({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // / dropdown
       if (
-        showDropdown &&
+        showSlashDropdown &&
         inputRef.current && !inputRef.current.contains(event.target) &&
-        dropdownRef.current && !dropdownRef.current.contains(event.target)
+        slashDropdownRef.current && !slashDropdownRef.current.contains(event.target)
       ) {
-        setShowDropdown(false)
+        setShowSlashDropdown(false)
       }
-      // @ dropdown
-      if (
-        showAtDropdown &&
-        inputRef.current && !inputRef.current.contains(event.target) &&
-        atDropdownRef.current && !atDropdownRef.current.contains(event.target)
-      ) {
-        setShowAtDropdown(false)
-        setHoveredCategory(null)
-      }
-      // inline dropdown
+      // @ dropdown is handled by DropdownMenu's own onOpenChange
       if (
         inlineDropdown &&
         inputRef.current && !inputRef.current.contains(event.target) &&
@@ -1018,7 +967,7 @@ export default function ReorderAdNameParts({
 
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [showDropdown, showAtDropdown, inlineDropdown])
+  }, [showSlashDropdown, inlineDropdown])
 
   // ── Render ──
 
@@ -1123,7 +1072,6 @@ export default function ReorderAdNameParts({
           onKeyDown={handleKeyDown}
           onClick={handleCursorCheck}
           onKeyUp={(e) => {
-            // Re-check on arrow keys for cursor movement
             if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
               handleCursorCheck()
             }
@@ -1137,13 +1085,13 @@ export default function ReorderAdNameParts({
         />
 
         {/* ── Slash (/) Dropdown — built-in variables ── */}
-        {showDropdown && (
+        {showSlashDropdown && (
           <div
-            ref={dropdownRef}
+            ref={slashDropdownRef}
             className="absolute z-50 w-64"
             style={{
-              top: `${dropdownPosition.top}px`,
-              left: `${dropdownPosition.left}px`,
+              top: `${slashDropdownPos.top}px`,
+              left: `${slashDropdownPos.left}px`,
             }}
           >
             <Command
@@ -1175,70 +1123,80 @@ export default function ReorderAdNameParts({
           </div>
         )}
 
-        {/* ── At (@) Dropdown — custom variables nested picker ── */}
-        {showAtDropdown && customVariables.length > 0 && (
-          <div
-            ref={atDropdownRef}
-            className="absolute z-50"
-            style={{
-              top: `${atDropdownPosition.top}px`,
-              left: `${atDropdownPosition.left}px`,
+        {/* ── At (@) Dropdown — custom variables via shadcn DropdownMenu ──
+            Uses a controlled DropdownMenu with an invisible trigger span
+            positioned at the cursor. onCloseAutoFocus returns focus to the
+            input so the user can keep typing after dismissing.
+        */}
+        <DropdownMenu open={showAtDropdown} onOpenChange={setShowAtDropdown}>
+          <DropdownMenuTrigger asChild>
+            <span
+              className="absolute w-px h-px opacity-0 pointer-events-none"
+              style={{
+                top: `${atDropdownPos.top}px`,
+                left: `${atDropdownPos.left}px`,
+              }}
+              tabIndex={-1}
+              aria-hidden
+            />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            sideOffset={0}
+            className="rounded-xl min-w-[160px]"
+            onCloseAutoFocus={(e) => {
+              e.preventDefault()
+              inputRef.current?.focus()
             }}
           >
-            <div className="flex rounded-xl border shadow-md bg-white overflow-hidden">
-              {/* Left panel: categories */}
-              <div className="border-r min-w-[150px] py-1">
-                <div className="px-3 py-1.5 text-xs font-medium text-gray-400 select-none">
-                  Pick Variable
-                </div>
-                {customVariables.map((cat) => (
-                  <div
-                    key={cat.id}
-                    onMouseEnter={() => setHoveredCategory(cat.id)}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleCustomCategorySelect(cat)}
-                    className={cn(
-                      "px-3 py-2 cursor-pointer flex items-center justify-between text-sm transition-colors",
-                      hoveredCategory === cat.id
-                        ? "bg-gray-100"
-                        : "hover:bg-gray-50"
-                    )}
-                  >
-                    <span>{cat.name}</span>
-                    {cat.values.length > 0 && (
-                      <ChevronRight className="w-3.5 h-3.5 text-gray-400 ml-2 shrink-0" />
-                    )}
-                  </div>
-                ))}
-              </div>
+            <DropdownMenuLabel className="text-xs text-gray-400 font-medium">
+              Pick Variable
+            </DropdownMenuLabel>
 
-              {/* Right panel: values for hovered category */}
-              {hoveredCategory && (() => {
-                const cat = customVariables.find(c => c.id === hoveredCategory)
-                if (!cat || cat.values.length === 0) return null
-                return (
-                  <div className="min-w-[150px] py-1">
-                    <div className="px-3 py-1.5 text-xs font-medium text-gray-400 select-none">
-                      {cat.name}
-                    </div>
+            {customVariables.map((cat) =>
+              cat.values.length > 0 ? (
+                <DropdownMenuSub key={cat.name}>
+                  <DropdownMenuSubTrigger className="cursor-pointer rounded-lg">
+                    {cat.name}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="rounded-xl min-w-[140px]">
+                    {/* Option to insert just the category name */}
+                    <DropdownMenuItem
+                      className="cursor-pointer rounded-lg text-gray-400 text-xs"
+                      onSelect={() => handleCustomCategorySelect(cat.name)}
+                    >
+                      Use &ldquo;{cat.name}&rdquo; as label
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     {cat.values.map((val) => (
-                      <div
+                      <DropdownMenuItem
                         key={val}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleCustomValueSelect(cat.id, val)}
-                        className="px-3 py-2 cursor-pointer text-sm hover:bg-gray-100 transition-colors"
+                        className="cursor-pointer rounded-lg"
+                        onSelect={() => handleCustomValueSelect(cat.name, val)}
                       >
                         {val}
-                      </div>
+                      </DropdownMenuItem>
                     ))}
-                  </div>
-                )
-              })()}
-            </div>
-          </div>
-        )}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+              ) : (
+                <DropdownMenuItem
+                  key={cat.name}
+                  className="cursor-pointer rounded-lg"
+                  onSelect={() => handleCustomCategorySelect(cat.name)}
+                >
+                  {cat.name}
+                </DropdownMenuItem>
+              )
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        {/* ── Inline category value dropdown ── */}
+        {/* ── Inline category value dropdown ──
+            Shown when user clicks inside a {{CategoryName}} block in the input.
+            Displays the category's values so the user can resolve it to
+            {{CategoryName:Value}}.
+        */}
         {inlineDropdown && (
           <div
             ref={inlineDropdownRef}
@@ -1248,7 +1206,7 @@ export default function ReorderAdNameParts({
               left: `${inlineDropdown.position.left}px`,
             }}
           >
-            <div className="rounded-xl border shadow-md bg-white overflow-hidden min-w-[150px] py-1">
+            <div className="rounded-xl border shadow-md bg-white overflow-hidden min-w-[160px] py-1">
               <div className="px-3 py-1.5 text-xs font-medium text-gray-400 select-none">
                 Select a value for {inlineDropdown.category.name}
               </div>
@@ -1257,7 +1215,7 @@ export default function ReorderAdNameParts({
                   key={val}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => handleInlineValueSelect(val)}
-                  className="px-3 py-2 cursor-pointer text-sm hover:bg-gray-100 transition-colors"
+                  className="px-3 py-2 cursor-pointer text-sm hover:bg-gray-100 transition-colors rounded-lg mx-1"
                 >
                   {val}
                 </div>
