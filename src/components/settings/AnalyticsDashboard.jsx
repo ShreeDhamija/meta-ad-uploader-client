@@ -1066,18 +1066,19 @@ export default function AnalyticsDashboard() {
                             </div>
 
                             {/* Sticky blue bottom bar */}
-                            <div className="flex-shrink-0 bg-blue-600 px-8 py-2.5 flex items-center justify-center gap-6 rounded-b-[28px]">
+                            <div className="flex-shrink-0 bg-blue-600 px-8 py-1.5 flex items-center justify-center gap-6 rounded-b-[28px]">
+
+                                <button
+                                    onClick={handleSaveSettings}
+                                    className="rounded-xl bg-white text-blue-600 hover:bg-gray-100 px-6 h-9 text-sm font-medium transition-colors"
+                                >
+                                    Save Settings
+                                </button>
                                 <button
                                     onClick={() => setShowSettingsDialog(false)}
                                     className="text-white text-sm font-medium hover:underline"
                                 >
-                                    Skip for now
-                                </button>
-                                <button
-                                    onClick={handleSaveSettings}
-                                    className="rounded-lg bg-white text-blue-600 hover:bg-gray-100 px-6 h-9 text-sm font-medium transition-colors"
-                                >
-                                    Save Settings
+                                    Close
                                 </button>
                             </div>
                         </div>
