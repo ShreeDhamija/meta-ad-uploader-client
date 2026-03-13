@@ -781,7 +781,7 @@ export default function MediaPreview({
             <div className="flex flex-col items-start">
               <CardTitle className="text-left">Uploads Preview</CardTitle>
               <CardDescription className="text-left">
-                {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length) > 1 ? "s" : ""} selected`}
+                {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
                 {isCarouselAd && (
                   <span className="block text-xs text-gray-500 mt-1">
                     {fileGroups.length > 0
