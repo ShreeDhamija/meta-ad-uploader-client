@@ -62,6 +62,10 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
 
     const [hiddenCampaigns, setHiddenCampaigns] = useState(new Set())
 
+    useEffect(() => {
+        setHiddenCampaigns(new Set())
+    }, [data, days])
+
     const handleToggleCampaign = useCallback((name) => {
         setHiddenCampaigns(prev => {
             const next = new Set(prev)

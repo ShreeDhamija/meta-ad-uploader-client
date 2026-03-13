@@ -102,10 +102,17 @@ export default function AnalyticsDashboard() {
     // Track what we've already fetched for this account+mode combo
     const fetchedRef = useRef({})
     const modeCache = useRef({})
+    const dailyInsightsCacheRef = useRef({})
+    const dailyInsightsAbortRef = useRef(null)
+    const pendingDailySettingsRef = useRef(null)
 
 
     // ── Ad account settings hook ────────────────────────────
-    const { settings: adAccountSettings, loading: adAccountSettingsLoading } = useAdAccountSettings(selectedAdAccount)
+    const {
+        settings: adAccountSettings,
+        setSettings: setAdAccountSettings,
+        loading: adAccountSettingsLoading
+    } = useAdAccountSettings(selectedAdAccount)
 
     // ── Show onboarding on first visit ──────────────────────
     useEffect(() => {
@@ -293,26 +300,79 @@ export default function AnalyticsDashboard() {
     }, [selectedAdAccount, metricMode, adAccountSettings?.conversionEvent])
 
 
-    const fetchDailyInsights = useCallback(async (force = false) => {
-        if (!selectedAdAccount) return
-        const key = `daily-${selectedAdAccount}-${chartDays}`
-        if (!force && fetchedRef.current[key]) return
-        fetchedRef.current[key] = true
+    const getDailyInsightsCacheKey = useCallback((accountId, days, conversionEvent) => {
+        return `${accountId}::${days}::${conversionEvent || "__auto__"}`
+    }, [])
 
+    const clearDailyInsightsCache = useCallback((accountId = null) => {
+        if (!accountId) {
+            dailyInsightsCacheRef.current = {}
+            return
+        }
+
+        const prefix = `${accountId}::`
+        Object.keys(dailyInsightsCacheRef.current).forEach((key) => {
+            if (key.startsWith(prefix)) delete dailyInsightsCacheRef.current[key]
+        })
+    }, [])
+
+    const loadDailyInsights = useCallback(async ({
+        accountId = selectedAdAccount,
+        days = chartDays,
+        conversionEvent = adAccountSettings?.conversionEvent || null,
+        force = false,
+    } = {}) => {
+        if (!accountId) return
+
+        if (dailyInsightsAbortRef.current) {
+            dailyInsightsAbortRef.current.abort()
+            dailyInsightsAbortRef.current = null
+        }
+
+        const cacheKey = getDailyInsightsCacheKey(accountId, days, conversionEvent)
+        const cachedPayload = dailyInsightsCacheRef.current[cacheKey]
+
+        if (!force && cachedPayload) {
+            setDailyInsights(cachedPayload)
+            setDailyLoading(false)
+            return
+        }
+
+        const controller = new AbortController()
+        dailyInsightsAbortRef.current = controller
+        setDailyInsights(null)
         setDailyLoading(true)
+
         try {
-            let url = `${API_BASE_URL}/api/analytics/daily-insights?adAccountId=${selectedAdAccount}&days=${chartDays}`
-            // Pass conversion event if user has one saved
-            if (adAccountSettings?.conversionEvent) {
-                url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
+            let url = `${API_BASE_URL}/api/analytics/daily-insights?adAccountId=${accountId}&days=${days}`
+            if (conversionEvent) {
+                url += `&conversionEvent=${encodeURIComponent(conversionEvent)}`
             }
-            const res = await fetch(url, { credentials: 'include' })
+
+            const res = await fetch(url, {
+                credentials: 'include',
+                signal: controller.signal,
+            })
             const data = await res.json()
-            if (res.ok) setDailyInsights(data)
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to fetch daily insights')
+            }
+
+            if (controller.signal.aborted || dailyInsightsAbortRef.current !== controller) return
+
+            dailyInsightsCacheRef.current[cacheKey] = data
+            setDailyInsights(data)
         } catch (err) {
+            if (err.name === 'AbortError') return
             console.error('Daily insights error:', err)
-        } finally { setDailyLoading(false) }
-    }, [selectedAdAccount, chartDays, adAccountSettings?.conversionEvent])
+        } finally {
+            if (dailyInsightsAbortRef.current === controller) {
+                dailyInsightsAbortRef.current = null
+                setDailyLoading(false)
+            }
+        }
+    }, [selectedAdAccount, chartDays, adAccountSettings?.conversionEvent, getDailyInsightsCacheKey])
 
     const fetchWeeklyInsights = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
@@ -336,6 +396,7 @@ export default function AnalyticsDashboard() {
     // ── Data fetching triggers ──────────────────────────────
     useEffect(() => {
         if (!adAccountsLoading && adAccounts?.length > 0 && !selectedAdAccount) {
+            pendingDailySettingsRef.current = adAccounts[0].id
             setSelectedAdAccount(adAccounts[0].id)
         }
     }, [adAccountsLoading, adAccounts, selectedAdAccount])
@@ -343,10 +404,9 @@ export default function AnalyticsDashboard() {
     useEffect(() => {
         if (selectedAdAccount) {
             fetchAccountInfo(selectedAdAccount)
-            fetchDailyInsights()
             fetchWeeklyInsights()
         }
-    }, [selectedAdAccount, fetchAccountInfo, fetchDailyInsights, fetchWeeklyInsights])
+    }, [selectedAdAccount, fetchAccountInfo, fetchWeeklyInsights])
 
     useEffect(() => {
         if (!selectedAdAccount) return
@@ -359,12 +419,45 @@ export default function AnalyticsDashboard() {
     }, [activeTab, selectedAdAccount, metricMode, fetchRecommendations, fetchAnomalies, fetchPoorAds])
 
     useEffect(() => {
-        if (selectedAdAccount) fetchDailyInsights()
-    }, [chartDays, fetchDailyInsights])
+        if (
+            selectedAdAccount &&
+            !adAccountSettingsLoading &&
+            pendingDailySettingsRef.current === selectedAdAccount
+        ) {
+            pendingDailySettingsRef.current = null
+        }
+    }, [selectedAdAccount, adAccountSettingsLoading, adAccountSettings?.conversionEvent])
+
+    useEffect(() => {
+        if (!selectedAdAccount) {
+            if (dailyInsightsAbortRef.current) {
+                dailyInsightsAbortRef.current.abort()
+                dailyInsightsAbortRef.current = null
+            }
+            setDailyInsights(null)
+            setDailyLoading(false)
+            return
+        }
+
+        if (adAccountSettingsLoading || pendingDailySettingsRef.current === selectedAdAccount) {
+            return
+        }
+
+        loadDailyInsights()
+    }, [selectedAdAccount, chartDays, adAccountSettingsLoading, adAccountSettings?.conversionEvent, loadDailyInsights])
+
+    useEffect(() => {
+        return () => {
+            if (dailyInsightsAbortRef.current) {
+                dailyInsightsAbortRef.current.abort()
+            }
+        }
+    }, [])
 
 
 
     const handleAdAccountSelect = (accountId) => {
+        pendingDailySettingsRef.current = accountId
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
 
@@ -379,13 +472,19 @@ export default function AnalyticsDashboard() {
 
         setRecommendations(null); setAnomalies(null); setPoorAds(null)
         setDailyInsights(null); setWeeklyInsights(null)
+        if (dailyInsightsAbortRef.current) {
+            dailyInsightsAbortRef.current.abort()
+            dailyInsightsAbortRef.current = null
+        }
+        setDailyLoading(false)
         fetchedRef.current = {}
     }
 
     const handleRefresh = () => {
         fetchedRef.current = {}
+        clearDailyInsightsCache(selectedAdAccount)
         fetchAccountInfo(selectedAdAccount)
-        fetchDailyInsights(true)
+        loadDailyInsights({ force: true })
         fetchWeeklyInsights(true)
         if (activeTab === 'recommendations') {
             fetchRecommendations(true)
@@ -401,6 +500,7 @@ export default function AnalyticsDashboard() {
         const newTargetCPA = tempTargetCPA ? parseFloat(tempTargetCPA) : null
         const newTargetROAS = tempTargetROAS ? parseFloat(tempTargetROAS) : null
         const modeForStorage = tempAnalyticsMode === 'roas' ? 'roas' : 'cpa'
+        const nextConversionEvent = modeForStorage === 'cpa' ? tempConversionEvent : null
 
         try {
             console.log('[Settings] Saving for account:', selectedAdAccount)
@@ -413,7 +513,7 @@ export default function AnalyticsDashboard() {
                     targetROAS: newTargetROAS,
                     slackAlertsEnabled: tempSlackAlertsEnabled,
                     analyticsMode: modeForStorage,
-                    conversionEvent: modeForStorage === 'cpa' ? tempConversionEvent : null,
+                    conversionEvent: nextConversionEvent,
                 }
             })
 
@@ -421,6 +521,15 @@ export default function AnalyticsDashboard() {
             setTargetCPA(newTargetCPA)
             setTargetROAS(newTargetROAS)
             setSlackAlertsEnabled(tempSlackAlertsEnabled)
+            setAdAccountSettings((prev) => ({
+                ...prev,
+                anomalyThresholds: tempThresholds,
+                targetCPA: newTargetCPA,
+                targetROAS: newTargetROAS,
+                slackAlertsEnabled: tempSlackAlertsEnabled,
+                analyticsMode: modeForStorage,
+                conversionEvent: nextConversionEvent,
+            }))
             setShowSettingsDialog(false)
 
             const newMode = tempAnalyticsMode === 'roas' ? 'roas' : 'cpr'
@@ -430,9 +539,13 @@ export default function AnalyticsDashboard() {
 
             delete fetchedRef.current[`anomalies-${selectedAdAccount}`]
             delete fetchedRef.current[`recs-${selectedAdAccount}-${metricMode}`]
-            delete fetchedRef.current[`daily-${selectedAdAccount}-${chartDays}`]
-
-            fetchDailyInsights(true)
+            clearDailyInsightsCache(selectedAdAccount)
+            loadDailyInsights({
+                force: true,
+                accountId: selectedAdAccount,
+                days: chartDays,
+                conversionEvent: nextConversionEvent,
+            })
             toast.success('Settings saved')
         } catch (err) {
             console.error('[Settings] Save FAILED:', err.message)
