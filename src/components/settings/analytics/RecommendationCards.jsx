@@ -61,6 +61,16 @@ const TYPE_CONFIG = {
         iconColor: 'text-purple-600', badgeBg: 'bg-purple-100 text-purple-700 border-purple-200',
         btnClass: 'bg-purple-600 hover:bg-purple-700', Icon: Activity, label: 'Consolidate',
     },
+    trend_alert: {
+        color: 'amber',
+        bgClass: 'border-amber-200 bg-amber-50/30',
+        iconBg: 'bg-amber-100',
+        iconColor: 'text-amber-600',
+        badgeBg: 'bg-amber-100 text-amber-700 border-amber-200',
+        btnClass: '',
+        Icon: AlertTriangle,
+        label: 'Alert',
+    },
 }
 
 /**
@@ -350,13 +360,27 @@ export default function RecommendationCards({
                                                                         Scale Winner
                                                                     </Badge>
                                                                 )}
+                                                                {rec.type === 'trend_alert' && rec.alertKind && (
+                                                                    <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-white border-amber-500 whitespace-nowrap mb-1">
+                                                                        {rec.alertKind === 'rising_frequency' ? 'Rising Frequency' :
+                                                                            rec.alertKind === 'falling_ctr' ? 'Falling CTR' :
+                                                                                rec.alertKind === 'rising_cpm' ? 'Rising CPM' :
+                                                                                    rec.alertKind === 'falling_cr' ? 'Falling Conversion Rate' :
+                                                                                        'Trend Alert'}
+                                                                    </Badge>
+                                                                )}
                                                                 <div className="flex items-center gap-2 min-w-0">
                                                                     <p className="font-medium text-gray-900 text-sm break-words line-clamp-2 min-w-0">
                                                                         {rec.type === 'scale_winner' ? rec.adName : (rec.adsetName || rec.campaignName)}
                                                                     </p>
                                                                     {rec.type !== 'scale_winner' && (
-                                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-gray-100 text-gray-500 border-gray-200 flex-shrink-0">
-                                                                            {rec.level}
+                                                                        <Badge variant="outline" className={cn(
+                                                                            "text-[10px] px-1.5 py-0 rounded-full flex-shrink-0",
+                                                                            rec.type === 'trend_alert'
+                                                                                ? "bg-amber-100 text-amber-700 border-amber-200"
+                                                                                : "bg-gray-100 text-gray-500 border-gray-200"
+                                                                        )}>
+                                                                            {rec.type === 'trend_alert' ? 'alert' : rec.level}
                                                                         </Badge>
                                                                     )}
                                                                 </div>
@@ -373,7 +397,7 @@ export default function RecommendationCards({
                                                             )}
 
                                                             {/* Budget edit row (only for non-pause, non-winner with budget) */}
-                                                            {rec.type !== 'pause' && rec.type !== 'scale_winner' && suggestedBudget && (
+                                                            {rec.type !== 'pause' && rec.type !== 'scale_winner' && rec.type !== 'trend_alert' && suggestedBudget && (
                                                                 <div className="flex items-center gap-3 mt-3">
                                                                     <span className="text-xs text-gray-500">
                                                                         Current: <span className="font-medium">${(rec.dailyBudget || rec.lifetimeBudget).toFixed(2)}/day</span>
@@ -411,7 +435,11 @@ export default function RecommendationCards({
 
                                                     {/* Action buttons */}
                                                     <div className="flex items-center gap-2 flex-shrink-0">
-                                                        {rec.type === 'scale_winner' ? (
+                                                        {rec.type === 'trend_alert' ? (
+                                                            // No action button — dismiss only
+                                                            null
+                                                        ) : rec.type === 'scale_winner' ? (
+
                                                             <Button
                                                                 size="sm"
                                                                 onClick={() => {
