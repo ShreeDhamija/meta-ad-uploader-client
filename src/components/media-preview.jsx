@@ -291,9 +291,13 @@ export default function MediaPreview({
     return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedImportedFiles];
   }, [files, dropboxFiles, importedFiles, fileGroups]);
 
+  // const totalFileCount = useMemo(() => {
+  //   return files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length;
+  // }, [files, driveFiles, dropboxFiles, importedFiles]);
+
   const totalFileCount = useMemo(() => {
-    return files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length;
-  }, [files, driveFiles, dropboxFiles, importedFiles]);
+    return files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length;
+  }, [files, driveFiles, dropboxFiles, importedFiles, importedPosts, selectedIgOrganicPosts]);
 
   const canGroupFiles = useMemo(() => {
     const maxGroupSize = (adType === 'flexible' || isCarouselAd) ? 10 : 3;
@@ -781,7 +785,7 @@ export default function MediaPreview({
             <div className="flex flex-col items-start">
               <CardTitle className="text-left">Uploads Preview</CardTitle>
               <CardDescription className="text-left">
-                {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
+                {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
                 {isCarouselAd && (
                   <span className="block text-xs text-gray-500 mt-1">
                     {fileGroups.length > 0
