@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
     TrendingUp, TrendingDown, Pause, Loader2, XCircle, Activity,
-    Star, ArrowUpRight, ArrowDownRight, Eye, CheckCircle2, AlertTriangle, Zap,
+    Star, ArrowUpRight, ArrowDownRight, Eye, CheckCircle2, AlertTriangle, Zap, ChevronDown,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -100,6 +100,7 @@ export default function RecommendationCards({
     const [dismissed, setDismissed] = useState(new Set())
     const [editedBudgets, setEditedBudgets] = useState({})
     const [confirmDialog, setConfirmDialog] = useState(null) // { rec, action } or { type: 'single'|'bulk', ad?, count? }
+    const [scaleWinnersExpanded, setScaleWinnersExpanded] = useState(false)
 
     // ── Poor Performing Ads State ───────────────────────
     const [selected, setSelected] = useState(new Set())
@@ -334,155 +335,213 @@ export default function RecommendationCards({
                             </Card>
                         ) : (
                             <div className="space-y-3">
-                                {recs.map((rec) => {
-                                    const key = recKey(rec)
-                                    const cfg = TYPE_CONFIG[rec.type] || TYPE_CONFIG.reduce
-                                    const Icon = cfg.Icon
-                                    const applying = applyingId === key
+                                {(() => {
+                                    const scaleWinners = recs.filter(r => r.type === 'scale_winner')
+                                    const otherRecs = recs.filter(r => r.type !== 'scale_winner')
+                                    const groupWinners = scaleWinners.length >= 5
 
-                                    const suggestedBudget = rec.budgetChange && (rec.dailyBudget || rec.lifetimeBudget)
-                                        ? (rec.dailyBudget || rec.lifetimeBudget) * (1 + rec.budgetChange / 100)
-                                        : null
+                                    const renderRecCard = (rec, { neutralStyle = false } = {}) => {
+                                        const key = recKey(rec)
+                                        const baseCfg = TYPE_CONFIG[rec.type] || TYPE_CONFIG.reduce
+                                        const cfg = (neutralStyle && rec.type === 'scale_winner') ? {
+                                            ...baseCfg,
+                                            bgClass: 'border-gray-200 bg-white',
+                                            iconBg: 'bg-gray-100',
+                                            iconColor: 'text-gray-500',
+                                            badgeBg: 'bg-gray-100 text-gray-600 border-gray-200',
+                                            btnClass: 'bg-gray-700 hover:bg-gray-800',
+                                        } : baseCfg
+                                        const Icon = baseCfg.Icon
+                                        const applying = applyingId === key
 
-                                    return (
-                                        <Card key={key} className={cn("rounded-2xl", cfg.bgClass)}>
-                                            <CardContent className="p-4">
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                                                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", cfg.iconBg)}>
-                                                            <Icon className={cn("w-5 h-5", cfg.iconColor)} />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            {/* Entity name */}
-                                                            <div className="min-w-0">
-                                                                {rec.type === 'scale_winner' && (
-                                                                    <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white border-blue-600 whitespace-nowrap mb-1">
-                                                                        Scale Winner
-                                                                    </Badge>
-                                                                )}
-                                                                {rec.type === 'trend_alert' && rec.alertKind && (
-                                                                    <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-white border-amber-500 whitespace-nowrap mb-1">
-                                                                        {rec.alertKind === 'rising_frequency' ? 'Rising Frequency' :
-                                                                            rec.alertKind === 'falling_ctr' ? 'Falling CTR' :
-                                                                                rec.alertKind === 'rising_cpm' ? 'Rising CPM' :
-                                                                                    rec.alertKind === 'falling_cr' ? 'Falling Conversion Rate' :
-                                                                                        'Trend Alert'}
-                                                                    </Badge>
-                                                                )}
-                                                                <div className="flex items-center gap-2 min-w-0">
-                                                                    <p className="font-medium text-gray-900 text-sm break-words line-clamp-2 min-w-0">
-                                                                        {rec.type === 'scale_winner' ? rec.adName : (rec.adsetName || rec.campaignName)}
-                                                                    </p>
-                                                                    {rec.type !== 'scale_winner' && (
-                                                                        <Badge variant="outline" className={cn(
-                                                                            "text-[10px] px-1.5 py-0 rounded-full flex-shrink-0",
-                                                                            rec.type === 'trend_alert'
-                                                                                ? "bg-amber-100 text-amber-700 border-amber-200"
-                                                                                : "bg-gray-100 text-gray-500 border-gray-200"
-                                                                        )}>
-                                                                            {rec.type === 'trend_alert' ? 'alert' : rec.level}
+                                        const suggestedBudget = rec.budgetChange && (rec.dailyBudget || rec.lifetimeBudget)
+                                            ? (rec.dailyBudget || rec.lifetimeBudget) * (1 + rec.budgetChange / 100)
+                                            : null
+
+                                        return (
+                                            <Card key={key} className={cn("rounded-2xl", cfg.bgClass)}>
+                                                <CardContent className="p-4">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", cfg.iconBg)}>
+                                                                <Icon className={cn("w-5 h-5", cfg.iconColor)} />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="min-w-0">
+                                                                    {rec.type === 'scale_winner' && !neutralStyle && (
+                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white border-blue-600 whitespace-nowrap mb-1">
+                                                                            Scale Winner
                                                                         </Badge>
                                                                     )}
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Message with bolded figures */}
-                                                            <p className="text-sm text-gray-600 mt-1">
-                                                                <BoldedMessage text={rec.message} />
-                                                            </p>
-
-                                                            {/* Campaign breadcrumb for adset/ad level */}
-                                                            {rec.level !== 'campaign' && rec.campaignName && (
-                                                                <p className="text-xs text-gray-400 mt-0.5">Campaign: {rec.campaignName}</p>
-                                                            )}
-
-                                                            {/* Budget edit row (only for non-pause, non-winner with budget) */}
-                                                            {rec.type !== 'pause' && rec.type !== 'scale_winner' && rec.type !== 'trend_alert' && suggestedBudget && (
-                                                                <div className="flex items-center gap-3 mt-3">
-                                                                    <span className="text-xs text-gray-500">
-                                                                        Current: <span className="font-medium">${(rec.dailyBudget || rec.lifetimeBudget).toFixed(2)}/day</span>
-                                                                    </span>
-                                                                    <span className="text-xs">→</span>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="text-xs text-gray-500">New:</span>
-                                                                        <div className="relative">
-                                                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
-                                                                            <input
-                                                                                type="number"
-                                                                                value={editedBudgets[key] ?? suggestedBudget.toFixed(2)}
-                                                                                onChange={(e) => setEditedBudgets(prev => ({ ...prev, [key]: e.target.value }))}
-                                                                                className={cn(
-                                                                                    "w-24 pl-5 pr-2 py-1 text-xs font-medium border rounded-lg focus:outline-none focus:ring-2",
-                                                                                    rec.type === 'scale'
-                                                                                        ? "border-green-300 focus:ring-green-500 text-green-700"
-                                                                                        : "border-orange-300 focus:ring-orange-500 text-orange-700"
-                                                                                )}
-                                                                            />
-                                                                        </div>
-                                                                        <span className="text-xs text-gray-500">/day</span>
-                                                                        {rec.budgetChange && (
-                                                                            <span className={cn("text-[10px] font-medium",
-                                                                                rec.budgetChange > 0 ? "text-green-600" : "text-orange-600"
+                                                                    {rec.type === 'trend_alert' && rec.alertKind && (
+                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500 text-white border-amber-500 whitespace-nowrap mb-1">
+                                                                            {rec.alertKind === 'rising_frequency' ? 'Rising Frequency' :
+                                                                                rec.alertKind === 'falling_ctr' ? 'Falling CTR' :
+                                                                                    rec.alertKind === 'rising_cpm' ? 'Rising CPM' :
+                                                                                        rec.alertKind === 'falling_cr' ? 'Falling Conversion Rate' :
+                                                                                            'Trend Alert'}
+                                                                        </Badge>
+                                                                    )}
+                                                                    <div className="flex items-center gap-2 min-w-0">
+                                                                        <p className="font-medium text-gray-900 text-sm break-words line-clamp-2 min-w-0">
+                                                                            {rec.type === 'scale_winner' ? rec.adName : (rec.adsetName || rec.campaignName)}
+                                                                        </p>
+                                                                        {rec.type !== 'scale_winner' && (
+                                                                            <Badge variant="outline" className={cn(
+                                                                                "text-[10px] px-1.5 py-0 rounded-full flex-shrink-0",
+                                                                                rec.type === 'trend_alert'
+                                                                                    ? "bg-amber-100 text-amber-700 border-amber-200"
+                                                                                    : "bg-gray-100 text-gray-500 border-gray-200"
                                                                             )}>
-                                                                                ({rec.budgetChange > 0 ? '+' : ''}{rec.budgetChange}%)
-                                                                            </span>
+                                                                                {rec.type === 'trend_alert' ? 'alert' : rec.level}
+                                                                            </Badge>
                                                                         )}
                                                                     </div>
                                                                 </div>
+
+                                                                <p className="text-sm text-gray-600 mt-1">
+                                                                    <BoldedMessage text={rec.message} />
+                                                                </p>
+
+                                                                {rec.level !== 'campaign' && rec.campaignName && (
+                                                                    <p className="text-xs text-gray-400 mt-0.5">Campaign: {rec.campaignName}</p>
+                                                                )}
+
+                                                                {rec.type !== 'pause' && rec.type !== 'scale_winner' && rec.type !== 'trend_alert' && suggestedBudget && (
+                                                                    <div className="flex items-center gap-3 mt-3">
+                                                                        <span className="text-xs text-gray-500">
+                                                                            Current: <span className="font-medium">${(rec.dailyBudget || rec.lifetimeBudget).toFixed(2)}/day</span>
+                                                                        </span>
+                                                                        <span className="text-xs">→</span>
+                                                                        <div className="flex items-center gap-1">
+                                                                            <span className="text-xs text-gray-500">New:</span>
+                                                                            <div className="relative">
+                                                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-400">$</span>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    value={editedBudgets[key] ?? suggestedBudget.toFixed(2)}
+                                                                                    onChange={(e) => setEditedBudgets(prev => ({ ...prev, [key]: e.target.value }))}
+                                                                                    className={cn(
+                                                                                        "w-24 pl-5 pr-2 py-1 text-xs font-medium border rounded-lg focus:outline-none focus:ring-2",
+                                                                                        rec.type === 'scale'
+                                                                                            ? "border-green-300 focus:ring-green-500 text-green-700"
+                                                                                            : "border-orange-300 focus:ring-orange-500 text-orange-700"
+                                                                                    )}
+                                                                                />
+                                                                            </div>
+                                                                            <span className="text-xs text-gray-500">/day</span>
+                                                                            {rec.budgetChange && (
+                                                                                <span className={cn("text-[10px] font-medium",
+                                                                                    rec.budgetChange > 0 ? "text-green-600" : "text-orange-600"
+                                                                                )}>
+                                                                                    ({rec.budgetChange > 0 ? '+' : ''}{rec.budgetChange}%)
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                                            {rec.type === 'trend_alert' ? (
+                                                                null
+                                                            ) : rec.type === 'scale_winner' ? (
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        const account = adAccounts?.find(a => a.id === adAccountId);
+                                                                        const bizId = account?.business_id || '';
+                                                                        const url = `https://adsmanager.facebook.com/adsmanager/manage/ads/edit/standalone?act=${adAccountId}&business_id=${bizId}&global_scope_id=${bizId}&selected_adset_ids=${rec.adsetId}&selected_ad_ids=${rec.adId}`;
+                                                                        window.open(url, '_blank');
+                                                                    }}
+                                                                    className={cn("rounded-xl text-xs", cfg.btnClass)}
+                                                                >
+                                                                    <Eye className="w-4 h-4 mr-1" />
+                                                                    View Ad
+                                                                </Button>
+                                                            ) : (
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => rec.type === 'pause'
+                                                                        ? setConfirmDialog({ rec, action: 'pause' })
+                                                                        : handleApply(rec)
+                                                                    }
+                                                                    disabled={applying}
+                                                                    className={cn("rounded-xl text-xs", cfg.btnClass)}
+                                                                >
+                                                                    {applying ? (
+                                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                                    ) : (
+                                                                        cfg.label
+                                                                    )}
+                                                                </Button>
                                                             )}
+                                                            <Button
+                                                                variant="ghost" size="sm"
+                                                                onClick={() => handleDismiss(rec)}
+                                                                className="text-gray-400 hover:text-gray-600 h-8 w-8 p-0"
+                                                            >
+                                                                <XCircle className="w-4 h-4" />
+                                                            </Button>
                                                         </div>
                                                     </div>
+                                                </CardContent>
+                                            </Card>
+                                        )
+                                    }
 
-                                                    {/* Action buttons */}
-                                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                                        {rec.type === 'trend_alert' ? (
-                                                            // No action button — dismiss only
-                                                            null
-                                                        ) : rec.type === 'scale_winner' ? (
-
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => {
-                                                                    const account = adAccounts?.find(a => a.id === adAccountId);
-                                                                    const bizId = account?.business_id || '';
-                                                                    const url = `https://adsmanager.facebook.com/adsmanager/manage/ads/edit/standalone?act=${adAccountId}&business_id=${bizId}&global_scope_id=${bizId}&selected_adset_ids=${rec.adsetId}&selected_ad_ids=${rec.adId}`;
-                                                                    window.open(url, '_blank');
-                                                                }}
-                                                                className={cn("rounded-xl text-xs", cfg.btnClass)}
-                                                            >
-                                                                <Eye className="w-4 h-4 mr-1" />
-                                                                View Ad
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={() => rec.type === 'pause'
-                                                                    ? setConfirmDialog({ rec, action: 'pause' })
-                                                                    : handleApply(rec)
-                                                                }
-                                                                disabled={applying}
-                                                                className={cn("rounded-xl text-xs", cfg.btnClass)}
-                                                            >
-                                                                {applying ? (
-                                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                                ) : (
-                                                                    cfg.label
-                                                                )}
-                                                            </Button>
-                                                        )}
-                                                        <Button
-                                                            variant="ghost" size="sm"
-                                                            onClick={() => handleDismiss(rec)}
-                                                            className="text-gray-400 hover:text-gray-600 h-8 w-8 p-0"
+                                    return (
+                                        <>
+                                            {/* Grouped Scale Winners collapsible card */}
+                                            {groupWinners && scaleWinners.length > 0 && (
+                                                <Card className="rounded-2xl border-blue-200 bg-blue-50/30">
+                                                    <CardContent className="p-0">
+                                                        <button
+                                                            onClick={() => setScaleWinnersExpanded(prev => !prev)}
+                                                            className="w-full p-4 flex items-center justify-between gap-3"
                                                         >
-                                                            <XCircle className="w-4 h-4" />
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-100">
+                                                                    <Star className="w-5 h-5 text-blue-600" />
+                                                                </div>
+                                                                <div className="text-left">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white border-blue-600 whitespace-nowrap">
+                                                                            Scale Winners
+                                                                        </Badge>
+                                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-blue-100 text-blue-700 border-blue-200">
+                                                                            {scaleWinners.length} ads
+                                                                        </Badge>
+                                                                    </div>
+                                                                    <p className="text-sm text-blue-700 mt-1 font-medium">
+                                                                        {scaleWinners.length} ads are doing well that you should scale
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <ChevronDown className={cn(
+                                                                "w-5 h-5 text-blue-500 transition-transform flex-shrink-0",
+                                                                scaleWinnersExpanded && "rotate-180"
+                                                            )} />
+                                                        </button>
+
+                                                        {scaleWinnersExpanded && (
+                                                            <div className="px-4 pb-4 space-y-2 border-t border-blue-100 pt-3">
+                                                                {scaleWinners.map(rec => renderRecCard(rec, { neutralStyle: true }))}
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                </Card>
+                                            )}
+
+                                            {/* Individual scale winners when fewer than 5 */}
+                                            {!groupWinners && scaleWinners.map(rec => renderRecCard(rec))}
+
+                                            {/* All other recommendation cards */}
+                                            {otherRecs.map(rec => renderRecCard(rec))}
+                                        </>
                                     )
-                                })}
+                                })()}
                             </div>
                         )}
                     </>
