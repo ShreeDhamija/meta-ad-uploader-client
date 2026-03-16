@@ -923,7 +923,7 @@ const IgCardInfo = ({ item, instagramAccountId, onViewComments }) => (
                 className="text-xs text-blue-500 font-medium inline-block text-left hover:text-blue-600 transition-colors"
                 onClick={(e) => { e.stopPropagation(); e.preventDefault(); onViewComments(item); }}
             >
-                View Comments ({item.comments?.length || 0})
+                View Comments
             </button>
         ) : (
             item.permalink && (
