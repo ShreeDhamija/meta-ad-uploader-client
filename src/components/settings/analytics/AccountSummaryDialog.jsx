@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Loader2, RefreshCw, FileText } from "lucide-react"
+import { Loader2, RefreshCw, FileText, ClipboardList, Lightbulb } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
-// ── Markdown-lite renderer (ported from AccountChangeSummary.tsx) ──
-
+// ── Inline bold renderer ──
 function renderInlineBold(text) {
     const parts = text.split(/\*\*(.*?)\*\*/g)
     return parts.map((part, i) =>
@@ -16,58 +15,31 @@ function renderInlineBold(text) {
     )
 }
 
-function renderSummary(text) {
-    const lines = text.split("\n")
-    const output = []
-    let bulletBuffer = []
-    let bufferStart = 0
+// ── Extract bullets from a text block ──
+function extractBullets(text) {
+    return text
+        .split("\n")
+        .map(l => l.trim())
+        .filter(l => l.startsWith("•") || l.startsWith("-"))
+        .map(l => l.replace(/^[•\-]\s*/, ""))
+}
 
-    function flushBullets() {
-        if (bulletBuffer.length === 0) return
-        output.push(
-            <ul key={`ul-${bufferStart}`} className="mt-2 space-y-1.5">
-                {bulletBuffer.map((content, j) => (
-                    <li key={j} className="text-sm text-gray-700 leading-relaxed flex gap-2">
-                        <span className="text-gray-400 flex-shrink-0">•</span>
-                        <span>{renderInlineBold(content)}</span>
-                    </li>
-                ))}
-            </ul>
-        )
-        bulletBuffer = []
+// ── Parse the summary into two guaranteed sections ──
+function parseSections(summary) {
+    const splitMarker = "**Up Next (suggested)**"
+    const idx = summary.indexOf(splitMarker)
+
+    if (idx === -1) {
+        return { changes: extractBullets(summary), suggestions: [] }
     }
 
-    lines.forEach((line, i) => {
-        const trimmed = line.trim()
-        if (!trimmed) { flushBullets(); return }
+    const changesPart = summary.slice(0, idx)
+    const suggestionsPart = summary.slice(idx + splitMarker.length)
 
-        if (trimmed.startsWith("**") && trimmed.endsWith("**")) {
-            flushBullets()
-            const content = trimmed.slice(2, -2)
-            output.push(
-                <p key={i} className="font-semibold text-gray-900 mt-5 first:mt-0 text-sm">
-                    {content}
-                </p>
-            )
-            return
-        }
-
-        if (trimmed.startsWith("•") || trimmed.startsWith("-")) {
-            if (bulletBuffer.length === 0) bufferStart = i
-            bulletBuffer.push(trimmed.replace(/^[•\-]\s*/, ""))
-            return
-        }
-
-        flushBullets()
-        output.push(
-            <p key={i} className="text-sm text-gray-600 mt-1">
-                {renderInlineBold(trimmed)}
-            </p>
-        )
-    })
-
-    flushBullets()
-    return output
+    return {
+        changes: extractBullets(changesPart),
+        suggestions: extractBullets(suggestionsPart),
+    }
 }
 
 /**
@@ -119,6 +91,8 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId }) {
     }, [adAccountId])
 
     if (!open) return null
+
+    const sections = summary ? parseSections(summary) : null
 
     return (
         <>
@@ -211,11 +185,51 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId }) {
                             </div>
                         )}
 
-                        {summary && (
-                            <div>
-                                {renderSummary(summary)}
+                        {sections && (
+                            <div className="space-y-4">
+                                {/* Section 1: What changed */}
+                                <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-5">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
+                                            <ClipboardList className="w-4 h-4 text-blue-600" />
+                                        </div>
+                                        <h3 className="text-sm font-semibold text-blue-900">What Changed</h3>
+                                    </div>
+                                    <ul className="space-y-2.5">
+                                        {sections.changes.map((bullet, i) => (
+                                            <li key={i} className="flex gap-2.5 text-sm text-blue-900/80 leading-relaxed">
+                                                <span className="text-blue-400 flex-shrink-0 mt-0.5">•</span>
+                                                <span>{renderInlineBold(bullet)}</span>
+                                            </li>
+                                        ))}
+                                        {sections.changes.length === 0 && (
+                                            <li className="text-sm text-blue-400 italic">No changes detected.</li>
+                                        )}
+                                    </ul>
+                                </div>
+
+                                {/* Section 2: Suggestions */}
+                                {sections.suggestions.length > 0 && (
+                                    <div className="bg-amber-50/60 border border-amber-100 rounded-2xl p-5">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center">
+                                                <Lightbulb className="w-4 h-4 text-amber-600" />
+                                            </div>
+                                            <h3 className="text-sm font-semibold text-amber-900">Up Next</h3>
+                                        </div>
+                                        <ul className="space-y-2.5">
+                                            {sections.suggestions.map((bullet, i) => (
+                                                <li key={i} className="flex gap-2.5 text-sm text-amber-900/80 leading-relaxed">
+                                                    <span className="text-amber-400 flex-shrink-0 mt-0.5">•</span>
+                                                    <span>{renderInlineBold(bullet)}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
                                 {generatedAt && (
-                                    <p className="mt-5 text-xs text-gray-400">
+                                    <p className="text-xs text-gray-400 text-center pt-1">
                                         Generated {generatedAt}
                                     </p>
                                 )}
