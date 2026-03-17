@@ -25,6 +25,8 @@ import AnomalyCards from "./analytics/AnomalyCards"
 import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
+import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
+import slackIcon from "@/assets/icons/slack.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -78,6 +80,7 @@ export default function AnalyticsDashboard() {
     const [slackAlertsEnabled, setSlackAlertsEnabled] = useState(false)
     const [tempSlackAlertsEnabled, setTempSlackAlertsEnabled] = useState(false)
     const [slackDisconnecting, setSlackDisconnecting] = useState(false)
+    const [showSlackDialog, setShowSlackDialog] = useState(false)
 
     // ── Data state 
     const [recommendations, setRecommendations] = useState(null)
@@ -769,6 +772,19 @@ export default function AnalyticsDashboard() {
                         <FileBarChart2 className="w-3.5 h-3.5" />
                         Audit Account
                     </Button>
+                    <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} className="rounded-2xl h-11 px-4">
+                        <FileBarChart2 className="w-3.5 h-3.5" />
+                        Account Summary
+                    </Button>
+                    <Button
+                        variant="outline" size="sm"
+                        onClick={() => setShowSlackDialog(true)}
+                        className="rounded-2xl h-11 w-11 p-0"
+                        title="Slack Alerts"
+                    >
+                        <img src={slackIcon} alt="Slack" className="w-4 h-4" />
+                    </Button>
+
                 </div>
             </div>
 
@@ -913,6 +929,16 @@ export default function AnalyticsDashboard() {
                 conversionEvent={adAccountSettings?.conversionEvent}
                 targetCPA={adAccountSettings?.targetCPA}
                 targetROAS={adAccountSettings?.targetROAS}
+            />
+            <SlackAlertsDialog
+                open={showSlackDialog}
+                onClose={() => setShowSlackDialog(false)}
+                slackConnected={slackConnected}
+                slackChannelName={slackChannelName}
+                slackAlertsEnabled={slackAlertsEnabled}
+                onSlackAlertsEnabledChange={setSlackAlertsEnabled}
+                onSlackDisconnect={handleSlackDisconnect}
+                slackDisconnecting={slackDisconnecting}
             />
 
             {/* ── Custom Settings Popup ── */}
@@ -1124,7 +1150,7 @@ export default function AnalyticsDashboard() {
                                     <div className="border-t border-gray-200" />
 
                                     {/* ── Slack Alerts ── */}
-                                    <div className="space-y-4">
+                                    {/* <div className="space-y-4">
                                         <h3 className="font-medium text-gray-900 flex items-center gap-2">
                                             <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: SLACK_PURPLE }}>
                                                 <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor">
@@ -1184,7 +1210,7 @@ export default function AnalyticsDashboard() {
                                                 </>
                                             )}
                                         </div>
-                                    </div>
+                                    </div> */}
                                 </div>
                             </div>
 

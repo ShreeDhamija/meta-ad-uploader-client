@@ -644,7 +644,7 @@ export default function RecommendationCards({
                                     )}
                                 </button>
                                 <span className="text-xs text-gray-500 font-medium">
-                                    {ads.length} Select poor performing ad{ads.length > 1 ? 's' : ''}
+                                    Select {ads.length} poor performing ad{ads.length > 1 ? 's' : ''}
                                 </span>
                             </div>
 
