@@ -17,7 +17,7 @@ import useGlobalSettings from "@/lib/useGlobalSettings"
 import { saveSettings } from "@/lib/saveSettings"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
-
+import slackIcon from "@/assets/icons/slack.svg"
 import KPIChart from "./analytics/KPIChart"
 import WeeklyChart from "./analytics/WeeklyChart"
 import RecommendationCards from "./analytics/RecommendationCards"
@@ -26,7 +26,8 @@ import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
 import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
-import slackIcon from "@/assets/icons/slack.svg"
+import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
+
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -81,7 +82,7 @@ export default function AnalyticsDashboard() {
     const [tempSlackAlertsEnabled, setTempSlackAlertsEnabled] = useState(false)
     const [slackDisconnecting, setSlackDisconnecting] = useState(false)
     const [showSlackDialog, setShowSlackDialog] = useState(false)
-
+    const [showSummaryDialog, setShowSummaryDialog] = useState(false)
     // ── Data state 
     const [recommendations, setRecommendations] = useState(null)
     const [recsLoading, setRecsLoading] = useState(false)
@@ -781,8 +782,12 @@ export default function AnalyticsDashboard() {
                         <FileBarChart2 className="w-3.5 h-3.5" />
                         Audit Account
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} className="rounded-2xl h-11 px-4">
-                        <FileBarChart2 className="w-3.5 h-3.5" />
+                    <Button
+                        variant="outline" size="sm"
+                        onClick={() => setShowSummaryDialog(true)}
+                        className="rounded-2xl h-11 px-4"
+                    >
+                        <FileText className="w-4 h-4 mr-2" />
                         Account Summary
                     </Button>
 
@@ -942,7 +947,11 @@ export default function AnalyticsDashboard() {
                 onSlackDisconnect={handleSlackDisconnect}
                 slackDisconnecting={slackDisconnecting}
             />
-
+            <AccountSummaryDialog
+                open={showSummaryDialog}
+                onClose={() => setShowSummaryDialog(false)}
+                adAccountId={selectedAdAccount}
+            />
             {/* ── Custom Settings Popup ── */}
             {showSettingsDialog && (
                 <>
