@@ -8,7 +8,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import {
     AlertTriangle, RefreshCw, Loader2, ChevronsUpDown,
-    Target, Settings2, Activity, Zap, Eye, CheckCircle2, BarChart3, FileBarChart2
+    Target, Settings2, Activity, Zap, Eye, CheckCircle2, BarChart3, FileBarChart2, FileText
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
