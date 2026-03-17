@@ -278,7 +278,7 @@ export default function AnalyticsDashboard() {
 
     const fetchPoorAds = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
-        const key = `poor-${selectedAdAccount}-${metricMode}`
+        const key = `poor-${selectedAdAccount}-${metricMode}-${adAccountSettings?.conversionEvent || '__auto__'}`
         if (!force && fetchedRef.current[key]) return
         fetchedRef.current[key] = true
 
@@ -539,7 +539,12 @@ export default function AnalyticsDashboard() {
 
             delete fetchedRef.current[`anomalies-${selectedAdAccount}`]
             delete fetchedRef.current[`recs-${selectedAdAccount}-${metricMode}`]
+            // FIXED: Also invalidate poor ads cache when conversion event changes
+            Object.keys(fetchedRef.current).forEach(k => {
+                if (k.startsWith(`poor-${selectedAdAccount}`)) delete fetchedRef.current[k]
+            })
             clearDailyInsightsCache(selectedAdAccount)
+
             loadDailyInsights({
                 force: true,
                 accountId: selectedAdAccount,
@@ -547,6 +552,12 @@ export default function AnalyticsDashboard() {
                 conversionEvent: nextConversionEvent,
             })
             toast.success('Settings saved')
+            if (activeTab === 'recommendations') {
+                setTimeout(() => {
+                    fetchRecommendations(true)
+                    fetchPoorAds(true)
+                }, 100)
+            }
         } catch (err) {
             console.error('[Settings] Save FAILED:', err.message)
             toast.error(`Failed to save settings: ${err.message}`)
@@ -794,9 +805,9 @@ export default function AnalyticsDashboard() {
                         <Zap className="w-4 h-4" />
                         <span className="hidden sm:inline">Recommendations</span>
                         <span className="sm:hidden">Recs</span>
-                        {(recsCount) > 0 && (
+                        {(recsCount + poorAdsCount) > 0 && (
                             <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-2xl">
-                                {recsCount}
+                                {recsCount} + {poorAdsCount}
                             </Badge>
                         )}
                     </button>

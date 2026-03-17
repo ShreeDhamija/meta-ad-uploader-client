@@ -287,11 +287,12 @@ export default function RecommendationCards({
                 <div className="px-1">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                         <Zap className="w-5 h-5 text-blue-500" />
-                        Budget Recommendations
+                        Budget Recommendations {recs.length > 0 && <span className="text-base font-normal text-gray-400">({recs.length})</span>}
+
                     </h2>
                     <p className="text-sm text-gray-500 mt-1">
                         Compares each campaign and ad set's {mode === 'roas' ? 'ROAS' : 'CPA'} against the
-                        spend-weighted account average over 3-day windows. Recommends scaling outperformers
+                        spend-weighted account average over 3-day windows. <br></br>Recommends scaling outperformers
                         and reducing or pausing underperformers.
                     </p>
                 </div>
@@ -557,7 +558,7 @@ export default function RecommendationCards({
                     <div className="bg-red-500 rounded-2xl px-5 py-4">
                         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                             <AlertTriangle className="w-5 h-5 text-white" />
-                            Poor Performing Ads
+                            Poor Performing Ads {ads.length > 0 && <span className="text-base font-normal text-red-200">({ads.length})</span>}
                         </h2>
                         <p className="text-sm text-red-100 mt-1">
                             Ads with spend {'>'} 0.5X account avg CPA, running 14+ days, performing below average
@@ -643,7 +644,7 @@ export default function RecommendationCards({
                                     )}
                                 </button>
                                 <span className="text-xs text-gray-500 font-medium">
-                                    {ads.length} poor performing ad{ads.length > 1 ? 's' : ''} found
+                                    {ads.length} Select poor performing ad{ads.length > 1 ? 's' : ''}
                                 </span>
                             </div>
 
