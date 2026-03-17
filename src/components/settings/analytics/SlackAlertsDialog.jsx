@@ -90,9 +90,8 @@ export default function SlackAlertsDialog({
                                 <a
                                     href={`${API_BASE_URL}/api/analytics/slack/install`}
                                     className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl text-sm font-medium text-white transition-colors hover:opacity-90"
-                                    style={{ backgroundColor: SLACK_PURPLE }}
                                 >
-                                    <img src={slackIcon} alt="Slack" className="w-4 h-4 brightness-0 invert" />
+                                    <img src={slackIcon} alt="Slack" className="w-4 h-4" />
                                     Connect to Slack
                                 </a>
                             </div>
@@ -109,7 +108,7 @@ export default function SlackAlertsDialog({
                                     <button
                                         onClick={onSlackDisconnect}
                                         disabled={slackDisconnecting}
-                                        className="text-xs text-red-500 hover:text-red-700 font-medium"
+                                        className="text-xs text-white bg-red-500 hover:bg-red-600 font-medium px-3 py-1 rounded-lg transition-colors"
                                     >
                                         {slackDisconnecting ? 'Disconnecting...' : 'Disconnect'}
                                     </button>
@@ -136,7 +135,7 @@ export default function SlackAlertsDialog({
                                     <div>
                                         <p className="text-sm text-gray-700">Audit reports</p>
                                         <p className="text-xs text-gray-500">
-                                            Receive account audit summaries in Slack
+                                            Request account audit summaries in Slack
                                         </p>
                                     </div>
                                     <Switch
@@ -150,7 +149,7 @@ export default function SlackAlertsDialog({
                                     <div>
                                         <p className="text-sm text-gray-700">Account summary</p>
                                         <p className="text-xs text-gray-500">
-                                            Get a daily account performance summary in Slack
+                                            Request daily account performance summary in Slack
                                         </p>
                                     </div>
                                     <Switch

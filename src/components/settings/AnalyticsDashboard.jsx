@@ -766,8 +766,17 @@ export default function AnalyticsDashboard() {
                         className="rounded-2xl h-11 px-4"
                     >
                         <Settings2 className="w-4 h-4 mr-2" />
-                        Preferences
+
                     </Button>
+                    <Button
+                        variant="outline" size="sm"
+                        onClick={() => setShowSlackDialog(true)}
+                        className="rounded-2xl h-11 w-11 p-0"
+                        title="Slack Alerts"
+                    >
+                        <img src={slackIcon} alt="Slack" className="w-5 h-5" />
+                    </Button>
+
                     <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} className="rounded-2xl h-11 px-4">
                         <FileBarChart2 className="w-3.5 h-3.5" />
                         Audit Account
@@ -776,14 +785,7 @@ export default function AnalyticsDashboard() {
                         <FileBarChart2 className="w-3.5 h-3.5" />
                         Account Summary
                     </Button>
-                    <Button
-                        variant="outline" size="sm"
-                        onClick={() => setShowSlackDialog(true)}
-                        className="rounded-2xl h-11 w-11 p-0"
-                        title="Slack Alerts"
-                    >
-                        <img src={slackIcon} alt="Slack" className="w-4 h-4" />
-                    </Button>
+
 
                 </div>
             </div>
@@ -1147,7 +1149,7 @@ export default function AnalyticsDashboard() {
                                         </div>
                                     </div>
 
-                                    <div className="border-t border-gray-200" />
+
 
                                     {/* ── Slack Alerts ── */}
                                     {/* <div className="space-y-4">
