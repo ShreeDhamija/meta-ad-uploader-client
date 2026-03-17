@@ -144,17 +144,17 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                 </div>
 
                 {loading ? (
-                    <div className="flex items-center justify-center h-[220px]">
+                    <div className="flex items-center justify-center h-[200px]">
                         <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                     </div>
                 ) : chartData.length === 0 ? (
-                    <div className="flex items-center justify-center h-[220px] text-sm text-gray-400">
+                    <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
                         No data available for this period
                     </div>
                 ) : (
                     <>
                         {/* Chart — fixed height, never squished */}
-                        <ResponsiveContainer width="100%" height={220}>
+                        <ResponsiveContainer width="100%" height={200}>
                             <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis

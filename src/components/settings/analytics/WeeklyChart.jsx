@@ -4,8 +4,8 @@
 import { useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ChevronDown, Loader2 } from "lucide-react"
+import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { ChevronDown, Loader2, CheckCircle2 } from "lucide-react"
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer,
@@ -130,7 +130,7 @@ export default function WeeklyChart({ data, loading }) {
             <CardContent className="p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                        <p className="text-sm font-medium text-gray-900">Weekly Account Metrics</p>
+                        <p className="text-sm font-medium text-gray-900">Trailing 6 Month Metrics By Week</p>
                         <p className="text-xs text-gray-400">{subtitle}</p>
                     </div>
                     <DropdownMenu>
@@ -149,30 +149,35 @@ export default function WeeklyChart({ data, loading }) {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator className="mx-1 my-1 bg-gray-100" />
                             {Object.entries(METRIC_OPTIONS).map(([metricKey, metric]) => (
-                                <DropdownMenuCheckboxItem
+                                <DropdownMenuItem
                                     key={metricKey}
-                                    checked={selectedMetrics.includes(metricKey)}
-                                    onCheckedChange={(checked) => handleMetricToggle(metricKey, checked)}
-                                    className="cursor-pointer rounded-xl px-8 py-2 text-sm focus:bg-gray-100"
+                                    onSelect={(e) => e.preventDefault()}
+                                    onClick={() => handleMetricToggle(metricKey, !selectedMetrics.includes(metricKey))}
+                                    className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100 flex items-center gap-2"
                                 >
+                                    {selectedMetrics.includes(metricKey) ? (
+                                        <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                                    ) : (
+                                        <span className="h-4 w-4" /> // invisible spacer to keep alignment
+                                    )}
                                     {metric.label}
-                                </DropdownMenuCheckboxItem>
+                                </DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
 
                 {loading ? (
-                    <div className="flex items-center justify-center h-[220px]">
+                    <div className="flex items-center justify-center h-[200px]">
                         <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
                     </div>
                 ) : chartData.length === 0 ? (
-                    <div className="flex items-center justify-center h-[220px] text-sm text-gray-400">
+                    <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
                         No weekly data available
                     </div>
                 ) : (
                     <>
-                        <ResponsiveContainer width="100%" height={220}>
+                        <ResponsiveContainer width="100%" height={200}>
                             <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis
@@ -213,7 +218,7 @@ export default function WeeklyChart({ data, loading }) {
                             </LineChart>
                         </ResponsiveContainer>
 
-                        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+                        <div className="mt-3 grid flex flex-wrap justify-center gap-x-4 gap-y-1.5">
                             {selectedMetricConfigs.map((metric) => (
                                 <div key={metric.key} className="flex items-center gap-2">
                                     <span

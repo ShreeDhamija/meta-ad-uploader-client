@@ -794,9 +794,9 @@ export default function AnalyticsDashboard() {
                         <Zap className="w-4 h-4" />
                         <span className="hidden sm:inline">Recommendations</span>
                         <span className="sm:hidden">Recs</span>
-                        {(recsCount + poorAdsCount) > 0 && (
+                        {(recsCount) > 0 && (
                             <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-2xl">
-                                {recsCount + poorAdsCount}
+                                {recsCount}
                             </Badge>
                         )}
                     </button>
