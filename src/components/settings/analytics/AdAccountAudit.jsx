@@ -1,8 +1,539 @@
+// "use client"
+
+// import { useState, useEffect, useCallback } from "react"
+// import { Button } from "@/components/ui/button"
+// import { Loader2, FileBarChart2 } from "lucide-react"
+// import {
+//     ComposedChart, BarChart as ReBarChart, LineChart, Bar, Line, XAxis, YAxis,
+//     CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
+// } from "recharts"
+// import { cn } from "@/lib/utils"
+
+// const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
+
+// // ---- Colors ----
+// const CPC_COLOR = "#6366f1"
+// const CTR_COLOR = "#10b981"
+// const CPM_COLOR = "#6b7280"
+// const FREQ_COLOR = "#6366f1"
+// const FTIR_COLOR = "#0891b2"
+// const SPEND_COLOR = "#6366f1"
+// const KPI_COLOR = "#f59e0b"
+// const PROSPECTING_COLOR = "#6366f1"
+// const RETARGETING_COLOR = "#f59e0b"
+
+// // ---- Shared chart styling (matches KPIChart / dashboard) ----
+// const GRID_STROKE = "#f0f0f0"
+// const AXIS_TICK = { fontSize: 10, fill: '#9ca3af' }
+// const AXIS_LINE = { stroke: '#e5e7eb' }
+// const TOOLTIP_STYLE = {
+//     borderRadius: '12px',
+//     border: '1px solid #e5e7eb',
+//     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+//     fontSize: '12px',
+// }
+
+// // ---- Formatters ----
+// function fmt$(v, decimals = 0) {
+//     if (v === null || v === undefined) return "\u2014"
+//     if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`
+//     return `$${v.toFixed(decimals)}`
+// }
+// function fmtPct(v, decimals = 1) {
+//     if (v === null || v === undefined) return "\u2014"
+//     return `${(v * 100).toFixed(decimals)}%`
+// }
+// function fmtNum(v, decimals = 2) {
+//     if (v === null || v === undefined) return "\u2014"
+//     return v.toFixed(decimals)
+// }
+
+// // ---- Subcomponents ----
+
+// function MetricCard({ label, value, sub, color }) {
+//     return (
+//         <div className="bg-gray-50 rounded-xl p-4 flex flex-col gap-1">
+//             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+//             <p className="text-2xl font-bold" style={{ color: color || "#111827" }}>{value}</p>
+//             {sub && <p className="text-xs text-gray-400">{sub}</p>}
+//         </div>
+//     )
+// }
+
+// function SectionHeader({ num, title, sub }) {
+//     return (
+//         <div className="mb-4">
+//             <div className="flex items-baseline gap-2">
+//                 <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">{num}</span>
+//                 <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+//             </div>
+//             {sub && <p className="text-xs text-gray-400 mt-0.5 ml-8">{sub}</p>}
+//         </div>
+//     )
+// }
+
+// function ChartTooltipContent({ active, payload, label, formatters }) {
+//     if (!active || !payload?.length) return null
+//     return (
+//         <div className="bg-white rounded-xl border border-gray-200 px-3 py-2 text-xs min-w-[140px]"
+//             style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+//         >
+//             <p className="font-semibold text-gray-600 mb-1">{label}</p>
+//             {payload.map((entry) => (
+//                 <div key={entry.name} className="flex justify-between gap-3">
+//                     <span style={{ color: entry.color }}>{entry.name}</span>
+//                     <span className="text-gray-800 font-medium">
+//                         {formatters?.[entry.name] ? formatters[entry.name](entry.value) : entry.value}
+//                     </span>
+//                 </div>
+//             ))}
+//         </div>
+//     )
+// }
+
+// // ---- Section 1: Traffic ----
+// function TrafficSection({ traffic }) {
+//     const dateLabel = (d) => d.slice(5).replace("-", "/")
+//     return (
+//         <div className="bg-white rounded-2xl border border-gray-200 p-6">
+//             <SectionHeader num={1} title="Traffic Overview" sub="Trailing 30 days · Cost Per Link Click, Link CTR, and CPM" />
+//             <div className="grid grid-cols-3 gap-4 mb-6">
+//                 <MetricCard label="Avg Cost Per Link Click" value={fmt$(traffic.avgCostPerClick, 2)} color={CPC_COLOR} />
+//                 <MetricCard label="Avg Link CTR" value={traffic.avgCtr !== null ? `${traffic.avgCtr.toFixed(2)}%` : "\u2014"} color={CTR_COLOR} />
+//                 <MetricCard label="Avg CPM" value={fmt$(traffic.avgCpm, 2)} color={CPM_COLOR} />
+//             </div>
+//             <div className="grid grid-cols-3 gap-4">
+//                 {[
+//                     { key: "costPerClick", label: "Cost Per Click (CPC)", color: CPC_COLOR, fmt: (v) => `$${(v ?? 0).toFixed(2)}`, yFmt: (v) => `$${v.toFixed(0)}` },
+//                     { key: "ctr", label: "Link Click-Through Rate (CTR)", color: CTR_COLOR, fmt: (v) => `${(v ?? 0).toFixed(2)}%`, yFmt: (v) => `${v.toFixed(1)}%` },
+//                     { key: "cpm", label: "Cost Per 1,000 Impressions (CPM)", color: CPM_COLOR, fmt: (v) => `$${(v ?? 0).toFixed(2)}`, yFmt: (v) => `$${v.toFixed(0)}` },
+//                 ].map(({ key, label, color, fmt: tooltipFmt, yFmt }) => (
+//                     <div key={key}>
+//                         <p className="text-xs font-medium text-gray-500 mb-2">{label}</p>
+//                         <div style={{ height: 160 }}>
+//                             <ResponsiveContainer width="100%" height="100%">
+//                                 <LineChart data={traffic.daily} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+//                                     <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+//                                     <XAxis dataKey="date" tick={AXIS_TICK} tickFormatter={dateLabel} interval="preserveStartEnd" axisLine={AXIS_LINE} tickLine={false} />
+//                                     <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={yFmt} width={36} />
+//                                     <Tooltip
+//                                         contentStyle={TOOLTIP_STYLE}
+//                                         formatter={(v) => [tooltipFmt(v), label.split(" (")[0]]}
+//                                         labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+//                                     />
+//                                     <Line type="monotone" dataKey={key} stroke={color} dot={false} strokeWidth={2} connectNulls />
+//                                 </LineChart>
+//                             </ResponsiveContainer>
+//                         </div>
+//                     </div>
+//                 ))}
+//             </div>
+//         </div>
+//     )
+// }
+
+// // ---- Section 2: Funnel ----
+// function FunnelSection({ funnel }) {
+//     const chartData = funnel.weekly.map((w) => ({
+//         week: `${w.weekStart.slice(5).replace("-", "/")}–${w.weekEnd.slice(5).replace("-", "/")}`,
+//         Frequency: w.frequency,
+//         "FTIR %": w.ftir !== null ? w.ftir * 100 : null,
+//     }))
+//     return (
+//         <div className="bg-white rounded-2xl border border-gray-200 p-6">
+//             <SectionHeader num={2} title="Funnel Health" sub="Trailing 3 months · weekly averages · Frequency and First-Time Impression Rate" />
+//             <div className="grid grid-cols-2 gap-4 mb-6">
+//                 <MetricCard label="Avg Weekly Frequency" value={fmtNum(funnel.avgFrequency)} sub="impressions per unique user" color={FREQ_COLOR} />
+//                 <MetricCard label="Avg First-Time Impression Rate" value={fmtPct(funnel.avgFtir)} sub="reach ÷ impressions · higher is healthier" color={FTIR_COLOR} />
+//             </div>
+//             <div style={{ height: 220 }}>
+//                 <ResponsiveContainer width="100%" height="100%">
+//                     <ComposedChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+//                         <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+//                         <XAxis dataKey="week" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
+//                         <YAxis yAxisId="freq" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(1)} width={36} />
+//                         <YAxis yAxisId="ftir" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => `${v.toFixed(0)}%`} width={44} />
+//                         <Tooltip content={<ChartTooltipContent formatters={{ Frequency: (v) => v.toFixed(2), "FTIR %": (v) => `${v.toFixed(1)}%` }} />} />
+//                         <Legend wrapperStyle={{ fontSize: '11px' }} />
+//                         <Line yAxisId="freq" type="monotone" dataKey="Frequency" stroke={FREQ_COLOR} strokeWidth={2} dot={{ r: 4, strokeWidth: 0, fill: FREQ_COLOR }} />
+//                         <Line yAxisId="ftir" type="monotone" dataKey="FTIR %" stroke={FTIR_COLOR} strokeWidth={2} dot={{ r: 4, strokeWidth: 0, fill: FTIR_COLOR }} />
+//                     </ComposedChart>
+//                 </ResponsiveContainer>
+//             </div>
+//         </div>
+//     )
+// }
+
+// // ---- Section 3: Monthly Spend ----
+// function MonthlySpendSection({ monthlySpend, kpiType }) {
+//     const kpiLabel = kpiType === "roas" ? "ROAS" : "CPA"
+//     const kpiFmt = (v) => kpiType === "roas" ? `${v.toFixed(2)}×` : `$${v.toFixed(0)}`
+//     return (
+//         <div className="bg-white rounded-2xl border border-gray-200 p-6">
+//             <SectionHeader num={3} title="Monthly Ad Spend" sub={`Last 6 months · total account spend and blended ${kpiLabel} by calendar month`} />
+//             <div style={{ height: 240 }}>
+//                 <ResponsiveContainer width="100%" height="100%">
+//                     <ComposedChart data={monthlySpend} margin={{ top: 4, right: 48, left: 0, bottom: 0 }}>
+//                         <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
+//                         <XAxis dataKey="month" tick={{ ...AXIS_TICK, fontSize: 11 }} axisLine={AXIS_LINE} tickLine={false} />
+//                         <YAxis yAxisId="spend" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} width={48} />
+//                         <YAxis yAxisId="kpi" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={kpiFmt} width={44} />
+//                         <Tooltip content={<ChartTooltipContent formatters={{ Spend: (v) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, [kpiLabel]: kpiFmt }} />} />
+//                         <Legend wrapperStyle={{ fontSize: '11px' }} />
+//                         <Bar yAxisId="spend" dataKey="spend" name="Spend" fill={SPEND_COLOR} radius={[3, 3, 0, 0]}>
+//                             {monthlySpend.map((_, i) => (
+//                                 <Cell key={i} fill={i === monthlySpend.length - 1 ? "#818cf8" : SPEND_COLOR} />
+//                             ))}
+//                         </Bar>
+//                         <Line yAxisId="kpi" type="monotone" dataKey="kpi" name={kpiLabel} stroke={KPI_COLOR} dot={{ r: 4, strokeWidth: 0, fill: KPI_COLOR }} strokeWidth={2} connectNulls />
+//                     </ComposedChart>
+//                 </ResponsiveContainer>
+//             </div>
+//         </div>
+//     )
+// }
+
+// // ---- Section 4: Audience ----
+// function AudienceSection({ audience }) {
+//     const [filter, setFilter] = useState("all")
+//     const [showAll, setShowAll] = useState(false)
+
+//     const filtered = audience.adsets.filter((a) => filter === "all" || a.type === filter)
+//     const visible = showAll ? filtered : filtered.slice(0, 8)
+//     const total = audience.totalSpend30d
+
+//     const spendPct = (v) => total > 0 ? `${((v / total) * 100).toFixed(0)}%` : "\u2014"
+
+//     const splitData = [
+//         { name: "Prospecting", spend: audience.prospectingSpend, fill: PROSPECTING_COLOR },
+//         { name: "Retargeting", spend: audience.retargetingSpend, fill: RETARGETING_COLOR },
+//     ]
+
+//     return (
+//         <div className="bg-white rounded-2xl border border-gray-200 p-6">
+//             <SectionHeader num={4} title="Audience Strategy" sub="Adsets with delivery in last 30 days (including paused) · prospecting vs retargeting classification" />
+
+//             <div className="grid grid-cols-3 gap-4 mb-6">
+//                 <MetricCard label="Prospecting Spend (30d)" value={fmt$(audience.prospectingSpend)} sub={`${spendPct(audience.prospectingSpend)} of total`} color={PROSPECTING_COLOR} />
+//                 <MetricCard label="Retargeting Spend (30d)" value={fmt$(audience.retargetingSpend)} sub={`${spendPct(audience.retargetingSpend)} of total`} color={RETARGETING_COLOR} />
+//                 <MetricCard label="Total Account Spend (30d)" value={fmt$(audience.totalSpend30d)} />
+//             </div>
+
+//             <div style={{ height: 80 }} className="mb-6">
+//                 <ResponsiveContainer width="100%" height="100%">
+//                     <ReBarChart layout="vertical" data={splitData} margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+//                         <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} axisLine={AXIS_LINE} tickLine={false} />
+//                         <YAxis type="category" dataKey="name" tick={{ ...AXIS_TICK, fontSize: 11 }} width={80} tickLine={false} axisLine={false} />
+//                         <Tooltip
+//                             contentStyle={TOOLTIP_STYLE}
+//                             formatter={(v) => [`$${(v || 0).toLocaleString()}`, ""]}
+//                             cursor={{ fill: "#f9fafb" }}
+//                         />
+//                         <Bar dataKey="spend" radius={[0, 3, 3, 0]}>
+//                             {splitData.map((entry, i) => (<Cell key={i} fill={entry.fill} />))}
+//                         </Bar>
+//                     </ReBarChart>
+//                 </ResponsiveContainer>
+//             </div>
+
+//             {audience.topExclusions?.length > 0 && (
+//                 <div className="mb-5">
+//                     <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Most-Used Exclusion Audiences</p>
+//                     <div className="flex flex-wrap gap-2">
+//                         {audience.topExclusions.map((exc) => (
+//                             <span key={exc.name} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+//                                 {exc.name} <span className="text-gray-400">×{exc.count}</span>
+//                             </span>
+//                         ))}
+//                     </div>
+//                 </div>
+//             )}
+
+//             <div className="mb-3 flex items-center gap-2">
+//                 {["all", "prospecting", "retargeting"].map((t) => (
+//                     <button key={t} onClick={() => setFilter(t)}
+//                         className={cn("px-3 py-1 text-xs rounded-xl font-medium transition-colors",
+//                             filter === t
+//                                 ? t === "prospecting" ? "bg-indigo-100 text-indigo-700" : t === "retargeting" ? "bg-amber-100 text-amber-700" : "bg-gray-200 text-gray-700"
+//                                 : "bg-gray-50 text-gray-500 hover:bg-gray-100"
+//                         )}>
+//                         {t.charAt(0).toUpperCase() + t.slice(1)}
+//                         {t !== "all" && <span className="ml-1 text-gray-400">({audience.adsets.filter(a => a.type === t).length})</span>}
+//                     </button>
+//                 ))}
+//                 <span className="ml-auto text-xs text-gray-400">{filtered.length} adsets</span>
+//             </div>
+
+//             <div className="overflow-x-auto rounded-xl border border-gray-200">
+//                 <table className="min-w-full text-sm">
+//                     <thead className="bg-gray-50">
+//                         <tr>
+//                             <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Adset</th>
+//                             <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Type</th>
+//                             <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 min-w-[200px]">Targeting</th>
+//                             <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Exclusions</th>
+//                             <th className="text-right px-3 py-2 text-xs font-medium text-gray-500">30d Spend</th>
+//                         </tr>
+//                     </thead>
+//                     <tbody className="divide-y divide-gray-50">
+//                         {visible.map((adset) => (
+//                             <tr key={adset.id} className="hover:bg-gray-50">
+//                                 <td className="px-3 py-2 text-gray-800 max-w-[180px] truncate" title={adset.name}>{adset.name}</td>
+//                                 <td className="px-3 py-2">
+//                                     <span className={cn("inline-block px-2 py-0.5 text-xs rounded-full font-medium",
+//                                         adset.type === "prospecting" ? "bg-indigo-50 text-indigo-700" : "bg-amber-50 text-amber-700"
+//                                     )}>
+//                                         {adset.type === "prospecting" ? "Pros." : "Retas."}
+//                                     </span>
+//                                 </td>
+//                                 <td className="px-3 py-2 text-gray-600 text-xs max-w-[220px]">{adset.targetingSummary}</td>
+//                                 <td className="px-3 py-2 text-gray-500 text-xs max-w-[180px]">
+//                                     {adset.exclusions.length
+//                                         ? adset.exclusions.slice(0, 2).join(", ") + (adset.exclusions.length > 2 ? "…" : "")
+//                                         : <span className="text-gray-300">—</span>}
+//                                 </td>
+//                                 <td className="px-3 py-2 text-right font-medium text-gray-800">{fmt$(adset.spend30d)}</td>
+//                             </tr>
+//                         ))}
+//                     </tbody>
+//                 </table>
+//             </div>
+//             {filtered.length > 8 && (
+//                 <button onClick={() => setShowAll(v => !v)} className="mt-2 text-xs text-indigo-600 hover:text-indigo-800">
+//                     {showAll ? "Show less" : `Show all ${filtered.length} adsets`}
+//                 </button>
+//             )}
+//         </div>
+//     )
+// }
+
+// // ---- Section 5: Learning Phase ----
+// function LearningSection({ learning }) {
+//     const pct = learning.learningSpendPct
+//     const pctDisplay = pct !== null ? `${(pct * 100).toFixed(1)}%` : "\u2014"
+//     let status = "good"
+//     if (pct !== null) {
+//         if (pct >= 0.5) status = "bad"
+//         else if (pct >= 0.2) status = "warn"
+//     }
+//     const cfg = {
+//         good: { label: "Healthy", bg: "bg-green-50", text: "text-green-700", border: "border-green-200", numColor: "#059669" },
+//         warn: { label: "Monitor", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", numColor: "#d97706" },
+//         bad: { label: "Action needed", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", numColor: "#dc2626" },
+//     }[status]
+
+//     return (
+//         <div className="bg-white rounded-2xl border border-gray-200 p-6">
+//             <SectionHeader num={5} title="% of Budget in Learning Phase" sub="Last 7 days · ad sets in Learning or Learning Limited (including paused)" />
+//             <div className="flex items-start gap-6">
+//                 <div className={cn("flex-shrink-0 border rounded-2xl px-8 py-6 text-center", cfg.bg, cfg.border)}>
+//                     <p className="text-5xl font-bold" style={{ color: cfg.numColor }}>{pctDisplay}</p>
+//                     <p className={cn("text-sm font-medium mt-1", cfg.text)}>{cfg.label}</p>
+//                 </div>
+//                 <div className="flex-1 space-y-3 pt-1">
+//                     <div className="grid grid-cols-2 gap-3">
+//                         <MetricCard label="Learning Spend (7d)" value={fmt$(learning.learningSpend)} sub="spend from Learning / Learning Limited ad sets" />
+//                         <MetricCard label="Total Spend (7d)" value={fmt$(learning.totalSpend)} sub="all ad sets" />
+//                     </div>
+//                     <div className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3 space-y-1">
+//                         <p><span className="font-medium text-green-700">{"< 20%"}</span> — Healthy. Most budget is running in stable, optimized ad sets.</p>
+//                         <p><span className="font-medium text-amber-700">20–50%</span> — Monitor. A significant portion of budget is in learning; avoid additional structural changes.</p>
+//                         <p><span className="font-medium text-red-700">{"> 50%"}</span> — Action needed. Consolidate ad sets or pause new launches until learning completes.</p>
+//                     </div>
+//                 </div>
+//             </div>
+//         </div>
+//     )
+// }
+
+// // ---- Section 6: Copy Utilization ----
+// function CopyUtilizationSection({ copyUtilization }) {
+//     const isGood = copyUtilization.status === "maximizing"
+//     return (
+//         <div className="bg-white rounded-2xl border border-gray-200 p-6">
+//             <SectionHeader num={6} title="Copy Utilization" sub="Top 10 ads by 30-day spend · primary text and headline field usage" />
+//             <div className="flex items-start gap-6 mb-5">
+//                 <div className={cn("flex-shrink-0 border rounded-2xl px-6 py-4 text-center",
+//                     isGood ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
+//                 )}>
+//                     <p className={cn("text-4xl font-bold", isGood ? "text-green-700" : "text-amber-700")}>
+//                         {copyUtilization.maximizingCount}/{copyUtilization.totalCount}
+//                     </p>
+//                     <p className={cn("text-xs font-medium mt-1", isGood ? "text-green-600" : "text-amber-600")}>maximizing</p>
+//                 </div>
+//                 <div className="flex-1 pt-1">
+//                     <p className={cn("text-sm font-semibold mb-2", isGood ? "text-green-700" : "text-amber-700")}>
+//                         {isGood ? "✓ " : "⚠ "}{copyUtilization.statusText}
+//                     </p>
+//                     <p className="text-xs text-gray-500">
+//                         Ads using all 5 primary text variants and 5 headline variants allow Meta's algorithm to test more combinations, improving delivery efficiency and reducing cost over time.
+//                     </p>
+//                 </div>
+//             </div>
+//         </div>
+//     )
+// }
+
+// // ---- Section 7: Opportunities ----
+// function OpportunitiesSection({ text, isLoading, error, onChange }) {
+//     return (
+//         <div className="bg-white rounded-2xl border border-gray-200 p-6">
+//             <SectionHeader num={7} title="Areas of Opportunity" sub="AI-generated analysis based on account performance data · editable" />
+//             {isLoading && (
+//                 <div className="flex flex-col items-center justify-center py-16">
+//                     <Loader2 className="w-7 h-7 animate-spin text-indigo-500 mb-3" />
+//                     <p className="text-sm font-medium text-gray-600">
+//                         Generating suggestions…
+//                     </p>
+//                     <p className="text-xs text-gray-400 mt-1">
+//                         Analyzing your account data with AI
+//                     </p>
+//                 </div>
+//             )}
+//             {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl mb-3">{error}</p>}
+//             {!isLoading && (
+//                 <textarea
+//                     value={text}
+//                     onChange={(e) => onChange(e.target.value)}
+//                     className="w-full min-h-[350px] text-sm text-gray-700 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y leading-relaxed"
+//                     placeholder="Areas of Opportunity will appear here automatically after the report loads…"
+//                 />
+//             )}
+//         </div>
+//     )
+// }
+
+
+// // ============================================
+// // Main Export
+// // ============================================
+// export default function AdAccountAudit({
+//     open, onOpenChange, adAccountId, adAccountName,
+//     kpiType = "cpa", conversionEvent = null, targetCPA = null, targetROAS = null,
+// }) {
+//     const [report, setReport] = useState(null)
+//     const [isGenerating, setIsGenerating] = useState(false)
+//     const [error, setError] = useState(null)
+//     const [opportunitiesText, setOpportunitiesText] = useState("")
+//     const [isLoadingOpps, setIsLoadingOpps] = useState(false)
+//     const [oppsError, setOppsError] = useState(null)
+
+//     const kpiTarget = kpiType === "cpa" ? targetCPA : targetROAS
+
+//     useEffect(() => {
+//         if (open && adAccountId && !report && !isGenerating) generateReport()
+//         if (!open) { setReport(null); setError(null); setOpportunitiesText(""); setOppsError(null) }
+//     }, [open, adAccountId])
+
+//     const generateReport = async () => {
+//         setIsGenerating(true); setError(null); setReport(null); setOpportunitiesText("")
+//         const params = new URLSearchParams({ adAccountId, kpiType })
+//         if (kpiType === "cpa" && conversionEvent) params.set("conversionEvent", conversionEvent)
+//         try {
+//             const res = await fetch(`${API_BASE_URL}/api/analytics/audit/report?${params}`, { credentials: "include" })
+//             if (!res.ok) { const err = await res.json(); setError(err.error || "Failed to generate report"); return }
+//             const data = await res.json(); setReport(data); fetchOpportunities(data)
+//         } catch (e) { setError("Network error — please try again.") }
+//         finally { setIsGenerating(false) }
+//     }
+
+//     const fetchOpportunities = async (reportData) => {
+//         setIsLoadingOpps(true); setOppsError(null)
+//         try {
+//             const res = await fetch(`${API_BASE_URL}/api/analytics/audit/opportunities`, {
+//                 method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+//                 body: JSON.stringify({
+//                     accountName: adAccountName, kpiType, kpiTarget: kpiTarget || "",
+//                     conversionEvent: kpiType === "cpa" ? conversionEvent : "",
+//                     traffic: reportData.traffic, funnel: reportData.funnel, monthlySpend: reportData.monthlySpend,
+//                     audience: reportData.audience, learning: reportData.learning, copyUtilization: reportData.copyUtilization,
+//                 }),
+//             })
+//             if (!res.ok) { const err = await res.json(); setOppsError(err.error || "Failed to generate opportunities") }
+//             else { const data = await res.json(); setOpportunitiesText(data.opportunities || "") }
+//         } catch { setOppsError("Network error — could not generate opportunities.") }
+//         finally { setIsLoadingOpps(false) }
+//     }
+
+//     const reportDate = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
+
+//     if (!open) return null
+
+//     return (
+//         <>
+//             <div className="fixed inset-0 bg-black/50 z-50" onClick={() => onOpenChange(false)} />
+//             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+//                 <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-[960px] max-h-[92vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+//                     {/* Sticky header */}
+//                     <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+//                         <div className="flex-1 min-w-0 mr-4">
+//                             <h2 className="text-lg font-bold text-gray-900 truncate">{adAccountName || "Ad Account Audit"}</h2>
+//                             <p className="text-xs text-gray-500 mt-0.5">
+//                                 Ad Account Audit · {reportDate}
+//                                 {kpiTarget && (
+//                                     <span className="ml-2 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">
+//                                         Target {kpiType.toUpperCase()}: {kpiType === "cpa" ? `$${kpiTarget}` : `${kpiTarget}×`}
+//                                         {kpiType === "cpa" && conversionEvent ? ` · ${conversionEvent}` : ""}
+//                                     </span>
+//                                 )}
+//                             </p>
+//                         </div>
+//                         <div className="flex items-center gap-3 flex-shrink-0">
+//                             {report && !isGenerating && (
+//                                 <Button variant="outline" size="sm" onClick={generateReport} className="rounded-2xl text-xs gap-1.5">
+//                                     <FileBarChart2 className="w-3.5 h-3.5" />
+//                                     Re-run Audit
+//                                 </Button>
+//                             )}
+//                             <button onClick={() => onOpenChange(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 hover:bg-gray-100 rounded-xl">
+//                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+//                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+//                                 </svg>
+//                             </button>
+//                         </div>
+//                     </div>
+
+//                     {/* Scrollable content */}
+//                     <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 custom-scrollbar">
+//                         {isGenerating && (
+//                             <div className="flex flex-col items-center justify-center py-20 text-sm text-gray-500">
+//                                 <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-3" />
+//                                 Fetching account data from Meta… this usually takes 5–15 seconds.
+//                             </div>
+//                         )}
+//                         {error && !isGenerating && (
+//                             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+//                                 {error}
+//                                 <button onClick={generateReport} className="ml-3 underline text-red-600 hover:text-red-800">Retry</button>
+//                             </div>
+//                         )}
+//                         {report && !isGenerating && (
+//                             <>
+//                                 <TrafficSection traffic={report.traffic} />
+//                                 <FunnelSection funnel={report.funnel} />
+//                                 <MonthlySpendSection monthlySpend={report.monthlySpend} kpiType={report.kpiType || kpiType} />
+//                                 <AudienceSection audience={report.audience} />
+//                                 <LearningSection learning={report.learning} />
+//                                 {report.copyUtilization && <CopyUtilizationSection copyUtilization={report.copyUtilization} />}
+//                                 <OpportunitiesSection text={opportunitiesText} isLoading={isLoadingOpps} error={oppsError} onChange={setOpportunitiesText} />
+//                             </>
+//                         )}
+//                     </div>
+//                 </div>
+//             </div>
+//         </>
+//     )
+// }
+
+
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Loader2, FileBarChart2 } from "lucide-react"
+import {
+    Loader2, FileBarChart2, TrendingUp, Filter, DollarSign,
+    Users, GraduationCap, FileText, Sparkles, LayoutDashboard,
+} from "lucide-react"
 import {
     ComposedChart, BarChart as ReBarChart, LineChart, Bar, Line, XAxis, YAxis,
     CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
@@ -11,29 +542,53 @@ import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
-// ---- Colors ----
-const CPC_COLOR = "#6366f1"
-const CTR_COLOR = "#10b981"
-const CPM_COLOR = "#6b7280"
-const FREQ_COLOR = "#6366f1"
-const FTIR_COLOR = "#0891b2"
-const SPEND_COLOR = "#6366f1"
-const KPI_COLOR = "#f59e0b"
-const PROSPECTING_COLOR = "#6366f1"
-const RETARGETING_COLOR = "#f59e0b"
+// ── Colors (all blues — zero purple) ─────────────────────────────────────────
+const BLUE = "#2563eb"
+const BLUE_LIGHT = "#3b82f6"
+const BLUE_DARK = "#1d4ed8"
+const BLUE_BG = "#eff6ff"
+const BLUE_BORDER = "#dbeafe"
+const GREEN = "#10b981"
+const CYAN = "#0891b2"
+const AMBER = "#f59e0b"
+const GRAY = "#6b7280"
 
-// ---- Shared chart styling (matches KPIChart / dashboard) ----
+// Chart colors (mapped from old indigo/purple → blue)
+const CPC_COLOR = BLUE
+const CTR_COLOR = GREEN
+const CPM_COLOR = GRAY
+const FREQ_COLOR = BLUE
+const FTIR_COLOR = CYAN
+const SPEND_COLOR = BLUE
+const KPI_COLOR = AMBER
+const PROSPECTING_COLOR = BLUE
+const RETARGETING_COLOR = AMBER
+
+// ── Shared chart styling ─────────────────────────────────────────────────────
 const GRID_STROKE = "#f0f0f0"
 const AXIS_TICK = { fontSize: 10, fill: '#9ca3af' }
 const AXIS_LINE = { stroke: '#e5e7eb' }
 const TOOLTIP_STYLE = {
-    borderRadius: '12px',
+    borderRadius: '14px',
     border: '1px solid #e5e7eb',
-    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
     fontSize: '12px',
+    padding: '8px 12px',
 }
 
-// ---- Formatters ----
+// ── Sidebar config ───────────────────────────────────────────────────────────
+const SIDEBAR_SECTIONS = [
+    { id: "summary", label: "Summary", Icon: LayoutDashboard },
+    { id: "traffic", label: "Traffic", Icon: TrendingUp },
+    { id: "funnel", label: "Funnel Health", Icon: Filter },
+    { id: "spend", label: "Monthly Spend", Icon: DollarSign },
+    { id: "audience", label: "Audience", Icon: Users },
+    { id: "learning", label: "Learning Phase", Icon: GraduationCap },
+    { id: "copy", label: "Copy Util.", Icon: FileText },
+    { id: "opportunities", label: "Opportunities", Icon: Sparkles },
+]
+
+// ── Formatters ───────────────────────────────────────────────────────────────
 function fmt$(v, decimals = 0) {
     if (v === null || v === undefined) return "\u2014"
     if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`
@@ -48,26 +603,37 @@ function fmtNum(v, decimals = 2) {
     return v.toFixed(decimals)
 }
 
-// ---- Subcomponents ----
+// ═════════════════════════════════════════════════════════════════════════════
+// REUSABLE SUBCOMPONENTS
+// ═════════════════════════════════════════════════════════════════════════════
 
 function MetricCard({ label, value, sub, color }) {
     return (
-        <div className="bg-gray-50 rounded-xl p-4 flex flex-col gap-1">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-            <p className="text-2xl font-bold" style={{ color: color || "#111827" }}>{value}</p>
-            {sub && <p className="text-xs text-gray-400">{sub}</p>}
+        <div className="bg-white rounded-2xl p-4 flex flex-col gap-1 border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_0_0_1px_rgba(0,0,0,0.02)]">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
+            <p className="text-2xl font-bold tabular-nums" style={{ color: color || "#111827" }}>{value}</p>
+            {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
         </div>
     )
 }
 
-function SectionHeader({ num, title, sub }) {
+function SectionHeader({ title, sub }) {
     return (
-        <div className="mb-4">
-            <div className="flex items-baseline gap-2">
-                <span className="text-xs font-bold text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">{num}</span>
-                <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-            </div>
-            {sub && <p className="text-xs text-gray-400 mt-0.5 ml-8">{sub}</p>}
+        <div className="mb-5">
+            <h3 className="text-[15px] font-semibold text-gray-900 leading-tight">{title}</h3>
+            {sub && <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{sub}</p>}
+        </div>
+    )
+}
+
+// V2-style section card: white, rounded-2xl, subtle ring shadow
+function SectionCard({ children, id }) {
+    return (
+        <div
+            id={`audit-${id}`}
+            className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_0_0_1px_rgba(0,0,0,0.02)] p-6"
+        >
+            {children}
         </div>
     )
 }
@@ -75,14 +641,12 @@ function SectionHeader({ num, title, sub }) {
 function ChartTooltipContent({ active, payload, label, formatters }) {
     if (!active || !payload?.length) return null
     return (
-        <div className="bg-white rounded-xl border border-gray-200 px-3 py-2 text-xs min-w-[140px]"
-            style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
-        >
-            <p className="font-semibold text-gray-600 mb-1">{label}</p>
+        <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5 text-xs min-w-[140px] shadow-lg">
+            <p className="font-semibold text-gray-600 mb-1.5">{label}</p>
             {payload.map((entry) => (
-                <div key={entry.name} className="flex justify-between gap-3">
+                <div key={entry.name} className="flex justify-between gap-4">
                     <span style={{ color: entry.color }}>{entry.name}</span>
-                    <span className="text-gray-800 font-medium">
+                    <span className="text-gray-800 font-medium tabular-nums">
                         {formatters?.[entry.name] ? formatters[entry.name](entry.value) : entry.value}
                     </span>
                 </div>
@@ -91,13 +655,196 @@ function ChartTooltipContent({ active, payload, label, formatters }) {
     )
 }
 
-// ---- Section 1: Traffic ----
+// ── Donut ring (for learning + audience) ─────────────────────────────────────
+function DonutRing({ value, total, color = BLUE, size = 100 }) {
+    const pct = total > 0 ? value / total : 0
+    const r = (size - 12) / 2
+    const circ = 2 * Math.PI * r
+    const offset = circ * (1 - pct)
+    return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="block">
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f3f4f6" strokeWidth={9} />
+            <circle
+                cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={9}
+                strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+                transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.34,1.56,0.64,1)" }}
+            />
+            <text x={size / 2} y={size / 2 + 5} textAnchor="middle" fontSize="18" fontWeight="700" fill="#1a1a1a">
+                {(pct * 100).toFixed(0)}%
+            </text>
+        </svg>
+    )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SECTION 0: EXECUTIVE SUMMARY
+// ═════════════════════════════════════════════════════════════════════════════
+
+function SummarySection({ report, kpiType, kpiTarget }) {
+    if (!report) return null
+
+    const { traffic, funnel, monthlySpend, audience, learning, copyUtilization } = report
+    const kpiLabel = kpiType === "roas" ? "ROAS" : "CPA"
+
+    const insights = []
+
+    // Spend trend
+    if (monthlySpend?.length >= 2) {
+        const cur = monthlySpend[monthlySpend.length - 1]
+        const prev = monthlySpend[monthlySpend.length - 2]
+        const delta = prev.spend > 0 ? ((cur.spend - prev.spend) / prev.spend * 100).toFixed(0) : null
+        if (delta !== null) {
+            insights.push({
+                label: "Spend Trend",
+                statement: `Spend is ${delta > 0 ? "up" : "down"} ${Math.abs(delta)}% month-over-month at ${fmt$(cur.spend)}.`,
+                status: Math.abs(delta) < 25 ? "neutral" : delta > 0 ? "warn" : "good",
+            })
+        }
+    }
+
+    // KPI vs target
+    if (monthlySpend?.length >= 1 && kpiTarget) {
+        const cur = monthlySpend[monthlySpend.length - 1]
+        if (cur.kpi != null) {
+            const above = kpiType === "roas" ? cur.kpi < kpiTarget : cur.kpi > kpiTarget
+            const gap = Math.abs(cur.kpi - kpiTarget)
+            const fmtGap = kpiType === "roas" ? `${gap.toFixed(2)}×` : `$${gap.toFixed(1)}`
+            insights.push({
+                label: `${kpiLabel} vs Target`,
+                statement: `Blended ${kpiLabel} is ${kpiType === "roas" ? `${cur.kpi.toFixed(2)}×` : `$${cur.kpi.toFixed(1)}`} — ${fmtGap} ${above ? "worse than" : "better than"} your ${kpiType === "roas" ? `${kpiTarget}×` : `$${kpiTarget}`} target.`,
+                status: above ? "warn" : "good",
+            })
+        }
+    }
+
+    // Learning phase
+    if (learning) {
+        const pct = learning.learningSpendPct
+        if (pct !== null) {
+            insights.push({
+                label: "Learning Phase",
+                statement: `${(pct * 100).toFixed(0)}% of budget is in learning${pct < 0.2 ? " — within healthy range." : ". Consider consolidating ad sets."}`,
+                status: pct < 0.2 ? "good" : pct < 0.5 ? "warn" : "bad",
+            })
+        }
+    }
+
+    // Audience split
+    if (audience && audience.totalSpend30d > 0) {
+        const prospPct = ((audience.prospectingSpend / audience.totalSpend30d) * 100).toFixed(0)
+        insights.push({
+            label: "Audience Split",
+            statement: `${prospPct}% prospecting / ${100 - prospPct}% retargeting allocation.`,
+            status: prospPct >= 55 && prospPct <= 85 ? "good" : "neutral",
+        })
+    }
+
+    // Frequency / fatigue
+    if (funnel && funnel.avgFrequency != null) {
+        const ok = funnel.avgFrequency < 2.0
+        insights.push({
+            label: "Ad Fatigue",
+            statement: `Weekly frequency at ${funnel.avgFrequency.toFixed(2)}${ok ? " — no signs of fatigue." : ". Approaching fatigue threshold — refresh creative."}`,
+            status: ok ? "good" : "warn",
+        })
+    }
+
+    // Copy utilization
+    if (copyUtilization) {
+        insights.push({
+            label: "Copy Slots",
+            statement: `${copyUtilization.maximizingCount}/${copyUtilization.totalCount} top ads are maximizing copy variants.${copyUtilization.totalCount - copyUtilization.maximizingCount > 0 ? ` ${copyUtilization.totalCount - copyUtilization.maximizingCount} ads have room to improve.` : ""}`,
+            status: copyUtilization.maximizingCount >= copyUtilization.totalCount * 0.8 ? "good" : "warn",
+        })
+    }
+
+    // Traffic CPC direction
+    if (traffic?.daily?.length >= 14) {
+        const recent = traffic.daily.slice(-7)
+        const prior = traffic.daily.slice(-14, -7)
+        const avgRecent = recent.reduce((s, d) => s + (d.costPerClick || 0), 0) / recent.length
+        const avgPrior = prior.reduce((s, d) => s + (d.costPerClick || 0), 0) / prior.length
+        if (avgPrior > 0) {
+            const delta = ((avgRecent - avgPrior) / avgPrior * 100).toFixed(0)
+            insights.push({
+                label: "CPC Trend",
+                statement: `Cost per click is ${delta > 0 ? "up" : "down"} ${Math.abs(delta)}% over the last 7 days vs prior 7 days.`,
+                status: delta <= 0 ? "good" : "warn",
+            })
+        }
+    }
+
+    const dotColors = {
+        good: { dot: "#22c55e", ring: "#dcfce7" },
+        warn: { dot: "#f59e0b", ring: "#fef3c7" },
+        bad: { dot: "#ef4444", ring: "#fef2f2" },
+        neutral: { dot: "#9ca3af", ring: "#f3f4f6" },
+    }
+
+    // Build top-line statement
+    let headline = ""
+    if (monthlySpend?.length >= 2) {
+        const cur = monthlySpend[monthlySpend.length - 1]
+        const prev = monthlySpend[monthlySpend.length - 2]
+        const delta = prev.spend > 0 ? ((cur.spend - prev.spend) / prev.spend * 100).toFixed(0) : "0"
+        headline = `You spent ${fmt$(cur.spend)} this month (${delta > 0 ? "+" : ""}${delta}% MoM)`
+        if (cur.kpi != null) {
+            headline += ` with a blended ${kpiLabel} of ${kpiType === "roas" ? `${cur.kpi.toFixed(2)}×` : `$${cur.kpi.toFixed(1)}`}`
+        }
+        if (kpiTarget) {
+            const above = kpiType === "roas" ? cur.kpi < kpiTarget : cur.kpi > kpiTarget
+            const gap = Math.abs((cur.kpi || 0) - kpiTarget)
+            const fmtGap = kpiType === "roas" ? `${gap.toFixed(2)}×` : `$${gap.toFixed(1)}`
+            headline += above
+                ? `. That's ${fmtGap} above target — focus on consolidating underperformers.`
+                : `. That's ${fmtGap} better than target — consider scaling top audiences.`
+        } else {
+            headline += "."
+        }
+    }
+
+    return (
+        <SectionCard id="summary">
+            <SectionHeader title="Account Summary" sub="Key signals for your Meta ad account this period" />
+
+            {headline && (
+                <div className="rounded-2xl border p-4 mb-5" style={{ background: BLUE_BG, borderColor: BLUE_BORDER }}>
+                    <p className="text-[13px] font-medium leading-relaxed" style={{ color: "#1e40af" }}
+                        dangerouslySetInnerHTML={{ __html: headline.replace(/\$[\d,.]+k?/g, '<strong>$&</strong>').replace(/\d+(\.\d+)?[×%]/g, '<strong>$&</strong>') }}
+                    />
+                </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2.5">
+                {insights.map(ins => {
+                    const d = dotColors[ins.status] || dotColors.neutral
+                    return (
+                        <div key={ins.label} className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_0_0_1px_rgba(0,0,0,0.015)] p-3 flex gap-2.5 items-start">
+                            <div className="w-2 h-2 rounded-full mt-[5px] flex-shrink-0 shadow-[0_0_0_3px_var(--ring)]" style={{ background: d.dot, "--ring": d.ring }} />
+                            <div>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">{ins.label}</p>
+                                <p className="text-[12px] text-gray-600 leading-relaxed">{ins.statement}</p>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        </SectionCard>
+    )
+}
+
+
+// ═════════════════════════════════════════════════════════════════════════════
+// SECTION 1: TRAFFIC
+// ═════════════════════════════════════════════════════════════════════════════
+
 function TrafficSection({ traffic }) {
     const dateLabel = (d) => d.slice(5).replace("-", "/")
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <SectionHeader num={1} title="Traffic Overview" sub="Trailing 30 days · Cost Per Link Click, Link CTR, and CPM" />
-            <div className="grid grid-cols-3 gap-4 mb-6">
+        <SectionCard id="traffic">
+            <SectionHeader title="Traffic Overview" sub="Trailing 30 days · Cost Per Link Click, Link CTR, and CPM" />
+            <div className="grid grid-cols-3 gap-3 mb-5">
                 <MetricCard label="Avg Cost Per Link Click" value={fmt$(traffic.avgCostPerClick, 2)} color={CPC_COLOR} />
                 <MetricCard label="Avg Link CTR" value={traffic.avgCtr !== null ? `${traffic.avgCtr.toFixed(2)}%` : "\u2014"} color={CTR_COLOR} />
                 <MetricCard label="Avg CPM" value={fmt$(traffic.avgCpm, 2)} color={CPM_COLOR} />
@@ -108,9 +855,9 @@ function TrafficSection({ traffic }) {
                     { key: "ctr", label: "Link Click-Through Rate (CTR)", color: CTR_COLOR, fmt: (v) => `${(v ?? 0).toFixed(2)}%`, yFmt: (v) => `${v.toFixed(1)}%` },
                     { key: "cpm", label: "Cost Per 1,000 Impressions (CPM)", color: CPM_COLOR, fmt: (v) => `$${(v ?? 0).toFixed(2)}`, yFmt: (v) => `$${v.toFixed(0)}` },
                 ].map(({ key, label, color, fmt: tooltipFmt, yFmt }) => (
-                    <div key={key}>
-                        <p className="text-xs font-medium text-gray-500 mb-2">{label}</p>
-                        <div style={{ height: 160 }}>
+                    <div key={key} className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3">
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">{label}</p>
+                        <div style={{ height: 150 }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={traffic.daily} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -121,18 +868,21 @@ function TrafficSection({ traffic }) {
                                         formatter={(v) => [tooltipFmt(v), label.split(" (")[0]]}
                                         labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                                     />
-                                    <Line type="monotone" dataKey={key} stroke={color} dot={false} strokeWidth={2} connectNulls />
+                                    <Line type="natural" dataKey={key} stroke={color} dot={false} strokeWidth={2} connectNulls />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
                     </div>
                 ))}
             </div>
-        </div>
+        </SectionCard>
     )
 }
 
-// ---- Section 2: Funnel ----
+// ═════════════════════════════════════════════════════════════════════════════
+// SECTION 2: FUNNEL
+// ═════════════════════════════════════════════════════════════════════════════
+
 function FunnelSection({ funnel }) {
     const chartData = funnel.weekly.map((w) => ({
         week: `${w.weekStart.slice(5).replace("-", "/")}–${w.weekEnd.slice(5).replace("-", "/")}`,
@@ -140,13 +890,13 @@ function FunnelSection({ funnel }) {
         "FTIR %": w.ftir !== null ? w.ftir * 100 : null,
     }))
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <SectionHeader num={2} title="Funnel Health" sub="Trailing 3 months · weekly averages · Frequency and First-Time Impression Rate" />
-            <div className="grid grid-cols-2 gap-4 mb-6">
+        <SectionCard id="funnel">
+            <SectionHeader title="Funnel Health" sub="Trailing 3 months · weekly averages · Frequency and First-Time Impression Rate" />
+            <div className="grid grid-cols-2 gap-3 mb-5">
                 <MetricCard label="Avg Weekly Frequency" value={fmtNum(funnel.avgFrequency)} sub="impressions per unique user" color={FREQ_COLOR} />
                 <MetricCard label="Avg First-Time Impression Rate" value={fmtPct(funnel.avgFtir)} sub="reach ÷ impressions · higher is healthier" color={FTIR_COLOR} />
             </div>
-            <div style={{ height: 220 }}>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3" style={{ height: 240 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
@@ -155,23 +905,26 @@ function FunnelSection({ funnel }) {
                         <YAxis yAxisId="ftir" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => `${v.toFixed(0)}%`} width={44} />
                         <Tooltip content={<ChartTooltipContent formatters={{ Frequency: (v) => v.toFixed(2), "FTIR %": (v) => `${v.toFixed(1)}%` }} />} />
                         <Legend wrapperStyle={{ fontSize: '11px' }} />
-                        <Line yAxisId="freq" type="monotone" dataKey="Frequency" stroke={FREQ_COLOR} strokeWidth={2} dot={{ r: 4, strokeWidth: 0, fill: FREQ_COLOR }} />
-                        <Line yAxisId="ftir" type="monotone" dataKey="FTIR %" stroke={FTIR_COLOR} strokeWidth={2} dot={{ r: 4, strokeWidth: 0, fill: FTIR_COLOR }} />
+                        <Line yAxisId="freq" type="natural" dataKey="Frequency" stroke={FREQ_COLOR} strokeWidth={2} dot={{ r: 3, strokeWidth: 0, fill: FREQ_COLOR }} />
+                        <Line yAxisId="ftir" type="natural" dataKey="FTIR %" stroke={FTIR_COLOR} strokeWidth={2} dot={{ r: 3, strokeWidth: 0, fill: FTIR_COLOR }} />
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
-        </div>
+        </SectionCard>
     )
 }
 
-// ---- Section 3: Monthly Spend ----
+// ═════════════════════════════════════════════════════════════════════════════
+// SECTION 3: MONTHLY SPEND
+// ═════════════════════════════════════════════════════════════════════════════
+
 function MonthlySpendSection({ monthlySpend, kpiType }) {
     const kpiLabel = kpiType === "roas" ? "ROAS" : "CPA"
     const kpiFmt = (v) => kpiType === "roas" ? `${v.toFixed(2)}×` : `$${v.toFixed(0)}`
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <SectionHeader num={3} title="Monthly Ad Spend" sub={`Last 6 months · total account spend and blended ${kpiLabel} by calendar month`} />
-            <div style={{ height: 240 }}>
+        <SectionCard id="spend">
+            <SectionHeader title="Monthly Ad Spend" sub={`Last 6 months · total account spend and blended ${kpiLabel} by calendar month`} />
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3" style={{ height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={monthlySpend} margin={{ top: 4, right: 48, left: 0, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
@@ -180,20 +933,23 @@ function MonthlySpendSection({ monthlySpend, kpiType }) {
                         <YAxis yAxisId="kpi" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={kpiFmt} width={44} />
                         <Tooltip content={<ChartTooltipContent formatters={{ Spend: (v) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, [kpiLabel]: kpiFmt }} />} />
                         <Legend wrapperStyle={{ fontSize: '11px' }} />
-                        <Bar yAxisId="spend" dataKey="spend" name="Spend" fill={SPEND_COLOR} radius={[3, 3, 0, 0]}>
+                        <Bar yAxisId="spend" dataKey="spend" name="Spend" fill={SPEND_COLOR} radius={[6, 6, 0, 0]}>
                             {monthlySpend.map((_, i) => (
-                                <Cell key={i} fill={i === monthlySpend.length - 1 ? "#818cf8" : SPEND_COLOR} />
+                                <Cell key={i} fill={i === monthlySpend.length - 1 ? BLUE_LIGHT : `${BLUE}88`} />
                             ))}
                         </Bar>
-                        <Line yAxisId="kpi" type="monotone" dataKey="kpi" name={kpiLabel} stroke={KPI_COLOR} dot={{ r: 4, strokeWidth: 0, fill: KPI_COLOR }} strokeWidth={2} connectNulls />
+                        <Line yAxisId="kpi" type="natural" dataKey="kpi" name={kpiLabel} stroke={KPI_COLOR} dot={{ r: 3, strokeWidth: 0, fill: KPI_COLOR }} strokeWidth={2} connectNulls />
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
-        </div>
+        </SectionCard>
     )
 }
 
-// ---- Section 4: Audience ----
+// ═════════════════════════════════════════════════════════════════════════════
+// SECTION 4: AUDIENCE
+// ═════════════════════════════════════════════════════════════════════════════
+
 function AudienceSection({ audience }) {
     const [filter, setFilter] = useState("all")
     const [showAll, setShowAll] = useState(false)
@@ -210,26 +966,22 @@ function AudienceSection({ audience }) {
     ]
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <SectionHeader num={4} title="Audience Strategy" sub="Adsets with delivery in last 30 days (including paused) · prospecting vs retargeting classification" />
+        <SectionCard id="audience">
+            <SectionHeader title="Audience Strategy" sub="Adsets with delivery in last 30 days (including paused) · prospecting vs retargeting classification" />
 
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-3 gap-3 mb-5">
                 <MetricCard label="Prospecting Spend (30d)" value={fmt$(audience.prospectingSpend)} sub={`${spendPct(audience.prospectingSpend)} of total`} color={PROSPECTING_COLOR} />
                 <MetricCard label="Retargeting Spend (30d)" value={fmt$(audience.retargetingSpend)} sub={`${spendPct(audience.retargetingSpend)} of total`} color={RETARGETING_COLOR} />
                 <MetricCard label="Total Account Spend (30d)" value={fmt$(audience.totalSpend30d)} />
             </div>
 
-            <div style={{ height: 80 }} className="mb-6">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3 mb-5" style={{ height: 90 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <ReBarChart layout="vertical" data={splitData} margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
                         <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} axisLine={AXIS_LINE} tickLine={false} />
                         <YAxis type="category" dataKey="name" tick={{ ...AXIS_TICK, fontSize: 11 }} width={80} tickLine={false} axisLine={false} />
-                        <Tooltip
-                            contentStyle={TOOLTIP_STYLE}
-                            formatter={(v) => [`$${(v || 0).toLocaleString()}`, ""]}
-                            cursor={{ fill: "#f9fafb" }}
-                        />
-                        <Bar dataKey="spend" radius={[0, 3, 3, 0]}>
+                        <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [`$${(v || 0).toLocaleString()}`, ""]} cursor={{ fill: "#f9fafb" }} />
+                        <Bar dataKey="spend" radius={[0, 6, 6, 0]}>
                             {splitData.map((entry, i) => (<Cell key={i} fill={entry.fill} />))}
                         </Bar>
                     </ReBarChart>
@@ -237,11 +989,11 @@ function AudienceSection({ audience }) {
             </div>
 
             {audience.topExclusions?.length > 0 && (
-                <div className="mb-5">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Most-Used Exclusion Audiences</p>
-                    <div className="flex flex-wrap gap-2">
+                <div className="mb-4">
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Most-Used Exclusion Audiences</p>
+                    <div className="flex flex-wrap gap-1.5">
                         {audience.topExclusions.map((exc) => (
-                            <span key={exc.name} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                            <span key={exc.name} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-600 text-[11px] rounded-full border border-gray-100">
                                 {exc.name} <span className="text-gray-400">×{exc.count}</span>
                             </span>
                         ))}
@@ -249,65 +1001,72 @@ function AudienceSection({ audience }) {
                 </div>
             )}
 
-            <div className="mb-3 flex items-center gap-2">
-                {["all", "prospecting", "retargeting"].map((t) => (
-                    <button key={t} onClick={() => setFilter(t)}
-                        className={cn("px-3 py-1 text-xs rounded-xl font-medium transition-colors",
-                            filter === t
-                                ? t === "prospecting" ? "bg-indigo-100 text-indigo-700" : t === "retargeting" ? "bg-amber-100 text-amber-700" : "bg-gray-200 text-gray-700"
-                                : "bg-gray-50 text-gray-500 hover:bg-gray-100"
-                        )}>
-                        {t.charAt(0).toUpperCase() + t.slice(1)}
-                        {t !== "all" && <span className="ml-1 text-gray-400">({audience.adsets.filter(a => a.type === t).length})</span>}
-                    </button>
-                ))}
-                <span className="ml-auto text-xs text-gray-400">{filtered.length} adsets</span>
+            {/* Filter toggle — V2 style matching parent CPA/ROAS toggle */}
+            <div className="flex items-center gap-2 mb-3">
+                <div className="inline-flex p-0.5 bg-gray-100 rounded-2xl border border-gray-200/60">
+                    {["all", "prospecting", "retargeting"].map((t) => (
+                        <button key={t} onClick={() => setFilter(t)}
+                            className={cn(
+                                "px-3.5 py-1.5 text-xs font-medium rounded-xl transition-all duration-200",
+                                filter === t
+                                    ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                    : "text-gray-500 hover:text-gray-700"
+                            )}>
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                            {t !== "all" && <span className="ml-1 text-gray-400">({audience.adsets.filter(a => a.type === t).length})</span>}
+                        </button>
+                    ))}
+                </div>
+                <span className="ml-auto text-[10px] text-gray-400">{filtered.length} adsets</span>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-gray-200">
+            <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
                 <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-gray-50/70">
                         <tr>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Adset</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Type</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 min-w-[200px]">Targeting</th>
-                            <th className="text-left px-3 py-2 text-xs font-medium text-gray-500">Exclusions</th>
-                            <th className="text-right px-3 py-2 text-xs font-medium text-gray-500">30d Spend</th>
+                            <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Adset</th>
+                            <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Type</th>
+                            <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider min-w-[200px]">Targeting</th>
+                            <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Exclusions</th>
+                            <th className="text-right px-3.5 py-2.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">30d Spend</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {visible.map((adset) => (
-                            <tr key={adset.id} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 text-gray-800 max-w-[180px] truncate" title={adset.name}>{adset.name}</td>
-                                <td className="px-3 py-2">
-                                    <span className={cn("inline-block px-2 py-0.5 text-xs rounded-full font-medium",
-                                        adset.type === "prospecting" ? "bg-indigo-50 text-indigo-700" : "bg-amber-50 text-amber-700"
-                                    )}>
+                            <tr key={adset.id} className="hover:bg-gray-50/50 transition-colors">
+                                <td className="px-3.5 py-2.5 text-gray-800 max-w-[180px] truncate font-medium" title={adset.name}>{adset.name}</td>
+                                <td className="px-3.5 py-2.5">
+                                    <span className={cn("inline-block px-2.5 py-0.5 text-[10px] rounded-full font-semibold",
+                                        adset.type === "prospecting" ? "text-blue-700" : "text-amber-700"
+                                    )} style={{ background: adset.type === "prospecting" ? BLUE_BG : "#fffbeb" }}>
                                         {adset.type === "prospecting" ? "Pros." : "Retas."}
                                     </span>
                                 </td>
-                                <td className="px-3 py-2 text-gray-600 text-xs max-w-[220px]">{adset.targetingSummary}</td>
-                                <td className="px-3 py-2 text-gray-500 text-xs max-w-[180px]">
+                                <td className="px-3.5 py-2.5 text-gray-500 text-xs max-w-[220px]">{adset.targetingSummary}</td>
+                                <td className="px-3.5 py-2.5 text-gray-500 text-xs max-w-[180px]">
                                     {adset.exclusions.length
                                         ? adset.exclusions.slice(0, 2).join(", ") + (adset.exclusions.length > 2 ? "…" : "")
                                         : <span className="text-gray-300">—</span>}
                                 </td>
-                                <td className="px-3 py-2 text-right font-medium text-gray-800">{fmt$(adset.spend30d)}</td>
+                                <td className="px-3.5 py-2.5 text-right font-semibold text-gray-800 tabular-nums">{fmt$(adset.spend30d)}</td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
             {filtered.length > 8 && (
-                <button onClick={() => setShowAll(v => !v)} className="mt-2 text-xs text-indigo-600 hover:text-indigo-800">
+                <button onClick={() => setShowAll(v => !v)} className={cn("mt-2 text-xs font-medium hover:underline", `text-[${BLUE}]`)}>
                     {showAll ? "Show less" : `Show all ${filtered.length} adsets`}
                 </button>
             )}
-        </div>
+        </SectionCard>
     )
 }
 
-// ---- Section 5: Learning Phase ----
+// ═════════════════════════════════════════════════════════════════════════════
+// SECTION 5: LEARNING PHASE
+// ═════════════════════════════════════════════════════════════════════════════
+
 function LearningSection({ learning }) {
     const pct = learning.learningSpendPct
     const pctDisplay = pct !== null ? `${(pct * 100).toFixed(1)}%` : "\u2014"
@@ -317,96 +1076,108 @@ function LearningSection({ learning }) {
         else if (pct >= 0.2) status = "warn"
     }
     const cfg = {
-        good: { label: "Healthy", bg: "bg-green-50", text: "text-green-700", border: "border-green-200", numColor: "#059669" },
-        warn: { label: "Monitor", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", numColor: "#d97706" },
-        bad: { label: "Action needed", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", numColor: "#dc2626" },
+        good: { label: "Healthy", bg: "bg-green-50", text: "text-green-700", border: "border-green-200", numColor: "#059669", dotColor: "#22c55e", ringColor: "#dcfce7" },
+        warn: { label: "Monitor", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", numColor: "#d97706", dotColor: "#f59e0b", ringColor: "#fef3c7" },
+        bad: { label: "Action needed", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", numColor: "#dc2626", dotColor: "#ef4444", ringColor: "#fef2f2" },
     }[status]
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <SectionHeader num={5} title="% of Budget in Learning Phase" sub="Last 7 days · ad sets in Learning or Learning Limited (including paused)" />
+        <SectionCard id="learning">
+            <SectionHeader title="% of Budget in Learning Phase" sub="Last 7 days · ad sets in Learning or Learning Limited (including paused)" />
             <div className="flex items-start gap-6">
-                <div className={cn("flex-shrink-0 border rounded-2xl px-8 py-6 text-center", cfg.bg, cfg.border)}>
-                    <p className="text-5xl font-bold" style={{ color: cfg.numColor }}>{pctDisplay}</p>
-                    <p className={cn("text-sm font-medium mt-1", cfg.text)}>{cfg.label}</p>
+                <div className="flex-shrink-0 flex flex-col items-center gap-2">
+                    <DonutRing value={learning.learningSpend} total={learning.totalSpend} color={cfg.numColor} size={110} />
+                    <span className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold", cfg.bg, cfg.text, `border ${cfg.border}`)}>
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.dotColor }} />
+                        {cfg.label}
+                    </span>
                 </div>
                 <div className="flex-1 space-y-3 pt-1">
                     <div className="grid grid-cols-2 gap-3">
                         <MetricCard label="Learning Spend (7d)" value={fmt$(learning.learningSpend)} sub="spend from Learning / Learning Limited ad sets" />
                         <MetricCard label="Total Spend (7d)" value={fmt$(learning.totalSpend)} sub="all ad sets" />
                     </div>
-                    <div className="text-xs text-gray-500 bg-gray-50 rounded-xl p-3 space-y-1">
-                        <p><span className="font-medium text-green-700">{"< 20%"}</span> — Healthy. Most budget is running in stable, optimized ad sets.</p>
-                        <p><span className="font-medium text-amber-700">20–50%</span> — Monitor. A significant portion of budget is in learning; avoid additional structural changes.</p>
-                        <p><span className="font-medium text-red-700">{"> 50%"}</span> — Action needed. Consolidate ad sets or pause new launches until learning completes.</p>
+                    <div className="text-xs text-gray-500 bg-gray-50 rounded-2xl p-3.5 space-y-1 border border-gray-100">
+                        <p><span className="font-semibold text-green-700">{"< 20%"}</span> — Healthy. Most budget is running in stable, optimized ad sets.</p>
+                        <p><span className="font-semibold text-amber-700">20–50%</span> — Monitor. A significant portion of budget is in learning; avoid additional structural changes.</p>
+                        <p><span className="font-semibold text-red-700">{"> 50%"}</span> — Action needed. Consolidate ad sets or pause new launches until learning completes.</p>
                     </div>
                 </div>
             </div>
-        </div>
+        </SectionCard>
     )
 }
 
-// ---- Section 6: Copy Utilization ----
+// ═════════════════════════════════════════════════════════════════════════════
+// SECTION 6: COPY UTILIZATION
+// ═════════════════════════════════════════════════════════════════════════════
+
 function CopyUtilizationSection({ copyUtilization }) {
     const isGood = copyUtilization.status === "maximizing"
+    const color = isGood ? "#059669" : AMBER
+    const r = 32, circ = 2 * Math.PI * r
+    const offset = circ * (1 - copyUtilization.maximizingCount / copyUtilization.totalCount)
+
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <SectionHeader num={6} title="Copy Utilization" sub="Top 10 ads by 30-day spend · primary text and headline field usage" />
-            <div className="flex items-start gap-6 mb-5">
-                <div className={cn("flex-shrink-0 border rounded-2xl px-6 py-4 text-center",
-                    isGood ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"
-                )}>
-                    <p className={cn("text-4xl font-bold", isGood ? "text-green-700" : "text-amber-700")}>
+        <SectionCard id="copy">
+            <SectionHeader title="Copy Utilization" sub="Top 10 ads by 30-day spend · primary text and headline field usage" />
+            <div className="flex items-center gap-5 mb-4">
+                <svg width={80} height={80} viewBox="0 0 80 80" className="flex-shrink-0">
+                    <circle cx={40} cy={40} r={r} fill="none" stroke="#f3f4f6" strokeWidth={7} />
+                    <circle cx={40} cy={40} r={r} fill="none" stroke={color} strokeWidth={7}
+                        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+                        transform="rotate(-90 40 40)" style={{ transition: "stroke-dashoffset 0.8s ease" }} />
+                    <text x={40} y={43} textAnchor="middle" fontSize="15" fontWeight="700" fill="#1a1a1a">
                         {copyUtilization.maximizingCount}/{copyUtilization.totalCount}
-                    </p>
-                    <p className={cn("text-xs font-medium mt-1", isGood ? "text-green-600" : "text-amber-600")}>maximizing</p>
-                </div>
+                    </text>
+                </svg>
                 <div className="flex-1 pt-1">
-                    <p className={cn("text-sm font-semibold mb-2", isGood ? "text-green-700" : "text-amber-700")}>
+                    <p className={cn("text-sm font-semibold mb-1", isGood ? "text-green-700" : "text-amber-700")}>
                         {isGood ? "✓ " : "⚠ "}{copyUtilization.statusText}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 leading-relaxed">
                         Ads using all 5 primary text variants and 5 headline variants allow Meta's algorithm to test more combinations, improving delivery efficiency and reducing cost over time.
                     </p>
                 </div>
             </div>
-        </div>
+        </SectionCard>
     )
 }
 
-// ---- Section 7: Opportunities ----
+// ═════════════════════════════════════════════════════════════════════════════
+// SECTION 7: OPPORTUNITIES
+// ═════════════════════════════════════════════════════════════════════════════
+
 function OpportunitiesSection({ text, isLoading, error, onChange }) {
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <SectionHeader num={7} title="Areas of Opportunity" sub="AI-generated analysis based on account performance data · editable" />
+        <SectionCard id="opportunities">
+            <SectionHeader title="Areas of Opportunity" sub="AI-generated analysis based on account performance data · editable" />
             {isLoading && (
                 <div className="flex flex-col items-center justify-center py-16">
-                    <Loader2 className="w-7 h-7 animate-spin text-indigo-500 mb-3" />
-                    <p className="text-sm font-medium text-gray-600">
-                        Generating suggestions…
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                        Analyzing your account data with AI
-                    </p>
+                    <Loader2 className="w-7 h-7 animate-spin mb-3" style={{ color: BLUE }} />
+                    <p className="text-sm font-medium text-gray-600">Generating suggestions…</p>
+                    <p className="text-xs text-gray-400 mt-1">Analyzing your account data with AI</p>
                 </div>
             )}
-            {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl mb-3">{error}</p>}
+            {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl mb-3 border border-red-100">{error}</p>}
             {!isLoading && (
                 <textarea
                     value={text}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-full min-h-[350px] text-sm text-gray-700 border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-y leading-relaxed"
+                    className="w-full min-h-[350px] text-sm text-gray-700 border border-gray-200 rounded-2xl p-4 focus:outline-none focus:ring-2 focus:border-transparent resize-y leading-relaxed bg-gray-50/60"
+                    style={{ "--tw-ring-color": `${BLUE}30` }}
                     placeholder="Areas of Opportunity will appear here automatically after the report loads…"
                 />
             )}
-        </div>
+        </SectionCard>
     )
 }
 
 
-// ============================================
-// Main Export
-// ============================================
+// ═════════════════════════════════════════════════════════════════════════════
+// MAIN EXPORT
+// ═════════════════════════════════════════════════════════════════════════════
+
 export default function AdAccountAudit({
     open, onOpenChange, adAccountId, adAccountName,
     kpiType = "cpa", conversionEvent = null, targetCPA = null, targetROAS = null,
@@ -417,6 +1188,8 @@ export default function AdAccountAudit({
     const [opportunitiesText, setOpportunitiesText] = useState("")
     const [isLoadingOpps, setIsLoadingOpps] = useState(false)
     const [oppsError, setOppsError] = useState(null)
+    const [activeSection, setActiveSection] = useState("summary")
+    const contentRef = useRef(null)
 
     const kpiTarget = kpiType === "cpa" ? targetCPA : targetROAS
 
@@ -424,6 +1197,28 @@ export default function AdAccountAudit({
         if (open && adAccountId && !report && !isGenerating) generateReport()
         if (!open) { setReport(null); setError(null); setOpportunitiesText(""); setOppsError(null) }
     }, [open, adAccountId])
+
+    // Scroll spy
+    useEffect(() => {
+        const container = contentRef.current
+        if (!container || !report) return
+        const ids = SIDEBAR_SECTIONS.map(s => s.id)
+        const handleScroll = () => {
+            let current = "summary"
+            for (const id of ids) {
+                const el = document.getElementById(`audit-${id}`)
+                if (el && el.getBoundingClientRect().top < 220) current = id
+            }
+            setActiveSection(current)
+        }
+        container.addEventListener("scroll", handleScroll, { passive: true })
+        return () => container.removeEventListener("scroll", handleScroll)
+    }, [report])
+
+    const scrollTo = (id) => {
+        const el = document.getElementById(`audit-${id}`)
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+    }
 
     const generateReport = async () => {
         setIsGenerating(true); setError(null); setReport(null); setOpportunitiesText("")
@@ -459,68 +1254,150 @@ export default function AdAccountAudit({
 
     if (!open) return null
 
+    // Determine which sidebar sections to show (copy only if data exists)
+    const visibleSections = report
+        ? SIDEBAR_SECTIONS.filter(s => s.id !== "copy" || report.copyUtilization)
+        : SIDEBAR_SECTIONS
+
     return (
         <>
-            <div className="fixed inset-0 bg-black/50 z-50" onClick={() => onOpenChange(false)} />
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 z-50"
+                style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+                onClick={() => onOpenChange(false)}
+            />
+
+            {/* Modal */}
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-[28px] shadow-2xl w-full max-w-[960px] max-h-[92vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-                    {/* Sticky header */}
-                    <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-                        <div className="flex-1 min-w-0 mr-4">
-                            <h2 className="text-lg font-bold text-gray-900 truncate">{adAccountName || "Ad Account Audit"}</h2>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                                Ad Account Audit · {reportDate}
-                                {kpiTarget && (
-                                    <span className="ml-2 px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full">
-                                        Target {kpiType.toUpperCase()}: {kpiType === "cpa" ? `$${kpiTarget}` : `${kpiTarget}×`}
-                                        {kpiType === "cpa" && conversionEvent ? ` · ${conversionEvent}` : ""}
-                                    </span>
-                                )}
-                            </p>
+                <div
+                    className="bg-white rounded-[24px] shadow-2xl w-full max-w-[1020px] max-h-[92vh] overflow-hidden flex flex-col border border-gray-100"
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ animation: "auditSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1)" }}
+                >
+                    {/* ── Sticky header ── */}
+                    <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-white">
+                        <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
+                            <div
+                                className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0"
+                                style={{ background: `linear-gradient(135deg, ${BLUE}, ${BLUE_LIGHT})`, boxShadow: `0 2px 8px ${BLUE}44` }}
+                            >
+                                <FileBarChart2 className="w-[18px] h-[18px] text-white" />
+                            </div>
+                            <div className="min-w-0">
+                                <h2 className="text-[16px] font-bold text-gray-900 truncate leading-tight">
+                                    {adAccountName || "Ad Account Audit"}
+                                </h2>
+                                <p className="text-[11px] text-gray-400 mt-0.5">
+                                    Ad Account Audit · {reportDate}
+                                    {kpiTarget && (
+                                        <span
+                                            className="ml-2 px-2.5 py-0.5 text-[10px] font-semibold rounded-full"
+                                            style={{ background: BLUE_BG, color: BLUE_DARK }}
+                                        >
+                                            Target {kpiType.toUpperCase()}: {kpiType === "cpa" ? `$${kpiTarget}` : `${kpiTarget}×`}
+                                            {kpiType === "cpa" && conversionEvent ? ` · ${conversionEvent}` : ""}
+                                        </span>
+                                    )}
+                                </p>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                             {report && !isGenerating && (
-                                <Button variant="outline" size="sm" onClick={generateReport} className="rounded-2xl text-xs gap-1.5">
+                                <Button variant="outline" size="sm" onClick={generateReport} className="rounded-2xl text-xs gap-1.5 h-9">
                                     <FileBarChart2 className="w-3.5 h-3.5" />
                                     Re-run Audit
                                 </Button>
                             )}
-                            <button onClick={() => onOpenChange(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 hover:bg-gray-100 rounded-xl">
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <button
+                                onClick={() => onOpenChange(false)}
+                                className="w-9 h-9 rounded-[10px] bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                            >
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
                     </div>
 
-                    {/* Scrollable content */}
-                    <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5 custom-scrollbar">
-                        {isGenerating && (
-                            <div className="flex flex-col items-center justify-center py-20 text-sm text-gray-500">
-                                <Loader2 className="w-8 h-8 animate-spin text-indigo-500 mb-3" />
-                                Fetching account data from Meta… this usually takes 5–15 seconds.
-                            </div>
-                        )}
-                        {error && !isGenerating && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
-                                {error}
-                                <button onClick={generateReport} className="ml-3 underline text-red-600 hover:text-red-800">Retry</button>
-                            </div>
-                        )}
+                    {/* ── Body: Sidebar + Scrollable Content ── */}
+                    <div className="flex-1 flex overflow-hidden min-h-0">
+
+                        {/* Sidebar — anchor navigation */}
                         {report && !isGenerating && (
-                            <>
-                                <TrafficSection traffic={report.traffic} />
-                                <FunnelSection funnel={report.funnel} />
-                                <MonthlySpendSection monthlySpend={report.monthlySpend} kpiType={report.kpiType || kpiType} />
-                                <AudienceSection audience={report.audience} />
-                                <LearningSection learning={report.learning} />
-                                {report.copyUtilization && <CopyUtilizationSection copyUtilization={report.copyUtilization} />}
-                                <OpportunitiesSection text={opportunitiesText} isLoading={isLoadingOpps} error={oppsError} onChange={setOpportunitiesText} />
-                            </>
+                            <nav className="w-[180px] flex-shrink-0 border-r border-gray-100 p-2.5 overflow-y-auto bg-[#fafafa]">
+                                {visibleSections.map(({ id, label, Icon }) => {
+                                    const isActive = activeSection === id
+                                    return (
+                                        <button
+                                            key={id}
+                                            onClick={() => scrollTo(id)}
+                                            className={cn(
+                                                "w-full text-left flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium transition-all duration-150 mb-0.5",
+                                                isActive
+                                                    ? "bg-blue-50/80 text-blue-700"
+                                                    : "text-gray-500 hover:bg-gray-100/60 hover:text-gray-700"
+                                            )}
+                                        >
+                                            <span className={cn(
+                                                "w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
+                                                isActive ? "bg-blue-100/80 text-blue-600" : "bg-gray-100/60 text-gray-400"
+                                            )}>
+                                                <Icon className="w-3.5 h-3.5" />
+                                            </span>
+                                            <span className="flex-1 truncate">{label}</span>
+                                            {isActive && (
+                                                <span className="w-[3px] h-[18px] rounded-full flex-shrink-0" style={{ background: `linear-gradient(180deg, ${BLUE}, ${BLUE_LIGHT})` }} />
+                                            )}
+                                        </button>
+                                    )
+                                })}
+                            </nav>
                         )}
+
+                        {/* Scrollable content area */}
+                        <div ref={contentRef} className="flex-1 overflow-y-auto p-5 custom-scrollbar" style={{ background: "#f8f9fb" }}>
+                            {isGenerating && (
+                                <div className="flex flex-col items-center justify-center py-24 text-sm text-gray-500">
+                                    <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: BLUE }} />
+                                    <p className="font-medium text-gray-600">Fetching account data from Meta…</p>
+                                    <p className="text-xs text-gray-400 mt-1">This usually takes 5–15 seconds</p>
+                                </div>
+                            )}
+                            {error && !isGenerating && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">
+                                    {error}
+                                    <button onClick={generateReport} className="ml-3 underline text-red-600 hover:text-red-800 font-medium">Retry</button>
+                                </div>
+                            )}
+                            {report && !isGenerating && (
+                                <div className="space-y-4" style={{ animation: "auditFadeIn 0.4s ease" }}>
+                                    <SummarySection report={report} kpiType={report.kpiType || kpiType} kpiTarget={kpiTarget} />
+                                    <TrafficSection traffic={report.traffic} />
+                                    <FunnelSection funnel={report.funnel} />
+                                    <MonthlySpendSection monthlySpend={report.monthlySpend} kpiType={report.kpiType || kpiType} />
+                                    <AudienceSection audience={report.audience} />
+                                    <LearningSection learning={report.learning} />
+                                    {report.copyUtilization && <CopyUtilizationSection copyUtilization={report.copyUtilization} />}
+                                    <OpportunitiesSection text={opportunitiesText} isLoading={isLoadingOpps} error={oppsError} onChange={setOpportunitiesText} />
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
+
+            {/* Keyframe animations */}
+            <style>{`
+                @keyframes auditSlideUp {
+                    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                @keyframes auditFadeIn {
+                    from { opacity: 0; transform: translateY(6px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </>
     )
 }
