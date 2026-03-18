@@ -759,7 +759,7 @@
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from "sonner"
-import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users, X, ExternalLink } from "lucide-react";
+import { Loader2, Image as ImageIcon, Video, FolderOpen, Heart, MessageCircle, Users, X, ExternalLink, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Meta from "@/assets/icons/Meta2.svg";
 import Instagram from "@/assets/icons/ig.svg";
@@ -842,7 +842,8 @@ const CommentDetailPopup = ({ item, onClose }) => {
                         <MessageCircle className="h-4 w-4" /> {item.comments_count || 0}
                     </span>
                     {formattedDate && (
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="ml-auto flex items-center gap-1.5 text-sm font-medium text-gray-500">
+                            <CalendarDays className="h-4 w-4" />
                             {formattedDate}
                         </span>
                     )}
@@ -917,7 +918,8 @@ const IgCardInfo = ({ item, instagramAccountId, onViewComments }) => {
                     <MessageCircle className="h-3.5 w-3.5" /> {item.comments_count || 0}
                 </span>
                 {formattedDate && (
-                    <span className="text-xs font-medium text-gray-700">
+                    <span className="ml-auto flex items-center gap-1 text-xs font-medium text-gray-500">
+                        <CalendarDays className="h-3.5 w-3.5" />
                         {formattedDate}
                     </span>
                 )}
