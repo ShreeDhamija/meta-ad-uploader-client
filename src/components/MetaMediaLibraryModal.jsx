@@ -890,7 +890,10 @@ const CommentDetailPopup = ({ item, onClose }) => {
 };
 
 // Shared card info section used by both images and videos tabs
-const IgCardInfo = ({ item, instagramAccountId, onViewComments }) => (
+const IgCardInfo = ({ item, instagramAccountId, onViewComments }) => {
+    const formattedDate = formatInstagramTimestamp(item.timestamp);
+
+    return (
     <div className="bg-white border-t border-gray-200 px-2.5 py-2 h-32 flex flex-col">
         {/* Source pills */}
         <div className="flex items-center gap-1 mb-1">
@@ -913,6 +916,11 @@ const IgCardInfo = ({ item, instagramAccountId, onViewComments }) => (
                 <span className="flex items-center gap-1 text-xs font-medium">
                     <MessageCircle className="h-3.5 w-3.5" /> {item.comments_count || 0}
                 </span>
+                {formattedDate && (
+                    <span className="text-xs font-medium text-gray-700">
+                        {formattedDate}
+                    </span>
+                )}
             </div>
         )}
         {item.caption && (
@@ -957,7 +965,8 @@ const IgCardInfo = ({ item, instagramAccountId, onViewComments }) => (
             )
         )}
     </div>
-);
+    );
+};
 
 export default function MetaMediaLibraryModal({
     adAccountId,
