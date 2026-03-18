@@ -90,7 +90,7 @@ function fmtNum(v, decimals = 2) {
 
 function MetricCard({ label, value, sub, color }) {
     return (
-        <div className="bg-white rounded-3xl p-4 flex flex-col gap-1 border-[0.5px] border-gray-50 shadow-md">
+        <div className="bg-white rounded-3xl p-4 flex flex-col gap-1 border-[0.5px] border-gray-50 shadow-sm">
             <p className="text-[10px] font-semibold text-gray-400">{label}</p>
             <p className="text-2xl font-bold tabular-nums" style={{ color: color || "#111827" }}>{value}</p>
             {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
@@ -112,7 +112,7 @@ function SectionCard({ children, id }) {
     return (
         <div
             id={`audit-${id}`}
-            className="bg-white rounded-3xl border-[0.5px] border-gray-50 shadow-md p-6"
+            className="bg-white rounded-3xl border-[0.5px] border-gray-50 shadow-sm p-6"
         >
             {children}
         </div>
@@ -830,7 +830,7 @@ export default function AdAccountAudit({
             {/* Backdrop */}
             <div
                 className="fixed inset-0 z-50"
-                style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                style={{ background: "rgba(0,0,0,0.2)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)", top: -25, left: 0, right: 0, bottom: 0, position: 'fixed' }}
                 onClick={() => onOpenChange(false)}
             />
 
@@ -912,7 +912,7 @@ export default function AdAccountAudit({
                                             </span>
                                             <span className="flex-1 truncate">{label}</span>
                                             {isActive && (
-                                                <span className="w-[3px] h-[18px] rounded-full flex-shrink-0" style={{ background: `linear-gradient(180deg, ${BLUE}, ${BLUE_LIGHT})` }} />
+                                                <span className="w-[3px] h-[18px] rounded-full flex-shrink-0" style={{ background: "linear-gradient(180deg, #1a1a1a, #9ca3af)" }} />
                                             )}
                                         </button>
                                     )
