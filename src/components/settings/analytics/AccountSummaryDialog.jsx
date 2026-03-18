@@ -237,14 +237,12 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId }) {
                         )}
                     </div>
 
-                    {/* Bottom bar */}
-                    <div className="flex-shrink-0 bg-blue-600 px-8 py-1.5 flex items-center justify-center gap-6 rounded-b-[28px]">
-                        <button
-                            onClick={onClose}
-                            className="text-white text-sm font-medium hover:underline"
-                        >
-                            Close
-                        </button>
+                    {/* Bottom bar — entire bar is clickable */}
+                    <div
+                        onClick={onClose}
+                        className="flex-shrink-0 bg-blue-600 px-8 py-1.5 flex items-center justify-center gap-6 rounded-b-[28px] cursor-pointer"
+                    >
+                        <span className="text-white text-sm font-medium">Close</span>
                     </div>
                 </div>
             </div>
