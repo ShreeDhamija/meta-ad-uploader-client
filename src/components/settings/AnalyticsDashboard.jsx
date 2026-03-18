@@ -966,7 +966,7 @@ export default function AnalyticsDashboard() {
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Scrollable area */}
-                            <div className="p-8 pb-4 space-y-6 flex-1 overflow-y-auto min-h-0">
+                            <div className="p-8 pb-6 space-y-6 flex-1 overflow-y-auto min-h-0">
                                 {/* Header */}
                                 <div className="flex items-start justify-between">
                                     <div className="space-y-1">

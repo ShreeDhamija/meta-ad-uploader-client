@@ -790,11 +790,25 @@ const setIgCache = (igUserId, images, videos, pagination) => {
     sessionStorage.setItem(IG_CACHE_KEY, JSON.stringify({ igUserId, images, videos, pagination }));
 };
 
+const formatInstagramTimestamp = (timestamp) => {
+    if (!timestamp) return null;
+
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return null;
+
+    return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    }).format(date);
+};
+
 // Staging-only: Comment detail popup overlay (renders on top of the media library modal)
 const CommentDetailPopup = ({ item, onClose }) => {
     if (!item) return null;
     const preview = item.previewUrl || item.thumbnail_url || item.media_url || '';
     const comments = item.comments || [];
+    const formattedDate = formatInstagramTimestamp(item.timestamp);
 
     return (
         <>
@@ -827,6 +841,11 @@ const CommentDetailPopup = ({ item, onClose }) => {
                     <span className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
                         <MessageCircle className="h-4 w-4" /> {item.comments_count || 0}
                     </span>
+                    {formattedDate && (
+                        <span className="text-sm font-medium text-gray-700">
+                            {formattedDate}
+                        </span>
+                    )}
                 </div>
 
                 {/* Comments */}
