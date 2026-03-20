@@ -18,6 +18,7 @@ import { saveSettings } from "@/lib/saveSettings"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
 import slackIcon from "@/assets/icons/slack.svg"
+import slackWhite from "@/assets/icons/slackwhite.svg"
 import KPIChart from "./analytics/KPIChart"
 import WeeklyChart from "./analytics/WeeklyChart"
 import RecommendationCards from "./analytics/RecommendationCards"
@@ -772,10 +773,10 @@ export default function AnalyticsDashboard() {
                     <Button
                         variant="outline" size="sm"
                         onClick={() => setShowSlackDialog(true)}
-                        className="rounded-2xl h-11 w-11 p-0"
+                        className="rounded-2xl h-11 w-11 p-0 flex items-center justify-center bg-[#4A154B] hover:bg-[#611f69] transition-colors"
                         title="Slack Alerts"
                     >
-                        <img src={slackIcon} alt="Slack" className="w-5 h-5" />
+                        <img src={slackWhite} alt="Slack" className="w-5 h-5" />
                     </Button>
 
                     <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} className="rounded-2xl h-11 px-4">
