@@ -328,7 +328,7 @@ function TrafficSection({ traffic }) {
             <div className="grid grid-cols-3 gap-3 mb-5">
                 <MetricCard label="Avg Cost Per Link Click" value={fmt$(traffic.avgCostPerClick, 2)} color={CPC_COLOR} />
                 <MetricCard label="Avg Link CTR" value={traffic.avgCtr !== null ? `${traffic.avgCtr.toFixed(2)}%` : "\u2014"} color={CTR_COLOR} />
-                <MetricCard label="Avg CPM" value={fmt$(traffic.avgCpm, 2)} color={CPM_COLOR} />
+                <MetricCard label="Avg CPM" value={fmt$(traffic.avgCpm, 0)} color={CPM_COLOR} />
             </div>
             <div className="grid grid-cols-3 gap-4">
                 {[
@@ -523,11 +523,13 @@ function AudienceSection({ audience }) {
                                         {adset.type === "prospecting" ? "Pros." : "Retas."}
                                     </span>
                                 </td>
-                                <td className="px-3.5 py-2.5 text-gray-500 text-xs max-w-[220px]">{adset.targetingSummary}</td>
+                                <td className="px-3.5 py-2.5 text-gray-500 text-xs max-w-[220px] truncate" title={adset.targetingSummary}>{adset.targetingSummary}</td>
                                 <td className="px-3.5 py-2.5 text-gray-500 text-xs max-w-[180px]">
-                                    {adset.exclusions.length
-                                        ? adset.exclusions.slice(0, 2).join(", ") + (adset.exclusions.length > 2 ? "…" : "")
-                                        : <span className="text-gray-300">—</span>}
+                                    <td className="px-3.5 py-2.5 text-gray-500 text-xs max-w-[180px] truncate" title={adset.exclusions.length ? adset.exclusions.join(", ") : ""}>
+                                        {adset.exclusions.length
+                                            ? adset.exclusions.slice(0, 2).join(", ") + (adset.exclusions.length > 2 ? "…" : "")
+                                            : <span className="text-gray-300">—</span>}
+                                    </td>
                                 </td>
                                 <td className="px-3.5 py-2.5 text-right font-semibold text-gray-800 tabular-nums">{fmt$(adset.spend30d)}</td>
                             </tr>
@@ -770,6 +772,19 @@ export default function AdAccountAudit({
         if (!container || !report) return
         const ids = SIDEBAR_SECTIONS.map(s => s.id)
         const handleScroll = () => {
+            const { scrollTop, scrollHeight, clientHeight } = container
+            const atBottom = scrollHeight - scrollTop - clientHeight < 40
+
+            if (atBottom) {
+                // Pick the last section that actually exists in DOM
+                for (let i = ids.length - 1; i >= 0; i--) {
+                    if (document.getElementById(`audit-${ids[i]}`)) {
+                        setActiveSection(ids[i])
+                        return
+                    }
+                }
+            }
+
             let current = "summary"
             for (const id of ids) {
                 const el = document.getElementById(`audit-${id}`)
