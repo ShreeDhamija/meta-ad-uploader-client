@@ -770,14 +770,7 @@ export default function AnalyticsDashboard() {
                         <Settings2 className="w-4 h-4" />
 
                     </Button>
-                    <Button
-                        variant="outline" size="sm"
-                        onClick={() => setShowSlackDialog(true)}
-                        className="rounded-2xl h-11 w-11 p-0 flex items-center justify-center bg-[#4A154B] hover:bg-[#611f69] transition-colors"
-                        title="Slack Alerts"
-                    >
-                        <img src={slackWhite} alt="Slack" className="w-5 h-5" />
-                    </Button>
+
 
                     <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} className="rounded-2xl h-11 px-4">
                         <FileBarChart2 className="w-3.5 h-3.5" />
@@ -790,6 +783,14 @@ export default function AnalyticsDashboard() {
                     >
                         <FileText className="w-4 h-4 mr-2" />
                         Account Summary
+                    </Button>
+                    <Button
+                        variant="outline" size="sm"
+                        onClick={() => setShowSlackDialog(true)}
+                        className="rounded-2xl h-11 w-11 p-0 flex items-center justify-center hover:bg-[#4A154B] bg-[#611f69] shadow-sm transition-colors"
+                        title="Slack Alerts"
+                    >
+                        <img src={slackWhite} alt="Slack" className="w-5 h-5" />
                     </Button>
 
 

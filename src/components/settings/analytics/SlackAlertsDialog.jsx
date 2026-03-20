@@ -2,6 +2,7 @@
 
 import { CheckCircle2, Loader2, FileBarChart2, FileText, Terminal } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
+import slackWhite from "@/assets/icons/analytics/slackwhite.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const SLACK_PURPLE = '#4A154B'
@@ -56,8 +57,8 @@ export default function SlackAlertsDialog({
                         <div className="flex items-start justify-between">
                             <div className="space-y-1">
                                 <h2 className="text-xl font-semibold flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: SLACK_PURPLE }}>
-                                        <SlackIcon className="w-4 h-4 text-white" />
+                                    <div className="w-7 h-7 rounded-lg bg-[#4A154B] flex items-center justify-center">
+                                        <img src={slackWhite} alt="Slack" className="w-4 h-4 brightness-0 invert" />
                                     </div>
                                     Slack Integration
                                 </h2>
