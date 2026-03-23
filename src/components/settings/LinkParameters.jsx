@@ -26,7 +26,7 @@ const DEFAULT_PREFILL_PAIRS = [
     { key: "utm_term", value: "{{adset.name}}" }
 ];
 
-function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount }) {
+function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAccount, displayLink, setDisplayLink }) {
     const [inputValue, setInputValue] = useState("")
     const [openIndex, setOpenIndex] = useState(null)
 
@@ -47,8 +47,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     const [rawUtmString, setRawUtmString] = useState("");
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
     const [tempUtmPairs, setTempUtmPairs] = useState([]);
-
-
+    const [enableDisplayLink, setEnableDisplayLink] = useState(Boolean(displayLink))
     // 2. TEMP HANDLERS
     const handleTempPairChange = useCallback((index, field, value) => {
         setTempUtmPairs(prev => prev.map((pair, i) => i === index ? { ...pair, [field]: value } : pair))
@@ -462,35 +461,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
                     </div>
                 )}
-                {/* {utmPairs.length > 0 && (
-                    <div className="mb-3">
-                        <p className="text-xs font-semibold mb-1 text-zinc-700">Link with UTMs</p>
-                        <div className="bg-white rounded-lg p-2 font-mono text-xs break-all text-gray-700">
-                            {(() => {
-                                // Determine base URL
-                                let baseUrl = 'landingpagelink';
-                                const defaultLink = links.find(link => link.isDefault);
-                                if (defaultLink) {
-                                    baseUrl = defaultLink.url;
-                                } else if (links.length > 0) {
-                                    baseUrl = links[0].url;
-                                }
 
-                                // Add https:// if not present
-                                if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-                                    baseUrl = 'https://' + baseUrl;
-                                }
-
-                                // Build UTM query string without encoding (to preserve {{}} for Facebook parameters)
-                                const utmParams = utmPairs
-                                    .filter(pair => pair.key && pair.value)
-                                    .map(pair => `${pair.key}=${pair.value}`);
-
-                                return `${baseUrl}${utmParams.length > 0 ? '?' + utmParams.join('&') : ''}`;
-                            })()}
-                        </div>
-                    </div>
-                )} */}
 
 
                 <Button
@@ -500,6 +471,36 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     <Settings2 className="w-4 h-4 mr-2" />
                     Set Up UTMs
                 </Button>
+            </div>
+
+            {/* Display Link */}
+            <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-2 mb-2">
+                    <input
+                        type="checkbox"
+                        id="enableDisplayLink"
+                        checked={enableDisplayLink}
+                        onChange={(e) => {
+                            setEnableDisplayLink(e.target.checked);
+                            if (!e.target.checked) setDisplayLink("");
+                        }}
+                        className="rounded"
+                    />
+                    <label htmlFor="enableDisplayLink" className="text-sm font-semibold cursor-pointer">
+                        Add Display Link
+                    </label>
+                </div>
+                <p className="text-xs text-gray-500 mb-2">
+                    Customize the URL displayed on your ads (e.g. yourbrand.com).
+                </p>
+                {enableDisplayLink && (
+                    <Input
+                        placeholder="e.g. yourbrand.com"
+                        value={displayLink}
+                        onChange={(e) => setDisplayLink(e.target.value)}
+                        className="rounded-xl bg-white"
+                    />
+                )}
             </div>
 
             {/* --- MODAL 1: IMPORT LINKS (Modified to remove Tabs) --- */}

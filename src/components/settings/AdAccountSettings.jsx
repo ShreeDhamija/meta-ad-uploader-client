@@ -80,7 +80,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [links, setLinks] = useState([]) // Array of {url, isDefault}
   // const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
   const [utmPairs, setUtmPairs] = useState([])
-
+  const [displayLink, setDisplayLink] = useState("")
   const [defaultCTA, setDefaultCTA] = useState("Learn More")
   // const [copyTemplates, setCopyTemplates] = useState({})
   const [enhancements, setEnhancements] = useState(DEFAULT_ENHANCEMENTS)
@@ -152,7 +152,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       !areUtmPairsEqual(utmPairs, initialSettings.defaultUTMs) ||
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
       adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput ||
-      multiAdvertiserAds !== initialSettings.multiAdvertiserAds
+      multiAdvertiserAds !== initialSettings.multiAdvertiserAds ||
+      displayLink !== initialSettings.displayLink
     );
   }, [
     selectedPage,
@@ -166,6 +167,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     multiAdvertiserAds,  // ADD THIS
     selectedAdAccount,
     areUtmPairsEqual,
+    displayLink
 
 
   ]);
@@ -189,6 +191,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       adNameFormulaV2: adSettings.adNameFormulaV2 || { rawInput: "" },
       multiAdvertiserAds: adSettings.multiAdvertiserAds || false,
       customVariables: adSettings.customVariables || [],
+      displayLink: adSettings.displayLink || "",
+
 
     };
   }, []);
@@ -210,6 +214,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       setMultiAdvertiserAds(false);
       setCustomVariables([]);  // ← ADD THIS
       setInitialSettings({});
+      setDisplayLink("");
+
     }
 
     // Reset cache restored flag when switching accounts
@@ -238,6 +244,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setAdNameFormulaV2(initialSettings.adNameFormulaV2);
     setMultiAdvertiserAds(initialSettings.multiAdvertiserAds);
     setCustomVariables(initialSettings.customVariables);
+    setDisplayLink(initialSettings.displayLink);
+
 
     // Clear the cached draft
     localStorage.removeItem(DRAFT_CACHE_KEY);
@@ -265,6 +273,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       },
       multiAdvertiserAds: multiAdvertiserAds,
       customVariables: customVariables,
+      displayLink: displayLink,
+
 
     };
 
@@ -297,6 +307,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         adNameFormulaV2: adNameFormulaV2,
         multiAdvertiserAds: multiAdvertiserAds,
         customVariables: customVariables,
+        displayLink: displayLink,
+
 
       };
 
@@ -322,7 +334,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     adNameFormulaV2,
     multiAdvertiserAds,
     isFirstEverSave,
-    customVariables
+    customVariables,
+    displayLink
   ]);
 
 
@@ -379,7 +392,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         enhancements,
         adNameFormulaV2,
         multiAdvertiserAds,
-        customVariables,        // ← ADD THIS
+        customVariables,
+        displayLink,     // ← ADD THIS
         timestamp: Date.now()
       };
 
@@ -398,7 +412,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         // Ignore parse errors
       }
     }
-  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, customVariables]);
+  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, customVariables, displayLink]);
 
 
 
@@ -440,7 +454,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           setEnhancements(draft.enhancements);
           setAdNameFormulaV2(draft.adNameFormulaV2);
           setMultiAdvertiserAds(draft.multiAdvertiserAds);
-          setCustomVariables(draft.customVariables || []);  // ← ADD THIS
+          setCustomVariables(draft.customVariables || []);
+          setDisplayLink(draft.displayLink || "");
           setInitialSettings(initial);
           cacheRestoredRef.current = true;
           return;
@@ -461,6 +476,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setInitialSettings(initial);
     setMultiAdvertiserAds(initial.multiAdvertiserAds);
     setCustomVariables(initial.customVariables || []);  // ← ADD THIS
+    setDisplayLink(initial.displayLink || "");
 
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
 
@@ -673,7 +689,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             utmPairs={utmPairs}
             setUtmPairs={setUtmPairs}
             selectedAdAccount={selectedAdAccount}
-
+            displayLink={displayLink}
+            setDisplayLink={setDisplayLink}
           />
 
           <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />

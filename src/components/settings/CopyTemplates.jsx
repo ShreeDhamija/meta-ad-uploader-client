@@ -977,7 +977,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           disabled={isProcessing}
         />
         <label htmlFor="addDescriptions" className="text-xs text-gray-600 cursor-pointer">
-          Add Descriptions (Only compatible with regular image/video ads)
+          Add Descriptions
         </label>
       </div>
 
