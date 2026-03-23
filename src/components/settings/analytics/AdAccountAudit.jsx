@@ -179,7 +179,7 @@ function SummarySection({ report, kpiType, kpiTarget }) {
             insights.push({
                 label: "Spend Trend",
                 statement: `Spend is ${delta > 0 ? "up" : "down"} ${Math.abs(delta)}% month-over-month at ${fmt$(cur.spend)}.`,
-                status: Math.abs(delta) < 25 ? "neutral" : delta > 0 ? "warn" : "good",
+                status: Math.abs(delta) < 25 ? "neutral" : delta > 0 ? "good" : "warn",
             })
         }
     }
@@ -763,7 +763,7 @@ export default function AdAccountAudit({
 
     useEffect(() => {
         if (open && adAccountId && !report && !isGenerating) generateReport()
-        if (!open) { setReport(null); setError(null); setOpportunitiesText(""); setOppsError(null) }
+        if (!open) { setReport(null); setError(null); setOpportunitiesText(""); setOppsError(null); setActiveSection("summary") }
     }, [open, adAccountId])
 
     // Scroll spy
