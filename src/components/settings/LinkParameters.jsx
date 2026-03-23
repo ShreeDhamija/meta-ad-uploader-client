@@ -480,6 +480,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     <Checkbox
                         id="enableDisplayLink"
                         checked={enableDisplayLink}
+                        className="border-gray-300 w-4 h-4 rounded-md"
                         onCheckedChange={(checked) => {
                             setEnableDisplayLink(checked);
                             if (!checked) setDisplayLink("");
@@ -489,9 +490,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                         Add Display Link
                     </label>
                 </div>
-                <p className="text-xs text-gray-500 mb-2">
-                    Customize the URL displayed on your ads (e.g. yourbrand.com).
-                </p>
+
                 {enableDisplayLink && (
                     <Input
                         placeholder="e.g. yourbrand.com"

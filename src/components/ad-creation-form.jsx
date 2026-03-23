@@ -5613,13 +5613,13 @@ export default function AdCreationForm({
                               className="flex items-center gap-4"
                             >
                               <div className="flex items-center gap-2">
-                                <RadioGroupItem value="dynamic" id="identity-dynamic" className="h-3.5 w-3.5" />
+                                <RadioGroupItem value="dynamic" id="identity-dynamic" />
                                 <Label htmlFor="identity-dynamic" className="text-sm font-normal cursor-pointer">
                                   Dynamic
                                 </Label>
                               </div>
                               <div className="flex items-center gap-2">
-                                <RadioGroupItem value="first_identity_only" id="identity-first" className="h-3.5 w-3.5" />
+                                <RadioGroupItem value="first_identity_only" id="identity-first" />
                                 <Label htmlFor="identity-first" className="text-sm font-normal cursor-pointer">
                                   First identity only
                                 </Label>
