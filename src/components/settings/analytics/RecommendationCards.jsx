@@ -318,7 +318,7 @@ export default function RecommendationCards({
                                     <span>Account Avg ROAS: <span className="font-medium text-gray-700">{data.accountAverageROAS.toFixed(2)}x</span></span>
                                 )}
                                 {data.primaryResultType && (
-                                    <span>Primary Event: <span className="font-medium text-gray-700">{data.primaryResultType}</span></span>
+                                    <span>Primary Event: <span className="font-medium text-gray-700">{data.primaryResultType.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span></span>
                                 )}
                             </div>
                         )}
@@ -566,7 +566,7 @@ export default function RecommendationCards({
                     </div>
                 </div>
 
-                {poorAdsLoading ? (
+                {(poorAdsLoading || !poorAdsData) ? (
                     <Card className="rounded-2xl">
                         <CardContent className="py-10">
                             <div className="flex flex-col items-center justify-center gap-3">
@@ -591,8 +591,7 @@ export default function RecommendationCards({
                         {poorAdsData?.accountAverageCPA > 0 && mode === 'cpr' && (
                             <div className="text-xs text-gray-500 px-1">
                                 Account Average CPA: <span className="font-medium text-gray-700">${poorAdsData.accountAverageCPA.toFixed(2)}</span>
-                                {poorAdsData.primaryActionType && <span className="ml-3">Primary Event: <span className="font-medium text-gray-700">{poorAdsData.primaryActionType}</span></span>}
-                            </div>
+                                {poorAdsData.primaryActionType && <span className="ml-3">Primary Event: <span className="font-medium text-gray-700">{poorAdsData.primaryActionType.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span></span>}                            </div>
                         )}
 
                         {/* Bulk action bar */}
