@@ -118,7 +118,8 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                     <div>
                         <p className="text-sm font-medium text-gray-900">Daily {metricLabel} by Campaign</p>
                         <p className="text-xs text-gray-400">
-                            {data?.primaryActionType ? `Event: ${data.primaryActionType}` : 'Auto-detected event'}
+                            {data?.primaryActionType ? `Event: ${data.primaryActionType.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}` : 'Auto-detected event'}
+
                         </p>
                     </div>
                     <div className="flex p-0.5 bg-gray-100 rounded-lg border border-gray-200/60">
