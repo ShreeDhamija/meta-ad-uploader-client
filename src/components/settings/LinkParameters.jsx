@@ -12,6 +12,7 @@ import {
 import { toast } from "sonner";
 import { Download, CirclePlus, Settings2, Loader } from "lucide-react";
 import { RotateLoader } from "react-spinners";
+import { Checkbox } from "@/components/ui/checkbox"
 import LinkIcon from '@/assets/icons/link.svg?react';
 
 // Move constants outside component
@@ -476,15 +477,13 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
             {/* Display Link */}
             <div className="pt-4 border-t border-gray-200">
                 <div className="flex items-center gap-2 mb-2">
-                    <input
-                        type="checkbox"
+                    <Checkbox
                         id="enableDisplayLink"
                         checked={enableDisplayLink}
-                        onChange={(e) => {
-                            setEnableDisplayLink(e.target.checked);
-                            if (!e.target.checked) setDisplayLink("");
+                        onCheckedChange={(checked) => {
+                            setEnableDisplayLink(checked);
+                            if (!checked) setDisplayLink("");
                         }}
-                        className="rounded"
                     />
                     <label htmlFor="enableDisplayLink" className="text-sm font-semibold cursor-pointer">
                         Add Display Link
