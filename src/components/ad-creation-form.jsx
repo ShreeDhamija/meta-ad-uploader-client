@@ -561,6 +561,7 @@ export default function AdCreationForm({
   const [partnerFbPageId, setPartnerFbPageId] = useState("");
   const [openPartnerSelector, setOpenPartnerSelector] = useState(false);
   const [partnerSearchValue, setPartnerSearchValue] = useState("");
+  const [partnershipIdentityMode, setPartnershipIdentityMode] = useState("dynamic");
 
   const [adScheduleStartTime, setAdScheduleStartTime] = useState(null);
   const [adScheduleEndTime, setAdScheduleEndTime] = useState(null);
@@ -743,6 +744,8 @@ export default function AdCreationForm({
         isPartnershipAd,
         partnerIgAccountId,
         partnerFbPageId,
+        partnershipIdentityMode,
+
 
         // For computing adName
         adNameFormulaV2: adNameFormulaV2 ? { ...adNameFormulaV2 } : null,
@@ -2674,6 +2677,8 @@ export default function AdCreationForm({
       isPartnershipAd,
       partnerIgAccountId,
       partnerFbPageId,
+      partnershipIdentityMode,
+
 
       // Other
       adValues,
@@ -3040,6 +3045,7 @@ export default function AdCreationForm({
         isPartnershipAd,
         partnerIgAccountId,
         partnerFbPageId,
+        partnershipIdentityMode,
         adScheduleStartTime,
         adScheduleEndTime,
       }
@@ -3066,6 +3072,9 @@ export default function AdCreationForm({
         }
         if (partnerFbPageId) {
           formData.append("partnerFbPageId", partnerFbPageId);
+        }
+        if (partnershipIdentityMode === 'first_identity_only') {
+          formData.append("partnershipIdentityMode", "first_identity_only");
         }
 
       }
@@ -3966,6 +3975,7 @@ export default function AdCreationForm({
               isPartnershipAd,
               partnerIgAccountId,
               partnerFbPageId,
+              partnershipIdentityMode,
               adScheduleStartTime,
               adScheduleEndTime,
             });
@@ -4095,6 +4105,7 @@ export default function AdCreationForm({
                 isPartnershipAd,
                 partnerIgAccountId,
                 partnerFbPageId,
+                partnershipIdentityMode,
                 adScheduleStartTime,
                 adScheduleEndTime,
               });
@@ -4161,6 +4172,7 @@ export default function AdCreationForm({
               isPartnershipAd,
               partnerIgAccountId,
               partnerFbPageId,
+              partnershipIdentityMode,
               adScheduleStartTime,
               adScheduleEndTime,
             });
@@ -4228,6 +4240,7 @@ export default function AdCreationForm({
             isPartnershipAd,
             partnerIgAccountId,
             partnerFbPageId,
+            partnershipIdentityMode,
             adScheduleStartTime,
             adScheduleEndTime,
           });
@@ -4326,6 +4339,7 @@ export default function AdCreationForm({
                 isPartnershipAd,
                 partnerIgAccountId,
                 partnerFbPageId,
+                partnershipIdentityMode,
                 adScheduleStartTime,
                 adScheduleEndTime,
               });
@@ -4429,6 +4443,7 @@ export default function AdCreationForm({
                 isPartnershipAd,
                 partnerIgAccountId,
                 partnerFbPageId,
+                partnershipIdentityMode,
                 adScheduleStartTime,
                 adScheduleEndTime,
               });
@@ -4465,6 +4480,7 @@ export default function AdCreationForm({
                 isPartnershipAd,
                 partnerIgAccountId,
                 partnerFbPageId,
+                partnershipIdentityMode,
                 adScheduleStartTime,
                 adScheduleEndTime,
               });
@@ -4502,6 +4518,7 @@ export default function AdCreationForm({
                 isPartnershipAd,
                 partnerIgAccountId,
                 partnerFbPageId,
+                partnershipIdentityMode,
                 adScheduleStartTime,
                 adScheduleEndTime,
               });
@@ -4535,6 +4552,7 @@ export default function AdCreationForm({
                 isPartnershipAd,
                 partnerIgAccountId,
                 partnerFbPageId,
+                partnershipIdentityMode,
                 adScheduleStartTime,
                 adScheduleEndTime,
               });
@@ -4592,6 +4610,7 @@ export default function AdCreationForm({
                 isPartnershipAd,
                 partnerIgAccountId,
                 partnerFbPageId,
+                partnershipIdentityMode,
                 adScheduleStartTime,
                 adScheduleEndTime,
               });
@@ -4624,6 +4643,7 @@ export default function AdCreationForm({
                 isPartnershipAd,
                 partnerIgAccountId,
                 partnerFbPageId,
+                partnershipIdentityMode,
                 adScheduleStartTime,
                 adScheduleEndTime,
               });
@@ -5582,6 +5602,32 @@ export default function AdCreationForm({
                               </div>
                             </div>
                           )}
+
+                          <div className="space-y-2">
+                            <Label className="text-sm text-gray-600">
+                              Select identities in header
+                            </Label>
+                            <RadioGroup
+                              value={partnershipIdentityMode}
+                              onValueChange={setPartnershipIdentityMode}
+                              className="flex items-center gap-4"
+                            >
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="dynamic" id="identity-dynamic" />
+                                <Label htmlFor="identity-dynamic" className="text-sm font-normal cursor-pointer">
+                                  Dynamic
+                                </Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="first_identity_only" id="identity-first" />
+                                <Label htmlFor="identity-first" className="text-sm font-normal cursor-pointer">
+                                  First identity only
+                                </Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+
+
 
                           {availablePartners.length === 0 && !isLoadingPartners && !partnersError && (
                             <p className="text-xs text-gray-500">
