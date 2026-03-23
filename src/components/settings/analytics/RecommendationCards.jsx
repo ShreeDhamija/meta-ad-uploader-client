@@ -124,6 +124,12 @@ export default function RecommendationCards({
 
     const handleApply = async (rec) => {
         const key = recKey(rec)
+
+        // Safety: don't send API calls for non-actionable recs
+        if (rec.level === 'account' || rec.type === 'consolidate' || rec.type === 'trend_alert') {
+            return
+        }
+
         setApplyingId(key)
         setConfirmDialog(null)
 
@@ -133,16 +139,24 @@ export default function RecommendationCards({
             if (rec.type === 'pause') {
                 body.action = 'pause'
             } else if (editedBudgets[key]) {
-                body.newBudget = parseFloat(editedBudgets[key])
-                if (isNaN(body.newBudget) || body.newBudget <= 0) {
+                const editedValue = parseFloat(editedBudgets[key])
+                if (isNaN(editedValue) || editedValue <= 0) {
                     toast.error('Please enter a valid budget amount')
                     setApplyingId(null)
                     return
                 }
+                body.newBudget = editedValue
+                body.budgetType = rec.lifetimeBudget && !rec.dailyBudget ? 'lifetime' : 'daily'
             } else if (rec.budgetChange) {
+                const currentBudget = rec.dailyBudget || rec.lifetimeBudget || 0
+                if (currentBudget <= 0) {
+                    toast.error('Cannot adjust budget — no budget data available')
+                    setApplyingId(null)
+                    return
+                }
                 body.action = rec.budgetChange > 0 ? 'increase_budget' : 'decrease_budget'
                 body.budgetChangePercent = Math.abs(rec.budgetChange)
-                body.currentBudget = rec.dailyBudget || rec.lifetimeBudget || 0
+                body.currentBudget = currentBudget
                 body.budgetType = rec.lifetimeBudget && !rec.dailyBudget ? 'lifetime' : 'daily'
             }
 
@@ -404,7 +418,7 @@ export default function RecommendationCards({
                                                                     <BoldedMessage text={rec.message} />
                                                                 </p>
 
-                                                                {rec.level !== 'campaign' && rec.campaignName && (
+                                                                {rec.level !== 'campaign' && rec.level !== 'account' && rec.campaignName && (
                                                                     <p className="text-xs text-gray-400 mt-0.5">Campaign: {rec.campaignName}</p>
                                                                 )}
 
@@ -445,7 +459,7 @@ export default function RecommendationCards({
                                                         </div>
 
                                                         <div className="flex items-center gap-2 flex-shrink-0">
-                                                            {rec.type === 'trend_alert' ? (
+                                                            {(rec.type === 'trend_alert' || rec.type === 'consolidate') ? (
                                                                 null
                                                             ) : rec.type === 'scale_winner' ? (
                                                                 <Button
