@@ -158,7 +158,7 @@ function DonutRing({ value, total, color = BLUE, size = 100 }) {
     )
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════════════════════════════════════════  
 // SECTION 0: EXECUTIVE SUMMARY
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -809,6 +809,11 @@ export default function AdAccountAudit({
             const res = await fetch(`${API_BASE_URL}/api/analytics/audit/report?${params}`, { credentials: "include" })
             if (!res.ok) { const err = await res.json(); setError(err.error || "Failed to generate report"); return }
             const data = await res.json(); setReport(data); fetchOpportunities(data)
+
+            console.log('[AUDIT FE] conversionEvent prop:', conversionEvent);
+            console.log('[AUDIT FE] kpiType:', kpiType);
+            console.log('[AUDIT FE] monthlySpend kpi values:', data.monthlySpend?.map(m => ({ month: m.month, kpi: m.kpi })));
+            setReport(data); fetchOpportunities(data)
         } catch (e) { setError("Network error — please try again.") }
         finally { setIsGenerating(false) }
     }
