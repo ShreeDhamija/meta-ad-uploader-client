@@ -218,7 +218,7 @@ export default function WeeklyChart({ data, loading }) {
                             </LineChart>
                         </ResponsiveContainer>
 
-                        <div className="mt-3 grid flex flex-wrap justify-center gap-x-4 gap-y-1.5">
+                        <div className="mt-3 grid grid-cols-2 justify-items-center gap-x-4 gap-y-1.5">
                             {selectedMetricConfigs.map((metric) => (
                                 <div key={metric.key} className="flex items-center gap-2">
                                     <span

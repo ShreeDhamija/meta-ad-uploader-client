@@ -14,7 +14,7 @@ const COLORS = [
     "#06b6d4", "#eab308", "#ec4899", "#14b8a6", "#6366f1",
 ]
 
-const MAX_NAME_LENGTH = 25
+const MAX_NAME_LENGTH = 50
 
 function truncateName(name) {
     if (!name) return ''
@@ -217,7 +217,7 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                                     ref={legendRef}
                                     className="max-h-[88px] overflow-y-auto custom-scrollbar"
                                 >
-                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                                    <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pr-4">
                                         {campaigns.map((name, i) => {
                                             const isHidden = hiddenCampaigns.has(name)
                                             return (

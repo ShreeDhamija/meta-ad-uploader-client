@@ -881,8 +881,7 @@ export default function AdAccountAudit({
                                             style={{ background: BLUE_BG, color: BLUE_DARK }}
                                         >
                                             Target {kpiType.toUpperCase()}: {kpiType === "cpa" ? `$${kpiTarget}` : `${kpiTarget}×`}
-                                            {kpiType === "cpa" && conversionEvent ? ` · ${conversionEvent}` : ""}
-                                        </span>
+                                            {kpiType === "cpa" && conversionEvent ? ` · ${conversionEvent.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}` : ""}                                        </span>
                                     )}
                                 </p>
                             </div>
