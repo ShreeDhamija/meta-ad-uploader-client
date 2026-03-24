@@ -858,25 +858,24 @@ export default function AdCreationForm({
 
 
   // Add this helper function
-  const uploadChunkWithRetry = async (url, chunk, fileType, partNumber, maxRetries = 3) => {
+  // Whatever your uploadChunkWithRetry looks like, add signal:
+  async function uploadChunkWithRetry(url, chunk, contentType, partNumber, maxRetries = 3, signal = null) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
       try {
-        const response = await axios.put(url, chunk, {
-          headers: { 'Content-Type': fileType },
-          timeout: 120000, // Increase to 2 min for slow connections
+        return await axios.put(url, chunk, {
+          headers: { 'Content-Type': contentType },
+          signal, // This makes axios reject immediately on abort
         });
-        return response;
       } catch (error) {
-        const isLastAttempt = attempt === maxRetries;
-        const isNetworkError = !error.response || error.code === 'ECONNABORTED';
-
-        if (isLastAttempt || !isNetworkError) throw error;
-
-        // console.log(`⚠️ Chunk ${partNumber} failed (attempt ${attempt}/${maxRetries}). Retrying...`);
-        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt - 1))); // Exponential backoff
+        if (axios.isCancel(error) || error.name === 'AbortError' || signal?.aborted) {
+          throw new DOMException('Cancelled', 'AbortError');
+        }
+        if (attempt === maxRetries) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
       }
     }
-  };
+  }
 
   const uploadToS3 = async (file, onChunkUploaded, uniqueId, maxUploadRetries = 2, signal = null) => {    // Validate inputs
     if (!file) {
@@ -962,8 +961,7 @@ export default function AdCreationForm({
 
           return limit(async () => {
             try {
-              const uploadResponse = await uploadChunkWithRetry(url, chunk, file.type, partNumber);
-
+              const uploadResponse = await uploadChunkWithRetry(url, chunk, file.type, partNumber, 3, signal);
               // Only call progress callback on first attempt to avoid double-counting
               if (onChunkUploaded && uploadAttempt === 1) {
                 uploadedChunksCount++;
