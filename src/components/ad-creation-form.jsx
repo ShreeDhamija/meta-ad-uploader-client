@@ -121,7 +121,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     const scheduleConnectionRetry = (reason) => {
       if (!isSubscribed || retryCount >= maxConnectionRetries) {
         if (retryCount >= maxConnectionRetries) {
-          console.error('Max connection retry attempts reached');
+          // console.error('Max connection retry attempts reached');
           setStatus('error');
           setMessage('Connection failed. Please check your internet connection.');
         }
@@ -144,7 +144,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     const scheduleJobRetry = () => {
       if (!isSubscribed || jobNotFoundCount >= maxJobNotFoundRetries) {
         if (jobNotFoundCount >= maxJobNotFoundRetries) {
-          console.error('Job not found after maximum attempts - job may not exist');
+          // console.error('Job not found after maximum attempts - job may not exist');
           setStatus('job-not-found'); // NEW: Specific status instead of 'error'
           setMessage('Job not found. The task may have expired or been cancelled.');
         }
@@ -177,7 +177,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
         // Set connection timeout
         connectionTimeoutId = setTimeout(() => {
           if (eventSource && eventSource.readyState === EventSource.CONNECTING) {
-            console.warn('SSE connection timeout');
+            // console.warn('SSE connection timeout');
             eventSource.close();
             scheduleConnectionRetry('Connection timeout');
           }
@@ -247,7 +247,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
         };
 
         eventSource.onerror = (error) => {
-          console.error('❌ SSE Error:', error);
+          // console.error('❌ SSE Error:', error);
 
           if (!isSubscribed) {
             cleanup();
@@ -271,7 +271,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
         };
 
       } catch (error) {
-        console.error('Failed to create EventSource:', error);
+        // console.error('Failed to create EventSource:', error);
         if (isSubscribed) {
           setStatus('error');
           setMessage('Failed to initialize progress tracking.');
@@ -381,7 +381,6 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
 
       setPartners(approvedPartners);
     } catch (err) {
-      console.error('Error fetching partnership ad partners:', err);
       setError(err.response?.data?.error || 'Re-authenticate the app and approve additional permissions to make partnership ads');
       setPartners([]);
     } finally {
@@ -991,9 +990,9 @@ export default function AdCreationForm({
           });
         });
 
-        console.time(`⏱️ [${file.name}] chunk Promise.all`);
+
         const completedParts = await Promise.all(uploadPromises);
-        console.timeEnd(`⏱️ [${file.name}] chunk Promise.all`);
+
 
         const completePayload = {
           key: s3Key,
@@ -1015,8 +1014,7 @@ export default function AdCreationForm({
               throw error;
             }
             const delay = 2000 * Math.pow(2, attempt - 1);
-            // console.log(`⚠️ S3 complete-upload attempt ${attempt} failed. Retrying in ${delay}ms...`);
-            // console.log(`   Error: ${error.message}`);
+
             await new Promise(resolve => setTimeout(resolve, delay));
           }
         }
@@ -1036,38 +1034,38 @@ export default function AdCreationForm({
         lastError = error;
 
         if (axios.isCancel(error) || error.name === 'AbortError' || signal?.aborted) {
-          console.log(`⏱️ [${file.name}] Abort detected, cleaning up...`);
+
           if (uploadId && s3Key) {
             try {
-              console.time(`⏱️ [${file.name}] S3 abort-upload call`);
+
               await axios.post(
                 `${API_BASE_URL}/auth/s3/abort-upload`,
                 { key: s3Key, uploadId: uploadId },
                 { withCredentials: true }
               );
-              console.timeEnd(`⏱️ [${file.name}] S3 abort-upload call`);
+
             } catch (abortError) {
-              console.timeEnd(`⏱️ [${file.name}] S3 abort-upload call`);
+
               console.error('Failed to abort S3 upload:', abortError.message);
             }
           }
-          console.log(`⏱️ [${file.name}] Throwing cancel error`);
+
           const cancelError = new DOMException(`Upload cancelled for ${file.name}`, 'AbortError');
           throw cancelError;
         }
 
-        console.error(`❌ Upload attempt ${uploadAttempt}/${maxUploadRetries} failed for ${file.name}:`, error.message);
+
 
         // Abort the current upload before retrying
         if (uploadId && s3Key) {
-          // console.log(`🧹 Aborting failed upload (attempt ${uploadAttempt})...`);
+
           try {
             await axios.post(
               `${API_BASE_URL}/auth/s3/abort-upload`,
               { key: s3Key, uploadId: uploadId },
               { withCredentials: true }
             );
-            // console.log(`✅ Successfully aborted upload for retry`);
+
           } catch (abortError) {
             console.error('❌ Failed to abort upload:', abortError.message);
           }
@@ -1076,7 +1074,7 @@ export default function AdCreationForm({
         // If not the last attempt, wait before retrying
         if (uploadAttempt < maxUploadRetries) {
           const delay = 3000 * uploadAttempt;
-          // console.log(`⏳ Retrying upload for ${file.name} in ${delay}ms...`);
+
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -1279,11 +1277,13 @@ export default function AdCreationForm({
     // setMessage('Initializing...');
     setShowCompletedView(false);
     setJobId(null);
+    setIsCancelling(false); // Reset for new job
+
 
     handleCreateAd(jobToProcess).catch(err => {
       // Don't treat cancellation as a critical error
       if (err.name === 'AbortError' || axios.isCancel(err)) {
-        console.log('Job cancelled during initialization phase');
+
         const cancelledJob = {
           id: jobToProcess.id,
           message: 'Job cancelled.',
@@ -1300,7 +1300,7 @@ export default function AdCreationForm({
         return;
       }
 
-      console.error("Critical error during job initialization:", err);
+
       const failedJob = {
         id: jobToProcess.id,
         message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
@@ -1485,7 +1485,7 @@ export default function AdCreationForm({
         }
 
       } catch (error) {
-        console.error("Failed to check Google auth status:", error);
+
         setGoogleAuthStatus({
           checking: false,
           authenticated: false,
@@ -1657,7 +1657,7 @@ export default function AdCreationForm({
 
         // toast.success("File imported successfully!", { id: toastId });
       } catch (error) {
-        console.error("Direct file import error:", error);
+
         toast.error("Failed to import file. Make sure you have access to it.");
       }
       return; // Stop execution here so we don't open the folder picker
@@ -2918,9 +2918,9 @@ export default function AdCreationForm({
 
 
 
-      console.time('⏱️ S3 allSettled');
+
       const results = await Promise.allSettled(uploadPromises);
-      console.timeEnd('⏱️ S3 allSettled');
+
 
 
       // Process regular file results
@@ -3443,7 +3443,7 @@ export default function AdCreationForm({
           }
         } else {
           // 🔴 ADD THIS LOG
-          console.warn("   ❌ Match FAILED for ID:", fileId);
+
         }
       });
 
@@ -3908,11 +3908,11 @@ export default function AdCreationForm({
           }
 
           if (attempt === maxRetries - 1) {
-            console.error(`Failed after ${maxRetries} attempts:`, error.message);
+
             throw error;
           }
 
-          console.warn(`Attempt ${attempt + 1} failed, retrying... (${error.message})`);
+
 
           const delay = baseDelay * Math.pow(1.5, attempt) + Math.random() * 500;
           await new Promise(resolve => setTimeout(resolve, delay));
@@ -4958,6 +4958,7 @@ export default function AdCreationForm({
           setJobQueue(prev => prev.slice(1));
           setCurrentJob(null);
           setIsProcessingQueue(false);
+          setIsCancelling(false);
         }
         isInPromisePhase.current = false; // ADD THIS
       } catch (error) {
@@ -4967,7 +4968,7 @@ export default function AdCreationForm({
     } catch (error) {
       // If user cancelled, don't treat as an error
       if (error.name === 'AbortError' || axios.isCancel(error)) {
-        console.log('Job cancelled by user during pre-processing phase');
+
         // Notify backend to mark job as cancelled
         try {
           await axios.post(`${API_BASE_URL}/auth/cancel-job`,
@@ -6684,7 +6685,7 @@ export default function AdCreationForm({
                               setLeadgenForms([]);
                             }
                           } catch (error) {
-                            console.error('Error fetching leadgen forms:', error);
+
                             setLeadgenForms([]);
                           } finally {
                             setLoadingForms(false);
