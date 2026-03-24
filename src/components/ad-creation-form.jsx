@@ -5616,14 +5616,12 @@ export default function AdCreationForm({
                                 <RadioGroupItem
                                   value="first_identity_only"
                                   id="identity-first"
-                                  disabled={!partnerFbPageId}
+                                  disabled={!partnerFbPageId && partnerIgAccountId}
                                 />
                                 <Label
                                   htmlFor="identity-first"
-                                  className={cn(
-                                    "text-sm font-normal cursor-pointer",
-                                    !partnerFbPageId && "text-gray-400 cursor-not-allowed"
-                                  )}
+                                  className=
+                                  "text-sm font-normal cursor-pointer"
                                 >
                                   First identity only
                                 </Label>
