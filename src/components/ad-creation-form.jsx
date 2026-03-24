@@ -988,7 +988,9 @@ export default function AdCreationForm({
           });
         });
 
+        console.time(`⏱️ [${file.name}] chunk Promise.all`);
         const completedParts = await Promise.all(uploadPromises);
+        console.timeEnd(`⏱️ [${file.name}] chunk Promise.all`);
 
         const completePayload = {
           key: s3Key,
@@ -1031,19 +1033,24 @@ export default function AdCreationForm({
         lastError = error;
 
         if (axios.isCancel(error) || error.name === 'AbortError' || signal?.aborted) {
+          console.log(`⏱️ [${file.name}] Abort detected, cleaning up...`);
           if (uploadId && s3Key) {
             try {
+              console.time(`⏱️ [${file.name}] S3 abort-upload call`);
               await axios.post(
                 `${API_BASE_URL}/auth/s3/abort-upload`,
                 { key: s3Key, uploadId: uploadId },
-                { withCredentials: true } // no signal here — let this complete
+                { withCredentials: true }
               );
+              console.timeEnd(`⏱️ [${file.name}] S3 abort-upload call`);
             } catch (abortError) {
+              console.timeEnd(`⏱️ [${file.name}] S3 abort-upload call`);
               console.error('Failed to abort S3 upload:', abortError.message);
             }
           }
+          console.log(`⏱️ [${file.name}] Throwing cancel error`);
           const cancelError = new DOMException(`Upload cancelled for ${file.name}`, 'AbortError');
-          throw cancelError; // Exits immediately, skips all retries
+          throw cancelError;
         }
 
         console.error(`❌ Upload attempt ${uploadAttempt}/${maxUploadRetries} failed for ${file.name}:`, error.message);
@@ -2889,7 +2896,10 @@ export default function AdCreationForm({
 
 
 
+      console.time('⏱️ S3 allSettled');
       const results = await Promise.allSettled(uploadPromises);
+      console.timeEnd('⏱️ S3 allSettled');
+
 
       // Process regular file results
       results.forEach((result, index) => {
