@@ -5629,7 +5629,7 @@ export default function AdCreationForm({
                                 </Label>
                               </div>
                             </RadioGroup>
-                            {!partnerFbPageId && (
+                            {!partnerFbPageId && partnerIgAccountId && (
                               <p className="text-xs text-amber-600">
                                 Partner's Facebook Page ID is required for first identity only.
                               </p>
