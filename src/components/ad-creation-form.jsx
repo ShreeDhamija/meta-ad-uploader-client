@@ -536,6 +536,7 @@ export default function AdCreationForm({
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
   const [currentAbortController, setCurrentAbortController] = useState(null);
+  const isInPromisePhase = useRef(false); // ADD THIS
   const [preserveMedia, setPreserveMedia] = useState(false);
 
   const [liveProgress, setLiveProgress] = useState({
@@ -1346,6 +1347,10 @@ export default function AdCreationForm({
         };
         addCompletedJob(failedJob);
       } else if (status === 'cancelled') {
+        if (isInPromisePhase.current) {
+          return; // Let the promise phase handle it
+        }
+
         const cancelledJob = {
           id: currentJob.id,
           message: trackedMessage || 'Job cancelled. Some Ads might still have been made.',
@@ -4708,6 +4713,7 @@ export default function AdCreationForm({
 
 
       setLiveProgress({ completed: 0, succeeded: 0, failed: 0, total: promises.length, errors: [] });
+      isInPromisePhase.current = true; // ADD THIS
 
       try {
         setJobId(frontendJobId);
@@ -4857,6 +4863,30 @@ export default function AdCreationForm({
         } catch (completeError) {
           console.warn("Failed to update progress tracker");
         }
+
+        if (signal.aborted) {
+          const cancelledJob = {
+            id: jobData.id,
+            message: jobMessage,
+            completedAt: Date.now(),
+            status: jobStatus, // 'cancelled', 'partial-success', or 'complete'
+            successCount,
+            failureCount,
+            totalCount,
+            errorMessages,
+            selectedAdSets: selectedAdSets,
+            selectedAdAccount: selectedAdAccount,
+            formData: jobData.formData,
+          };
+          addCompletedJob(cancelledJob);
+
+          // Clean up the queue directly since useEffect might not trigger
+          setShowCompletedView(true);
+          setJobQueue(prev => prev.slice(1));
+          setCurrentJob(null);
+          setIsProcessingQueue(false);
+        }
+        isInPromisePhase.current = false; // ADD THIS
       } catch (error) {
         console.error("Unexpected error:", error);
       }
