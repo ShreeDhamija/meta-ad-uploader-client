@@ -1348,10 +1348,15 @@ export default function AdCreationForm({
       } else if (status === 'cancelled') {
         const cancelledJob = {
           id: currentJob.id,
-          message: trackedMessage || 'Job cancelled.',
+          message: trackedMessage || 'Job cancelled. Some Ads might still have been made.',
           completedAt: Date.now(),
           status: 'cancelled',
           successCount: metaData.successCount,
+          failureCount: metaData.failureCount,
+          totalCount: metaData.totalCount,
+          errorMessages: metaData.errorMessages,
+          selectedAdSets: currentJob.formData.selectedAdSets,
+          selectedAdAccount: currentJob.formData.selectedAdAccount,
           formData: currentJob.formData,
         };
         addCompletedJob(cancelledJob);
@@ -2654,7 +2659,7 @@ export default function AdCreationForm({
     setCurrentAbortController(abortController);
 
     const throwIfCancelled = () => {
-      if (signal.aborted) throw new DOMException('Job cancelled by user', 'AbortError');
+      if (signal.aborted) throw new DOMException('Job cancelled. Some Ads might still have been made.', 'AbortError');
     };
 
 
@@ -2842,6 +2847,7 @@ export default function AdCreationForm({
       let uploadedChunks = 0;
 
       const updateOverallProgress = () => {
+        if (signal?.aborted) return; // Don't update progress after cancel
         uploadedChunks += 1;
         const percent = Math.round((uploadedChunks / totalChunksAllFiles) * 100);
         setProgress(percent);
@@ -2927,12 +2933,12 @@ export default function AdCreationForm({
           console.error("❌ Dropbox to S3 upload failed", result.reason);
         }
       });
-
+      throwIfCancelled();
       setProgress(100);
       setProgressMessage('File upload complete! Creating ads...');
       // toast.success("Video files uploaded!");
     }
-
+    throwIfCancelled(); // ADD THIS LINE
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
     const smallDriveFiles = driveFiles.filter(file =>
@@ -3806,7 +3812,7 @@ export default function AdCreationForm({
       const baseDelay = 1000;
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
-        if (signal?.aborted) throw new DOMException('Job cancelled', 'AbortError');
+        if (signal?.aborted) throw new DOMException('Job cancelled. Some Ads might still have been made.', 'AbortError');
         try {
           const response = await axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
             withCredentials: true,
@@ -4800,7 +4806,7 @@ export default function AdCreationForm({
           // User cancelled — determine what actually happened
           if (successCount === 0 && failureCount === 0) {
             jobStatus = 'cancelled';
-            jobMessage = 'Job cancelled.';
+            jobMessage = 'Job cancelled. Some Ads might still have been made.';
           } else if (successCount === totalCount) {
             // Everything finished before cancel propagated
             jobStatus = 'complete';
@@ -4811,7 +4817,7 @@ export default function AdCreationForm({
           } else {
             // Only failures and cancellations, no successes
             jobStatus = 'cancelled';
-            jobMessage = 'Job cancelled.';
+            jobMessage = 'Job cancelled Some Ads might still have been made..';
           }
         } else {
           // Normal (non-cancelled) completion
@@ -4992,7 +4998,7 @@ export default function AdCreationForm({
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0">
                           {job.status === 'cancelled' ? (
-                            <Ban className="w-6 h-6 text-gray-400" />
+                            <Ban className="w-6 h-6 text-orange-500" />
                           ) : job.status === 'error' ? (
                             <CircleX className="w-6 h-6 text-red-500" />
                           ) : job.status === 'partial-success' ? (
@@ -5008,7 +5014,7 @@ export default function AdCreationForm({
                           <p
                             style={{ overflowWrap: 'anywhere' }}
                             className={`text-sm break-words ${job.status === 'cancelled'
-                              ? 'text-gray-500'
+                              ? 'text-orange-500'
                               : job.status === 'error'
                                 ? 'text-red-600'
                                 : job.status === 'partial-success'
@@ -5020,6 +5026,25 @@ export default function AdCreationForm({
                           >
                             {job.message}
                           </p>
+                          {job.status === 'cancelled' && job.totalCount > 0 && job.successCount > 0 && (
+                            <div className="flex gap-2 mt-1.5">
+                              <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-lg">
+                                <CheckIcon className="w-3 h-3 text-green-600" />
+                                <span className="text-xs font-medium text-green-700">
+                                  {job.successCount} created
+                                </span>
+                              </div>
+                              {job.failureCount > 0 && (
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-red-50 border border-red-200 rounded-lg">
+                                  <CircleX className="w-3 h-3 text-red-500" />
+                                  <span className="text-xs font-medium text-red-600">
+                                    {job.failureCount} failed
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
 
                           {job.status === 'retry' && (
                             <span className="block text-xs text-orange-500 mt-1">
@@ -5077,7 +5102,7 @@ export default function AdCreationForm({
                       </div>
 
                       {/* Error details (moved outside the flex row) */}
-                      {job.status === 'partial-success' && job.errorMessages?.length > 0 && (
+                      {(job.status === 'partial-success' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
                         <div className="mt-2 ml-9">
                           <details className="text-xs">
                             <summary className="cursor-pointer text-[#FF0000]">
