@@ -1031,6 +1031,23 @@ export default function AdCreationForm({
 
       } catch (error) {
         lastError = error;
+
+        if (axios.isCancel(error) || error.name === 'AbortError' || signal?.aborted) {
+          if (uploadId && s3Key) {
+            try {
+              await axios.post(
+                `${API_BASE_URL}/auth/s3/abort-upload`,
+                { key: s3Key, uploadId: uploadId },
+                { withCredentials: true } // no signal here — let this complete
+              );
+            } catch (abortError) {
+              console.error('Failed to abort S3 upload:', abortError.message);
+            }
+          }
+          const cancelError = new DOMException(`Upload cancelled for ${file.name}`, 'AbortError');
+          throw cancelError; // Exits immediately, skips all retries
+        }
+
         console.error(`❌ Upload attempt ${uploadAttempt}/${maxUploadRetries} failed for ${file.name}:`, error.message);
 
         // Abort the current upload before retrying
@@ -1102,7 +1119,9 @@ export default function AdCreationForm({
         };
 
       } catch (error) {
-        // If this was the last attempt, throw the error
+        if (axios.isCancel(error) || error.name === 'AbortError' || signal?.aborted) {
+          throw new DOMException(`Upload cancelled for ${file.name}`, 'AbortError');
+        }
         if (attempt === maxRetries) {
           throw new Error(`S3 upload failed after ${maxRetries} attempts: ${error.message}`);
         }
@@ -1139,6 +1158,10 @@ export default function AdCreationForm({
           isS3Upload: true
         };
       } catch (error) {
+        if (axios.isCancel(error) || error.name === 'AbortError' || signal?.aborted) {
+          throw new DOMException(`Upload cancelled for ${file.name}`, 'AbortError');
+        }
+
         if (attempt === maxRetries) {
           throw new Error(`Dropbox S3 upload failed after ${maxRetries} attempts: ${error.message}`);
         }
@@ -2879,7 +2902,14 @@ export default function AdCreationForm({
           }
           s3Results.push(uploadResult);
         } else {
-          toast.error(`Failed to upload ${largeFiles[index].name} due to weak network connection. Reload page to try again`);
+          // Don't show error toast if this was a user cancellation
+          const isCancellation = result.reason?.name === 'AbortError' ||
+            axios.isCancel(result.reason) ||
+            signal?.aborted;
+
+          if (!isCancellation) {
+            toast.error(`Failed to upload ${largeFiles[index].name} due to weak network connection. Reload page to try again`);
+          }
           console.error(`❌ Failed to upload ${largeFiles[index].name}:`, result.reason);
         }
       });
@@ -2909,8 +2939,14 @@ export default function AdCreationForm({
 
 
         } else {
-          toast.error(`Failed to upload Drive video: ${largeDriveFiles[index].name}`);
-          console.error("❌ Drive to S3 upload failed", result.reason);
+          const isCancellation = result.reason?.name === 'AbortError' ||
+            axios.isCancel(result.reason) ||
+            signal?.aborted;
+
+          if (!isCancellation) {
+            toast.error(`Failed to upload Drive video: ${largeDriveFiles[index].name}`);
+          }
+          console.error("❌ Google Drive to S3 upload failed", result.reason);
         }
       });
 
@@ -2934,7 +2970,13 @@ export default function AdCreationForm({
           uploadResult.dropboxId = largeDropboxFiles[index].dropboxId;  // ✅ Add this if missing
           s3DropboxResults.push(uploadResult);
         } else {
-          toast.error(`Failed to upload Dropbox video: ${largeDropboxFiles[index].name}`);
+          const isCancellation = result.reason?.name === 'AbortError' ||
+            axios.isCancel(result.reason) ||
+            signal?.aborted;
+
+          if (!isCancellation) {
+            toast.error(`Failed to upload Dropbox video: ${largeDriveFiles[index].name}`);
+          }
           console.error("❌ Dropbox to S3 upload failed", result.reason);
         }
       });
@@ -4819,7 +4861,7 @@ export default function AdCreationForm({
             jobMessage = `All ${totalCount} ads were created before cancellation took effect.`;
           } else if (successCount > 0) {
             jobStatus = 'partial-success';
-            jobMessage = `Cancelled. ${successCount} of ${totalCount} ads were already created.`;
+            jobMessage = `Cancelled. ${successCount} of ${totalCount} ads were already created. This count could be inaccurate.`;
           } else {
             // Only failures and cancellations, no successes
             jobStatus = 'cancelled';
@@ -5224,7 +5266,7 @@ export default function AdCreationForm({
                               );
                             } catch (e) { /* best-effort */ }
                           }}
-                          className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                          className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 border border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
                         >
                           Cancel
                         </button>
