@@ -480,7 +480,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     <Checkbox
                         id="enableDisplayLink"
                         checked={enableDisplayLink}
-                        className="border-gray-300 w-4 h-4 rounded-md"
+                        className="border-gray-300 w-4 h-4 rounded-md !shadow-none"
                         onCheckedChange={(checked) => {
                             setEnableDisplayLink(checked);
                             if (!checked) setDisplayLink("");
