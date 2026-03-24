@@ -396,7 +396,13 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
   return { partners, isLoading, error, refetch: fetchPartners };
 };
 
-
+const buildISOString = (date, time) => {
+  if (!date) return null;
+  const [hours, minutes] = (time || "00:00").split(":").map(Number);
+  const d = new Date(date);
+  d.setHours(hours, minutes, 0, 0);
+  return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+};
 
 
 export default function AdCreationForm({
@@ -5613,355 +5619,250 @@ export default function AdCreationForm({
                                 </Label>
                               </div>
                               <div className="flex items-center gap-2">
-                                <RadioGroupItem
-                                  value="first_identity_only"
-                                  id="identity-first"
-                                  disabled={!partnerFbPageId && partnerIgAccountId}
-                                />
-                                <Label
-                                  htmlFor="identity-first"
-                                  className={cn(
-                                    "text-sm font-normal cursor-pointer",
-                                    !partnerFbPageId && partnerIgAccountId && "text-gray-400 cursor-not-allowed"
-                                  )}
-                                >
+                                <RadioGroupItem value="first_identity_only" id="identity-first" />
+                                <Label htmlFor="identity-first" className="text-sm font-normal cursor-pointer">
                                   First identity only
                                 </Label>
-                                {!partnerFbPageId && partnerIgAccountId && (
-                                  <p className="text-xs text-amber-600">
-                                    Partner's Facebook Page ID is required for first identity only.
-                                  </p>
-                                )}
                               </div>
-
-
-
-                              {availablePartners.length === 0 && !isLoadingPartners && !partnersError && (
-                                <p className="text-xs text-gray-500">
-                                  No approved partnership ad permissions found. Partners need to approve your brand first.
-                                </p>
-                              )}
+                            </RadioGroup>
                           </div>
-                      )}
+
+
+
+                          {availablePartners.length === 0 && !isLoadingPartners && !partnersError && (
+                            <p className="text-xs text-gray-500">
+                              No approved partnership ad permissions found. Partners need to approve your brand first.
+                            </p>
+                          )}
                         </div>
-                  </div>
-
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor="adName" className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <LabelIcon className="w-4 h-4" />
-                        Ad Name
-                      </div>
-                      {selectedAdAccount && !adAccountSettings?.adNameFormulaV2?.rawInput && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                          className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
-                        >
-                          <CogIcon className="w-3 h-3 mr-1 text-white" />
-                          Set Up Ad Name Formula
-                        </Button>
                       )}
-                    </Label>
-
-                    <ReorderAdNameParts
-                      formulaInput={adNameFormulaV2?.rawInput || ""}
-                      onFormulaChange={(newRawInput) => {
-                        setAdNameFormulaV2({ rawInput: newRawInput });
-                      }}
-                      variant="home"
-                      customVariables={adAccountSettings.customVariables || []}
-
-                    />
-                    <div className="mt-1">
-                      <Label className="text-xs text-gray-500">
-                        Ad Name Preview: {
-                          (files.length > 0 || driveFiles.length > 0 || importedFiles.length > 0 || importedPosts.length > 0 || selectedIgOrganicPosts.length > 0)
-                            ? computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], null, adType)
-                            : "Upload a file to see example"
-                        }
-                      </Label>
                     </div>
                   </div>
 
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="adName" className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <LabelIcon className="w-4 h-4" />
+                      Ad Name
+                    </div>
+                    {selectedAdAccount && !adAccountSettings?.adNameFormulaV2?.rawInput && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+                        className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
+                      >
+                        <CogIcon className="w-3 h-3 mr-1 text-white" />
+                        Set Up Ad Name Formula
+                      </Button>
+                    )}
+                  </Label>
+
+                  <ReorderAdNameParts
+                    formulaInput={adNameFormulaV2?.rawInput || ""}
+                    onFormulaChange={(newRawInput) => {
+                      setAdNameFormulaV2({ rawInput: newRawInput });
+                    }}
+                    variant="home"
+                    customVariables={adAccountSettings.customVariables || []}
+
+                  />
+                  <div className="mt-1">
+                    <Label className="text-xs text-gray-500">
+                      Ad Name Preview: {
+                        (files.length > 0 || driveFiles.length > 0 || importedFiles.length > 0 || importedPosts.length > 0 || selectedIgOrganicPosts.length > 0)
+                          ? computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], null, adType)
+                          : "Upload a file to see example"
+                      }
+                    </Label>
+                  </div>
+                </div>
 
 
-                  {selectedIgOrganicPosts.length === 0 ? (
-                    <div className="space-y-3">
+
+                {selectedIgOrganicPosts.length === 0 ? (
+                  <div className="space-y-3">
 
 
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Label className="flex items-center gap-2 mb-0">
-                            <TemplateIcon className="w-4 h-4" />
-                            Select a Copy Template
-                          </Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="flex items-center gap-2 mb-0">
+                          <TemplateIcon className="w-4 h-4" />
+                          Select a Copy Template
+                        </Label>
 
-                          {/* No templates + no content → Setup button */}
-                          {Object.keys(copyTemplates).length === 0 && !hasAnyContent && (
+                        {/* No templates + no content → Setup button */}
+                        {Object.keys(copyTemplates).length === 0 && !hasAnyContent && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+                            className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
+                          >
+                            <CogIcon className="w-3 h-3 text-white" />
+                            Set Up Templates
+                          </Button>
+                        )}
+
+                        {/* No templates + content typed → Save as New only */}
+                        {Object.keys(copyTemplates).length === 0 && hasAnyContent && (
+                          <div className="ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
                             <Button
                               type="button"
                               size="sm"
                               variant="outline"
-                              onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                              className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto"
+                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate || hasDuplicates}
+                              onClick={() => setShowSaveNewDialog(true)}
+                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
                             >
-                              <CogIcon className="w-3 h-3 text-white" />
-                              Set Up Templates
-                            </Button>
-                          )}
-
-                          {/* No templates + content typed → Save as New only */}
-                          {Object.keys(copyTemplates).length === 0 && hasAnyContent && (
-                            <div className="ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate || hasDuplicates}
-                                onClick={() => setShowSaveNewDialog(true)}
-                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
-                              >
-                                {isSavingNew ? (
-                                  <Loader className="w-3 h-3 animate-spin" />
-                                ) : existingDuplicateTemplate ? (
-                                  `Already exists as "${existingDuplicateTemplate}"`
-                                ) : (
-                                  "Save as New Template"
-                                )}
-                              </Button>
-                            </div>
-                          )}
-
-                          {/* Has templates + changes detected → both buttons */}
-                          {Object.keys(copyTemplates).length > 0 && hasUnsavedTemplateChanges && (
-                            <div className="flex items-center gap-2 ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate || hasDuplicates}
-                                onClick={() => setShowSaveNewDialog(true)}
-                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
-                              >
-                                {isSavingNew ? (
-                                  <Loader className="w-3 h-3 animate-spin" />
-                                ) : existingDuplicateTemplate ? (
-                                  `Already exists as "${existingDuplicateTemplate}"`
-                                ) : (
-                                  "Save as New Template"
-                                )}
-                              </Button>
-                              {selectedTemplate && copyTemplates[selectedTemplate] && (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="outline"
-                                  disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate || hasDuplicates}
-                                  onClick={handleUpdateSelectedTemplate}
-                                  className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200"
-                                >
-                                  {isUpdatingTemplate ? (
-                                    <>
-                                      <Loader className="w-3 h-3 animate-spin mr-1" />
-                                      Updating Template...
-                                    </>
-                                  ) : (
-                                    "Update Selected Template"
-                                  )}
-                                </Button>
+                              {isSavingNew ? (
+                                <Loader className="w-3 h-3 animate-spin" />
+                              ) : existingDuplicateTemplate ? (
+                                `Already exists as "${existingDuplicateTemplate}"`
+                              ) : (
+                                "Save as New Template"
                               )}
-                            </div>
-                          )}
-                        </div>
+                            </Button>
+                          </div>
+                        )}
 
-                        <Select
-                          value={selectedTemplate}
-                          onValueChange={setSelectedTemplate}
-                          disabled={Object.keys(copyTemplates).length === 0}
-                        >
-                          <SelectTrigger
-                            className="border border-gray-400 rounded-xl bg-white shadow"
-                            disabled={Object.keys(copyTemplates).length === 0}
-                          >
-                            <SelectValue
-                              placeholder={
-                                Object.keys(copyTemplates).length === 0
-                                  ? "No templates available for selected ad account"
-                                  : "Choose a Template"
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white shadow-lg rounded-xl max-h-[450px] p-0 pr-2">
-                            {Object.entries(copyTemplates)
-                              .sort(([a], [b]) => {
-                                if (a === defaultTemplateName) return -1;
-                                if (b === defaultTemplateName) return 1;
-                                return a.localeCompare(b);
-                              })
-                              .map(([templateName]) => (
-                                <SelectItem
-                                  key={templateName}
-                                  value={templateName}
-                                  className="text-sm px-4 py-2 rounded-xl hover:bg-gray-100"
-                                >
-                                  {templateName}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-
-                      <div className="space-y-2">
-                        {/* Primary text Section */}
-                        <div className="space-y-2">
-                          <Label className="flex items-center justify-between">
-                            <span>
-                              {isCarouselAd ? "Headline" : "Primary Text"}
-                              {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
-                            </span>
-                            {isCarouselAd && (
-                              <div className="flex items-center space-x-1 ">
-                                <Checkbox
-                                  id="apply-text-all"
-                                  checked={applyTextToAllCards}
-                                  onCheckedChange={(checked) => {
-                                    setApplyTextToAllCards(checked);
-                                    if (checked && messages.length > 0) {
-                                      const firstMessage = messages[0];
-                                      const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
-                                      if (fileCount > 0) {
-                                        setMessages(new Array(fileCount).fill(firstMessage));
-                                      }
-
-                                    } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
-                                      const tpl = copyTemplates[selectedTemplate];
-                                      setMessages(tpl.primaryTexts || [""]);
-                                    }
-                                  }}
-                                  className="border-gray-300 w-4 h-4 rounded-md"
-                                />
-                                <label htmlFor="apply-text-all" className="text-xs font-medium">
-                                  Apply To All Cards
-                                </label>
-                              </div>
-                            )}
-                          </Label>
-                          <div className="space-y-3">
-                            {messages.map((value, index) => (
-                              <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? 'hidden' : ''}`}>
-                                <div className="flex flex-col w-full">
-                                  <TextareaAutosize
-                                    value={value}
-                                    onChange={(e) => {
-                                      if (isCarouselAd && applyTextToAllCards) {
-                                        setMessages(new Array(messages.length).fill(e.target.value));
-                                      } else {
-                                        updateField(setMessages, messages, index, e.target.value);
-                                      }
-                                    }}
-                                    placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Add text option"}
-                                    disabled={!isLoggedIn}
-                                    minRows={2}
-                                    maxRows={10}
-                                    className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.messages.has(index)
-                                      ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                                      : ""
-                                      }`}
-                                    style={{
-                                      scrollbarWidth: 'thin',
-                                      scrollbarColor: '#c7c7c7 transparent'
-                                    }}
-                                  />
-                                  {duplicateIndices.messages.has(index) && (
-                                    <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
-                                  )}
-                                </div>
-                                {messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                                    size="icon"
-                                    onClick={() => removeField(setMessages, messages, index)}
-                                  >
-                                    <Trash2
-                                      className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                                    <span className="sr-only">Remove</span>
-                                  </Button>
-                                )}
-                              </div>
-                            ))}
-                            {messages.length < (isCarouselAd ? 10 : 5) && (
+                        {/* Has templates + changes detected → both buttons */}
+                        {Object.keys(copyTemplates).length > 0 && hasUnsavedTemplateChanges && (
+                          <div className="flex items-center gap-2 ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate || hasDuplicates}
+                              onClick={() => setShowSaveNewDialog(true)}
+                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
+                            >
+                              {isSavingNew ? (
+                                <Loader className="w-3 h-3 animate-spin" />
+                              ) : existingDuplicateTemplate ? (
+                                `Already exists as "${existingDuplicateTemplate}"`
+                              ) : (
+                                "Save as New Template"
+                              )}
+                            </Button>
+                            {selectedTemplate && copyTemplates[selectedTemplate] && (
                               <Button
                                 type="button"
                                 size="sm"
-                                className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                                onClick={() => addField(setMessages, messages)}
+                                variant="outline"
+                                disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate || hasDuplicates}
+                                onClick={handleUpdateSelectedTemplate}
+                                className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200"
                               >
-                                <Plus className="mr-2 h-4 w-4 text-white" />
-                                {isCarouselAd ? 'Add card headline' : 'Add text option'}
+                                {isUpdatingTemplate ? (
+                                  <>
+                                    <Loader className="w-3 h-3 animate-spin mr-1" />
+                                    Updating Template...
+                                  </>
+                                ) : (
+                                  "Update Selected Template"
+                                )}
                               </Button>
                             )}
                           </div>
-                        </div>
+                        )}
                       </div>
 
-                      {/* Headlines Section */}
+                      <Select
+                        value={selectedTemplate}
+                        onValueChange={setSelectedTemplate}
+                        disabled={Object.keys(copyTemplates).length === 0}
+                      >
+                        <SelectTrigger
+                          className="border border-gray-400 rounded-xl bg-white shadow"
+                          disabled={Object.keys(copyTemplates).length === 0}
+                        >
+                          <SelectValue
+                            placeholder={
+                              Object.keys(copyTemplates).length === 0
+                                ? "No templates available for selected ad account"
+                                : "Choose a Template"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white shadow-lg rounded-xl max-h-[450px] p-0 pr-2">
+                          {Object.entries(copyTemplates)
+                            .sort(([a], [b]) => {
+                              if (a === defaultTemplateName) return -1;
+                              if (b === defaultTemplateName) return 1;
+                              return a.localeCompare(b);
+                            })
+                            .map(([templateName]) => (
+                              <SelectItem
+                                key={templateName}
+                                value={templateName}
+                                className="text-sm px-4 py-2 rounded-xl hover:bg-gray-100"
+                              >
+                                {templateName}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+
+                    <div className="space-y-2">
+                      {/* Primary text Section */}
                       <div className="space-y-2">
                         <Label className="flex items-center justify-between">
                           <span>
-                            {isCarouselAd ? "Description" : "Headlines"}
+                            {isCarouselAd ? "Headline" : "Primary Text"}
                             {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
                           </span>
                           {isCarouselAd && (
-                            <div className="flex items-center space-x-1">
+                            <div className="flex items-center space-x-1 ">
                               <Checkbox
-                                id="apply-headlines-all"
-                                checked={applyHeadlinesToAllCards}
+                                id="apply-text-all"
+                                checked={applyTextToAllCards}
                                 onCheckedChange={(checked) => {
-                                  setApplyHeadlinesToAllCards(checked);
-                                  if (checked && headlines.length > 0) {
-                                    const firstHeadline = headlines[0];
+                                  setApplyTextToAllCards(checked);
+                                  if (checked && messages.length > 0) {
+                                    const firstMessage = messages[0];
                                     const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
                                     if (fileCount > 0) {
-                                      setHeadlines(new Array(fileCount).fill(firstHeadline));
+                                      setMessages(new Array(fileCount).fill(firstMessage));
                                     }
+
                                   } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
                                     const tpl = copyTemplates[selectedTemplate];
-                                    setHeadlines(tpl.headlines || [""]);
+                                    setMessages(tpl.primaryTexts || [""]);
                                   }
                                 }}
                                 className="border-gray-300 w-4 h-4 rounded-md"
                               />
-                              <label htmlFor="apply-headlines-all" className="text-xs font-medium">
+                              <label htmlFor="apply-text-all" className="text-xs font-medium">
                                 Apply To All Cards
                               </label>
                             </div>
                           )}
                         </Label>
                         <div className="space-y-3">
-                          {headlines.map((value, index) => (
-                            <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
+                          {messages.map((value, index) => (
+                            <div key={index} className={`flex items-start gap-2 ${isCarouselAd && applyTextToAllCards && index > 0 ? 'hidden' : ''}`}>
                               <div className="flex flex-col w-full">
                                 <TextareaAutosize
                                   value={value}
                                   onChange={(e) => {
-                                    if (isCarouselAd && applyHeadlinesToAllCards) {
-                                      const newHeadlines = new Array(headlines.length).fill(e.target.value);
-                                      setHeadlines(newHeadlines);
+                                    if (isCarouselAd && applyTextToAllCards) {
+                                      setMessages(new Array(messages.length).fill(e.target.value));
                                     } else {
-                                      updateField(setHeadlines, headlines, index, e.target.value);
+                                      updateField(setMessages, messages, index, e.target.value);
                                     }
                                   }}
-                                  minRows={1}
+                                  placeholder={isCarouselAd ? `Headline for card ${index + 1}` : "Add text option"}
+                                  disabled={!isLoggedIn}
+                                  minRows={2}
                                   maxRows={10}
-                                  className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.headlines.has(index)
+                                  className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.messages.has(index)
                                     ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                                     : ""
                                     }`}
@@ -5969,889 +5870,981 @@ export default function AdCreationForm({
                                     scrollbarWidth: 'thin',
                                     scrollbarColor: '#c7c7c7 transparent'
                                   }}
-                                  placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
-                                  disabled={!isLoggedIn}
                                 />
-                                {duplicateIndices.headlines.has(index) && (
+                                {duplicateIndices.messages.has(index) && (
                                   <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                                 )}
                               </div>
-                              {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
+                              {messages.length > 1 && !(isCarouselAd && applyTextToAllCards) && (
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   className="border border-gray-400 rounded-xl bg-white shadow-sm"
                                   size="icon"
-                                  onClick={() => removeField(setHeadlines, headlines, index)}
+                                  onClick={() => removeField(setMessages, messages, index)}
                                 >
                                   <Trash2
-                                    className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
+                                    className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
                                   <span className="sr-only">Remove</span>
                                 </Button>
                               )}
                             </div>
                           ))}
-                          {headlines.length < (isCarouselAd ? 10 : 5) && (
+                          {messages.length < (isCarouselAd ? 10 : 5) && (
                             <Button
                               type="button"
                               size="sm"
                               className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                              onClick={() => addField(setHeadlines, headlines)}
+                              onClick={() => addField(setMessages, messages)}
                             >
                               <Plus className="mr-2 h-4 w-4 text-white" />
-                              {isCarouselAd ? 'Add card description' : 'Add headline option'}
+                              {isCarouselAd ? 'Add card headline' : 'Add text option'}
                             </Button>
                           )}
                         </div>
                       </div>
-
-                      {/* Descriptions Section - only show if template has descriptions */}
-
-
-                      {(isCarouselAd || descriptions.some(d => d.trim())) && (
-                        <div className="space-y-2">
-                          <Label>{isCarouselAd ? "Primary Text" : "Descriptions"}</Label>
-                          <div className="space-y-3">
-                            {isCarouselAd ? (
-                              <div className="flex items-center gap-2">
-                                <TextareaAutosize
-                                  value={descriptions[0] || ''}
-                                  onChange={(e) => setDescriptions([e.target.value])}
-                                  minRows={2}
-                                  maxRows={10}
-                                  className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
-                                  style={{
-                                    scrollbarWidth: 'thin',
-                                    scrollbarColor: '#c7c7c7 transparent'
-                                  }}
-                                  placeholder="Enter primary text"
-                                  disabled={!isLoggedIn}
-                                />
-                              </div>
-                            ) : (
-                              <>
-                                {descriptions.map((value, index) => (
-                                  <div key={index} className="flex items-center gap-2">
-                                    <div className="flex flex-col w-full">
-                                      <TextareaAutosize
-                                        value={value}
-                                        onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
-                                        minRows={1}
-                                        maxRows={10}
-                                        className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.descriptions.has(index)
-                                          ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                                          : ""
-                                          }`}
-                                        style={{
-                                          scrollbarWidth: 'thin',
-                                          scrollbarColor: '#c7c7c7 transparent'
-                                        }}
-                                        placeholder="Enter description"
-                                        disabled={!isLoggedIn}
-                                      />
-                                      {duplicateIndices.descriptions.has(index) && (
-                                        <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
-                                      )}
-                                    </div>
-                                    {descriptions.length > 1 && (
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="border border-gray-400 rounded-xl bg-white shadow-sm"
-                                        size="icon"
-                                        onClick={() => removeField(setDescriptions, descriptions, index)}
-                                      >
-                                        <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
-                                        <span className="sr-only">Remove</span>
-                                      </Button>
-                                    )}
-                                  </div>
-                                ))}
-                                {descriptions.length < 5 && (
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                                    onClick={() => addField(setDescriptions, descriptions)}
-                                  >
-                                    <Plus className="mr-2 h-4 w-4 text-white" />
-                                    Add description option
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-
                     </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <TemplateIcon className="w-4 h-4" />
-                        <span>Ad Copy</span>
-                        {selectedIgOrganicPosts.length > 1 && (
-                          <div className="flex items-center gap-1 ml-auto">
-                            <span className="text-xs text-gray-600">
-                              {activeIgCaptionIndex + 1}/{selectedIgOrganicPosts.length}
-                            </span>
-                            <button
-                              type="button"
-                              disabled={activeIgCaptionIndex === 0}
-                              onClick={() => setActiveIgCaptionIndex((prev) => prev - 1)}
-                              className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === 0
-                                ? 'text-gray-300 cursor-not-allowed'
-                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                                }`}
-                            >
-                              <ChevronLeft className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={activeIgCaptionIndex === selectedIgOrganicPosts.length - 1}
-                              onClick={() => setActiveIgCaptionIndex((prev) => prev + 1)}
-                              className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === selectedIgOrganicPosts.length - 1
-                                ? 'text-gray-300 cursor-not-allowed'
-                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                                }`}
-                            >
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </Label>
-                      <TextareaAutosize
-                        value={selectedIgOrganicPosts[activeIgCaptionIndex]?.caption || ''}
-                        disabled
-                        minRows={2}
-                        maxRows={10}
-                        className="border border-gray-200 shadom-md rounded-xl bg-gray-100 w-full px-3 py-2 text-sm resize-none focus:outline-none text-gray-500 cursor-not-allowed"
-                        style={{
-                          scrollbarWidth: 'thin',
-                          scrollbarColor: '#c7c7c7 transparent'
-                        }}
-                        placeholder="No caption available"
-                      />
-                      <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl">
-                        <p className="text-xs text-blue-700">
-                          Ad copy will be sourced from the selected Instagram posts.
-                        </p>
-                      </div>
-                    </div>
-                  )
-                  }
 
-                  <div className="space-y-3">
+                    {/* Headlines Section */}
                     <div className="space-y-2">
                       <Label className="flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                          <LinkIcon className="w-4 h-4" />
-                          Link (URL)
+                        <span>
+                          {isCarouselAd ? "Description" : "Headlines"}
+                          {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
                         </span>
                         {isCarouselAd && (
                           <div className="flex items-center space-x-1">
                             <Checkbox
-                              id="apply-link-all"
-                              checked={link.length === 1}
+                              id="apply-headlines-all"
+                              checked={applyHeadlinesToAllCards}
                               onCheckedChange={(checked) => {
-                                if (checked) {
-                                  const currentLink = customLink.trim() || link[0] || "";
-                                  setLink([currentLink]);
-                                } else {
-                                  const currentLink = customLink.trim() || link[0] || "";
-                                  setLink([currentLink, ""]);
+                                setApplyHeadlinesToAllCards(checked);
+                                if (checked && headlines.length > 0) {
+                                  const firstHeadline = headlines[0];
+                                  const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
+                                  if (fileCount > 0) {
+                                    setHeadlines(new Array(fileCount).fill(firstHeadline));
+                                  }
+                                } else if (!checked && selectedTemplate && copyTemplates[selectedTemplate]) {
+                                  const tpl = copyTemplates[selectedTemplate];
+                                  setHeadlines(tpl.headlines || [""]);
                                 }
                               }}
                               className="border-gray-300 w-4 h-4 rounded-md"
                             />
-                            <label htmlFor="apply-link-all" className="text-xs font-medium">
+                            <label htmlFor="apply-headlines-all" className="text-xs font-medium">
                               Apply To All Cards
                             </label>
                           </div>
                         )}
                       </Label>
-                      <p className="text-gray-500 text-[12px] font-regular">
-                        Your UTMs will be auto applied from Preferences
-                      </p>
-
-                      {!isCarouselAd || link.length === 1 ? (
-                        // Single link mode (normal ads or carousel with "apply to all")
-                        <div className="space-y-3">
-                          {!showCustomLink && availableLinks.length > 0 && (
-                            <Select
-                              value={link[0] || ""}
-                              onValueChange={(value) => setLink([value])}
-                              disabled={!isLoggedIn || availableLinks.length === 0}
-                            >
-                              <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow w-full">
-                                <SelectValue placeholder="Select a link" />
-                              </SelectTrigger>
-
-                              <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
-                                {availableLinks.map((linkObj, index) => (
-                                  <SelectItem
-                                    key={index}
-                                    value={linkObj.url}
-                                    className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
-                                  >
-                                    <div className="flex items-center justify-between w-full">
-                                      <span className="truncate max-w-[650px]">{linkObj.url}</span>
-
-                                      {linkObj.isDefault && (
-                                        <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">
-                                          Default
-                                        </span>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-
-                          <div className="flex items-center space-x-2">
-                            <div className="space-y-2 w-full">
-                              {/* Custom link input */}
-                              {(showCustomLink || availableLinks.length === 0) && (
-                                <div className="w-full">
-                                  <Input
-                                    type="text"
-                                    value={customLink}
-                                    onChange={(e) => {
-                                      setCustomLink(e.target.value);
-                                      setLink([e.target.value]);
-                                    }}
-                                    className="w-full border border-gray-400 rounded-xl bg-white shadow"
-                                    placeholder="https://example.com"
-                                    disabled={!isLoggedIn}
-                                    required
-                                  />
-                                </div>
-                              )}
-
-                              {/* Checkbox toggle - only show if they have saved links */}
-                              {availableLinks.length > 0 && (
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id="custom-link-toggle"
-                                    checked={showCustomLink}
-                                    onCheckedChange={(checked) => {
-                                      setShowCustomLink(checked);
-                                      if (!checked) {
-                                        setCustomLink("");
-                                        const dropdownValue = defaultLink?.url || "";
-                                        setLink([dropdownValue]);
-                                      }
-                                    }}
-                                    className="border-gray-300 w-4 h-4 rounded-md"
-                                  />
-                                  <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
-                                    Enter custom link
-                                  </label>
-                                </div>
+                      <div className="space-y-3">
+                        {headlines.map((value, index) => (
+                          <div key={index} className={`flex items-center gap-2 ${isCarouselAd && applyHeadlinesToAllCards && index > 0 ? 'hidden' : ''}`}>
+                            <div className="flex flex-col w-full">
+                              <TextareaAutosize
+                                value={value}
+                                onChange={(e) => {
+                                  if (isCarouselAd && applyHeadlinesToAllCards) {
+                                    const newHeadlines = new Array(headlines.length).fill(e.target.value);
+                                    setHeadlines(newHeadlines);
+                                  } else {
+                                    updateField(setHeadlines, headlines, index, e.target.value);
+                                  }
+                                }}
+                                minRows={1}
+                                maxRows={10}
+                                className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.headlines.has(index)
+                                  ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                  : ""
+                                  }`}
+                                style={{
+                                  scrollbarWidth: 'thin',
+                                  scrollbarColor: '#c7c7c7 transparent'
+                                }}
+                                placeholder={isCarouselAd ? `Description for card ${index + 1}` : "Enter headline"}
+                                disabled={!isLoggedIn}
+                              />
+                              {duplicateIndices.headlines.has(index) && (
+                                <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
                               )}
                             </div>
+                            {headlines.length > 1 && !(isCarouselAd && applyHeadlinesToAllCards) && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                                size="icon"
+                                onClick={() => removeField(setHeadlines, headlines, index)}
+                              >
+                                <Trash2
+                                  className="w-4 h-4 text-gray-600 cursor-pointer !hover:text-red-500" />
+                                <span className="sr-only">Remove</span>
+                              </Button>
+                            )}
                           </div>
-                        </div>
-                      ) : (
-                        // Multiple links mode (carousel with separate links per card)
-                        <div className="space-y-4">
-                          {link.map((value, index) => (
-                            <div key={index} className="border border-gray-200 rounded-xl p-3 space-y-3">
-                              <Label className="text-sm font-medium">Card {index + 1} Link</Label>
+                        ))}
+                        {headlines.length < (isCarouselAd ? 10 : 5) && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className=" w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                            onClick={() => addField(setHeadlines, headlines)}
+                          >
+                            <Plus className="mr-2 h-4 w-4 text-white" />
+                            {isCarouselAd ? 'Add card description' : 'Add headline option'}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
 
-                              {(!linkCustomStates || !linkCustomStates[index]) && (
-                                <Select
-                                  value={value || ""}
-                                  onValueChange={(newValue) => {
-                                    const newLinks = [...link];
-                                    newLinks[index] = newValue;
-                                    setLink(newLinks);
-                                  }}
-                                  disabled={!isLoggedIn || availableLinks.length === 0}
-                                >
-                                  <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
-                                    <SelectValue placeholder="Select a link" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-white shadow-lg rounded-xl">
-                                    {availableLinks.map((linkObj, linkIndex) => (
-                                      <SelectItem
-                                        key={linkIndex}
-                                        value={linkObj.url}
-                                        className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl mx-2 my-1"
-                                      >
-                                        <div className="flex items-center justify-between w-full">
-                                          <span className="truncate max-w-[250px]">{linkObj.url}</span>
-                                          {linkObj.isDefault && (
-                                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
-                                              Default
-                                            </span>
-                                          )}
-                                        </div>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
+                    {/* Descriptions Section - only show if template has descriptions */}
 
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox
-                                    id={`custom-link-${index}`}
-                                    checked={linkCustomStates?.[index] || false}
-                                    onCheckedChange={(checked) => {
-                                      const newStates = { ...linkCustomStates };
-                                      newStates[index] = checked;
-                                      setLinkCustomStates(newStates);
 
-                                      if (!checked) {
-                                        // Reset to dropdown value
-                                        const newLinks = [...link];
-                                        newLinks[index] = defaultLink?.url || "";
-                                        setLink(newLinks);
-                                      }
-                                    }}
-                                    className="border-gray-300 w-4 h-4 rounded-md"
-                                  />
-                                  <label htmlFor={`custom-link-${index}`} className="text-xs font-medium text-gray-600">
-                                    Use custom link
-                                  </label>
+                    {(isCarouselAd || descriptions.some(d => d.trim())) && (
+                      <div className="space-y-2">
+                        <Label>{isCarouselAd ? "Primary Text" : "Descriptions"}</Label>
+                        <div className="space-y-3">
+                          {isCarouselAd ? (
+                            <div className="flex items-center gap-2">
+                              <TextareaAutosize
+                                value={descriptions[0] || ''}
+                                onChange={(e) => setDescriptions([e.target.value])}
+                                minRows={2}
+                                maxRows={10}
+                                className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                                style={{
+                                  scrollbarWidth: 'thin',
+                                  scrollbarColor: '#c7c7c7 transparent'
+                                }}
+                                placeholder="Enter primary text"
+                                disabled={!isLoggedIn}
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              {descriptions.map((value, index) => (
+                                <div key={index} className="flex items-center gap-2">
+                                  <div className="flex flex-col w-full">
+                                    <TextareaAutosize
+                                      value={value}
+                                      onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
+                                      minRows={1}
+                                      maxRows={10}
+                                      className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.descriptions.has(index)
+                                        ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                                        : ""
+                                        }`}
+                                      style={{
+                                        scrollbarWidth: 'thin',
+                                        scrollbarColor: '#c7c7c7 transparent'
+                                      }}
+                                      placeholder="Enter description"
+                                      disabled={!isLoggedIn}
+                                    />
+                                    {duplicateIndices.descriptions.has(index) && (
+                                      <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
+                                    )}
+                                  </div>
+                                  {descriptions.length > 1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                                      size="icon"
+                                      onClick={() => removeField(setDescriptions, descriptions, index)}
+                                    >
+                                      <Trash2 className="w-4 h-4 text-gray-600 cursor-pointer hover:text-red-500" />
+                                      <span className="sr-only">Remove</span>
+                                    </Button>
+                                  )}
                                 </div>
+                              ))}
+                              {descriptions.length < 5 && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                                  onClick={() => addField(setDescriptions, descriptions)}
+                                >
+                                  <Plus className="mr-2 h-4 w-4 text-white" />
+                                  Add description option
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-                                {link.length > 1 && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => {
-                                      const newLinks = link.filter((_, i) => i !== index);
-                                      setLink(newLinks);
-                                      // Also clean up custom states
-                                      const newStates = { ...linkCustomStates };
-                                      delete newStates[index];
-                                      setLinkCustomStates(newStates);
-                                    }}
-                                  >
-                                    <Trash2 className="w-4 h-4 text-gray-600 hover:text-red-500" />
-                                  </Button>
-                                )}
-                              </div>
 
-                              {linkCustomStates?.[index] && (
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <TemplateIcon className="w-4 h-4" />
+                      <span>Ad Copy</span>
+                      {selectedIgOrganicPosts.length > 1 && (
+                        <div className="flex items-center gap-1 ml-auto">
+                          <span className="text-xs text-gray-600">
+                            {activeIgCaptionIndex + 1}/{selectedIgOrganicPosts.length}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={activeIgCaptionIndex === 0}
+                            onClick={() => setActiveIgCaptionIndex((prev) => prev - 1)}
+                            className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === 0
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                              }`}
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={activeIgCaptionIndex === selectedIgOrganicPosts.length - 1}
+                            onClick={() => setActiveIgCaptionIndex((prev) => prev + 1)}
+                            className={`p-0.5 rounded transition-colors ${activeIgCaptionIndex === selectedIgOrganicPosts.length - 1
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                              }`}
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </Label>
+                    <TextareaAutosize
+                      value={selectedIgOrganicPosts[activeIgCaptionIndex]?.caption || ''}
+                      disabled
+                      minRows={2}
+                      maxRows={10}
+                      className="border border-gray-200 shadom-md rounded-xl bg-gray-100 w-full px-3 py-2 text-sm resize-none focus:outline-none text-gray-500 cursor-not-allowed"
+                      style={{
+                        scrollbarWidth: 'thin',
+                        scrollbarColor: '#c7c7c7 transparent'
+                      }}
+                      placeholder="No caption available"
+                    />
+                    <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl">
+                      <p className="text-xs text-blue-700">
+                        Ad copy will be sourced from the selected Instagram posts.
+                      </p>
+                    </div>
+                  </div>
+                )
+                }
+
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <LinkIcon className="w-4 h-4" />
+                        Link (URL)
+                      </span>
+                      {isCarouselAd && (
+                        <div className="flex items-center space-x-1">
+                          <Checkbox
+                            id="apply-link-all"
+                            checked={link.length === 1}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                const currentLink = customLink.trim() || link[0] || "";
+                                setLink([currentLink]);
+                              } else {
+                                const currentLink = customLink.trim() || link[0] || "";
+                                setLink([currentLink, ""]);
+                              }
+                            }}
+                            className="border-gray-300 w-4 h-4 rounded-md"
+                          />
+                          <label htmlFor="apply-link-all" className="text-xs font-medium">
+                            Apply To All Cards
+                          </label>
+                        </div>
+                      )}
+                    </Label>
+                    <p className="text-gray-500 text-[12px] font-regular">
+                      Your UTMs will be auto applied from Preferences
+                    </p>
+
+                    {!isCarouselAd || link.length === 1 ? (
+                      // Single link mode (normal ads or carousel with "apply to all")
+                      <div className="space-y-3">
+                        {!showCustomLink && availableLinks.length > 0 && (
+                          <Select
+                            value={link[0] || ""}
+                            onValueChange={(value) => setLink([value])}
+                            disabled={!isLoggedIn || availableLinks.length === 0}
+                          >
+                            <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow w-full">
+                              <SelectValue placeholder="Select a link" />
+                            </SelectTrigger>
+
+                            <SelectContent className="bg-white shadow-lg rounded-xl w-auto">
+                              {availableLinks.map((linkObj, index) => (
+                                <SelectItem
+                                  key={index}
+                                  value={linkObj.url}
+                                  className="cursor-pointer px-3 py-2 hover:bg-gray-100 rounded-xl mx-2 my-1 ml-4"
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <span className="truncate max-w-[650px]">{linkObj.url}</span>
+
+                                    {linkObj.isDefault && (
+                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg flex-shrink-0">
+                                        Default
+                                      </span>
+                                    )}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+
+                        <div className="flex items-center space-x-2">
+                          <div className="space-y-2 w-full">
+                            {/* Custom link input */}
+                            {(showCustomLink || availableLinks.length === 0) && (
+                              <div className="w-full">
                                 <Input
                                   type="text"
-                                  value={value}
+                                  value={customLink}
                                   onChange={(e) => {
-                                    const newLinks = [...link];
-                                    newLinks[index] = e.target.value;
-                                    setLink(newLinks);
+                                    setCustomLink(e.target.value);
+                                    setLink([e.target.value]);
                                   }}
-                                  className="border border-gray-400 rounded-xl bg-white shadow"
+                                  className="w-full border border-gray-400 rounded-xl bg-white shadow"
                                   placeholder="https://example.com"
                                   disabled={!isLoggedIn}
                                   required
                                 />
+                              </div>
+                            )}
+
+                            {/* Checkbox toggle - only show if they have saved links */}
+                            {availableLinks.length > 0 && (
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id="custom-link-toggle"
+                                  checked={showCustomLink}
+                                  onCheckedChange={(checked) => {
+                                    setShowCustomLink(checked);
+                                    if (!checked) {
+                                      setCustomLink("");
+                                      const dropdownValue = defaultLink?.url || "";
+                                      setLink([dropdownValue]);
+                                    }
+                                  }}
+                                  className="border-gray-300 w-4 h-4 rounded-md"
+                                />
+                                <label htmlFor="custom-link-toggle" className="text-xs font-medium text-gray-600">
+                                  Enter custom link
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      // Multiple links mode (carousel with separate links per card)
+                      <div className="space-y-4">
+                        {link.map((value, index) => (
+                          <div key={index} className="border border-gray-200 rounded-xl p-3 space-y-3">
+                            <Label className="text-sm font-medium">Card {index + 1} Link</Label>
+
+                            {(!linkCustomStates || !linkCustomStates[index]) && (
+                              <Select
+                                value={value || ""}
+                                onValueChange={(newValue) => {
+                                  const newLinks = [...link];
+                                  newLinks[index] = newValue;
+                                  setLink(newLinks);
+                                }}
+                                disabled={!isLoggedIn || availableLinks.length === 0}
+                              >
+                                <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
+                                  <SelectValue placeholder="Select a link" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white shadow-lg rounded-xl">
+                                  {availableLinks.map((linkObj, linkIndex) => (
+                                    <SelectItem
+                                      key={linkIndex}
+                                      value={linkObj.url}
+                                      className="cursor-pointer px-4 py-3 hover:bg-gray-100 rounded-xl mx-2 my-1"
+                                    >
+                                      <div className="flex items-center justify-between w-full">
+                                        <span className="truncate max-w-[250px]">{linkObj.url}</span>
+                                        {linkObj.isDefault && (
+                                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                                            Default
+                                          </span>
+                                        )}
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`custom-link-${index}`}
+                                  checked={linkCustomStates?.[index] || false}
+                                  onCheckedChange={(checked) => {
+                                    const newStates = { ...linkCustomStates };
+                                    newStates[index] = checked;
+                                    setLinkCustomStates(newStates);
+
+                                    if (!checked) {
+                                      // Reset to dropdown value
+                                      const newLinks = [...link];
+                                      newLinks[index] = defaultLink?.url || "";
+                                      setLink(newLinks);
+                                    }
+                                  }}
+                                  className="border-gray-300 w-4 h-4 rounded-md"
+                                />
+                                <label htmlFor={`custom-link-${index}`} className="text-xs font-medium text-gray-600">
+                                  Use custom link
+                                </label>
+                              </div>
+
+                              {link.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    const newLinks = link.filter((_, i) => i !== index);
+                                    setLink(newLinks);
+                                    // Also clean up custom states
+                                    const newStates = { ...linkCustomStates };
+                                    delete newStates[index];
+                                    setLinkCustomStates(newStates);
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4 text-gray-600 hover:text-red-500" />
+                                </Button>
                               )}
                             </div>
-                          ))}
 
-                          {link.length < 10 && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                              onClick={() => setLink([...link, ""])}
-                            >
-                              <Plus className="mr-2 h-4 w-4 text-white" />
-                              Add Card Link
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                            {linkCustomStates?.[index] && (
+                              <Input
+                                type="text"
+                                value={value}
+                                onChange={(e) => {
+                                  const newLinks = [...link];
+                                  newLinks[index] = e.target.value;
+                                  setLink(newLinks);
+                                }}
+                                className="border border-gray-400 rounded-xl bg-white shadow"
+                                placeholder="https://example.com"
+                                disabled={!isLoggedIn}
+                                required
+                              />
+                            )}
+                          </div>
+                        ))}
 
-                    <div className="space-y-2">
-                      <Label htmlFor="cta" className="flex items-center gap-2">
-                        <CTAIcon className="w-4 h-4" />
-                        Call-to-Action (CTA)
-                      </Label>
-                      <Select disabled={!isLoggedIn} value={cta} onValueChange={setCta}>
-                        <SelectTrigger id="cta" className="border border-gray-400 rounded-xl bg-white shadow">
-                          <SelectValue placeholder="Select a CTA" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
-                          {ctaOptions.map((option) => (
-                            <SelectItem
-                              key={option.value}
-                              value={option.value}
-                              className={cn(
-                                "w-full text-left",
-                                "px-4 py-2 m-1 rounded-xl", // padding and spacing
-                                "transition-colors duration-150",
-                                "hover:bg-gray-100 hover:rounded-xl",
-                                "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
-                                "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
-                                cta === option.value && "!bg-gray-100 font-semibold rounded-xl"
-                              )}
-                            >
-                              {option.label}
-                            </SelectItem>
-
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {/* Shop Destination Selector - Only show when needed */}
-                    <ShopDestinationSelector
-                      pageId={pageId}
-                      selectedShopDestination={selectedShopDestination}
-                      setSelectedShopDestination={setSelectedShopDestination}
-                      selectedShopDestinationType={selectedShopDestinationType}
-                      setSelectedShopDestinationType={setSelectedShopDestinationType}
-                      isVisible={showShopDestinationSelector}
-                    />
-                  </div>
-
-                  {shouldShowLeadFormSelector && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="leadgen-form" className="flex items-center gap-2">
-                          <FileText className="w-4 h-4" />
-                          Select a Form
-                        </Label>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!pageId || loadingForms) return;
-                            setLoadingForms(true);
-                            try {
-                              const response = await fetch(
-                                `${API_BASE_URL}/auth/fetch-leadgen-forms?pageId=${encodeURIComponent(pageId)}`,
-                                { credentials: 'include' }
-                              );
-                              const data = await response.json();
-                              if (data.success && data.forms) {
-                                setLeadgenForms(data.forms);
-                              } else {
-                                setLeadgenForms([]);
-                              }
-                            } catch (error) {
-                              console.error('Error fetching leadgen forms:', error);
-                              setLeadgenForms([]);
-                            } finally {
-                              setLoadingForms(false);
-                            }
-                          }}
-                          disabled={loadingForms}
-                          className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
-                        >
-                          <RefreshCcw className={cn("w-4 h-4", loadingForms && "animate-spin")} />
-
-                        </button>
+                        {link.length < 10 && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                            onClick={() => setLink([...link, ""])}
+                          >
+                            <Plus className="mr-2 h-4 w-4 text-white" />
+                            Add Card Link
+                          </Button>
+                        )}
                       </div>
-
-                      <Select
-                        disabled={!isLoggedIn || loadingForms || leadgenForms.length === 0}
-                        value={selectedForm || ""}
-                        onValueChange={(value) => setSelectedForm(value || null)}
-                      >
-                        <SelectTrigger id="leadgen-form" className="border border-gray-400 rounded-xl bg-white shadow">
-                          <SelectValue placeholder={
-                            loadingForms
-                              ? "Loading forms..."
-                              : leadgenForms.length === 0
-                                ? "No forms available"
-                                : "Select a form"
-                          } />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
-                          {leadgenForms.map((form) => (
-                            <SelectItem
-                              key={form.id}
-                              value={form.id}
-                              className={cn(
-                                "w-full text-left",
-                                "px-4 py-2 m-1 rounded-xl",
-                                "transition-colors duration-150",
-                                "hover:bg-gray-100 hover:rounded-xl",
-                                "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
-                                "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
-                                selectedForm === form.id && "!bg-gray-100 font-semibold rounded-xl"
-                              )}
-                            >
-                              {form.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="block">Upload Media</Label>
-
-                      <MetaMediaLibraryModal
-                        adAccountId={selectedAdAccount}
-                        isLoggedIn={isLoggedIn}
-                        importedFiles={importedFiles}
-                        setImportedFiles={setImportedFiles}
-                        instagramAccountId={instagramAccountId}
-                        selectedIgOrganicPosts={selectedIgOrganicPosts}
-                        setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
-                      />
-                    </div>
-                    <div
-                      {...getRootProps()}
-                      className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
-                        }`}
-                    >
-                      <input {...getInputProps()} disabled={!isLoggedIn} />
-                      <div className="flex flex-col items-center gap-2">
-                        <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
-                        {isDragActive ? (
-                          <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
-                        ) : (
-                          <p className="text-sm text-gray-500 group-hover:text-black">
-                            Drag & drop files here, or click to select files
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-2 mt-2 mb-4">
-                    {/* Google Drive */}
-                    <div className="flex-1">
-                      <Button
-                        type="button"
-                        onClick={handleDriveClick}
-                        className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
-                      >
-                        <img
-                          src="https://api.withblip.com/googledrive.png"
-                          alt="Drive Icon"
-                          className="h-4 w-4"
-                        />
-                        Choose Files from Google Drive
-                      </Button>
-
-                      <div className="text-xs text-gray-500 text-left mt-0.5">
-                        Google Drive  and Dropbox Files upload 5X faster
-                      </div>
-                    </div>
-
-                    {/* Dropbox */}
-                    <div className="flex-1">
-                      <Button
-                        type="button"
-                        onClick={handleDropboxClick}
-                        className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
-                      >
-                        <img
-                          src={DropboxIcon}
-                          alt="Dropbox Icon"
-                          className="h-4 w-4"
-                        />
-                        Choose Files from Dropbox
-                      </Button>
-                    </div>
-                  </div>
-
-
-                  {showFolderInput && (
-                    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]" style={{
-                      top: 'calc(50vh - 500px)' // Positions it above center where picker usually appears
-                    }} >
-                      <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setShowFolderInput(false);
-                              setFolderLinkValue("");
-                            }}
-                            className="h-6 w-6 p-0"
-                          >
-
-                          </Button>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Input
-                            type="text"
-                            placeholder="Paste Google Drive folder link here"
-                            value={folderLinkValue}
-                            onChange={(e) => setFolderLinkValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                handleImportFromFolder();
-                              }
-                            }}
-                            className="flex-1"
-
-                          />
-                          <Button
-                            type="button"
-                            onClick={handleImportFromFolder}
-                            disabled={!folderLinkValue}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            {isImportingFolder ? (
-                              <>
-                                <Loader className="h-4 w-4 mr-2 animate-spin" />
-                                Opening...
-                              </>
-                            ) : (
-                              "Open"
+                    <Label htmlFor="cta" className="flex items-center gap-2">
+                      <CTAIcon className="w-4 h-4" />
+                      Call-to-Action (CTA)
+                    </Label>
+                    <Select disabled={!isLoggedIn} value={cta} onValueChange={setCta}>
+                      <SelectTrigger id="cta" className="border border-gray-400 rounded-xl bg-white shadow">
+                        <SelectValue placeholder="Select a CTA" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
+                        {ctaOptions.map((option) => (
+                          <SelectItem
+                            key={option.value}
+                            value={option.value}
+                            className={cn(
+                              "w-full text-left",
+                              "px-4 py-2 m-1 rounded-xl", // padding and spacing
+                              "transition-colors duration-150",
+                              "hover:bg-gray-100 hover:rounded-xl",
+                              "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
+                              "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
+                              cta === option.value && "!bg-gray-100 font-semibold rounded-xl"
                             )}
-                          </Button>
-                        </div>
+                          >
+                            {option.label}
+                          </SelectItem>
 
-                        <div className="text-xs text-gray-500">
-                          Or browse files below ↓
-                        </div>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Shop Destination Selector - Only show when needed */}
+                  <ShopDestinationSelector
+                    pageId={pageId}
+                    selectedShopDestination={selectedShopDestination}
+                    setSelectedShopDestination={setSelectedShopDestination}
+                    selectedShopDestinationType={selectedShopDestinationType}
+                    setSelectedShopDestinationType={setSelectedShopDestinationType}
+                    isVisible={showShopDestinationSelector}
+                  />
+                </div>
+
+                {shouldShowLeadFormSelector && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="leadgen-form" className="flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        Select a Form
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!pageId || loadingForms) return;
+                          setLoadingForms(true);
+                          try {
+                            const response = await fetch(
+                              `${API_BASE_URL}/auth/fetch-leadgen-forms?pageId=${encodeURIComponent(pageId)}`,
+                              { credentials: 'include' }
+                            );
+                            const data = await response.json();
+                            if (data.success && data.forms) {
+                              setLeadgenForms(data.forms);
+                            } else {
+                              setLeadgenForms([]);
+                            }
+                          } catch (error) {
+                            console.error('Error fetching leadgen forms:', error);
+                            setLeadgenForms([]);
+                          } finally {
+                            setLoadingForms(false);
+                          }
+                        }}
+                        disabled={loadingForms}
+                        className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCcw className={cn("w-4 h-4", loadingForms && "animate-spin")} />
+
+                      </button>
+                    </div>
+
+                    <Select
+                      disabled={!isLoggedIn || loadingForms || leadgenForms.length === 0}
+                      value={selectedForm || ""}
+                      onValueChange={(value) => setSelectedForm(value || null)}
+                    >
+                      <SelectTrigger id="leadgen-form" className="border border-gray-400 rounded-xl bg-white shadow">
+                        <SelectValue placeholder={
+                          loadingForms
+                            ? "Loading forms..."
+                            : leadgenForms.length === 0
+                              ? "No forms available"
+                              : "Select a form"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
+                        {leadgenForms.map((form) => (
+                          <SelectItem
+                            key={form.id}
+                            value={form.id}
+                            className={cn(
+                              "w-full text-left",
+                              "px-4 py-2 m-1 rounded-xl",
+                              "transition-colors duration-150",
+                              "hover:bg-gray-100 hover:rounded-xl",
+                              "data-[state=selected]:!bg-gray-100 data-[state=selected]:rounded-xl",
+                              "data-[highlighted]:!bg-gray-100 data-[highlighted]:rounded-xl",
+                              selectedForm === form.id && "!bg-gray-100 font-semibold rounded-xl"
+                            )}
+                          >
+                            {form.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="block">Upload Media</Label>
+
+                    <MetaMediaLibraryModal
+                      adAccountId={selectedAdAccount}
+                      isLoggedIn={isLoggedIn}
+                      importedFiles={importedFiles}
+                      setImportedFiles={setImportedFiles}
+                      instagramAccountId={instagramAccountId}
+                      selectedIgOrganicPosts={selectedIgOrganicPosts}
+                      setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
+                    />
+                  </div>
+                  <div
+                    {...getRootProps()}
+                    className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                      }`}
+                  >
+                    <input {...getInputProps()} disabled={!isLoggedIn} />
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
+                      {isDragActive ? (
+                        <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
+                      ) : (
+                        <p className="text-sm text-gray-500 group-hover:text-black">
+                          Drag & drop files here, or click to select files
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-2 mb-4">
+                  {/* Google Drive */}
+                  <div className="flex-1">
+                    <Button
+                      type="button"
+                      onClick={handleDriveClick}
+                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
+                    >
+                      <img
+                        src="https://api.withblip.com/googledrive.png"
+                        alt="Drive Icon"
+                        className="h-4 w-4"
+                      />
+                      Choose Files from Google Drive
+                    </Button>
+
+                    <div className="text-xs text-gray-500 text-left mt-0.5">
+                      Google Drive  and Dropbox Files upload 5X faster
+                    </div>
+                  </div>
+
+                  {/* Dropbox */}
+                  <div className="flex-1">
+                    <Button
+                      type="button"
+                      onClick={handleDropboxClick}
+                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
+                    >
+                      <img
+                        src={DropboxIcon}
+                        alt="Dropbox Icon"
+                        className="h-4 w-4"
+                      />
+                      Choose Files from Dropbox
+                    </Button>
+                  </div>
+                </div>
+
+
+                {showFolderInput && (
+                  <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]" style={{
+                    top: 'calc(50vh - 500px)' // Positions it above center where picker usually appears
+                  }} >
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-sm">Quick Navigate to Folder</h3>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setShowFolderInput(false);
+                            setFolderLinkValue("");
+                          }}
+                          className="h-6 w-6 p-0"
+                        >
+
+                        </Button>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Paste Google Drive folder link here"
+                          value={folderLinkValue}
+                          onChange={(e) => setFolderLinkValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleImportFromFolder();
+                            }
+                          }}
+                          className="flex-1"
+
+                        />
+                        <Button
+                          type="button"
+                          onClick={handleImportFromFolder}
+                          disabled={!folderLinkValue}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          {isImportingFolder ? (
+                            <>
+                              <Loader className="h-4 w-4 mr-2 animate-spin" />
+                              Opening...
+                            </>
+                          ) : (
+                            "Open"
+                          )}
+                        </Button>
+                      </div>
+
+                      <div className="text-xs text-gray-500">
+                        Or browse files below ↓
                       </div>
                     </div>
-                  )}
+                  </div>
+                )}
 
-                </>
+              </>
             )}
 
+          </div>
+
+
+
+          <div className="space-y-1">
+            <Button
+              type="submit"
+              className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
+              disabled={
+                !isLoggedIn ||
+                (selectedAdSets.length === 0 && !duplicateAdSet) ||
+                (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
+                (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
+                (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
+                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||
+                (showShopDestinationSelector && !selectedShopDestination) ||
+                ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
+                ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
+                (selectedFiles.size > 0) ||
+                (shouldShowLeadFormSelector && !selectedForm) ||
+                (!isCarouselAd && hasDuplicates)
+              }
+            >
+              Publish Ads
+            </Button>
+
+            {!isCarouselAd && hasDuplicates && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Duplicate values found in your text fields — this can lead to errors when making ads. Please remove duplicates before publishing.
+              </div>
+            )}
+
+            {showShopDestinationSelector && !selectedShopDestination && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please select a shop destination
+              </div>
+            )}
+
+            {adLimitWarning && (
+              <div className="flex items-start gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl mt-2">
+                <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5 mr-0.5" />
+                <span className="text-xs text-orange-700">
+                  This might push your ad set past the 50 ads limit! Only Sales campaigns using Advantage+ Audience can contain a maximum of 150 Ads.
+                </span>
+              </div>
+            )}
+
+            {isCarouselAd && (files.length + driveFiles.length + dropboxFiles.length) > 0 && (files.length + driveFiles.length + dropboxFiles.length) < 2 && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Carousel ads require at least 2 files. You have {files.length + driveFiles.length + dropboxFiles.length}.
+              </div>
+            )}
+
+            {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (importedPosts.length === 0) && (!useExistingPosts) && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please provide a link URL
+              </div>
+            )}
+            {enablePlacementCustomization && selectedFiles && (selectedFiles.size > 1) && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                You have ungrouped files for placement customization. Use the group ads button on the top right to group files               </div>
+            )}
+
+            {shouldShowLeadFormSelector && !selectedForm && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please select a lead form to publish lead ads
+              </div>
+            )}
+
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Label className="text-sm font-medium">Ad Status:</Label>
+
+                <RadioGroup
+                  value={launchPaused ? "paused" : "active"}
+                  onValueChange={(value) => setLaunchPaused(value === "paused")}
+                  disabled={!isLoggedIn}
+                  className="flex items-center space-x-2"
+                >
+                  <div
+                    className={cn(
+                      "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                      !launchPaused
+                        ? "bg-green-50 border border-green-300"
+                        : "border border-transparent"
+                    )}
+                  >
+                    <RadioGroupItem
+                      value="active"
+                      id="statusActive"
+                      className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
+                    />
+                    <Label
+                      htmlFor="statusActive"
+                      className={cn(
+                        "text-sm font-medium leading-none cursor-pointer",
+                        !launchPaused ? "text-green-600" : "text-gray-600"
+                      )}
+                    >
+                      Active
+                    </Label>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                      launchPaused
+                        ? "bg-red-50 border border-red-300"
+                        : "border border-transparent"
+                    )}
+                  >
+                    <RadioGroupItem
+                      value="paused"
+                      id="statusPaused"
+                      className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
+                    />
+                    <Label
+                      htmlFor="statusPaused"
+                      className={cn(
+                        "text-sm font-medium leading-none cursor-pointer",
+                        launchPaused ? "text-red-600" : "text-gray-600"
+                      )}
+                    >
+                      Paused
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
 
+              {/* Schedule — pushed to the right, only for sales/app promo */}
+              {campaignObjective.length > 0 &&
+                campaignObjective.every(obj =>
+                  ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)
+                ) && (
+                  <div className="flex items-center gap-2">
+                    <Popover open={showSchedule} onOpenChange={setShowSchedule}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors",
+                            (adScheduleStartTime || adScheduleEndTime)
+                              ? "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
+                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                          )}
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          {(adScheduleStartTime || adScheduleEndTime) ? "Scheduled" : "Ad Schedule"}
+                        </button>
+                      </PopoverTrigger>
 
+                      <PopoverContent className="w-auto p-4 bg-white rounded-xl shadow-lg border" align="end">
+                        <div className="space-y-4">
+                          <p className="text-sm font-medium text-gray-700">Ad Schedule</p>
 
-            <div className="space-y-1">
-              <Button
-                type="submit"
-                className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
-                disabled={
-                  !isLoggedIn ||
-                  (selectedAdSets.length === 0 && !duplicateAdSet) ||
-                  (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
-                  (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-                  (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
-                  (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||
-                  (showShopDestinationSelector && !selectedShopDestination) ||
-                  ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
-                  ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
-                  (selectedFiles.size > 0) ||
-                  (shouldShowLeadFormSelector && !selectedForm) ||
-                  (!isCarouselAd && hasDuplicates)
-                }
-              >
-                Publish Ads
-              </Button>
+                          <ScheduleDateTimePicker
+                            label="Start Time"
+                            value={adScheduleStartTime}
+                            onChange={(iso) => setAdScheduleStartTime(iso)}
+                            onClear={() => setAdScheduleStartTime(null)}
+                          />
 
-              {!isCarouselAd && hasDuplicates && (
-                <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                  Duplicate values found in your text fields — this can lead to errors when making ads. Please remove duplicates before publishing.
-                </div>
-              )}
+                          <ScheduleDateTimePicker
+                            label="End Time"
+                            value={adScheduleEndTime}
+                            onChange={(iso) => setAdScheduleEndTime(iso)}
+                            onClear={() => setAdScheduleEndTime(null)}
+                          />
 
-              {showShopDestinationSelector && !selectedShopDestination && (
-                <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                  Please select a shop destination
-                </div>
-              )}
-
-              {adLimitWarning && (
-                <div className="flex items-start gap-1 p-1 pl-2 bg-orange-50 border border-orange-200 rounded-2xl mt-2">
-                  <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5 mr-0.5" />
-                  <span className="text-xs text-orange-700">
-                    This might push your ad set past the 50 ads limit! Only Sales campaigns using Advantage+ Audience can contain a maximum of 150 Ads.
-                  </span>
-                </div>
-              )}
-
-              {isCarouselAd && (files.length + driveFiles.length + dropboxFiles.length) > 0 && (files.length + driveFiles.length + dropboxFiles.length) < 2 && (
-                <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                  Carousel ads require at least 2 files. You have {files.length + driveFiles.length + dropboxFiles.length}.
-                </div>
-              )}
-
-              {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (importedPosts.length === 0) && (!useExistingPosts) && (
-                <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                  Please provide a link URL
-                </div>
-              )}
-              {enablePlacementCustomization && selectedFiles && (selectedFiles.size > 1) && (
-                <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                  You have ungrouped files for placement customization. Use the group ads button on the top right to group files               </div>
-              )}
-
-              {shouldShowLeadFormSelector && !selectedForm && (
-                <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                  Please select a lead form to publish lead ads
-                </div>
-              )}
-
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium">Ad Status:</Label>
-
-                  <RadioGroup
-                    value={launchPaused ? "paused" : "active"}
-                    onValueChange={(value) => setLaunchPaused(value === "paused")}
-                    disabled={!isLoggedIn}
-                    className="flex items-center space-x-2"
-                  >
-                    <div
-                      className={cn(
-                        "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                        !launchPaused
-                          ? "bg-green-50 border border-green-300"
-                          : "border border-transparent"
-                      )}
-                    >
-                      <RadioGroupItem
-                        value="active"
-                        id="statusActive"
-                        className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
-                      />
-                      <Label
-                        htmlFor="statusActive"
-                        className={cn(
-                          "text-sm font-medium leading-none cursor-pointer",
-                          !launchPaused ? "text-green-600" : "text-gray-600"
-                        )}
-                      >
-                        Active
-                      </Label>
-                    </div>
-
-                    <div
-                      className={cn(
-                        "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                        launchPaused
-                          ? "bg-red-50 border border-red-300"
-                          : "border border-transparent"
-                      )}
-                    >
-                      <RadioGroupItem
-                        value="paused"
-                        id="statusPaused"
-                        className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
-                      />
-                      <Label
-                        htmlFor="statusPaused"
-                        className={cn(
-                          "text-sm font-medium leading-none cursor-pointer",
-                          launchPaused ? "text-red-600" : "text-gray-600"
-                        )}
-                      >
-                        Paused
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-
-                {/* Schedule — pushed to the right, only for sales/app promo */}
-                {campaignObjective.length > 0 &&
-                  campaignObjective.every(obj =>
-                    ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)
-                  ) && (
-                    <div className="flex items-center gap-2">
-                      <Popover open={showSchedule} onOpenChange={setShowSchedule}>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className={cn(
-                              "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors",
-                              (adScheduleStartTime || adScheduleEndTime)
-                                ? "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
-                                : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                          {(adScheduleStartTime && adScheduleEndTime) &&
+                            new Date(adScheduleEndTime) <= new Date(adScheduleStartTime) && (
+                              <p className="text-xs text-red-500">End time must be after start time</p>
                             )}
-                          >
-                            <Clock className="w-3.5 h-3.5" />
-                            {(adScheduleStartTime || adScheduleEndTime) ? "Scheduled" : "Ad Schedule"}
-                          </button>
-                        </PopoverTrigger>
-
-                        <PopoverContent className="w-auto p-4 bg-white rounded-xl shadow-lg border" align="end">
-                          <div className="space-y-4">
-                            <p className="text-sm font-medium text-gray-700">Ad Schedule</p>
-
-                            <ScheduleDateTimePicker
-                              label="Start Time"
-                              value={adScheduleStartTime}
-                              onChange={(iso) => setAdScheduleStartTime(iso)}
-                              onClear={() => setAdScheduleStartTime(null)}
-                            />
-
-                            <ScheduleDateTimePicker
-                              label="End Time"
-                              value={adScheduleEndTime}
-                              onChange={(iso) => setAdScheduleEndTime(iso)}
-                              onClear={() => setAdScheduleEndTime(null)}
-                            />
-
-                            {(adScheduleStartTime && adScheduleEndTime) &&
-                              new Date(adScheduleEndTime) <= new Date(adScheduleStartTime) && (
-                                <p className="text-xs text-red-500">End time must be after start time</p>
-                              )}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
 
 
-                    </div>
-                  )}
-              </div>
-
-              {/* Schedule summary — right-aligned */}
-              {formatScheduleLabel() && (
-                <div className="flex items-center justify-end gap-1.5">
-                  <p className="text-xs text-blue-600">{formatScheduleLabel()}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAdScheduleStartTime(null);
-                      setAdScheduleEndTime(null);
-                    }}
-                    className="p-0.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                    title="Clear schedule"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
+                  </div>
+                )}
             </div>
 
+            {/* Schedule summary — right-aligned */}
+            {formatScheduleLabel() && (
+              <div className="flex items-center justify-end gap-1.5">
+                <p className="text-xs text-blue-600">{formatScheduleLabel()}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdScheduleStartTime(null);
+                    setAdScheduleEndTime(null);
+                  }}
+                  className="p-0.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                  title="Clear schedule"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
 
-            <div
+
+          <div
+            className={cn(
+              "flex items-center space-x-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
+            )}
+          >
+            <Checkbox
+              id="preserveMedia"
+              checked={preserveMedia}
+              onCheckedChange={setPreserveMedia}
+              disabled={!isLoggedIn}
               className={cn(
-                "flex items-center space-x-2 rounded-xl transition-colors duration-150", // Base styling: padding, rounded corners, transition
+                "rounded-md", // Or "rounded-lg", "rounded-full"
+                "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0", // Remove focus ring
+              )} // Optional: style checkbox itself when checked & paused
+            />
+            <Label
+              htmlFor="preserveMedia"
+              className={cn(
+                "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
               )}
             >
-              <Checkbox
-                id="preserveMedia"
-                checked={preserveMedia}
-                onCheckedChange={setPreserveMedia}
-                disabled={!isLoggedIn}
-                className={cn(
-                  "rounded-md", // Or "rounded-lg", "rounded-full"
-                  "focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0", // Remove focus ring
-                )} // Optional: style checkbox itself when checked & paused
-              />
-              <Label
-                htmlFor="preserveMedia"
-                className={cn(
-                  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
-                )}
-              >
-                Don't clear media after publishing ads
-              </Label>
-            </div>
+              Don't clear media after publishing ads
+            </Label>
+          </div>
 
 
         </form>
