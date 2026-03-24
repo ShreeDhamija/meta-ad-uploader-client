@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -236,7 +236,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
               });
 
               // Auto-cleanup on job completion
-              if (data.status === 'complete' || data.status === 'error' || data.status === 'partial-success') {
+              if (data.status === 'complete' || data.status === 'error' || data.status === 'partial-success' || data.status === 'cancelled') {
                 cleanup();
               }
             }
@@ -535,6 +535,7 @@ export default function AdCreationForm({
   const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true);
   const [completedJobs, setCompletedJobs] = useState([]);
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
+  const [currentAbortController, setCurrentAbortController] = useState(null);
   const [preserveMedia, setPreserveMedia] = useState(false);
 
   const [liveProgress, setLiveProgress] = useState({
@@ -876,8 +877,7 @@ export default function AdCreationForm({
     }
   };
 
-  const uploadToS3 = async (file, onChunkUploaded, uniqueId, maxUploadRetries = 2) => {
-    // Validate inputs
+  const uploadToS3 = async (file, onChunkUploaded, uniqueId, maxUploadRetries = 2, signal = null) => {    // Validate inputs
     if (!file) {
       console.error('❌ FATAL: No file provided to uploadToS3');
       throw new Error('No file provided for upload');
@@ -921,7 +921,7 @@ export default function AdCreationForm({
         const startResponse = await axios.post(
           `${API_BASE_URL}/auth/s3/start-upload`,
           startPayload,
-          { withCredentials: true }
+          { withCredentials: true, signal }
         );
 
         uploadId = startResponse.data.uploadId;
@@ -941,7 +941,7 @@ export default function AdCreationForm({
         const urlsResponse = await axios.post(
           `${API_BASE_URL}/auth/s3/get-upload-urls`,
           urlsPayload,
-          { withCredentials: true }
+          { withCredentials: true, signal }
         );
 
         const presignedUrls = urlsResponse.data.parts;
@@ -1003,7 +1003,7 @@ export default function AdCreationForm({
             completeResponse = await axios.post(
               `${API_BASE_URL}/auth/s3/complete-upload`,
               completePayload,
-              { withCredentials: true }
+              { withCredentials: true, signal }
             );
             break;
           } catch (error) {
@@ -1070,7 +1070,7 @@ export default function AdCreationForm({
     throw new Error(`Failed to upload ${file.name} to S3 after ${maxUploadRetries} attempts: ${lastError?.message}`);
   };
 
-  async function uploadDriveFileToS3(file, maxRetries = 3) {
+  async function uploadDriveFileToS3(file, maxRetries = 3, signal = null) {
     const driveDownloadUrl = `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -1086,7 +1086,8 @@ export default function AdCreationForm({
             mimeType: file.mimeType,
             accessToken: file.accessToken,
             size: file.size
-          })
+          }),
+          signal
         });
 
         const data = await res.json();
@@ -1114,7 +1115,7 @@ export default function AdCreationForm({
   }
 
 
-  async function uploadDropboxFileToS3(file, maxRetries = 3) {
+  async function uploadDropboxFileToS3(file, maxRetries = 3, signal = null) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const res = await fetch(`${API_BASE_URL}/api/upload-from-dropbox`, {
@@ -1279,7 +1280,7 @@ export default function AdCreationForm({
     }
 
     // Only act on the final states reported by the SSE hook
-    if (status === 'complete' || status === 'partial-success' || status === 'error' || status === 'job-not-found') {
+    if (status === 'complete' || status === 'partial-success' || status === 'error' || status === 'job-not-found' || status === 'cancelled') {
       if (status === 'complete') {
         // Fix: Handle multiple adsets properly
         const selectedAdSetIds = currentJob.formData.selectedAdSets;
@@ -1344,7 +1345,19 @@ export default function AdCreationForm({
           formData: currentJob.formData,
         };
         addCompletedJob(failedJob);
-      } else {
+      } else if (status === 'cancelled') {
+        const cancelledJob = {
+          id: currentJob.id,
+          message: trackedMessage || 'Job cancelled.',
+          completedAt: Date.now(),
+          status: 'cancelled',
+          successCount: metaData.successCount,
+          formData: currentJob.formData,
+        };
+        addCompletedJob(cancelledJob);
+      }
+
+      else {
 
         const failedJob = {
           id: currentJob.id,
@@ -2635,6 +2648,16 @@ export default function AdCreationForm({
 
   const handleCreateAd = async (jobData) => {
 
+
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+    setCurrentAbortController(abortController);
+
+    const throwIfCancelled = () => {
+      if (signal.aborted) throw new DOMException('Job cancelled by user', 'AbortError');
+    };
+
+
     const {
       // Form content
       headlines,
@@ -2826,8 +2849,10 @@ export default function AdCreationForm({
       };
 
       const uploadPromises = largeFiles.map(file =>
-        limit(() => uploadToS3(file, updateOverallProgress, getFileId(file))) // <-- Pass the ID here
-
+        limit(() => {
+          throwIfCancelled();
+          return uploadToS3(file, updateOverallProgress, getFileId(file), 2, signal);
+        })
       );
 
 
@@ -2850,7 +2875,10 @@ export default function AdCreationForm({
 
       // Upload Drive files with concurrency control
       const driveUploadPromises = largeDriveFiles.map(file =>
-        limit(() => uploadDriveFileToS3(file)) // Your existing function unchanged
+        limit(() => {
+          throwIfCancelled();
+          return uploadDriveFileToS3(file, 3, signal);
+        })
       );
 
       const driveResults = await Promise.allSettled(driveUploadPromises);
@@ -2877,7 +2905,10 @@ export default function AdCreationForm({
 
       // Upload Dropbox files with concurrency control
       const dropboxUploadPromises = largeDropboxFiles.map(file =>
-        limit(() => uploadDropboxFileToS3(file))
+        limit(() => {
+          throwIfCancelled();
+          return uploadDropboxFileToS3(file, 3, signal);
+        })
       );
 
       const dropboxResults = await Promise.allSettled(dropboxUploadPromises);
@@ -2917,6 +2948,7 @@ export default function AdCreationForm({
     let finalAdSetIds = [...selectedAdSets];
     if (duplicateAdSet) {
       try {
+        throwIfCancelled();
         const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim());
         finalAdSetIds = [newAdSetId];
         jobData.formData.selectedAdSets = [newAdSetId];
@@ -3769,15 +3801,17 @@ export default function AdCreationForm({
       });
     };
 
-    const createAdApiCall = async (formData, API_BASE_URL) => {
+    const createAdApiCall = async (formData, API_BASE_URL, signal = null) => {
       const maxRetries = 5;
       const baseDelay = 1000;
 
       for (let attempt = 0; attempt < maxRetries; attempt++) {
+        if (signal?.aborted) throw new DOMException('Job cancelled', 'AbortError');
         try {
           const response = await axios.post(`${API_BASE_URL}/auth/create-ad`, formData, {
             withCredentials: true,
             headers: { "Content-Type": "multipart/form-data" },
+            signal,
           });
 
           return response;
@@ -3844,7 +3878,7 @@ export default function AdCreationForm({
               formData.append("adType", "duplication");
             }
 
-            promises.push(createAdApiCall(formData, API_BASE_URL));
+            promises.push(createAdApiCall(formData, API_BASE_URL, signal));
             promiseMetadata.push({ fileName: post.ad_name });
           });
         });
@@ -3880,7 +3914,7 @@ export default function AdCreationForm({
             if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
             if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
 
-            promises.push(createAdApiCall(formData, API_BASE_URL));
+            promises.push(createAdApiCall(formData, API_BASE_URL, signal));
             promiseMetadata.push({ fileName: igPost.ad_name });
           });
         });
@@ -4048,7 +4082,7 @@ export default function AdCreationForm({
             // Shop destination
             appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-            promises.push(createAdApiCall(formData, API_BASE_URL));
+            promises.push(createAdApiCall(formData, API_BASE_URL, signal));
             promiseMetadata.push({ fileName: group ? `Carousel Ad ${groupIndex + 1}` : carouselAdName });
           });
         });
@@ -4134,7 +4168,7 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
               globalFileIndex++;
             });
           });
@@ -4199,7 +4233,7 @@ export default function AdCreationForm({
 
             // Append shop destination
             appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-            promises.push(createAdApiCall(formData, API_BASE_URL));
+            promises.push(createAdApiCall(formData, API_BASE_URL, signal));
             promiseMetadata.push(null); // ADD - keeps array indices aligned
 
           });
@@ -4262,7 +4296,7 @@ export default function AdCreationForm({
 
           // Append shop destination
           appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-          promises.push(createAdApiCall(formData, API_BASE_URL));
+          promises.push(createAdApiCall(formData, API_BASE_URL, signal));
           promiseMetadata.push(null); // ADD - keeps array indices aligned
 
         });
@@ -4375,7 +4409,7 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
               // Append has ungrouped files flag
               formData.append("hasUngroupedFiles", hasUngroupedFiles);
-              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
               promiseMetadata.push({ fileName: groupedAdNames[groupIndex] }); // ADD
               localIterationIndex++;
             });
@@ -4453,7 +4487,7 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
               promiseMetadata.push({ fileName: file.name }); // ADD
 
             });
@@ -4491,7 +4525,7 @@ export default function AdCreationForm({
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
               promiseMetadata.push({ fileName: driveFile.name }); // ADD
 
             });
@@ -4526,7 +4560,7 @@ export default function AdCreationForm({
               appendSingleDropboxFile(formData, dropboxFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
               promiseMetadata.push({ fileName: dropboxFile.name });
             });
 
@@ -4563,7 +4597,7 @@ export default function AdCreationForm({
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
               promiseMetadata.push({ fileName: s3File.name || s3File.originalName || 'S3 Video' }); // ADD
 
             });
@@ -4618,7 +4652,7 @@ export default function AdCreationForm({
               appendMetaImageFile(formData, metaFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
               promiseMetadata.push({ fileName: metaFile.name });
             });
 
@@ -4651,7 +4685,7 @@ export default function AdCreationForm({
               appendMetaVideoFile(formData, metaFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL));
+              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
               promiseMetadata.push({ fileName: metaFile.name });
             });
 
@@ -4692,6 +4726,23 @@ export default function AdCreationForm({
               return result;
             })
             .catch(error => {
+              // Check if this is a cancellation (frontend abort or backend 499)
+              const isCancellation = axios.isCancel(error) ||
+                error.name === 'AbortError' ||
+                error.response?.status === 499 ||
+                error.response?.data?.cancelled;
+
+              if (isCancellation) {
+                setLiveProgress(prev => ({
+                  ...prev,
+                  completed: prev.completed + 1,
+                  // Don't increment failed — this was user-initiated
+                }));
+                responses[index] = { status: 'cancelled' };
+                return null;
+              }
+
+              // Real error — existing logic
               let errorMsg = 'Unknown error';
               if (error.response?.data?.error) {
                 errorMsg = error.response.data.error;
@@ -4721,10 +4772,8 @@ export default function AdCreationForm({
 
         const successCount = responses.filter(r => r.status === 'fulfilled').length;
         const failureCount = responses.filter(r => r.status === 'rejected').length;
+        const cancelledCount = responses.filter(r => r.status === 'cancelled').length;
         const totalCount = responses.length;
-
-
-
 
         const errorMessages = responses
           .map((r, index) => ({ response: r, meta: promiseMetadata[index] }))
@@ -4744,29 +4793,44 @@ export default function AdCreationForm({
             };
           });
 
-
         let jobStatus = 'complete';
         let jobMessage = 'All ads created successfully!';
 
-        if (failureCount > 0 && successCount > 0) {
-          jobStatus = 'partial-success';
-          jobMessage = `${successCount} of ${totalCount} ads created. ${failureCount} failed.`;
-        }
-        else if (failureCount === totalCount) {
-          jobStatus = 'error';
-          const firstError = responses.find(r => r.status === 'rejected');
-
-          // Extract fbErrorMsg from response
-          let errorMsg = 'Unknown error';
-          if (firstError?.reason?.response?.data?.error) {
-            errorMsg = firstError.reason.response.data.error; // This is fbErrorMsg
-          } else if (firstError?.reason?.response?.data) {
-            errorMsg = firstError.reason.response.data;
-          } else if (firstError?.reason?.message) {
-            errorMsg = firstError.reason.message;
+        if (signal.aborted) {
+          // User cancelled — determine what actually happened
+          if (successCount === 0 && failureCount === 0) {
+            jobStatus = 'cancelled';
+            jobMessage = 'Job cancelled.';
+          } else if (successCount === totalCount) {
+            // Everything finished before cancel propagated
+            jobStatus = 'complete';
+            jobMessage = `All ${totalCount} ads were created before cancellation took effect.`;
+          } else if (successCount > 0) {
+            jobStatus = 'partial-success';
+            jobMessage = `Cancelled. ${successCount} of ${totalCount} ads were already created.`;
+          } else {
+            // Only failures and cancellations, no successes
+            jobStatus = 'cancelled';
+            jobMessage = 'Job cancelled.';
           }
-
-          jobMessage = `${errorMsg}`;
+        } else {
+          // Normal (non-cancelled) completion
+          if (failureCount > 0 && successCount > 0) {
+            jobStatus = 'partial-success';
+            jobMessage = `${successCount} of ${totalCount} ads created. ${failureCount} failed.`;
+          } else if (failureCount === totalCount) {
+            jobStatus = 'error';
+            const firstError = responses.find(r => r.status === 'rejected');
+            let errorMsg = 'Unknown error';
+            if (firstError?.reason?.response?.data?.error) {
+              errorMsg = firstError.reason.response.data.error;
+            } else if (firstError?.reason?.response?.data) {
+              errorMsg = firstError.reason.response.data;
+            } else if (firstError?.reason?.message) {
+              errorMsg = firstError.reason.message;
+            }
+            jobMessage = `${errorMsg}`;
+          }
         }
 
         try {
@@ -4774,13 +4838,12 @@ export default function AdCreationForm({
             jobId: frontendJobId,
             status: jobStatus,
             message: jobMessage,
-            successCount,      // ADD
-            failureCount,      // ADD
+            successCount,
+            failureCount,
             totalCount,
             errorMessages,
-            selectedAdSets,      // ADD - from formData destructure
-            selectedAdAccount    //
-
+            selectedAdSets,
+            selectedAdAccount
           }, {
             withCredentials: true,
             timeout: 5000
@@ -4788,13 +4851,26 @@ export default function AdCreationForm({
         } catch (completeError) {
           console.warn("Failed to update progress tracker");
         }
-
       } catch (error) {
         console.error("Unexpected error:", error);
       }
 
     } catch (error) {
+      // If user cancelled, don't treat as an error
+      if (error.name === 'AbortError' || axios.isCancel(error)) {
+        console.log('Job cancelled by user during pre-processing phase');
+        // Notify backend to mark job as cancelled
+        try {
+          await axios.post(`${API_BASE_URL}/auth/cancel-job`,
+            { jobId: currentJob?.id },
+            { withCredentials: true, timeout: 3000 }
+          );
+        } catch (e) { /* best-effort */ }
+        return; // Don't throw — let the status useEffect handle it via SSE
+      }
+
       let errorMessage = "Unknown error occurred";
+
 
       if (typeof error.response?.data === "string") {
         errorMessage = error.response.data;
@@ -4811,6 +4887,8 @@ export default function AdCreationForm({
 
     } finally {
       setIsLoading(false);
+      setCurrentAbortController(null);
+
     }
   }
 
@@ -4913,7 +4991,9 @@ export default function AdCreationForm({
                       {/* Main job row */}
                       <div className="flex items-start gap-3">
                         <div className="flex-shrink-0">
-                          {job.status === 'error' ? (
+                          {job.status === 'cancelled' ? (
+                            <Ban className="w-6 h-6 text-gray-400" />
+                          ) : job.status === 'error' ? (
                             <CircleX className="w-6 h-6 text-red-500" />
                           ) : job.status === 'partial-success' ? (
                             <PartialSuccess className="w-6 h-6" />
@@ -4927,13 +5007,15 @@ export default function AdCreationForm({
                         <div className="flex-1 min-w-0 overflow-hidden">
                           <p
                             style={{ overflowWrap: 'anywhere' }}
-                            className={`text-sm break-words ${job.status === 'error'
-                              ? 'text-red-600'
-                              : job.status === 'partial-success'
-                                ? 'text-[#F0A000]'
-                                : job.status === 'retry'
-                                  ? 'text-orange-600'
-                                  : 'text-gray-700'
+                            className={`text-sm break-words ${job.status === 'cancelled'
+                              ? 'text-gray-500'
+                              : job.status === 'error'
+                                ? 'text-red-600'
+                                : job.status === 'partial-success'
+                                  ? 'text-[#F0A000]'
+                                  : job.status === 'retry'
+                                    ? 'text-orange-600'
+                                    : 'text-gray-700'
                               }`}
                           >
                             {job.message}
@@ -5056,24 +5138,42 @@ export default function AdCreationForm({
                     </div>
                     <div className="flex justify-between items-center mt-2">
                       <p className="text-xs text-gray-500">{progressMessage || trackedMessage}</p>
-                      {(progressMessage || trackedMessage) && liveProgress.total > 0 && (
-                        <div className="flex gap-2">
-                          <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded-lg">
-                            <CheckIcon className="w-4 h-4 text-green-600" />
-                            <span className="text-xs font-medium text-green-700">
-                              {liveProgress.succeeded}/{liveProgress.total}
-                            </span>
-                          </div>
-                          {liveProgress.failed > 0 && (
-                            <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-lg">
-                              <CircleX className="w-4 h-4 text-red-500" />
-                              <span className="text-xs font-medium text-red-600">
-                                {liveProgress.failed}/{liveProgress.total}
+                      <div className="flex items-center gap-2">
+                        {(progressMessage || trackedMessage) && liveProgress.total > 0 && (
+                          <div className="flex gap-2">
+                            <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded-lg">
+                              <CheckIcon className="w-4 h-4 text-green-600" />
+                              <span className="text-xs font-medium text-green-700">
+                                {liveProgress.succeeded}/{liveProgress.total}
                               </span>
                             </div>
-                          )}
-                        </div>
-                      )}
+                            {liveProgress.failed > 0 && (
+                              <div className="flex items-center gap-1 px-2 py-1 bg-red-50 border border-red-200 rounded-lg">
+                                <CircleX className="w-4 h-4 text-red-500" />
+                                <span className="text-xs font-medium text-red-600">
+                                  {liveProgress.failed}/{liveProgress.total}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <button
+                          onClick={async () => {
+                            if (currentAbortController) {
+                              currentAbortController.abort();
+                            }
+                            try {
+                              await axios.post(`${API_BASE_URL}/auth/cancel-job`,
+                                { jobId },
+                                { withCredentials: true, timeout: 3000 }
+                              );
+                            } catch (e) { /* best-effort */ }
+                          }}
+                          className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                     {/* Live error details */}
                     {liveProgress.errors && liveProgress.errors.length > 0 && (
