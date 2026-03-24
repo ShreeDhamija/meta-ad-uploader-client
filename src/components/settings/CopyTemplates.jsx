@@ -844,30 +844,33 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       </div>
 
       {/* New row with template dropdown and set as default button */}
-      {Object.keys(templates).length > 0 && <div className="flex items-center gap-3 mb-4 transition-all duration-300">
-        <Select
-          value={selectedName}
-          onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
-          disabled={availableTemplates.length === 0}
-        >
-          <SelectTrigger className="flex-1 max-w-[490px] overflow-hidden rounded-xl px-3 py-2 text-sm justify-between bg-white disabled:opacity-50 disabled:cursor-not-allowed">            <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto relative">
-            {availableTemplates.map(([name]) => (
-              <SelectItemWithDelete
-                key={name}
-                value={name}
-                name={name}
-                isDefault={name === defaultName}
-                onDelete={handleDeleteTemplate}
-              />
-            ))}
-          </SelectContent>
-        </Select>
+      {Object.keys(templates).length > 0 && <div className="flex w-full items-center gap-3 mb-4 transition-all duration-300">
+        <div className="flex-1 min-w-0">
+          <Select
+            value={selectedName}
+            onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
+            disabled={availableTemplates.length === 0}
+          >
+            <SelectTrigger className="w-full overflow-hidden rounded-xl px-3 py-2 text-sm justify-between bg-white disabled:opacity-50 disabled:cursor-not-allowed">
+              <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto relative">
+              {availableTemplates.map(([name]) => (
+                <SelectItemWithDelete
+                  key={name}
+                  value={name}
+                  name={name}
+                  isDefault={name === defaultName}
+                  onDelete={handleDeleteTemplate}
+                />
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button
           variant="outline"
           size="sm"
-          className="rounded-xl px-3 whitespace-nowrap"
+          className="shrink-0 rounded-xl px-3 whitespace-nowrap"
           disabled={!templateName.trim() || isEditingDefault || isProcessing}
           onClick={handleSetAsDefault}
         >
