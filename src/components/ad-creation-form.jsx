@@ -537,6 +537,9 @@ export default function AdCreationForm({
   const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false);
   const [currentAbortController, setCurrentAbortController] = useState(null);
   const isInPromisePhase = useRef(false); // ADD THIS
+  const currentJobIdRef = useRef(null); // ADD THIS
+  const [isCancelling, setIsCancelling] = useState(false);
+
   const [preserveMedia, setPreserveMedia] = useState(false);
 
   const [liveProgress, setLiveProgress] = useState({
@@ -1278,8 +1281,26 @@ export default function AdCreationForm({
     setJobId(null);
 
     handleCreateAd(jobToProcess).catch(err => {
-      console.error("Critical error during job initialization:", err);
+      // Don't treat cancellation as a critical error
+      if (err.name === 'AbortError' || axios.isCancel(err)) {
+        console.log('Job cancelled during initialization phase');
+        const cancelledJob = {
+          id: jobToProcess.id,
+          message: 'Job cancelled.',
+          completedAt: Date.now(),
+          status: 'cancelled',
+          formData: jobToProcess.formData,
+        };
+        addCompletedJob(cancelledJob);
+        setJobQueue(prev => prev.slice(1));
+        setCurrentJob(null);
+        setIsProcessingQueue(false);
+        setIsCancelling(false);  // <-- AND HERE
 
+        return;
+      }
+
+      console.error("Critical error during job initialization:", err);
       const failedJob = {
         id: jobToProcess.id,
         message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
@@ -1288,12 +1309,11 @@ export default function AdCreationForm({
         formData: jobToProcess.formData,
       };
       addCompletedJob(failedJob);
-      // setCompletedJobs(prev => [...prev, failedJob]);
       setJobQueue(prev => prev.slice(1));
       setCurrentJob(null);
       setIsProcessingQueue(false);
+      setIsCancelling(false);  // <-- HERE
     });
-
   }, [jobQueue, isProcessingQueue, resetProgress]);
 
 
@@ -1413,6 +1433,8 @@ export default function AdCreationForm({
       setJobQueue(prev => prev.slice(1));
       setCurrentJob(null);
       setIsProcessingQueue(false);
+      setIsCancelling(false);
+
     }
   }, [status, isProcessingQueue, currentJob]);
 
@@ -2996,6 +3018,7 @@ export default function AdCreationForm({
     throwIfCancelled(); // ADD THIS LINE
     // 🔧 NOW start the actual job (50-100% progress)
     const frontendJobId = uuidv4();
+    currentJobIdRef.current = frontendJobId;
     const smallDriveFiles = driveFiles.filter(file =>
       !(isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD)
     );
@@ -4974,6 +4997,8 @@ export default function AdCreationForm({
     } finally {
       setIsLoading(false);
       setCurrentAbortController(null);
+      currentJobIdRef.current = null; // ADD
+
 
     }
   }
@@ -5244,15 +5269,19 @@ export default function AdCreationForm({
                       </div>
                       <button
                         onClick={async () => {
+                          setIsCancelling(true);
                           if (currentAbortController) {
                             currentAbortController.abort();
                           }
-                          try {
-                            await axios.post(`${API_BASE_URL}/auth/cancel-job`,
-                              { jobId },
-                              { withCredentials: true, timeout: 3000 }
-                            );
-                          } catch (e) { /* best-effort */ }
+                          const cancelJobId = currentJobIdRef.current || jobId;
+                          if (cancelJobId) {
+                            try {
+                              await axios.post(`${API_BASE_URL}/auth/cancel-job`,
+                                { jobId: cancelJobId },
+                                { withCredentials: true, timeout: 3000 }
+                              );
+                            } catch (e) { /* best-effort */ }
+                          }
                         }}
                         className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors"
                         title="Cancel job"
@@ -5261,7 +5290,14 @@ export default function AdCreationForm({
                       </button>
                     </div>
                     <div className="flex justify-between items-center mt-2">
-                      <p className="text-xs text-gray-500">{progressMessage || trackedMessage}</p>
+                      {isCancelling ? (
+                        <div className="flex items-center gap-1.5">
+                          <Loader className="animate-spin h-3 w-3 text-red-400" />
+                          <span className="text-xs text-red-400">Cancelling...</span>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">{progressMessage || trackedMessage}</p>
+                      )}
                       <div className="flex items-center gap-2">
                         {(progressMessage || trackedMessage) && liveProgress.total > 0 && (
                           <div className="flex gap-2">
@@ -5281,22 +5317,6 @@ export default function AdCreationForm({
                             )}
                           </div>
                         )}
-                        {/* <button
-                          onClick={async () => {
-                            if (currentAbortController) {
-                              currentAbortController.abort();
-                            }
-                            try {
-                              await axios.post(`${API_BASE_URL}/auth/cancel-job`,
-                                { jobId },
-                                { withCredentials: true, timeout: 3000 }
-                              );
-                            } catch (e) { /* best-effort */ }
-                        {/*}   }}
-                          className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 border border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
-                        >
-                          Cancel
-                        </button> */}
                       </div>
                     </div>
                     {/* Live error details */}
