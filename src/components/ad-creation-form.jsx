@@ -5619,8 +5619,18 @@ export default function AdCreationForm({
                                 </Label>
                               </div>
                               <div className="flex items-center gap-2">
-                                <RadioGroupItem value="first_identity_only" id="identity-first" />
-                                <Label htmlFor="identity-first" className="text-sm font-normal cursor-pointer">
+                                <RadioGroupItem
+                                  value="first_identity_only"
+                                  id="identity-first"
+                                  disabled={!partnerFbPageId && partnerIgAccountId}
+                                />
+                                <Label
+                                  htmlFor="identity-first"
+                                  className={cn(
+                                    "text-sm font-normal cursor-pointer",
+                                    !partnerFbPageId && partnerIgAccountId && "text-gray-400 cursor-not-allowed"
+                                  )}
+                                >
                                   First identity only
                                 </Label>
                               </div>
