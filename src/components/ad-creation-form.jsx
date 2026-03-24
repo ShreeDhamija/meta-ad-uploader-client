@@ -396,13 +396,7 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
   return { partners, isLoading, error, refetch: fetchPartners };
 };
 
-const buildISOString = (date, time) => {
-  if (!date) return null;
-  const [hours, minutes] = (time || "00:00").split(":").map(Number);
-  const d = new Date(date);
-  d.setHours(hours, minutes, 0, 0);
-  return d.toISOString().replace(/\.\d{3}Z$/, "Z");
-};
+
 
 
 export default function AdCreationForm({
@@ -5619,12 +5613,27 @@ export default function AdCreationForm({
                                 </Label>
                               </div>
                               <div className="flex items-center gap-2">
-                                <RadioGroupItem value="first_identity_only" id="identity-first" />
-                                <Label htmlFor="identity-first" className="text-sm font-normal cursor-pointer">
+                                <RadioGroupItem
+                                  value="first_identity_only"
+                                  id="identity-first"
+                                  disabled={!partnerFbPageId}
+                                />
+                                <Label
+                                  htmlFor="identity-first"
+                                  className={cn(
+                                    "text-sm font-normal cursor-pointer",
+                                    !partnerFbPageId && "text-gray-400 cursor-not-allowed"
+                                  )}
+                                >
                                   First identity only
                                 </Label>
                               </div>
                             </RadioGroup>
+                            {!partnerFbPageId && (
+                              <p className="text-xs text-amber-600">
+                                Partner's Facebook Page ID is required for first identity only.
+                              </p>
+                            )}
                           </div>
 
 
