@@ -5227,11 +5227,30 @@ export default function AdCreationForm({
                       </p>
                       <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progress || trackedProgress}%` }}
-                      />
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${progress || trackedProgress}%` }}
+                        />
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (currentAbortController) {
+                            currentAbortController.abort();
+                          }
+                          try {
+                            await axios.post(`${API_BASE_URL}/auth/cancel-job`,
+                              { jobId },
+                              { withCredentials: true, timeout: 3000 }
+                            );
+                          } catch (e) { /* best-effort */ }
+                        }}
+                        className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                        title="Cancel job"
+                      >
+                        <CircleX className="h-4 w-4" />
+                      </button>
                     </div>
                     <div className="flex justify-between items-center mt-2">
                       <p className="text-xs text-gray-500">{progressMessage || trackedMessage}</p>
@@ -5254,7 +5273,7 @@ export default function AdCreationForm({
                             )}
                           </div>
                         )}
-                        <button
+                        {/* <button
                           onClick={async () => {
                             if (currentAbortController) {
                               currentAbortController.abort();
@@ -5265,11 +5284,11 @@ export default function AdCreationForm({
                                 { withCredentials: true, timeout: 3000 }
                               );
                             } catch (e) { /* best-effort */ }
-                          }}
+                        {/*}   }}
                           className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-1 border border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
                         >
                           Cancel
-                        </button>
+                        </button> */}
                       </div>
                     </div>
                     {/* Live error details */}
