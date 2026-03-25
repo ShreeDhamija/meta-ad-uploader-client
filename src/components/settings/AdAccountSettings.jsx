@@ -6,17 +6,18 @@ import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ChevronsUpDown, Loader, CirclePlus, Info } from "lucide-react"
+import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw } from "lucide-react"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
 import PageSelectors from "./PageSelectors"
 import LinkParameters from "./LinkParameters"
 import MultiAdvertiserAds from "./MultiAdvertiserAds"
 import DefaultCTA from "./DefaultCTA"
-import TeamSyncToggle from "./TeamSyncToggle"
 import { toast } from "sonner"
 import { saveSettings } from "@/lib/saveSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
+import useTeamSync from "@/lib/useTeamSync"
 import CreativeEnhancements from "./CreativeEnhancements"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import LabelIcon from '@/assets/icons/label.svg?react';
@@ -76,7 +77,19 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [selectedInstagram, setSelectedInstagram] = useState(null)
   const [savingSettings, setSavingSettings] = useState(false)
   const { settings: adSettings, setSettings: setAdSettings, loading, isFirstEverSave } = useAdAccountSettings(selectedAdAccount)
-
+  const [syncConfirmOpen, setSyncConfirmOpen] = useState(false)
+  const [syncConfirmAction, setSyncConfirmAction] = useState(null)
+  const {
+    loading: syncLoading,
+    toggling: syncToggling,
+    inTeam,
+    syncEnabled,
+    isOwner,
+    teamName,
+    enableSync,
+    disableSync,
+    refetch: refetchSync,
+  } = useTeamSync()
 
   const [links, setLinks] = useState([]) // Array of {url, isDefault}
   // const [utmPairs, setUtmPairs] = useState(DEFAULT_UTM_PAIRS)
@@ -110,6 +123,47 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setIsReauthOpen(false)
     window.location.href = `${API_BASE_URL}/auth/facebook?state=settings`
   }, [])
+
+
+  const handleSyncToggle = useCallback(() => {
+    if (!isOwner) {
+      toast.info("Only the team owner can change sync settings.")
+      return
+    }
+    setSyncConfirmAction(syncEnabled ? "disable" : "enable")
+    setSyncConfirmOpen(true)
+  }, [isOwner, syncEnabled])
+
+  const handleSyncConfirm = useCallback(async () => {
+    setSyncConfirmOpen(false)
+    let result
+    if (syncConfirmAction === "enable") {
+      result = await enableSync()
+      if (result.success) {
+        toast.success(
+          result.seededCount > 0
+            ? `Sync enabled! ${result.seededCount} ad account settings synced.`
+            : "Sync enabled! Settings will be shared when anyone saves next."
+        )
+      }
+    } else {
+      result = await disableSync()
+      if (result.success) {
+        toast.success("Sync disabled. Each member will use their own settings.")
+      }
+    }
+    if (!result?.success) {
+      toast.error(result?.error || "Something went wrong.")
+    }
+    // Re-trigger settings fetch
+    if (selectedAdAccount) {
+      const current = selectedAdAccount
+      setSelectedAdAccount(null)
+      setTimeout(() => setSelectedAdAccount(current), 50)
+    }
+  }, [syncConfirmAction, enableSync, disableSync, selectedAdAccount])
+
+
 
   // Memoized filtered ad accounts for dropdown
   const filteredAdAccounts = useMemo(() => {
@@ -498,43 +552,65 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   return (
     <div className="space-y-6 w-full max-w-3xl">
       {/* Ad Account Dropdown */}
-      <TeamSyncToggle
-        onSyncChange={() => {
-          // Re-trigger settings fetch from the correct source
-          if (selectedAdAccount) {
-            const current = selectedAdAccount;
-            setSelectedAdAccount(null);
-            setTimeout(() => setSelectedAdAccount(current), 50);
-          }
-        }}
-      />
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-md font-medium text-gray-800">Select Ad Account</label>
           <div className="flex items-center gap-2">
 
-            {(subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onTriggerAdAccountPopup}
-                className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
-              >
-                Change Selected Accounts
-              </Button>
-            )}
-
-            {/* Inline Add Ad Accounts Button with Dialog */}
-            <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
-              <DialogTrigger asChild>
+            {/* Team sync — owners see button when not synced, everyone sees status when synced */}
+            {!syncLoading && inTeam && (isOwner || syncEnabled) && (
+              syncEnabled ? (
+                <span className="text-xs text-gray-500 flex items-center gap-1.5">
+                  <RefreshCw className="w-3 h-3 text-blue-500" />
+                  Settings are in sync with team.
+                </span>
+              ) : (
                 <Button
                   size="sm"
-                  className="text-sm text-white bg-blue-500 hover:bg-blue-600 hover:text-white rounded-xl"
+                  variant="outline"
+                  onClick={handleSyncToggle}
+                  disabled={syncToggling || !isOwner}
+                  className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
                 >
-                  <CirclePlus className="w-4 h-4 mr-1" />
-                  Link New Ad Accounts
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
+                  Sync Settings with Team
                 </Button>
-              </DialogTrigger>
+              )
+            )}
+
+            {/* Dropdown: Edit Active Accounts */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
+                >
+                  Edit Active Accounts
+                  <ChevronDown className="w-3.5 h-3.5 ml-1.5 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="rounded-xl">
+                <DropdownMenuItem
+                  onClick={() => setIsReauthOpen(true)}
+                  className="cursor-pointer rounded-lg"
+                >
+                  <CirclePlus className="w-4 h-4 mr-2" />
+                  Link New Ad Accounts
+                </DropdownMenuItem>
+                {(subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (
+                  <DropdownMenuItem
+                    onClick={onTriggerAdAccountPopup}
+                    className="cursor-pointer rounded-lg"
+                  >
+                    Change Selected Accounts in Plan
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Reauth dialog (opened from dropdown) */}
+            <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
               <DialogContent className="sm:max-w-md !rounded-xl">
                 <div className="text-left space-y-4 p-6 !rounded-xl">
                   <div className="space-y-2">
@@ -720,36 +796,72 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           className={`absolute bottom-0 left-0 w-full z-40 w-full bg-blue-600 text-white transition-transform duration-300 ease-in-out ${hasChanges ? "translate-y-0" : "translate-y-full"
             }`}
         >
-          <div className="mx-auto max-w-3xl px-6 py-1.5 flex items-center justify-center gap-4">
-            <span className="text-sm font-medium">
-              You have unsaved settings
-            </span>
-
-            <Button
-              onClick={handleSave}
-              className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
-            >
-              {savingSettings ? (
-                <>
-                  <Loader className="h-4 w-4 animate-spin" />
-                  <span className="block truncate flex-1 text-left">Saving changes...</span>
-                </>
-              ) : (
-                <p className="text-blue-600 hover:text-blue-600">Save Changes</p>
-              )}
-            </Button>
-            <Button
-              onClick={handleDismiss}
-              variant="ghost"
-              className="text-white hover:bg-blue-700 hover:text-white rounded-xl px-4 h-9 text-sm font-medium"
-            >
-              Dismiss changes
-            </Button>
+          <div className="mx-auto max-w-3xl px-6 py-1.5 flex flex-col items-center gap-1">
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={handleSave}
+                className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
+              >
+                {savingSettings ? (
+                  <>
+                    <Loader className="h-4 w-4 animate-spin" />
+                    <span className="block truncate flex-1 text-left">Saving changes...</span>
+                  </>
+                ) : (
+                  <p className="text-blue-600 hover:text-blue-600">Save Changes</p>
+                )}
+              </Button>
+              <Button
+                onClick={handleDismiss}
+                variant="ghost"
+                className="text-white hover:bg-blue-700 hover:text-white rounded-xl px-4 h-9 text-sm font-medium"
+              >
+                Dismiss changes
+              </Button>
+            </div>
+            {syncEnabled && (
+              <span className="text-[11px] text-white/60">
+                Changes will be synced for all team members
+              </span>
+            )}
           </div>
         </div>,
         document.getElementById('settings-save-bar-portal')
       )}
 
+      {/* Sync confirmation dialog */}
+      <Dialog open={syncConfirmOpen} onOpenChange={setSyncConfirmOpen}>
+        <DialogContent className="sm:max-w-md !rounded-xl">
+          <div className="text-left space-y-4 p-6">
+            <h3 className="text-sm font-semibold">
+              {syncConfirmAction === "enable" ? "Enable team sync?" : "Disable team sync?"}
+            </h3>
+            <div className="text-sm text-gray-600 space-y-2">
+              {syncConfirmAction === "enable" ? (
+                <>
+                  <p>This will share your ad account settings and copy templates with all team members. Your current settings will be used as the starting point.</p>
+                  <p>Any team member will be able to edit settings, and changes will be visible to everyone.</p>
+                </>
+              ) : (
+                <p>Each team member will return to using their own personal settings. Their current settings (copied from the shared ones) will be preserved.</p>
+              )}
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button variant="outline" onClick={() => setSyncConfirmOpen(false)} className="rounded-xl">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSyncConfirm}
+                className={`rounded-xl ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-700 hover:bg-gray-800 text-white"}`}
+              >
+                {syncConfirmAction === "enable" ? "Enable sync" : "Disable sync"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
+
 }
