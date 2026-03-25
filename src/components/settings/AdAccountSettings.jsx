@@ -911,12 +911,12 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           onClick={() => setSyncConfirmOpen(false)}
         >
           <div
-            className="bg-white rounded-3xl w-[440px] shadow-xl border border-gray-200"
+            className="bg-white rounded-3xl w-[440px] shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-8 space-y-4">
               <h3 className="text-base font-semibold">
-                {syncConfirmAction === "enable" ? "Enable team sync?" : "Disable team sync?"}
+                {syncConfirmAction === "enable" ? "Enable Team Sync" : "Disable team sync?"}
               </h3>
               <div className="text-sm text-gray-600 space-y-2">
                 {syncConfirmAction === "enable" ? (
