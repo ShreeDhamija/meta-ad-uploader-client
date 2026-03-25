@@ -563,9 +563,10 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                 isOwner ? (
                   <Button
                     size="sm"
+                    variant="outline"
                     onClick={handleSyncToggle}
                     disabled={syncToggling}
-                    className="text-sm rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 bg-white shadow-sm"
+                    className="text-sm rounded-xl border-red-200 text-red-600 bg-white hover:bg-red-50 hover:text-red-700 shadow-sm"
                   >
                     {syncToggling ? (
                       <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -589,46 +590,48 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             )}
 
             {/* Dropdown: Edit Active Accounts */}
-            {!subscriptionData?.planType ? null : (subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
-                  >
-                    <Folder className="w-3.5 h-3.5 mr-1.5 opacity-80" />
-                    Edit Active Accounts
-                    <ChevronDown className="w-3.5 h-3.5 ml-1.5 opacity-50" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="rounded-xl bg-white">
-                  <DropdownMenuItem
-                    onClick={() => setIsReauthOpen(true)}
-                    className="cursor-pointer rounded-lg text-blue-600"
-                  >
-                    <CirclePlus className="w-4 h-4 text-blue-600 hover:text-blue-700" />
-                    Link New Ad Accounts
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={onTriggerAdAccountPopup}
-                    className="cursor-pointer rounded-lg"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Change Selected Accounts in Plan
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsReauthOpen(true)}
-                className="text-sm rounded-xl border-gray-200 bg-white hover:bg-gray-50 text-blue-600"
-              >
-                <CirclePlus className="w-4 h-4 mr-1.5 text-blue-600" />
-                Link New Ad Accounts
-              </Button>
+            {subscriptionData?.planType && (
+              (subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
+                    >
+                      <Folder className="w-3.5 h-3.5 mr-1.5 opacity-80" />
+                      Edit Active Accounts
+                      <ChevronDown className="w-3.5 h-3.5 ml-1.5 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" side="bottom" className="rounded-xl bg-white" avoidCollisions={false}>
+                    <DropdownMenuItem
+                      onClick={() => setIsReauthOpen(true)}
+                      className="cursor-pointer rounded-lg text-blue-600 hover:text-blue-700"
+                    >
+                      <CirclePlus className="w-4 h-4 text-blue-600 hover:text-blue-700" />
+                      Link New Ad Accounts
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={onTriggerAdAccountPopup}
+                      className="cursor-pointer rounded-lg"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Change Selected Accounts in Plan
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsReauthOpen(true)}
+                  className="text-sm rounded-xl border-gray-200 bg-white hover:bg-gray-50 text-blue-600 hover:text-blue-700"
+                >
+                  <CirclePlus className="w-4 h-4 mr-1.5 text-blue-600 hover:text-blue-700" />
+                  Link New Ad Accounts
+                </Button>
+              )
             )}
 
             {/* Reauth dialog (opened from dropdown) */}
