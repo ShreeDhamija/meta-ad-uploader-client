@@ -565,7 +565,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                     size="sm"
                     onClick={handleSyncToggle}
                     disabled={syncToggling}
-                    className="text-sm rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                    className="text-sm rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 bg-white shadow-sm"
                   >
                     {syncToggling ? (
                       <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -589,7 +589,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             )}
 
             {/* Dropdown: Edit Active Accounts */}
-            {(subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') ? (
+            {!subscriptionData?.planType ? null : (subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -597,7 +597,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                     variant="outline"
                     className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
                   >
-                    <Folder className="w-3.5 h-3.5 mr-1.5 opacity-60" />
+                    <Folder className="w-3.5 h-3.5 mr-1.5 opacity-80" />
                     Edit Active Accounts
                     <ChevronDown className="w-3.5 h-3.5 ml-1.5 opacity-50" />
                   </Button>
@@ -607,14 +607,14 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                     onClick={() => setIsReauthOpen(true)}
                     className="cursor-pointer rounded-lg text-blue-600"
                   >
-                    <CirclePlus className="w-4 h-4 mr-2 text-blue-600" />
+                    <CirclePlus className="w-4 h-4 text-blue-600 hover:text-blue-700" />
                     Link New Ad Accounts
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={onTriggerAdAccountPopup}
                     className="cursor-pointer rounded-lg"
                   >
-                    <Pencil className="w-4 h-4 mr-2" />
+                    <Pencil className="w-4 h-4" />
                     Change Selected Accounts in Plan
                   </DropdownMenuItem>
                 </DropdownMenuContent>
