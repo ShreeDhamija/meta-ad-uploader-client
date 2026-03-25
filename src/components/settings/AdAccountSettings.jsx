@@ -901,17 +901,16 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       </Dialog>
       ```
 
-      AFTER:
-      ```jsx
+
       {/* Sync confirmation dialog */}
       {syncConfirmOpen && (
         <div
           className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
-          style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+          style={{ top: -25, left: 0, right: 0, bottom: 0, position: 'fixed' }}
           onClick={() => setSyncConfirmOpen(false)}
         >
           <div
-            className="bg-white rounded-3xl w-[440px] shadow-xl"
+            className="bg-white rounded-3xl w-[440px] shadow-xl border border-gray-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-8 space-y-4">
@@ -948,7 +947,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           </div>
         </div>
       )}
-      ```
+
 
     </div>
   )
