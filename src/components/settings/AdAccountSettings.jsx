@@ -708,7 +708,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         {!syncLoading && inTeam && syncEnabled && (
           <div className="flex items-center gap-1.5 mt-1.5">
             <RefreshCw className="w-3 h-3 text-blue-500" />
-            <span className="text-xs text-gray-500">Settings are in sync with team.</span>
+            <span className="text-xs text-gray-500">Settings are in sync with team. Any change will be reflected for all team members</span>
           </div>
         )}
 
@@ -836,11 +836,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                 Dismiss changes
               </Button>
             </div>
-            {syncEnabled && (
-              <span className="text-[11px] text-white/60">
-                Changes will be synced for all team members
-              </span>
-            )}
+
           </div>
         </div>,
         document.getElementById('settings-save-bar-portal')
