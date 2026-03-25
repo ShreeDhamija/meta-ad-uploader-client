@@ -568,7 +568,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                     disabled={syncToggling}
                     className="text-sm rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
+                    {syncToggling ? (
+                      <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <CircleX className="w-3.5 h-3.5 mr-1.5" />
+                    )}
                     Disable Settings Sync With Team
                   </Button>
                 ) : null
@@ -580,11 +584,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   disabled={syncToggling || !isOwner}
                   className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
                 >
-                  {syncToggling ? (
-                    <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                  ) : (
-                    <CircleX className="w-3.5 h-3.5 mr-1.5" />
-                  )}
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
                   Sync Settings with Team
                 </Button>
               )
