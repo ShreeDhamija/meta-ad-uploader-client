@@ -48,7 +48,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     const [rawUtmString, setRawUtmString] = useState("");
     const [selectedLinkIndex, setSelectedLinkIndex] = useState(null)
     const [tempUtmPairs, setTempUtmPairs] = useState([]);
-    const [enableDisplayLink, setEnableDisplayLink] = useState(Boolean(displayLink))
+    const [enableDisplayLink, setEnableDisplayLink] = useState(false);
     // 2. TEMP HANDLERS
     const handleTempPairChange = useCallback((index, field, value) => {
         setTempUtmPairs(prev => prev.map((pair, i) => i === index ? { ...pair, [field]: value } : pair))
@@ -61,6 +61,12 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     useEffect(() => {
         setShowAddForm(links.length === 0);
     }, [links.length]);
+
+    useEffect(() => {
+        if (displayLink) {
+            setEnableDisplayLink(true);
+        }
+    }, [displayLink]);
 
     const selectedLink = useMemo(() => {
         if (links.length === 0) return null;
