@@ -874,8 +874,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             <div className="text-sm text-gray-600 space-y-2">
               {syncConfirmAction === "enable" ? (
                 <>
-                  <p>This will share your ad account settings and copy templates with all team members. Your current settings will be used as the starting point.</p>
-                  <p>Any team member will be able to edit settings, and changes will be visible to everyone.</p>
+                  <p>This will share your ad account settings and copy templates with all team members.</p>
+                  <p className="font-semibold">The admin's settings will be used as the starting point and will override any existing team member settings. If the admin hasn't saved settings for an ad account, the first team member with saved settings will be used instead.</p>
+                  <p>Once enabled, any team member can edit settings and changes will be visible to everyone.</p>
                 </>
               ) : (
                 <p>Each team member will return to using their own personal settings. Their current settings (copied from the shared ones) will be preserved.</p>
