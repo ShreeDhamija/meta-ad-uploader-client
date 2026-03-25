@@ -13,6 +13,7 @@ import PageSelectors from "./PageSelectors"
 import LinkParameters from "./LinkParameters"
 import MultiAdvertiserAds from "./MultiAdvertiserAds"
 import DefaultCTA from "./DefaultCTA"
+import TeamSyncToggle from "./TeamSyncToggle"
 import { toast } from "sonner"
 import { saveSettings } from "@/lib/saveSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
@@ -497,6 +498,16 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   return (
     <div className="space-y-6 w-full max-w-3xl">
       {/* Ad Account Dropdown */}
+      <TeamSyncToggle
+        onSyncChange={() => {
+          // Re-trigger settings fetch from the correct source
+          if (selectedAdAccount) {
+            const current = selectedAdAccount;
+            setSelectedAdAccount(null);
+            setTimeout(() => setSelectedAdAccount(current), 50);
+          }
+        }}
+      />
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-md font-medium text-gray-800">Select Ad Account</label>
