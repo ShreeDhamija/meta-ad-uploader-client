@@ -864,18 +864,21 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       )}
 
       {/* Sync confirmation dialog */}
+      BEFORE:
+      ```jsx
+      {/* Sync confirmation dialog */}
       <Dialog open={syncConfirmOpen} onOpenChange={setSyncConfirmOpen}>
-        <DialogOverlay className="bg-black/20" />
+        <DialogOverlay className="bg-black/30" />
         <DialogContent className="sm:max-w-md !rounded-xl">
           <div className="text-left space-y-4 p-6">
             <h3 className="text-sm font-semibold">
-              {syncConfirmAction === "enable" ? "Enable Team Sync" : "Disable team sync?"}
+              {syncConfirmAction === "enable" ? "Enable team sync?" : "Disable team sync?"}
             </h3>
             <div className="text-sm text-gray-600 space-y-2">
               {syncConfirmAction === "enable" ? (
                 <>
                   <p>This will share your ad account settings and copy templates with all team members.</p>
-                  <p className="font-bold text-black">Your settings will be used as the starting point and will override any existing team member settings. If you haven't saved settings for an ad account, the first team member with saved settings will be used instead.</p>
+                  <p className="font-semibold">The admin's settings will be used as the starting point and will override any existing team member settings. If the admin hasn't saved settings for an ad account, the first team member with saved settings will be used instead.</p>
                   <p>Once enabled, any team member can edit settings and changes will be visible to everyone.</p>
                 </>
               ) : (
@@ -888,14 +891,64 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               </Button>
               <Button
                 onClick={handleSyncConfirm}
-                className={`rounded-xl flex-1 ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-red-600 hover:bg-red-700 text-white"}`}
+                className={`rounded-xl flex-1 ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-700 hover:bg-gray-800 text-white"}`}
               >
-                {syncConfirmAction === "enable" ? "Enable Sync" : "Disable Sync"}
+                {syncConfirmAction === "enable" ? "Enable sync" : "Disable sync"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+      ```
+
+      AFTER:
+      ```jsx
+      {/* Sync confirmation dialog */}
+      {syncConfirmOpen && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
+          style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+          onClick={() => setSyncConfirmOpen(false)}
+        >
+          <div
+            className="bg-white rounded-3xl w-[440px] shadow-xl border border-gray-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-8 space-y-4">
+              <h3 className="text-base font-semibold">
+                {syncConfirmAction === "enable" ? "Enable team sync?" : "Disable team sync?"}
+              </h3>
+              <div className="text-sm text-gray-600 space-y-2">
+                {syncConfirmAction === "enable" ? (
+                  <>
+                    <p>This will share your ad account settings and copy templates with all team members.</p>
+                    <p className="font-semibold">The admin's settings will be used as the starting point and will override any existing team member settings. If the admin hasn't saved settings for an ad account, the first team member with saved settings will be used instead.</p>
+                    <p>Once enabled, any team member can edit settings and changes will be visible to everyone.</p>
+                  </>
+                ) : (
+                  <p>Each team member will return to using their own personal settings. Their current settings (copied from the shared ones) will be preserved.</p>
+                )}
+              </div>
+              <div className="flex gap-3 pt-2 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => setSyncConfirmOpen(false)}
+                  className="rounded-2xl flex-1 border-gray-200"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSyncConfirm}
+                  className={`rounded-2xl flex-1 ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-red-500 hover:bg-red-600 text-white"}`}
+                >
+                  {syncConfirmAction === "enable" ? "Enable sync" : "Disable sync"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      ```
 
     </div>
   )
