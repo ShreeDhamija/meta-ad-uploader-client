@@ -6,7 +6,7 @@ import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw } from "lucide-react"
+import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown } from "lucide-react"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
