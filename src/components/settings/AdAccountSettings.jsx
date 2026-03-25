@@ -579,10 +579,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               ) : (
                 <Button
                   size="sm"
-                  variant="outline"
                   onClick={handleSyncToggle}
                   disabled={syncToggling || !isOwner}
-                  className="text-sm rounded-xl bg-zinc-700 hover:bg-zinc-800 shadow-md tex-white"
+                  className="text-sm rounded-xl bg-zinc-700 hover:bg-zinc-800 shadow-md text-white"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
                   Sync Settings with Team
