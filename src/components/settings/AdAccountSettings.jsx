@@ -863,44 +863,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         document.getElementById('settings-save-bar-portal')
       )}
 
-      {/* Sync confirmation dialog */}
-      BEFORE:
-      ```jsx
-      {/* Sync confirmation dialog */}
-      <Dialog open={syncConfirmOpen} onOpenChange={setSyncConfirmOpen}>
-        <DialogOverlay className="bg-black/30" />
-        <DialogContent className="sm:max-w-md !rounded-xl">
-          <div className="text-left space-y-4 p-6">
-            <h3 className="text-sm font-semibold">
-              {syncConfirmAction === "enable" ? "Enable team sync?" : "Disable team sync?"}
-            </h3>
-            <div className="text-sm text-gray-600 space-y-2">
-              {syncConfirmAction === "enable" ? (
-                <>
-                  <p>This will share your ad account settings and copy templates with all team members.</p>
-                  <p className="font-semibold">The admin's settings will be used as the starting point and will override any existing team member settings. If the admin hasn't saved settings for an ad account, the first team member with saved settings will be used instead.</p>
-                  <p>Once enabled, any team member can edit settings and changes will be visible to everyone.</p>
-                </>
-              ) : (
-                <p>Each team member will return to using their own personal settings. Their current settings (copied from the shared ones) will be preserved.</p>
-              )}
-            </div>
-            <div className="flex gap-2 pt-2 w-full">
-              <Button variant="outline" onClick={() => setSyncConfirmOpen(false)} className="rounded-xl flex-1">
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSyncConfirm}
-                className={`rounded-xl flex-1 ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-700 hover:bg-gray-800 text-white"}`}
-              >
-                {syncConfirmAction === "enable" ? "Enable sync" : "Disable sync"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      ```
-
 
       {/* Sync confirmation dialog */}
       {syncConfirmOpen && (
