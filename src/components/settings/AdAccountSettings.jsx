@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown } from "lucide-react"
@@ -557,13 +557,21 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           <label className="text-md font-medium text-gray-800">Select Ad Account</label>
           <div className="flex items-center gap-2">
 
-            {/* Team sync — owners see button when not synced, everyone sees status when synced */}
+            {/* Team sync button — owners always see, members only when synced */}
             {!syncLoading && inTeam && (isOwner || syncEnabled) && (
               syncEnabled ? (
-                <span className="text-xs text-gray-500 flex items-center gap-1.5">
-                  <RefreshCw className="w-3 h-3 text-blue-500" />
-                  Settings are in sync with team.
-                </span>
+                isOwner ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSyncToggle}
+                    disabled={syncToggling}
+                    className="text-sm rounded-xl border-red-200 text-red-600 hover:bg-red-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
+                    Disable Sync
+                  </Button>
+                ) : null
               ) : (
                 <Button
                   size="sm"
@@ -590,12 +598,12 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   <ChevronDown className="w-3.5 h-3.5 ml-1.5 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl">
+              <DropdownMenuContent align="end" className="rounded-xl bg-white">
                 <DropdownMenuItem
                   onClick={() => setIsReauthOpen(true)}
-                  className="cursor-pointer rounded-lg"
+                  className="cursor-pointer rounded-lg text-blue-600"
                 >
-                  <CirclePlus className="w-4 h-4 mr-2" />
+                  <CirclePlus className="w-4 h-4 mr-2 text-blue-600" />
                   Link New Ad Accounts
                 </DropdownMenuItem>
                 {(subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (
@@ -611,6 +619,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
             {/* Reauth dialog (opened from dropdown) */}
             <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
+              <DialogOverlay className="bg-black/20" />
               <DialogContent className="sm:max-w-md !rounded-xl">
                 <div className="text-left space-y-4 p-6 !rounded-xl">
                   <div className="space-y-2">
@@ -696,6 +705,14 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             </Command>
           </PopoverContent>
         </Popover>
+        {!syncLoading && inTeam && syncEnabled && (
+          <div className="flex items-center gap-1.5 mt-1.5">
+            <RefreshCw className="w-3 h-3 text-blue-500" />
+            <span className="text-xs text-gray-500">Settings are in sync with team.</span>
+          </div>
+        )}
+
+
         {selectedAdAccount && loading && (
           <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
             <Loader className="h-4 w-4 animate-spin" />
@@ -831,6 +848,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
 
       {/* Sync confirmation dialog */}
       <Dialog open={syncConfirmOpen} onOpenChange={setSyncConfirmOpen}>
+        <DialogOverlay className="bg-black/20" />
         <DialogContent className="sm:max-w-md !rounded-xl">
           <div className="text-left space-y-4 p-6">
             <h3 className="text-sm font-semibold">
@@ -846,13 +864,13 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                 <p>Each team member will return to using their own personal settings. Their current settings (copied from the shared ones) will be preserved.</p>
               )}
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" onClick={() => setSyncConfirmOpen(false)} className="rounded-xl">
+            <div className="flex gap-2 pt-2 w-full">
+              <Button variant="outline" onClick={() => setSyncConfirmOpen(false)} className="rounded-xl flex-1">
                 Cancel
               </Button>
               <Button
                 onClick={handleSyncConfirm}
-                className={`rounded-xl ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-700 hover:bg-gray-800 text-white"}`}
+                className={`rounded-xl flex-1 ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-700 hover:bg-gray-800 text-white"}`}
               >
                 {syncConfirmAction === "enable" ? "Enable sync" : "Disable sync"}
               </Button>
