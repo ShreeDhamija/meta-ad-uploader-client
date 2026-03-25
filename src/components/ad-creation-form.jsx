@@ -613,12 +613,21 @@ export default function AdCreationForm({
   );
 
   // Filter partners based on search
+  // const filteredPartners = useMemo(() => {
+  //   if (!partnerSearchValue) return availablePartners;
+  //   const searchLower = partnerSearchValue.toLowerCase();
+  //   return availablePartners.filter(partner =>
+  //     partner.creatorUsername.toLowerCase().includes(searchLower) ||
+  //     partner.creatorIgId.includes(partnerSearchValue)
+  //   );
+  // }, [availablePartners, partnerSearchValue]);
+
   const filteredPartners = useMemo(() => {
     if (!partnerSearchValue) return availablePartners;
     const searchLower = partnerSearchValue.toLowerCase();
     return availablePartners.filter(partner =>
-      partner.creatorUsername.toLowerCase().includes(searchLower) ||
-      partner.creatorIgId.includes(partnerSearchValue)
+      (partner.creatorUsername ?? "").toLowerCase().includes(searchLower) ||
+      partner.creatorIgId?.includes(partnerSearchValue)
     );
   }, [availablePartners, partnerSearchValue]);
 
@@ -5818,7 +5827,7 @@ export default function AdCreationForm({
                                           )}
                                         >
                                           <div className="flex flex-col">
-                                            <span>@{partner.creatorUsername}</span>
+                                            <span>@{partner.creatorUsername ?? "Username not available"}</span>
                                             <span className="text-xs text-gray-400">
                                               ID: {partner.creatorIgId}
                                             </span>
