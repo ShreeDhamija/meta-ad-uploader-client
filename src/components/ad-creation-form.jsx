@@ -622,6 +622,7 @@ export default function AdCreationForm({
   //   );
   // }, [availablePartners, partnerSearchValue]);
 
+
   const filteredPartners = useMemo(() => {
     if (!partnerSearchValue) return availablePartners;
     const searchLower = partnerSearchValue.toLowerCase();
