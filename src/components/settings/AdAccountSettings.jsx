@@ -566,10 +566,10 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                     variant="outline"
                     onClick={handleSyncToggle}
                     disabled={syncToggling}
-                    className="text-sm rounded-xl border-red-200 text-red-600 hover:bg-red-50"
+                    className="text-sm rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
-                    Disable Sync
+                    Disable Settings Sync With Team
                   </Button>
                 ) : null
               ) : (
@@ -601,7 +601,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               <DropdownMenuContent align="end" className="rounded-xl bg-white">
                 <DropdownMenuItem
                   onClick={() => setIsReauthOpen(true)}
-                  className="cursor-pointer rounded-lg text-blue-600"
+                  className="cursor-pointer rounded-lg text-blue-600 hover:text-blue-600"
                 >
                   <CirclePlus className="w-4 h-4 mr-2 text-blue-600" />
                   Link New Ad Accounts
