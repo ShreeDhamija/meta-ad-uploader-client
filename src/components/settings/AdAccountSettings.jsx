@@ -582,7 +582,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   variant="outline"
                   onClick={handleSyncToggle}
                   disabled={syncToggling || !isOwner}
-                  className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
+                  className="text-sm rounded-xl bg-zinc-700 hover:bg-zinc-800 shadow-md tex-white"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
                   Sync Settings with Team
@@ -852,7 +852,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         <DialogContent className="sm:max-w-md !rounded-xl">
           <div className="text-left space-y-4 p-6">
             <h3 className="text-sm font-semibold">
-              {syncConfirmAction === "enable" ? "Enable team sync?" : "Disable team sync?"}
+              {syncConfirmAction === "enable" ? "Enable Team Sync" : "Disable team sync?"}
             </h3>
             <div className="text-sm text-gray-600 space-y-2">
               {syncConfirmAction === "enable" ? (
@@ -870,9 +870,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               </Button>
               <Button
                 onClick={handleSyncConfirm}
-                className={`rounded-xl flex-1 ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-gray-700 hover:bg-gray-800 text-white"}`}
+                className={`rounded-xl flex-1 ${syncConfirmAction === "enable" ? "bg-blue-500 hover:bg-blue-600 text-white" : "bg-red-600 hover:bg-red-700 text-white"}`}
               >
-                {syncConfirmAction === "enable" ? "Enable sync" : "Disable sync"}
+                {syncConfirmAction === "enable" ? "Enable Sync" : "Disable Sync"}
               </Button>
             </div>
           </div>
