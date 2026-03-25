@@ -6,7 +6,7 @@ import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@
 import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown } from "lucide-react"
+import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX } from "lucide-react"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
@@ -580,7 +580,11 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   disabled={syncToggling || !isOwner}
                   className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
+                  {syncToggling ? (
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <CircleX className="w-3.5 h-3.5 mr-1.5" />
+                  )}
                   Sync Settings with Team
                 </Button>
               )
