@@ -626,7 +626,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   size="sm"
                   variant="outline"
                   onClick={() => setIsReauthOpen(true)}
-                  className="text-sm rounded-xl border-gray-200 bg-white hover:bg-gray-50 text-blue-600 hover:text-blue-700"
+                  className="text-sm rounded-xl border-gray-200 hover:border-blue-500 bg-white hover:bg-gray-50 text-blue-600 hover:text-blue-700"
                 >
                   <CirclePlus className="w-4 h-4 mr-1.5 text-blue-600 hover:text-blue-700" />
                   Link New Ad Accounts
