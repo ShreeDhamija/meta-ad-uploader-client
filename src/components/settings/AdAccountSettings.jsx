@@ -6,7 +6,7 @@ import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@
 import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX } from "lucide-react"
+import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX, Folder, Pencil } from "lucide-react"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
@@ -563,7 +563,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                 isOwner ? (
                   <Button
                     size="sm"
-                    variant="outline"
                     onClick={handleSyncToggle}
                     disabled={syncToggling}
                     className="text-sm rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
@@ -590,35 +589,47 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             )}
 
             {/* Dropdown: Edit Active Accounts */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
-                >
-                  Edit Active Accounts
-                  <ChevronDown className="w-3.5 h-3.5 ml-1.5 opacity-50" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl bg-white">
-                <DropdownMenuItem
-                  onClick={() => setIsReauthOpen(true)}
-                  className="cursor-pointer rounded-lg text-blue-600 hover:text-blue-600"
-                >
-                  <CirclePlus className="w-4 h-4 mr-2 text-blue-600" />
-                  Link New Ad Accounts
-                </DropdownMenuItem>
-                {(subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (
+            {(subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-sm rounded-xl border-gray-200 hover:bg-gray-50"
+                  >
+                    <Folder className="w-3.5 h-3.5 mr-1.5 opacity-60" />
+                    Edit Active Accounts
+                    <ChevronDown className="w-3.5 h-3.5 ml-1.5 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-xl bg-white">
+                  <DropdownMenuItem
+                    onClick={() => setIsReauthOpen(true)}
+                    className="cursor-pointer rounded-lg text-blue-600"
+                  >
+                    <CirclePlus className="w-4 h-4 mr-2 text-blue-600" />
+                    Link New Ad Accounts
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={onTriggerAdAccountPopup}
                     className="cursor-pointer rounded-lg"
                   >
+                    <Pencil className="w-4 h-4 mr-2" />
                     Change Selected Accounts in Plan
                   </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsReauthOpen(true)}
+                className="text-sm rounded-xl border-gray-200 bg-white hover:bg-gray-50 text-blue-600"
+              >
+                <CirclePlus className="w-4 h-4 mr-1.5 text-blue-600" />
+                Link New Ad Accounts
+              </Button>
+            )}
 
             {/* Reauth dialog (opened from dropdown) */}
             <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
