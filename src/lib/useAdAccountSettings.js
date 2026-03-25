@@ -9,6 +9,7 @@ export default function useAdAccountSettings(adAccountId) {
         defaultPage: null,
         defaultInstagram: null,
         defaultAdName: "",
+        displayLink: "",
         multiAdvertiserAds: false,
     });
 
@@ -54,6 +55,7 @@ export default function useAdAccountSettings(adAccountId) {
                         defaultLinkName: "",
                         links: [],
                         defaultCTA: "LEARN_MORE",
+                        displayLink: "",
                         defaultUTMs: [],
                         copyTemplates: {},
                         defaultTemplateName: "",
@@ -92,6 +94,7 @@ export default function useAdAccountSettings(adAccountId) {
                         links: links,
                         defaultCTA: s.defaultCTA || "LEARN_MORE",
                         defaultUTMs: Array.isArray(s.defaultUTMs) ? s.defaultUTMs : [],
+                        displayLink: s.displayLink || "",
                         copyTemplates: s.copyTemplates,
                         defaultTemplateName: s.defaultTemplateName || "" || {},
                         creativeEnhancements: s.creativeEnhancements || {},
