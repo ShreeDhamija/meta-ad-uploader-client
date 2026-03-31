@@ -593,6 +593,10 @@ export default function AnalyticsDashboard() {
 
         setRecommendations(null); setAnomalies(null); setPoorAds(null)
         setDailyInsights(null); setWeeklyInsights(null)
+        setTargetCPA(null)
+        setTargetROAS(null)
+        setTempTargetCPA("")
+        setTempTargetROAS("")
         if (dailyInsightsAbortRef.current) {
             dailyInsightsAbortRef.current.abort()
             dailyInsightsAbortRef.current = null

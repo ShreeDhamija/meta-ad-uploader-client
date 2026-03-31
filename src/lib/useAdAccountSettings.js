@@ -13,6 +13,13 @@ export default function useAdAccountSettings(adAccountId) {
         multiAdvertiserAds: false,
     });
 
+    const [prevId, setPrevId] = useState(adAccountId);
+
+    if (adAccountId !== prevId) {
+        setPrevId(adAccountId);
+        setLoading(true);
+    }
+
     const refetchCopyTemplates = async () => {
         if (!adAccountId) return;
         try {
