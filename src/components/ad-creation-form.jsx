@@ -613,16 +613,6 @@ export default function AdCreationForm({
   );
 
   // Filter partners based on search
-  // const filteredPartners = useMemo(() => {
-  //   if (!partnerSearchValue) return availablePartners;
-  //   const searchLower = partnerSearchValue.toLowerCase();
-  //   return availablePartners.filter(partner =>
-  //     partner.creatorUsername.toLowerCase().includes(searchLower) ||
-  //     partner.creatorIgId.includes(partnerSearchValue)
-  //   );
-  // }, [availablePartners, partnerSearchValue]);
-
-
   const filteredPartners = useMemo(() => {
     if (!partnerSearchValue) return availablePartners;
     const searchLower = partnerSearchValue.toLowerCase();

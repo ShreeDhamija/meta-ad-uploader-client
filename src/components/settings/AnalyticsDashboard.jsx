@@ -109,6 +109,7 @@ export default function AnalyticsDashboard() {
     const dailyInsightsCacheRef = useRef({})
     const dailyInsightsAbortRef = useRef(null)
     const pendingDailySettingsRef = useRef(null)
+    const currentAccountRef = useRef(null)
 
 
     // ── Ad account settings hook ────────────────────────────
@@ -234,8 +235,36 @@ export default function AnalyticsDashboard() {
     }, [])
 
     // ── Fetch functions
+    // const fetchRecommendations = useCallback(async (force = false) => {
+    //     if (!selectedAdAccount) return
+    //     const key = `recs-${selectedAdAccount}-${metricMode}`
+    //     if (!force && fetchedRef.current[key]) return
+    //     fetchedRef.current[key] = true
+
+    //     setRecsLoading(true)
+    //     try {
+    //         let url = `${API_BASE_URL}/api/analytics/recommendations?adAccountId=${selectedAdAccount}&mode=${metricMode}`
+    //         if (metricMode === 'cpr' && targetCPA) url += `&targetCPA=${targetCPA}`
+    //         if (metricMode === 'roas' && targetROAS) url += `&targetROAS=${targetROAS}`
+    //         if (adAccountSettings?.conversionEvent) {
+    //             url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
+    //         }
+
+    //         const res = await fetch(url, { credentials: 'include' })
+    //         const data = await res.json()
+    //         if (res.ok) setRecommendations(data)
+    //         else toast.error(data.error || 'Failed to fetch recommendations')
+    //     } catch (err) {
+    //         console.error('Recommendations error:', err)
+    //         toast.error('Failed to fetch recommendations')
+    //     } finally { setRecsLoading(false) }
+    // }, [selectedAdAccount, metricMode, targetCPA, targetROAS, adAccountSettings?.conversionEvent])
+
+
     const fetchRecommendations = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
+        const accountAtStart = selectedAdAccount
+
         const key = `recs-${selectedAdAccount}-${metricMode}`
         if (!force && fetchedRef.current[key]) return
         fetchedRef.current[key] = true
@@ -251,6 +280,10 @@ export default function AnalyticsDashboard() {
 
             const res = await fetch(url, { credentials: 'include' })
             const data = await res.json()
+
+            // Discard if user switched accounts while we were fetching
+            if (currentAccountRef.current !== accountAtStart) return
+
             if (res.ok) setRecommendations(data)
             else toast.error(data.error || 'Failed to fetch recommendations')
         } catch (err) {
@@ -259,8 +292,56 @@ export default function AnalyticsDashboard() {
         } finally { setRecsLoading(false) }
     }, [selectedAdAccount, metricMode, targetCPA, targetROAS, adAccountSettings?.conversionEvent])
 
+
+
+    // const fetchAnomalies = useCallback(async (force = false) => {
+    //     if (!selectedAdAccount) return
+    //     const key = `anomalies-${selectedAdAccount}`
+    //     if (!force && fetchedRef.current[key]) return
+    //     fetchedRef.current[key] = true
+
+    //     setAnomaliesLoading(true)
+    //     try {
+    //         const res = await fetch(
+    //             `${API_BASE_URL}/api/analytics/anomalies?adAccountId=${selectedAdAccount}&cpaThreshold=${anomalyThresholds.cpaSpike}&overspendThreshold=${anomalyThresholds.overspend}`,
+    //             { credentials: 'include' }
+    //         )
+    //         const data = await res.json()
+    //         if (res.ok) setAnomalies(data)
+    //         else toast.error(data.error || 'Failed to fetch anomalies')
+    //     } catch (err) {
+    //         console.error('Anomalies error:', err)
+    //         toast.error('Failed to fetch anomalies')
+    //     } finally { setAnomaliesLoading(false) }
+    // }, [selectedAdAccount, anomalyThresholds])
+
+    // const fetchPoorAds = useCallback(async (force = false) => {
+    //     if (!selectedAdAccount) return
+    //     const key = `poor-${selectedAdAccount}-${metricMode}-${adAccountSettings?.conversionEvent || '__auto__'}`
+    //     if (!force && fetchedRef.current[key]) return
+    //     fetchedRef.current[key] = true
+
+    //     setPoorAdsLoading(true)
+    //     try {
+    //         let url = `${API_BASE_URL}/api/analytics/poor-performing-ads?adAccountId=${selectedAdAccount}&mode=${metricMode}`
+    //         if (adAccountSettings?.conversionEvent) {
+    //             url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
+    //         }
+
+    //         const res = await fetch(url, { credentials: 'include' })
+    //         const data = await res.json()
+    //         if (res.ok) setPoorAds(data)
+    //         else toast.error(data.error || 'Failed to fetch poor performing ads')
+    //     } catch (err) {
+    //         console.error('Poor ads error:', err)
+    //         toast.error('Failed to fetch poor performing ads')
+    //     } finally { setPoorAdsLoading(false) }
+    // }, [selectedAdAccount, metricMode, adAccountSettings?.conversionEvent])
+
     const fetchAnomalies = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
+        const accountAtStart = selectedAdAccount
+
         const key = `anomalies-${selectedAdAccount}`
         if (!force && fetchedRef.current[key]) return
         fetchedRef.current[key] = true
@@ -272,6 +353,9 @@ export default function AnalyticsDashboard() {
                 { credentials: 'include' }
             )
             const data = await res.json()
+
+            if (currentAccountRef.current !== accountAtStart) return
+
             if (res.ok) setAnomalies(data)
             else toast.error(data.error || 'Failed to fetch anomalies')
         } catch (err) {
@@ -280,8 +364,11 @@ export default function AnalyticsDashboard() {
         } finally { setAnomaliesLoading(false) }
     }, [selectedAdAccount, anomalyThresholds])
 
+
     const fetchPoorAds = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
+        const accountAtStart = selectedAdAccount
+
         const key = `poor-${selectedAdAccount}-${metricMode}-${adAccountSettings?.conversionEvent || '__auto__'}`
         if (!force && fetchedRef.current[key]) return
         fetchedRef.current[key] = true
@@ -295,6 +382,9 @@ export default function AnalyticsDashboard() {
 
             const res = await fetch(url, { credentials: 'include' })
             const data = await res.json()
+
+            if (currentAccountRef.current !== accountAtStart) return
+
             if (res.ok) setPoorAds(data)
             else toast.error(data.error || 'Failed to fetch poor performing ads')
         } catch (err) {
@@ -401,26 +491,48 @@ export default function AnalyticsDashboard() {
     useEffect(() => {
         if (!adAccountsLoading && adAccounts?.length > 0 && !selectedAdAccount) {
             pendingDailySettingsRef.current = adAccounts[0].id
+            currentAccountRef.current = adAccounts[0].id
             setSelectedAdAccount(adAccounts[0].id)
         }
     }, [adAccountsLoading, adAccounts, selectedAdAccount])
 
+    // useEffect(() => {
+    //     if (selectedAdAccount) {
+    //         fetchAccountInfo(selectedAdAccount)
+    //         fetchWeeklyInsights()
+    //     }
+    // }, [selectedAdAccount, fetchAccountInfo, fetchWeeklyInsights])
+
+
+    // Weekly insights don't depend on settings, fetch immediately
     useEffect(() => {
         if (selectedAdAccount) {
-            fetchAccountInfo(selectedAdAccount)
             fetchWeeklyInsights()
         }
-    }, [selectedAdAccount, fetchAccountInfo, fetchWeeklyInsights])
+    }, [selectedAdAccount, fetchWeeklyInsights])
+
+    // Account info auto-detection should only run AFTER settings have loaded,
+    // so modeCache is already populated if the user has a saved preference
+    useEffect(() => {
+        if (selectedAdAccount && !adAccountSettingsLoading) {
+            fetchAccountInfo(selectedAdAccount)
+        }
+    }, [selectedAdAccount, adAccountSettingsLoading, fetchAccountInfo])
+
+
+
 
     useEffect(() => {
         if (!selectedAdAccount) return
+        if (adAccountSettingsLoading) return  // ← add this guard
+
         if (activeTab === 'recommendations') {
             fetchRecommendations()
             fetchPoorAds()
         } else if (activeTab === 'anomalies') {
             fetchAnomalies()
         }
-    }, [activeTab, selectedAdAccount, metricMode, fetchRecommendations, fetchAnomalies, fetchPoorAds])
+    }, [activeTab, selectedAdAccount, metricMode, adAccountSettingsLoading, fetchRecommendations, fetchAnomalies, fetchPoorAds])
 
     useEffect(() => {
         if (
@@ -462,6 +574,7 @@ export default function AnalyticsDashboard() {
 
     const handleAdAccountSelect = (accountId) => {
         pendingDailySettingsRef.current = accountId
+        currentAccountRef.current = accountId
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
 
@@ -556,12 +669,12 @@ export default function AnalyticsDashboard() {
                 conversionEvent: nextConversionEvent,
             })
             toast.success('Settings saved')
-            if (activeTab === 'recommendations') {
-                setTimeout(() => {
-                    fetchRecommendations(true)
-                    fetchPoorAds(true)
-                }, 100)
-            }
+            // if (activeTab === 'recommendations') {
+            //     setTimeout(() => {
+            //         fetchRecommendations(true)
+            //         fetchPoorAds(true)
+            //     }, 100)
+            // }
         } catch (err) {
             console.error('[Settings] Save FAILED:', err.message)
             toast.error(`Failed to save settings: ${err.message}`)
