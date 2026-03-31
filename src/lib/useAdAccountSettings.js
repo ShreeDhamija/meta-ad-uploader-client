@@ -42,6 +42,7 @@ export default function useAdAccountSettings(adAccountId) {
                     credentials: "include",
                 });
                 const data = await res.json();
+                console.log('[Settings DB]', adAccountId, { mode: data.settings?.analyticsMode, event: data.settings?.conversionEvent, targetCPA: data.settings?.targetCPA })
 
 
                 if (res.status === 404 || !data.settings || data.error === 'Document not found') {

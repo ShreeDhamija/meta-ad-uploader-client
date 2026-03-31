@@ -129,6 +129,7 @@ export default function AnalyticsDashboard() {
     // Sync settings from hook (including analyticsMode + conversionEvent)
     useEffect(() => {
         if (!adAccountSettingsLoading && adAccountSettings) {
+            console.log('[Settings Sync]', { mode: adAccountSettings.analyticsMode, event: adAccountSettings.conversionEvent, loading: adAccountSettingsLoading })
             if (adAccountSettings.anomalyThresholds) {
                 setAnomalyThresholds(adAccountSettings.anomalyThresholds)
                 setTempThresholds(adAccountSettings.anomalyThresholds)
@@ -204,7 +205,8 @@ export default function AnalyticsDashboard() {
             const data = await res.json()
 
             // Only auto-set if the user hasn't manually selected or saved a mode for this account
-            if (modeCache.current[accountId]) return;
+            const cached = modeCache.current[accountId]
+            console.log('[AutoDetect]', { account: accountId, suggested: data.suggestedMode, cached, settingsLoading: adAccountSettingsLoading, willApply: !cached && res.ok && !!data.suggestedMode })
 
             if (res.ok && data.suggestedMode) {
                 setMetricMode(data.suggestedMode)
@@ -277,6 +279,7 @@ export default function AnalyticsDashboard() {
             if (adAccountSettings?.conversionEvent) {
                 url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
             }
+            console.log('[Recs Fetch]', { mode: metricMode, event: adAccountSettings?.conversionEvent, targetCPA, targetROAS, force, url })
 
             const res = await fetch(url, { credentials: 'include' })
             const data = await res.json()
@@ -524,6 +527,7 @@ export default function AnalyticsDashboard() {
 
     useEffect(() => {
         if (!selectedAdAccount) return
+        console.log('[Fetch Trigger]', { tab: activeTab, metricMode, settingsLoading: adAccountSettingsLoading, event: adAccountSettings?.conversionEvent })
         if (adAccountSettingsLoading) return  // ← add this guard
 
         if (activeTab === 'recommendations') {
@@ -621,6 +625,7 @@ export default function AnalyticsDashboard() {
 
         try {
             console.log('[Settings] Saving for account:', selectedAdAccount)
+            console.log('[Settings Save] writing to DB:', { modeForStorage, nextConversionEvent, targetCPA: newTargetCPA, targetROAS: newTargetROAS })
 
             await saveSettings({
                 adAccountId: selectedAdAccount,
@@ -647,6 +652,8 @@ export default function AnalyticsDashboard() {
                 analyticsMode: modeForStorage,
                 conversionEvent: nextConversionEvent,
             }))
+            console.log('[Settings Save] local state updated:', { metricMode, newMode: tempAnalyticsMode === 'roas' ? 'roas' : 'cpr', modeWillChange: (tempAnalyticsMode === 'roas' ? 'roas' : 'cpr') !== metricMode })
+
             setShowSettingsDialog(false)
 
             const newMode = tempAnalyticsMode === 'roas' ? 'roas' : 'cpr'
@@ -1274,68 +1281,7 @@ export default function AnalyticsDashboard() {
 
 
 
-                                    {/* ── Slack Alerts ── */}
-                                    {/* <div className="space-y-4">
-                                        <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                            <div className="w-5 h-5 rounded flex items-center justify-center" style={{ backgroundColor: SLACK_PURPLE }}>
-                                                <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                                    <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.166 0a2.528 2.528 0 0 1 2.521 2.522v6.312zm-2.521 10.124a2.528 2.528 0 0 1 2.521 2.52A2.528 2.528 0 0 1 15.166 24a2.528 2.528 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.312A2.528 2.528 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.521h-6.312z" />
-                                                </svg>
-                                            </div>
-                                            Slack Alerts
-                                        </h3>
 
-                                        <div className="pl-6 space-y-4">
-                                            {!slackConnected ? (
-                                                <>
-                                                    <p className="text-xs text-gray-500">
-                                                        Connect Slack to receive anomaly alerts in your chosen channel.
-                                                    </p>
-
-                                                    <a href={`${API_BASE_URL}/api/analytics/slack/install`}
-                                                        className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl text-sm font-medium text-white transition-colors hover:opacity-90"
-                                                        style={{ backgroundColor: SLACK_PURPLE }}
-                                                    >
-                                                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                                            <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.271 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zm0 1.271a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zm10.124 2.521a2.528 2.528 0 0 1 2.52-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.52V8.834zm-1.271 0a2.528 2.528 0 0 1-2.521 2.521 2.528 2.528 0 0 1-2.521-2.521V2.522A2.528 2.528 0 0 1 15.166 0a2.528 2.528 0 0 1 2.521 2.522v6.312zm-2.521 10.124a2.528 2.528 0 0 1 2.521 2.52A2.528 2.528 0 0 1 15.166 24a2.528 2.528 0 0 1-2.521-2.522v-2.52h2.521zm0-1.271a2.528 2.528 0 0 1-2.521-2.521 2.528 2.528 0 0 1 2.521-2.521h6.312A2.528 2.528 0 0 1 24 15.166a2.528 2.528 0 0 1-2.522 2.521h-6.312z" />
-                                                        </svg>
-                                                        Connect to Slack
-                                                    </a>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                                            <div>
-                                                                <p className="text-sm text-gray-700">Connected to <span className="font-medium">{slackChannelName || 'Slack'}</span></p>
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            onClick={handleSlackDisconnect}
-                                                            disabled={slackDisconnecting}
-                                                            className="text-xs text-red-500 hover:text-red-700 font-medium"
-                                                        >
-                                                            {slackDisconnecting ? 'Disconnecting...' : 'Disconnect'}
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <p className="text-sm text-gray-700">Enable alerts for this account</p>
-                                                            <p className="text-xs text-gray-500">
-                                                                Get notified when CPA spikes or overspend is detected
-                                                            </p>
-                                                        </div>
-                                                        <Switch
-                                                            checked={tempSlackAlertsEnabled}
-                                                            onCheckedChange={setTempSlackAlertsEnabled}
-                                                        />
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div> */}
                                 </div>
                             </div>
 
