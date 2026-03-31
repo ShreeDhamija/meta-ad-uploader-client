@@ -608,6 +608,7 @@ export default function AnalyticsDashboard() {
 
 
     const handleAdAccountSelect = (accountId) => {
+        currentAccountRef.current = accountId  // ← add this
         pendingDailySettingsRef.current = accountId
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
@@ -720,7 +721,7 @@ export default function AnalyticsDashboard() {
             if (res.ok) {
                 setSlackConnected(false)
                 setSlackChannelName(null)
-                setSlackAlertsEnabled(false)
+                setAdAccountSettings(prev => ({ ...prev, slackAlertsEnabled: false }))
                 setTempSlackAlertsEnabled(false)
                 toast.success('Slack disconnected')
             } else {
