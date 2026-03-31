@@ -18,6 +18,19 @@ export default function useAdAccountSettings(adAccountId) {
     if (adAccountId !== prevId) {
         setPrevId(adAccountId);
         setLoading(true);
+        setSettings({
+            defaultPage: null,
+            defaultInstagram: null,
+            defaultAdName: "",
+            displayLink: "",
+            multiAdvertiserAds: false,
+            analyticsMode: null,
+            conversionEvent: null,
+            targetCPA: null,
+            targetROAS: null,
+            anomalyThresholds: null,
+            slackAlertsEnabled: false,
+        });
     }
 
     const refetchCopyTemplates = async () => {

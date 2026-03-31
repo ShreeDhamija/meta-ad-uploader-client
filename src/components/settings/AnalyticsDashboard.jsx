@@ -50,8 +50,8 @@ export default function AnalyticsDashboard() {
     const [selectedAdAccount, setSelectedAdAccount] = useState(null)
     const [openAdAccount, setOpenAdAccount] = useState(false)
     const [searchValue, setSearchValue] = useState("")
-    const [metricMode, setMetricMode] = useState("cpr") // cpr | roas
-    const [modeAutoDetected, setModeAutoDetected] = useState(false)
+    // const [metricMode, setMetricMode] = useState("cpr") // cpr | roas
+    // const [modeAutoDetected, setModeAutoDetected] = useState(false)
     const [activeTab, setActiveTab] = useState("recommendations")
     const [chartDays, setChartDays] = useState(14)
 
@@ -60,12 +60,12 @@ export default function AnalyticsDashboard() {
 
     // ── Settings 
     const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-    const [anomalyThresholds, setAnomalyThresholds] = useState(DEFAULT_THRESHOLDS)
+    // const [anomalyThresholds, setAnomalyThresholds] = useState(DEFAULT_THRESHOLDS)
     const [tempThresholds, setTempThresholds] = useState(DEFAULT_THRESHOLDS)
 
     // ── Target KPI (lives in settings dialog, feeds recommendations) 
-    const [targetCPA, setTargetCPA] = useState(null)
-    const [targetROAS, setTargetROAS] = useState(null)
+    // const [targetCPA, setTargetCPA] = useState(null)
+    // const [targetROAS, setTargetROAS] = useState(null)
     const [tempTargetCPA, setTempTargetCPA] = useState("")
     const [tempTargetROAS, setTempTargetROAS] = useState("")
 
@@ -78,7 +78,7 @@ export default function AnalyticsDashboard() {
     // ── Slack state 
     const [slackConnected, setSlackConnected] = useState(false)
     const [slackChannelName, setSlackChannelName] = useState(null)
-    const [slackAlertsEnabled, setSlackAlertsEnabled] = useState(false)
+    // const [slackAlertsEnabled, setSlackAlertsEnabled] = useState(false)
     const [tempSlackAlertsEnabled, setTempSlackAlertsEnabled] = useState(false)
     const [slackDisconnecting, setSlackDisconnecting] = useState(false)
     const [showSlackDialog, setShowSlackDialog] = useState(false)
@@ -105,7 +105,7 @@ export default function AnalyticsDashboard() {
     const [auditOpen, setAuditOpen] = useState(false)
     // Track what we've already fetched for this account+mode combo
     const fetchedRef = useRef({})
-    const modeCache = useRef({})
+    // const modeCache = useRef({})
     const dailyInsightsCacheRef = useRef({})
     const dailyInsightsAbortRef = useRef(null)
     const pendingDailySettingsRef = useRef(null)
@@ -119,6 +119,13 @@ export default function AnalyticsDashboard() {
         loading: adAccountSettingsLoading
     } = useAdAccountSettings(selectedAdAccount)
 
+    const metricMode = adAccountSettings?.analyticsMode === 'roas' ? 'roas' : 'cpr'
+    const targetCPA = adAccountSettings?.targetCPA ?? null
+    const targetROAS = adAccountSettings?.targetROAS ?? null
+    const anomalyThresholds = adAccountSettings?.anomalyThresholds ?? DEFAULT_THRESHOLDS
+    const slackAlertsEnabled = adAccountSettings?.slackAlertsEnabled ?? false
+
+
     // ── Show onboarding on first visit ──────────────────────
     useEffect(() => {
         if (!globalSettingsLoading && !adAccountsLoading && adAccounts?.length > 0 && !hasSeenAnalyticsOnboarding) {
@@ -127,41 +134,41 @@ export default function AnalyticsDashboard() {
     }, [globalSettingsLoading, adAccountsLoading, adAccounts, hasSeenAnalyticsOnboarding])
 
     // Sync settings from hook (including analyticsMode + conversionEvent)
-    useEffect(() => {
-        if (!adAccountSettingsLoading && adAccountSettings) {
-            console.log('[Settings Sync]', { mode: adAccountSettings.analyticsMode, event: adAccountSettings.conversionEvent, loading: adAccountSettingsLoading })
-            if (adAccountSettings.anomalyThresholds) {
-                setAnomalyThresholds(adAccountSettings.anomalyThresholds)
-                setTempThresholds(adAccountSettings.anomalyThresholds)
-            }
-            if (adAccountSettings.slackAlertsEnabled !== undefined) {
-                setSlackAlertsEnabled(adAccountSettings.slackAlertsEnabled)
-                setTempSlackAlertsEnabled(adAccountSettings.slackAlertsEnabled)
-            }
-            if (adAccountSettings.targetCPA !== undefined && adAccountSettings.targetCPA !== null) {
-                setTargetCPA(adAccountSettings.targetCPA)
-                setTempTargetCPA(String(adAccountSettings.targetCPA))
-            } else {
-                setTargetCPA(null)
-                setTempTargetCPA("")
-            }
-            if (adAccountSettings.targetROAS !== undefined && adAccountSettings.targetROAS !== null) {
-                setTargetROAS(adAccountSettings.targetROAS)
-                setTempTargetROAS(String(adAccountSettings.targetROAS))
-            } else {
-                setTargetROAS(null)
-                setTempTargetROAS("")
-            }
+    // useEffect(() => {
+    //     if (!adAccountSettingsLoading && adAccountSettings) {
+    //         console.log('[Settings Sync]', { mode: adAccountSettings.analyticsMode, event: adAccountSettings.conversionEvent, loading: adAccountSettingsLoading })
+    //         if (adAccountSettings.anomalyThresholds) {
+    //             setAnomalyThresholds(adAccountSettings.anomalyThresholds)
+    //             setTempThresholds(adAccountSettings.anomalyThresholds)
+    //         }
+    //         if (adAccountSettings.slackAlertsEnabled !== undefined) {
+    //             setSlackAlertsEnabled(adAccountSettings.slackAlertsEnabled)
+    //             setTempSlackAlertsEnabled(adAccountSettings.slackAlertsEnabled)
+    //         }
+    //         if (adAccountSettings.targetCPA !== undefined && adAccountSettings.targetCPA !== null) {
+    //             setTargetCPA(adAccountSettings.targetCPA)
+    //             setTempTargetCPA(String(adAccountSettings.targetCPA))
+    //         } else {
+    //             setTargetCPA(null)
+    //             setTempTargetCPA("")
+    //         }
+    //         if (adAccountSettings.targetROAS !== undefined && adAccountSettings.targetROAS !== null) {
+    //             setTargetROAS(adAccountSettings.targetROAS)
+    //             setTempTargetROAS(String(adAccountSettings.targetROAS))
+    //         } else {
+    //             setTargetROAS(null)
+    //             setTempTargetROAS("")
+    //         }
 
-            // Load saved analytics mode preference
-            if (adAccountSettings.analyticsMode) {
-                const savedMode = adAccountSettings.analyticsMode === 'roas' ? 'roas' : 'cpr'
-                setMetricMode(savedMode)
-                modeCache.current[selectedAdAccount] = savedMode
-                setModeAutoDetected(false)
-            }
-        }
-    }, [adAccountSettingsLoading, adAccountSettings, selectedAdAccount])
+    //         // Load saved analytics mode preference
+    //         if (adAccountSettings.analyticsMode) {
+    //             const savedMode = adAccountSettings.analyticsMode === 'roas' ? 'roas' : 'cpr'
+    //             setMetricMode(savedMode)
+    //             modeCache.current[selectedAdAccount] = savedMode
+    //             setModeAutoDetected(false)
+    //         }
+    //     }
+    // }, [adAccountSettingsLoading, adAccountSettings, selectedAdAccount])
 
     // ── Check Slack connection (per-user, runs once) 
     useEffect(() => {
@@ -196,7 +203,32 @@ export default function AnalyticsDashboard() {
 
 
     // Auto-detect mode from account info (fallback if no saved preference)
+    // const fetchAccountInfo = useCallback(async (accountId) => {
+    //     try {
+    //         const res = await fetch(
+    //             `${API_BASE_URL}/api/analytics/account-info?adAccountId=${accountId}`,
+    //             { credentials: 'include' }
+    //         )
+    //         const data = await res.json()
+
+    //         // Only auto-set if the user hasn't manually selected or saved a mode for this account
+    //         const cached = modeCache.current[accountId]
+    //         console.log('[AutoDetect]', { account: accountId, suggested: data.suggestedMode, cached, settingsLoading: adAccountSettingsLoading, willApply: !cached && res.ok && !!data.suggestedMode })
+
+    //         if (res.ok && data.suggestedMode) {
+    //             setMetricMode(data.suggestedMode)
+    //             setModeAutoDetected(true)
+    //         }
+    //     } catch (err) {
+    //         console.error('Account info error:', err)
+    //     }
+    // }, [])
+
     const fetchAccountInfo = useCallback(async (accountId) => {
+        const key = `account-info-${accountId}`
+        if (fetchedRef.current[key]) return
+        fetchedRef.current[key] = true
+
         try {
             const res = await fetch(
                 `${API_BASE_URL}/api/analytics/account-info?adAccountId=${accountId}`,
@@ -204,18 +236,17 @@ export default function AnalyticsDashboard() {
             )
             const data = await res.json()
 
-            // Only auto-set if the user hasn't manually selected or saved a mode for this account
-            const cached = modeCache.current[accountId]
-            console.log('[AutoDetect]', { account: accountId, suggested: data.suggestedMode, cached, settingsLoading: adAccountSettingsLoading, willApply: !cached && res.ok && !!data.suggestedMode })
-
-            if (res.ok && data.suggestedMode) {
-                setMetricMode(data.suggestedMode)
-                setModeAutoDetected(true)
+            // Only auto-set mode if user has no saved preference
+            if (res.ok && data.suggestedMode && !adAccountSettings?.analyticsMode) {
+                setAdAccountSettings(prev => ({
+                    ...prev,
+                    analyticsMode: data.suggestedMode === 'roas' ? 'roas' : 'cpa'
+                }))
             }
         } catch (err) {
             console.error('Account info error:', err)
         }
-    }, [])
+    }, [adAccountSettings?.analyticsMode, setAdAccountSettings])
 
     // ── Fetch conversion events for settings dialog ─────────
     const fetchConversionEvents = useCallback(async (accountId) => {
@@ -578,25 +609,14 @@ export default function AnalyticsDashboard() {
 
     const handleAdAccountSelect = (accountId) => {
         pendingDailySettingsRef.current = accountId
-        currentAccountRef.current = accountId
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
 
-        // Restore cached mode for this account, or default to 'cpr'
-        if (modeCache.current[accountId]) {
-            setMetricMode(modeCache.current[accountId])
-            setModeAutoDetected(false)
-        } else {
-            setMetricMode("cpr")
-            setModeAutoDetected(false)
-        }
+        // Settings reset happens synchronously in useAdAccountSettings
+        // metricMode, targetCPA, etc. all derive from settings automatically
 
         setRecommendations(null); setAnomalies(null); setPoorAds(null)
         setDailyInsights(null); setWeeklyInsights(null)
-        setTargetCPA(null)
-        setTargetROAS(null)
-        setTempTargetCPA("")
-        setTempTargetROAS("")
         if (dailyInsightsAbortRef.current) {
             dailyInsightsAbortRef.current.abort()
             dailyInsightsAbortRef.current = null
@@ -625,12 +645,9 @@ export default function AnalyticsDashboard() {
         const newTargetCPA = tempTargetCPA ? parseFloat(tempTargetCPA) : null
         const newTargetROAS = tempTargetROAS ? parseFloat(tempTargetROAS) : null
         const modeForStorage = tempAnalyticsMode === 'roas' ? 'roas' : 'cpa'
-        const nextConversionEvent = modeForStorage === 'cpa' ? tempConversionEvent : null
+        const nextConversionEvent = tempConversionEvent
 
         try {
-            console.log('[Settings] Saving for account:', selectedAdAccount)
-            console.log('[Settings Save] writing to DB:', { modeForStorage, nextConversionEvent, targetCPA: newTargetCPA, targetROAS: newTargetROAS })
-
             await saveSettings({
                 adAccountId: selectedAdAccount,
                 adAccountSettings: {
@@ -643,11 +660,8 @@ export default function AnalyticsDashboard() {
                 }
             })
 
-            setAnomalyThresholds(tempThresholds)
-            setTargetCPA(newTargetCPA)
-            setTargetROAS(newTargetROAS)
-            setSlackAlertsEnabled(tempSlackAlertsEnabled)
-            setAdAccountSettings((prev) => ({
+            // One update — all derived values update in a single render
+            setAdAccountSettings(prev => ({
                 ...prev,
                 anomalyThresholds: tempThresholds,
                 targetCPA: newTargetCPA,
@@ -656,20 +670,11 @@ export default function AnalyticsDashboard() {
                 analyticsMode: modeForStorage,
                 conversionEvent: nextConversionEvent,
             }))
-            console.log('[Settings Save] local state updated:', { metricMode, newMode: tempAnalyticsMode === 'roas' ? 'roas' : 'cpr', modeWillChange: (tempAnalyticsMode === 'roas' ? 'roas' : 'cpr') !== metricMode })
-
             setShowSettingsDialog(false)
 
-            const newMode = tempAnalyticsMode === 'roas' ? 'roas' : 'cpr'
-            if (newMode !== metricMode) {
-                handleModeChange(newMode)
-            }
-
-            delete fetchedRef.current[`anomalies-${selectedAdAccount}`]
-            delete fetchedRef.current[`recs-${selectedAdAccount}-${metricMode}`]
-            // FIXED: Also invalidate poor ads cache when conversion event changes
+            // Clear all caches for this account so effects re-fetch with new values
             Object.keys(fetchedRef.current).forEach(k => {
-                if (k.startsWith(`poor-${selectedAdAccount}`)) delete fetchedRef.current[k]
+                if (k.includes(selectedAdAccount)) delete fetchedRef.current[k]
             })
             clearDailyInsightsCache(selectedAdAccount)
 
@@ -679,13 +684,8 @@ export default function AnalyticsDashboard() {
                 days: chartDays,
                 conversionEvent: nextConversionEvent,
             })
+
             toast.success('Settings saved')
-            // if (activeTab === 'recommendations') {
-            //     setTimeout(() => {
-            //         fetchRecommendations(true)
-            //         fetchPoorAds(true)
-            //     }, 100)
-            // }
         } catch (err) {
             console.error('[Settings] Save FAILED:', err.message)
             toast.error(`Failed to save settings: ${err.message}`)
@@ -695,22 +695,19 @@ export default function AnalyticsDashboard() {
     }
 
 
-
     const handleModeChange = (mode) => {
-        setMetricMode(mode)
+        // Update the single source of truth — metricMode derives from this
+        setAdAccountSettings(prev => ({
+            ...prev,
+            analyticsMode: mode === 'roas' ? 'roas' : 'cpa'
+        }))
 
-        // Save preference to cache
-        if (selectedAdAccount) {
-            modeCache.current[selectedAdAccount] = mode
-        }
-
-        setModeAutoDetected(false)
         setRecommendations(null)
         setPoorAds(null)
-        const prefix = `recs-${selectedAdAccount}`
-        const poorPrefix = `poor-${selectedAdAccount}`
         Object.keys(fetchedRef.current).forEach(k => {
-            if (k.startsWith(prefix) || k.startsWith(poorPrefix)) delete fetchedRef.current[k]
+            if (k.startsWith(`recs-${selectedAdAccount}`) || k.startsWith(`poor-${selectedAdAccount}`)) {
+                delete fetchedRef.current[k]
+            }
         })
     }
 
@@ -1068,7 +1065,7 @@ export default function AnalyticsDashboard() {
                 slackConnected={slackConnected}
                 slackChannelName={slackChannelName}
                 slackAlertsEnabled={slackAlertsEnabled}
-                onSlackAlertsEnabledChange={setSlackAlertsEnabled}
+                onSlackAlertsEnabledChange={(val) => setAdAccountSettings(prev => ({ ...prev, slackAlertsEnabled: val }))}
                 onSlackDisconnect={handleSlackDisconnect}
                 slackDisconnecting={slackDisconnecting}
             />
