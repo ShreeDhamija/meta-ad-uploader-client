@@ -2,12 +2,13 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { Helix } from "ldrs/react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
     TrendingUp, TrendingDown, Pause, Loader2, XCircle, Activity,
-    Star, ArrowUpRight, ArrowDownRight, Eye, CheckCircle2, AlertTriangle, Zap, ChevronDown,
+    Star, Eye, CheckCircle2, AlertTriangle, Zap, ChevronDown,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -16,6 +17,15 @@ import {
 import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+function HelixLoader({ color = "black", size = "45", label }) {
+    return (
+        <div className="flex flex-col items-center justify-center gap-3">
+            <Helix size={size} speed="2.5" color={color} />
+            {label ? <p className="text-sm text-gray-500">{label}</p> : null}
+        </div>
+    )
+}
 
 // ── Bold figures in recommendation messages ──────────────
 // Wraps $amounts, percentages, and multiplier values in <strong> tags
@@ -182,11 +192,6 @@ export default function RecommendationCards({
         }
     }
 
-    const formatMetric = (value, metric) => {
-        if (value === null || value === undefined) return 'N/A'
-        return metric === 'ROAS' ? `${value.toFixed(2)}x` : `$${value.toFixed(2)}`
-    }
-
     // ── Poor Performing Ads Logic ───────────────────────
     const ads = useMemo(() => {
         if (!poorAdsData?.ads) return []
@@ -195,6 +200,7 @@ export default function RecommendationCards({
 
     const allSelected = ads.length > 0 && selected.size === ads.length
     const someSelected = selected.size > 0 && selected.size < ads.length
+    const bulkPauseLabel = `Pause ${selected.size} Selected`
 
     const toggleSelect = (adId) => {
         setSelected(prev => {
@@ -281,10 +287,7 @@ export default function RecommendationCards({
         return (
             <Card className="rounded-2xl">
                 <CardContent className="py-12">
-                    <div className="flex flex-col items-center justify-center gap-3">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                        <p className="text-sm text-gray-500">Analyzing your campaigns...</p>
-                    </div>
+                    <HelixLoader color="#3b82f6" label="Analyzing your campaigns..." />
                 </CardContent>
             </Card>
         )
@@ -314,10 +317,7 @@ export default function RecommendationCards({
                 {loading ? (
                     <Card className="rounded-2xl">
                         <CardContent className="py-10">
-                            <div className="flex flex-col items-center justify-center gap-3">
-                                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                                <p className="text-sm text-gray-500">Generating recommendations...</p>
-                            </div>
+                            <HelixLoader color="#3b82f6" size="36" label="Generating recommendations..." />
                         </CardContent>
                     </Card>
                 ) : (
@@ -583,10 +583,7 @@ export default function RecommendationCards({
                 {(poorAdsLoading || !poorAdsData) ? (
                     <Card className="rounded-2xl">
                         <CardContent className="py-10">
-                            <div className="flex flex-col items-center justify-center gap-3">
-                                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                                <p className="text-sm text-gray-500">Scanning for poor performing ads...</p>
-                            </div>
+                            <HelixLoader color="#ef4444" size="36" label="Scanning for poor performing ads..." />
                         </CardContent>
                     </Card>
                 ) : ads.length === 0 ? (
@@ -608,57 +605,48 @@ export default function RecommendationCards({
                                 {poorAdsData.primaryActionType && <span className="ml-3">Primary Event: <span className="font-medium text-gray-700">{poorAdsData.primaryActionType.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span></span>}                            </div>
                         )}
 
-                        {/* Bulk action bar */}
-                        {selected.size > 0 && (
-                            <Card className="rounded-2xl border-red-200 bg-red-50/30">
-                                <CardContent className="p-3">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm font-medium text-red-700">
-                                            {selected.size} ad{selected.size > 1 ? 's' : ''} selected
-                                        </span>
-                                        <Button
-                                            size="sm"
-                                            onClick={() => setConfirmDialog({ type: 'bulk', count: selected.size })}
-                                            disabled={pausingId === 'bulk'}
-                                            className="rounded-xl bg-red-600 hover:bg-red-700 text-xs"
-                                        >
-                                            {pausingId === 'bulk' ? (
-                                                <Loader2 className="w-4 h-4 animate-spin mr-1" />
-                                            ) : (
-                                                <Pause className="w-3 h-3 mr-1" />
-                                            )}
-                                            Pause Selected
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
                         {/* Ads list */}
                         <div className="space-y-2">
                             {/* Select all header */}
-                            <div className="flex items-center gap-3 px-4 py-2">
-                                <button
-                                    onClick={toggleSelectAll}
-                                    className={cn(
-                                        "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors",
-                                        allSelected ? "bg-red-600 border-red-600" :
-                                            someSelected ? "bg-red-200 border-red-400" :
-                                                "border-gray-300 hover:border-gray-400"
-                                    )}
-                                >
-                                    {(allSelected || someSelected) && (
-                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                            {allSelected
-                                                ? <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                : <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
-                                            }
-                                        </svg>
-                                    )}
-                                </button>
-                                <span className="text-xs text-gray-500 font-medium">
-                                    Select {ads.length} poor performing ad{ads.length > 1 ? 's' : ''}
-                                </span>
+                            <div className="flex items-center justify-between gap-3 px-4 py-2">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <button
+                                        onClick={toggleSelectAll}
+                                        className={cn(
+                                            "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors",
+                                            allSelected ? "bg-red-600 border-red-600" :
+                                                someSelected ? "bg-red-200 border-red-400" :
+                                                    "border-gray-300 hover:border-gray-400"
+                                        )}
+                                    >
+                                        {(allSelected || someSelected) && (
+                                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                {allSelected
+                                                    ? <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                    : <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                                                }
+                                            </svg>
+                                        )}
+                                    </button>
+                                    <span className="text-xs text-gray-500 font-medium">
+                                        Select {ads.length} poor performing ad{ads.length > 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                                {selected.size > 0 && (
+                                    <Button
+                                        size="sm"
+                                        onClick={() => setConfirmDialog({ type: 'bulk', count: selected.size })}
+                                        disabled={pausingId === 'bulk'}
+                                        className="rounded-xl bg-red-600 hover:bg-red-700 text-xs text-white flex-shrink-0"
+                                    >
+                                        {pausingId === 'bulk' ? (
+                                            <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                                        ) : (
+                                            <Pause className="w-3 h-3 mr-1" />
+                                        )}
+                                        {bulkPauseLabel}
+                                    </Button>
+                                )}
                             </div>
 
                             {ads.map((ad) => {
@@ -733,10 +721,10 @@ export default function RecommendationCards({
 
                                                 {/* Pause button */}
                                                 <Button
-                                                    size="sm" variant="outline"
+                                                    size="sm"
                                                     onClick={() => setConfirmDialog({ type: 'single', ad })}
                                                     disabled={isPausing}
-                                                    className="rounded-xl text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 flex-shrink-0"
+                                                    className="rounded-xl text-xs bg-red-600 text-white hover:bg-red-700 flex-shrink-0"
                                                 >
                                                     {isPausing ? (
                                                         <Loader2 className="w-3 h-3 animate-spin" />

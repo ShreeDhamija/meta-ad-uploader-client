@@ -10,6 +10,7 @@ import {
     AlertTriangle, RefreshCw, Loader2, ChevronsUpDown,
     Target, Settings2, Activity, Zap, Eye, CheckCircle2, BarChart3, FileBarChart2, FileText
 } from "lucide-react"
+import { Helix } from "ldrs/react"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
@@ -74,6 +75,7 @@ export default function AnalyticsDashboard() {
     const [tempConversionEvent, setTempConversionEvent] = useState(null)
     const [conversionEvents, setConversionEvents] = useState([])
     const [conversionEventsLoading, setConversionEventsLoading] = useState(false)
+    const [stableMetricMode, setStableMetricMode] = useState("cpr")
 
     // ── Slack state 
     const [slackConnected, setSlackConnected] = useState(false)
@@ -119,11 +121,18 @@ export default function AnalyticsDashboard() {
         loading: adAccountSettingsLoading
     } = useAdAccountSettings(selectedAdAccount)
 
-    const metricMode = adAccountSettings?.analyticsMode === 'roas' ? 'roas' : 'cpr'
+    const metricMode = adAccountSettingsLoading
+        ? stableMetricMode
+        : adAccountSettings?.analyticsMode === 'roas' ? 'roas' : 'cpr'
     const targetCPA = adAccountSettings?.targetCPA ?? null
     const targetROAS = adAccountSettings?.targetROAS ?? null
     const anomalyThresholds = adAccountSettings?.anomalyThresholds ?? DEFAULT_THRESHOLDS
     const slackAlertsEnabled = adAccountSettings?.slackAlertsEnabled ?? false
+
+    useEffect(() => {
+        if (adAccountSettingsLoading) return
+        setStableMetricMode(adAccountSettings?.analyticsMode === 'roas' ? 'roas' : 'cpr')
+    }, [adAccountSettingsLoading, adAccountSettings?.analyticsMode])
 
 
     // ── Show onboarding on first visit ──────────────────────
@@ -200,6 +209,8 @@ export default function AnalyticsDashboard() {
     const anomalyCount = anomalies?.summary?.total || 0
     const recsCount = recommendations?.recommendations?.length || 0
     const poorAdsCount = poorAds?.ads?.length || 0
+    const recommendationsTabLoading = recsLoading || poorAdsLoading
+    const shouldShowRecommendationsCount = !recommendationsTabLoading && (recommendations || poorAds)
 
 
     // Auto-detect mode from account info (fallback if no saved preference)
@@ -610,6 +621,11 @@ export default function AnalyticsDashboard() {
     const handleAdAccountSelect = (accountId) => {
         currentAccountRef.current = accountId  // ← add this
         pendingDailySettingsRef.current = accountId
+        setRecsLoading(true)
+        setPoorAdsLoading(true)
+        setAnomaliesLoading(true)
+        setDailyLoading(true)
+        setWeeklyLoading(true)
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
 
@@ -698,11 +714,14 @@ export default function AnalyticsDashboard() {
 
     const handleModeChange = (mode) => {
         // Update the single source of truth — metricMode derives from this
+        setStableMetricMode(mode)
         setAdAccountSettings(prev => ({
             ...prev,
             analyticsMode: mode === 'roas' ? 'roas' : 'cpa'
         }))
 
+        setRecsLoading(true)
+        setPoorAdsLoading(true)
         setRecommendations(null)
         setPoorAds(null)
         Object.keys(fetchedRef.current).forEach(k => {
@@ -951,11 +970,15 @@ export default function AnalyticsDashboard() {
                         <Zap className="w-4 h-4" />
                         <span className="hidden sm:inline">Recommendations</span>
                         <span className="sm:hidden">Recs</span>
-                        {(recsCount + poorAdsCount) > 0 && (
+                        {recommendationsTabLoading ? (
+                            <span className="ml-1 inline-flex items-center justify-center rounded-2xl bg-blue-100 px-2 py-1">
+                                <Helix size="16" speed="2.5" color="#1d4ed8" />
+                            </span>
+                        ) : shouldShowRecommendationsCount && (recsCount + poorAdsCount) > 0 ? (
                             <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-2xl">
                                 {recsCount} + {poorAdsCount}
                             </Badge>
-                        )}
+                        ) : null}
                     </button>
                     <button
                         onClick={() => setActiveTab('anomalies')}
