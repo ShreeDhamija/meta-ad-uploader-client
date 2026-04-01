@@ -10,7 +10,8 @@ import {
     AlertTriangle, RefreshCw, Loader2, ChevronsUpDown,
     Target, Settings2, Activity, Zap, Eye, CheckCircle2, BarChart3, FileBarChart2, FileText
 } from "lucide-react"
-import { Helix } from "ldrs/react"
+import { DotSpinner } from "ldrs/react"
+import "ldrs/react/DotSpinner.css"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
@@ -321,8 +322,6 @@ export default function AnalyticsDashboard() {
             if (adAccountSettings?.conversionEvent) {
                 url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
             }
-            console.log('[Recs Fetch]', { mode: metricMode, event: adAccountSettings?.conversionEvent, targetCPA, targetROAS, force, url })
-
             const res = await fetch(url, { credentials: 'include' })
             const data = await res.json()
 
@@ -569,7 +568,6 @@ export default function AnalyticsDashboard() {
 
     useEffect(() => {
         if (!selectedAdAccount) return
-        console.log('[Fetch Trigger]', { tab: activeTab, metricMode, settingsLoading: adAccountSettingsLoading, event: adAccountSettings?.conversionEvent })
         if (adAccountSettingsLoading) return  // ← add this guard
 
         if (activeTab === 'recommendations') {
@@ -972,7 +970,7 @@ export default function AnalyticsDashboard() {
                         <span className="sm:hidden">Recs</span>
                         {recommendationsTabLoading ? (
                             <span className="ml-1 inline-flex items-center justify-center rounded-2xl bg-blue-100 px-2 py-1">
-                                <Helix size="16" speed="2.5" color="#1d4ed8" />
+                                <DotSpinner size="16" speed="0.9" color="#1d4ed8" />
                             </span>
                         ) : shouldShowRecommendationsCount && (recsCount + poorAdsCount) > 0 ? (
                             <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-2xl">
