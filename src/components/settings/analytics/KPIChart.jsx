@@ -147,7 +147,7 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
 
                 {loading ? (
                     <div className="flex items-center justify-center h-[200px]">
-                        <Helix size="36" speed="2.5" color="#9ca3af" />
+                        <Helix size="36" speed="2.5" color="#3b82f6" />
                     </div>
                 ) : chartData.length === 0 ? (
                     <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">

@@ -2,10 +2,12 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { Helix } from "ldrs/react"
+import "ldrs/react/Helix.css"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ChevronDown, Loader2, CheckCircle2 } from "lucide-react"
+import { ChevronDown, CheckCircle2 } from "lucide-react"
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer,
@@ -169,7 +171,7 @@ export default function WeeklyChart({ data, loading }) {
 
                 {loading ? (
                     <div className="flex items-center justify-center h-[200px]">
-                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                        <Helix size="36" speed="2.5" color="#3b82f6" />
                     </div>
                 ) : chartData.length === 0 ? (
                     <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
