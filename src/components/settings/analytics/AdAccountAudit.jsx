@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { Helix } from "ldrs/react"
+import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
 import {
-    Loader2, FileBarChart2, TrendingUp, Filter, DollarSign,
+    FileBarChart2, TrendingUp, Filter, DollarSign,
     Users, GraduationCap, FileText, Sparkles, LayoutDashboard,
 } from "lucide-react"
 import {
@@ -719,7 +721,9 @@ function OpportunitiesSection({ text, isLoading, error }) {
 
             {isLoading && (
                 <div className="flex flex-col items-center justify-center py-16">
-                    <Loader2 className="w-7 h-7 animate-spin mb-3" style={{ color: BLUE }} />
+                    <div className="mb-3">
+                        <Helix size="40" speed="2.5" color={BLUE} />
+                    </div>
                     <p className="text-sm font-medium text-gray-600">Generating suggestions…</p>
                     <p className="text-xs text-gray-400 mt-1">Analyzing your account data with AI</p>
                 </div>
@@ -808,11 +812,7 @@ export default function AdAccountAudit({
         try {
             const res = await fetch(`${API_BASE_URL}/api/analytics/audit/report?${params}`, { credentials: "include" })
             if (!res.ok) { const err = await res.json(); setError(err.error || "Failed to generate report"); return }
-            const data = await res.json(); setReport(data); fetchOpportunities(data)
-
-            console.log('[AUDIT FE] conversionEvent prop:', conversionEvent);
-            console.log('[AUDIT FE] kpiType:', kpiType);
-            console.log('[AUDIT FE] monthlySpend kpi values:', data.monthlySpend?.map(m => ({ month: m.month, kpi: m.kpi })));
+            const data = await res.json()
             setReport(data); fetchOpportunities(data)
         } catch (e) { setError("Network error — please try again.") }
         finally { setIsGenerating(false) }
@@ -943,7 +943,9 @@ export default function AdAccountAudit({
                         <div ref={contentRef} className="flex-1 overflow-y-auto p-5 custom-scrollbar" style={{ background: "#f8f9fb" }}>
                             {isGenerating && (
                                 <div className="flex flex-col items-center justify-center py-24 text-sm text-gray-500">
-                                    <Loader2 className="w-8 h-8 animate-spin mb-3" style={{ color: BLUE }} />
+                                    <div className="mb-3">
+                                        <Helix size="44" speed="2.5" color={BLUE} />
+                                    </div>
                                     <p className="font-medium text-gray-600">Fetching account data from Meta…</p>
                                     <p className="text-xs text-gray-400 mt-1">This usually takes 5–15 seconds</p>
                                 </div>

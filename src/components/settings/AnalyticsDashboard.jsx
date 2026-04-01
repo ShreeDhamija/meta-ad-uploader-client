@@ -10,8 +10,6 @@ import {
     AlertTriangle, RefreshCw, Loader2, ChevronsUpDown,
     Target, Settings2, Activity, Zap, Eye, CheckCircle2, BarChart3, FileBarChart2, FileText
 } from "lucide-react"
-import { DotSpinner } from "ldrs/react"
-import "ldrs/react/DotSpinner.css"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
@@ -146,7 +144,6 @@ export default function AnalyticsDashboard() {
     // Sync settings from hook (including analyticsMode + conversionEvent)
     // useEffect(() => {
     //     if (!adAccountSettingsLoading && adAccountSettings) {
-    //         console.log('[Settings Sync]', { mode: adAccountSettings.analyticsMode, event: adAccountSettings.conversionEvent, loading: adAccountSettingsLoading })
     //         if (adAccountSettings.anomalyThresholds) {
     //             setAnomalyThresholds(adAccountSettings.anomalyThresholds)
     //             setTempThresholds(adAccountSettings.anomalyThresholds)
@@ -225,7 +222,6 @@ export default function AnalyticsDashboard() {
 
     //         // Only auto-set if the user hasn't manually selected or saved a mode for this account
     //         const cached = modeCache.current[accountId]
-    //         console.log('[AutoDetect]', { account: accountId, suggested: data.suggestedMode, cached, settingsLoading: adAccountSettingsLoading, willApply: !cached && res.ok && !!data.suggestedMode })
 
     //         if (res.ok && data.suggestedMode) {
     //             setMetricMode(data.suggestedMode)
@@ -968,11 +964,7 @@ export default function AnalyticsDashboard() {
                         <Zap className="w-4 h-4" />
                         <span className="hidden sm:inline">Recommendations</span>
                         <span className="sm:hidden">Recs</span>
-                        {recommendationsTabLoading ? (
-                            <span className="ml-1 inline-flex items-center justify-center rounded-2xl bg-blue-100 px-2 py-1">
-                                <DotSpinner size="16" speed="0.9" color="#1d4ed8" />
-                            </span>
-                        ) : shouldShowRecommendationsCount && (recsCount + poorAdsCount) > 0 ? (
+                        {!recommendationsTabLoading && shouldShowRecommendationsCount && (recsCount + poorAdsCount) > 0 ? (
                             <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-2xl">
                                 {recsCount} + {poorAdsCount}
                             </Badge>

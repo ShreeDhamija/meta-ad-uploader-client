@@ -1,8 +1,9 @@
 "use client"
 
 import { useMemo, useState, useCallback, useRef, useEffect } from "react"
+import { Helix } from "ldrs/react"
+import "ldrs/react/Helix.css"
 import { Card, CardContent } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -146,7 +147,7 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
 
                 {loading ? (
                     <div className="flex items-center justify-center h-[200px]">
-                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                        <Helix size="36" speed="2.5" color="#9ca3af" />
                     </div>
                 ) : chartData.length === 0 ? (
                     <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">

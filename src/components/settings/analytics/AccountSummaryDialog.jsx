@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Loader2, RefreshCw, FileText, ClipboardList, Lightbulb } from "lucide-react"
+import { Helix } from "ldrs/react"
+import "ldrs/react/Helix.css"
+import { RefreshCw, FileText, ClipboardList, Lightbulb } from "lucide-react"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -143,7 +145,7 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId }) {
                     <div className="flex-1 overflow-y-auto min-h-0 px-8 py-6">
                         {loading && !summary && (
                             <div className="flex flex-col items-center justify-center py-12 gap-3">
-                                <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                                <Helix size="36" speed="2.5" color="#3b82f6" />
                                 <p className="text-sm text-gray-500">Generating summary...</p>
                                 <p className="text-xs text-gray-400">This may take a few seconds</p>
                             </div>
@@ -151,7 +153,7 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId }) {
 
                         {loading && summary && (
                             <div className="mb-3 flex items-center gap-2 text-xs text-blue-600">
-                                <Loader2 className="w-3 h-3 animate-spin" />
+                                <Helix size="16" speed="2.5" color="#2563eb" />
                                 Regenerating...
                             </div>
                         )}
