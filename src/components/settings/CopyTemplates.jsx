@@ -193,18 +193,26 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
+  const hasFilledTextValue = useCallback((text) => text.trim() !== "", [])
+  const hasFilledDescriptionValue = useCallback((text) => text !== "", [])
+  const filterFilledTexts = useCallback((items) => items.filter(hasFilledTextValue), [hasFilledTextValue])
+  const filterFilledDescriptions = useCallback(
+    (items) => items.filter(hasFilledDescriptionValue),
+    [hasFilledDescriptionValue]
+  )
+
   // Detect duplicate values within each field type
   const duplicateIndices = useMemo(() => {
-    const findDupes = (arr) => {
+    const findDupes = (arr, { trimValues = true } = {}) => {
       const dupes = new Set();
       const seen = {};
       arr.forEach((val, i) => {
-        const trimmed = val.trim().toLowerCase();
-        if (!trimmed) return;
-        if (trimmed in seen) {
+        const normalized = (trimValues ? val.trim() : val).toLowerCase();
+        if (!normalized) return;
+        if (normalized in seen) {
           dupes.add(i); // mark the 2nd (and 3rd, etc.) occurrence
         } else {
-          seen[trimmed] = i;
+          seen[normalized] = i;
         }
       });
       return dupes;
@@ -213,7 +221,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     return {
       primaryTexts: findDupes(primaryTexts),
       headlines: findDupes(headlines),
-      descriptions: findDupes(descriptions),
+      descriptions: findDupes(descriptions, { trimValues: false }),
     };
   }, [primaryTexts, headlines, descriptions]);
 
@@ -229,10 +237,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     // Brand new template → trigger warning as soon as any field has content
     if (!currentTemplate?.id && !currentTemplate?.name) {
       return !!(
-        descriptions.some(text => text.trim()) ||
+        descriptions.some(hasFilledDescriptionValue) ||
         templateName.trim() ||
-        primaryTexts.some(text => text.trim()) ||
-        headlines.some(text => text.trim())
+        primaryTexts.some(hasFilledTextValue) ||
+        headlines.some(hasFilledTextValue)
       );
     }
 
@@ -241,7 +249,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       templateName !== currentTemplate.name ||
       JSON.stringify(primaryTexts) !== JSON.stringify(currentTemplate.primaryTexts || []) ||
       JSON.stringify(headlines) !== JSON.stringify(currentTemplate.headlines || []) ||
-      JSON.stringify(addDescriptions ? descriptions.filter(t => t.trim()) : []) !== JSON.stringify(currentTemplate.descriptions || [])
+      JSON.stringify(addDescriptions ? filterFilledDescriptions(descriptions) : []) !== JSON.stringify(currentTemplate.descriptions || [])
     );
   }, [
     templateName,
@@ -249,7 +257,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     primaryTexts,
     headlines,
     descriptions,
-
+    addDescriptions,
+    hasFilledDescriptionValue,
+    hasFilledTextValue,
+    filterFilledDescriptions,
   ]);
 
   // const blocker = useBlocker(() => templateChanged);
@@ -472,9 +483,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       return
     }
 
-    const filteredPrimaryTexts = primaryTexts.filter(text => text.trim() !== "");
-    const filteredHeadlines = headlines.filter(text => text.trim() !== "");
-    const filteredDescriptions = descriptions.filter(text => text.trim() !== "");
+    const filteredPrimaryTexts = filterFilledTexts(primaryTexts);
+    const filteredHeadlines = filterFilledTexts(headlines);
+    const filteredDescriptions = filterFilledDescriptions(descriptions);
 
 
     const newTemplate = {
@@ -552,9 +563,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const handleSetAsDefault = async () => {
     if (!templateName.trim() || defaultName === templateName) return
 
-    const filteredPrimaryTexts = primaryTexts.filter(text => text.trim() !== "");
-    const filteredHeadlines = headlines.filter(text => text.trim() !== "");
-    const filteredDescriptions = descriptions.filter(text => text.trim() !== "");
+    const filteredPrimaryTexts = filterFilledTexts(primaryTexts);
+    const filteredHeadlines = filterFilledTexts(headlines);
+    const filteredDescriptions = filterFilledDescriptions(descriptions);
 
     const updatedTemplate = {
       name: templateName,
@@ -622,7 +633,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     } finally {
       setIsProcessing(false)
     }
-  }, [selectedAdAccount, setAdSettings])
+  }, [selectedAdAccount, setAdSettings, filterFilledDescriptions, filterFilledTexts])
 
   const availableTemplates = useMemo(() =>
     Object.entries(templates).sort(([a], [b]) => {
@@ -911,12 +922,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               )}
             </div>
 
-            {primaryTexts.length > 1 && (
-              <Trash2
-                className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
-                onClick={() => handleRemove(i, setPrimaryTexts, primaryTexts)}
-              />
-            )}
+            <Trash2
+              className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
+              onClick={() => handleRemove(i, setPrimaryTexts, primaryTexts)}
+            />
           </div>
         ))}
         {primaryTexts.length < 5 && (
@@ -950,12 +959,10 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
               )}
             </div>
-            {headlines.length > 1 && (
-              <Trash2
-                className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
-                onClick={() => handleRemove(i, setHeadlines, headlines)}
-              />
-            )}
+            <Trash2
+              className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
+              onClick={() => handleRemove(i, setHeadlines, headlines)}
+            />
           </div>
         ))}
         {headlines.length < 5 && (
@@ -1030,13 +1037,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || hasDuplicates || !(primaryTexts.some(t => t.trim()) || headlines.some(t => t.trim()))}
+          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || hasDuplicates || !(primaryTexts.some(hasFilledTextValue) || headlines.some(hasFilledTextValue))}
         >
           {nameAlreadyExists
             ? "This template name already exists"
             : isProcessing
               ? "Saving..."
-              : !templateName.trim() && (primaryTexts.some(t => t.trim()) || headlines.some(t => t.trim()))
+              : !templateName.trim() && (primaryTexts.some(hasFilledTextValue) || headlines.some(hasFilledTextValue))
                 ? "Enter Template Name to Save"
                 : "Save Template"
           }
