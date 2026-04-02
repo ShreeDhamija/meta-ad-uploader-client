@@ -2587,7 +2587,7 @@ export default function AdCreationForm({
     return (
       JSON.stringify(messages.filter(t => t.trim())) !== JSON.stringify(tpl.primaryTexts || []) ||
       JSON.stringify(headlines.filter(t => t.trim())) !== JSON.stringify(tpl.headlines || []) ||
-      JSON.stringify((descriptions || []).filter(t => t.trim())) !== JSON.stringify(tpl.descriptions || [])
+      JSON.stringify((descriptions || []).filter(t => t !== "")) !== JSON.stringify(tpl.descriptions || [])
     );
   }, [messages, headlines, descriptions, copyTemplates, selectedTemplate]);
 
@@ -2612,7 +2612,7 @@ export default function AdCreationForm({
   const existingDuplicateTemplate = useMemo(() => {
     const currentPrimary = JSON.stringify(messages.filter(t => t.trim()).sort());
     const currentHL = JSON.stringify(headlines.filter(t => t.trim()).sort());
-    const currentDescs = JSON.stringify((descriptions || []).filter(t => t.trim()).sort());
+    const currentDescs = JSON.stringify((descriptions || []).filter(t => t !== "").sort());
     for (const [name, tpl] of Object.entries(copyTemplates)) {
       if (name === selectedTemplate) continue;
       if (
@@ -2633,7 +2633,7 @@ export default function AdCreationForm({
         name,
         primaryTexts: messages.filter(t => t.trim()),
         headlines: headlines.filter(t => t.trim()),
-        descriptions: (descriptions || []).filter(t => t.trim()),
+        descriptions: (descriptions || []).filter(t => t !== ""),
       };
       await saveCopyTemplate(selectedAdAccount, name, templateData, false);
       preferredTemplateRef.current = name;
@@ -2657,7 +2657,7 @@ export default function AdCreationForm({
         name: selectedTemplate,
         primaryTexts: messages.filter(t => t.trim()),
         headlines: headlines.filter(t => t.trim()),
-        descriptions: (descriptions || []).filter(t => t.trim()),
+        descriptions: (descriptions || []).filter(t => t !== ""),
       };
       await saveCopyTemplate(selectedAdAccount, selectedTemplate, templateData, false);
       preferredTemplateRef.current = selectedTemplate;
@@ -6256,7 +6256,7 @@ export default function AdCreationForm({
                     {/* Descriptions Section - only show if template has descriptions */}
 
 
-                    {(isCarouselAd || descriptions.some(d => d.trim())) && (
+                    {(isCarouselAd || descriptions.some(d => d !== "")) && (
                       <div className="space-y-2">
                         <Label>{isCarouselAd ? "Primary Text" : "Descriptions"}</Label>
                         <div className="space-y-3">
