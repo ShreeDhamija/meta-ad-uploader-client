@@ -1168,9 +1168,7 @@ export default function AnalyticsDashboard() {
                                                         </div>
                                                     ) : conversionEvents.length > 0 ? (
                                                         <div className="max-h-[150px] overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 custom-scrollbar">
-                                                            {conversionEvents.filter(e => e.totalAdsets > 0 || e.activeAdsets > 0).concat(
-                                                                conversionEvents.filter(e => e.totalAdsets === 0 && e.activeAdsets === 0)
-                                                            ).map((evt) => {
+                                                            {conversionEvents.map((evt) => {
                                                                 const isSelected = tempConversionEvent === evt.event
                                                                 return (
                                                                     <button
@@ -1188,9 +1186,9 @@ export default function AnalyticsDashboard() {
                                                                             )}>
                                                                                 {evt.label}
                                                                             </p>
-                                                                            {evt.activeAdsets > 0 && (
+                                                                            {evt.count > 0 && (
                                                                                 <p className="text-[10px] text-gray-400">
-                                                                                    {evt.activeAdsets} active ad set{evt.activeAdsets !== 1 ? 's' : ''}
+                                                                                    {evt.count} ad set{evt.count !== 1 ? 's' : ''}
                                                                                 </p>
                                                                             )}
                                                                         </div>

@@ -22,6 +22,22 @@ function truncateName(name) {
     return name.length > MAX_NAME_LENGTH ? name.slice(0, MAX_NAME_LENGTH) + '…' : name
 }
 
+
+function formatEventName(actionType) {
+    if (!actionType) return 'Unknown';
+    if (actionType.startsWith('offsite_conversion.fb_pixel_custom.')) {
+        return actionType.slice('offsite_conversion.fb_pixel_custom.'.length)
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+    if (actionType === 'offsite_conversion.fb_pixel_custom') return 'Custom Event';
+    if (actionType.startsWith('offsite_conversion.custom.')) return 'Custom Conversion';
+    if (actionType.startsWith('offsite_conversion.fb_pixel_')) {
+        return actionType.slice('offsite_conversion.fb_pixel_'.length)
+            .replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+    return actionType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
 export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
     const { chartData, campaigns, avgValue } = useMemo(() => {
         if (!data?.dailyInsights?.length) return { chartData: [], campaigns: [], avgValue: 0 }
@@ -119,8 +135,9 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                     <div>
                         <p className="text-sm font-medium text-gray-900">Daily {metricLabel} by Campaign</p>
                         <p className="text-xs text-gray-400">
-                            {data?.primaryActionType ? `Event: ${data.primaryActionType.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}` : 'Auto-detected event'}
-
+                            {data?.primaryActionType
+                                ? `Event: ${formatEventName(data.primaryActionType)}`
+                                : 'Auto-detected event'}
                         </p>
                     </div>
                     <div className="flex p-0.5 bg-gray-100 rounded-lg border border-gray-200/60">
