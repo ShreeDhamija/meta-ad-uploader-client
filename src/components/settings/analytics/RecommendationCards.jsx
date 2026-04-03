@@ -345,10 +345,10 @@ export default function RecommendationCards({
                         {data && (
                             <div className="flex items-center gap-4 text-xs text-gray-500 px-1">
                                 {data.accountAverageCPA > 0 && mode === 'cpr' && (
-                                    <span>Account Avg CPA: <span className="font-medium text-gray-700">${data.accountAverageCPA.toFixed(2)}</span></span>
+                                    <span>Account Avg CPA (3d): <span className="font-medium text-gray-700">${data.accountAverageCPA.toFixed(2)}</span></span>
                                 )}
                                 {data.accountAverageROAS > 0 && mode === 'roas' && (
-                                    <span>Account Avg ROAS: <span className="font-medium text-gray-700">{data.accountAverageROAS.toFixed(2)}x</span></span>
+                                    <span>Account Avg ROAS (3d): <span className="font-medium text-gray-700">{data.accountAverageROAS.toFixed(2)}x</span></span>
                                 )}
                                 {data.primaryResultType && (
                                     <span>Primary Event: <span className="font-medium text-gray-700">{formatEventName(data.primaryResultType)}</span></span>
@@ -620,7 +620,7 @@ export default function RecommendationCards({
                         {/* Account average context */}
                         {poorAdsData?.accountAverageCPA > 0 && mode === 'cpr' && (
                             <div className="text-xs text-gray-500 px-1">
-                                Account Average CPA: <span className="font-medium text-gray-700">${poorAdsData.accountAverageCPA.toFixed(2)}</span>
+                                Account Avg CPA (14d): <span className="font-medium text-gray-700">${poorAdsData.accountAverageCPA.toFixed(2)}</span>
                                 {poorAdsData.primaryActionType && <span className="ml-3">Primary Event: <span className="font-medium text-gray-700">{formatEventName(poorAdsData.primaryActionType)}</span></span>}
                             </div>
                         )}
