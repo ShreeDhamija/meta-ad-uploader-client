@@ -102,6 +102,24 @@ const TYPE_CONFIG = {
  *  - poorAdsLoading: boolean
  *  - onPoorAdsApplied: () => void — refresh poor ads
  */
+
+
+function formatEventName(actionType) {
+    if (!actionType) return 'Unknown';
+    if (actionType.startsWith('offsite_conversion.fb_pixel_custom.')) {
+        return actionType.slice('offsite_conversion.fb_pixel_custom.'.length)
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+    if (actionType === 'offsite_conversion.fb_pixel_custom') return 'Custom Event';
+    if (actionType.startsWith('offsite_conversion.custom.')) return 'Custom Conversion';
+    if (actionType.startsWith('offsite_conversion.fb_pixel_')) {
+        return actionType.slice('offsite_conversion.fb_pixel_'.length)
+            .replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+    return actionType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+
 export default function RecommendationCards({
     data, loading, mode, adAccountId, adAccounts, onApplied,
     poorAdsData, poorAdsLoading, onPoorAdsApplied,
@@ -333,7 +351,7 @@ export default function RecommendationCards({
                                     <span>Account Avg ROAS: <span className="font-medium text-gray-700">{data.accountAverageROAS.toFixed(2)}x</span></span>
                                 )}
                                 {data.primaryResultType && (
-                                    <span>Primary Event: <span className="font-medium text-gray-700">{data.primaryResultType.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span></span>
+                                    <span>Primary Event: <span className="font-medium text-gray-700">{formatEventName(data.primaryResultType)}</span></span>
                                 )}
                             </div>
                         )}
@@ -603,7 +621,8 @@ export default function RecommendationCards({
                         {poorAdsData?.accountAverageCPA > 0 && mode === 'cpr' && (
                             <div className="text-xs text-gray-500 px-1">
                                 Account Average CPA: <span className="font-medium text-gray-700">${poorAdsData.accountAverageCPA.toFixed(2)}</span>
-                                {poorAdsData.primaryActionType && <span className="ml-3">Primary Event: <span className="font-medium text-gray-700">{poorAdsData.primaryActionType.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span></span>}                            </div>
+                                {poorAdsData.primaryActionType && <span className="ml-3">Primary Event: <span className="font-medium text-gray-700">{formatEventName(poorAdsData.primaryActionType)}</span></span>}
+                            </div>
                         )}
 
                         {/* Ads list */}

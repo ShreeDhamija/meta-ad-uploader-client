@@ -92,7 +92,7 @@ function fmtNum(v, decimals = 2) {
 
 function MetricCard({ label, value, sub, color }) {
     return (
-        <div className="bg-white rounded-3xl p-4 flex flex-col gap-1 border-[0.5px] border-gray-50 shadow-sm">
+        <div className="bg-white rounded-3xl p-4 flex flex-col gap-1 border-[0.5px] border-gray-100 shadow-sm">
             <p className="text-[10px] font-semibold text-gray-400">{label}</p>
             <p className="text-2xl font-bold tabular-nums" style={{ color: color || "#111827" }}>{value}</p>
             {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
@@ -114,7 +114,7 @@ function SectionCard({ children, id }) {
     return (
         <div
             id={`audit-${id}`}
-            className="bg-white rounded-3xl border-[0.5px] border-gray-50 shadow-sm p-6"
+            className="bg-white rounded-3xl border-[0.5px] border-gray-100 shadow-sm p-6"
         >
             {children}
         </div>
