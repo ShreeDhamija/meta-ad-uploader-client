@@ -172,7 +172,7 @@ export default function Home() {
     const [importedPosts, setImportedPosts] = useState([])
     const [importedFiles, setImportedFiles] = useState([]);
     const [videoThumbs, setVideoThumbs] = useState({})
-    const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading } = useAppData()
+    const { adAccounts, setAdAccounts, pages, setPages, pagesLoading, adAccountsLoading, refetchAdAccounts } = useAppData()
     const { settings: adAccountSettings, documentExists, refetchCopyTemplates } = useAdAccountSettings(selectedAdAccount)
     const [hasAnyAdAccountSettings, setHasAnyAdAccountSettings] = useState(false);
     const [selectedShopDestination, setSelectedShopDestination] = useState("")

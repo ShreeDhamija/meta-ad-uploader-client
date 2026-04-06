@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { toast } from "sonner"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+import { clearCache } from "@/lib/dataCache"
 
 
 const AuthContext = createContext()
@@ -55,6 +56,7 @@ export const AuthProvider = ({ children }) => {
       })
       if (res.ok) {
         toast.info("Logged out successfully!")
+        clearCache()
         setIsLoggedIn(false)
         setUserName("")
         setProfilePicUrl("")

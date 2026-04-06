@@ -6,7 +6,7 @@ import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@
 import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX, Folder, Pencil } from "lucide-react"
+import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX, Folder, Pencil, CloudSync } from "lucide-react"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
@@ -15,6 +15,7 @@ import LinkParameters from "./LinkParameters"
 import MultiAdvertiserAds from "./MultiAdvertiserAds"
 import DefaultCTA from "./DefaultCTA"
 import { toast } from "sonner"
+import { RefreshCw } from "lucide-react"
 import { saveSettings } from "@/lib/saveSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useTeamSync from "@/lib/useTeamSync"
@@ -49,7 +50,7 @@ const DRAFT_CACHE_KEY = 'adAccountSettings_draft';
 
 
 export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAccountPopup, subscriptionData }) {
-  const { adAccounts, pages, adAccountsLoading } = useAppData()
+  const { adAccounts, pages, adAccountsLoading, refetchAdAccounts } = useAppData()
   const [selectedAdAccount, setSelectedAdAccount] = useState(() => {
     // If there's a preselected account, use that
     if (preselectedAdAccount) return preselectedAdAccount;
@@ -123,6 +124,15 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setIsReauthOpen(false)
     window.location.href = `${API_BASE_URL}/auth/facebook?state=settings`
   }, [])
+
+  const handleRefreshAdAccounts = async () => {
+    try {
+      await refetchAdAccounts()
+      toast.success("Ad accounts refreshed")
+    } catch (err) {
+      toast.error("Failed to refresh ad accounts")
+    }
+  }
 
 
   const handleSyncToggle = useCallback(() => {
@@ -583,7 +593,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   disabled={syncToggling || !isOwner}
                   className="text-sm rounded-xl bg-blue-600 hover:bg-blue-700 shadow-sm text-white"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
+                  <CloudSync className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
                   Sync Settings with Team
                 </Button>
               )
@@ -669,59 +679,70 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             </Dialog>
           </div>
         </div>
-        <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              className="w-full justify-between rounded-xl bg-white shadow-sm hover:bg-white"
-            >
-              {selectedAdAccountName}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
-            align="start"
-            sideOffset={4}
-          >
-            <Command filter={() => 1} loop={false} value="">
-              <CommandInput
-                placeholder="Search ad accounts..."
-                value={searchValue}
-                onValueChange={setSearchValue}
-                className="bg-white"
-              />
-              <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                {adAccountsLoading ? (
-                  <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
-                    <Loader className="h-4 w-4 animate-spin" />
-                    Fetching ad accounts...
-                  </div>
-                ) : (
+        <div className="flex items-center gap-2">
 
-                  <CommandGroup>
-                    {filteredAdAccounts.map((acct) => (
-                      <CommandItem
-                        key={acct.id}
-                        value={acct.id}
-                        onSelect={handleAdAccountSelect}
-                        className={`
+          <Popover open={openAdAccount} onOpenChange={setOpenAdAccount}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between rounded-xl bg-white shadow-sm hover:bg-white"
+              >
+                {selectedAdAccountName}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+              align="start"
+              sideOffset={4}
+            >
+              <Command filter={() => 1} loop={false} value="">
+                <CommandInput
+                  placeholder="Search ad accounts..."
+                  value={searchValue}
+                  onValueChange={setSearchValue}
+                  className="bg-white"
+                />
+                <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                  {adAccountsLoading ? (
+                    <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
+                      <Loader className="h-4 w-4 animate-spin" />
+                      Fetching ad accounts...
+                    </div>
+                  ) : (
+
+                    <CommandGroup>
+                      {filteredAdAccounts.map((acct) => (
+                        <CommandItem
+                          key={acct.id}
+                          value={acct.id}
+                          onSelect={handleAdAccountSelect}
+                          className={`
                         px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150
                         hover:bg-gray-100
                         ${selectedAdAccount === acct.id ? "bg-gray-100 font-semibold" : ""}
                         `}
-                        data-selected={acct.id === selectedAdAccount}
-                      >
-                        {acct.name || acct.id}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                )}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+                          data-selected={acct.id === selectedAdAccount}
+                        >
+                          {acct.name || acct.id}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  )}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+          <button
+            type="button"
+            onClick={handleRefreshAdAccounts}
+            disabled={adAccountsLoading}
+            className="disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+          >
+            <RefreshCw className={`w-4 h-4 text-gray-500 ${adAccountsLoading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
         {!syncLoading && inTeam && syncEnabled && (
           <div className="flex items-center gap-1.5 mt-1.5">
             <RefreshCw className="w-3 h-3 text-blue-500" />

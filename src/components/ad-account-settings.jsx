@@ -20,6 +20,7 @@ import AdSetIcon from '@/assets/icons/grid.svg?react';
 import CopyIcon from '@/assets/icons/copy.svg?react';
 import { useNavigate } from "react-router-dom"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+import { useAppData } from "@/lib/AppContext"
 
 
 // Add constant
@@ -82,6 +83,7 @@ export default function AdAccountSettings({
   const [isLoadingAdAccounts, setIsLoadingAdAccounts] = useState(false);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
   const [isLoadingAdSetsLocal, setIsLoadingAdSetsLocal] = useState(false);
+  const { refetchAdAccounts, adAccountsLoading } = useAppData()
 
 
 
@@ -265,26 +267,36 @@ export default function AdAccountSettings({
   });
 
   // Refresh functions
-  const refreshAdAccounts = useCallback(async () => {
-    setIsLoading(true)
-    setIsLoadingAdAccounts(true)
+  // const refreshAdAccounts = useCallback(async () => {
+  //   setIsLoading(true)
+  //   setIsLoadingAdAccounts(true)
+  //   try {
+  //     const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, {
+  //       credentials: "include",
+  //     })
+  //     const data = await res.json()
+  //     if (data.success && data.adAccounts) {
+  //       setAdAccounts(data.adAccounts)
+  //       toast.success("Ad accounts refreshed successfully!")
+  //     }
+  //   } catch (err) {
+  //     toast.error(`Failed to fetch ad accounts: ${err.message || "Unknown error"}`)
+  //     console.error("Failed to fetch ad accounts:", err)
+  //   } finally {
+  //     setIsLoading(false)
+  //     setIsLoadingAdAccounts(false)
+  //   }
+  // });
+
+  const refreshAdAccounts = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, {
-        credentials: "include",
-      })
-      const data = await res.json()
-      if (data.success && data.adAccounts) {
-        setAdAccounts(data.adAccounts)
-        toast.success("Ad accounts refreshed successfully!")
-      }
+      await refetchAdAccounts()
+      toast.success("Ad accounts refreshed successfully!")
     } catch (err) {
       toast.error(`Failed to fetch ad accounts: ${err.message || "Unknown error"}`)
-      console.error("Failed to fetch ad accounts:", err)
-    } finally {
-      setIsLoading(false)
-      setIsLoadingAdAccounts(false)
     }
-  });
+  }
+
 
   const refreshCampaigns = useCallback(async () => {
     if (!selectedAdAccount) return;
