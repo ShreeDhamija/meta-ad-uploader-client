@@ -428,6 +428,57 @@ export default function AdAccountSettings({
     [selectedAdSets, adSets]
   );
 
+  const budgetAccommodationWarning = useMemo(() => {
+    if (!duplicateAdSet) return null;
+
+    const sourceAdSet = adSets.find(a => a.id === duplicateAdSet);
+    if (!sourceAdSet) return null;
+
+    // Find the campaign this ad set belongs to
+    const campaign = campaigns.find(c => c.id === sourceAdSet.campaignId);
+    if (!campaign) return null;
+
+    // CBO check: if campaign has its own budget, it's CBO — no warning needed
+    const campaignDaily = parseInt(campaign.daily_budget || "0", 10);
+    const campaignLifetime = parseInt(campaign.lifetime_budget || "0", 10);
+    const isCBO = campaignDaily > 0 || campaignLifetime > 0;
+    if (isCBO) return null;
+
+    // ABO: only warn if campaign has a spend_cap
+    const spendCap = parseInt(campaign.spend_cap || "0", 10);
+    // Meta uses a sentinel value for "no cap" — treat 0 or the max sentinel as unlimited
+    if (!spendCap || spendCap >= 922337203685478) return null;
+
+    // Determine which budget field the new ad set would use (mirror the source)
+    const sourceDaily = parseInt(sourceAdSet.daily_budget || "0", 10);
+    const sourceLifetime = parseInt(sourceAdSet.lifetime_budget || "0", 10);
+    const useDaily = sourceDaily > 0;
+    const proposedBudget = useDaily ? sourceDaily : sourceLifetime;
+
+    if (!proposedBudget) return null;
+
+    // Sum active ad sets in THIS campaign using the same budget type
+    const currentTotal = adSets
+      .filter(a => a.campaignId === campaign.id && a.effective_status === "ACTIVE")
+      .reduce((sum, a) => {
+        const val = parseInt((useDaily ? a.daily_budget : a.lifetime_budget) || "0", 10);
+        return sum + val;
+      }, 0);
+
+    if (currentTotal + proposedBudget > spendCap) {
+      // Convert from minor units for display
+      const fmt = (n) => (n / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
+      return {
+        currentTotal: fmt(currentTotal),
+        proposedBudget: fmt(proposedBudget),
+        spendCap: fmt(spendCap),
+        budgetType: useDaily ? "daily" : "lifetime",
+      };
+    }
+
+    return null;
+  }, [duplicateAdSet, adSets, campaigns]);
+
   // Add this useEffect hook after your existing useEffect hooks
 
   useEffect(() => {
@@ -1126,22 +1177,37 @@ transition-all duration-150 hover:!bg-black
                   </Popover>
                   {/* New Ad Set Name Input */}
                   {duplicateAdSet && (
-                    <div className="space-y-2" style={{ marginTop: '20px' }}>
-                      <Label htmlFor="newAdSetName" className="block">
-                        New ad set name
-                      </Label>
-                      <Label className="text-gray-500 text-[12px] font-regular">
-                        Enter a custom name for the duplicated ad set
-                      </Label>
-                      <Input
-                        id="newAdSetName"
-                        value={newAdSetName}
-                        onChange={(e) => setNewAdSetName(e.target.value)}
-                        placeholder="Enter new ad set name..."
-                        className="border border-gray-400 rounded-xl bg-white shadow"
-                        disabled={!isLoggedIn}
-                      />
-                    </div>
+                    <>
+                      <div className="space-y-2" style={{ marginTop: '20px' }}>
+                        <Label htmlFor="newAdSetName" className="block">
+                          New ad set name
+                        </Label>
+                        <Label className="text-gray-500 text-[12px] font-regular">
+                          Enter a custom name for the duplicated ad set
+                        </Label>
+                        <Input
+                          id="newAdSetName"
+                          value={newAdSetName}
+                          onChange={(e) => setNewAdSetName(e.target.value)}
+                          placeholder="Enter new ad set name..."
+                          className="border border-gray-400 rounded-xl bg-white shadow"
+                          disabled={!isLoggedIn}
+                        />
+                      </div>
+
+                      {budgetAccommodationWarning && (
+                        <div className="flex items-start gap-2 p-2.5 mt-2 bg-amber-50 border border-amber-200 rounded-xl">
+                          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div className="text-xs text-amber-800">
+                            <span className="font-semibold">Campaign spend cap may be exceeded.</span>{" "}
+                            This campaign has a spend cap of {budgetAccommodationWarning.spendCap}, and active
+                            ad sets already total {budgetAccommodationWarning.currentTotal} in {budgetAccommodationWarning.budgetType} budget.
+                            Adding a duplicate with budget {budgetAccommodationWarning.proposedBudget} would exceed the cap.
+                            Consider raising the campaign spend cap before duplicating.
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

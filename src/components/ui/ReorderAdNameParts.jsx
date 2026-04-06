@@ -748,9 +748,9 @@ export default function ReorderAdNameParts({
           >
             <Command
               ref={commandInputRef}
-              className="rounded-xl border shadow-md bg-white focus-visible:outline-none focus-visible:ring-0"
+              className="rounded-xl border shadow-md bg-white outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 [&_*]:outline-none"
             >
-              <CommandList>
+              <CommandList className="outline-none focus:outline-none focus-visible:outline-none">
                 <CommandGroup heading="Pick Variable">
                   {AVAILABLE_VARIABLES.map((variable) => (
                     <CommandItem
