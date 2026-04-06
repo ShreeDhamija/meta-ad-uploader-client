@@ -494,7 +494,6 @@ export default function AdCreationForm({
   fileGroups,
   setFileGroups,
   adAccountSettings,
-  refreshAdSets,
   adNameFormulaV2,
   setAdNameFormulaV2,
   campaignObjective,
@@ -502,7 +501,9 @@ export default function AdCreationForm({
   setSelectedFiles,
   useExistingPosts,
   refetchCopyTemplates,
-  preferredTemplateRef
+  preferredTemplateRef,
+  onAdSetCountsCreated,
+  onAdSetCreated
 }) {
   // Local state
   const [showPostSelector, setShowPostSelector] = useState(false);
@@ -1373,9 +1374,6 @@ export default function AdCreationForm({
         addCompletedJob(completedJob);
 
 
-        if (currentJob.formData.duplicateAdSet) {
-          refreshAdSets();
-        }
       } else if (status === 'partial-success') {
 
         const completedJob = {
@@ -1393,9 +1391,6 @@ export default function AdCreationForm({
         };
         addCompletedJob(completedJob);
         toast.warning(trackedMessage);
-        if (currentJob.formData.duplicateAdSet) {
-          refreshAdSets();
-        }
       } else if (status === 'job-not-found') {
 
         const failedJob = {
@@ -3049,6 +3044,12 @@ export default function AdCreationForm({
         const newAdSetId = await duplicateAdSetRequest(duplicateAdSet, selectedCampaign[0], selectedAdAccount, newAdSetName.trim());
         finalAdSetIds = [newAdSetId];
         jobData.formData.selectedAdSets = [newAdSetId];
+        onAdSetCreated?.({
+          newAdSetId,
+          sourceAdSetId: duplicateAdSet,
+          name: newAdSetName.trim(),
+          campaignId: selectedCampaign[0],
+        });
 
       } catch (error) {
         const errorMessage = error.response?.data?.error || error.message || "Unknown error";
@@ -3937,10 +3938,16 @@ export default function AdCreationForm({
     try {
       const promises = [];
       const promiseMetadata = []; // ADD THIS
+      const queueCreateAdPromise = (formData, metadata = {}) => {
+        promises.push(createAdApiCall(formData, API_BASE_URL, signal));
+        promiseMetadata.push({
+          adSetId: formData.get("adSetId"),
+          ...metadata,
+        });
+      };
 
       // Pre-compute common JSON strings and values
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
-      let globalFileIndex = 0;
 
       // ============================================================================
       // SECTION 1: CAROUSEL ADS
@@ -3975,8 +3982,7 @@ export default function AdCreationForm({
               formData.append("adType", "duplication");
             }
 
-            promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-            promiseMetadata.push({ fileName: post.ad_name });
+            queueCreateAdPromise(formData, { fileName: post.ad_name });
           });
         });
 
@@ -4011,8 +4017,7 @@ export default function AdCreationForm({
             if (adScheduleStartTime) formData.append("adScheduleStartTime", adScheduleStartTime);
             if (adScheduleEndTime) formData.append("adScheduleEndTime", adScheduleEndTime);
 
-            promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-            promiseMetadata.push({ fileName: igPost.ad_name });
+            queueCreateAdPromise(formData, { fileName: igPost.ad_name });
           });
         });
       }
@@ -4179,8 +4184,7 @@ export default function AdCreationForm({
             // Shop destination
             appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-            promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-            promiseMetadata.push({ fileName: group ? `Carousel Ad ${groupIndex + 1}` : carouselAdName });
+            queueCreateAdPromise(formData, { fileName: group ? `Carousel Ad ${groupIndex + 1}` : carouselAdName });
           });
         });
       }
@@ -4265,8 +4269,7 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-              globalFileIndex++;
+              queueCreateAdPromise(formData, { fileName: groupAdNames[groupIndex] });
             });
           });
 
@@ -4330,8 +4333,7 @@ export default function AdCreationForm({
 
             // Append shop destination
             appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-            promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-            promiseMetadata.push(null); // ADD - keeps array indices aligned
+            queueCreateAdPromise(formData);
 
           });
         }
@@ -4393,8 +4395,7 @@ export default function AdCreationForm({
 
           // Append shop destination
           appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-          promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-          promiseMetadata.push(null); // ADD - keeps array indices aligned
+          queueCreateAdPromise(formData);
 
         });
       }
@@ -4506,8 +4507,7 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
               // Append has ungrouped files flag
               formData.append("hasUngroupedFiles", hasUngroupedFiles);
-              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-              promiseMetadata.push({ fileName: groupedAdNames[groupIndex] }); // ADD
+              queueCreateAdPromise(formData, { fileName: groupedAdNames[groupIndex] });
               localIterationIndex++;
             });
           }
@@ -4584,8 +4584,7 @@ export default function AdCreationForm({
 
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
-              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-              promiseMetadata.push({ fileName: file.name }); // ADD
+              queueCreateAdPromise(formData, { fileName: file.name });
 
             });
 
@@ -4622,8 +4621,7 @@ export default function AdCreationForm({
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-              promiseMetadata.push({ fileName: driveFile.name }); // ADD
+              queueCreateAdPromise(formData, { fileName: driveFile.name });
 
             });
 
@@ -4657,8 +4655,7 @@ export default function AdCreationForm({
               appendSingleDropboxFile(formData, dropboxFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-              promiseMetadata.push({ fileName: dropboxFile.name });
+              queueCreateAdPromise(formData, { fileName: dropboxFile.name });
             });
 
             // Handle S3 uploaded files
@@ -4694,8 +4691,7 @@ export default function AdCreationForm({
               // Append shop destination
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-              promiseMetadata.push({ fileName: s3File.name || s3File.originalName || 'S3 Video' }); // ADD
+              queueCreateAdPromise(formData, { fileName: s3File.name || s3File.originalName || 'S3 Video' });
 
             });
 
@@ -4749,8 +4745,7 @@ export default function AdCreationForm({
               appendMetaImageFile(formData, metaFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-              promiseMetadata.push({ fileName: metaFile.name });
+              queueCreateAdPromise(formData, { fileName: metaFile.name });
             });
 
             // Handle Meta library videos
@@ -4782,8 +4777,7 @@ export default function AdCreationForm({
               appendMetaVideoFile(formData, metaFile);
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
-              promises.push(createAdApiCall(formData, API_BASE_URL, signal));
-              promiseMetadata.push({ fileName: metaFile.name });
+              queueCreateAdPromise(formData, { fileName: metaFile.name });
             });
 
 
@@ -4870,8 +4864,24 @@ export default function AdCreationForm({
 
         const successCount = responses.filter(r => r.status === 'fulfilled').length;
         const failureCount = responses.filter(r => r.status === 'rejected').length;
-        const cancelledCount = responses.filter(r => r.status === 'cancelled').length;
         const totalCount = responses.length;
+        const successfulAdCountsByAdSet = responses.reduce((acc, response, index) => {
+          if (response?.status !== 'fulfilled') {
+            return acc;
+          }
+
+          const adSetId = promiseMetadata[index]?.adSetId;
+          if (!adSetId) {
+            return acc;
+          }
+
+          acc[adSetId] = (acc[adSetId] || 0) + 1;
+          return acc;
+        }, {});
+
+        if (Object.keys(successfulAdCountsByAdSet).length > 0) {
+          onAdSetCountsCreated?.(successfulAdCountsByAdSet);
+        }
 
         const errorMessages = responses
           .map((r, index) => ({ response: r, meta: promiseMetadata[index] }))

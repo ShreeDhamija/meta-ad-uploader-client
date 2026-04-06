@@ -909,8 +909,8 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 placeholder={`Enter Primary Text ${i + 1}`}
                 value={text}
                 onChange={(e) => handleChange(i, setPrimaryTexts, primaryTexts, e.target.value)}
-                className={`rounded-xl bg-white px-3 py-2 w-full text-sm resize-none focus:outline-none ${duplicateIndices.primaryTexts.has(i)
-                  ? "border border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
+                className={`rounded-xl bg-white px-3 py-2 w-full text-sm resize-none border border-input focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${duplicateIndices.primaryTexts.has(i)
+                  ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                   : ""
                   }`}
                 minRows={2}

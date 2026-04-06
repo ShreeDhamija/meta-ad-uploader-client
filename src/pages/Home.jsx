@@ -530,6 +530,60 @@ export default function Home() {
         }
     };
 
+    const handleAdSetAdCountsUpdate = useCallback((countsByAdSet) => {
+        if (!countsByAdSet || Object.keys(countsByAdSet).length === 0) {
+            return;
+        }
+
+        setAdSets((prev) => {
+            let didUpdate = false;
+
+            const nextAdSets = prev.map((adSet) => {
+                const increment = countsByAdSet[adSet.id];
+                if (!increment) {
+                    return adSet;
+                }
+
+                didUpdate = true;
+                const currentTotalAds = Number(adSet.totalAds) || 0;
+
+                return {
+                    ...adSet,
+                    totalAds: currentTotalAds + increment,
+                };
+            });
+
+            return didUpdate ? sortAdSets(nextAdSets) : prev;
+        });
+    }, []);
+
+    const handleLocalAdSetCreated = useCallback(({ newAdSetId, sourceAdSetId, name, campaignId }) => {
+        if (!newAdSetId) {
+            return;
+        }
+
+        setAdSets((prev) => {
+            if (prev.some((adSet) => adSet.id === newAdSetId)) {
+                return prev;
+            }
+
+            const sourceAdSet = prev.find((adSet) => adSet.id === sourceAdSetId);
+            const fallbackCampaign = campaigns.find((campaign) => campaign.id === campaignId);
+
+            const createdAdSet = {
+                ...(sourceAdSet || {}),
+                id: newAdSetId,
+                name: name || sourceAdSet?.name || newAdSetId,
+                campaignId: campaignId || sourceAdSet?.campaignId,
+                campaignName: sourceAdSet?.campaignName || fallbackCampaign?.name,
+                totalAds: 0,
+                spend: 0,
+            };
+
+            return sortAdSets([...prev, createdAdSet]);
+        });
+    }, [campaigns]);
+
 
 
 
@@ -685,7 +739,8 @@ export default function Home() {
                             useExistingPosts={useExistingPosts}
                             refetchCopyTemplates={refetchCopyTemplates}
                             preferredTemplateRef={preferredTemplateRef}
-
+                            onAdSetCountsCreated={handleAdSetAdCountsUpdate}
+                            onAdSetCreated={handleLocalAdSetCreated}
 
                         />
                     </div>
@@ -800,7 +855,6 @@ export default function Home() {
         </>
     )
 }
-
 
 
 
