@@ -83,7 +83,7 @@ export default function AdAccountSettings({
   const [isLoadingAdAccounts, setIsLoadingAdAccounts] = useState(false);
   const [isLoadingCampaigns, setIsLoadingCampaigns] = useState(false);
   const [isLoadingAdSetsLocal, setIsLoadingAdSetsLocal] = useState(false);
-  const { refetchAdAccounts, adAccountsLoading } = useAppData()
+  const { refetchAdAccounts } = useAppData()
 
 
 
