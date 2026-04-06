@@ -395,12 +395,25 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
   return { partners, isLoading, error, refetch: fetchPartners };
 };
 
-const buildISOString = (date, time) => {
-  if (!date) return null;
-  const [hours, minutes] = (time || "00:00").split(":").map(Number);
-  const d = new Date(date);
-  d.setHours(hours, minutes, 0, 0);
-  return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+const ErrorFileName = ({ name }) => {
+  const [expanded, setExpanded] = useState(false);
+  const LIMIT = 50;
+  const needsTruncation = name.length > LIMIT;
+  const display = !needsTruncation || expanded ? name : name.slice(0, LIMIT) + '…';
+  return (
+    <li className="break-words text-[#FF0000] leading-snug">
+      {display}
+      {needsTruncation && !expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="ml-1 text-[#FF8080] hover:text-[#FF0000] underline underline-offset-2"
+        >
+          View Full Ad Name
+        </button>
+      )}
+    </li>
+  );
 };
 
 
@@ -5211,37 +5224,40 @@ export default function AdCreationForm({
                       {(job.status === 'partial-success' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
                         <div className="mt-2 ml-9">
                           <details className="text-xs">
-                            <summary className="cursor-pointer text-[#FF0000]">
+                            <summary className="cursor-pointer text-[#FF0000] font-medium">
                               View error details
                             </summary>
-                            <ul className="mt-1 ml-4 list-disc space-y-0.5 text-[#FF0000]">
+                            <div className="mt-2 ml-1 space-y-3">
                               {(() => {
                                 const errorGroups = job.errorMessages.reduce((acc, item) => {
                                   const key = item.error;
-                                  if (!acc[key]) {
-                                    acc[key] = { error: item.error, fileNames: [] };
-                                  }
-                                  if (item.fileName) {
-                                    acc[key].fileNames.push(item.fileName);
-                                  }
+                                  if (!acc[key]) acc[key] = { error: item.error, fileNames: [] };
+                                  if (item.fileName) acc[key].fileNames.push(item.fileName);
                                   return acc;
                                 }, {});
 
-                                return Object.values(errorGroups).map((group, idx) => (
-                                  <li key={idx} className="break-words">
-                                    {group.fileNames.length > 0 && (
-                                      <span className="font-medium">{group.fileNames.join(', ')}: </span>
-                                    )}
-                                    {group.error}
-                                    {group.fileNames.length === 0 && job.errorMessages.filter(e => e.error === group.error).length > 1 && (
-                                      <span className="ml-1 text-red-500 font-medium">
-                                        (×{job.errorMessages.filter(e => e.error === group.error).length})
-                                      </span>
-                                    )}
-                                  </li>
-                                ));
+                                return Object.values(errorGroups).map((group, idx) => {
+                                  const count = group.fileNames.length || 1;
+                                  return (
+                                    <div key={idx} className="border-l-2 border-[#FF0000]/40 pl-2">
+                                      <div className="text-[#FF0000] font-medium flex items-start gap-1.5">
+                                        <span className="flex-1">{group.error}</span>
+                                        <span className="shrink-0 px-1.5 rounded bg-[#FF0000]/10 text-[#FF0000]">
+                                          {count} {count === 1 ? 'ad' : 'ads'}
+                                        </span>
+                                      </div>
+                                      {group.fileNames.length > 0 && (
+                                        <ul className="mt-1.5 ml-3 list-disc space-y-1">
+                                          {group.fileNames.map((name, i) => (
+                                            <ErrorFileName key={i} name={name} />
+                                          ))}
+                                        </ul>
+                                      )}
+                                    </div>
+                                  );
+                                });
                               })()}
-                            </ul>
+                            </div>
                           </details>
                         </div>
                       )}
@@ -5324,37 +5340,40 @@ export default function AdCreationForm({
                     {liveProgress.errors && liveProgress.errors.length > 0 && (
                       <div className="mt-2">
                         <details className="text-xs" open>
-                          <summary className="cursor-pointer text-[#FF0000]">
+                          <summary className="cursor-pointer text-[#FF0000] font-medium">
                             View error details
                           </summary>
-                          <ul className="mt-1 ml-4 list-disc space-y-0.5 text-[#FF0000]">
+                          <div className="mt-2 ml-1 space-y-3">
                             {(() => {
                               const errorGroups = liveProgress.errors.reduce((acc, item) => {
                                 const key = item.error;
-                                if (!acc[key]) {
-                                  acc[key] = { error: item.error, fileNames: [] };
-                                }
-                                if (item.fileName) {
-                                  acc[key].fileNames.push(item.fileName);
-                                }
+                                if (!acc[key]) acc[key] = { error: item.error, fileNames: [] };
+                                if (item.fileName) acc[key].fileNames.push(item.fileName);
                                 return acc;
                               }, {});
 
-                              return Object.values(errorGroups).map((group, idx) => (
-                                <li key={idx} className="break-words">
-                                  {group.fileNames.length > 0 && (
-                                    <span className="font-medium">{group.fileNames.join(', ')}: </span>
-                                  )}
-                                  {group.error}
-                                  {group.fileNames.length === 0 && liveProgress.errors.filter(e => e.error === group.error).length > 1 && (
-                                    <span className="ml-1 text-red-500 font-medium">
-                                      (×{liveProgress.errors.filter(e => e.error === group.error).length})
-                                    </span>
-                                  )}
-                                </li>
-                              ));
+                              return Object.values(errorGroups).map((group, idx) => {
+                                const count = group.fileNames.length || 1;
+                                return (
+                                  <div key={idx} className="border-l-2 border-[#FF0000]/40 pl-2">
+                                    <div className="text-[#FF0000] font-medium flex items-start gap-1.5">
+                                      <span className="flex-1">{group.error}</span>
+                                      <span className="shrink-0 px-1.5 rounded bg-[#FF0000]/10 text-[#FF0000]">
+                                        {count} {count === 1 ? 'ad' : 'ads'}
+                                      </span>
+                                    </div>
+                                    {group.fileNames.length > 0 && (
+                                      <ul className="mt-1.5 ml-3 list-disc space-y-1">
+                                        {group.fileNames.map((name, i) => (
+                                          <ErrorFileName key={i} name={name} />
+                                        ))}
+                                      </ul>
+                                    )}
+                                  </div>
+                                );
+                              });
                             })()}
-                          </ul>
+                          </div>
                         </details>
                       </div>
                     )}

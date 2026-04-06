@@ -1097,12 +1097,15 @@ export default function ReorderAdNameParts({
               className="rounded-xl border shadow-md bg-white focus-visible:outline-none focus-visible:ring-0"
             >
               <CommandList>
-                <CommandGroup heading="Pick Variable">
+                <CommandGroup
+                  heading="Pick Variable"
+                  className="overflow-visible"
+                >
                   {AVAILABLE_VARIABLES.map((variable) => (
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
-                      className="cursor-pointer rounded-lg mx-1 aria-selected:bg-gray-100 focus:outline-none focus:ring-0"
+                      className="mx-1 cursor-pointer rounded-lg text-gray-900 outline-none focus:outline-none focus:ring-0 aria-selected:bg-gray-100 data-[selected=true]:bg-gray-100 data-[selected=true]:ring-1 data-[selected=true]:ring-inset data-[selected=true]:ring-gray-600"
                       onMouseDown={(e) => e.preventDefault()}
                     >
                       <span className="flex items-center">
