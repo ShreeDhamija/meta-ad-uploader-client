@@ -227,7 +227,7 @@ export default function Home() {
             loading,
             showOnboardingPopup,
             userCreatedAt,
-            parsedCreatedAt: parsedCreatedAt?.toISOString?.() ?? parsedCreatedAt,
+            parsedCreatedAt: isValidCreatedAt ? parsedCreatedAt.toISOString() : String(userCreatedAt),
             analyticsLaunchAt: ANALYTICS_LAUNCH_AT.toISOString(),
             isValidCreatedAt,
             isExistingUser,
@@ -929,7 +929,6 @@ export default function Home() {
         </>
     )
 }
-
 
 
 
