@@ -31,26 +31,24 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                         <span className="font-semibold text-[#3A3A3A]">Now in Preferences.</span>
                     </p>
 
-                    <div className="bg-[#F4E8D4] rounded-[28px] border border-black/20 overflow-hidden mb-8">
-                        <img
-                            src={AnalyticsPopup}
-                            alt="Analytics preview"
-                            className="w-full h-auto object-cover"
-                        />
-                    </div>
+                    <img
+                        src={AnalyticsPopup}
+                        alt="Analytics preview"
+                        className="w-[370px] h-auto object-contain mx-auto mb-8"
+                    />
 
                     <div className="flex items-center gap-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="text-[#F72585] text-[18px] font-semibold px-3 py-2"
+                            className="text-[#F72585] text-[16px] font-semibold px-3 py-2"
                         >
                             Skip
                         </button>
 
                         <Button
                             onClick={onCheckOutAnalytics}
-                            className="flex-1 bg-[#F72585] hover:bg-[#e11d74] text-white text-[18px] font-semibold rounded-full py-6"
+                            className="flex-1 bg-[#F72585] hover:bg-[#e11d74] text-white text-[16px] font-semibold rounded-full py-7 px-[18px]"
                         >
                             Check out Analytics
                         </Button>
