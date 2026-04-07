@@ -222,7 +222,20 @@ export default function Home() {
         const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
         const isExistingUser = isValidCreatedAt && parsedCreatedAt < ANALYTICS_LAUNCH_AT
 
+        console.log("[AnalyticsHomePopup] eligibility", {
+            isLoggedIn,
+            loading,
+            showOnboardingPopup,
+            userCreatedAt,
+            parsedCreatedAt: parsedCreatedAt?.toISOString?.() ?? parsedCreatedAt,
+            analyticsLaunchAt: ANALYTICS_LAUNCH_AT.toISOString(),
+            isValidCreatedAt,
+            isExistingUser,
+            hasSeenAnalyticsHomePopup,
+        })
+
         if (isExistingUser && !hasSeenAnalyticsHomePopup) {
+            console.log("[AnalyticsHomePopup] opening")
             setShowAnalyticsHomePopup(true)
         }
     }, [
@@ -420,6 +433,7 @@ export default function Home() {
 
     const markAnalyticsHomePopupSeen = async () => {
         try {
+            console.log("[AnalyticsHomePopup] marking seen")
             await saveSettings({
                 globalSettings: { hasSeenAnalyticsHomePopup: true },
             })
@@ -915,7 +929,6 @@ export default function Home() {
         </>
     )
 }
-
 
 
 
