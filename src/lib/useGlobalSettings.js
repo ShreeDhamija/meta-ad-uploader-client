@@ -62,6 +62,7 @@ export default function useGlobalSettings() {
     const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
     const [hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding] = useState(false);
     const [hasSeenAnalyticsOnboarding, setHasSeenAnalyticsOnboarding] = useState(false);
+    const [hasSeenAnalyticsHomePopup, setHasSeenAnalyticsHomePopup] = useState(false);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
 
     const fetchSettings = async () => {
@@ -74,6 +75,7 @@ export default function useGlobalSettings() {
             setHasSeenOnboarding(data?.settings?.hasSeenOnboarding || false);
             setHasSeenSettingsOnboarding(data?.settings?.hasSeenSettingsOnboarding || false);
             setHasSeenAnalyticsOnboarding(data?.settings?.hasSeenAnalyticsOnboarding || false);
+            setHasSeenAnalyticsHomePopup(data?.settings?.hasSeenAnalyticsHomePopup || false);
             setSelectedAdAccountIds(data?.settings?.selectedAdAccountIds || [])
 
         } catch (err) {
@@ -82,6 +84,7 @@ export default function useGlobalSettings() {
             setSelectedAdAccountIds([]);
             setHasSeenSettingsOnboarding(false);
             setHasSeenAnalyticsOnboarding(false);
+            setHasSeenAnalyticsHomePopup(false);
         } finally {
             setLoading(false);
         }
@@ -103,6 +106,8 @@ export default function useGlobalSettings() {
         hasSeenSettingsOnboarding,
         setHasSeenSettingsOnboarding,
         hasSeenAnalyticsOnboarding,
+        hasSeenAnalyticsHomePopup,
+        setHasSeenAnalyticsHomePopup,
         selectedAdAccountIds,
     };
 }

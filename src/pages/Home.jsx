@@ -7,18 +7,21 @@ import AdAccountSettings from "../components/ad-account-settings"
 import AdCreationForm from "../components/ad-creation-form"
 import MediaPreview from "../components/media-preview"
 import OnboardingPopup from "../components/onboarding-popup"
+import AnalyticsHomePopup from "../components/AnalyticsHomePopup"
 
 import { useAuth } from "../lib/AuthContext"
 import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
 import useSubscription from "@/lib/useSubscriptionSettings"
+import { saveSettings } from "@/lib/saveSettings"
 import AdAccountSelectionPopup from "../components/AdAccountSelectionPopup"
 import { useIntercom } from "@/lib/useIntercom";
 import DesktopIcon from '@/assets/Desktop.webp';
 import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
+const ANALYTICS_LAUNCH_AT = new Date("2026-04-07T12:00:00+05:30");
 
 // Check if user has active access
 
@@ -87,14 +90,23 @@ const sortCampaigns = (campaigns) => {
 
 
 export default function Home() {
-    const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
+    const { isLoggedIn, userName, handleLogout, authLoading, userCreatedAt } = useAuth()
     const { showMessenger, hideMessenger } = useIntercom();
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = useState(false)
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
-    const { hasSeenOnboarding, setHasSeenOnboarding, hasSeenSettingsOnboarding, loading, selectedAdAccountIds } = useGlobalSettings();
+    const [showAnalyticsHomePopup, setShowAnalyticsHomePopup] = useState(false)
+    const {
+        hasSeenOnboarding,
+        setHasSeenOnboarding,
+        hasSeenSettingsOnboarding,
+        hasSeenAnalyticsHomePopup,
+        setHasSeenAnalyticsHomePopup,
+        loading,
+        selectedAdAccountIds
+    } = useGlobalSettings();
     const {
         subscriptionData,
         isOnTrial,
@@ -202,6 +214,24 @@ export default function Home() {
             setShowOnboardingPopup(true)
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
+
+    useEffect(() => {
+        if (!isLoggedIn || loading || showOnboardingPopup) return
+
+        const parsedCreatedAt = userCreatedAt ? new Date(userCreatedAt) : null
+        const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
+        const isExistingUser = isValidCreatedAt && parsedCreatedAt < ANALYTICS_LAUNCH_AT
+
+        if (isExistingUser && !hasSeenAnalyticsHomePopup) {
+            setShowAnalyticsHomePopup(true)
+        }
+    }, [
+        isLoggedIn,
+        loading,
+        showOnboardingPopup,
+        userCreatedAt,
+        hasSeenAnalyticsHomePopup
+    ])
 
     useEffect(() => {
         if (loading || subscriptionLoading) return;
@@ -386,6 +416,29 @@ export default function Home() {
         }).catch((err) => {
             console.error("Failed to save onboarding flag:", err)
         })
+    }
+
+    const markAnalyticsHomePopupSeen = async () => {
+        try {
+            await saveSettings({
+                globalSettings: { hasSeenAnalyticsHomePopup: true },
+            })
+            setHasSeenAnalyticsHomePopup(true)
+            window.dispatchEvent(new Event('globalSettingsUpdated'))
+        } catch (err) {
+            console.error("Failed to save analytics home popup flag:", err)
+        }
+    }
+
+    const handleCloseAnalyticsHomePopup = async () => {
+        setShowAnalyticsHomePopup(false)
+        await markAnalyticsHomePopupSeen()
+    }
+
+    const handleCheckOutAnalytics = async () => {
+        setShowAnalyticsHomePopup(false)
+        await markAnalyticsHomePopupSeen()
+        navigate("/settings?tab=analytics")
     }
     const onItemToggle = (item) => {
         setSelectedItems((prev) =>
@@ -813,6 +866,13 @@ export default function Home() {
                     />
                 )}
 
+                {showAnalyticsHomePopup && (
+                    <AnalyticsHomePopup
+                        onClose={handleCloseAnalyticsHomePopup}
+                        onCheckOutAnalytics={handleCheckOutAnalytics}
+                    />
+                )}
+
                 {showTrialExpiredPopup && (
                     <TrialExpiredPopup
                         onClose={() => {
@@ -855,7 +915,6 @@ export default function Home() {
         </>
     )
 }
-
 
 
 
