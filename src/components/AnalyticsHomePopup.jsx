@@ -12,7 +12,7 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                 }
             }}
         >
-            <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-8 py-10 w-full max-w-[520px] relative overflow-hidden text-left">
+            <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-6 py-7 w-full max-w-[470px] relative overflow-hidden text-left">
                 <div className="animate-fadeSwap">
                     <div className="w-[370px] max-w-full mx-auto">
                         <div className="flex items-center gap-3 mb-5">
@@ -28,15 +28,15 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
 
                         <p className="text-[15px] leading-7 text-[#6B5B53] mb-8">
                             We took the playbook behind $3M/month in ad spend and put it in your hands.
-                            Review recommendations and apply them in one click or not.{" "}
-                            <span className="font-semibold text-[#3A3A3A]">Now in Preferences.</span>
+                            Review recommendations and apply them in one click or not.
+                            <span className="block font-semibold text-[#3A3A3A]">Now in Preferences.</span>
                         </p>
                     </div>
 
                     <img
                         src={AnalyticsPopup}
                         alt="Analytics preview"
-                        className="w-[370px] h-auto object-contain mx-auto mb-8"
+                        className="w-[370px] h-auto object-contain mx-auto mb-5"
                     />
 
                     <div className="w-[370px] max-w-full mx-auto flex items-center gap-4">
