@@ -12,10 +12,10 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                 }
             }}
         >
-            <div className="bg-[#FAF9F7] rounded-[24px] shadow-2xl px-6 py-7 w-full max-w-[470px] relative overflow-hidden text-left">
+            <div className="bg-[#FAF9F7] rounded-[30px] shadow-2xl px-6 py-7 w-full max-w-[430px] relative overflow-hidden text-left">
                 <div className="animate-fadeSwap">
                     <div className="w-[370px] max-w-full mx-auto">
-                        <div className="flex items-center gap-3 mb-5">
+                        <div className="flex items-center gap-3 mb-3">
                             <img
                                 src={AnalyticsIcon}
                                 alt="Analytics icon"
@@ -36,7 +36,7 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                     <img
                         src={AnalyticsPopup}
                         alt="Analytics preview"
-                        className="w-[370px] h-auto object-contain mx-auto mb-5"
+                        className="w-[370px] h-auto object-contain mx-auto mb-3"
                     />
 
                     <div className="w-[370px] max-w-full mx-auto flex items-center gap-4">
@@ -50,7 +50,7 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
 
                         <Button
                             onClick={onCheckOutAnalytics}
-                            className="flex-1 bg-[#F72585] hover:bg-[#e11d74] text-white text-[16px] font-semibold rounded-full py-[22px] px-[12px]"
+                            className="flex-1 bg-[#F72585] hover:bg-[#e11d74] text-white text-[16px] font-semibold rounded-full py-[24px] px-[10px]"
                         >
                             Check out Analytics
                         </Button>
