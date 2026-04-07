@@ -22,6 +22,7 @@ import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 const ANALYTICS_LAUNCH_AT = new Date("2026-04-07T12:00:00+05:30");
+const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
 
 const parseUserCreatedAt = (value) => {
     if (!value) return null;
@@ -239,7 +240,7 @@ export default function Home() {
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
-        if (!isLoggedIn || loading || showOnboardingPopup) return
+        if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup) return
 
         const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
         const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
@@ -938,4 +939,3 @@ export default function Home() {
         </>
     )
 }
-
