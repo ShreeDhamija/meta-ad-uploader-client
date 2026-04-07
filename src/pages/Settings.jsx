@@ -21,6 +21,7 @@ import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import DesktopIcon from '@/assets/Desktop.webp';
+import TrialExpiredPopup from "@/components/TrialExpiredPopup";
 import "../settings.css"
 import { toast } from "sonner"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -29,15 +30,24 @@ export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
+    const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false)
+    const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false)
     const navigate = useNavigate()
-    const { subscriptionData, loading: subscriptionLoading } = useSubscription()
+    const {
+        subscriptionData,
+        isTrialExpired,
+        hasActiveAccess,
+        loading: subscriptionLoading,
+        canExtendTrial,
+        extendTrial
+    } = useSubscription()
+    const { showMessenger } = useIntercom(true);
 
 
     const urlParams = new URLSearchParams(window.location.search)
     const initialTab = urlParams.get('tab') || 'adaccount'
     const preselectedAdAccount = urlParams.get('adAccount')
     const [activeTab, setActiveTab] = useState(initialTab)
-    useIntercom(true);
 
     // UPDATED: Added analytics to the tab icon map
     const tabIconMap = {
@@ -111,6 +121,25 @@ export default function Settings() {
     }, [subscriptionData.planType, selectedAdAccountIds])
 
     useEffect(() => {
+        const userHasActiveAccess = hasActiveAccess();
+
+        if (
+            activeTab === "analytics" &&
+            !subscriptionLoading &&
+            isTrialExpired() &&
+            !userHasActiveAccess &&
+            !hasDismissedTrialPopup
+        ) {
+            setShowTrialExpiredPopup(true);
+            return;
+        }
+
+        if (activeTab !== "analytics") {
+            setShowTrialExpiredPopup(false);
+        }
+    }, [activeTab, subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
+
+    useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const slackStatus = params.get('slack');
         const reason = params.get('reason');
@@ -134,6 +163,17 @@ export default function Settings() {
             window.history.replaceState({}, '', url);
         }
     }, [])
+
+    const handleExtendTrial = async () => {
+        const result = await extendTrial();
+        if (result.success) {
+            setShowTrialExpiredPopup(false);
+            toast.success("Trial Extended Successfully, reloading...")
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }
+    };
 
     if (authLoading) return null
     if (!isLoggedIn) return <Navigate to="/login" />
@@ -275,6 +315,33 @@ export default function Settings() {
                     selectedAdAccountIds={selectedAdAccountIds}
 
                 />
+                {showTrialExpiredPopup && activeTab === "analytics" && (
+                    <TrialExpiredPopup
+                        onClose={() => {
+                            setShowTrialExpiredPopup(false);
+                            setHasDismissedTrialPopup(true);
+                        }}
+                        onUpgrade={() => {
+                            handleTabChange("billing");
+                            setShowTrialExpiredPopup(false);
+                            setHasDismissedTrialPopup(true);
+                        }}
+                        joinTeam={() => {
+                            handleTabChange("team");
+                            setShowTrialExpiredPopup(false);
+                            setHasDismissedTrialPopup(true);
+                        }}
+                        onChatWithUs={() => {
+                            showMessenger();
+                            setShowTrialExpiredPopup(false);
+                            setHasDismissedTrialPopup(true);
+                        }}
+                        canExtendTrial={canExtendTrial()}
+                        onExtendTrial={handleExtendTrial}
+                        isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                        isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                    />
+                )}
             </div>
         </>
     )
