@@ -256,14 +256,6 @@ export default function BillingSettings() {
     };
 
     const claimRetentionDiscount = async () => {
-        if (!cancelReason) {
-            toast.error("Please select a reason first");
-            return;
-        }
-        if (cancelReason === 'other' && !cancelOtherText.trim()) {
-            toast.error("Please tell us why");
-            return;
-        }
 
         setSubmittingCancel(true);
         try {
@@ -747,9 +739,9 @@ export default function BillingSettings() {
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" />
                 <DialogContent className="sm:max-w-[480px] !rounded-[30px] p-6 space-y-4">
                     <DialogHeader className="space-y-1">
-                        <DialogTitle className="text-xl">Before you go...</DialogTitle>
+                        <DialogTitle className="text-xl">You're breaking my heat 💔</DialogTitle>
                         <DialogDescription className="text-sm leading-relaxed">
-                            We're sorry to see you go. Mind telling us why?
+                            I guess its me not you. At least tell me why.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -758,8 +750,8 @@ export default function BillingSettings() {
                             <label
                                 key={r.id}
                                 className={`flex items-center gap-3 py-2 px-3 rounded-xl border cursor-pointer transition ${cancelReason === r.id
-                                        ? 'border-zinc-800 bg-zinc-50'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                    ? 'border-zinc-800 bg-zinc-50'
+                                    : 'border-gray-200 hover:border-gray-300'
                                     }`}
                             >
                                 <input
