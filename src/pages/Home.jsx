@@ -23,6 +23,29 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 const ANALYTICS_LAUNCH_AT = new Date("2026-04-07T12:00:00+05:30");
 
+const parseUserCreatedAt = (value) => {
+    if (!value) return null;
+
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value;
+    }
+
+    if (typeof value === "string" || typeof value === "number") {
+        const parsed = new Date(value);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    const seconds = value?._seconds ?? value?.seconds;
+    const nanoseconds = value?._nanoseconds ?? value?.nanoseconds ?? 0;
+
+    if (typeof seconds === "number") {
+        const parsed = new Date(seconds * 1000 + Math.floor(nanoseconds / 1000000));
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    return null;
+};
+
 // Check if user has active access
 
 
@@ -218,7 +241,7 @@ export default function Home() {
     useEffect(() => {
         if (!isLoggedIn || loading || showOnboardingPopup) return
 
-        const parsedCreatedAt = userCreatedAt ? new Date(userCreatedAt) : null
+        const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
         const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
         const isExistingUser = isValidCreatedAt && parsedCreatedAt < ANALYTICS_LAUNCH_AT
 
@@ -929,6 +952,5 @@ export default function Home() {
         </>
     )
 }
-
 
 
