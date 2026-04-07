@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertCircle, Users, FileText, RefreshCw, Ban } from "lucide-react"
 import { toast } from "sonner"
+import GiftIcon from '@/assets/gift.webp';
 import {
     Dialog,
     DialogContent,
@@ -744,19 +745,19 @@ export default function BillingSettings() {
                 }}
             >
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" />
-                <DialogContent className="sm:max-w-[480px] !rounded-[30px] p-8 space-y-5 max-h-[90vh] overflow-y-auto">
-                    <DialogHeader className="space-y-2">
+                <DialogContent className="sm:max-w-[480px] !rounded-[30px] p-6 space-y-4">
+                    <DialogHeader className="space-y-1">
                         <DialogTitle className="text-xl">Before you go...</DialogTitle>
                         <DialogDescription className="text-sm leading-relaxed">
                             We're sorry to see you go. Mind telling us why?
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                         {CANCEL_REASONS.map((r) => (
                             <label
                                 key={r.id}
-                                className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition ${cancelReason === r.id
+                                className={`flex items-center gap-3 py-2 px-3 rounded-xl border cursor-pointer transition ${cancelReason === r.id
                                         ? 'border-zinc-800 bg-zinc-50'
                                         : 'border-gray-200 hover:border-gray-300'
                                     }`}
@@ -767,7 +768,7 @@ export default function BillingSettings() {
                                     value={r.id}
                                     checked={cancelReason === r.id}
                                     onChange={() => setCancelReason(r.id)}
-                                    className="mt-1 accent-zinc-800"
+                                    className="accent-zinc-800"
                                 />
                                 <span className="text-sm text-gray-700">{r.label}</span>
                             </label>
@@ -777,29 +778,32 @@ export default function BillingSettings() {
                                 value={cancelOtherText}
                                 onChange={(e) => setCancelOtherText(e.target.value)}
                                 placeholder="Tell us more..."
-                                className="w-full mt-2 p-3 border border-gray-200 rounded-2xl text-sm resize-none focus:outline-none focus:border-zinc-800"
-                                rows={3}
+                                className="w-full mt-2 p-3 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-zinc-800"
+                                rows={2}
                             />
                         )}
                     </div>
 
                     {!hasUsedRetentionDiscount && (
-                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-4 space-y-2">
-                            <p className="text-sm font-semibold text-purple-900">
-                                🎁 Wait! Get 75% off your next month
-                            </p>
-                            <p className="text-xs text-purple-700 leading-relaxed">
-                                Stay with us and we'll automatically apply a 75% discount to your next invoice. One-time offer.
-                            </p>
+                        <div className="bg-zinc-900 rounded-2xl p-4 flex items-center gap-3">
+                            <img src={GiftIcon} className="w-10 h-10 flex-shrink-0" alt="" />
+                            <div className="space-y-0.5">
+                                <p className="text-base font-bold text-white leading-tight">
+                                    Wait! Get 75% off your next month
+                                </p>
+                                <p className="text-xs text-gray-300 leading-snug">
+                                    Stay with us and we'll automatically apply a 75% discount to your next invoice. One-time offer.
+                                </p>
+                            </div>
                         </div>
                     )}
 
-                    <DialogFooter className="flex flex-col gap-2 pt-2">
+                    <div className="flex flex-col gap-2 pt-1">
                         {!hasUsedRetentionDiscount && (
                             <Button
                                 onClick={claimRetentionDiscount}
                                 disabled={submittingCancel}
-                                className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-2xl h-12"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-12"
                             >
                                 Claim 75% off & keep subscription
                             </Button>
@@ -821,7 +825,7 @@ export default function BillingSettings() {
                                 Confirm cancel
                             </Button>
                         </div>
-                    </DialogFooter>
+                    </div>
                 </DialogContent>
             </Dialog>
 
