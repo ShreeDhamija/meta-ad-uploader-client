@@ -33,7 +33,14 @@ const PLANS = [
     { type: 'pro', name: 'Agency', adAccounts: 'Unlimited', price: 370, icon: RocketIcon },
 ];
 
-
+const CANCEL_REASONS = [
+    { id: 'no_longer_need', label: "I no longer need to launch ads for my brand" },
+    { id: 'not_media_buyer', label: "I am no longer the media buyer for the brand/agency" },
+    { id: 'price', label: "Price" },
+    { id: 'buggy', label: "Buggy experience" },
+    { id: 'competitor', label: "Switching to a competitor" },
+    { id: 'other', label: "Other" },
+];
 
 
 export default function BillingSettings() {
@@ -48,6 +55,10 @@ export default function BillingSettings() {
         isTrialExpired,
         isPaidSubscriber,
     } = useSubscription()
+    const [cancelReason, setCancelReason] = useState(null);
+    const [cancelOtherText, setCancelOtherText] = useState('');
+    const [submittingCancel, setSubmittingCancel] = useState(false);
+    const hasUsedRetentionDiscount = subscriptionData?.hasUsedRetentionDiscount || false;
 
     const [showPlanSelector, setShowPlanSelector] = useState(false);
     const [changingPlan, setChangingPlan] = useState(false);
@@ -200,23 +211,82 @@ export default function BillingSettings() {
         setShowCancelDialog(true);
     };
 
+    const getReasonPayload = () => {
+        const reasonObj = CANCEL_REASONS.find(r => r.id === cancelReason);
+        return {
+            reason: cancelReason,
+            details: cancelReason === 'other' ? cancelOtherText : (reasonObj?.label || '')
+        };
+    };
+
     const confirmCancel = async () => {
-        setShowCancelDialog(false);
-        setIsLoading(true);
+        if (!cancelReason) {
+            toast.error("Please select a reason");
+            return;
+        }
+        if (cancelReason === 'other' && !cancelOtherText.trim()) {
+            toast.error("Please tell us why");
+            return;
+        }
+
+        setSubmittingCancel(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/stripe/cancel-subscription`, {
                 method: 'POST',
                 credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(getReasonPayload()),
             });
 
             if (response.ok) {
                 toast.success("Subscription will cancel at the end of your billing period");
                 refreshSubscriptionData();
+                setShowCancelDialog(false);
+                setCancelReason(null);
+                setCancelOtherText('');
+            } else {
+                toast.error("Failed to cancel subscription");
             }
         } catch (error) {
             toast.error("Failed to cancel subscription");
         } finally {
-            setIsLoading(false);
+            setSubmittingCancel(false);
+        }
+    };
+
+    const claimRetentionDiscount = async () => {
+        if (!cancelReason) {
+            toast.error("Please select a reason first");
+            return;
+        }
+        if (cancelReason === 'other' && !cancelOtherText.trim()) {
+            toast.error("Please tell us why");
+            return;
+        }
+
+        setSubmittingCancel(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/apply-retention-discount`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(getReasonPayload()),
+            });
+
+            if (response.ok) {
+                toast.success("🎉 75% off applied to your next invoice!");
+                refreshSubscriptionData();
+                setShowCancelDialog(false);
+                setCancelReason(null);
+                setCancelOtherText('');
+            } else {
+                const err = await response.json();
+                toast.error(err.error || "Failed to apply discount");
+            }
+        } catch (error) {
+            toast.error("Failed to apply discount");
+        } finally {
+            setSubmittingCancel(false);
         }
     };
 
@@ -663,24 +733,94 @@ export default function BillingSettings() {
             )}
 
             {/* Cancel Confirmation Dialog */}
-            <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+            <Dialog
+                open={showCancelDialog}
+                onOpenChange={(open) => {
+                    setShowCancelDialog(open);
+                    if (!open) {
+                        setCancelReason(null);
+                        setCancelOtherText('');
+                    }
+                }}
+            >
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" />
-                <DialogContent className="sm:max-w-[425px] !rounded-[30px] p-8 space-y-6">
-                    <DialogHeader className="space-y-4">
-                        <DialogTitle className="text-xl">Cancel Subscription</DialogTitle>
-                        <DialogDescription className="text-base leading-relaxed">
-                            Are you sure you want to cancel your subscription? Your plan will remain active until the end of your
-                            current billing period.
+                <DialogContent className="sm:max-w-[480px] !rounded-[30px] p-8 space-y-5 max-h-[90vh] overflow-y-auto">
+                    <DialogHeader className="space-y-2">
+                        <DialogTitle className="text-xl">Before you go...</DialogTitle>
+                        <DialogDescription className="text-sm leading-relaxed">
+                            We're sorry to see you go. Mind telling us why?
                         </DialogDescription>
                     </DialogHeader>
 
-                    <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
-                        <Button variant="outline" onClick={() => setShowCancelDialog(false)} className="rounded-2xl flex-1">
-                            Keep Subscription
-                        </Button>
-                        <Button onClick={confirmCancel} className="bg-red-600 hover:bg-red-700 rounded-2xl flex-1">
-                            Yes, Cancel
-                        </Button>
+                    <div className="space-y-2">
+                        {CANCEL_REASONS.map((r) => (
+                            <label
+                                key={r.id}
+                                className={`flex items-start gap-3 p-3 rounded-2xl border cursor-pointer transition ${cancelReason === r.id
+                                        ? 'border-zinc-800 bg-zinc-50'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                    }`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="cancelReason"
+                                    value={r.id}
+                                    checked={cancelReason === r.id}
+                                    onChange={() => setCancelReason(r.id)}
+                                    className="mt-1 accent-zinc-800"
+                                />
+                                <span className="text-sm text-gray-700">{r.label}</span>
+                            </label>
+                        ))}
+                        {cancelReason === 'other' && (
+                            <textarea
+                                value={cancelOtherText}
+                                onChange={(e) => setCancelOtherText(e.target.value)}
+                                placeholder="Tell us more..."
+                                className="w-full mt-2 p-3 border border-gray-200 rounded-2xl text-sm resize-none focus:outline-none focus:border-zinc-800"
+                                rows={3}
+                            />
+                        )}
+                    </div>
+
+                    {!hasUsedRetentionDiscount && (
+                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-2xl p-4 space-y-2">
+                            <p className="text-sm font-semibold text-purple-900">
+                                🎁 Wait! Get 75% off your next month
+                            </p>
+                            <p className="text-xs text-purple-700 leading-relaxed">
+                                Stay with us and we'll automatically apply a 75% discount to your next invoice. One-time offer.
+                            </p>
+                        </div>
+                    )}
+
+                    <DialogFooter className="flex flex-col gap-2 pt-2">
+                        {!hasUsedRetentionDiscount && (
+                            <Button
+                                onClick={claimRetentionDiscount}
+                                disabled={submittingCancel}
+                                className="w-full bg-purple-600 hover:bg-purple-700 text-white rounded-2xl h-12"
+                            >
+                                Claim 75% off & keep subscription
+                            </Button>
+                        )}
+                        <div className="flex gap-2 w-full">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowCancelDialog(false)}
+                                disabled={submittingCancel}
+                                className="rounded-2xl flex-1 h-11"
+                            >
+                                Keep subscription
+                            </Button>
+                            <Button
+                                onClick={confirmCancel}
+                                disabled={submittingCancel}
+                                className="bg-red-600 hover:bg-red-700 rounded-2xl flex-1 h-11"
+                            >
+                                Confirm cancel
+                            </Button>
+                        </div>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
