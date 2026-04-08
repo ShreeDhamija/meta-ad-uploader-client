@@ -30,8 +30,8 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 const primaryButtonClass = "h-[45px] rounded-[20px] bg-[#003CFF] px-4 text-white hover:bg-[#002fd1]"
-const cancelButtonClass = "h-[45px] rounded-[20px] border-2 border-[#003CFF] bg-white px-4 text-[#003CFF] hover:bg-[#003CFF]/5"
-const iconInputClass = "h-[50px] rounded-[20px] border border-black/10 bg-white pl-12 text-[14px] font-semibold text-[#1f1f1f] placeholder:font-semibold placeholder:text-[#444444] focus-visible:ring-0 focus-visible:ring-offset-0"
+const cancelButtonClass = "h-[45px] rounded-[20px] border-2 border-[#003CFF] bg-white px-4 text-[#003CFF] hover:text-[#003CFF] hover:bg-white"
+const iconInputClass = "h-[50px] rounded-[18px] border border-black/10 bg-white pl-12 text-[14px] font-medium text-[#1f1f1f] placeholder:font-medium placeholder:text-[#444444] focus-visible:ring-0 focus-visible:ring-offset-0"
 
 export default function TeamSettings() {
     const {
@@ -251,8 +251,8 @@ export default function TeamSettings() {
                             <TeamIcon className="h-4 w-4" />
                             Start a Team
                         </Button>
-                        <Button onClick={() => setTeamMode("joining")} variant="outline" className={`w-full ${cancelButtonClass}`}>
-                            <JoinIcon className="h-4 w-4" />
+                        <Button onClick={() => setTeamMode("joining")} variant="outline" className={`w-full ${cancelButtonClass}`}  >
+                            <JoinIcon className="w-4 h-4" />
                             Join a Team
                         </Button>
                     </div>
@@ -270,11 +270,11 @@ export default function TeamSettings() {
                             />
                         </div>
                         <div className="flex flex-row gap-3">
-                            <Button disabled={!inviteCode || isLoading} onClick={handleJoinTeam} className={`w-40 ${primaryButtonClass}`}>
+                            <Button disabled={!inviteCode || isLoading} onClick={handleJoinTeam} className={`w-full ${primaryButtonClass}`}>
                                 {isLoading ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <KeyIcon className="h-4 w-4" />}
                                 Join Team
                             </Button>
-                            <Button variant="outline" className={`w-32 ${cancelButtonClass}`} onClick={() => { setTeamMode(null); setInviteCode("") }}>
+                            <Button variant="outline" className={`w-full ${cancelButtonClass}`} onClick={() => { setTeamMode(null); setInviteCode("") }}>
                                 <CancelIcon className="h-4 w-4" />
                                 Cancel
                             </Button>
@@ -294,11 +294,11 @@ export default function TeamSettings() {
                             />
                         </div>
                         <div className="flex flex-row gap-3">
-                            <Button disabled={!teamName || isLoading} onClick={handleCreateTeam} className={`w-40 ${primaryButtonClass}`}>
+                            <Button disabled={!teamName || isLoading} onClick={handleCreateTeam} className={`w-full ${primaryButtonClass}`}>
                                 {isLoading ? <Loader className="mr-2 h-4 w-4 animate-spin" /> : <TeamIcon className="h-4 w-4" />}
                                 Create Team
                             </Button>
-                            <Button variant="outline" className={`w-32 ${cancelButtonClass}`} onClick={() => { setTeamMode(null); setTeamName("") }}>
+                            <Button variant="outline" className={`w-full ${cancelButtonClass}`} onClick={() => { setTeamMode(null); setTeamName("") }}>
                                 <CancelIcon className="h-4 w-4" />
                                 Cancel
                             </Button>
@@ -339,7 +339,7 @@ export default function TeamSettings() {
                             </Button>
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-start gap-3 rounded-[20px] border border-[#F3A9FF] bg-[#FFE0EF] px-3 py-3">
+                        <div className="flex flex-wrap items-center justify-start gap-3 rounded-[20px] border border-[#F3A9FF] bg-[#FFE0EF] px-3 py-1">
                             <span className="text-sm font-medium text-[#B2038C]">
                                 Here is your Team ID
                             </span>
@@ -383,10 +383,19 @@ export default function TeamSettings() {
                                 <Button
                                     onClick={handleAddEmail}
                                     variant="outline"
-                                    className="h-[45px] w-[45px] rounded-[20px] border-2 border-black bg-white p-0 hover:bg-gray-50"
+                                    className="h-[45px] rounded-[20px] border-2 border-black bg-white px-4 text-black hover:bg-gray-50"
                                 >
                                     <AddIcon className="h-4 w-4 text-black" />
+                                    Add
                                 </Button>
+                                {inviteEmails.length > 0 && (
+                                    <Button
+                                        onClick={() => setInviteEmails([])}
+                                        className="h-[45px] w-[45px] rounded-[20px] bg-[#F00D55] p-0 text-white hover:bg-[#cf0b48]"
+                                    >
+                                        <TrashIcon className="h-4 w-4" />
+                                    </Button>
+                                )}
                             </div>
 
                             {inviteEmails.length > 0 && (

@@ -208,11 +208,12 @@ export default function Settings() {
                             {/* Back to Home Button */}
                             <Button
                                 onClick={() => navigate("/")}
-                                className="flex items-center justify-start gap-2 bg-white border border-gray-200 shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 hover:!bg-white hover:shadow-md"
+                                className="flex items-center justify-start gap-1 bg-white border border-gray-200 shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 hover:!bg-white hover:shadow-md"
                                 variant="ghost"
                             >
                                 <img src={RocketBtn} alt="Home" className="w-8 h-8 object-contain" />
-                                <span className="text-gray-700 font-bold max-lg:hidden">Back To Launcher</span>
+                                <div className="h-6 w-px bg-gray-300 mr-2 max-lg:hidden" />
+                                <span className="text-gray-700 font-semibold max-lg:hidden">Back To Launcher</span>
                             </Button>
 
                             {/* Tab Buttons - UPDATED: Added analytics to the array */}
