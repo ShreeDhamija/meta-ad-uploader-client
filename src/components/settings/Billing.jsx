@@ -2,11 +2,19 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertCircle, Users, FileText, RefreshCw, Ban } from "lucide-react"
 import { toast } from "sonner"
-import GiftIcon from '@/assets/gift.webp';
+import GiftIcon from "@/assets/gift.webp"
+import ProPlanImage from "@/assets/Pro.webp"
+import LightPlanImage from "@/assets/icons/zap.webp"
+import StarterPlanImage from "@/assets/icons/star.webp"
+import CheckCircleIcon from "@/assets/icons/check-circle.svg?react"
+import BillingCheckIcon from "@/assets/icons/Billing/Check.svg?react"
+import BillingCalendarIcon from "@/assets/icons/Billing/Calendar.svg?react"
+import BillingAlertIcon from "@/assets/icons/Billing/Alert.svg?react"
+import BillingSwitchIcon from "@/assets/icons/Billing/Switch.svg?react"
+import BillingCancelIcon from "@/assets/icons/Billing/Cancel.svg?react"
+import BillingInvoiceIcon from "@/assets/icons/Billing/Frame.svg?react"
+import MailIcon from "@/assets/icons/mail.svg?react"
 import {
     Dialog,
     DialogContent,
@@ -14,777 +22,625 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogOverlay, // Add this import
-
+    DialogOverlay,
 } from "@/components/ui/dialog"
 import useSubscription from "@/lib/useSubscriptionSettings"
-import CardIcon from '@/assets/icons/card.svg?react';
-import CheckIcon from '@/assets/icons/check.svg?react';
-import CheckIcon2 from '@/assets/icons/check2.svg?react';
-import CheckIcon3 from '@/assets/icons/check3.svg?react';
-import MailIcon from '@/assets/icons/mail.svg?react';
-import RocketIcon from '@/assets/icons/rocket2.webp';
-import LightningIcon from '@/assets/icons/zap.webp';
-import StarIcon from '@/assets/icons/star.webp';
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-// Add this constant for plan details
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 const PLANS = [
-    { type: 'starter', name: 'Starter', adAccounts: '1', price: 49, icon: StarIcon },
-    { type: 'brand', name: 'Brand', adAccounts: '5', price: 199, icon: LightningIcon },
-    { type: 'pro', name: 'Agency', adAccounts: 'Unlimited', price: 370, icon: RocketIcon },
-];
+    {
+        key: "agency",
+        matchKeys: ["agency", "pro"],
+        shortLabel: "PRO",
+        name: "Blip Pro",
+        planPhrase: "pro",
+        accountLine: "Unlimited Ad Accounts",
+        price: 370,
+        image: ProPlanImage,
+        buttonClass: "bg-[#02EE39] text-[#005814] hover:bg-[#19F64A]",
+    },
+    {
+        key: "brand",
+        matchKeys: ["brand"],
+        shortLabel: "LIGHT",
+        name: "Blip Light",
+        planPhrase: "light",
+        accountLine: "Up to 5 Ad Accounts",
+        price: 199,
+        image: LightPlanImage,
+        buttonClass: "bg-[#5B55FF] text-white hover:bg-[#645BFF]",
+    },
+    {
+        key: "starter",
+        matchKeys: ["starter"],
+        shortLabel: "STARTER",
+        name: "Blip Starter",
+        planPhrase: "starter",
+        accountLine: "1 Ad Account",
+        price: 49,
+        image: StarterPlanImage,
+        buttonClass: "bg-[#FFD21F] text-[#644F00] hover:bg-[#FFD21F]",
+    },
+]
 
 const CANCEL_REASONS = [
-    { id: 'no_longer_need', label: "I no longer need to launch ads for my brand" },
-    { id: 'not_media_buyer', label: "I am no longer the media buyer for the brand/agency" },
-    { id: 'price', label: "Price" },
-    { id: 'buggy', label: "Buggy experience" },
-    { id: 'competitor', label: "Switching to a competitor" },
-    { id: 'other', label: "Other" },
-];
+    { id: "no_longer_need", label: "I no longer need to launch ads for my brand" },
+    { id: "not_media_buyer", label: "I am no longer the media buyer for the brand/agency" },
+    { id: "price", label: "Price" },
+    { id: "buggy", label: "Buggy experience" },
+    { id: "competitor", label: "Switching to a competitor" },
+    { id: "other", label: "Other" },
+]
 
+const commonFeatureLines = [
+    "Unlimited Ads",
+    "Instant Setting Sync",
+    "Access to Analytics",
+    "Unlimited Team Seats",
+]
+
+function formatPlanPrice(price) {
+    return `$${price}/month`
+}
+
+function getPlanMeta(planType) {
+    return PLANS.find((plan) => plan.matchKeys.includes(planType))
+}
 
 export default function BillingSettings() {
-    const [isLoading, setIsLoading] = useState(false)
     const [showCancelDialog, setShowCancelDialog] = useState(false)
     const {
         loading,
         subscriptionData,
         refreshSubscriptionData,
-        hasActiveAccess,
-        isOnTrial,
         isTrialExpired,
         isPaidSubscriber,
     } = useSubscription()
-    const [cancelReason, setCancelReason] = useState(null);
-    const [cancelOtherText, setCancelOtherText] = useState('');
-    const [submittingCancel, setSubmittingCancel] = useState(false);
-    const hasUsedRetentionDiscount = subscriptionData?.hasUsedRetentionDiscount || false;
 
-    const [showPlanSelector, setShowPlanSelector] = useState(false);
-    const [changingPlan, setChangingPlan] = useState(false);
-    const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
-    const [pendingPlanChange, setPendingPlanChange] = useState(null);
+    const [cancelReason, setCancelReason] = useState(null)
+    const [cancelOtherText, setCancelOtherText] = useState("")
+    const [submittingCancel, setSubmittingCancel] = useState(false)
+    const [showPlanSelector, setShowPlanSelector] = useState(false)
+    const [showChangePlanDialog, setShowChangePlanDialog] = useState(false)
+    const [pendingPlanChange, setPendingPlanChange] = useState(null)
+    const [changingPlanType, setChangingPlanType] = useState(null)
+    const [checkoutLoadingPlan, setCheckoutLoadingPlan] = useState(null)
+    const [portalLoading, setPortalLoading] = useState(false)
+    const [reactivating, setReactivating] = useState(false)
 
-    // Add this function
-    // This opens the confirmation dialog
-    const handleChangePlanClick = (newPlanType) => {
-        if (newPlanType === subscriptionData?.planType) return;
-        setPendingPlanChange(newPlanType);
-        setShowChangePlanDialog(true);
-    };
-
-    // This actually changes the plan after confirmation
-    const confirmChangePlan = async () => {
-        if (!pendingPlanChange) return;
-
-        setShowChangePlanDialog(false);
-        setChangingPlan(true);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/stripe/change-plan`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ newPlanType: pendingPlanChange }),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                toast.success(`Plan changed to ${data.newPlanType}. Reloading...`);
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
-            } else {
-                toast.error(data.error || 'Failed to change plan');
-            }
-        } catch (error) {
-            console.error('Error changing plan:', error);
-            toast.error('Failed to change plan');
-        } finally {
-            setChangingPlan(false);
-            setPendingPlanChange(null);
-        }
-    };
-
+    const hasUsedRetentionDiscount = subscriptionData?.hasUsedRetentionDiscount || false
+    const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner
+    const currentPlan = isPaidSubscriber()
+        ? (getPlanMeta(subscriptionData.planType) || PLANS[0])
+        : null
 
     useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const sessionId = urlParams.get("session_id");
-        if (!sessionId) {
-            return;
-        }
+        const urlParams = new URLSearchParams(window.location.search)
+        const sessionId = urlParams.get("session_id")
+        if (!sessionId) return
 
-        console.log("[Billing] Found session_id:", sessionId);
-        const fetchUrl = `${API_BASE_URL}/api/stripe/session/${encodeURIComponent(sessionId)}`;
-
-        fetch(fetchUrl, { credentials: "include" })
+        fetch(`${API_BASE_URL}/api/stripe/session/${encodeURIComponent(sessionId)}`, {
+            credentials: "include",
+        })
             .then(async (res) => {
-
-
                 if (!res.ok) {
-                    const text = await res.text();
-                    console.warn("[Billing] Stripe session fetch failed. Response text:", text);
-                    throw new Error(`Session fetch failed: ${res.status}`);
+                    const text = await res.text()
+                    throw new Error(text || `Session fetch failed: ${res.status}`)
                 }
 
-                const data = await res.json();
-
-
+                const data = await res.json()
                 if (data.amount_total) {
-                    console.log("[Billing] Pushing to dataLayer...");
-                    window.dataLayer = window.dataLayer || [];
+                    window.dataLayer = window.dataLayer || []
                     window.dataLayer.push({
                         event: "purchase",
                         value: data.amount_total,
                         customer_name: data.customer_name,
                         customer_email: data.customer_email,
-
-                    });
-
-                } else {
-                    console.warn("[Billing] No amount_total found in response. Data:", data);
+                    })
                 }
 
-                // Clean up the URL
-                const url = new URL(window.location.href);
+                const url = new URL(window.location.href)
                 if (url.searchParams.has("session_id")) {
-                    url.searchParams.delete("session_id");
-                    window.history.replaceState({}, "", url);
-
+                    url.searchParams.delete("session_id")
+                    window.history.replaceState({}, "", url)
                 }
             })
             .catch((err) => {
-                console.error("[Billing] ❌ Error fetching Stripe session:", err);
-            });
-    }, []);
+                console.error("[Billing] Error fetching Stripe session:", err)
+            })
+    }, [])
 
-
-    // In Billing.jsx, update the API calls:
-    const handleUpgrade = async (planType = 'agency') => {
-        setIsLoading(true);
+    const handleCheckout = async (planKey) => {
+        setCheckoutLoadingPlan(planKey)
         try {
             const response = await fetch(`${API_BASE_URL}/api/stripe/create-checkout-session`, {
-                method: 'POST',
-                credentials: 'include',
+                method: "POST",
+                credentials: "include",
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ planType }),
+                body: JSON.stringify({ planType: planKey }),
+            })
 
-            });
-
-            const { url } = await response.json();
-            window.location.href = url;
-        } catch (error) {
-            toast.error("Failed to start upgrade process");
-        } finally {
-            setIsLoading(false);
+            const { url } = await response.json()
+            window.location.href = url
+        } catch {
+            toast.error("Failed to start upgrade process")
+            setCheckoutLoadingPlan(null)
         }
-    };
+    }
 
-
-    const handleReactivate = async () => {
-        setIsLoading(true);
+    const handleViewInvoices = async () => {
+        setPortalLoading(true)
         try {
-            const response = await fetch(`${API_BASE_URL}/api/stripe/reactivate-subscription`, {
-                method: 'POST',
-                credentials: 'include',
-            });
+            const response = await fetch(`${API_BASE_URL}/api/stripe/customer-portal`, {
+                method: "POST",
+                credentials: "include",
+            })
 
             if (response.ok) {
-                toast.success("Subscription reactivated successfully!");
-                refreshSubscriptionData();
+                const { url } = await response.json()
+                window.open(url, "_blank")
             } else {
-                const error = await response.json();
-                toast.error(error.message || "Failed to reactivate subscription");
+                const error = await response.json()
+                toast.error(error.message || "Failed to access customer portal")
+            }
+        } catch {
+            toast.error("Failed to access customer portal")
+        } finally {
+            setPortalLoading(false)
+        }
+    }
+
+    const handleReactivate = async () => {
+        setReactivating(true)
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/reactivate-subscription`, {
+                method: "POST",
+                credentials: "include",
+            })
+
+            if (response.ok) {
+                toast.success("Subscription reactivated successfully!")
+                refreshSubscriptionData()
+            } else {
+                const error = await response.json()
+                toast.error(error.message || "Failed to reactivate subscription")
+            }
+        } catch {
+            toast.error("Failed to reactivate subscription")
+        } finally {
+            setReactivating(false)
+        }
+    }
+
+    const handleChangePlanClick = (newPlanType) => {
+        const currentPlanKey = currentPlan.key
+        if (newPlanType === currentPlanKey) return
+        setPendingPlanChange(newPlanType)
+        setShowChangePlanDialog(true)
+    }
+
+    const confirmChangePlan = async () => {
+        if (!pendingPlanChange) return
+
+        setShowChangePlanDialog(false)
+        setChangingPlanType(pendingPlanChange)
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/change-plan`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({ newPlanType: pendingPlanChange }),
+            })
+
+            const data = await response.json()
+            if (data.success) {
+                toast.success(`Plan changed to ${getPlanMeta(pendingPlanChange).name}. Reloading...`)
+                setTimeout(() => {
+                    window.location.reload()
+                }, 1200)
+            } else {
+                toast.error(data.error || "Failed to change plan")
             }
         } catch (error) {
-            toast.error("Failed to reactivate subscription");
+            console.error("Error changing plan:", error)
+            toast.error("Failed to change plan")
         } finally {
-            setIsLoading(false);
+            setChangingPlanType(null)
+            setPendingPlanChange(null)
         }
-    };
-
-
-    const handleCancel = () => {
-        setShowCancelDialog(true);
-    };
+    }
 
     const getReasonPayload = () => {
-        const reasonObj = CANCEL_REASONS.find(r => r.id === cancelReason);
+        const reasonObj = CANCEL_REASONS.find((reason) => reason.id === cancelReason)
         return {
             reason: cancelReason,
-            details: cancelReason === 'other' ? cancelOtherText : (reasonObj?.label || '')
-        };
-    };
+            details: cancelReason === "other" ? cancelOtherText : (reasonObj?.label || ""),
+        }
+    }
 
     const confirmCancel = async () => {
         if (!cancelReason) {
-            toast.error("Please select a reason");
-            return;
+            toast.error("Please select a reason")
+            return
         }
-        if (cancelReason === 'other' && !cancelOtherText.trim()) {
-            toast.error("Please tell us why");
-            return;
+        if (cancelReason === "other" && !cancelOtherText.trim()) {
+            toast.error("Please tell us why")
+            return
         }
 
-        setSubmittingCancel(true);
+        setSubmittingCancel(true)
         try {
             const response = await fetch(`${API_BASE_URL}/api/stripe/cancel-subscription`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(getReasonPayload()),
-            });
+            })
 
             if (response.ok) {
-                toast.success("Subscription will cancel at the end of your billing period");
-                refreshSubscriptionData();
-                setShowCancelDialog(false);
-                setCancelReason(null);
-                setCancelOtherText('');
+                toast.success("Subscription will cancel at the end of your billing period")
+                refreshSubscriptionData()
+                setShowCancelDialog(false)
+                setCancelReason(null)
+                setCancelOtherText("")
             } else {
-                toast.error("Failed to cancel subscription");
+                toast.error("Failed to cancel subscription")
             }
-        } catch (error) {
-            toast.error("Failed to cancel subscription");
+        } catch {
+            toast.error("Failed to cancel subscription")
         } finally {
-            setSubmittingCancel(false);
+            setSubmittingCancel(false)
         }
-    };
+    }
 
     const claimRetentionDiscount = async () => {
-
-        setSubmittingCancel(true);
+        setSubmittingCancel(true)
         try {
             const response = await fetch(`${API_BASE_URL}/api/stripe/apply-retention-discount`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(getReasonPayload()),
-            });
+            })
 
             if (response.ok) {
-                toast.success("🎉 75% off applied to your next invoice!");
-                refreshSubscriptionData();
-                setShowCancelDialog(false);
-                setCancelReason(null);
-                setCancelOtherText('');
+                toast.success("75% off applied to your next invoice!")
+                refreshSubscriptionData()
+                setShowCancelDialog(false)
+                setCancelReason(null)
+                setCancelOtherText("")
             } else {
-                const err = await response.json();
-                toast.error(err.error || "Failed to apply discount");
+                const err = await response.json()
+                toast.error(err.error || "Failed to apply discount")
             }
-        } catch (error) {
-            toast.error("Failed to apply discount");
+        } catch {
+            toast.error("Failed to apply discount")
         } finally {
-            setSubmittingCancel(false);
+            setSubmittingCancel(false)
         }
-    };
+    }
 
     if (loading) {
         return (
             <div className="space-y-6">
-                <div className="animate-pulse">
-                    <div className="h-32 bg-gray-200 rounded-2xl mb-4"></div>
-                    <div className="h-24 bg-gray-200 rounded-2xl"></div>
+                <div className="animate-pulse space-y-4">
+                    <div className="h-16 rounded-[24px] bg-gray-200" />
+                    <div className="h-12 rounded-[20px] bg-gray-200" />
+                    <div className="h-12 rounded-[20px] bg-gray-200" />
+                    <div className="h-12 rounded-[20px] bg-gray-200" />
                 </div>
             </div>
         )
     }
 
-    const handleViewInvoices = async () => {
-        setIsLoading(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/stripe/customer-portal`, {
-                method: 'POST',
-                credentials: 'include',
-            });
+    const cancelDate = subscriptionData?.willCancelAt ? new Date(subscriptionData.willCancelAt) : null
+    const hasScheduledCancellation = Boolean(cancelDate && cancelDate > new Date())
 
-            if (response.ok) {
-                const { url } = await response.json();
-                window.open(url, '_blank');  // Changed this line
-            } else {
-                const error = await response.json();
-                toast.error(error.message || "Failed to access customer portal");
-            }
-        } catch (error) {
-            toast.error("Failed to access customer portal");
-        } finally {
-            setIsLoading(false);
+    const statusConfig = isPaidSubscriber()
+        ? {
+            containerClass: "border border-[#CFEFBF] bg-[#E2FFC8]",
+            titleClass: "text-[#0F5132]",
+            messageClass: "text-[#2A6B43]",
+            chipClass: "text-[#15803D]",
+            dotClass: "bg-[#15803D]",
+            icon: BillingCheckIcon,
+            label: currentPlan.shortLabel,
+            message: hasScheduledCancellation
+                ? `Your subscription stays active until ${cancelDate.toLocaleDateString()}.`
+                : `You're currently subscribed to the ${currentPlan.planPhrase} plan!`,
         }
-    };
-
-    const getStatusBadge = () => {
-        if (isPaidSubscriber()) {
-            // Check if subscription was cancelled and date has passed
-            if (subscriptionData.willCancelAt) {
-                const cancelDate = new Date(subscriptionData.willCancelAt);
-                const now = new Date();
-                if (now > cancelDate) {
-                    return <Badge variant="destructive">Expired</Badge>
-                }
+        : isTrialExpired()
+            ? {
+                containerClass: "border border-[#F5BE9A] bg-[#FFD1AD]",
+                titleClass: "text-[#B42318]",
+                messageClass: "text-[#D92D20]",
+                chipClass: "text-[#C1121F]",
+                dotClass: "bg-[#D00000]",
+                icon: BillingAlertIcon,
+                label: "TRIAL EXPIRED",
+                message: "Your trial has expired! Subscribe below to continue launching Ads",
             }
-            return (
-                <Badge variant="default" className="bg-green-100 text-green-800">
-                    {subscriptionData.planType}
-                </Badge>
-            )
-        }
-        if (isTrialExpired()) return <Badge variant="destructive">Trial Expired</Badge>
-        if (isOnTrial())
-            return (
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    Free Trial
-                </Badge>
-            )
-        return <Badge variant="outline">Inactive</Badge>
-    }
+            : {
+                containerClass: "border border-[#C5DFFF] bg-[#D8EDFF]",
+                titleClass: "text-[#1D4ED8]",
+                messageClass: "text-[#295BDE]",
+                chipClass: "text-[#1D4ED8]",
+                dotClass: "bg-[#2155FF]",
+                icon: BillingCalendarIcon,
+                label: "FREE TRIAL",
+                message: `You're currently on the free trial. You have ${subscriptionData.trialDaysLeft} day${subscriptionData.trialDaysLeft === 1 ? "" : "s"} remaining`,
+            }
 
-    const isTeamMember = subscriptionData.teamId && !subscriptionData.isTeamOwner;
+    const StatusIcon = statusConfig.icon
 
     return (
         <div className="space-y-6">
-            {/* Merged Plan Status and Actions Card */}
-
             {!isTeamMember && (
                 <>
-
-                    <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="flex items-center gap-2 text-lg">
-                                        <CardIcon className="w-5 h-5" />
-                                        Manage your billing
-                                    </CardTitle>
-                                    <CardDescription className="text-gray-500 text-xs">Upgrade or cancel your subscription</CardDescription>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-medium text-gray-600 mb-1 !shadow-none">Plan Type</p>
-                                    {getStatusBadge()}
+                    <div className={`rounded-[24px] px-5 py-4 pb-5 ${statusConfig.containerClass}`}>
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-2">
+                                <p className={`text-[16px] font-semibold ${statusConfig.titleClass}`}>Your Current Plan</p>
+                                <div className="flex items-center gap-2">
+                                    <StatusIcon className="h-5 w-5 flex-shrink-0" />
+                                    <p className={`text-sm font-medium ${statusConfig.messageClass}`}>{statusConfig.message}</p>
                                 </div>
                             </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {isPaidSubscriber() && (
-                                <div className="space-y-2">
-                                    {subscriptionData.willCancelAt ? (
-                                        <>
-                                            <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-2">
-                                                <p className="text-sm text-orange-800">
-                                                    {(() => {
-                                                        const cancelDate = new Date(subscriptionData.willCancelAt);
-                                                        const now = new Date();
-                                                        const hasExpired = now > cancelDate;
+                            <div className={`flex items-center gap-2 pt-0.5 text-sm font-semibold ${statusConfig.chipClass}`}>
+                                <span className={`h-2.5 w-2.5 rounded-full ${statusConfig.dotClass}`} />
+                                <span>{statusConfig.label}</span>
+                            </div>
+                        </div>
+                    </div>
 
-                                                        return hasExpired
-                                                            ? `Your subscription expired on ${cancelDate.toLocaleDateString()}`
-                                                            : `Your subscription will continue until ${cancelDate.toLocaleDateString()}. 
-                                    Your team members will lose access after this date as well.`;
-                                                    })()}
-                                                </p>
-                                            </div>
-                                            <Button onClick={handleReactivate}
-                                                className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl h-12"
-                                                disabled={isLoading}
-                                            >
-                                                Reactivate Subscription
-                                            </Button>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Button
-                                                onClick={handleViewInvoices}
-                                                variant="outline"
-                                                disabled={isLoading}
-                                                className="w-full h-12 rounded-2xl flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-900"
-                                            >
-                                                <FileText className="w-4 h-4 text-white" />
-                                                <p className="text-white"> View Invoices </p>
-                                            </Button>
+                    {isPaidSubscriber() && (
+                        <div className="space-y-3">
+                            {hasScheduledCancellation ? (
+                                <Button
+                                    onClick={handleReactivate}
+                                    disabled={reactivating}
+                                    className="h-[52px] w-full rounded-[20px] bg-[#27272A] text-white shadow-none hover:bg-[#27272A] hover:text-white"
+                                >
+                                    {reactivating ? "Reactivating..." : "Reactivate Subscription"}
+                                </Button>
+                            ) : (
+                                <>
+                                    <Button
+                                        onClick={() => setShowPlanSelector((current) => !current)}
+                                        className="h-[52px] w-full rounded-[20px] bg-[#27272A] text-white shadow-none hover:bg-[#27272A] hover:text-white"
+                                    >
+                                        <BillingSwitchIcon className="h-5 w-5" />
+                                        {showPlanSelector ? "Hide Plans" : "Change Plan"}
+                                    </Button>
 
-                                            <Button
-                                                onClick={handleCancel}
-                                                variant="destructive"
-                                                disabled={isLoading}
-                                                className="w-full h-12 rounded-2xl flex items-center justify-center gap-2"
-                                            >
-                                                <Ban className="w-4 h-4" />
-                                                Cancel Subscription
-                                            </Button>
+                                    <div
+                                        className={`grid transition-all duration-500 ease-in-out ${showPlanSelector
+                                            ? "grid-rows-[1fr] opacity-100"
+                                            : "grid-rows-[0fr] opacity-0 -mb-3"
+                                            }`}
+                                    >
+                                        <div className="overflow-hidden">
+                                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                                {PLANS.map((plan) => {
+                                                    const isCurrentPlan = currentPlan?.key === plan.key
+                                                    const isCardLoading = checkoutLoadingPlan === plan.key || changingPlanType === plan.key
+                                                    const buttonLabel = isCurrentPlan
+                                                        ? "Current Plan"
+                                                        : isCardLoading
+                                                            ? "Switching..."
+                                                            : "Switch Plan"
 
-                                            <>
-                                                <Button
-                                                    onClick={() => setShowPlanSelector(!showPlanSelector)}
-                                                    variant="outline"
-                                                    className="w-full h-12 rounded-2xl flex items-center justify-center gap-2"
-                                                >
-                                                    <RefreshCw className="w-4 h-4" />
-                                                    {showPlanSelector ? 'Hide Plans' : 'Change Plan'}
-                                                </Button>
+                                                    return (
+                                                        <div
+                                                            key={plan.key}
+                                                            className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-white"
+                                                        >
+                                                            <div className="bg-black px-4 pb-4 pt-3 text-white">
+                                                                <div className="flex items-center gap-2">
+                                                                    <img src={plan.image} alt={plan.name} className="h-7 w-7 object-contain" />
+                                                                    <p className="billing-plan-display text-[18px] font-semibold">{plan.name}</p>
+                                                                </div>
+                                                                <div className="mt-2 flex items-end gap-1">
+                                                                    <p className="billing-price-display text-[32px] leading-none">
+                                                                        ${plan.price}
+                                                                    </p>
+                                                                    <span className="billing-plan-display pb-[1px] text-[14px] font-medium text-white/85">
+                                                                        / month
+                                                                    </span>
+                                                                </div>
+                                                            </div>
 
-                                                {showPlanSelector && (
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
-                                                        {PLANS.map((plan) => {
-                                                            const isCurrentPlan = subscriptionData?.planType === plan.type;
-                                                            return (
-                                                                <Card
-                                                                    key={plan.type}
-                                                                    className={`rounded-2xl transition-all ${isCurrentPlan
-                                                                        ? 'border-2 border-blue-500 bg-white'
-                                                                        : 'border border-gray-200 hover:border-blue-300'
+                                                            <div className="flex flex-1 flex-col px-4 py-3">
+                                                                <div className="space-y-5">
+                                                                    {[plan.accountLine, ...commonFeatureLines].map((feature, index) => (
+                                                                        <div key={feature} className="flex items-start gap-1.5">
+                                                                            <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-black" />
+                                                                            <span className={`text-[14px] ${index === 0 ? "font-semibold text-black" : "text-[#5F5F63]"}`}>
+                                                                                {feature}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+
+                                                                <Button
+                                                                    onClick={() => {
+                                                                        if (!isCurrentPlan) handleChangePlanClick(plan.key)
+                                                                    }}
+                                                                    disabled={isCurrentPlan || isCardLoading}
+                                                                    className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold shadow-none ${isCurrentPlan
+                                                                        ? "bg-[#E8E8EA] text-[#6A6A70] hover:bg-[#E8E8EA] hover:text-[#6A6A70]"
+                                                                        : plan.buttonClass
                                                                         }`}
                                                                 >
-                                                                    <CardContent className="p-4">
-                                                                        <div className="flex items-center gap-1">
-                                                                            <img src={plan.icon} alt={plan.name} className="w-8 h-8" />
-                                                                            <h3 className="font-semibold text-lg">{plan.name}</h3>
-                                                                        </div>
-                                                                        <p className="text-2xl font-bold mt-2">${plan.price}<span className="text-sm font-normal text-gray-500">/mo</span></p>
-                                                                        <p className="text-gray-500 text-sm mt-1">
-                                                                            {plan.adAccounts === 'Unlimited' ? 'Unlimited' : plan.adAccounts} Ad Account{plan.adAccounts !== '1' ? 's' : ''}
-                                                                        </p>
-
-                                                                        <Button
-                                                                            onClick={() => !isCurrentPlan && handleChangePlanClick(plan.type)}
-                                                                            disabled={changingPlan && !isCurrentPlan}
-                                                                            className={`mt-3 w-full rounded-xl h-10 ${isCurrentPlan
-                                                                                ? 'bg-blue-600 text-white cursor-default hover:bg-blue-600'
-                                                                                : 'bg-zinc-800 hover:bg-zinc-900 text-white'
-                                                                                }`}
-                                                                        >
-                                                                            {isCurrentPlan
-                                                                                ? 'Current Plan'
-                                                                                : changingPlan
-                                                                                    ? 'Changing...'
-                                                                                    : 'Switch'}
-                                                                        </Button>
-                                                                    </CardContent>
-                                                                </Card>
-                                                            );
-                                                        })}
-                                                        <p className="col-span-full text-xs text-gray-400 text-center">
-                                                            Changes take effect immediately.
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </>
-
-
-
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Trial Warning */}
-                            {isOnTrial() && subscriptionData.trialDaysLeft <= 3 && (
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                                    <div className="flex items-center gap-2">
-                                        <AlertCircle className="w-5 h-5 text-yellow-600" />
-                                        <p className="text-sm font-medium text-yellow-800">
-                                            {subscriptionData.trialDaysLeft == 0 ? "Your trial is expired" : `Your trial expires in ${subscriptionData.trialDaysLeft} day`}
-                                            {(subscriptionData.trialDaysLeft == 1 || subscriptionData.trialDaysLeft == 0) ? "" : "s"}
-                                        </p>
-                                    </div>
-                                    <p className="text-sm text-yellow-700 mt-1">
-                                        Upgrade now to continue using all features without interruption.
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* Trial Expired Warning */}
-                            {isTrialExpired() && (
-                                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                                    <div className="flex items-center gap-2">
-                                        <AlertCircle className="w-5 h-5 text-red-600" />
-                                        <p className="text-sm font-medium text-red-800">Your trial has expired</p>
-                                    </div>
-                                    <p className="text-sm text-red-700 mt-1">Upgrade to a paid plan to continue using the service.</p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Pro Plan Benefits */}
-                    {!isPaidSubscriber() && (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            {/* Pro Plan */}
-                            <Card className="flex-1 rounded-[20px] ">
-                                <CardHeader className="p-1">
-                                    <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-6 shadow-[0_2px_10px_0px_rgba(34,197,94,0.15)] border border-2 border-green-100">
-                                        <div>
-                                            <CardTitle className="flex items-center text-lg">
-                                                <img src={RocketIcon} alt="Pro" className="w-10 h-10" />
-                                                <p className="text-[26px] font-bold">Pro</p>
-                                            </CardTitle>
-                                            <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
-                                        </div>
-                                        <>
-                                            {/* Google Font link */}
-                                            <link
-                                                rel="stylesheet"
-                                                href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&display=swap"
-                                            />
-
-                                            <div>
-                                                <div
-                                                    className="text-4xl font-bold text-gray-900"
-                                                    style={{ fontFamily: "'DM Mono', monospace" }}
-                                                >
-                                                    $370
-                                                </div>
-                                                <div className="text-sm text-gray-400">/month</div>
+                                                                    <span>{buttonLabel}</span>
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
                                             </div>
-                                        </>
-
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-6 p-6 pb-8">
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Unlimited Ad Accounts</span>
-                                    </div>
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Unlimited Ad Posting</span>
-                                    </div>
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Instant Settings Sync</span>
-                                    </div>
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Unlimited Team Seats</span>
-                                    </div>
-                                    <Button
-                                        onClick={() => handleUpgrade('agency')}
-                                        disabled={isLoading}
-                                        className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
-                                        size="lg"
-                                    >
-                                        Upgrade
-                                    </Button>
-
-                                </CardContent>
-
-
-                            </Card>
-
-
-                            <Card className="flex-1 rounded-[20px]">
-                                <CardHeader className="p-1">
-                                    <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-6 shadow-[0_2px_10px_0px_rgba(255,215,0,0.15)] border border-2 border-yellow-200/50">
-                                        <div>
-                                            <CardTitle className="flex items-center text-lg">
-                                                <img src={LightningIcon} alt="Team Seats" className="w-10 h-10" />
-                                                <p className="text-[26px] font-bold">Light</p>
-                                            </CardTitle>
-                                            <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
-                                        </div>
-                                        <div>
-                                            <>
-                                                {/* Google Font link */}
-                                                <link
-                                                    rel="stylesheet"
-                                                    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&display=swap"
-                                                />
-
-                                                <div>
-                                                    <div
-                                                        className="text-4xl font-bold text-gray-900"
-                                                        style={{ fontFamily: "'DM Mono', monospace" }}
-                                                    >
-                                                        $199
-                                                    </div>
-                                                    <div className="text-sm text-gray-400">/month</div>
-                                                </div>
-                                            </>
-
                                         </div>
                                     </div>
-                                </CardHeader>
-                                <CardContent className="space-y-6 p-6 pb-8">
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Up to 5 Ad Accounts</span>
-                                    </div>
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Unlimited Ad Posting</span>
-                                    </div>
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Instant Settings Sync</span>
-                                    </div>
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon2 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Unlimited Team Seats</span>
-                                    </div>
+
                                     <Button
-                                        onClick={() => handleUpgrade('brand')}
-                                        disabled={isLoading}
-                                        className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
-                                        size="lg"
+                                        onClick={() => setShowCancelDialog(true)}
+                                        className="h-[52px] w-full rounded-[20px] bg-[#F00D55] text-white shadow-none hover:bg-[#F00D55] hover:text-white"
                                     >
-                                        Upgrade
+                                        <BillingCancelIcon className="h-5 w-5" />
+                                        Cancel Subscription
                                     </Button>
-
-                                </CardContent>
-                            </Card>
-
-                            <Card className="flex-1 rounded-[20px]">
-                                <CardHeader className="p-1">
-                                    <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-6 shadow-[0_2px_10px_0px_rgba(147,51,234,0.15)] border border-2 border-purple-100">
-                                        <div>
-                                            <CardTitle className="flex items-center text-lg">
-                                                <img src={StarIcon} className="w-10 h-10" />
-                                                <p className="text-[26px] font-bold">Starter</p>
-                                            </CardTitle>
-                                            <CardDescription className="text-gray-400 text-xs">Billed monthly</CardDescription>
-                                        </div>
-                                        <>
-                                            <link
-                                                rel="stylesheet"
-                                                href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@500&display=swap"
-                                            />
-                                            <div>
-                                                <div
-                                                    className="text-4xl font-bold text-gray-900"
-                                                    style={{ fontFamily: "'DM Mono', monospace" }}
-                                                >
-                                                    $49
-                                                </div>
-                                                <div className="text-sm text-gray-400">/month</div>
-                                            </div>
-                                        </>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="space-y-6 p-6 pb-8">
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon3 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">1 Ad Account Limit</span>
-                                    </div>
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon3 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Unlimited Ad Posting</span>
-                                    </div>
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon3 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Instant Settings Sync</span>
-                                    </div>
-                                    <div className="flex items-top gap-3 text-sm">
-                                        <CheckIcon3 className="w-6 h-6" />
-                                        <span className="text-[14px] text-gray-500">Unlimited Team Seats</span>
-                                    </div>
-                                    <Button
-                                        onClick={() => handleUpgrade('starter')}
-                                        disabled={isLoading}
-                                        className="w-full bg-zinc-800 hover:bg-zinc-900 text-white py-3 rounded-2xl text-base font-medium h-12"
-                                        size="lg"
-                                    >
-                                        Upgrade
-                                    </Button>
-                                </CardContent>
-                            </Card>
-
+                                </>
+                            )}
+                            <Button
+                                onClick={handleViewInvoices}
+                                disabled={portalLoading}
+                                variant="outline"
+                                className="h-[52px] w-full rounded-[20px] border border-black bg-white text-black shadow-none hover:bg-white hover:text-black"
+                            >
+                                <BillingInvoiceIcon className="h-5 w-5" />
+                                {portalLoading ? "Opening Invoices..." : "View Invoices"}
+                            </Button>
                         </div>
+                    )}
 
+                    {!isPaidSubscriber() && (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            {PLANS.map((plan) => {
+                                const isCardLoading = checkoutLoadingPlan === plan.key || changingPlanType === plan.key
+                                const buttonLabel = isCardLoading ? "Loading..." : "Subscribe"
 
+                                return (
+                                    <div
+                                        key={plan.key}
+                                        className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-white"
+                                    >
+                                        <div className="bg-black px-4 pb-4 pt-3 text-white">
+                                            <div className="flex items-center gap-2">
+                                                <img src={plan.image} alt={plan.name} className="h-7 w-7 object-contain" />
+                                                <p className="billing-plan-display text-[18px] font-extrabold">{plan.name}</p>
+                                            </div>
+                                            <div className="mt-2 flex items-end gap-1">
+                                                <p className="billing-price-display text-[32px] leading-none">
+                                                    ${plan.price}
+                                                </p>
+                                                <span className="billing-plan-display pb-[1px] text-[14px] font-medium text-white/85">
+                                                    / month
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-1 flex-col px-4 py-3">
+                                            <div className="space-y-5">
+                                                {[plan.accountLine, ...commonFeatureLines].map((feature, index) => (
+                                                    <div key={feature} className="flex items-start gap-1.5">
+                                                        <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-black" />
+                                                        <span className={`text-[14px] ${index === 0 ? "font-semibold text-black" : "text-[#5F5F63]"}`}>
+                                                            {feature}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <Button
+                                                onClick={() => handleCheckout(plan.key)}
+                                                disabled={isCardLoading}
+                                                className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold shadow-none ${plan.buttonClass}`}
+                                            >
+                                                <span>{buttonLabel}</span>
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
                     )}
                 </>
             )}
+
             <Button
                 asChild
-                className="w-full flex items-center justify-center gap-2 bg-white rounded-2xl text-black border border-gray-200/90 h-12 hover:bg-gray-100/40"
+                className="h-[52px] w-full rounded-[20px] border border-black/10 bg-white text-black shadow-none hover:bg-white hover:text-black shadow-sm"
             >
                 <a
                     href="mailto:shree@withblip.com"
                     target="_blank"
                     rel="noopener noreferrer"
                 >
-                    <MailIcon className="!w-6 !h-6" />
-                    Contact us For Help
+                    <MailIcon className="h-5 w-5" />
+                    Contact Us For Help
                 </a>
             </Button>
 
-
             {isTeamMember && (
-                <Card className="rounded-3xl shadow-lg shadow-gray-200/50">
-                    <CardContent className="pt-6">
-                        <div className="text-center py-4">
-                            <Users className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-600 font-medium">You're part of a team plan</p>
-                            <p className="text-sm text-gray-500 mt-1">
-                                Billing is managed by your team owner
-                            </p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="rounded-[24px] border border-black/10 bg-white px-6 py-8 text-center">
+                    <p className="text-base font-semibold text-black">You're part of a team plan</p>
+                    <p className="mt-1 text-sm text-gray-500">Billing is managed by your team owner</p>
+                </div>
             )}
 
-            {/* Cancel Confirmation Dialog */}
             <Dialog
                 open={showCancelDialog}
                 onOpenChange={(open) => {
-                    setShowCancelDialog(open);
+                    setShowCancelDialog(open)
                     if (!open) {
-                        setCancelReason(null);
-                        setCancelOtherText('');
+                        setCancelReason(null)
+                        setCancelOtherText("")
                     }
                 }}
             >
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" />
-                <DialogContent className="sm:max-w-[480px] !rounded-[30px] p-6 space-y-4">
+                <DialogContent className="space-y-4 p-6 sm:max-w-[480px] !rounded-[30px]">
                     <DialogHeader className="space-y-1">
-                        <DialogTitle className="text-xl">You're breaking my heat 💔</DialogTitle>
+                        <DialogTitle className="text-xl">You're breaking my heart</DialogTitle>
                         <DialogDescription className="text-sm leading-relaxed">
-                            I guess its me not you. At least tell me why.
+                            I guess it&apos;s me, not you. At least tell me why.
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-1.5">
-                        {CANCEL_REASONS.map((r) => (
+                        {CANCEL_REASONS.map((reason) => (
                             <label
-                                key={r.id}
-                                className={`flex items-center gap-3 py-2 px-3 rounded-xl border cursor-pointer transition ${cancelReason === r.id
-                                    ? 'border-zinc-800 bg-zinc-50'
-                                    : 'border-gray-200 hover:border-gray-300'
+                                key={reason.id}
+                                className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 transition ${cancelReason === reason.id
+                                    ? "border-zinc-800 bg-zinc-50"
+                                    : "border-gray-200 hover:border-gray-300"
                                     }`}
                             >
                                 <input
                                     type="radio"
                                     name="cancelReason"
-                                    value={r.id}
-                                    checked={cancelReason === r.id}
-                                    onChange={() => setCancelReason(r.id)}
+                                    value={reason.id}
+                                    checked={cancelReason === reason.id}
+                                    onChange={() => setCancelReason(reason.id)}
                                     className="accent-zinc-800"
                                 />
-                                <span className="text-sm text-gray-700">{r.label}</span>
+                                <span className="text-sm text-gray-700">{reason.label}</span>
                             </label>
                         ))}
-                        {cancelReason === 'other' && (
+
+                        {cancelReason === "other" && (
                             <textarea
                                 value={cancelOtherText}
                                 onChange={(e) => setCancelOtherText(e.target.value)}
                                 placeholder="Tell us more..."
-                                className="w-full mt-2 p-3 border border-gray-200 rounded-xl text-sm resize-none focus:outline-none focus:border-zinc-800"
+                                className="mt-2 w-full resize-none rounded-xl border border-gray-200 p-3 text-sm focus:border-zinc-800 focus:outline-none"
                                 rows={2}
                             />
                         )}
                     </div>
 
                     {!hasUsedRetentionDiscount && (
-                        <div className="bg-zinc-900 rounded-2xl p-4 flex items-center gap-3">
-                            <img src={GiftIcon} className="w-10 h-10 flex-shrink-0" alt="" />
+                        <div className="flex items-center gap-3 rounded-2xl bg-zinc-900 p-4">
+                            <img src={GiftIcon} className="h-10 w-10 flex-shrink-0" alt="" />
                             <div className="space-y-0.5">
-                                <p className="text-base font-bold text-white leading-tight">
+                                <p className="text-base font-bold leading-tight text-white">
                                     Wait! Get 75% off your next month
                                 </p>
-                                <p className="text-xs text-gray-300 leading-snug">
-                                    Stay with us and we'll automatically apply a 75% discount to your next invoice. One-time offer.
+                                <p className="text-xs leading-snug text-gray-300">
+                                    Stay with us and we&apos;ll automatically apply a 75% discount to your next invoice. One-time offer.
                                 </p>
                             </div>
                         </div>
@@ -795,24 +651,24 @@ export default function BillingSettings() {
                             <Button
                                 onClick={claimRetentionDiscount}
                                 disabled={submittingCancel}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-2xl h-12"
+                                className="h-12 w-full rounded-2xl bg-blue-600 text-white hover:bg-blue-700"
                             >
-                                Claim 75% off & keep subscription
+                                Claim 75% off and keep subscription
                             </Button>
                         )}
-                        <div className="flex gap-2 w-full">
+                        <div className="flex w-full gap-2">
                             <Button
                                 variant="outline"
                                 onClick={() => setShowCancelDialog(false)}
                                 disabled={submittingCancel}
-                                className="rounded-2xl flex-1 h-11"
+                                className="h-11 flex-1 rounded-2xl"
                             >
                                 Keep subscription
                             </Button>
                             <Button
                                 onClick={confirmCancel}
                                 disabled={submittingCancel}
-                                className="bg-red-600 hover:bg-red-700 rounded-2xl flex-1 h-11"
+                                className="h-11 flex-1 rounded-2xl bg-red-600 hover:bg-red-700"
                             >
                                 Confirm cancel
                             </Button>
@@ -821,40 +677,37 @@ export default function BillingSettings() {
                 </DialogContent>
             </Dialog>
 
-            {/* Change Plan Confirmation Dialog */}
             <Dialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
                 <DialogOverlay className="bg-black/50 !-mt-[20px]" />
-                <DialogContent className="sm:max-w-[425px] !rounded-[30px] p-8 space-y-6">
+                <DialogContent className="space-y-6 p-8 sm:max-w-[425px] !rounded-[30px]">
                     <DialogHeader className="space-y-4">
                         <DialogTitle className="text-xl">Change Plan</DialogTitle>
                         <DialogDescription className="text-base leading-relaxed">
-                            Are you sure you want to switch to the {PLANS.find(p => p.type === pendingPlanChange)?.name} plan?
+                            Are you sure you want to switch to the {PLANS.find((plan) => plan.key === pendingPlanChange)?.name} plan?
                             You and your team members will all be switched to this plan immediately.
-
                         </DialogDescription>
                     </DialogHeader>
 
-                    <DialogFooter className="flex flex-col sm:flex-row gap-3 pt-4">
+                    <DialogFooter className="flex flex-col gap-3 pt-4 sm:flex-row">
                         <Button
                             variant="outline"
                             onClick={() => {
-                                setShowChangePlanDialog(false);
-                                setPendingPlanChange(null);
+                                setShowChangePlanDialog(false)
+                                setPendingPlanChange(null)
                             }}
-                            className="rounded-2xl flex-1"
+                            className="flex-1 rounded-2xl"
                         >
                             Cancel
                         </Button>
                         <Button
                             onClick={confirmChangePlan}
-                            className="bg-blue-600 hover:bg-blue-700 rounded-2xl flex-1"
+                            className="flex-1 rounded-2xl bg-blue-600 hover:bg-blue-700"
                         >
                             Yes, Switch Plan
                         </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
         </div>
     )
 }

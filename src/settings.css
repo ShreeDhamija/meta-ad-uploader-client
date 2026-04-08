@@ -120,4 +120,22 @@
     animation: slideOutDown 300ms ease-in forwards;
 }
 
+@font-face {
+    font-family: "Alcyone Black";
+    src: url("./assets/fonts/Alcyone-Black.ttf") format("truetype");
+    font-weight: 900;
+    font-style: normal;
+}
+
+.billing-plan-display {
+    font-family: var(--billing-display-font), "Avenir Next", "Segoe UI", sans-serif;
+    letter-spacing: -0.02em;
+}
+
+.billing-price-display {
+    font-family: "Alcyone Black", var(--billing-display-font), "Avenir Next", "Segoe UI", sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+}
+
 /* Remove focus ring from all toggle switches in settings */
