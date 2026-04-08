@@ -397,7 +397,7 @@ export default function BillingSettings() {
                     </div>
 
                     {isPaidSubscriber() && (
-                        <div className="space-y-3">
+                        <div className="flex flex-col gap-3">
                             {hasScheduledCancellation ? (
                                 <Button
                                     onClick={handleReactivate}
@@ -417,9 +417,9 @@ export default function BillingSettings() {
                                     </Button>
 
                                     <div
-                                        className={`grid transition-all duration-500 ease-in-out ${showPlanSelector
+                                        className={`overflow-hidden grid transition-all duration-500 ease-in-out ${showPlanSelector
                                             ? "grid-rows-[1fr] opacity-100"
-                                            : "grid-rows-[0fr] opacity-0 -mb-3"
+                                            : "grid-rows-[0fr] opacity-0"
                                             }`}
                                     >
                                         <div className="overflow-hidden">
