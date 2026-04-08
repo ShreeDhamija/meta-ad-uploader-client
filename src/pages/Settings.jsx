@@ -14,8 +14,8 @@ import AnalyticsDashboard from "@/components/settings/AnalyticsDashboard" // NEW
 import useSubscription from "@/lib/useSubscriptionSettings"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
-import HomeBtn from '@/assets/icons/home.svg?react';
-import Folder from '@/assets/icons/cog.svg?react';
+import RocketBtn from '@/assets/rocket2.webp';
+import Folder from '@/assets/icons/cog-three.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
@@ -48,6 +48,7 @@ export default function Settings() {
     const initialTab = urlParams.get('tab') || 'adaccount'
     const preselectedAdAccount = urlParams.get('adAccount')
     const [activeTab, setActiveTab] = useState(initialTab)
+    const settingsTabs = ["adaccount", ...(import.meta.env.VITE_APP_ENV === "staging" ? ["analytics"] : []), "billing", "team"]
 
     // UPDATED: Added analytics to the tab icon map
     const tabIconMap = {
@@ -106,38 +107,38 @@ export default function Settings() {
     }
 
 
-    useEffect(() => {
-        if (!loading && !hasSeenSettingsOnboarding) {
-            setShowSettingsPopup(true)
-        }
-    }, [loading, hasSeenSettingsOnboarding])
+    // useEffect(() => {
+    //     if (!loading && !hasSeenSettingsOnboarding) {
+    //         setShowSettingsPopup(true)
+    //     }
+    // }, [loading, hasSeenSettingsOnboarding])
 
-    useEffect(() => {
-        if (loading || subscriptionLoading) return;
+    // useEffect(() => {
+    //     if (loading || subscriptionLoading) return;
 
-        if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
-            setShowAdAccountPopup(true)
-        }
-    }, [subscriptionData.planType, selectedAdAccountIds])
+    //     if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
+    //         setShowAdAccountPopup(true)
+    //     }
+    // }, [subscriptionData.planType, selectedAdAccountIds])
 
-    useEffect(() => {
-        const userHasActiveAccess = hasActiveAccess();
+    // useEffect(() => {
+    //     const userHasActiveAccess = hasActiveAccess();
 
-        if (
-            activeTab === "analytics" &&
-            !subscriptionLoading &&
-            isTrialExpired() &&
-            !userHasActiveAccess &&
-            !hasDismissedTrialPopup
-        ) {
-            setShowTrialExpiredPopup(true);
-            return;
-        }
+    //     if (
+    //         activeTab === "analytics" &&
+    //         !subscriptionLoading &&
+    //         isTrialExpired() &&
+    //         !userHasActiveAccess &&
+    //         !hasDismissedTrialPopup
+    //     ) {
+    //         setShowTrialExpiredPopup(true);
+    //         return;
+    //     }
 
-        if (activeTab !== "analytics") {
-            setShowTrialExpiredPopup(false);
-        }
-    }, [activeTab, subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
+    //     if (activeTab !== "analytics") {
+    //         setShowTrialExpiredPopup(false);
+    //     }
+    // }, [activeTab, subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -175,8 +176,8 @@ export default function Settings() {
         }
     };
 
-    if (authLoading) return null
-    if (!isLoggedIn) return <Navigate to="/login" />
+    // if (authLoading) return null
+    // if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <>
@@ -198,7 +199,7 @@ export default function Settings() {
             </div>
 
 
-            <div className="flex bg-gray-100 min-h-screen">
+            <div className="flex min-h-screen bg-[#fafafa]">
                 {/* Sidebar */}
                 <div className="w-[290px] flex flex-col h-screen sticky top-0 px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
                     <div className=" rounded-3xl p-4 flex flex-col h-full">
@@ -207,42 +208,44 @@ export default function Settings() {
                             {/* Back to Home Button */}
                             <Button
                                 onClick={() => navigate("/")}
-                                className="flex items-center justify-start gap-2 bg-white border border-gray-200 shadow-sm rounded-[20px] py-6 text- font-medium w-full mb-4 hover:!bg-white hover:shadow-md"
+                                className="flex items-center justify-start gap-2 bg-white border border-gray-200 shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 hover:!bg-white hover:shadow-md"
                                 variant="ghost"
                             >
-                                <HomeBtn className="!w-5 !h-5" />
-                                <div className="h-4 w-px bg-gray-300 max-lg:hidden" />
-                                <span className="text-gray-700 max-lg:hidden">Back To Home</span>
+                                <img src={RocketBtn} alt="Home" className="w-8 h-8 object-contain" />
+                                <span className="text-gray-700 font-bold max-lg:hidden">Back To Launcher</span>
                             </Button>
 
                             {/* Tab Buttons - UPDATED: Added analytics to the array */}
                             <div className="space-y-2">
-                                {["adaccount", ...(import.meta.env.VITE_APP_ENV === "staging" ? ["analytics"] : []), "billing", "team"].map((tab) => {
+                                {settingsTabs.map((tab) => {
                                     const Icon = tabIconMap[tab];
                                     return (
                                         <button
                                             key={tab}
                                             onClick={() => handleTabChange(tab)}
                                             className={cn(
-                                                "w-full flex items-center gap-2 px-4 py-2 rounded-2xl",
+                                                "w-full flex items-center gap-2 px-4 py-2 rounded-2xl transition-colors h-10",
                                                 activeTab === tab
-                                                    ? "bg-gradient-to-b from-zinc-600 to-zinc-700 border border-2 border-zinc-200/20 font-semibold text-white shadow-md"
-                                                    : "hover:bg-gray-300",
-                                                "justify-start max-lg:justify-center max-lg:px-2",
+                                                    ? "bg-[#ECECEE] border border-black/[0.02] font-semibold text-black"
+                                                    : "border border-transparent text-black hover:bg-black/[0.04]",
+                                                "justify-start max-lg:justify-center max-lg:px-2 relative",
                                             )}
                                         >
                                             <Icon
                                                 aria-label={`${tab} icon`}
                                                 className={cn(
-                                                    "w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-500 ease-in-out object-contain flex-shrink-0",
+                                                    "w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-500 ease-in-out object-contain flex-shrink-0 text-black",
                                                     activeTab === tab
-                                                        ? "brightness-0 invert"
-                                                        : "grayscale brightness-75 contrast-75 opacity-60"
+                                                        ? "opacity-100"
+                                                        : "opacity-70"
                                                 )}
                                             />
-                                            <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
+                                            <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out text-black">
                                                 {tabLabelMap[tab]}
                                             </span>
+                                            {activeTab === tab && (
+                                                <span className="ml-auto h-2 w-2 rounded-full bg-black max-lg:hidden" aria-hidden="true" />
+                                            )}
 
                                         </button>
                                     );
@@ -264,7 +267,7 @@ export default function Settings() {
                                 <div className="flex items-center">
                                     <div className="h-6 w-px bg-gray-300 max-lg:hidden" />
                                     <button onClick={handleLogout} className="ml-3 rounded-full transition max-lg:ml-0" title="Logout">
-                                        <LogOutIcon className="w-4 h-4 max-lg:w-5 max-lg:h-5 text-red-600" />
+                                        <LogOutIcon className="w-4 h-4 max-lg:w-5 max-lg:h-5 text-black" />
                                     </button>
                                 </div>
                             </div>
