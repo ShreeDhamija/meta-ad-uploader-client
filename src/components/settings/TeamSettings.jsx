@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import YourCopyIcon from "@/assets/icons/copy2.svg?react"
+import YourCopyIcon from "@/assets/icons/copy3.svg?react"
 import { Input } from "@/components/ui/input"
 import MailIcon from "@/assets/icons/mail.svg?react"
 import TeamIcon from "@/assets/icons/Team/Team.svg?react"
@@ -345,7 +345,7 @@ export default function TeamSettings() {
                                 Here is your Team ID
                             </span>
                             <div
-                                className="flex cursor-pointer items-center gap-2 rounded-[16px] bg-[#FFB2F6] px-3 py-2 pr-2"
+                                className="flex cursor-pointer items-center gap-2 rounded-[16px] bg-[#FFA560] px-3 py-2 pr-2"
                                 onClick={() => {
                                     navigator.clipboard.writeText(teamData.inviteCode)
                                     toast.success("Copied to clipboard!")

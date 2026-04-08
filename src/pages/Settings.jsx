@@ -107,38 +107,38 @@ export default function Settings() {
     }
 
 
-    // useEffect(() => {
-    //     if (!loading && !hasSeenSettingsOnboarding) {
-    //         setShowSettingsPopup(true)
-    //     }
-    // }, [loading, hasSeenSettingsOnboarding])
+    useEffect(() => {
+        if (!loading && !hasSeenSettingsOnboarding) {
+            setShowSettingsPopup(true)
+        }
+    }, [loading, hasSeenSettingsOnboarding])
 
-    // useEffect(() => {
-    //     if (loading || subscriptionLoading) return;
+    useEffect(() => {
+        if (loading || subscriptionLoading) return;
 
-    //     if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
-    //         setShowAdAccountPopup(true)
-    //     }
-    // }, [subscriptionData.planType, selectedAdAccountIds])
+        if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
+            setShowAdAccountPopup(true)
+        }
+    }, [subscriptionData.planType, selectedAdAccountIds])
 
-    // useEffect(() => {
-    //     const userHasActiveAccess = hasActiveAccess();
+    useEffect(() => {
+        const userHasActiveAccess = hasActiveAccess();
 
-    //     if (
-    //         activeTab === "analytics" &&
-    //         !subscriptionLoading &&
-    //         isTrialExpired() &&
-    //         !userHasActiveAccess &&
-    //         !hasDismissedTrialPopup
-    //     ) {
-    //         setShowTrialExpiredPopup(true);
-    //         return;
-    //     }
+        if (
+            activeTab === "analytics" &&
+            !subscriptionLoading &&
+            isTrialExpired() &&
+            !userHasActiveAccess &&
+            !hasDismissedTrialPopup
+        ) {
+            setShowTrialExpiredPopup(true);
+            return;
+        }
 
-    //     if (activeTab !== "analytics") {
-    //         setShowTrialExpiredPopup(false);
-    //     }
-    // }, [activeTab, subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
+        if (activeTab !== "analytics") {
+            setShowTrialExpiredPopup(false);
+        }
+    }, [activeTab, subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
@@ -176,8 +176,8 @@ export default function Settings() {
         }
     };
 
-    // if (authLoading) return null
-    // if (!isLoggedIn) return <Navigate to="/login" />
+    if (authLoading) return null
+    if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <>
