@@ -6,6 +6,7 @@ import YourCopyIcon from "@/assets/icons/copy2.svg?react"
 import { Input } from "@/components/ui/input"
 import MailIcon from "@/assets/icons/mail.svg?react"
 import TeamIcon from "@/assets/icons/Team/Team.svg?react"
+import TeamBlackIcon from "@/assets/icons/Team/TeamBlack.svg?react"
 import CancelIcon from "@/assets/icons/Team/Cancel.svg?react"
 import JoinIcon from "@/assets/icons/Team/Join.svg?react"
 import KeyIcon from "@/assets/icons/Team/Key.svg?react"
@@ -309,7 +310,7 @@ export default function TeamSettings() {
                 {teamMode === "member" && teamData && (
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 text-[22px] font-semibold text-black">
-                            <TeamIcon className="h-5 w-5" />
+                            <TeamBlackIcon className="h-5 w-5" />
                             <span>{teamData.teamName || teamData.name}</span>
                         </div>
                         <p className="text-sm text-gray-500">
@@ -323,7 +324,7 @@ export default function TeamSettings() {
                         <div className="flex items-center justify-between gap-4">
                             <div>
                                 <div className="flex items-center gap-2 text-[22px] font-semibold text-black">
-                                    <TeamIcon className="h-5 w-5" />
+                                    <TeamBlackIcon className="h-5 w-5" />
                                     <span>{teamData.teamName || teamData.name}</span>
                                 </div>
                                 <p className="mt-1 text-sm text-gray-500">
@@ -339,7 +340,7 @@ export default function TeamSettings() {
                             </Button>
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-start gap-3 rounded-[20px] border border-[#F3A9FF] bg-[#FFE0EF] px-3 py-1">
+                        <div className="flex flex-wrap items-center justify-start gap-3 rounded-2xl border border-[#F3A9FF] bg-[#FFE0EF] px-3 py-1">
                             <span className="text-sm font-medium text-[#B2038C]">
                                 Here is your Team ID
                             </span>
@@ -377,32 +378,26 @@ export default function TeamSettings() {
                                         value={currentEmail}
                                         onChange={(e) => setCurrentEmail(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && handleAddEmail()}
-                                        className="h-[45px] rounded-[20px] border border-black/10 bg-white pl-12 text-[14px] font-semibold text-[#1f1f1f] placeholder:font-semibold placeholder:text-[#444444] focus-visible:ring-0 focus-visible:ring-offset-0"
+                                        className="h-[45px] rounded-[20px] border border-black/10 bg-white pl-12 text-[14px] font-medium text-[#1f1f1f] placeholder:font-medium placeholder:text-[#444444] focus-visible:ring-0 focus-visible:ring-offset-0"
                                     />
                                 </div>
                                 <Button
                                     onClick={handleAddEmail}
                                     variant="outline"
-                                    className="h-[45px] rounded-[20px] border-2 border-black bg-white px-4 text-black hover:bg-gray-50"
+                                    className="h-[45px] rounded-[20px] border-2 border-black bg-white px-6 font-semibold text-black hover:bg-white"
                                 >
                                     <AddIcon className="h-4 w-4 text-black" />
                                     Add
                                 </Button>
-                                {inviteEmails.length > 0 && (
-                                    <Button
-                                        onClick={() => setInviteEmails([])}
-                                        className="h-[45px] w-[45px] rounded-[20px] bg-[#F00D55] p-0 text-white hover:bg-[#cf0b48]"
-                                    >
-                                        <TrashIcon className="h-4 w-4" />
-                                    </Button>
-                                )}
                             </div>
 
                             {inviteEmails.length > 0 && (
                                 <div className="space-y-2">
                                     {inviteEmails.map((email, index) => (
-                                        <div key={index} className="flex items-center justify-between gap-2 rounded-[20px] border border-black/10 bg-white px-4 py-3">
-                                            <span className="text-sm font-medium text-[#1f1f1f]">{email}</span>
+                                        <div key={index} className="flex items-center gap-2">
+                                            <div className="flex-1 rounded-[20px] border border-black/10 bg-white px-4 py-3">
+                                                <span className="text-sm font-medium text-[#1f1f1f]">{email}</span>
+                                            </div>
                                             <Button
                                                 onClick={() => handleRemoveEmail(email)}
                                                 className="h-[45px] w-[45px] rounded-[20px] bg-[#F00D55] p-0 text-white hover:bg-[#cf0b48]"
@@ -436,19 +431,21 @@ export default function TeamSettings() {
                         {teamData.members?.length > 0 && (
                             <div className="space-y-2">
                                 {teamData.members.map((member) => (
-                                    <div key={member.id} className="flex items-center justify-between rounded-[20px] bg-white px-4 py-3">
-                                        <div className="flex items-center gap-3">
-                                            <img
-                                                src={member.picture || "/default-avatar.png"}
-                                                alt={member.name}
-                                                className="h-8 w-8 rounded-full object-cover"
-                                            />
-                                            <span className="text-sm font-medium text-[#1f1f1f]">{member.name}</span>
+                                    <div key={member.id} className="flex items-center gap-2">
+                                        <div className="flex flex-1 items-center justify-between rounded-[20px] bg-white px-4 py-3">
+                                            <div className="flex items-center gap-3">
+                                                <img
+                                                    src={member.picture || "/default-avatar.png"}
+                                                    alt={member.name}
+                                                    className="h-8 w-8 rounded-full object-cover"
+                                                />
+                                                <span className="text-sm font-medium text-[#1f1f1f]">{member.name}</span>
+                                            </div>
                                         </div>
                                         <Button
                                             onClick={() => handleRemoveMember(member.id)}
                                             size="icon"
-                                            className="h-9 w-9 rounded-full bg-[#003CFF] text-white hover:bg-[#002fd1]"
+                                            className="h-[45px] w-[45px] rounded-[20px] bg-[#F00D55] p-0 text-white hover:bg-[#cf0b48]"
                                             disabled={deletingMemberId === member.id}
                                         >
                                             {deletingMemberId === member.id ? (
