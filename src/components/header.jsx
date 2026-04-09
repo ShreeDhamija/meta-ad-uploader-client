@@ -102,7 +102,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           alt="Profile"
           className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
         />
-        <span className="text-[14px] font-semibold text-gray-800 whitespace-nowrap">{userName}</span>
+        <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
       </div>
 
       {/* Action Buttons (Right) */}
