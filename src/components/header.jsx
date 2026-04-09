@@ -186,7 +186,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           }}
         >
           <Settings className="w-5 h-5 text-black" />
-          <span className="hidden md:inline text-gray-700 text-[14px] font-semibold">Preferences</span>
+          <span className="hidden md:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
         <div className="h-8 w-px bg-gray-300" />
         {/* Chat Support Button */}
@@ -196,7 +196,7 @@ export default function Header({ showMessenger, hideMessenger }) {
           className=" py-2 bg-transparent hover:bg-gray-100 text-gray-700 rounded-full flex items-center justify-center transition-colors px-2 gap-2"
         >
           <ChatIcon className="size-5" />
-          <span className="inline text-[14px] font-semibold">Chat With Us</span>
+          <span className="inline text-[14px] text-gray-900 font-medium">Chat With Us</span>
         </button>
 
         <div className="h-8 w-px bg-gray-300" />
