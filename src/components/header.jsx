@@ -154,7 +154,7 @@ export default function Header({ showMessenger, hideMessenger }) {
               <ZapIcon className="w-3.5 h-3.5" />
               {!hasActiveAccess() ? 'Subscribe' : 'Upgrade'}
             </Button>
-            <div className="hidden md:block h-8 w-px bg-gray-300 mx-1" />
+            <div className="hidden md:block h-8 w-px bg-gray-300 mx-0.5" />
           </>
         )}
 
@@ -192,14 +192,14 @@ export default function Header({ showMessenger, hideMessenger }) {
             </DropdownMenu>
 
             {/* Divider after bell */}
-            <div className="h-8 w-px bg-gray-300 mx-1" />
+            <div className="h-8 w-px bg-gray-300 mx-0.5" />
           </>
         )}
 
         <button
           onClick={() => navigate("/settings")}
           title="Settings"
-          className="hidden md:flex items-center gap-2 rounded-full transition !bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-4 py-2 mx-1"
+          className="hidden md:flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-3 py-2 mx-0.5"
           style={{
             outline: "none",
             boxShadow: "none",
@@ -209,31 +209,31 @@ export default function Header({ showMessenger, hideMessenger }) {
           <Settings className="w-5 h-5 text-black" />
           <span className="hidden md:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
-        <div className="h-8 w-px bg-gray-300 mx-1" />
+        <div className="h-8 w-px bg-gray-300 mx-0.5" />
         {showAnalyticsNav && (
           <>
             <button
               onClick={() => navigate("/analytics")}
               title="Analytics"
-              className="hidden md:flex items-center gap-2 rounded-full transition-colors px-4 py-2 mx-1 bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent"
+              className="hidden md:flex items-center gap-1.5 rounded-full transition-colors px-3 py-2 mx-0.5 bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent"
             >
               <AnalyticsIcon className="size-5" />
               <span className="inline text-[14px] text-gray-900 font-medium">Analytics</span>
             </button>
-            <div className="h-8 w-px bg-gray-300 mx-1" />
+            <div className="h-8 w-px bg-gray-300 mx-0.5" />
           </>
         )}
         {/* Chat Support Button */}
         <button
           onClick={handleChatToggle}
           title="Support Chat"
-          className="py-2 bg-transparent hover:bg-gray-100 text-gray-700 rounded-full flex items-center justify-center transition-colors px-4 mx-1 gap-2"
+          className="py-2 bg-transparent hover:bg-gray-100 text-gray-700 rounded-full flex items-center justify-center transition-colors px-3 mx-0.5 gap-2"
         >
           <ChatIcon className="size-5" />
           <span className="inline text-[14px] text-gray-900 font-medium">Chat With Us</span>
         </button>
 
-        <div className="h-8 w-px bg-gray-300 mx-1" />
+        <div className="h-8 w-px bg-gray-300 mx-0.5" />
 
         <button
           onClick={handleLogout}
