@@ -340,21 +340,21 @@ export default function TeamSettings() {
                             </Button>
                         </div>
 
-                        <div className="flex flex-wrap items-center justify-start gap-3 rounded-2xl border border-[#BC4500] bg-[#FFD1AD] px-3 py-1">
+                        <div className="flex flex-wrap items-center justify-start gap-3 rounded-2xl bg-[#FFD1AD] px-3 py-1">
                             <span className="text-sm font-medium text-[#BC4500]">
                                 Here is your Team ID
                             </span>
                             <div
-                                className="flex cursor-pointer items-center gap-2 rounded-[16px] bg-[#FFA560] px-3 py-2 pr-2"
+                                className="flex cursor-pointer items-center gap-2 rounded-[16px] bg-[#FFB47B] px-3 py-2 pr-2"
                                 onClick={() => {
                                     navigator.clipboard.writeText(teamData.inviteCode)
                                     toast.success("Copied to clipboard!")
                                 }}
                             >
-                                <span className="text-sm font-semibold text-[#743D02]">
+                                <span className="text-sm font-semibold text-[#AB5800]">
                                     {teamData.inviteCode}
                                 </span>
-                                <YourCopyIcon className="h-4 w-4 text-[#743D02]" />
+                                <YourCopyIcon className="h-4 w-4 text-[#AB5800]" />
                             </div>
                             <span className="text-sm font-medium text-[#BC4500]">
                                 Your team will need this to join.

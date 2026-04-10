@@ -147,7 +147,7 @@ export default function Settings() {
                                 variant="ghost"
                             >
                                 <img src={RocketBtn} alt="Home" className="w-8 h-8 object-contain" />
-                                <div className="h-6 w-px bg-neutral-300 mr-2 max-lg:hidden" />
+                                <div className="h-6 w-px bg-neutral-300 hover:bg-neutral-300 mr-2 max-lg:hidden" />
                                 <span className="text-neutral-700 font-semibold max-lg:hidden">Back To Launcher</span>
                             </Button>
 
