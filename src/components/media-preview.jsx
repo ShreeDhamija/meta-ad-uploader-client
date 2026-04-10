@@ -763,7 +763,7 @@ export default function MediaPreview({
     <>
       {(files.length > 0 || driveFiles.length > 0 || (dropboxFiles?.length || 0) > 0 || importedPosts.length > 0 || importedFiles.length > 0 || selectedIgOrganicPosts.length > 0) ? (
         <Card
-          className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-2xl"
+          className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-3xl"
           style={{ height: "calc(100vh - 140px)" }}
           onDragOver={(e) => {
             e.preventDefault();
@@ -1153,7 +1153,7 @@ export default function MediaPreview({
           style={{ height: "calc(100vh - 140px)" }}
         >
           <div
-            className="w-full h-full flex items-center justify-center relative overflow-hidden rounded-2xl border border-gray-200 shadow-md"
+            className="w-full h-full flex items-center justify-center relative overflow-hidden rounded-3xl border border-gray-200 shadow-md"
             style={{
               backgroundColor: '#ffffff',
               backgroundImage: `repeating-linear-gradient(

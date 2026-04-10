@@ -454,7 +454,7 @@ export default function AdAccountSettings({
 
   return (
 
-    <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
+    <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <CogIcon className="w-5 h-5" />

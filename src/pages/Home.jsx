@@ -862,82 +862,82 @@ export default function Home() {
                 </div>
             </div>
 
-                {showOnboardingPopup && (
-                    <OnboardingPopup
-                        userName={userName}
-                        hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
-                        onClose={handleCloseOnboarding}
-                        adAccounts={adAccounts} // your ad accounts array
-                        onImport={handleOnboardingImport}
-                        hasAnySettings={hasAnyAdAccountSettings}  // PASS THIS
-                        onGoToSettings={() => {
+            {showOnboardingPopup && (
+                <OnboardingPopup
+                    userName={userName}
+                    hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
+                    onClose={handleCloseOnboarding}
+                    adAccounts={adAccounts} // your ad accounts array
+                    onImport={handleOnboardingImport}
+                    hasAnySettings={hasAnyAdAccountSettings}  // PASS THIS
+                    onGoToSettings={() => {
 
-                            try {
-                                // Navigate FIRST, before unmounting the component                                
-                                navigate("/settings")
+                        try {
+                            // Navigate FIRST, before unmounting the component                                
+                            navigate("/settings")
 
-                                // Then update state and save settings
-                                setHasSeenOnboarding(true)
-                                setShowOnboardingPopup(false)
+                            // Then update state and save settings
+                            setHasSeenOnboarding(true)
+                            setShowOnboardingPopup(false)
 
-                                // Save settings after navigation
-                                fetch(`${API_BASE_URL}/settings/save`, {
-                                    method: "POST",
-                                    credentials: "include",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
-                                }).catch(error => console.error("Settings save error:", error))
+                            // Save settings after navigation
+                            fetch(`${API_BASE_URL}/settings/save`, {
+                                method: "POST",
+                                credentials: "include",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
+                            }).catch(error => console.error("Settings save error:", error))
 
-                            } catch (error) {
-                                console.error("Error in onGoToSettings:", error)
-                            }
-                        }}
-                    />
-                )}
-
-                {showAnalyticsHomePopup && (
-                    <AnalyticsHomePopup
-                        onClose={handleCloseAnalyticsHomePopup}
-                        onCheckOutAnalytics={handleCheckOutAnalytics}
-                    />
-                )}
-
-                {showTrialExpiredPopup && (
-                    <TrialExpiredPopup
-                        onClose={() => {
-                            setShowTrialExpiredPopup(false);
-                            setHasDismissedTrialPopup(true);
-                        }}
-                        onUpgrade={() => {
-                            // Navigate to billing tab in settings
-                            navigate("/settings?tab=billing");
-                            setShowTrialExpiredPopup(false);
-                            setHasDismissedTrialPopup(true);
-                        }}
-                        joinTeam={() => {
-                            // Navigate to billing tab in settings
-                            navigate("/settings?tab=team");
-                            setShowTrialExpiredPopup(false);
-                            setHasDismissedTrialPopup(true);
-                        }}
-                        onChatWithUs={() => {
-                            showMessenger();
-                            setShowTrialExpiredPopup(false);
-                            setHasDismissedTrialPopup(true);
-                        }}
-                        canExtendTrial={canExtendTrial()}
-                        onExtendTrial={handleExtendTrial}
-                        isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
-                        isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
-                    />
-                )}
-
-                <AdAccountSelectionPopup
-                    isOpen={showAdAccountPopup}
-                    onClose={() => setShowAdAccountPopup(false)}
+                        } catch (error) {
+                            console.error("Error in onGoToSettings:", error)
+                        }
+                    }}
                 />
+            )}
 
-                <Toaster richColors position="bottom-left" closeButton />
+            {showAnalyticsHomePopup && (
+                <AnalyticsHomePopup
+                    onClose={handleCloseAnalyticsHomePopup}
+                    onCheckOutAnalytics={handleCheckOutAnalytics}
+                />
+            )}
+
+            {showTrialExpiredPopup && (
+                <TrialExpiredPopup
+                    onClose={() => {
+                        setShowTrialExpiredPopup(false);
+                        setHasDismissedTrialPopup(true);
+                    }}
+                    onUpgrade={() => {
+                        // Navigate to billing tab in settings
+                        navigate("/settings?tab=billing");
+                        setShowTrialExpiredPopup(false);
+                        setHasDismissedTrialPopup(true);
+                    }}
+                    joinTeam={() => {
+                        // Navigate to billing tab in settings
+                        navigate("/settings?tab=team");
+                        setShowTrialExpiredPopup(false);
+                        setHasDismissedTrialPopup(true);
+                    }}
+                    onChatWithUs={() => {
+                        showMessenger();
+                        setShowTrialExpiredPopup(false);
+                        setHasDismissedTrialPopup(true);
+                    }}
+                    canExtendTrial={canExtendTrial()}
+                    onExtendTrial={handleExtendTrial}
+                    isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                    isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                />
+            )}
+
+            <AdAccountSelectionPopup
+                isOpen={showAdAccountPopup}
+                onClose={() => setShowAdAccountPopup(false)}
+            />
+
+            <Toaster richColors position="bottom-left" closeButton />
 
 
         </>
