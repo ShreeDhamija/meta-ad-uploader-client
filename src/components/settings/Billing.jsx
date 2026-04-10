@@ -408,6 +408,34 @@ export default function BillingSettings() {
                                 </Button>
                             ) : (
                                 <>
+                                    <Button
+                                        onClick={() => setShowCancelDialog(true)}
+                                        className="h-[52px] w-full rounded-[20px] bg-[#F00D55] text-white shadow-none hover:bg-[#F00D55] hover:text-white"
+                                    >
+                                        <BillingCancelIcon className="h-5 w-5" />
+                                        Cancel Subscription
+                                    </Button>
+                                </>
+                            )}
+                            <Button
+                                onClick={handleViewInvoices}
+                                disabled={portalLoading}
+                                variant="outline"
+                                className="h-[52px] w-full rounded-[20px] border border-black bg-white text-black shadow-none hover:bg-white hover:text-black"
+                            >
+                                <BillingInvoiceIcon className="h-5 w-5" />
+                                {portalLoading ? "Opening Invoices..." : "View Invoices"}
+                            </Button>
+                            {!hasScheduledCancellation && (
+                                <>
+                                    <Button
+                                        onClick={() => setShowPlanSelector((current) => !current)}
+                                        className="h-[52px] w-full rounded-[20px] bg-[#27272A] text-white shadow-none hover:bg-[#27272A] hover:text-white"
+                                    >
+                                        <BillingSwitchIcon className="h-5 w-5" />
+                                        {showPlanSelector ? "Hide Plans" : "Change Plan"}
+                                    </Button>
+
                                     <div
                                         className={`overflow-hidden grid transition-all duration-500 ease-in-out ${showPlanSelector
                                             ? "grid-rows-[1fr] opacity-100"
@@ -476,33 +504,7 @@ export default function BillingSettings() {
                                             </div>
                                         </div>
                                     </div>
-
-                                    <Button
-                                        onClick={() => setShowCancelDialog(true)}
-                                        className="h-[52px] w-full rounded-[20px] bg-[#F00D55] text-white shadow-none hover:bg-[#F00D55] hover:text-white"
-                                    >
-                                        <BillingCancelIcon className="h-5 w-5" />
-                                        Cancel Subscription
-                                    </Button>
                                 </>
-                            )}
-                            <Button
-                                onClick={handleViewInvoices}
-                                disabled={portalLoading}
-                                variant="outline"
-                                className="h-[52px] w-full rounded-[20px] border border-black bg-white text-black shadow-none hover:bg-white hover:text-black"
-                            >
-                                <BillingInvoiceIcon className="h-5 w-5" />
-                                {portalLoading ? "Opening Invoices..." : "View Invoices"}
-                            </Button>
-                            {!hasScheduledCancellation && (
-                                <Button
-                                    onClick={() => setShowPlanSelector((current) => !current)}
-                                    className="h-[52px] w-full rounded-[20px] bg-[#27272A] text-white shadow-none hover:bg-[#27272A] hover:text-white"
-                                >
-                                    <BillingSwitchIcon className="h-5 w-5" />
-                                    {showPlanSelector ? "Hide Plans" : "Change Plan"}
-                                </Button>
                             )}
                         </div>
                     )}

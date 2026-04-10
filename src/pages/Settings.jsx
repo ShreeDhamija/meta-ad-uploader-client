@@ -143,7 +143,7 @@ export default function Settings() {
                             {/* Back to Home Button */}
                             <Button
                                 onClick={() => navigate("/")}
-                                className="flex items-center pl-3 justify-start gap-1 bg-neutral-50 hover:bg-neutral-50 border border-neutral-200 shadow-xs rounded-[20px] py-7 font-medium w-full mb-4 text-neutral-700"
+                                className="flex items-center pl-3 justify-start gap-1 bg-neutral-50 hover:bg-neutral-50 border border-neutral-200 shadow-xs hover:shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 text-neutral-700"
                                 variant="ghost"
                             >
                                 <img src={RocketBtn} alt="Home" className="w-8 h-8 object-contain" />
