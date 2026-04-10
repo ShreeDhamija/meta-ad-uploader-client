@@ -101,7 +101,7 @@ export default function Analytics() {
             </div>
 
             <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-4 md:px-6">
-                <div className="w-full bg-white">
+                <div className="w-full bg-white p-4 md:p-6 rounded-3xl border border-gray-100 shadow-sm">
                     <AnalyticsDashboard />
                 </div>
             </div>
