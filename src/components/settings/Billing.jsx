@@ -562,7 +562,7 @@ export default function BillingSettings() {
 
             <Button
                 asChild
-                className="h-[52px] w-full rounded-[20px] border border-black/10 bg-white text-black shadow-none hover:bg-white hover:text-black shadow-sm"
+                className="h-[52px] w-full rounded-[20px] border border-black/10 bg-white text-black shadow-none hover:bg-white hover:text-black shadow-xs"
             >
                 <a
                     href="mailto:shree@withblip.com"

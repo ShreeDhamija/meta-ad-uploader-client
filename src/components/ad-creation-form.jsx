@@ -6168,7 +6168,7 @@ export default function AdCreationForm({
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                                  className="border border-gray-400 rounded-xl bg-white shadow-xs"
                                   size="icon"
                                   onClick={() => removeField(setMessages, messages, index)}
                                 >
@@ -6262,7 +6262,7 @@ export default function AdCreationForm({
                               <Button
                                 type="button"
                                 variant="ghost"
-                                className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                                className="border border-gray-400 rounded-xl bg-white shadow-xs"
                                 size="icon"
                                 onClick={() => removeField(setHeadlines, headlines, index)}
                               >
@@ -6339,7 +6339,7 @@ export default function AdCreationForm({
                                     <Button
                                       type="button"
                                       variant="ghost"
-                                      className="border border-gray-400 rounded-xl bg-white shadow-sm"
+                                      className="border border-gray-400 rounded-xl bg-white shadow-xs"
                                       size="icon"
                                       onClick={() => removeField(setDescriptions, descriptions, index)}
                                     >

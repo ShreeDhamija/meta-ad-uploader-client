@@ -139,7 +139,7 @@ export default function WeeklyChart({ data, loading }) {
                         <DropdownMenuTrigger asChild>
                             <Button
                                 variant="outline"
-                                className="h-8 min-w-[190px] justify-between rounded-xl border-gray-200 bg-white px-3 text-xs font-medium shadow-sm hover:bg-white"
+                                className="h-8 min-w-[190px] justify-between rounded-xl border-gray-200 bg-white px-3 text-xs font-medium shadow-xs hover:bg-white"
                             >
                                 <span className="truncate">{dropdownLabel}</span>
                                 <ChevronDown className="ml-2 h-3.5 w-3.5 text-gray-400" />

@@ -121,7 +121,7 @@ export default function Login() {
                         <img
                             src="https://api.withblip.com/logo.webp"
                             alt="Hero"
-                            className="shadow-sm w-[48px] h-[48px] mx-auto rounded-md mb-2"
+                            className="shadow-xs w-[48px] h-[48px] mx-auto rounded-md mb-2"
                         />
                         <h2 className="text-2xl font-bold tracking-tight">Welcome To Blip</h2>
                         <p className="text-sm font-bold text-zinc-700">

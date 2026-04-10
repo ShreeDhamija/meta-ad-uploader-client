@@ -816,7 +816,7 @@ export default function AnalyticsDashboard() {
                             <Button
                                 variant="outline"
                                 role="combobox"
-                                className="w-[280px] justify-between rounded-2xl h-11 bg-white shadow-sm hover:bg-white"
+                                className="w-[280px] justify-between rounded-2xl h-11 bg-white shadow-xs hover:bg-white"
                             >
                                 <span className="truncate">{selectedAdAccountName}</span>
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -875,7 +875,7 @@ export default function AnalyticsDashboard() {
                             className={cn(
                                 "px-4 py-1.5 text-sm font-medium rounded-xl transition-all duration-200",
                                 metricMode === 'cpr'
-                                    ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                    ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
                                     : "text-gray-500 hover:text-gray-700"
                             )}
                         >
@@ -886,7 +886,7 @@ export default function AnalyticsDashboard() {
                             className={cn(
                                 "px-4 py-1.5 text-sm font-medium rounded-xl transition-all duration-200",
                                 metricMode === 'roas'
-                                    ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                    ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
                                     : "text-gray-500 hover:text-gray-700"
                             )}
                         >
@@ -921,7 +921,7 @@ export default function AnalyticsDashboard() {
                     <Button
                         variant="outline" size="sm"
                         onClick={() => setShowSlackDialog(true)}
-                        className="rounded-2xl h-11 w-11 p-0 flex items-center justify-center hover:bg-[#4A154B] bg-[#611f69] shadow-sm transition-colors"
+                        className="rounded-2xl h-11 w-11 p-0 flex items-center justify-center hover:bg-[#4A154B] bg-[#611f69] shadow-xs transition-colors"
                         title="Slack Alerts"
                     >
                         <img src={slackWhite} alt="Slack" className="w-5 h-5" />
@@ -956,7 +956,7 @@ export default function AnalyticsDashboard() {
                         className={cn(
                             "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-2xl transition-all duration-200",
                             activeTab === 'recommendations'
-                                ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
                         )}
                     >
@@ -974,7 +974,7 @@ export default function AnalyticsDashboard() {
                         className={cn(
                             "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-2xl transition-all duration-200",
                             activeTab === 'anomalies'
-                                ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
                         )}
                     >

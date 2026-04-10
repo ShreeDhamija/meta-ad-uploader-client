@@ -435,7 +435,7 @@ export default function MetaMediaLibraryModal({
         mediaSource === 'meta_library' ? selectedMetaFiles.length : selectedIgPosts.length;
     if (!isOpen) {
         return (
-            <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-blue-400 to-purple-400 shadow-sm">
+            <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-blue-400 to-purple-400 shadow-xs">
                 <Button
                     type="button"
                     size="sm"

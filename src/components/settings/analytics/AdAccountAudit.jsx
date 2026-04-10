@@ -92,7 +92,7 @@ function fmtNum(v, decimals = 2) {
 
 function MetricCard({ label, value, sub, color }) {
     return (
-        <div className="bg-white rounded-3xl p-4 flex flex-col gap-1 border-[0.5px] border-gray-100 shadow-sm">
+        <div className="bg-white rounded-3xl p-4 flex flex-col gap-1 border-[0.5px] border-gray-100 shadow-xs">
             <p className="text-[10px] font-semibold text-gray-400">{label}</p>
             <p className="text-2xl font-bold tabular-nums" style={{ color: color || "#111827" }}>{value}</p>
             {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
@@ -114,7 +114,7 @@ function SectionCard({ children, id }) {
     return (
         <div
             id={`audit-${id}`}
-            className="bg-white rounded-3xl border-[0.5px] border-gray-100 shadow-sm p-6"
+            className="bg-white rounded-3xl border-[0.5px] border-gray-100 shadow-xs p-6"
         >
             {children}
         </div>
@@ -492,7 +492,7 @@ function AudienceSection({ audience }) {
                             className={cn(
                                 "px-3.5 py-1.5 text-xs font-medium rounded-xl transition-all duration-200",
                                 filter === t
-                                    ? "bg-white text-gray-900 shadow-sm ring-1 ring-black/5"
+                                    ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
                                     : "text-gray-500 hover:text-gray-700"
                             )}>
                             {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -865,7 +865,7 @@ export default function AdAccountAudit({
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-white">
                         <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
                             <div
-                                className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 bg-white border border-gray-200 shadow-sm"
+                                className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 bg-white border border-gray-200 shadow-xs"
                             >
                                 <img src={Audit} alt="" className="w-[18px] h-[18px]" />
                             </div>
@@ -925,7 +925,7 @@ export default function AdAccountAudit({
                                         >
                                             <span className={cn(
                                                 "w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
-                                                isActive ? "bg-white shadow-sm border border-gray-200" : "bg-gray-100/60"
+                                                isActive ? "bg-white shadow-xs border border-gray-200" : "bg-gray-100/60"
                                             )}>
                                                 <img src={icon} alt="" className="w-3.5 h-3.5 opacity-70" />
                                             </span>

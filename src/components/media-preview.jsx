@@ -113,7 +113,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
           {...listeners}
           variant="ghost"
           size="icon"
-          className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-sm w-4.5 h-4.5 z-10 cursor-move"
+          className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-xs w-4.5 h-4.5 z-10 cursor-move"
           style={{ opacity: 1, backgroundColor: "white" }}
         >
           <GripVertical className="h-2 w-2 text-gray-600" />
@@ -210,7 +210,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
         <Button
           type="button"
           variant="ghost"
-          className={`absolute border rounded-lg bg-white shadow-sm z-30 ${isCarouselAd
+          className={`absolute border rounded-lg bg-white shadow-xs z-30 ${isCarouselAd
             ? 'bottom-16 right-1.5 border-gray-300 h-6 w-6 p-2'
             : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
             }`}
@@ -1100,7 +1100,7 @@ export default function MediaPreview({
                           <Button
                             type="button"
                             variant="ghost"
-                            className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-sm h-7 w-7 p-3 z-30"
+                            className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
                             style={{ opacity: 0.9, backgroundColor: "white" }}
                             onClick={() => setImportedPosts(prev => prev.filter(p => p.id !== post.id))}
                           >
@@ -1129,7 +1129,7 @@ export default function MediaPreview({
                           <Button
                             type="button"
                             variant="ghost"
-                            className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-sm h-7 w-7 p-3 z-30"
+                            className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
                             style={{ opacity: 0.9, backgroundColor: "white" }}
                             onClick={() => setSelectedIgOrganicPosts(prev => prev.filter(p => p.source_instagram_media_id !== post.source_instagram_media_id))}
                           >

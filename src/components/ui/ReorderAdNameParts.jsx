@@ -633,14 +633,14 @@ export default function ReorderAdNameParts({
       <div className="flex items-center justify-between">
         <Label className="text-gray-500 text-[12px] leading-5 font-normal block">
           Type
-          <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-sm text-black">
+          <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">
             /
           </span>
           to see a list of variables
           {customVariables.length > 0 && (
             <>
               {" "}Type
-              <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-sm text-black">
+              <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">
                 @
               </span>
               for custom variables.

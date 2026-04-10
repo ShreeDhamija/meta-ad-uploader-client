@@ -575,7 +575,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                     variant="outline"
                     onClick={handleSyncToggle}
                     disabled={syncToggling}
-                    className="text-sm rounded-xl border-red-200 text-red-600 bg-white hover:bg-red-50 hover:text-red-700 shadow-sm"
+                    className="text-sm rounded-xl border-red-200 text-red-600 bg-white hover:bg-red-50 hover:text-red-700 shadow-xs"
                   >
                     {syncToggling ? (
                       <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -590,7 +590,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                   size="sm"
                   onClick={handleSyncToggle}
                   disabled={syncToggling || !isOwner}
-                  className="text-sm rounded-xl bg-blue-600 hover:bg-blue-700 shadow-sm text-white"
+                  className="text-sm rounded-xl bg-blue-600 hover:bg-blue-700 shadow-xs text-white"
                 >
                   <CloudSync className={`w-3.5 h-3.5 mr-1.5 ${syncToggling ? "animate-spin" : ""}`} />
                   Sync Settings with Team
@@ -685,7 +685,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               <Button
                 variant="outline"
                 role="combobox"
-                className="w-full justify-between rounded-xl bg-white shadow-sm hover:bg-white"
+                className="w-full justify-between rounded-xl bg-white shadow-xs hover:bg-white"
               >
                 {selectedAdAccountName}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -858,7 +858,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             <div className="flex items-center gap-4">
               <Button
                 onClick={handleSave}
-                className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-sm"
+                className="bg-white text-blue-600 hover:bg-white rounded-xl px-6 h-9 text-sm font-semibold shadow-xs"
               >
                 {savingSettings ? (
                   <>

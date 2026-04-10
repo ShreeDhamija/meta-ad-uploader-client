@@ -931,7 +931,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         {primaryTexts.length < 5 && (
           <Button
             variant="ghost"
-            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-zinc-800 hover:text-white h-[40px]"
+            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
             onClick={() => handleAdd(setPrimaryTexts, primaryTexts)}
             disabled={isProcessing}
           >
@@ -968,7 +968,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         {headlines.length < 5 && (
           <Button
             variant="ghost"
-            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-zinc-800 hover:text-white h-[40px]"
+            className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
             onClick={() => handleAdd(setHeadlines, headlines)}
             disabled={isProcessing}
           >
@@ -1023,7 +1023,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           {descriptions.length < 5 && (
             <Button
               variant="ghost"
-              className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-sm hover:bg-zinc-800 hover:text-white h-[40px]"
+              className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
               onClick={() => handleAdd(setDescriptions, descriptions)}
               disabled={isProcessing}
             >
@@ -1099,13 +1099,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       <TabsList className="flex h-10 items-center justify-start rounded-full bg-muted p-1 text-muted-foreground w-fit">
                         <TabsTrigger
                           value="primary-texts"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
                         >
                           Primary Texts ({recentAds.primaryTexts?.length || 0})
                         </TabsTrigger>
                         <TabsTrigger
                           value="headlines"
-                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
                         >
                           Headlines ({recentAds.headlines?.length || 0})
                         </TabsTrigger>

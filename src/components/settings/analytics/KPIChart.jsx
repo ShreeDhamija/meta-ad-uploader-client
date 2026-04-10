@@ -145,7 +145,7 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                             onClick={() => onDaysChange(14)}
                             className={cn(
                                 "px-2.5 py-1 text-xs font-medium rounded-md transition-all",
-                                days === 14 ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
+                                days === 14 ? "bg-white shadow-xs text-gray-900" : "text-gray-500 hover:text-gray-700"
                             )}
                         >
                             14d
@@ -154,7 +154,7 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                             onClick={() => onDaysChange(30)}
                             className={cn(
                                 "px-2.5 py-1 text-xs font-medium rounded-md transition-all",
-                                days === 30 ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
+                                days === 30 ? "bg-white shadow-xs text-gray-900" : "text-gray-500 hover:text-gray-700"
                             )}
                         >
                             30d

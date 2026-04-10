@@ -143,7 +143,7 @@ export default function Settings() {
                             {/* Back to Home Button */}
                             <Button
                                 onClick={() => navigate("/")}
-                                className="flex items-center pl-3 justify-start gap-1 bg-neutral-50 border border-neutral-200 shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 text-neutral-700"
+                                className="flex items-center pl-3 justify-start gap-1 bg-neutral-50 border border-neutral-200 shadow-xs rounded-[20px] py-7 font-medium w-full mb-4 text-neutral-700"
                                 variant="ghost"
                             >
                                 <img src={RocketBtn} alt="Home" className="w-8 h-8 object-contain" />
@@ -186,7 +186,7 @@ export default function Settings() {
 
                         {/* Footer Profile + Logout */}
                         <div className="pt-4 mt-auto">
-                            <div className="w-full flex items-center bg-neutral-50 border border-neutral-200 shadow-sm rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
+                            <div className="w-full flex items-center bg-neutral-50 border border-neutral-200 shadow-xs rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
                                 <div className="flex items-center gap-2 flex-grow max-lg:hidden">
                                     <img
                                         src={profilePicUrl || "/placeholder.svg"}
@@ -208,7 +208,7 @@ export default function Settings() {
 
                 {/* Main Area */}
                 <main className="flex-1 py-6 pr-6">
-                    <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
+                    <div className="bg-white rounded-3xl border border-gray-200 shadow-xs h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
                         <div className="flex-1 overflow-auto">
                             <div className="w-full max-w-[52rem] mx-auto p-16">
                                 <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
