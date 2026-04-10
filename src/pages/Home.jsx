@@ -187,7 +187,6 @@ export default function Home() {
     const [link, setLink] = useState([""])
     const [customLink, setCustomLink] = useState("")
     const [showCustomLink, setShowCustomLink] = useState(false)
-    const [phoneNumber, setPhoneNumber] = useState("")
     const [cta, setCta] = useState("LEARN_MORE")
 
     const [thumbnail, setThumbnail] = useState(null)
@@ -351,7 +350,6 @@ export default function Home() {
             setInstagramAccountId("");
             // setSelectedLink(""); // ✅ Updated
             setLink([""]);  // ❌ Change this
-            setPhoneNumber("");
             setCta("LEARN_MORE");
             setSelectedTemplate(undefined);
             setMessages([""]);
@@ -765,8 +763,6 @@ export default function Home() {
                             setCustomLink={setCustomLink}
                             showCustomLink={showCustomLink}
                             setShowCustomLink={setShowCustomLink}
-                            phoneNumber={phoneNumber}
-                            setPhoneNumber={setPhoneNumber}
                             cta={cta}
                             setCta={setCta}
                             thumbnail={thumbnail}

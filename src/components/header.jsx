@@ -19,7 +19,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { cn } from "@/lib/utils"
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
@@ -37,7 +36,6 @@ export default function Header({ showMessenger, hideMessenger }) {
   const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const isAnalyticsPage = location.pathname === "/analytics"
-  const isSettingsPage = location.pathname === "/settings"
   const showAnalyticsNav = import.meta.env.VITE_APP_ENV === "staging"
 
   const handleDropdownClose = (open) => {
@@ -198,10 +196,7 @@ export default function Header({ showMessenger, hideMessenger }) {
         <button
           onClick={() => navigate("/settings")}
           title="Settings"
-          className={cn(
-            "hidden md:flex items-center gap-1 p-1 rounded-full transition !focus:outline-none !focus:ring-0 !active:ring-0 px-2",
-            isSettingsPage ? "bg-gray-100 hover:bg-gray-100" : "!bg-transparent hover:!bg-transparent"
-          )}
+          className="hidden md:flex items-center gap-1 p-1 rounded-full transition !bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-2"
           style={{
             outline: "none",
             boxShadow: "none",
@@ -217,10 +212,7 @@ export default function Header({ showMessenger, hideMessenger }) {
             <button
               onClick={() => navigate("/analytics")}
               title="Analytics"
-              className={cn(
-                "hidden md:flex items-center gap-2 py-2 rounded-full transition-colors px-2",
-                isAnalyticsPage ? "bg-gray-100 hover:bg-gray-100" : "bg-transparent hover:bg-gray-100"
-              )}
+              className="hidden md:flex items-center gap-2 py-2 rounded-full transition-colors px-2 bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent"
             >
               <AnalyticsIcon className="size-5" />
               <span className="inline text-[14px] text-gray-900 font-medium">Analytics</span>
