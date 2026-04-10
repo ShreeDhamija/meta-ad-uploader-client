@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -448,6 +448,8 @@ export default function AdCreationForm({
   setLink,
   customLink,
   setCustomLink,
+  phoneNumber,
+  setPhoneNumber,
   showCustomLink,
   setShowCustomLink,
   cta,
@@ -723,6 +725,7 @@ export default function AdCreationForm({
         descriptions: [...descriptions],
         messages: [...messages],
         link: [...link],
+        phoneNumber,
         cta,
 
         // File states
@@ -800,6 +803,7 @@ export default function AdCreationForm({
     setDescriptions(d.descriptions || ['']);
     setMessages(d.messages || ['']);
     setLink(d.link || ['']);
+    setPhoneNumber(d.phoneNumber || '');
     setCta(d.cta || '');
 
     setFiles(d.files || []);
@@ -826,7 +830,7 @@ export default function AdCreationForm({
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setHeadlines, setDescriptions, setMessages, setLink, setCta, setFiles, setDriveFiles, setDropboxFiles, setImportedPosts, setImportedFiles, setSelectedIgOrganicPosts, setVideoThumbs, setThumbnail, setAdType, setIsCarouselAd, setEnablePlacementCustomization, setFileGroups, setSelectedFiles, setLaunchPaused, setSelectedShopDestination, setSelectedShopDestinationType, setAdNameFormulaV2]);
+  }, [setHeadlines, setDescriptions, setMessages, setLink, setPhoneNumber, setCta, setFiles, setDriveFiles, setDropboxFiles, setImportedPosts, setImportedFiles, setSelectedIgOrganicPosts, setVideoThumbs, setThumbnail, setAdType, setIsCarouselAd, setEnablePlacementCustomization, setFileGroups, setSelectedFiles, setLaunchPaused, setSelectedShopDestination, setSelectedShopDestinationType, setAdNameFormulaV2]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -2519,8 +2523,36 @@ export default function AdCreationForm({
     });
   }, [duplicateAdSet, selectedAdSets, adSets]);
 
+  const areAllAdSetsPhoneCall = useCallback(() => {
+    if (duplicateAdSet) {
+      const adset = adSets.find((a) => a.id === duplicateAdSet);
+      return adset?.destination_type === "PHONE_CALL";
+    }
+
+    if (selectedAdSets.length === 0) {
+      return false;
+    }
+
+    return selectedAdSets.every((adsetId) => {
+      const adset = adSets.find((a) => a.id === adsetId);
+      return adset?.destination_type === "PHONE_CALL";
+    });
+  }, [duplicateAdSet, selectedAdSets, adSets]);
 
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
+  const showPhoneNumberField = areAllAdSetsPhoneCall();
+  const requiresDestinationValue = importedPosts.length === 0;
+  const isMissingDestinationValue = requiresDestinationValue && (
+    showPhoneNumberField
+      ? !phoneNumber.trim()
+      : ((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim()))
+  );
+
+  useEffect(() => {
+    if (showPhoneNumberField && cta !== "CALL_NOW") {
+      setCta("CALL_NOW");
+    }
+  }, [showPhoneNumberField, cta, setCta]);
 
 
   const shouldShowLeadFormSelector = useMemo(() => {
@@ -2774,6 +2806,7 @@ export default function AdCreationForm({
       adValues,
       adScheduleStartTime,
       adScheduleEndTime,
+      phoneNumber,
       adSets
     } = jobData.formData;
 
@@ -3167,6 +3200,8 @@ export default function AdCreationForm({
         pageId,
         instagramAccountId,
         linkJSON,
+        phoneNumber,
+        usePhoneNumberField,
         cta,
         launchPaused,
         jobId,
@@ -3187,7 +3222,11 @@ export default function AdCreationForm({
       formData.append("adSetId", adSetId);
       formData.append("pageId", pageId);
       formData.append("instagramAccountId", instagramAccountId);
-      formData.append("link", linkJSON);
+      if (usePhoneNumberField) {
+        formData.append("phoneNumber", phoneNumber);
+      } else {
+        formData.append("link", linkJSON);
+      }
       formData.append("cta", cta);
       formData.append("launchPaused", launchPaused);
       formData.append("jobId", jobId);
@@ -3881,6 +3920,7 @@ export default function AdCreationForm({
       };
 
       // Pre-compute common JSON strings and values
+      const usePhoneNumberField = showPhoneNumberField;
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
 
       // ============================================================================
@@ -3915,6 +3955,11 @@ export default function AdCreationForm({
               formData.append("adId", post.ad_id);  // ← Changed from post.id to post.ad_id
               formData.append("adType", "duplication");
             }
+            if (usePhoneNumberField) {
+              formData.append("phoneNumber", phoneNumber);
+            } else {
+              formData.append("link", JSON.stringify(link));
+            }
 
             queueCreateAdPromise(formData, { fileName: post.ad_name });
           });
@@ -3942,7 +3987,11 @@ export default function AdCreationForm({
             formData.append("launchPaused", launchPaused);
             formData.append("jobId", frontendJobId);
             formData.append("cta", cta || "LEARN_MORE");  // placeholder CTA
-            formData.append("link", JSON.stringify(link));
+            if (usePhoneNumberField) {
+              formData.append("phoneNumber", phoneNumber);
+            } else {
+              formData.append("link", JSON.stringify(link));
+            }
 
             // IG post specific
             formData.append("sourceInstagramMediaId", igPost.source_instagram_media_id);
@@ -6417,9 +6466,6 @@ export default function AdCreationForm({
                       ) : (
                         "Your UTMs will be auto applied from Preferences"
                       )}
-
-
-
                     </p>
 
                     {showPhoneNumberField ? (
