@@ -79,7 +79,7 @@ export default function Analytics() {
     if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
-        <div className="min-h-screen w-full bg-white">
+        <div className="min-h-screen w-full bg-[#f9f9f9]">
             <div className="mobile-message fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-[100] lg:hidden">
                 <div className="text-center max-w-md">
                     <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
@@ -101,9 +101,9 @@ export default function Analytics() {
             </div>
 
             <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-4 md:px-6">
-                <div className="w-full border-t border-gray-200 pt-6">
-                    <AnalyticsDashboard />
-                </div>
+
+                <AnalyticsDashboard />
+
             </div>
 
             {showTrialExpiredPopup && (
