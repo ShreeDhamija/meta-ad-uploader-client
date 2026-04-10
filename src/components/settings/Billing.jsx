@@ -408,14 +408,6 @@ export default function BillingSettings() {
                                 </Button>
                             ) : (
                                 <>
-                                    <Button
-                                        onClick={() => setShowPlanSelector((current) => !current)}
-                                        className="h-[52px] w-full rounded-[20px] bg-[#27272A] text-white shadow-none hover:bg-[#27272A] hover:text-white"
-                                    >
-                                        <BillingSwitchIcon className="h-5 w-5" />
-                                        {showPlanSelector ? "Hide Plans" : "Change Plan"}
-                                    </Button>
-
                                     <div
                                         className={`overflow-hidden grid transition-all duration-500 ease-in-out ${showPlanSelector
                                             ? "grid-rows-[1fr] opacity-100"
@@ -503,6 +495,15 @@ export default function BillingSettings() {
                                 <BillingInvoiceIcon className="h-5 w-5" />
                                 {portalLoading ? "Opening Invoices..." : "View Invoices"}
                             </Button>
+                            {!hasScheduledCancellation && (
+                                <Button
+                                    onClick={() => setShowPlanSelector((current) => !current)}
+                                    className="h-[52px] w-full rounded-[20px] bg-[#27272A] text-white shadow-none hover:bg-[#27272A] hover:text-white"
+                                >
+                                    <BillingSwitchIcon className="h-5 w-5" />
+                                    {showPlanSelector ? "Hide Plans" : "Change Plan"}
+                                </Button>
+                            )}
                         </div>
                     )}
 
