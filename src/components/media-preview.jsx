@@ -73,31 +73,34 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       ? file.dropboxId
       : (file.isDrive ? file.id : file.uniqueId || file.name);
 
+  const isSelectable = (enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && groupNumber == null;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group ${isDragging ? 'opacity-50' : ''}`}
+      className={`relative group ${isDragging ? 'opacity-50' : ''} ${isSelectable ? 'cursor-pointer p-1.5 pb-2.5' : ''}`}
+      onClick={isSelectable ? () => onSelect(fileId) : undefined}
     >
-      {/* Selection overlay for placement customization - only show when NOT grouped */}
-      {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
+      {/* Selection background for placement customization - only show when NOT grouped */}
+      {isSelectable && (
         <div
-          className={`absolute rounded-2xl cursor-pointer transition-all ${isSelected ? 'bg-blue-200 bg-opacity-20 border-2 border-blue-300' : ' '
+          className={`absolute inset-0 rounded-2xl border-2 transition-all ${isSelected
+            ? 'bg-blue-100 border-blue-300'
+            : 'border-transparent bg-transparent'
             }`}
-          onClick={() => onSelect(fileId)}
           style={{
-            zIndex: isCarouselAd ? 4 : 5,
-            top: '-6px',
-            left: '-6px',
-            right: '-6px',
-            bottom: '-10px'
+            zIndex: 0
           }}
         />
       )}
 
       {/* Selection checkbox for placement customization - only show when NOT grouped */}
-      {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
-        <div className={`absolute z-20 ${isCarouselAd ? 'top-2 right-2' : 'top-1 left-1'}`}>
+      {isSelectable && (
+        <div
+          className={`absolute z-20 ${isCarouselAd ? 'top-2 right-2' : 'top-1 left-1'}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <Checkbox
             checked={isSelected}
             onCheckedChange={() => onSelect(fileId)}
@@ -106,42 +109,32 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
         </div>
       )}
 
-      {/* {isCarouselAd && !enablePlacementCustomization && ( */}
-      {isCarouselAd && (
-        <Button
-          ref={setActivatorNodeRef}
-          {...listeners}
-          variant="ghost"
-          size="icon"
-          className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-xs w-4.5 h-4.5 z-10 cursor-move"
-          style={{ opacity: 1, backgroundColor: "white" }}
-        >
-          <GripVertical className="h-2 w-2 text-gray-600" />
-        </Button>
-      )}
+      <div className="relative z-10">
+        {/* {isCarouselAd && !enablePlacementCustomization && ( */}
+        {isCarouselAd && (
+          <Button
+            ref={setActivatorNodeRef}
+            {...listeners}
+            variant="ghost"
+            size="icon"
+            className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-xs w-4.5 h-4.5 z-10 cursor-move"
+            style={{ opacity: 1, backgroundColor: "white" }}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-2 w-2 text-gray-600" />
+          </Button>
+        )}
 
-      <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
-        {file.isMetaLibrary ? (
-          // Meta library file
-          <img
-            src={
-              file.type === "image"
-                ? file.url
-                : file.thumbnail_url || "https://api.withblip.com/thumbnail.jpg"
-            }
-            alt={file.name}
-            title={file.name}
-            className="w-full h-auto object-cover"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "https://api.withblip.com/thumbnail.jpg";
-            }}
-          />
-        ) : isVideoFile(file) ? (
-          file.isDrive ? (
-            // Google Drive video - use Drive's thumbnail API
+        <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
+          {file.isMetaLibrary ? (
+            // Meta library file
             <img
-              src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`}
+              src={
+                file.type === "image"
+                  ? file.url
+                  : file.thumbnail_url || "https://api.withblip.com/thumbnail.jpg"
+              }
               alt={file.name}
               title={file.name}
               className="w-full h-auto object-cover"
@@ -150,21 +143,21 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                 e.target.src = "https://api.withblip.com/thumbnail.jpg";
               }}
             />
-          ) : file.isDropbox ? (
-            // Dropbox video - use icon or fallback thumbnail
-            <img
-              src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
-              alt={file.name}
-              title={file.name}
-              className="w-full h-auto object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "https://api.withblip.com/thumbnail.jpg";
-              }}
-            />
-          ) : (
-            // Local video - use generated thumbnail
-            videoThumbs[getFileId(file)] ? (
+          ) : isVideoFile(file) ? (
+            file.isDrive ? (
+              // Google Drive video - use Drive's thumbnail API
+              <img
+                src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`}
+                alt={file.name}
+                title={file.name}
+                className="w-full h-auto object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                }}
+              />
+            ) : file.isDropbox ? (
+              // Dropbox video - use icon or fallback thumbnail
               <img
                 src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
                 alt={file.name}
@@ -174,63 +167,77 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                   e.target.onerror = null;
                   e.target.src = "https://api.withblip.com/thumbnail.jpg";
                 }}
-                onLoad={(e) => {
-                  // Check if image actually rendered
-                  if (e.target.naturalWidth === 0) {
-                    e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                  }
-                }}
               />
             ) : (
-              <div className="w-full h-32 bg-gray-200 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-                <span className="ml-2 text-sm text-gray-500">Generating...</span>
-              </div>
+              // Local video - use generated thumbnail
+              videoThumbs[getFileId(file)] ? (
+                <img
+                  src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
+                  alt={file.name}
+                  title={file.name}
+                  className="w-full h-auto object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                  }}
+                  onLoad={(e) => {
+                    // Check if image actually rendered
+                    if (e.target.naturalWidth === 0) {
+                      e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                    }
+                  }}
+                />
+              ) : (
+                <div className="w-full h-32 bg-gray-200 flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                  <span className="ml-2 text-sm text-gray-500">Generating...</span>
+                </div>
+              )
             )
-          )
-        ) : (
-          // Image files
-          <img
-            src={
-              file.isDrive
-                ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`
-                : file.isDropbox
-                  ? (videoThumbs[getFileId(file)] || file.directLink || file.icon)
-                  : URL.createObjectURL(file)
-            }
-            alt={file.name}
-            title={file.name}
-            className="w-full h-auto object-cover"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "https://api.withblip.com/thumbnail.jpg";
+          ) : (
+            // Image files
+            <img
+              src={
+                file.isDrive
+                  ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`
+                  : file.isDropbox
+                    ? (videoThumbs[getFileId(file)] || file.directLink || file.icon)
+                    : URL.createObjectURL(file)
+              }
+              alt={file.name}
+              title={file.name}
+              className="w-full h-auto object-cover"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "https://api.withblip.com/thumbnail.jpg";
+              }}
+            />
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            className={`absolute border rounded-lg bg-white shadow-xs z-30 ${isCarouselAd
+              ? 'bottom-16 right-1.5 border-gray-300 h-6 w-6 p-2'
+              : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
+              }`}
+            style={{ opacity: 0.9, backgroundColor: "white" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
             }}
-          />
-        )}
-        <Button
-          type="button"
-          variant="ghost"
-          className={`absolute border rounded-lg bg-white shadow-xs z-30 ${isCarouselAd
-            ? 'bottom-16 right-1.5 border-gray-300 h-6 w-6 p-2'
-            : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
-            }`}
-          style={{ opacity: 0.9, backgroundColor: "white" }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-        >
-          <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
-          <span className="sr-only">Remove</span>
-        </Button>
-      </div>
-      <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
+          >
+            <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
+            <span className="sr-only">Remove</span>
+          </Button>
+        </div>
+        <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
 
-      {isCarouselAd && (
-        <span className="text-[10px] px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
-          Card {(cardIndex !== undefined ? cardIndex : index) + 1}
-        </span>
-      )}
+        {isCarouselAd && (
+          <span className="text-[10px] px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
+            Card {(cardIndex !== undefined ? cardIndex : index) + 1}
+          </span>
+        )}
+      </div>
     </div>
   );
 });
