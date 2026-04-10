@@ -689,11 +689,10 @@ export default function Home() {
                 </div>
             )}
 
-            <div className="min-h-screen w-full bg-white">
-                <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
-                    <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
-                    <div className="flex flex-col lg:flex-row gap-6 min-w-0">
-                        <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
+            <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
+                <Header isLoggedIn={isLoggedIn} userName={userName} handleLogout={handleLogout} showMessenger={showMessenger} hideMessenger={hideMessenger} />
+                <div className="flex flex-col lg:flex-row gap-6 min-w-0">
+                    <div className={`flex-1 lg:flex-[55] min-w-0 space-y-6 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
                         <AdAccountSettings
                             isLoading={isLoading}
                             setIsLoading={setIsLoading}
@@ -825,12 +824,12 @@ export default function Home() {
                             onAdSetCreated={handleLocalAdSetCreated}
 
                         />
-                        </div>
+                    </div>
 
-                        {/* <div className="flex-1 min-w-0"> */}
-                        <div className={`flex-1 lg:flex-[45] min-w-0 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
-                            <ErrorBoundary>
-                                <MediaPreview
+                    {/* <div className="flex-1 min-w-0"> */}
+                    <div className={`flex-1 lg:flex-[45] min-w-0 ${!userHasActiveAccess ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}`}>
+                        <ErrorBoundary>
+                            <MediaPreview
                                 files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
                                 setFiles={setFiles}
                                 importedPosts={importedPosts}
@@ -856,15 +855,14 @@ export default function Home() {
                                 selectedIgOrganicPosts={selectedIgOrganicPosts}
                                 setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
 
-                                />
-                            </ErrorBoundary>
+                            />
+                        </ErrorBoundary>
 
-                        </div>
                     </div>
                 </div>
             </div>
 
-            {showOnboardingPopup && (
+                {showOnboardingPopup && (
                     <OnboardingPopup
                         userName={userName}
                         hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
@@ -897,14 +895,14 @@ export default function Home() {
                     />
                 )}
 
-            {showAnalyticsHomePopup && (
+                {showAnalyticsHomePopup && (
                     <AnalyticsHomePopup
                         onClose={handleCloseAnalyticsHomePopup}
                         onCheckOutAnalytics={handleCheckOutAnalytics}
                     />
                 )}
 
-            {showTrialExpiredPopup && (
+                {showTrialExpiredPopup && (
                     <TrialExpiredPopup
                         onClose={() => {
                             setShowTrialExpiredPopup(false);
@@ -934,12 +932,12 @@ export default function Home() {
                     />
                 )}
 
-            <AdAccountSelectionPopup
-                isOpen={showAdAccountPopup}
-                onClose={() => setShowAdAccountPopup(false)}
-            />
+                <AdAccountSelectionPopup
+                    isOpen={showAdAccountPopup}
+                    onClose={() => setShowAdAccountPopup(false)}
+                />
 
-            <Toaster richColors position="bottom-left" closeButton />
+                <Toaster richColors position="bottom-left" closeButton />
 
 
         </>

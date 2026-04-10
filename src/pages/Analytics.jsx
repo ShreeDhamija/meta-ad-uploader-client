@@ -96,12 +96,12 @@ export default function Analytics() {
                 </div>
             </div>
 
-            <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
+            <div className="w-full max-w-[1600px] mx-auto pt-8 px-2 sm:px-4 md:px-6">
                 <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
             </div>
 
-            <div className="w-full border-t border-gray-200">
-                <div className="w-full max-w-[1600px] mx-auto py-6 px-2 sm:px-4 md:px-6">
+            <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-4 md:px-6">
+                <div className="w-full border-t border-gray-200 pt-6">
                     <AnalyticsDashboard />
                 </div>
             </div>

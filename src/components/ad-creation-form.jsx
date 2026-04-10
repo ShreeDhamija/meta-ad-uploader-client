@@ -5071,7 +5071,7 @@ export default function AdCreationForm({
 
 
   return (
-    <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-sm rounded-2xl">
+    <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-md rounded-2xl">
       {hasStartedAnyJob && (
         <div className="fixed bottom-4 right-4 z-50">
           {/* Collapsed State */}
