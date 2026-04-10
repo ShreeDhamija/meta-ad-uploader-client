@@ -132,7 +132,6 @@ export default function Settings() {
                 </div>
             </div>
 
-
             <div className="flex min-h-screen bg-[#fafafa]">
                 {/* Sidebar */}
                 <div className="w-[290px] flex flex-col h-screen sticky top-0 px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">

@@ -37,9 +37,7 @@ export default function Header({ showMessenger, hideMessenger }) {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const isAnalyticsPage = location.pathname === "/analytics"
   const showAnalyticsNav = import.meta.env.VITE_APP_ENV === "staging"
-  const headerCardShadow = isAnalyticsPage
-    ? "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
-    : "shadow-[0px_2px_3px_rgba(0,0,0,0.1)]"
+  const headerCardShadow = "shadow-[0px_1px_2px_rgba(0,0,0,0.06)]"
 
   const handleDropdownClose = (open) => {
     setDropdownOpen(open)

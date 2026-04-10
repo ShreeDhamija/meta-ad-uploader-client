@@ -5,8 +5,8 @@
 @layer base {
   :root {
     /* shadcn theme variables */
-    background-color: #f2f2f2;
-    background-image: radial-gradient(#d7d7d7 0.9px, #f0f0f0 0.9px);
+    background-color: #f3f3f3;
+    background-image: radial-gradient(#dbdbdb 0.9px, #f2f2f2 0.9px);
     background-size: 18px 18px;
   }
 
@@ -19,8 +19,8 @@
 
 
   body {
-    background-color: #f2f2f2;
-    background-image: radial-gradient(#d7d7d7 0.9px, #f0f0f0 0.9px);
+    background-color: #f3f3f3;
+    background-image: radial-gradient(#dbdbdb 0.9px, #f2f2f2 0.9px);
     background-size: 18px 18px;
     @apply text-foreground;
   }
