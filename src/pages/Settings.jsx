@@ -17,6 +17,7 @@ import RocketBtn from '@/assets/rocket2.webp';
 import Folder from '@/assets/icons/cog-three.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
+import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import DesktopIcon from '@/assets/Desktop.webp';
 import "../settings.css"
@@ -32,6 +33,7 @@ export default function Settings() {
         subscriptionData,
         loading: subscriptionLoading,
     } = useSubscription()
+    useIntercom(true)
     const urlParams = new URLSearchParams(window.location.search)
     const requestedTab = urlParams.get('tab')
     const initialTab = SETTINGS_TABS.includes(requestedTab) ? requestedTab : 'adaccount'
