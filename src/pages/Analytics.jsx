@@ -79,7 +79,7 @@ export default function Analytics() {
     if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
-        <div className="min-h-screen w-full bg-[#f3f3f3]">
+        <div className="min-h-screen w-full bg-[#f6f6f6]">
             <div className="mobile-message fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-[100] lg:hidden">
                 <div className="text-center max-w-md">
                     <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
