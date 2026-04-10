@@ -3276,72 +3276,7 @@ export default function AdCreationForm({
       }
     };
 
-    /**
-     * Append carousel-specific fields and files
-     */
-    const appendCarouselFields = (
-      formData,
-      {
-        isCarouselAd,
-        fileOrder,
-        files,
-        driveFiles,
-        dropboxFiles,           // ADD
-        s3Results,
-        s3DriveResults,
-        s3DropboxResults,       // ADD
-        S3_UPLOAD_THRESHOLD,
-        smallDriveFiles,
-        smallDropboxFiles,      // ADD
-        importedFiles
-      }
-    ) => {
-      formData.append("isCarouselAd", isCarouselAd);
-      formData.append("enablePlacementCustomization", false);
-      formData.append("fileOrder", JSON.stringify(fileOrder));
 
-      // Add S3 URLs for large files (including Dropbox)
-      [...s3Results, ...s3DriveResults, ...s3DropboxResults].forEach((s3File) => {
-        formData.append("s3VideoUrls", s3File.s3Url);
-        formData.append("s3VideoNames", s3File.name);  // Note: was "s3VideoName" - should be "s3VideoNames" for consistency
-      });
-
-      // Add small Drive files
-      smallDriveFiles.forEach((driveFile) => {
-        formData.append("driveFiles", JSON.stringify({
-          id: driveFile.id,
-          name: driveFile.name,
-          mimeType: driveFile.mimeType,
-          accessToken: driveFile.accessToken
-        }));
-      });
-
-      // ADD: Small Dropbox files
-      smallDropboxFiles.forEach((dropboxFile) => {
-        formData.append("dropboxFiles", JSON.stringify({
-          dropboxId: dropboxFile.dropboxId,
-          name: dropboxFile.name,
-          directLink: dropboxFile.directLink,
-          mimeType: dropboxFile.mimeType || getMimeFromName(dropboxFile.name)
-        }));
-      });
-
-      // Meta library files
-      if (importedFiles && importedFiles.length > 0) {
-        const metaImages = importedFiles.filter(f => f.type === 'image');
-        const metaVideos = importedFiles.filter(f => f.type === 'video');
-
-        metaImages.forEach((metaFile) => {
-          formData.append("metaImageHashes", metaFile.hash);
-          formData.append("metaImageNames", metaFile.name);
-        });
-
-        metaVideos.forEach((metaFile) => {
-          formData.append("metaVideoIds", metaFile.id);
-          formData.append("metaVideoNames", metaFile.name);
-        });
-      }
-    };
 
     /**
      * Append flexible ad specific fields
@@ -6533,9 +6468,17 @@ export default function AdCreationForm({
                       )}
                     </Label>
                     <p className="text-gray-500 text-[12px] font-regular">
-                      {showPhoneNumberField
-                        ? "This phone number will be used for your call ads."
-                        : "Your UTMs will be auto applied from Preferences"}
+                      {showPhoneNumberField ? (
+                        <>
+                          This phone number will be used for your call ads.{" "}
+                          <span className="font-semibold">Please add country code as well</span>
+                        </>
+                      ) : (
+                        "Your UTMs will be auto applied from Preferences"
+                      )}
+
+
+
                     </p>
 
                     {showPhoneNumberField ? (
@@ -6544,8 +6487,8 @@ export default function AdCreationForm({
                           type="tel"
                           value={phoneNumber}
                           onChange={(e) => setPhoneNumber(e.target.value)}
-                          className="w-full border border-gray-400 rounded-xl bg-white shadow"
-                          placeholder="+1 555 123 4567"
+                          className="w-full border border-gray-400 rounded-xl bg-white shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          placeholder="+15551234567. You must add country code without spaces."
                           disabled={!isLoggedIn}
                           required
                         />
@@ -6597,7 +6540,7 @@ export default function AdCreationForm({
                                     setCustomLink(e.target.value);
                                     setLink([e.target.value]);
                                   }}
-                                  className="w-full border border-gray-400 rounded-xl bg-white shadow"
+                                  className="w-full border border-gray-400 rounded-xl bg-white shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                                   placeholder="https://example.com"
                                   disabled={!isLoggedIn}
                                   required
@@ -6722,7 +6665,7 @@ export default function AdCreationForm({
                                   newLinks[index] = e.target.value;
                                   setLink(newLinks);
                                 }}
-                                className="border border-gray-400 rounded-xl bg-white shadow"
+                                className="border border-gray-400 rounded-xl bg-white shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
                                 placeholder="https://example.com"
                                 disabled={!isLoggedIn}
                                 required
