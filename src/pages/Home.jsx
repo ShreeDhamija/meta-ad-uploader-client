@@ -342,36 +342,30 @@ export default function Home() {
         }
     }, [isLoggedIn]);
 
-    // --- NEW, CORRECTED CODE ---
     useEffect(() => {
-        // This part handles resetting when no ad account is selected.
-        if (!selectedAdAccount) {
-            // Reset all settings to their initial "blank" state
-            setPageId("");
-            setInstagramAccountId("");
-            // setSelectedLink(""); // ✅ Updated
-            setLink([""]);  // ❌ Change this
-            setPhoneNumber("");
-            setCta("LEARN_MORE");
-            setSelectedTemplate(undefined);
-            setMessages([""]);
-            setHeadlines([""]);
-            setDescriptions([""]);
+        if (selectedAdAccount) return;
 
-            // --- Core logic for your request (Scenario 1) ---
-            // No ad account selected, so show all fields unchecked.
-            setAdOrder(["adType", "dateType", "fileName", "iteration"]);
-            setSelectedItems([]); // Set to empty array to uncheck all.
-            setAdValues({ dateType: "MonthYYYY", customTexts: {} });
-            setAdNameFormulaV2({ rawInput: "" }); // Reset V2 formula
-            return; // Exit the hook early
-        }
+        setPageId("");
+        setInstagramAccountId("");
+        setLink([""]);
+        setPhoneNumber("");
+        setCta("LEARN_MORE");
+        setSelectedTemplate(undefined);
+        setMessages([""]);
+        setHeadlines([""]);
+        setDescriptions([""]);
+        setAdOrder(["adType", "dateType", "fileName", "iteration"]);
+        setSelectedItems([]);
+        setAdValues({ dateType: "MonthYYYY", customTexts: {} });
+        setAdNameFormulaV2({ rawInput: "" });
+    }, [selectedAdAccount]);
 
-        // This part runs only when an ad account IS selected.
+    useEffect(() => {
+        if (!selectedAdAccount) return;
 
-        // Load default Page, Instagram, Link, CTA
         setPageId(adAccountSettings.defaultPage?.id || "");
         setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
+
         const defaultLink = adAccountSettings.links?.find(link => link.isDefault);
         const linkToUse = defaultLink?.url || adAccountSettings.links?.[0]?.url || "";
         setLink([linkToUse]);
@@ -379,25 +373,33 @@ export default function Home() {
         setCta(adAccountSettings.defaultCTA || "LEARN_MORE");
         setAdNameFormulaV2(adAccountSettings.adNameFormulaV2 || { rawInput: "" });
 
-        // --- Core logic for your request (Scenario 2) ---
         const formula = adAccountSettings.adNameFormula;
-        // Check if the formula is missing, null, or an empty object.
         if (!formula || Object.keys(formula).length === 0) {
-            // Formula doesn't exist for this account, so show all fields unchecked.
             setAdOrder(["adType", "dateType", "fileName", "iteration"]);
-            setSelectedItems([]); // Set to empty array to uncheck all.
+            setSelectedItems([]);
             setAdValues({ dateType: "MonthYYYY", customTexts: {} });
-        } else {
-            // A valid formula exists, so load its settings.
-            setAdValues({
-                dateType: formula.values?.dateType || "MonthYYYY",
-                customTexts: formula.values?.customTexts || {}
-            });
-            setAdOrder(formula.order || ["adType", "dateType", "fileName", "iteration"]);
-            setSelectedItems(formula.selected || []);
+            return;
         }
 
-        // Load Copy templates (this logic is fine as is)
+        setAdValues({
+            dateType: formula.values?.dateType || "MonthYYYY",
+            customTexts: formula.values?.customTexts || {}
+        });
+        setAdOrder(formula.order || ["adType", "dateType", "fileName", "iteration"]);
+        setSelectedItems(formula.selected || []);
+    }, [
+        selectedAdAccount,
+        adAccountSettings.defaultPage,
+        adAccountSettings.defaultInstagram,
+        adAccountSettings.links,
+        adAccountSettings.defaultCTA,
+        adAccountSettings.adNameFormula,
+        adAccountSettings.adNameFormulaV2,
+    ]);
+
+    useEffect(() => {
+        if (!selectedAdAccount) return;
+
         const templates = adAccountSettings.copyTemplates || {};
         const keys = Object.keys(templates);
 
@@ -406,24 +408,28 @@ export default function Home() {
             setMessages([""]);
             setHeadlines([""]);
             setDescriptions([""]);
-        } else {
-            const preferredName = preferredTemplateRef.current;
-            const initialTemplateName = preferredName && keys.includes(preferredName)
-                ? preferredName
-                : keys.includes(adAccountSettings.defaultTemplateName)
-                    ? adAccountSettings.defaultTemplateName
-                    : keys[0];
-
-            preferredTemplateRef.current = null; // consume it
-
-            setSelectedTemplate(initialTemplateName);
-            const selectedTemplateData = templates[initialTemplateName];
-            setMessages(selectedTemplateData?.primaryTexts || [""]);
-            setHeadlines(selectedTemplateData?.headlines || [""]);
-            setDescriptions(selectedTemplateData?.descriptions || [""]);
+            return;
         }
 
-    }, [selectedAdAccount, adAccountSettings]); // Keep dependencies the same
+        const preferredName = preferredTemplateRef.current;
+        const initialTemplateName = preferredName && keys.includes(preferredName)
+            ? preferredName
+            : keys.includes(adAccountSettings.defaultTemplateName)
+                ? adAccountSettings.defaultTemplateName
+                : keys[0];
+
+        preferredTemplateRef.current = null;
+
+        setSelectedTemplate(initialTemplateName);
+        const selectedTemplateData = templates[initialTemplateName];
+        setMessages(selectedTemplateData?.primaryTexts || [""]);
+        setHeadlines(selectedTemplateData?.headlines || [""]);
+        setDescriptions(selectedTemplateData?.descriptions || [""]);
+    }, [
+        selectedAdAccount,
+        adAccountSettings.copyTemplates,
+        adAccountSettings.defaultTemplateName,
+    ]);
 
 
 
