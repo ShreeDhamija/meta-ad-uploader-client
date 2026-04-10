@@ -517,6 +517,8 @@ export default function AdAccountSettings({
                     placeholder="Search ad accounts..."
                     value={searchValue}
                     onValueChange={setSearchValue}
+                    className="bg-transparent"
+                    wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                   />
                   {/* <CommandEmpty>No ad account found.</CommandEmpty> */}
                   <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
@@ -649,6 +651,8 @@ export default function AdAccountSettings({
                     placeholder="Search campaigns..."
                     value={campaignSearchValue}
                     onValueChange={setCampaignSearchValue}
+                    className="bg-transparent"
+                    wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                   />
                   <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
                   <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
@@ -766,6 +770,8 @@ transition-all duration-150 hover:!bg-black
                           placeholder="Search campaign..."
                           value={duplicateCampaignSearchValue}
                           onValueChange={setDuplicateCampaignSearchValue}
+                          className="bg-transparent"
+                          wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                         />
                         <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
                         <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
@@ -907,6 +913,8 @@ transition-all duration-150 hover:!bg-black
                     placeholder="Search AdSets..."
                     value={adSetSearchValue}
                     onValueChange={setAdSetSearchValue}
+                    className="bg-transparent"
+                    wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                   />
                   <CommandEmpty>No ad sets exist in this campaign. Select a different campaign</CommandEmpty>
                   <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar px-2" selectOnFocus={false}>
@@ -1091,6 +1099,8 @@ transition-all duration-150 hover:!bg-black
                           placeholder="Search ad set..."
                           value={duplicateAdSetSearchValue}
                           onValueChange={setDuplicateAdSetSearchValue}
+                          className="bg-transparent"
+                          wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                         />
                         <CommandEmpty>No ad sets exist in this campaign. Select a different campaign</CommandEmpty>
                         <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>

@@ -831,7 +831,8 @@ export default function AnalyticsDashboard() {
                                     placeholder="Search ad accounts..."
                                     value={searchValue}
                                     onValueChange={setSearchValue}
-                                    className="bg-white"
+                                    className="bg-transparent"
+                                    wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                                 />
                                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                                     <CommandGroup>
