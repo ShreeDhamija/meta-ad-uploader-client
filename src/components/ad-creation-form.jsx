@@ -24,7 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -450,6 +450,8 @@ export default function AdCreationForm({
   setCustomLink,
   showCustomLink,
   setShowCustomLink,
+  phoneNumber,
+  setPhoneNumber,
   cta,
   setCta,
   thumbnail,
@@ -723,6 +725,7 @@ export default function AdCreationForm({
         descriptions: [...descriptions],
         messages: [...messages],
         link: [...link],
+        phoneNumber,
         cta,
 
         // File states
@@ -800,6 +803,7 @@ export default function AdCreationForm({
     setDescriptions(d.descriptions || ['']);
     setMessages(d.messages || ['']);
     setLink(d.link || ['']);
+    setPhoneNumber(d.phoneNumber || '');
     setCta(d.cta || '');
 
     setFiles(d.files || []);
@@ -826,7 +830,7 @@ export default function AdCreationForm({
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setHeadlines, setDescriptions, setMessages, setLink, setCta, setFiles, setDriveFiles, setDropboxFiles, setImportedPosts, setImportedFiles, setSelectedIgOrganicPosts, setVideoThumbs, setThumbnail, setAdType, setIsCarouselAd, setEnablePlacementCustomization, setFileGroups, setSelectedFiles, setLaunchPaused, setSelectedShopDestination, setSelectedShopDestinationType, setAdNameFormulaV2]);
+  }, [setHeadlines, setDescriptions, setMessages, setLink, setPhoneNumber, setCta, setFiles, setDriveFiles, setDropboxFiles, setImportedPosts, setImportedFiles, setSelectedIgOrganicPosts, setVideoThumbs, setThumbnail, setAdType, setIsCarouselAd, setEnablePlacementCustomization, setFileGroups, setSelectedFiles, setLaunchPaused, setSelectedShopDestination, setSelectedShopDestinationType, setAdNameFormulaV2]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -2507,6 +2511,23 @@ export default function AdCreationForm({
   }
 
 
+  const areAllAdSetsPhoneCall = useCallback((selectedAdSetIds, duplicateAdSetId, adSetsList) => {
+    if (duplicateAdSetId) {
+      const adset = adSetsList.find((a) => a.id === duplicateAdSetId);
+      return adset?.destination_type === "PHONE_CALL";
+    }
+
+    if (!selectedAdSetIds?.length) {
+      return false;
+    }
+
+    return selectedAdSetIds.every((adsetId) => {
+      const adset = adSetsList.find((a) => a.id === adsetId);
+      return adset?.destination_type === "PHONE_CALL";
+    });
+  }, []);
+
+
 
   const hasShopAutomaticAdSets = useMemo(() => {
     if (duplicateAdSet) {
@@ -2522,6 +2543,16 @@ export default function AdCreationForm({
 
 
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
+  const showPhoneNumberField = useMemo(
+    () => areAllAdSetsPhoneCall(selectedAdSets, duplicateAdSet, adSets),
+    [areAllAdSetsPhoneCall, selectedAdSets, duplicateAdSet, adSets]
+  );
+  const requiresDestinationValue = importedPosts.length === 0 && !useExistingPosts;
+  const isMissingDestinationValue = requiresDestinationValue && (
+    showPhoneNumberField
+      ? !phoneNumber.trim()
+      : ((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim()))
+  );
 
 
   const shouldShowLeadFormSelector = useMemo(() => {
@@ -2732,6 +2763,7 @@ export default function AdCreationForm({
       descriptions,
       messages,
       link,
+      phoneNumber,
       cta,
 
       // Files
@@ -2777,6 +2809,8 @@ export default function AdCreationForm({
       adScheduleEndTime,
       adSets
     } = jobData.formData;
+
+    const usePhoneNumberField = areAllAdSetsPhoneCall(selectedAdSets, duplicateAdSet, adSets);
 
 
 
@@ -3153,6 +3187,12 @@ export default function AdCreationForm({
       };
     };
 
+    const appendPhoneNumberField = (formData, phoneNumberValue) => {
+      if (phoneNumberValue?.trim()) {
+        formData.append("phoneNumber", phoneNumberValue.trim());
+      }
+    };
+
     /**
      * Append common formData fields shared across all ad types
      */
@@ -3168,6 +3208,8 @@ export default function AdCreationForm({
         pageId,
         instagramAccountId,
         linkJSON,
+        phoneNumber,
+        usePhoneNumberField,
         cta,
         launchPaused,
         jobId,
@@ -3188,7 +3230,11 @@ export default function AdCreationForm({
       formData.append("adSetId", adSetId);
       formData.append("pageId", pageId);
       formData.append("instagramAccountId", instagramAccountId);
-      formData.append("link", linkJSON);
+      if (usePhoneNumberField) {
+        appendPhoneNumberField(formData, phoneNumber);
+      } else {
+        formData.append("link", linkJSON);
+      }
       formData.append("cta", cta);
       formData.append("launchPaused", launchPaused);
       formData.append("jobId", jobId);
@@ -3947,7 +3993,12 @@ export default function AdCreationForm({
       };
 
       // Pre-compute common JSON strings and values
-      const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
+      const commonPrecomputed = preComputeCommonValues(
+        headlines,
+        descriptions,
+        messages,
+        usePhoneNumberField ? [""] : link
+      );
 
       // ============================================================================
       // SECTION 1: CAROUSEL ADS
@@ -3970,6 +4021,9 @@ export default function AdCreationForm({
             formData.append("instagramAccountId", instagramAccountId || "");
             formData.append("launchPaused", launchPaused);
             formData.append("jobId", frontendJobId);
+            if (usePhoneNumberField) {
+              appendPhoneNumberField(formData, phoneNumber);
+            }
 
             // POST-SPECIFIC: Send the post ID instead of media
             if (usePostID) {
@@ -4008,7 +4062,11 @@ export default function AdCreationForm({
             formData.append("launchPaused", launchPaused);
             formData.append("jobId", frontendJobId);
             formData.append("cta", cta || "LEARN_MORE");  // placeholder CTA
-            formData.append("link", JSON.stringify(link));
+            if (usePhoneNumberField) {
+              appendPhoneNumberField(formData, phoneNumber);
+            } else {
+              formData.append("link", JSON.stringify(link));
+            }
 
             // IG post specific
             formData.append("sourceInstagramMediaId", igPost.source_instagram_media_id);
@@ -4104,6 +4162,8 @@ export default function AdCreationForm({
               pageId,
               instagramAccountId,
               linkJSON: commonPrecomputed.linkJSON,
+              phoneNumber,
+              usePhoneNumberField,
               cta,
               launchPaused,
               jobId: frontendJobId,
@@ -4233,6 +4293,8 @@ export default function AdCreationForm({
                 pageId,
                 instagramAccountId,
                 linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
@@ -4299,6 +4361,8 @@ export default function AdCreationForm({
               pageId,
               instagramAccountId,
               linkJSON: commonPrecomputed.linkJSON,
+              phoneNumber,
+              usePhoneNumberField,
               cta,
               launchPaused,
               jobId: frontendJobId,
@@ -4366,6 +4430,8 @@ export default function AdCreationForm({
             pageId,
             instagramAccountId,
             linkJSON: commonPrecomputed.linkJSON,
+            phoneNumber,
+            usePhoneNumberField,
             cta,
             launchPaused,
             jobId: frontendJobId,
@@ -4464,6 +4530,8 @@ export default function AdCreationForm({
                 pageId,
                 instagramAccountId,
                 linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
@@ -4567,6 +4635,8 @@ export default function AdCreationForm({
                 pageId,
                 instagramAccountId,
                 linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
@@ -4603,6 +4673,8 @@ export default function AdCreationForm({
                 pageId,
                 instagramAccountId,
                 linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
@@ -4640,6 +4712,8 @@ export default function AdCreationForm({
                 pageId,
                 instagramAccountId,
                 linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
@@ -4673,6 +4747,8 @@ export default function AdCreationForm({
                 pageId,
                 instagramAccountId,
                 linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
@@ -4730,6 +4806,8 @@ export default function AdCreationForm({
                 pageId,
                 instagramAccountId,
                 linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
@@ -4762,6 +4840,8 @@ export default function AdCreationForm({
                 pageId,
                 instagramAccountId,
                 linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
                 cta,
                 launchPaused,
                 jobId: frontendJobId,
@@ -6423,10 +6503,14 @@ export default function AdCreationForm({
                   <div className="space-y-2">
                     <Label className="flex items-center justify-between">
                       <span className="flex items-center gap-2">
-                        <LinkIcon className="w-4 h-4" />
-                        Link (URL)
+                        {showPhoneNumberField ? (
+                          <Phone className="w-4 h-4" />
+                        ) : (
+                          <LinkIcon className="w-4 h-4" />
+                        )}
+                        {showPhoneNumberField ? "Phone Number" : "Link (URL)"}
                       </span>
-                      {isCarouselAd && (
+                      {isCarouselAd && !showPhoneNumberField && (
                         <div className="flex items-center space-x-1">
                           <Checkbox
                             id="apply-link-all"
@@ -6449,10 +6533,24 @@ export default function AdCreationForm({
                       )}
                     </Label>
                     <p className="text-gray-500 text-[12px] font-regular">
-                      Your UTMs will be auto applied from Preferences
+                      {showPhoneNumberField
+                        ? "This phone number will be used for your call ads."
+                        : "Your UTMs will be auto applied from Preferences"}
                     </p>
 
-                    {!isCarouselAd || link.length === 1 ? (
+                    {showPhoneNumberField ? (
+                      <div className="space-y-3">
+                        <Input
+                          type="tel"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          className="w-full border border-gray-400 rounded-xl bg-white shadow"
+                          placeholder="+1 555 123 4567"
+                          disabled={!isLoggedIn}
+                          required
+                        />
+                      </div>
+                    ) : !isCarouselAd || link.length === 1 ? (
                       // Single link mode (normal ads or carousel with "apply to all")
                       <div className="space-y-3">
                         {!showCustomLink && availableLinks.length > 0 && (
@@ -6916,8 +7014,7 @@ export default function AdCreationForm({
                 (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
                 (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||
                 (showShopDestinationSelector && !selectedShopDestination) ||
-                ((importedPosts.length === 0) && !showCustomLink && !link[0]) ||
-                ((importedPosts.length === 0) && showCustomLink && !customLink.trim()) ||
+                isMissingDestinationValue ||
                 (selectedFiles.size > 0) ||
                 (shouldShowLeadFormSelector && !selectedForm) ||
                 (!isCarouselAd && hasDuplicates)
@@ -6953,9 +7050,9 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim())) && (importedPosts.length === 0) && (!useExistingPosts) && (
+            {isMissingDestinationValue && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                Please provide a link URL
+                {showPhoneNumberField ? 'Please provide a phone number' : 'Please provide a link URL'}
               </div>
             )}
             {enablePlacementCustomization && selectedFiles && (selectedFiles.size > 1) && (
