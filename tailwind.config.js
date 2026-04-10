@@ -1,17 +1,11 @@
+import tailwindcssAnimate from "tailwindcss-animate";
+
 /** @type {import('tailwindcss').Config} */
 export default {
 	darkMode: false,
 	content: [
 		"./index.html",
 		"./src/**/*.{js,ts,jsx,tsx}",
-	],
-	ssafelist: [
-		'data-[state=open]:bg-muted',
-		'data-[state=checked]:bg-primary',
-		'data-[state=selected]:bg-muted',
-		'data-[highlighted]:bg-muted',
-		'hover:bg-muted',
-		'group-hover:bg-muted'
 	],
 	theme: {
 		extend: {
@@ -93,5 +87,5 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
-}
+	plugins: [tailwindcssAnimate],
+};

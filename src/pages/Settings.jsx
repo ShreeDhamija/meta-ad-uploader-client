@@ -134,21 +134,21 @@ export default function Settings() {
                 </div>
             </div>
 
-            <div className="flex min-h-screen bg-[#fafafa]">
+            <div className="flex min-h-screen bg-neutral-100">
                 {/* Sidebar */}
                 <div className="w-[290px] flex flex-col h-screen sticky top-0 px-4 py-6 max-lg:w-[80px] max-lg:min-w-[80px] max-lg:px-2">
-                    <div className=" rounded-3xl p-4 flex flex-col h-full">
+                    <div className="rounded-3xl bg-neutral-100 p-4 flex flex-col h-full">
                         {/* Main Content */}
                         <div className="flex-1 flex flex-col">
                             {/* Back to Home Button */}
                             <Button
                                 onClick={() => navigate("/")}
-                                className="flex items-center pl-3 justify-start gap-1 bg-white border border-gray-200 shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 hover:!bg-white hover:shadow-md"
+                                className="flex items-center pl-3 justify-start gap-1 bg-neutral-50 border border-neutral-200 shadow-sm rounded-[20px] py-7 font-medium w-full mb-4 text-neutral-700"
                                 variant="ghost"
                             >
                                 <img src={RocketBtn} alt="Home" className="w-8 h-8 object-contain" />
-                                <div className="h-6 w-px bg-gray-300 mr-2 max-lg:hidden" />
-                                <span className="text-gray-700 font-semibold max-lg:hidden">Back To Launcher</span>
+                                <div className="h-6 w-px bg-neutral-300 mr-2 max-lg:hidden" />
+                                <span className="text-neutral-700 font-semibold max-lg:hidden">Back To Launcher</span>
                             </Button>
 
                             {/* Tab Buttons */}
@@ -162,25 +162,20 @@ export default function Settings() {
                                             className={cn(
                                                 "w-full flex items-center gap-2 px-4 py-2 rounded-2xl transition-colors h-10",
                                                 activeTab === tab
-                                                    ? "bg-[#ECECEE] border border-black/[0.02] font-semibold text-black"
-                                                    : "border border-transparent text-black hover:bg-black/[0.04]",
+                                                    ? "bg-neutral-200 border border-neutral-300 font-semibold text-neutral-900"
+                                                    : "border border-transparent text-neutral-700 hover:bg-neutral-200",
                                                 "justify-start max-lg:justify-center max-lg:px-2 relative",
                                             )}
                                         >
                                             <Icon
                                                 aria-label={`${tab} icon`}
-                                                className={cn(
-                                                    "w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-500 ease-in-out object-contain flex-shrink-0 text-black",
-                                                    activeTab === tab
-                                                        ? "opacity-100"
-                                                        : "opacity-70"
-                                                )}
+                                                className="w-5 h-5 max-lg:w-6 max-lg:h-6 transition-all duration-500 ease-in-out object-contain flex-shrink-0 text-neutral-700 opacity-100"
                                             />
-                                            <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out text-black">
+                                            <span className="text-sm font-medium max-lg:hidden transition-colors duration-500 ease-in-out">
                                                 {tabLabelMap[tab]}
                                             </span>
                                             {activeTab === tab && (
-                                                <span className="ml-auto h-2 w-2 rounded-full bg-black max-lg:hidden" aria-hidden="true" />
+                                                <span className="ml-auto h-1.5 w-1.5 rounded-full bg-neutral-500 max-lg:hidden" aria-hidden="true" />
                                             )}
 
                                         </button>
@@ -191,19 +186,19 @@ export default function Settings() {
 
                         {/* Footer Profile + Logout */}
                         <div className="pt-4 mt-auto">
-                            <div className="w-full flex items-center bg-white border border-gray-200 shadow-sm rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
+                            <div className="w-full flex items-center bg-neutral-50 border border-neutral-200 shadow-sm rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
                                 <div className="flex items-center gap-2 flex-grow max-lg:hidden">
                                     <img
                                         src={profilePicUrl || "/placeholder.svg"}
                                         alt="Profile"
                                         className="w-8 h-8 rounded-full object-cover"
                                     />
-                                    <span className="text-sm font-medium text-black truncate max-w-[120px]">{userName}</span>
+                                    <span className="text-sm font-medium text-neutral-800 truncate max-w-[120px]">{userName}</span>
                                 </div>
                                 <div className="flex items-center">
-                                    <div className="h-6 w-px bg-gray-300 max-lg:hidden" />
+                                    <div className="h-6 w-px bg-neutral-300 max-lg:hidden" />
                                     <button onClick={handleLogout} className="ml-3 rounded-full transition max-lg:ml-0" title="Logout">
-                                        <LogOutIcon className="w-4 h-4 max-lg:w-5 max-lg:h-5 text-black" />
+                                        <LogOutIcon className="w-4 h-4 max-lg:w-5 max-lg:h-5 text-neutral-700" />
                                     </button>
                                 </div>
                             </div>
