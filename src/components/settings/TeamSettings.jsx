@@ -39,7 +39,6 @@ export default function TeamSettings() {
         subscriptionData,
         refreshSubscriptionData,
         loading,
-        isPaidSubscriber,
     } = useSubscription()
 
     const [teamMode, setTeamMode] = useState(null)
@@ -309,24 +308,17 @@ export default function TeamSettings() {
                 )}
 
                 {teamMode === "member" && teamData && (
-                    <div className="rounded-[24px] border border-[#A7F3D0] bg-[#DCFCE7] px-5 py-4 pb-5">
-                        <div className="flex items-start justify-between gap-4">
-                            <div className="space-y-2">
-                                <p className="text-[16px] font-semibold text-[#166534]">Your Current Team</p>
-                                <div className="flex items-center gap-2">
-                                    <TeamBlackIcon className="h-5 w-5 flex-shrink-0 text-[#166534]" />
-                                    <p className="text-sm font-medium text-[#15803D]">
-                                        You&apos;re now a part of <span className="font-extrabold text-[#14532D]">{teamData.teamName || teamData.name}</span>
-                                    </p>
-                                </div>
-                                <p className="text-sm text-[#15803D]/85">
-                                    Team created by {teamData.ownerName || "your team owner"}
+                    <div className="rounded-[24px] border border-[#CFEFBF] bg-[#E2FFC8] px-5 py-4 pb-5">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <TeamBlackIcon className="h-5 w-5 flex-shrink-0 text-[#0F5132]" />
+                                <p className="text-[16px] font-semibold text-[#2A6B43]">
+                                    You&apos;re now a part of <span className="font-extrabold text-[#0F5132]">{teamData.teamName || teamData.name}</span>
                                 </p>
                             </div>
-                            <div className="flex items-center gap-2 pt-0.5 text-sm font-semibold text-[#166534]">
-                                <span className="h-2.5 w-2.5 rounded-full bg-[#22C55E]" />
-                                <span>{isPaidSubscriber() ? "SUBSCRIBED" : "TEAM MEMBER"}</span>
-                            </div>
+                            <p className="text-sm text-[#2A6B43]">
+                                Team created by {teamData.ownerName || "your team owner"}
+                            </p>
                         </div>
                     </div>
                 )}
