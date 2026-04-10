@@ -79,18 +79,22 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group ${isDragging ? 'opacity-50' : ''} ${isSelectable ? 'cursor-pointer p-1.5 pb-2.5' : ''}`}
+      className={`relative group ${isDragging ? 'opacity-50' : ''} ${isSelectable ? 'cursor-pointer' : ''}`}
       onClick={isSelectable ? () => onSelect(fileId) : undefined}
     >
       {/* Selection background for placement customization - only show when NOT grouped */}
       {isSelectable && (
         <div
-          className={`absolute inset-0 rounded-2xl border-2 transition-all ${isSelected
+          className={`absolute rounded-2xl border-2 transition-all pointer-events-none ${isSelected
             ? 'bg-blue-100 border-blue-300'
             : 'border-transparent bg-transparent'
             }`}
           style={{
-            zIndex: 0
+            zIndex: 0,
+            top: '-6px',
+            left: '-6px',
+            right: '-6px',
+            bottom: '-10px'
           }}
         />
       )}
