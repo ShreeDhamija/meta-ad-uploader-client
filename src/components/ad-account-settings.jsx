@@ -485,7 +485,7 @@ export default function AdAccountSettings({
                   role="combobox"
                   aria-expanded={open}
                   disabled={!isLoggedIn || isLoading}
-                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
                   {selectedAdAccount
                     ? adAccounts.find((acct) => acct.id === selectedAdAccount)?.name || selectedAdAccount
@@ -609,7 +609,7 @@ export default function AdAccountSettings({
                   role="combobox"
                   aria-expanded={openCampaign}
                   disabled={!isLoggedIn || !selectedAdAccount || isLoadingCampaigns || (selectedAdAccount && campaigns.length === 0)}
-                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
+                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                 >
                   <div className="w-full overflow-hidden flex items-center gap-2">
                     {isLoadingCampaigns ? (
@@ -867,7 +867,7 @@ transition-all duration-150 hover:!bg-black
                   role="combobox"
                   aria-expanded={openAdSet}
                   disabled={!isLoggedIn || selectedCampaign.length === 0 || isLoadingAdSetsLocal || (selectedCampaign.length > 0 && adSets.length === 0)}
-                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
                   <div className="w-full overflow-hidden flex items-center gap-2">
                     {isLoadingAdSetsLocal ? (

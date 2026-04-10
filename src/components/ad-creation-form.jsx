@@ -507,6 +507,10 @@ export default function AdCreationForm({
   onAdSetCountsCreated,
   onAdSetCreated
 }) {
+  const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
+  const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
+  const formDropdownTriggerChrome = `${formFieldChrome} hover:bg-white`;
+
   // Local state
   const [showPostSelector, setShowPostSelector] = useState(false);
   const navigate = useNavigate()
@@ -5466,7 +5470,7 @@ export default function AdCreationForm({
                 }}
                 disabled={!isLoggedIn}
               >
-                <SelectTrigger className="w-[180px] bg-white border-gray-400 rounded-xl font-medium">
+                <SelectTrigger className={cn("w-[180px] font-medium", formFieldChrome)}>
                   <SelectValue placeholder="Select ad type" />
                 </SelectTrigger>
                 <SelectContent className="bg-white rounded-xl gap-4" >
@@ -5556,7 +5560,7 @@ export default function AdCreationForm({
                           aria-expanded={openPage}
                           disabled={!isLoggedIn || pagesLoading || isPagesLoading} // 👈 Disable while loading
                           id="page"
-                          className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
+                          className={cn("w-full justify-between", formDropdownTriggerChrome)}
                         >
                           {(pagesLoading || isPagesLoading) ? ( // 👈 Show loading state in button
                             <div className="flex items-center gap-2">
@@ -5664,7 +5668,7 @@ export default function AdCreationForm({
                           variant="outline"
                           role="combobox"
                           aria-expanded={openInstagram}
-                          className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
+                          className={cn("w-full justify-between", formDropdownTriggerChrome)}
                           disabled={filteredInstagramAccounts.length === 0}
                         >
                           {instagramAccountId ? (
@@ -5796,7 +5800,7 @@ export default function AdCreationForm({
                                   variant="outline"
                                   role="combobox"
                                   aria-expanded={openPartnerSelector}
-                                  className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow hover:bg-white"
+                                  className={cn("w-full justify-between", formDropdownTriggerChrome)}
                                   disabled={isLoadingPartners || availablePartners.length === 0}
                                 >
                                   {isLoadingPartners ? (
@@ -6067,7 +6071,7 @@ export default function AdCreationForm({
                         disabled={Object.keys(copyTemplates).length === 0}
                       >
                         <SelectTrigger
-                          className="border border-gray-400 rounded-xl bg-white shadow"
+                          className={formFieldChrome}
                           disabled={Object.keys(copyTemplates).length === 0}
                         >
                           <SelectValue
@@ -6474,7 +6478,7 @@ export default function AdCreationForm({
                           type="tel"
                           value={phoneNumber}
                           onChange={(e) => setPhoneNumber(e.target.value)}
-                          className="w-full border border-gray-400 rounded-xl bg-white shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          className={cn("w-full", formInputChrome)}
                           placeholder="+15551234567. You must add country code without spaces."
                           disabled={!isLoggedIn}
                           required
@@ -6489,7 +6493,7 @@ export default function AdCreationForm({
                             onValueChange={(value) => setLink([value])}
                             disabled={!isLoggedIn || availableLinks.length === 0}
                           >
-                            <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow w-full">
+                            <SelectTrigger className={cn("w-full", formFieldChrome)}>
                               <SelectValue placeholder="Select a link" />
                             </SelectTrigger>
 
@@ -6527,7 +6531,7 @@ export default function AdCreationForm({
                                     setCustomLink(e.target.value);
                                     setLink([e.target.value]);
                                   }}
-                                  className="w-full border border-gray-400 rounded-xl bg-white shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                  className={cn("w-full", formInputChrome)}
                                   placeholder="https://example.com"
                                   disabled={!isLoggedIn}
                                   required
@@ -6576,7 +6580,7 @@ export default function AdCreationForm({
                                 }}
                                 disabled={!isLoggedIn || availableLinks.length === 0}
                               >
-                                <SelectTrigger className="border border-gray-400 rounded-xl bg-white shadow">
+                                <SelectTrigger className={formFieldChrome}>
                                   <SelectValue placeholder="Select a link" />
                                 </SelectTrigger>
                                 <SelectContent className="bg-white shadow-lg rounded-xl">
@@ -6652,7 +6656,7 @@ export default function AdCreationForm({
                                   newLinks[index] = e.target.value;
                                   setLink(newLinks);
                                 }}
-                                className="border border-gray-400 rounded-xl bg-white shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                                className={formInputChrome}
                                 placeholder="https://example.com"
                                 disabled={!isLoggedIn}
                                 required
@@ -6682,7 +6686,7 @@ export default function AdCreationForm({
                       Call-to-Action (CTA)
                     </Label>
                     <Select disabled={!isLoggedIn} value={cta} onValueChange={setCta}>
-                      <SelectTrigger id="cta" className="border border-gray-400 rounded-xl bg-white shadow">
+                      <SelectTrigger id="cta" className={formFieldChrome}>
                         <SelectValue placeholder="Select a CTA" />
                       </SelectTrigger>
                       <SelectContent className="bg-white shadow-lg rounded-xl max-h-full p-0 pr-2">
@@ -6761,7 +6765,7 @@ export default function AdCreationForm({
                       value={selectedForm || ""}
                       onValueChange={(value) => setSelectedForm(value || null)}
                     >
-                      <SelectTrigger id="leadgen-form" className="border border-gray-400 rounded-xl bg-white shadow">
+                      <SelectTrigger id="leadgen-form" className={formFieldChrome}>
                         <SelectValue placeholder={
                           loadingForms
                             ? "Loading forms..."
@@ -6810,7 +6814,7 @@ export default function AdCreationForm({
                   </div>
                   <div
                     {...getRootProps()}
-                    className={`group cursor-pointer border-2 border-dashed rounded-xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                    className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
                       }`}
                   >
                     <input {...getInputProps()} disabled={!isLoggedIn} />
@@ -6833,7 +6837,7 @@ export default function AdCreationForm({
                     <Button
                       type="button"
                       onClick={handleDriveClick}
-                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
+                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
                     >
                       <img
                         src="https://api.withblip.com/googledrive.png"
@@ -6853,7 +6857,7 @@ export default function AdCreationForm({
                     <Button
                       type="button"
                       onClick={handleDropboxClick}
-                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-xl h-[48px] flex items-center justify-center gap-2"
+                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
                     >
                       <img
                         src={DropboxIcon}
@@ -6898,7 +6902,7 @@ export default function AdCreationForm({
                               handleImportFromFolder();
                             }
                           }}
-                          className="flex-1"
+                          className={cn("flex-1", formInputChrome)}
 
                         />
                         <Button
@@ -6935,7 +6939,7 @@ export default function AdCreationForm({
           <div className="space-y-1">
             <Button
               type="submit"
-              className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-xl"
+              className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl"
               disabled={
                 !isLoggedIn ||
                 (selectedAdSets.length === 0 && !duplicateAdSet) ||
@@ -7185,7 +7189,7 @@ export default function AdCreationForm({
               value={newTemplateNameInput}
               onChange={(e) => setNewTemplateNameInput(e.target.value)}
               placeholder="e.g. Summer Sale Copy"
-              className="rounded-xl"
+              className={formFieldChrome}
               autoFocus
               onKeyDown={(e) => e.key === "Enter" && !copyTemplates[newTemplateNameInput.trim()] && handleSaveAsNewTemplate()}
             />

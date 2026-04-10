@@ -222,23 +222,23 @@ export default function Home() {
 
     const [showMobileBanner, setShowMobileBanner] = useState(true);
 
-    if (authLoading) return null
+    // if (authLoading) return null
 
 
-    useEffect(() => {
-        if (!authLoading && !isLoggedIn) {
-            navigate("/login");
-        }
-    }, [authLoading, isLoggedIn]);
+    // useEffect(() => {
+    //     if (!authLoading && !isLoggedIn) {
+    //         navigate("/login");
+    //     }
+    // }, [authLoading, isLoggedIn]);
 
 
 
-    useEffect(() => {
-        if (!isLoggedIn || loading) return
-        if (!hasSeenOnboarding) {
-            setShowOnboardingPopup(true)
-        }
-    }, [isLoggedIn, loading, hasSeenOnboarding])
+    // useEffect(() => {
+    //     if (!isLoggedIn || loading) return
+    //     if (!hasSeenOnboarding) {
+    //         setShowOnboardingPopup(true)
+    //     }
+    // }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
         if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup) return
