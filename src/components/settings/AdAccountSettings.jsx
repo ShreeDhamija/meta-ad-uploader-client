@@ -692,18 +692,25 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               </Button>
             </PopoverTrigger>
             <PopoverContent
-              className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-xl"
+              className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
               align="start"
               sideOffset={4}
+              side="bottom"
+              avoidCollisions={false}
+              style={{
+                minWidth: "var(--radix-popover-trigger-width)",
+                width: "auto",
+              }}
             >
               <Command filter={() => 1} loop={false} value="">
                 <CommandInput
                   placeholder="Search ad accounts..."
                   value={searchValue}
                   onValueChange={setSearchValue}
-                  className="bg-white"
+                  className="bg-transparent"
+                  wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                 />
-                <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
                   {adAccountsLoading ? (
                     <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
                       <Loader className="h-4 w-4 animate-spin" />
@@ -718,7 +725,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
                           value={acct.id}
                           onSelect={handleAdAccountSelect}
                           className={`
-                        px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150
+                        px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150
                         hover:bg-gray-100
                         ${selectedAdAccount === acct.id ? "bg-gray-100 font-semibold" : ""}
                         `}

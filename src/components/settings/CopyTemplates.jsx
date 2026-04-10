@@ -897,7 +897,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           value={templateName}
           onChange={(e) => setTemplateName(e.target.value)}
           placeholder="Enter template name (e.g. Evergreen, Sale copy, etc.)"
-          className={settingsFieldChrome}
+          className={`${settingsFieldChrome} h-9 rounded-xl py-2`}
           disabled={isProcessing}
         />
       </div>
