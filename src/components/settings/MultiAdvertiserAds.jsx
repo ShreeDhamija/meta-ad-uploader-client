@@ -4,7 +4,7 @@ import { Users } from "lucide-react";
 
 function MultiAdvertiserAds({ enabled, setEnabled }) {
     return (
-        <div className="bg-[#f7f7f7] rounded-xl p-4">
+        <div className="bg-[#f7f7f7] rounded-2xl p-4">
             <div className="flex items-center justify-between">
                 <div className="flex items-start gap-2">
                     <Users className="w-5 h-5 text-gray-500 mt-0.5" />

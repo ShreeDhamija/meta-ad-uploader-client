@@ -98,22 +98,22 @@ export default function Settings() {
     }, [activeTab])
 
 
-    useEffect(() => {
-        if (!loading && !hasSeenSettingsOnboarding) {
-            setShowSettingsPopup(true)
-        }
-    }, [loading, hasSeenSettingsOnboarding])
+    // useEffect(() => {
+    //     if (!loading && !hasSeenSettingsOnboarding) {
+    //         setShowSettingsPopup(true)
+    //     }
+    // }, [loading, hasSeenSettingsOnboarding])
 
-    useEffect(() => {
-        if (loading || subscriptionLoading) return;
+    // useEffect(() => {
+    //     if (loading || subscriptionLoading) return;
 
-        if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
-            setShowAdAccountPopup(true)
-        }
-    }, [subscriptionData.planType, selectedAdAccountIds])
+    //     if ((subscriptionData.planType === 'brand' || subscriptionData.planType === 'starter') && (!selectedAdAccountIds || selectedAdAccountIds.length === 0)) {
+    //         setShowAdAccountPopup(true)
+    //     }
+    // }, [subscriptionData.planType, selectedAdAccountIds])
 
-    if (authLoading) return null
-    if (!isLoggedIn) return <Navigate to="/login" />
+    // if (authLoading) return null
+    // if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <>

@@ -456,7 +456,7 @@ export default function RecommendationCards({
                                                                                     value={editedBudgets[key] ?? suggestedBudget.toFixed(2)}
                                                                                     onChange={(e) => setEditedBudgets(prev => ({ ...prev, [key]: e.target.value }))}
                                                                                     className={cn(
-                                                                                        "w-24 pl-5 pr-2 py-1 text-xs font-medium border rounded-lg focus:outline-none focus:ring-2",
+                                                                                        "w-24 pl-5 pr-2 py-4.5 text-xs font-medium border rounded-2xl bg-white shadow focus:outline-none focus:ring-2",
                                                                                         rec.type === 'scale'
                                                                                             ? "border-green-300 focus:ring-green-500 text-green-700"
                                                                                             : "border-orange-300 focus:ring-orange-500 text-orange-700"

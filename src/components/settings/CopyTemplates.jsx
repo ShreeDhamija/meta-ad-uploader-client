@@ -28,6 +28,8 @@ import {
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const settingsFieldChrome = "rounded-2xl border border-gray-300 py-4.5 bg-white shadow";
+const settingsTextareaChrome = "rounded-2xl border border-gray-300 bg-white px-3 pt-3 pb-3 shadow";
 
 
 
@@ -797,7 +799,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   }, [selectedAdAccount, templates, defaultName, onTemplateUpdate, setAdSettings])
 
   return (
-    <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
+    <div className="p-4 bg-[#f5f5f5] rounded-2xl space-y-3 w-full max-w-3xl">
       <div className="flex items-start justify-between mb-6">
         <div className="flex flex-col gap-[12px]">
           <div className="flex items-center gap-2">
@@ -862,7 +864,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
             disabled={availableTemplates.length === 0}
           >
-            <SelectTrigger className="w-full overflow-hidden rounded-xl px-3 py-2 text-sm justify-between bg-white disabled:opacity-50 disabled:cursor-not-allowed">
+            <SelectTrigger className={`w-full overflow-hidden ${settingsFieldChrome} px-3 text-sm justify-between disabled:opacity-50 disabled:cursor-not-allowed`}>
               <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
             </SelectTrigger>
             <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto relative">
@@ -895,7 +897,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           value={templateName}
           onChange={(e) => setTemplateName(e.target.value)}
           placeholder="Enter template name (e.g. Evergreen, Sale copy, etc.)"
-          className="rounded-xl bg-white"
+          className={settingsFieldChrome}
           disabled={isProcessing}
         />
       </div>
@@ -909,7 +911,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 placeholder={`Enter Primary Text ${i + 1}`}
                 value={text}
                 onChange={(e) => handleChange(i, setPrimaryTexts, primaryTexts, e.target.value)}
-                className={`rounded-xl bg-white px-3 py-2 w-full text-sm resize-none border border-input focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${duplicateIndices.primaryTexts.has(i)
+                className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 ${duplicateIndices.primaryTexts.has(i)
                   ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                   : ""
                   }`}
@@ -949,7 +951,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 placeholder={`Enter Headline ${i + 1}`}
                 value={text}
                 onChange={(e) => handleChange(i, setHeadlines, headlines, e.target.value)}
-                className={`rounded-xl bg-white ${duplicateIndices.headlines.has(i)
+                className={`${settingsFieldChrome} ${duplicateIndices.headlines.has(i)
                   ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                   : ""
                   }`}
@@ -1002,7 +1004,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   placeholder={`Enter Description ${i + 1}`}
                   value={text}
                   onChange={(e) => handleChange(i, setDescriptions, descriptions, e.target.value)}
-                  className={`rounded-xl bg-white ${duplicateIndices.descriptions.has(i)
+                  className={`${settingsFieldChrome} ${duplicateIndices.descriptions.has(i)
                     ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                     : ""
                     }`}

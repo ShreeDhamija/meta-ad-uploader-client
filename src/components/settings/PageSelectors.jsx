@@ -104,7 +104,7 @@ function PageSelectors({
   }, [setSelectedInstagram]);
 
   return (
-    <div className="bg-[#f5f5f5] rounded-xl p-4 space-y-4">
+    <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-4">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <MetaIcon
@@ -135,7 +135,7 @@ function PageSelectors({
               <Button
                 variant="outline"
                 disabled={pagesLoading || isPagesLoading} // 👈 Disable while loading
-                className="w-full justify-between border border-gray-300 rounded-xl bg-white shadow-xs flex items-center hover:bg-white pl-3"
+                className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
               >
                 {(pagesLoading || isPagesLoading) ? ( // 👈 Show loading state
                   <div className="flex items-center gap-2">
@@ -201,7 +201,7 @@ function PageSelectors({
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full justify-between border border-gray-300 rounded-xl bg-white shadow-xs flex items-center hover:bg-white pl-3"
+                className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-4.5"
               >
                 <div className="flex items-center gap-2">
                   {selectedInstagram?.profilePictureUrl && (

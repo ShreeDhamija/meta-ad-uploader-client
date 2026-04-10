@@ -55,7 +55,7 @@ export default function GlobalSettings() {
   return (
     <div className="space-y-6">
       {/* Ad Naming Convention */}
-      <div className="bg-[#f7f7f7] rounded-xl p-3 space-y-3">
+      <div className="bg-[#f7f7f7] rounded-2xl p-3 space-y-3">
         <div className="flex items-center gap-2">
           <img src="https://unpkg.com/@mynaui/icons/icons/label.svg" alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
           <h3 className="font-medium text-[14px] text-zinc-950 flex items-center gap-1">

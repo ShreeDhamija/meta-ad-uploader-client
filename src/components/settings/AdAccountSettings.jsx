@@ -685,14 +685,14 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               <Button
                 variant="outline"
                 role="combobox"
-                className="w-full justify-between rounded-xl bg-white shadow-xs hover:bg-white"
+                className="w-full justify-between rounded-2xl border border-gray-300 bg-white shadow hover:bg-white px-3 py-4.5"
               >
                 {selectedAdAccountName}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
             <PopoverContent
-              className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+              className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-xl"
               align="start"
               sideOffset={4}
             >
@@ -780,7 +780,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           />
 
           {/* Ad Naming Convention */}
-          <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-3">
+          <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-3">
             <div className="flex items-center gap-2">
               <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
               <h3 className="font-medium text-[14px] text-zinc-950">

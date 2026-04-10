@@ -183,7 +183,7 @@ function CreativeEnhancements({ enhancements, setEnhancements }) {
     }, [setEnhancements]);
 
     return (
-        <div className="bg-[#f7f7f7] rounded-xl p-4 space-y-6">
+        <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-6">
             <div className="flex items-center justify-between">
                 <div className="flex items-start gap-2">
                     <EnhanceIcon

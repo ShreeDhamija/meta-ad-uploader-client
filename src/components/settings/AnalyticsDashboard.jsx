@@ -1228,7 +1228,7 @@ export default function AnalyticsDashboard() {
                                                         value={tempTargetCPA}
                                                         onChange={(e) => setTempTargetCPA(e.target.value)}
                                                         placeholder="e.g. 30"
-                                                        className="w-28 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        className="w-28 px-3 py-4.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                     />
                                                 </div>
                                             ) : (
@@ -1240,7 +1240,7 @@ export default function AnalyticsDashboard() {
                                                         value={tempTargetROAS}
                                                         onChange={(e) => setTempTargetROAS(e.target.value)}
                                                         placeholder="e.g. 3.0"
-                                                        className="w-28 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        className="w-28 px-3 py-4.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                     />
                                                 </div>
                                             )}
@@ -1265,7 +1265,7 @@ export default function AnalyticsDashboard() {
                                                         value={tempThresholds.cpaSpike}
                                                         onChange={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: e.target.value }))}
                                                         onBlur={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: parseInt(e.target.value) || 50 }))}
-                                                        className="w-24 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        className="w-24 px-3 py-4.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                     />
                                                     <span className="text-sm text-gray-500">
                                                         Alert when CPA increases by more than this % vs 7-day average
@@ -1281,7 +1281,7 @@ export default function AnalyticsDashboard() {
                                                         value={tempThresholds.overspend}
                                                         onChange={(e) => setTempThresholds(prev => ({ ...prev, overspend: e.target.value }))}
                                                         onBlur={(e) => setTempThresholds(prev => ({ ...prev, overspend: parseInt(e.target.value) || 150 }))}
-                                                        className="w-24 px-3 py-2 border border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        className="w-24 px-3 py-4.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                     />
                                                     <span className="text-sm text-gray-500">
                                                         Alert when daily spend exceeds this % of budget (ABO only)

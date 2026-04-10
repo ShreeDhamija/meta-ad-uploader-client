@@ -32,7 +32,7 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 const primaryButtonClass = "h-[45px] rounded-[20px] bg-[#003CFF] px-4 text-white hover:bg-[#002fd1]"
 const cancelButtonClass = "h-[45px] rounded-[20px] border-2 border-[#003CFF] bg-white px-4 text-[#003CFF] hover:text-[#003CFF] hover:bg-white"
-const iconInputClass = "h-[50px] rounded-[18px] border border-black/10 bg-white pl-12 text-[14px] font-medium text-[#1f1f1f] placeholder:font-medium placeholder:text-[#444444] focus-visible:ring-0 focus-visible:ring-offset-0"
+const iconInputClass = "h-[50px] rounded-2xl border border-gray-300 bg-white pl-12 py-4.5 text-[14px] font-medium text-[#1f1f1f] shadow placeholder:font-medium placeholder:text-[#444444] focus-visible:ring-0 focus-visible:ring-offset-0"
 
 export default function TeamSettings() {
     const {
@@ -382,7 +382,7 @@ export default function TeamSettings() {
                                         value={currentEmail}
                                         onChange={(e) => setCurrentEmail(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && handleAddEmail()}
-                                        className="h-[45px] rounded-[20px] border border-black/10 bg-white pl-12 text-[14px] font-medium text-[#1f1f1f] placeholder:font-medium placeholder:text-[#444444] focus-visible:ring-0 focus-visible:ring-offset-0"
+                                        className="h-[45px] rounded-2xl border border-gray-300 bg-white pl-12 py-4.5 text-[14px] font-medium text-[#1f1f1f] shadow placeholder:font-medium placeholder:text-[#444444] focus-visible:ring-0 focus-visible:ring-offset-0"
                                     />
                                 </div>
                                 <Button

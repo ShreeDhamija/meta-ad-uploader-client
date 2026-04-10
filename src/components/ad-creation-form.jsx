@@ -510,6 +510,7 @@ export default function AdCreationForm({
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
   const formDropdownTriggerChrome = `${formFieldChrome} hover:bg-white`;
+  const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-3 pb-3 text-sm resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
 
   // Local state
   const [showPostSelector, setShowPostSelector] = useState(false);
@@ -6155,7 +6156,7 @@ export default function AdCreationForm({
                                   disabled={!isLoggedIn}
                                   minRows={2}
                                   maxRows={10}
-                                  className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.messages.has(index)
+                                  className={`${formTextareaChrome} ${duplicateIndices.messages.has(index)
                                     ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                                     : ""
                                     }`}
@@ -6247,7 +6248,7 @@ export default function AdCreationForm({
                                 }}
                                 minRows={1}
                                 maxRows={10}
-                                className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.headlines.has(index)
+                                className={`${formTextareaChrome} ${duplicateIndices.headlines.has(index)
                                   ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                                   : ""
                                   }`}
@@ -6305,7 +6306,7 @@ export default function AdCreationForm({
                                 onChange={(e) => setDescriptions([e.target.value])}
                                 minRows={2}
                                 maxRows={10}
-                                className="border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none"
+                                className={formTextareaChrome}
                                 style={{
                                   scrollbarWidth: 'thin',
                                   scrollbarColor: '#c7c7c7 transparent'
@@ -6324,7 +6325,7 @@ export default function AdCreationForm({
                                       onChange={(e) => updateField(setDescriptions, descriptions, index, e.target.value)}
                                       minRows={1}
                                       maxRows={10}
-                                      className={`border border-gray-300 rounded-xl bg-white shadow w-full px-3 py-2 text-sm resize-none focus:outline-none ${duplicateIndices.descriptions.has(index)
+                                      className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index)
                                         ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                                         : ""
                                         }`}

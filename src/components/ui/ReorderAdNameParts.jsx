@@ -150,7 +150,7 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
                   value={category.name}
                   onChange={(e) => updateCategoryName(category._editKey, e.target.value)}
                   placeholder="e.g. Category, URL Type, Region..."
-                  className="bg-white rounded-lg h-9 text-sm"
+                  className="rounded-2xl h-9 text-sm shadow"
                 />
               </div>
 
@@ -190,7 +190,7 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
                     }
                     onKeyDown={(e) => handleValueKeyDown(e, category._editKey)}
                     placeholder="Type a value and press Enter"
-                    className="bg-white rounded-lg h-9 text-sm flex-1"
+                    className="rounded-2xl h-9 text-sm shadow flex-1"
                   />
                   <Button
                     type="button"
@@ -656,7 +656,7 @@ export default function ReorderAdNameParts({
             <Button
               variant="outline"
               size="sm"
-              className="rounded-xl px-3 whitespace-nowrap"
+              className="rounded-2xl px-3 whitespace-nowrap"
               onClick={() => setShowSetupDialog(true)}
             >
               Custom Variables
@@ -730,7 +730,7 @@ export default function ReorderAdNameParts({
           }}
           placeholder="Enter custom text or variables."
           className={cn(
-            "w-full bg-white rounded-xl",
+            "w-full rounded-2xl",
             variant === "home" && "border border-gray-300 shadow focus-visible:ring-0 focus-visible:ring-offset-0",
             dateFormatError && "border-red-400 focus-visible:ring-red-400"
           )}

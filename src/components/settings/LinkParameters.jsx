@@ -292,7 +292,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
     )
 
     return (
-        <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-3 w-full max-w-3xl">
+        <div className="p-4 bg-[#f5f5f5] rounded-2xl space-y-3 w-full max-w-3xl">
             {/* Section Header */}
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
@@ -328,7 +328,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             <Button
                                 variant="outline"
                                 role="combobox"
-                                className="flex-1 justify-between rounded-xl bg-white hover:bg-white"
+                                className="flex-1 justify-between rounded-2xl border border-gray-300 bg-white shadow hover:bg-white px-3 py-4.5"
                                 disabled={links.length === 0}
                             >
                                 {selectedLink ? (
@@ -410,7 +410,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 placeholder="Enter Link URL"
                                 value={newLinkUrl}
                                 onChange={(e) => setNewLinkUrl(e.target.value)}
-                                className="rounded-xl"
+                                className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                             />
                         </div>
                         <div className="flex gap-2">
@@ -502,7 +502,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                         placeholder="e.g. yourbrand.com"
                         value={displayLink}
                         onChange={(e) => setDisplayLink(e.target.value)}
-                        className="rounded-xl bg-white"
+                        className="rounded-2xl border-gray-300 py-4.5 bg-white shadow"
                     />
                 )}
             </div>
@@ -615,7 +615,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                         placeholder="Paste UTM string here eg: utm_source=facebook&utm_campaign={{campaign.name}}&utm_medium=paid&utm_content={{ad.name}}&utm_term={{adset.name}}"
                                         value={rawUtmString}
                                         onChange={(e) => setRawUtmString(e.target.value)}
-                                        className="rounded-xl bg-white placeholder:text-xs h-9"
+                                        className="rounded-2xl border-gray-300 bg-white shadow placeholder:text-xs h-9"
                                     />
                                     <Button
                                         onClick={handleExtractUtms}
@@ -660,7 +660,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                     value={pair.key}
                                                     // 2. Use handleTempPairChange
                                                     onChange={(e) => handleTempPairChange(i, "key", e.target.value)}
-                                                    className="rounded-xl flex-1 bg-white h-10"
+                                                    className="rounded-2xl flex-1 border-gray-300 bg-white shadow h-10"
                                                 />
 
                                                 {/* VALUE INPUT */}
@@ -680,7 +680,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                         onBlur={() => {
                                                             setTimeout(() => setOpenIndex(null), 150)
                                                         }}
-                                                        className="rounded-xl w-full bg-white h-10"
+                                                        className="rounded-2xl w-full border-gray-300 bg-white shadow h-10"
                                                     />
                                                     {openIndex === i && (
                                                         <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 p-2 max-h-[200px] overflow-hidden">

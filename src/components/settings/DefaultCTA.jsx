@@ -41,7 +41,7 @@ function DefaultCTA({ defaultCTA, setDefaultCTA }) {
     );
 
     return (
-        <div className="p-4 bg-[#f5f5f5] rounded-xl space-y-4 w-full max-w-3xl">
+        <div className="p-4 bg-[#f5f5f5] rounded-2xl space-y-4 w-full max-w-3xl">
             {/* Section Header */}
             <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -58,7 +58,7 @@ function DefaultCTA({ defaultCTA, setDefaultCTA }) {
 
             {/* Dropdown */}
             <Select value={defaultCTA} onValueChange={setDefaultCTA}>
-                <SelectTrigger className="w-full rounded-xl px-3 py-2 text-sm justify-between bg-white">
+                <SelectTrigger className="w-full rounded-2xl border border-gray-300 px-3 py-4.5 text-sm justify-between bg-white shadow">
                     <SelectValue className="truncate" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl bg-white py-2 max-h-full pt-1">

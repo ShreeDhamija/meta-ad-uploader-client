@@ -629,7 +629,7 @@ export default function BillingSettings() {
                                 value={cancelOtherText}
                                 onChange={(e) => setCancelOtherText(e.target.value)}
                                 placeholder="Tell us more..."
-                                className="mt-2 w-full resize-none rounded-xl border border-gray-200 p-3 text-sm focus:border-zinc-800 focus:outline-none"
+                                className="mt-2 w-full resize-none rounded-2xl border border-gray-300 bg-white p-3 text-sm shadow focus:border-zinc-800 focus:outline-none"
                                 rows={2}
                             />
                         )}
