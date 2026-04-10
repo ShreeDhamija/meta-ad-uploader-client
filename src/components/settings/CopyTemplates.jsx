@@ -29,7 +29,7 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const settingsFieldChrome = "rounded-2xl border border-gray-300 py-4.5 bg-white shadow";
-const settingsTextareaChrome = "rounded-2xl border border-gray-300 bg-white px-3 pt-3 pb-3 shadow";
+const settingsTextareaChrome = "rounded-2xl border border-gray-300 bg-white px-3 pt-2.5 pb-2.5 leading-5 shadow";
 
 
 

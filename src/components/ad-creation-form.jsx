@@ -510,7 +510,7 @@ export default function AdCreationForm({
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
   const formDropdownTriggerChrome = `${formFieldChrome} hover:bg-white`;
-  const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-3 pb-3 text-sm resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
+  const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
 
   // Local state
   const [showPostSelector, setShowPostSelector] = useState(false);
@@ -5471,7 +5471,7 @@ export default function AdCreationForm({
                 }}
                 disabled={!isLoggedIn}
               >
-                <SelectTrigger className={cn("w-[180px] font-medium", formFieldChrome)}>
+                <SelectTrigger className={cn("w-[180px] h-10 py-2 font-medium", formFieldChrome)}>
                   <SelectValue placeholder="Select ad type" />
                 </SelectTrigger>
                 <SelectContent className="bg-white rounded-xl gap-4" >

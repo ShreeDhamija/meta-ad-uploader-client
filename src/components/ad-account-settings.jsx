@@ -494,7 +494,7 @@ export default function AdAccountSettings({
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                 align="start"
                 sideOffset={4}
                 side="bottom"
@@ -519,7 +519,7 @@ export default function AdAccountSettings({
                     onValueChange={setSearchValue}
                   />
                   {/* <CommandEmpty>No ad account found.</CommandEmpty> */}
-                  <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                  <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
                     {(isLoadingAdAccounts || adAccountsLoading) ? (
                       <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
                         <Loader className="h-4 w-4 animate-spin" />
@@ -537,9 +537,9 @@ export default function AdAccountSettings({
                                 setOpen(false)
                               }}
                               className={cn(
-                                "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
                                 "data-[selected=true]:bg-gray-100",
-                                selectedAdAccount === acct.id && "bg-gray-100 rounded-xl font-semibold",
+                                selectedAdAccount === acct.id && "bg-gray-100 rounded-2xl font-semibold",
                                 "hover:bg-gray-100",
                               )}
                               data-selected={acct.id === selectedAdAccount}
@@ -633,7 +633,7 @@ export default function AdAccountSettings({
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                 align="start"
                 sideOffset={4}
                 side="bottom"
@@ -651,7 +651,7 @@ export default function AdAccountSettings({
                     onValueChange={setCampaignSearchValue}
                   />
                   <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
-                  <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                  <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
                     <CommandGroup>
                       {filteredCampaigns.map((camp) => {
                         const isSelected = selectedCampaign.includes(camp.id);
@@ -660,7 +660,7 @@ export default function AdAccountSettings({
                             key={camp.id}
                             value={camp.name || camp.id}
                             onSelect={() => handleCampaignChange(camp.id)}
-                            className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150"
+                            className="px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150"
                           >
                             <div className="flex items-center gap-2 w-full">
                               <Checkbox
@@ -693,7 +693,7 @@ export default function AdAccountSettings({
                       }}
                       // className="w-full justify-start text-left font-normal bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-xl"
                       className={`
-h-10 w-full px-4 py-3 m-1 rounded-xl 
+h-10 w-full px-4 py-3 m-1 rounded-2xl 
 !bg-zinc-700 !text-white shadow-md 
 flex items-center justify-center 
 text-sm font-semibold cursor-pointer 
@@ -710,7 +710,7 @@ transition-all duration-150 hover:!bg-black
             </Popover>
 
             {showDuplicateCampaignBlock && (
-              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 relative mt-2">
+              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -737,7 +737,7 @@ transition-all duration-150 hover:!bg-black
                         role="combobox"
                         aria-expanded={openDuplicateCampaign}
                         disabled={!isLoggedIn || campaigns.length === 0}
-                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
+                        className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                       >
                         <div className="w-full overflow-hidden">
                           <span className="block truncate flex-1 text-left">
@@ -750,7 +750,7 @@ transition-all duration-150 hover:!bg-black
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                      className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                       align="start"
                       sideOffset={4}
                       side="bottom"
@@ -768,7 +768,7 @@ transition-all duration-150 hover:!bg-black
                           onValueChange={setDuplicateCampaignSearchValue}
                         />
                         <CommandEmpty>No campaigns exist in this ad account. Try selecting a different account.</CommandEmpty>
-                        <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                        <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
                           <CommandGroup>
                             {campaigns
                               .filter((campaign) =>
@@ -783,7 +783,7 @@ transition-all duration-150 hover:!bg-black
                                     setOpenDuplicateCampaign(false);
                                   }}
                                   className={cn(
-                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
                                     campaign.status !== "ACTIVE" && "text-gray-400"
                                   )}
                                 >
@@ -815,7 +815,7 @@ transition-all duration-150 hover:!bg-black
                         value={newCampaignName}
                         onChange={(e) => setNewCampaignName(e.target.value)}
                         placeholder="Enter new campaign name..."
-                        className="border border-gray-400 rounded-xl bg-white shadow"
+                        className="border border-gray-400 rounded-2xl bg-white shadow"
                         disabled={!isLoggedIn}
                       />
 
@@ -891,7 +891,7 @@ transition-all duration-150 hover:!bg-black
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                 align="start"
                 sideOffset={4}
                 side="bottom"
@@ -909,7 +909,7 @@ transition-all duration-150 hover:!bg-black
                     onValueChange={setAdSetSearchValue}
                   />
                   <CommandEmpty>No ad sets exist in this campaign. Select a different campaign</CommandEmpty>
-                  <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar px-2" selectOnFocus={false}>
+                  <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar px-2" selectOnFocus={false}>
                     <CommandGroup>
                       {!isAdvantagePlusCampaign && (
                         <CommandItem
@@ -924,7 +924,7 @@ transition-all duration-150 hover:!bg-black
                             }
                           }}
                           className={`
-                          h-10 w-full px-4 py-3 m-1 rounded-xl 
+                          h-10 w-full px-4 py-3 m-1 rounded-2xl 
                           ${selectedCampaign.length !== 1 ? '!bg-zinc-800 !text-zinc-500' : '!bg-zinc-700 !text-white'}
                           shadow-md 
                           flex items-center justify-center 
@@ -976,7 +976,7 @@ transition-all duration-150 hover:!bg-black
                                       value={adset.name || adset.id}
                                       onSelect={() => handleAdSetCheckboxChange(adset.id, !isSelected)}
                                       className={cn(
-                                        "py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                        "py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
                                         isSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
                                       )}
                                     >
@@ -1035,7 +1035,7 @@ transition-all duration-150 hover:!bg-black
             )}
 
             {showDuplicateBlock && (
-              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200 relative mt-2">
+              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -1062,7 +1062,7 @@ transition-all duration-150 hover:!bg-black
                         role="combobox"
                         aria-expanded={openDuplicateAdSet}
                         disabled={!isLoggedIn || adSets.length === 0}
-                        className="w-full justify-between border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
+                        className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                       >
                         <div className="w-full overflow-hidden">
                           <span className="block truncate flex-1 text-left">
@@ -1075,7 +1075,7 @@ transition-all duration-150 hover:!bg-black
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-xl"
+                      className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                       align="start"
                       sideOffset={4}
                       side="bottom"
@@ -1093,7 +1093,7 @@ transition-all duration-150 hover:!bg-black
                           onValueChange={setDuplicateAdSetSearchValue}
                         />
                         <CommandEmpty>No ad sets exist in this campaign. Select a different campaign</CommandEmpty>
-                        <CommandList className="max-h-[500px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                        <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
                           <CommandGroup>
                             {filteredAdSets.length > 0 ? (
                               (() => {
@@ -1130,7 +1130,7 @@ transition-all duration-150 hover:!bg-black
                                               setOpenDuplicateAdSet(false)
                                             }}
                                             className={cn(
-                                              "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
                                               adset.status !== "ACTIVE" && "text-gray-400"
                                             )}
                                           >
@@ -1172,7 +1172,7 @@ transition-all duration-150 hover:!bg-black
                           value={newAdSetName}
                           onChange={(e) => setNewAdSetName(e.target.value)}
                           placeholder="Enter new ad set name..."
-                          className="border border-gray-400 rounded-xl bg-white shadow"
+                          className="border border-gray-400 rounded-2xl bg-white shadow"
                           disabled={!isLoggedIn}
                         />
                       </div>
@@ -1189,13 +1189,13 @@ transition-all duration-150 hover:!bg-black
                   return (
                     <label
                       key={id}
-                      className="inline-flex items-center gap-2 bg-white rounded-xl border border-gray-300 px-4 py-2 cursor-pointer hover:bg-gray-50"
+                      className="inline-flex items-center gap-2 bg-white rounded-2xl border border-gray-300 px-4 py-2 cursor-pointer hover:bg-gray-50"
                     >
                       <Checkbox
                         id={`selected-adset-${id}`}
                         checked={true}
                         onCheckedChange={() => handleAdSetCheckboxChange(id, false)}
-                        className="w-4 h-4 p-0 bg-white border border-gray-300 rounded-xl"
+                        className="w-4 h-4 p-0 bg-white border border-gray-300 rounded-2xl"
                       >
                         <Checkbox.Indicator className="flex items-center justify-center">
                           <X className="w-3 h-3 text-gray-500" />
