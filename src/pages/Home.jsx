@@ -464,7 +464,7 @@ export default function Home() {
     const handleCheckOutAnalytics = async () => {
         setShowAnalyticsHomePopup(false)
         await markAnalyticsHomePopupSeen()
-        navigate("/settings?tab=analytics")
+        navigate("/analytics")
     }
     const onItemToggle = (item) => {
         setSelectedItems((prev) =>

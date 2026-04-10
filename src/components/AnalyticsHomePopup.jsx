@@ -29,7 +29,7 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                         <p className="text-[15px] leading-7 text-[#6B5B53] mb-8">
                             We took the playbook behind $3M/month in ad spend and put it in your hands.
                             Review recommendations and apply them in one click or not.
-                            <span className="block font-semibold text-[#3A3A3A]">Now in Preferences.</span>
+                            <span className="block font-semibold text-[#3A3A3A]">Now in the header.</span>
                         </p>
                     </div>
 

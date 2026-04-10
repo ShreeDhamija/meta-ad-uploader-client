@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button"
 import { LogOutIcon, Settings, Clock, Bell } from "lucide-react"
 import ZapIcon from "@/assets/icons/Zap.svg?react"
 import ChatIcon from "@/assets/icons/chat.svg?react"
+import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
+import RocketBtn from "@/assets/rocket2.webp"
 import { useAuth } from "@/lib/AuthContext"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useNotifications from "@/lib/useNotifications"
 import {
@@ -17,10 +19,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const {
     subscriptionData,
     isOnTrial,
@@ -32,6 +36,9 @@ export default function Header({ showMessenger, hideMessenger }) {
 
   const { notifications, hasUnread, loading: notificationsLoading, markAsRead } = useNotifications()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const isAnalyticsPage = location.pathname === "/analytics"
+  const isSettingsPage = location.pathname === "/settings"
+  const showAnalyticsNav = import.meta.env.VITE_APP_ENV === "staging"
 
   const handleDropdownClose = (open) => {
     setDropdownOpen(open)
@@ -96,14 +103,28 @@ export default function Header({ showMessenger, hideMessenger }) {
   return (
     <header className="flex justify-between items-center py-3 mb-4">
       {/* Profile Section (Left) */}
-      <div className="flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 shadow-[0px_2px_3px_rgba(0,0,0,0.1)]">
-        <img
-          src={profilePicUrl}
-          alt="Profile"
-          className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
-        />
-        <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
-      </div>
+      {isAnalyticsPage ? (
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 shadow-[0px_2px_3px_rgba(0,0,0,0.1)] hover:shadow-md transition"
+        >
+          <img
+            src={RocketBtn}
+            alt="Launcher"
+            className="w-9 h-9 object-contain"
+          />
+          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">Go To Launcher</span>
+        </button>
+      ) : (
+        <div className="flex items-center gap-3 bg-white border border-black/10 rounded-[20px] px-3 py-2 shadow-[0px_2px_3px_rgba(0,0,0,0.1)]">
+          <img
+            src={profilePicUrl}
+            alt="Profile"
+            className="w-9 h-9 rounded-full border border-zinc-300 object-cover"
+          />
+          <span className="text-[14px] font-medium text-gray-700 whitespace-nowrap">{userName}</span>
+        </div>
+      )}
 
       {/* Action Buttons (Right) */}
       <div className="flex items-center gap-2 bg-white border border-black/10 rounded-[20px] px-3 py-2 ml-2 shadow-[0px_2px_3px_rgba(0,0,0,0.1)]">
@@ -177,9 +198,11 @@ export default function Header({ showMessenger, hideMessenger }) {
         <button
           onClick={() => navigate("/settings")}
           title="Settings"
-          className="hidden md:flex items-center gap-1 p-1 rounded-full transition !bg-transparent hover:!bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-2 "
+          className={cn(
+            "hidden md:flex items-center gap-1 p-1 rounded-full transition !focus:outline-none !focus:ring-0 !active:ring-0 px-2",
+            isSettingsPage ? "bg-gray-100 hover:bg-gray-100" : "!bg-transparent hover:!bg-transparent"
+          )}
           style={{
-            backgroundColor: "transparent",
             outline: "none",
             boxShadow: "none",
             border: "none",
@@ -189,6 +212,22 @@ export default function Header({ showMessenger, hideMessenger }) {
           <span className="hidden md:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
         <div className="h-8 w-px bg-gray-300" />
+        {showAnalyticsNav && (
+          <>
+            <button
+              onClick={() => navigate("/analytics")}
+              title="Analytics"
+              className={cn(
+                "hidden md:flex items-center gap-2 py-2 rounded-full transition-colors px-2",
+                isAnalyticsPage ? "bg-gray-100 hover:bg-gray-100" : "bg-transparent hover:bg-gray-100"
+              )}
+            >
+              <AnalyticsIcon className="size-5" />
+              <span className="inline text-[14px] text-gray-900 font-medium">Analytics</span>
+            </button>
+            <div className="h-8 w-px bg-gray-300" />
+          </>
+        )}
         {/* Chat Support Button */}
         <button
           onClick={handleChatToggle}

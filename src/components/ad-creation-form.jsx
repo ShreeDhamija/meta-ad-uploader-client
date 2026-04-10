@@ -1207,6 +1207,7 @@ export default function AdCreationForm({
     { value: "SEE_MORE", label: "See More" },
     { value: "APPLY_NOW", label: "Apply Now" },
     { value: "INSTALL_MOBILE_APP", label: "Install Now" },
+    { value: "CALL_NOW", label: "Call Now" },
   ]
 
   const availableLinks = adAccountSettings?.links || [];
@@ -2553,6 +2554,12 @@ export default function AdCreationForm({
       ? !phoneNumber.trim()
       : ((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim()))
   );
+
+  useEffect(() => {
+    if (showPhoneNumberField && cta !== "CALL_NOW") {
+      setCta("CALL_NOW");
+    }
+  }, [showPhoneNumberField, cta, setCta]);
 
 
   const shouldShowLeadFormSelector = useMemo(() => {

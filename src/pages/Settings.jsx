@@ -3,14 +3,13 @@
 import { useAuth } from "@/lib/AuthContext"
 import { Navigate, useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { LogOutIcon, ChartLine } from "lucide-react"
+import { LogOutIcon } from "lucide-react"
 import { Toaster } from "sonner"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
-import AnalyticsDashboard from "@/components/settings/AnalyticsDashboard" // NEW IMPORT
 import useSubscription from "@/lib/useSubscriptionSettings"
 import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
 import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
@@ -18,68 +17,49 @@ import RocketBtn from '@/assets/rocket2.webp';
 import Folder from '@/assets/icons/cog-three.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
-import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import DesktopIcon from '@/assets/Desktop.webp';
-import TrialExpiredPopup from "@/components/TrialExpiredPopup";
 import "../settings.css"
-import { toast } from "sonner"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const SETTINGS_TABS = ["adaccount", "billing", "team"]
 
 export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
-    const [showTrialExpiredPopup, setShowTrialExpiredPopup] = useState(false)
-    const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false)
     const navigate = useNavigate()
     const {
         subscriptionData,
-        isTrialExpired,
-        hasActiveAccess,
         loading: subscriptionLoading,
-        canExtendTrial,
-        extendTrial
     } = useSubscription()
-    const { showMessenger } = useIntercom(true);
-
-
     const urlParams = new URLSearchParams(window.location.search)
-    const initialTab = urlParams.get('tab') || 'adaccount'
+    const requestedTab = urlParams.get('tab')
+    const initialTab = SETTINGS_TABS.includes(requestedTab) ? requestedTab : 'adaccount'
     const preselectedAdAccount = urlParams.get('adAccount')
     const [activeTab, setActiveTab] = useState(initialTab)
-    const settingsTabs = ["adaccount", ...(import.meta.env.VITE_APP_ENV === "staging" ? ["analytics"] : []), "billing", "team"]
 
-    // UPDATED: Added analytics to the tab icon map
     const tabIconMap = {
         adaccount: Folder,
-        analytics: ChartLine, // NEW - use BarChart3 from lucide-react if you don't have custom icon
         billing: Card,
         team: UsersIcon,
     }
 
     const { hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding, loading, selectedAdAccountIds } = useGlobalSettings()
 
-    // UPDATED: Added analytics description
     const tabDescriptionMap = {
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
-        analytics: "Monitor anomalies and get AI-powered budget recommendations for your ad accounts.", // NEW
         billing: "Manage your subscription, billing methods, and view invoices.",
         team: "Manage your team, invite members, or join an existing team.",
     }
 
-    // UPDATED: Added analytics title
     const tabTitleMap = {
         adaccount: "Ad Account Settings",
-        analytics: "Analytics & Insights", // NEW
         billing: "Billing and Subscription",
         team: "Team Management",
     };
 
-    // UPDATED: Added analytics label
     const tabLabelMap = {
         adaccount: "Preferences",
-        analytics: "Analytics", // NEW
         billing: "Billing",
         team: "Team",
     }
@@ -106,6 +86,15 @@ export default function Settings() {
         document.activeElement.blur()
     }
 
+    useEffect(() => {
+        if (!SETTINGS_TABS.includes(activeTab)) {
+            setActiveTab("adaccount")
+            const newUrl = new URL(window.location)
+            newUrl.searchParams.set("tab", "adaccount")
+            window.history.replaceState({}, '', newUrl)
+        }
+    }, [activeTab])
+
 
     useEffect(() => {
         if (!loading && !hasSeenSettingsOnboarding) {
@@ -120,61 +109,6 @@ export default function Settings() {
             setShowAdAccountPopup(true)
         }
     }, [subscriptionData.planType, selectedAdAccountIds])
-
-    useEffect(() => {
-        const userHasActiveAccess = hasActiveAccess();
-
-        if (
-            activeTab === "analytics" &&
-            !subscriptionLoading &&
-            isTrialExpired() &&
-            !userHasActiveAccess &&
-            !hasDismissedTrialPopup
-        ) {
-            setShowTrialExpiredPopup(true);
-            return;
-        }
-
-        if (activeTab !== "analytics") {
-            setShowTrialExpiredPopup(false);
-        }
-    }, [activeTab, subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
-
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const slackStatus = params.get('slack');
-        const reason = params.get('reason');
-
-        if (slackStatus === 'connected') {
-            toast.success('Slack connected successfully!')
-        } else if (slackStatus === 'error') {
-            const messages = {
-                missing_params: 'Slack connection failed: missing parameters',
-                user_not_found: 'Slack connection failed: user not found',
-                exchange_failed: 'Slack connection failed: could not complete authorization',
-            };
-            toast.error(messages[reason] || `Slack connection failed: ${reason || 'unknown error'}`)
-        }
-
-        // Clean up URL params so it doesn't re-toast on refresh
-        if (slackStatus) {
-            const url = new URL(window.location);
-            url.searchParams.delete('slack');
-            url.searchParams.delete('reason');
-            window.history.replaceState({}, '', url);
-        }
-    }, [])
-
-    const handleExtendTrial = async () => {
-        const result = await extendTrial();
-        if (result.success) {
-            setShowTrialExpiredPopup(false);
-            toast.success("Trial Extended Successfully, reloading...")
-            setTimeout(() => {
-                window.location.reload();
-            }, 500);
-        }
-    };
 
     if (authLoading) return null
     if (!isLoggedIn) return <Navigate to="/login" />
@@ -216,9 +150,9 @@ export default function Settings() {
                                 <span className="text-gray-700 font-semibold max-lg:hidden">Back To Launcher</span>
                             </Button>
 
-                            {/* Tab Buttons - UPDATED: Added analytics to the array */}
+                            {/* Tab Buttons */}
                             <div className="space-y-2">
-                                {settingsTabs.map((tab) => {
+                                {SETTINGS_TABS.map((tab) => {
                                     const Icon = tabIconMap[tab];
                                     return (
                                         <button
@@ -280,7 +214,7 @@ export default function Settings() {
                 <main className="flex-1 py-6 pr-6">
                     <div className="bg-white rounded-3xl border border-gray-200 shadow-sm h-[calc(100vh-3rem)] flex flex-col overflow-hidden relative">
                         <div className="flex-1 overflow-auto">
-                            <div className={cn("w-full mx-auto p-16", activeTab === "analytics" ? "max-w-[80rem]" : "max-w-[52rem]")}>
+                            <div className="w-full max-w-[52rem] mx-auto p-16">
                                 <p className="text-sm text-gray-400 mb-1 text-left">Settings / {tabLabelMap[activeTab]}</p>
                                 <h1 className="text-xl font-semibold mb-1 text-left">
                                     {tabTitleMap[activeTab]}
@@ -296,8 +230,6 @@ export default function Settings() {
                                             subscriptionData={subscriptionData}
                                         />
                                     )}
-                                    {/* NEW: Analytics tab content */}
-                                    {activeTab === "analytics" && <AnalyticsDashboard />}
                                     {activeTab === "billing" && <BillingSettings />}
                                     {activeTab === "team" && <TeamSettings />}
 
@@ -319,33 +251,6 @@ export default function Settings() {
                     selectedAdAccountIds={selectedAdAccountIds}
 
                 />
-                {showTrialExpiredPopup && activeTab === "analytics" && (
-                    <TrialExpiredPopup
-                        onClose={() => {
-                            setShowTrialExpiredPopup(false);
-                            setHasDismissedTrialPopup(true);
-                        }}
-                        onUpgrade={() => {
-                            handleTabChange("billing");
-                            setShowTrialExpiredPopup(false);
-                            setHasDismissedTrialPopup(true);
-                        }}
-                        joinTeam={() => {
-                            handleTabChange("team");
-                            setShowTrialExpiredPopup(false);
-                            setHasDismissedTrialPopup(true);
-                        }}
-                        onChatWithUs={() => {
-                            showMessenger();
-                            setShowTrialExpiredPopup(false);
-                            setHasDismissedTrialPopup(true);
-                        }}
-                        canExtendTrial={canExtendTrial()}
-                        onExtendTrial={handleExtendTrial}
-                        isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
-                        isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
-                    />
-                )}
             </div>
         </>
     )
