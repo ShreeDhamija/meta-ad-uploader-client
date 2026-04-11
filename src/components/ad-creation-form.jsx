@@ -7091,10 +7091,10 @@ export default function AdCreationForm({
                         <button
                           type="button"
                           className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors",
+                            "inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-medium shadow-sm transition-colors",
                             (adScheduleStartTime || adScheduleEndTime)
-                              ? "bg-blue-50 border-blue-300 text-blue-700 hover:bg-blue-100"
-                              : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                              ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                              : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                           )}
                         >
                           <Clock className="w-3.5 h-3.5" />
@@ -7102,9 +7102,13 @@ export default function AdCreationForm({
                         </button>
                       </PopoverTrigger>
 
-                      <PopoverContent className="w-auto p-4 bg-white rounded-xl shadow-lg border" align="end">
-                        <div className="space-y-4">
-                          <p className="text-sm font-medium text-gray-700">Ad Schedule</p>
+                      <PopoverContent
+                        className="w-[380px] max-w-[92vw] rounded-2xl border border-gray-200 bg-white p-5 shadow-xl"
+                        align="end"
+                        sideOffset={10}
+                      >
+                        <div className="space-y-5">
+                          <p className="text-sm font-semibold text-gray-800">Ad Schedule</p>
 
                           <ScheduleDateTimePicker
                             label="Start Time"
@@ -7122,7 +7126,9 @@ export default function AdCreationForm({
 
                           {(adScheduleStartTime && adScheduleEndTime) &&
                             new Date(adScheduleEndTime) <= new Date(adScheduleStartTime) && (
-                              <p className="text-xs text-red-500">End time must be after start time</p>
+                              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                                End time must be after start time
+                              </p>
                             )}
                         </div>
                       </PopoverContent>
