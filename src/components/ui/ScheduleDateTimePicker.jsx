@@ -92,7 +92,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                             selected={selectedDate}
                             onSelect={handleDateSelect}
                             disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                            className="p-4 [--cell-size:2.55rem]"
+                            className="p-4 [--cell-size:2.65rem]"
                             classNames={{
                                 month: "flex w-full flex-col gap-3",
                                 month_caption: "flex h-[--cell-size] w-full items-center justify-center px-[--cell-size] mb-1",
@@ -100,7 +100,10 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                                 weekday: "flex-1 select-none text-center text-[0.8rem] font-medium text-gray-500",
                                 table: "w-full border-separate border-spacing-y-2",
                                 week: "mt-1.5 flex w-full gap-2",
-                                day: "relative flex-1 aspect-square select-none p-0 text-center",
+                                day: "relative flex-1 aspect-square select-none p-0.5 text-center",
+                                day_button: "h-[2.35rem] w-[2.35rem] rounded-full text-sm font-medium transition-colors hover:bg-blue-100 hover:text-blue-800",
+                                today: "bg-transparent text-blue-600 font-semibold data-[selected=true]:bg-blue-600 data-[selected=true]:text-white",
+                                selected: "bg-blue-600 text-white hover:bg-blue-700 hover:text-white",
                             }}
                             initialFocus
                         />
