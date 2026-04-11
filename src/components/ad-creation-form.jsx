@@ -596,6 +596,7 @@ export default function AdCreationForm({
   const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false);
   const [newTemplateNameInput, setNewTemplateNameInput] = useState("");
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false);
+  const wasPhoneCallCtaAutoAppliedRef = useRef(false);
 
   const [activeIgCaptionIndex, setActiveIgCaptionIndex] = useState(0);
 
@@ -2554,10 +2555,21 @@ export default function AdCreationForm({
   );
 
   useEffect(() => {
-    if (showPhoneNumberField && cta !== "CALL_NOW") {
-      setCta("CALL_NOW");
+    const defaultCta = adAccountSettings?.defaultCTA || "LEARN_MORE";
+
+    if (showPhoneNumberField) {
+      if (cta !== "CALL_NOW") {
+        wasPhoneCallCtaAutoAppliedRef.current = true;
+        setCta("CALL_NOW");
+      }
+      return;
     }
-  }, [showPhoneNumberField, cta, setCta]);
+
+    if (wasPhoneCallCtaAutoAppliedRef.current && cta === "CALL_NOW") {
+      wasPhoneCallCtaAutoAppliedRef.current = false;
+      setCta(defaultCta);
+    }
+  }, [showPhoneNumberField, cta, setCta, adAccountSettings?.defaultCTA]);
 
 
   const shouldShowLeadFormSelector = useMemo(() => {

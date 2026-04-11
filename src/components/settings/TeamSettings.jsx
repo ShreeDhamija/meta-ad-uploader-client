@@ -240,7 +240,7 @@ export default function TeamSettings() {
     }
 
     const wrapperClass = teamMode === "owner" && teamData
-        ? "rounded-[28px] border border-black/[0.05] bg-[#f9f9f9] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.2)]"
+        ? "bg-[#f5f5f5] rounded-2xl p-4 space-y-4"
         : "p-0"
 
     return (

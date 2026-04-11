@@ -197,7 +197,7 @@ export default function Header({ showMessenger, hideMessenger }) {
         <button
           onClick={() => navigate("/settings")}
           title="Settings"
-          className="hidden md:flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-3 py-2 mx-0.5"
+          className="hidden md:flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-2 py-2 mx-0.5"
           style={{
             outline: "none",
             boxShadow: "none",
@@ -213,7 +213,7 @@ export default function Header({ showMessenger, hideMessenger }) {
             <button
               onClick={() => navigate("/analytics")}
               title="Analytics"
-              className="hidden md:flex items-center gap-1.5 rounded-full transition-colors px-3 py-2 mx-0.5 bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent"
+              className="hidden md:flex items-center gap-1.5 rounded-full transition-colors px-2 py-2 mx-0.5 bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent"
             >
               <AnalyticsIcon className="size-5" />
               <span className="inline text-[14px] text-gray-900 font-medium">Analytics</span>
