@@ -616,34 +616,108 @@ export default function MediaPreview({
 
 
 
+  // const handleAIGroup = useCallback(async () => {
+  //   try {
+  //     setIsAIGrouping(true);
+
+  //     // Combine all file sources (same pattern used by handleFlexibleAutoGroup)
+  //     const allFiles = [
+  //       ...files,
+  //       ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)).map(f => ({ ...f, isDrive: true })),
+  //       ...(dropboxFiles || []).map(f => ({ ...f, isDropbox: true })),
+  //     ];
+
+  //     // Only process image files
+  //     const imageFiles = allFiles.filter(file => !isVideoFile(file));
+
+  //     const processedImages = await Promise.all(
+  //       imageFiles.map(async (file, index) => {
+  //         const base64 = await compressAndConvertToBase64(file);
+  //         const aspectRatio = await getAspectRatio(file);
+
+  //         return {
+  //           base64,
+  //           mimeType: file.type || file.mimeType || 'image/jpeg',
+  //           aspectRatio,
+  //           index,
+  //           fileId: getFileId(file)
+  //         };
+  //       })
+  //     );
+
+  //     const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       credentials: 'include',
+  //       body: JSON.stringify({ images: processedImages })
+  //     });
+
+  //     const responseText = await response.text();
+
+  //     if (!response.ok) {
+  //       throw new Error(`Grouping failed: ${responseText}`);
+  //     }
+
+  //     const result = JSON.parse(responseText);
+
+  //     // Convert AI indices to actual fileIds using imageFiles (not files)
+  //     const newGroups = result.groups.map(indexGroup =>
+  //       indexGroup.map(idx => {
+  //         const file = imageFiles[idx];
+  //         return getFileId(file);
+  //       })
+  //     );
+
+  //     setFileGroups(newGroups);
+  //     setSelectedFiles(new Set());
+  //   } catch (error) {
+  //     console.error('AI grouping error:', error);
+  //     alert(`Failed to group images: ${error.message}`);
+  //   } finally {
+  //     setIsAIGrouping(false);
+  //   }
+  // }, [files, driveFiles, dropboxFiles, setFileGroups, setSelectedFiles]);
+
   const handleAIGroup = useCallback(async () => {
     try {
       setIsAIGrouping(true);
 
-      // Combine all file sources (same pattern used by handleFlexibleAutoGroup)
       const allFiles = [
         ...files,
         ...driveFiles.filter(df => !files.some(f => f.isDrive && f.id === df.id)).map(f => ({ ...f, isDrive: true })),
         ...(dropboxFiles || []).map(f => ({ ...f, isDropbox: true })),
       ];
 
-      // Only process image files
       const imageFiles = allFiles.filter(file => !isVideoFile(file));
 
-      const processedImages = await Promise.all(
-        imageFiles.map(async (file, index) => {
-          const base64 = await compressAndConvertToBase64(file);
-          const aspectRatio = await getAspectRatio(file);
+      // --- NEW CONCURRENCY BATCHING LOGIC ---
+      const processedImages = [];
+      const CONCURRENCY_LIMIT = 5; // Process 5 images at a time to prevent browser freeze
 
-          return {
-            base64,
-            mimeType: file.type || file.mimeType || 'image/jpeg',
-            aspectRatio,
-            index,
-            fileId: getFileId(file)
-          };
-        })
-      );
+      for (let i = 0; i < imageFiles.length; i += CONCURRENCY_LIMIT) {
+        const batch = imageFiles.slice(i, i + CONCURRENCY_LIMIT);
+
+        const batchResults = await Promise.all(
+          batch.map(async (file, batchIndex) => {
+            const actualIndex = i + batchIndex; // Maintain correct 0-49 index for the AI
+            const base64 = await compressAndConvertToBase64(file); // Kept at 1024px for text
+            const aspectRatio = await getAspectRatio(file);
+
+            return {
+              base64,
+              mimeType: file.type || file.mimeType || 'image/jpeg',
+              aspectRatio,
+              index: actualIndex,
+              fileId: getFileId(file)
+            };
+          })
+        );
+
+        processedImages.push(...batchResults);
+      }
+      // --------------------------------------
 
       const response = await fetch(`${API_BASE_URL}/api/grouping/group-images`, {
         method: 'POST',
@@ -651,7 +725,7 @@ export default function MediaPreview({
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ images: processedImages })
+        body: JSON.stringify({ images: processedImages }) // All 50 sent together
       });
 
       const responseText = await response.text();
@@ -662,7 +736,6 @@ export default function MediaPreview({
 
       const result = JSON.parse(responseText);
 
-      // Convert AI indices to actual fileIds using imageFiles (not files)
       const newGroups = result.groups.map(indexGroup =>
         indexGroup.map(idx => {
           const file = imageFiles[idx];
@@ -679,6 +752,7 @@ export default function MediaPreview({
       setIsAIGrouping(false);
     }
   }, [files, driveFiles, dropboxFiles, setFileGroups, setSelectedFiles]);
+
 
 
   const handleFlexibleAutoGroup = useCallback(async () => {
