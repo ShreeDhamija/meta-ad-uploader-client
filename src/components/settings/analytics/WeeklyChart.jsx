@@ -1,6 +1,8 @@
 
 "use client"
 
+/* eslint-disable react/prop-types */
+
 import { useMemo, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
@@ -12,6 +14,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer,
 } from "recharts"
+import { getAnalyticsDateRangeSummary } from "./dateRangeUtils"
 
 const METRIC_OPTIONS = {
     costPerLinkClick: {
@@ -19,7 +22,7 @@ const METRIC_OPTIONS = {
         color: '#3b82f6',
         tickFormatter: (value) => `$${value.toFixed(2)}`,
         valueFormatter: (value) => value !== null && value !== undefined ? `$${value.toFixed(2)}` : 'N/A',
-        subtitle: 'Weekly cost per link click over ~6 months',
+        subtitle: 'Weekly cost per link click',
         yAxisWidth: 56,
     },
     cpm: {
@@ -27,7 +30,7 @@ const METRIC_OPTIONS = {
         color: '#f97316',
         tickFormatter: (value) => `$${value.toFixed(2)}`,
         valueFormatter: (value) => value !== null && value !== undefined ? `$${value.toFixed(2)}` : 'N/A',
-        subtitle: 'Weekly CPM over ~6 months',
+        subtitle: 'Weekly CPM',
         yAxisWidth: 56,
     },
     linkCtr: {
@@ -35,7 +38,7 @@ const METRIC_OPTIONS = {
         color: '#14b8a6',
         tickFormatter: (value) => `${value.toFixed(1)}%`,
         valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}%` : 'N/A',
-        subtitle: 'Weekly link CTR over ~6 months',
+        subtitle: 'Weekly link CTR',
         yAxisWidth: 52,
     },
     frequency: {
@@ -43,13 +46,14 @@ const METRIC_OPTIONS = {
         color: '#a855f7',
         tickFormatter: (value) => `${value.toFixed(1)}x`,
         valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}x` : 'N/A',
-        subtitle: 'Weekly frequency over ~6 months',
+        subtitle: 'Weekly frequency',
         yAxisWidth: 48,
     },
 }
 
-export default function WeeklyChart({ data, loading }) {
+export default function WeeklyChart({ data, loading, dateRange }) {
     const [selectedMetrics, setSelectedMetrics] = useState(["costPerLinkClick", "frequency"])
+    const selectedRangeSummary = useMemo(() => getAnalyticsDateRangeSummary(dateRange), [dateRange])
 
     const chartData = useMemo(() => {
         if (!data?.weeklyInsights?.length) return []
@@ -85,9 +89,12 @@ export default function WeeklyChart({ data, loading }) {
     }, [selectedMetricConfigs])
 
     const subtitle = useMemo(() => {
-        if (selectedMetricConfigs.length === 1) return selectedMetricConfigs[0].subtitle
-        return `${selectedMetricConfigs.map((metric) => metric.label).join(', ')} over ~6 months`
-    }, [selectedMetricConfigs])
+        if (selectedMetricConfigs.length === 1) {
+            return `${selectedMetricConfigs[0].subtitle} for ${selectedRangeSummary}`
+        }
+
+        return `${selectedMetricConfigs.map((metric) => metric.label).join(', ')} for ${selectedRangeSummary}`
+    }, [selectedMetricConfigs, selectedRangeSummary])
 
     const handleMetricToggle = (metricKey, checked) => {
         setSelectedMetrics((prev) => {
@@ -132,7 +139,7 @@ export default function WeeklyChart({ data, loading }) {
             <CardContent className="p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
-                        <p className="text-sm font-medium text-gray-900">Trailing 6 Month Metrics By Week</p>
+                        <p className="text-sm font-medium text-gray-900">Weekly Metrics</p>
                         <p className="text-xs text-gray-400">{subtitle}</p>
                     </div>
                     <DropdownMenu>

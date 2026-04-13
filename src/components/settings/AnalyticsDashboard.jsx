@@ -21,12 +21,18 @@ import { Switch } from "@/components/ui/switch"
 import slackWhite from "@/assets/icons/analytics/slackwhite.svg"
 import KPIChart from "./analytics/KPIChart"
 import WeeklyChart from "./analytics/WeeklyChart"
+import AnalyticsDateRangePicker from "./analytics/AnalyticsDateRangePicker"
 import RecommendationCards from "./analytics/RecommendationCards"
 import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
 import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
 import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
+import {
+    buildAnalyticsDateQueryParams,
+    createAnalyticsDateRangeFromPreset,
+    getAnalyticsDateRangeCacheKey,
+} from "./analytics/dateRangeUtils"
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -50,7 +56,7 @@ export default function AnalyticsDashboard() {
     // const [metricMode, setMetricMode] = useState("cpr") // cpr | roas
     // const [modeAutoDetected, setModeAutoDetected] = useState(false)
     const [activeTab, setActiveTab] = useState("budget")
-    const [chartDays, setChartDays] = useState(14)
+    const [analyticsDateRange, setAnalyticsDateRange] = useState(() => createAnalyticsDateRangeFromPreset("last_30d"))
 
     // ── Aggregate KPI dialog 
     const [showAggregateDialog, setShowAggregateDialog] = useState(false)
@@ -104,6 +110,8 @@ export default function AnalyticsDashboard() {
     // const modeCache = useRef({})
     const dailyInsightsCacheRef = useRef({})
     const dailyInsightsAbortRef = useRef(null)
+    const weeklyInsightsCacheRef = useRef({})
+    const weeklyInsightsAbortRef = useRef(null)
     const pendingDailySettingsRef = useRef(null)
     const currentAccountRef = useRef(null)
 
@@ -421,8 +429,25 @@ export default function AnalyticsDashboard() {
     }, [selectedAdAccount, metricMode, adAccountSettings?.conversionEvent])
 
 
-    const getDailyInsightsCacheKey = useCallback((accountId, days, conversionEvent) => {
-        return `${accountId}::${days}::${conversionEvent || "__auto__"}`
+    const buildAnalyticsQueryString = useCallback((accountId, dateRange, extraParams = {}) => {
+        const params = buildAnalyticsDateQueryParams(dateRange)
+        params.set("adAccountId", accountId)
+
+        Object.entries(extraParams).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== "") {
+                params.set(key, value)
+            }
+        })
+
+        return params.toString()
+    }, [])
+
+    const getDailyInsightsCacheKey = useCallback((accountId, dateRange, conversionEvent) => {
+        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}`
+    }, [])
+
+    const getWeeklyInsightsCacheKey = useCallback((accountId, dateRange) => {
+        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}`
     }, [])
 
     const clearDailyInsightsCache = useCallback((accountId = null) => {
@@ -437,9 +462,21 @@ export default function AnalyticsDashboard() {
         })
     }, [])
 
+    const clearWeeklyInsightsCache = useCallback((accountId = null) => {
+        if (!accountId) {
+            weeklyInsightsCacheRef.current = {}
+            return
+        }
+
+        const prefix = `${accountId}::`
+        Object.keys(weeklyInsightsCacheRef.current).forEach((key) => {
+            if (key.startsWith(prefix)) delete weeklyInsightsCacheRef.current[key]
+        })
+    }, [])
+
     const loadDailyInsights = useCallback(async ({
         accountId = selectedAdAccount,
-        days = chartDays,
+        dateRange = analyticsDateRange,
         conversionEvent = adAccountSettings?.conversionEvent || null,
         force = false,
     } = {}) => {
@@ -450,7 +487,7 @@ export default function AnalyticsDashboard() {
             dailyInsightsAbortRef.current = null
         }
 
-        const cacheKey = getDailyInsightsCacheKey(accountId, days, conversionEvent)
+        const cacheKey = getDailyInsightsCacheKey(accountId, dateRange, conversionEvent)
         const cachedPayload = dailyInsightsCacheRef.current[cacheKey]
 
         if (!force && cachedPayload) {
@@ -465,10 +502,8 @@ export default function AnalyticsDashboard() {
         setDailyLoading(true)
 
         try {
-            let url = `${API_BASE_URL}/api/analytics/daily-insights?adAccountId=${accountId}&days=${days}`
-            if (conversionEvent) {
-                url += `&conversionEvent=${encodeURIComponent(conversionEvent)}`
-            }
+            const query = buildAnalyticsQueryString(accountId, dateRange, { conversionEvent })
+            const url = `${API_BASE_URL}/api/analytics/daily-insights?${query}`
 
             const res = await fetch(url, {
                 credentials: 'include',
@@ -493,26 +528,70 @@ export default function AnalyticsDashboard() {
                 setDailyLoading(false)
             }
         }
-    }, [selectedAdAccount, chartDays, adAccountSettings?.conversionEvent, getDailyInsightsCacheKey])
+    }, [
+        selectedAdAccount,
+        analyticsDateRange,
+        adAccountSettings?.conversionEvent,
+        buildAnalyticsQueryString,
+        getDailyInsightsCacheKey,
+    ])
 
-    const fetchWeeklyInsights = useCallback(async (force = false) => {
-        if (!selectedAdAccount) return
-        const key = `weekly-${selectedAdAccount}`
-        if (!force && fetchedRef.current[key]) return
-        fetchedRef.current[key] = true
+    const fetchWeeklyInsights = useCallback(async ({
+        accountId = selectedAdAccount,
+        dateRange = analyticsDateRange,
+        force = false,
+    } = {}) => {
+        if (!accountId) return
 
+        if (weeklyInsightsAbortRef.current) {
+            weeklyInsightsAbortRef.current.abort()
+            weeklyInsightsAbortRef.current = null
+        }
+
+        const cacheKey = getWeeklyInsightsCacheKey(accountId, dateRange)
+        const cachedPayload = weeklyInsightsCacheRef.current[cacheKey]
+
+        if (!force && cachedPayload) {
+            setWeeklyInsights(cachedPayload)
+            setWeeklyLoading(false)
+            return
+        }
+
+        const controller = new AbortController()
+        weeklyInsightsAbortRef.current = controller
+
+        setWeeklyInsights(null)
         setWeeklyLoading(true)
         try {
-            const res = await fetch(
-                `${API_BASE_URL}/api/analytics/weekly-insights?adAccountId=${selectedAdAccount}&weeks=26`,
-                { credentials: 'include' }
-            )
+            const query = buildAnalyticsQueryString(accountId, dateRange)
+            const res = await fetch(`${API_BASE_URL}/api/analytics/weekly-insights?${query}`, {
+                credentials: 'include',
+                signal: controller.signal,
+            })
             const data = await res.json()
-            if (res.ok) setWeeklyInsights(data)
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to fetch weekly insights')
+            }
+
+            if (controller.signal.aborted || weeklyInsightsAbortRef.current !== controller) return
+
+            weeklyInsightsCacheRef.current[cacheKey] = data
+            setWeeklyInsights(data)
         } catch (err) {
+            if (err.name === 'AbortError') return
             console.error('Weekly insights error:', err)
-        } finally { setWeeklyLoading(false) }
-    }, [selectedAdAccount])
+        } finally {
+            if (weeklyInsightsAbortRef.current === controller) {
+                weeklyInsightsAbortRef.current = null
+                setWeeklyLoading(false)
+            }
+        }
+    }, [
+        selectedAdAccount,
+        analyticsDateRange,
+        buildAnalyticsQueryString,
+        getWeeklyInsightsCacheKey,
+    ])
 
     // ── Data fetching triggers ──────────────────────────────
     useEffect(() => {
@@ -536,7 +615,7 @@ export default function AnalyticsDashboard() {
         if (selectedAdAccount && !adAccountSettingsLoading) {
             fetchWeeklyInsights()
         }
-    }, [selectedAdAccount, adAccountSettingsLoading, fetchWeeklyInsights])
+    }, [selectedAdAccount, adAccountSettingsLoading, analyticsDateRange, fetchWeeklyInsights])
 
     // Account info auto-detection should only run AFTER settings have loaded,
     // so modeCache is already populated if the user has a saved preference
@@ -580,8 +659,14 @@ export default function AnalyticsDashboard() {
                 dailyInsightsAbortRef.current.abort()
                 dailyInsightsAbortRef.current = null
             }
+            if (weeklyInsightsAbortRef.current) {
+                weeklyInsightsAbortRef.current.abort()
+                weeklyInsightsAbortRef.current = null
+            }
             setDailyInsights(null)
             setDailyLoading(false)
+            setWeeklyInsights(null)
+            setWeeklyLoading(false)
             return
         }
 
@@ -590,12 +675,21 @@ export default function AnalyticsDashboard() {
         }
 
         loadDailyInsights()
-    }, [selectedAdAccount, chartDays, adAccountSettingsLoading, adAccountSettings?.conversionEvent, loadDailyInsights])
+    }, [
+        selectedAdAccount,
+        analyticsDateRange,
+        adAccountSettingsLoading,
+        adAccountSettings?.conversionEvent,
+        loadDailyInsights,
+    ])
 
     useEffect(() => {
         return () => {
             if (dailyInsightsAbortRef.current) {
                 dailyInsightsAbortRef.current.abort()
+            }
+            if (weeklyInsightsAbortRef.current) {
+                weeklyInsightsAbortRef.current.abort()
             }
         }
     }, [])
@@ -603,7 +697,7 @@ export default function AnalyticsDashboard() {
 
 
     const handleAdAccountSelect = (accountId) => {
-        currentAccountRef.current = accountId  // ← add this
+        currentAccountRef.current = accountId
         pendingDailySettingsRef.current = accountId
         setRecsLoading(false)
         setPoorAdsLoading(false)
@@ -621,6 +715,12 @@ export default function AnalyticsDashboard() {
             dailyInsightsAbortRef.current.abort()
             dailyInsightsAbortRef.current = null
         }
+        if (weeklyInsightsAbortRef.current) {
+            weeklyInsightsAbortRef.current.abort()
+            weeklyInsightsAbortRef.current = null
+        }
+        clearDailyInsightsCache(accountId)
+        clearWeeklyInsightsCache(accountId)
         fetchedRef.current = {}
     }
 
@@ -702,7 +802,7 @@ export default function AnalyticsDashboard() {
                 loadDailyInsights({
                     force: true,
                     accountId: selectedAdAccount,
-                    days: chartDays,
+                    dateRange: analyticsDateRange,
                     conversionEvent: nextConversionEvent,
                 })
             }
@@ -896,6 +996,15 @@ export default function AnalyticsDashboard() {
                 </div>
             </div>
 
+            {selectedAdAccount && (
+                <div className="flex justify-end">
+                    <AnalyticsDateRangePicker
+                        value={analyticsDateRange}
+                        onChange={setAnalyticsDateRange}
+                    />
+                </div>
+            )}
+
             {/* ── Charts Row  */}
             {selectedAdAccount && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -924,12 +1033,11 @@ export default function AnalyticsDashboard() {
                                 data={dailyInsights}
                                 loading={dailyLoading}
                                 mode={metricMode}
-                                days={chartDays}
-                                onDaysChange={setChartDays}
                             />
                             <WeeklyChart
                                 data={weeklyInsights}
                                 loading={weeklyLoading}
+                                dateRange={analyticsDateRange}
                             />
                         </>
                     )}

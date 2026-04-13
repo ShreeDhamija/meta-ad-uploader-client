@@ -39,7 +39,7 @@ function formatEventName(actionType) {
     return actionType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
+export default function KPIChart({ data, loading, mode }) {
     const { chartData, campaigns } = useMemo(() => {
         if (!data?.dailyInsights?.length) return { chartData: [], campaigns: [] }
 
@@ -73,7 +73,7 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
 
     useEffect(() => {
         setHiddenCampaigns(new Set())
-    }, [data, days])
+    }, [data])
 
     const handleToggleCampaign = useCallback((name) => {
         setHiddenCampaigns(prev => {
@@ -160,26 +160,6 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                                 ? `Event: ${formatEventName(data.primaryActionType)}`
                                 : 'Auto-detected event'}
                         </p>
-                    </div>
-                    <div className="flex p-0.5 bg-gray-100 rounded-lg border border-gray-200/60">
-                        <button
-                            onClick={() => onDaysChange(14)}
-                            className={cn(
-                                "px-2.5 py-1 text-xs font-medium rounded-md transition-all",
-                                days === 14 ? "bg-white shadow-xs text-gray-900" : "text-gray-500 hover:text-gray-700"
-                            )}
-                        >
-                            14d
-                        </button>
-                        <button
-                            onClick={() => onDaysChange(30)}
-                            className={cn(
-                                "px-2.5 py-1 text-xs font-medium rounded-md transition-all",
-                                days === 30 ? "bg-white shadow-xs text-gray-900" : "text-gray-500 hover:text-gray-700"
-                            )}
-                        >
-                            30d
-                        </button>
                     </div>
                 </div>
 
