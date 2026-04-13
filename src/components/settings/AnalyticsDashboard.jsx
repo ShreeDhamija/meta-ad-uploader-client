@@ -895,7 +895,7 @@ export default function AnalyticsDashboard() {
                         <span className="hidden sm:inline">Budget Recommendations</span>
                         <span className="sm:hidden">Budget</span>
                         {!recsLoading && recommendations && recsCount > 0 ? (
-                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-yellow-100 text-yellow-800 hover:bg-yellow-100 rounded-2xl">
+                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-yellow-100 text-yellow-800 border-yellow-800 hover:bg-yellow-100 rounded-2xl shadow-none">
                                 {recsCount}
                             </Badge>
                         ) : null}
@@ -913,7 +913,7 @@ export default function AnalyticsDashboard() {
                         <span className="hidden sm:inline">Poor Performers</span>
                         <span className="sm:hidden">Poor</span>
                         {!poorAdsLoading && poorAds && poorAdsCount > 0 && (
-                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-red-100 text-red-700 hover:bg-red-100 rounded-2xl">
+                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-red-100 text-red-700 border-red-700 hover:bg-red-100 rounded-2xl shadow-none">
                                 {poorAdsCount}
                             </Badge>
                         )}

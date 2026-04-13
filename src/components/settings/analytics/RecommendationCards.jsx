@@ -21,6 +21,10 @@ import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
+function getDismissedStorageKey(adAccountId, mode) {
+    return `analytics-dismissed-recommendations:${adAccountId}:${mode}`
+}
+
 function HelixLoader({ color = "black", size = "45", label }) {
     return (
         <div className="flex flex-col items-center justify-center gap-3">
@@ -50,9 +54,9 @@ function BoldedMessage({ text }) {
 // ── Type config for budget recommendation cards ─────────
 const TYPE_CONFIG = {
     scale: {
-        color: 'yellow', bgClass: 'border-yellow-200 bg-yellow-50/60', iconBg: 'bg-yellow-100',
-        iconColor: 'text-yellow-700', badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        btnClass: 'bg-yellow-500 text-yellow-950 hover:bg-yellow-400', Icon: TrendingUp, label: 'Scale',
+        color: 'green', bgClass: 'border-green-200 bg-green-50/30', iconBg: 'bg-green-100',
+        iconColor: 'text-green-600', badgeBg: 'bg-green-100 text-green-700 border-green-200',
+        btnClass: 'bg-green-600 hover:bg-green-700', Icon: TrendingUp, label: 'Scale',
     },
     reduce: {
         color: 'yellow', bgClass: 'border-yellow-200 bg-yellow-50/60', iconBg: 'bg-yellow-100',
@@ -65,9 +69,9 @@ const TYPE_CONFIG = {
         btnClass: 'bg-red-600 hover:bg-red-700', Icon: Pause, label: 'Pause',
     },
     scale_winner: {
-        color: 'yellow', bgClass: 'border-yellow-200 bg-yellow-50/60', iconBg: 'bg-yellow-100',
-        iconColor: 'text-yellow-700', badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        btnClass: 'bg-yellow-500 text-yellow-950 hover:bg-yellow-400', Icon: Star, label: 'Scale Winner',
+        color: 'blue', bgClass: 'border-blue-200 bg-blue-50/30', iconBg: 'bg-blue-100',
+        iconColor: 'text-blue-600', badgeBg: 'bg-blue-100 text-blue-700 border-blue-200',
+        btnClass: 'bg-blue-600 hover:bg-blue-700', Icon: Star, label: 'Scale Winner',
     },
     consolidate: {
         color: 'orange', bgClass: 'border-orange-200 bg-orange-50/40', iconBg: 'bg-orange-100',
@@ -136,14 +140,41 @@ export default function RecommendationCards({
 
     useEffect(() => {
         setApplyingId(null)
-        setDismissed(new Set())
         setEditedBudgets({})
         setConfirmDialog(null)
         setScaleWinnersExpanded(false)
         setSelected(new Set())
         setPausingId(null)
         setPausedIds(new Set())
-    }, [adAccountId])
+    }, [adAccountId, section, mode])
+
+    useEffect(() => {
+        if (section !== "budget" || !adAccountId || typeof window === "undefined") {
+            setDismissed(new Set())
+            return
+        }
+
+        try {
+            const rawDismissed = window.sessionStorage.getItem(getDismissedStorageKey(adAccountId, mode))
+            const parsedDismissed = rawDismissed ? JSON.parse(rawDismissed) : []
+            setDismissed(new Set(Array.isArray(parsedDismissed) ? parsedDismissed : []))
+        } catch {
+            setDismissed(new Set())
+        }
+    }, [adAccountId, mode, section])
+
+    useEffect(() => {
+        if (section !== "budget" || !adAccountId || typeof window === "undefined") return
+
+        try {
+            window.sessionStorage.setItem(
+                getDismissedStorageKey(adAccountId, mode),
+                JSON.stringify([...dismissed])
+            )
+        } catch {
+            // Ignore storage failures and keep the in-memory fallback.
+        }
+    }, [dismissed, adAccountId, mode, section])
 
     // ── Budget Recommendations Logic ────────────────────
     function recKey(r) {
@@ -315,7 +346,7 @@ export default function RecommendationCards({
                 {/* Section header */}
                 <div className="px-1">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-yellow-600" />
+                        <Zap className="w-5 h-5 text-blue-500" />
                         Budget Recommendations {recs.length > 0 && <span className="text-base font-normal text-gray-400">({recs.length})</span>}
 
                     </h2>
@@ -329,7 +360,7 @@ export default function RecommendationCards({
                 {loading ? (
                     <Card className="rounded-2xl">
                         <CardContent className="py-10">
-                            <HelixLoader color="#eab308" size="36" label="Generating recommendations..." />
+                            <HelixLoader color="#3b82f6" size="36" label="Generating recommendations..." />
                         </CardContent>
                     </Card>
                 ) : (
@@ -452,14 +483,16 @@ export default function RecommendationCards({
                                                                                         "w-24 pl-5 pr-2 py-2.5 text-xs font-medium border rounded-2xl bg-white shadow focus:outline-none focus:ring-2",
                                                                                         rec.type === 'consolidate'
                                                                                             ? "border-orange-300 focus:ring-orange-500 text-orange-700"
-                                                                                            : "border-yellow-300 focus:ring-yellow-500 text-yellow-800"
+                                                                                            : rec.type === 'reduce'
+                                                                                                ? "border-yellow-300 focus:ring-yellow-500 text-yellow-800"
+                                                                                                : "border-green-300 focus:ring-green-500 text-green-700"
                                                                                     )}
                                                                                 />
                                                                             </div>
                                                                             <span className="text-xs text-gray-500">/day</span>
                                                                             {rec.budgetChange && (
                                                                             <span className={cn("text-[10px] font-medium",
-                                                                                    rec.budgetChange > 0 ? "text-yellow-700" : "text-orange-600"
+                                                                                    rec.budgetChange > 0 ? "text-green-600" : "text-yellow-700"
                                                                                 )}>
                                                                                     ({rec.budgetChange > 0 ? '+' : ''}{rec.budgetChange}%)
                                                                                 </span>
@@ -522,38 +555,38 @@ export default function RecommendationCards({
                                         <>
                                             {/* Grouped Scale Winners collapsible card */}
                                             {groupWinners && scaleWinners.length > 0 && (
-                                                <Card className="rounded-2xl border-yellow-200 bg-yellow-50/60">
+                                                <Card className="rounded-2xl border-blue-200 bg-blue-50/30">
                                                     <CardContent className="p-0">
                                                         <button
                                                             onClick={() => setScaleWinnersExpanded(prev => !prev)}
                                                             className="w-full p-4 flex items-center justify-between gap-3"
                                                         >
                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-yellow-100">
-                                                                    <Star className="w-5 h-5 text-yellow-700" />
+                                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-100">
+                                                                    <Star className="w-5 h-5 text-blue-600" />
                                                                 </div>
                                                                 <div className="text-left">
                                                                     <div className="flex items-center gap-2">
-                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500 text-yellow-950 border-yellow-500 whitespace-nowrap">
+                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white border-blue-600 whitespace-nowrap">
                                                                             Scale Winners
                                                                         </Badge>
-                                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-yellow-100 text-yellow-800 border-yellow-200">
+                                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-blue-100 text-blue-700 border-blue-200">
                                                                             {scaleWinners.length} ads
                                                                         </Badge>
                                                                     </div>
-                                                                    <p className="text-sm text-yellow-800 mt-1 font-medium">
+                                                                    <p className="text-sm text-blue-700 mt-1 font-medium">
                                                                         {scaleWinners.length} ads are doing well that you should scale
                                                                     </p>
                                                                 </div>
                                                             </div>
                                                             <ChevronDown className={cn(
-                                                                "w-5 h-5 text-yellow-700 transition-transform flex-shrink-0",
+                                                                "w-5 h-5 text-blue-500 transition-transform flex-shrink-0",
                                                                 scaleWinnersExpanded && "rotate-180"
                                                             )} />
                                                         </button>
 
                                                         {scaleWinnersExpanded && (
-                                                            <div className="px-4 pb-4 space-y-2 border-t border-yellow-100 pt-3">
+                                                            <div className="px-4 pb-4 space-y-2 border-t border-blue-100 pt-3">
                                                                 {scaleWinners.map(rec => renderRecCard(rec, { neutralStyle: true }))}
                                                             </div>
                                                         )}

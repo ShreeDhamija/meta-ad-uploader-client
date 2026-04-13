@@ -1,13 +1,14 @@
 "use client"
 
+/* eslint-disable react/prop-types */
+
 import { useMemo, useState, useCallback, useRef, useEffect } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, ReferenceLine,
+    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
 
 const COLORS = [
@@ -39,8 +40,8 @@ function formatEventName(actionType) {
 }
 
 export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
-    const { chartData, campaigns, avgValue } = useMemo(() => {
-        if (!data?.dailyInsights?.length) return { chartData: [], campaigns: [], avgValue: 0 }
+    const { chartData, campaigns } = useMemo(() => {
+        if (!data?.dailyInsights?.length) return { chartData: [], campaigns: [] }
 
         const metric = mode === 'roas' ? 'roas' : 'cpa'
 
@@ -65,16 +66,7 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                 }
             })
 
-        let sum = 0, count = 0
-        for (const row of data.dailyInsights) {
-            if (row[metric] !== null && row[metric] !== undefined) {
-                sum += row[metric]
-                count++
-            }
-        }
-        const avgValue = count > 0 ? sum / count : 0
-
-        return { chartData, campaigns, avgValue }
+        return { chartData, campaigns }
     }, [data, mode])
 
     const [hiddenCampaigns, setHiddenCampaigns] = useState(new Set())
@@ -111,17 +103,46 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
         return () => { el.removeEventListener('scroll', check); ro.disconnect() }
     }, [campaigns])
 
-    const visibleAvg = useMemo(() => {
-        if (!data?.dailyInsights?.length || campaigns.length === 0) return avgValue
-        if (hiddenCampaigns.size === 0) return avgValue
-        const metric = mode === 'roas' ? 'roas' : 'cpa'
-        let sum = 0, count = 0
-        for (const row of data.dailyInsights) {
-            if (hiddenCampaigns.has(row.campaignName)) continue
-            if (row[metric] !== null && row[metric] !== undefined) { sum += row[metric]; count++ }
+    const chartDataWithTrend = useMemo(() => {
+        if (chartData.length === 0) return []
+
+        const visibleCampaigns = campaigns.filter((campaign) => !hiddenCampaigns.has(campaign))
+        const points = chartData
+            .map((row, index) => {
+                const values = visibleCampaigns
+                    .map((campaign) => row[campaign])
+                    .filter((value) => value !== null && value !== undefined)
+
+                if (values.length === 0) return null
+
+                const dayAverage = values.reduce((sum, value) => sum + value, 0) / values.length
+                return { x: index, y: dayAverage }
+            })
+            .filter(Boolean)
+
+        if (points.length < 2) {
+            return chartData.map((row) => ({ ...row, __trend: null }))
         }
-        return count > 0 ? sum / count : 0
-    }, [data, mode, hiddenCampaigns, campaigns, avgValue])
+
+        const pointCount = points.length
+        const sumX = points.reduce((sum, point) => sum + point.x, 0)
+        const sumY = points.reduce((sum, point) => sum + point.y, 0)
+        const sumXY = points.reduce((sum, point) => sum + point.x * point.y, 0)
+        const sumXX = points.reduce((sum, point) => sum + point.x * point.x, 0)
+        const denominator = pointCount * sumXX - sumX * sumX
+
+        if (denominator === 0) {
+            return chartData.map((row) => ({ ...row, __trend: null }))
+        }
+
+        const slope = (pointCount * sumXY - sumX * sumY) / denominator
+        const intercept = (sumY - slope * sumX) / pointCount
+
+        return chartData.map((row, index) => ({
+            ...row,
+            __trend: intercept + slope * index,
+        }))
+    }, [chartData, campaigns, hiddenCampaigns])
 
     const metricLabel = mode === 'roas' ? 'ROAS' : 'CPA'
     const formatValue = mode === 'roas'
@@ -174,7 +195,7 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                     <>
                         {/* Chart — fixed height, never squished */}
                         <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                            <LineChart data={chartDataWithTrend} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis
                                     dataKey="label"
@@ -198,20 +219,17 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                                     formatter={(value, name) => [formatValue(value), name]}
                                     labelStyle={{ fontWeight: 600, marginBottom: 4 }}
                                 />
-                                {visibleAvg > 0 && (
-                                    <ReferenceLine
-                                        y={visibleAvg}
-                                        stroke="#9ca3af"
-                                        strokeDasharray="6 4"
-                                        strokeWidth={1.5}
-                                        label={{
-                                            value: `Avg: ${formatValue(visibleAvg)}`,
-                                            position: 'right',
-                                            fill: '#9ca3af',
-                                            fontSize: 10,
-                                        }}
-                                    />
-                                )}
+                                <Line
+                                    type="monotone"
+                                    dataKey="__trend"
+                                    name="Trend"
+                                    stroke="#111827"
+                                    strokeWidth={2}
+                                    strokeDasharray="6 4"
+                                    dot={false}
+                                    activeDot={false}
+                                    connectNulls
+                                />
                                 {campaigns.map((name, i) => (
                                     <Line
                                         key={name}
