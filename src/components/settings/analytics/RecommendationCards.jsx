@@ -1,7 +1,9 @@
 
 "use client"
 
-import { useState, useMemo } from "react"
+/* eslint-disable react/prop-types */
+
+import { useEffect, useState, useMemo } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
@@ -48,14 +50,14 @@ function BoldedMessage({ text }) {
 // ── Type config for budget recommendation cards ─────────
 const TYPE_CONFIG = {
     scale: {
-        color: 'green', bgClass: 'border-green-200 bg-green-50/30', iconBg: 'bg-green-100',
-        iconColor: 'text-green-600', badgeBg: 'bg-green-100 text-green-700 border-green-200',
-        btnClass: 'bg-green-600 hover:bg-green-700', Icon: TrendingUp, label: 'Scale',
+        color: 'yellow', bgClass: 'border-yellow-200 bg-yellow-50/60', iconBg: 'bg-yellow-100',
+        iconColor: 'text-yellow-700', badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        btnClass: 'bg-yellow-500 text-yellow-950 hover:bg-yellow-400', Icon: TrendingUp, label: 'Scale',
     },
     reduce: {
-        color: 'orange', bgClass: 'border-orange-200 bg-orange-50/30', iconBg: 'bg-orange-100',
-        iconColor: 'text-orange-600', badgeBg: 'bg-orange-100 text-orange-700 border-orange-200',
-        btnClass: 'bg-orange-600 hover:bg-orange-700', Icon: TrendingDown, label: 'Reduce',
+        color: 'yellow', bgClass: 'border-yellow-200 bg-yellow-50/60', iconBg: 'bg-yellow-100',
+        iconColor: 'text-yellow-700', badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        btnClass: 'bg-yellow-500 text-yellow-950 hover:bg-yellow-400', Icon: TrendingDown, label: 'Reduce',
     },
     pause: {
         color: 'red', bgClass: 'border-red-200 bg-red-50/30', iconBg: 'bg-red-100',
@@ -63,14 +65,14 @@ const TYPE_CONFIG = {
         btnClass: 'bg-red-600 hover:bg-red-700', Icon: Pause, label: 'Pause',
     },
     scale_winner: {
-        color: 'blue', bgClass: 'border-blue-200 bg-blue-50/30', iconBg: 'bg-blue-100',
-        iconColor: 'text-blue-600', badgeBg: 'bg-blue-100 text-blue-700 border-blue-200',
-        btnClass: 'bg-blue-600 hover:bg-blue-700', Icon: Star, label: 'Scale Winner',
+        color: 'yellow', bgClass: 'border-yellow-200 bg-yellow-50/60', iconBg: 'bg-yellow-100',
+        iconColor: 'text-yellow-700', badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        btnClass: 'bg-yellow-500 text-yellow-950 hover:bg-yellow-400', Icon: Star, label: 'Scale Winner',
     },
     consolidate: {
-        color: 'purple', bgClass: 'border-purple-200 bg-purple-50/30', iconBg: 'bg-purple-100',
-        iconColor: 'text-purple-600', badgeBg: 'bg-purple-100 text-purple-700 border-purple-200',
-        btnClass: 'bg-purple-600 hover:bg-purple-700', Icon: Activity, label: 'Consolidate',
+        color: 'orange', bgClass: 'border-orange-200 bg-orange-50/40', iconBg: 'bg-orange-100',
+        iconColor: 'text-orange-700', badgeBg: 'bg-orange-100 text-orange-800 border-orange-200',
+        btnClass: 'bg-orange-600 hover:bg-orange-700', Icon: Activity, label: 'Consolidate',
     },
     trend_alert: {
         color: 'amber',
@@ -85,22 +87,17 @@ const TYPE_CONFIG = {
 }
 
 /**
- * RecommendationCards (merged)
- *
- * Combines budget recommendations and poor performing ads into a single
- * scrollable view. Budget recommendations are shown first with a section
- * header, followed by poor performing ads with their own header.
+ * RecommendationCards
  *
  * Props:
+ *  - section: 'budget' | 'poor-performers'
  *  - data: recommendations API response { recommendations, accountAverageCPA, accountAverageROAS, primaryResultType }
  *  - loading: boolean for recommendations
  *  - mode: 'cpr' | 'roas'
  *  - adAccountId: string
  *  - adAccounts: array
- *  - onApplied: () => void — refresh recommendations
  *  - poorAdsData: poor performing ads API response { ads, accountAverageCPA, primaryActionType }
  *  - poorAdsLoading: boolean
- *  - onPoorAdsApplied: () => void — refresh poor ads
  */
 
 
@@ -121,8 +118,9 @@ function formatEventName(actionType) {
 
 
 export default function RecommendationCards({
-    data, loading, mode, adAccountId, adAccounts, onApplied,
-    poorAdsData, poorAdsLoading, onPoorAdsApplied,
+    section = "budget",
+    data, loading, mode, adAccountId, adAccounts,
+    poorAdsData, poorAdsLoading,
 }) {
     // ── Budget Recommendations State ────────────────────
     const [applyingId, setApplyingId] = useState(null)
@@ -135,6 +133,17 @@ export default function RecommendationCards({
     const [selected, setSelected] = useState(new Set())
     const [pausingId, setPausingId] = useState(null)
     const [pausedIds, setPausedIds] = useState(new Set())
+
+    useEffect(() => {
+        setApplyingId(null)
+        setDismissed(new Set())
+        setEditedBudgets({})
+        setConfirmDialog(null)
+        setScaleWinnersExpanded(false)
+        setSelected(new Set())
+        setPausingId(null)
+        setPausedIds(new Set())
+    }, [adAccountId])
 
     // ── Budget Recommendations Logic ────────────────────
     function recKey(r) {
@@ -199,7 +208,6 @@ export default function RecommendationCards({
             if (result.success) {
                 toast.success(rec.type === 'pause' ? 'Entity paused successfully' : 'Budget updated successfully')
                 setDismissed(prev => new Set([...prev, key]))
-                if (onApplied) onApplied()
             } else {
                 toast.error(result.error || 'Failed to apply action')
             }
@@ -252,7 +260,7 @@ export default function RecommendationCards({
             } else {
                 toast.error(result.error || 'Failed to pause ad')
             }
-        } catch (err) {
+        } catch {
             toast.error('Failed to pause ad')
         } finally {
             setPausingId(null)
@@ -285,7 +293,6 @@ export default function RecommendationCards({
         if (failed > 0) toast.error(`Failed to pause ${failed} ad${failed > 1 ? 's' : ''}`)
         setSelected(new Set())
         setPausingId(null)
-        if (onPoorAdsApplied) onPoorAdsApplied()
     }
 
     const getDaysOld = (createdTime) => {
@@ -301,33 +308,19 @@ export default function RecommendationCards({
         return spend / activeDays
     }
 
-    // ── Combined loading state ──────────────────────────
-    if (loading && poorAdsLoading) {
-        return (
-            <Card className="rounded-2xl">
-                <CardContent className="py-12">
-                    <HelixLoader color="#3b82f6" label="Analyzing your campaigns..." />
-                </CardContent>
-            </Card>
-        )
-    }
-
     return (
         <div className="space-y-8">
-
-            {/* ════════════════════════════════════════════════
-                SECTION 1: BUDGET RECOMMENDATIONS
-            ════════════════════════════════════════════════ */}
-            <div className="space-y-4">
+            {section === "budget" && (
+                <div className="space-y-4">
                 {/* Section header */}
                 <div className="px-1">
                     <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-blue-500" />
+                        <Zap className="w-5 h-5 text-yellow-600" />
                         Budget Recommendations {recs.length > 0 && <span className="text-base font-normal text-gray-400">({recs.length})</span>}
 
                     </h2>
                     <p className="text-sm text-gray-500 mt-1">
-                        Compares each campaign and ad set's {mode === 'roas' ? 'ROAS' : 'CPA'} against the
+                        Compares each campaign and ad set&apos;s {mode === 'roas' ? 'ROAS' : 'CPA'} against the
                         spend-weighted account average over 3-day windows. <br></br>Recommends scaling outperformers
                         and reducing or pausing underperformers.
                     </p>
@@ -336,7 +329,7 @@ export default function RecommendationCards({
                 {loading ? (
                     <Card className="rounded-2xl">
                         <CardContent className="py-10">
-                            <HelixLoader color="#3b82f6" size="36" label="Generating recommendations..." />
+                            <HelixLoader color="#eab308" size="36" label="Generating recommendations..." />
                         </CardContent>
                     </Card>
                 ) : (
@@ -400,10 +393,10 @@ export default function RecommendationCards({
                                                             <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", cfg.iconBg)}>
                                                                 <Icon className={cn("w-5 h-5", cfg.iconColor)} />
                                                             </div>
-                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex-1 min-w-0">
                                                                 <div className="min-w-0">
                                                                     {rec.type === 'scale_winner' && !neutralStyle && (
-                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white border-blue-600 whitespace-nowrap mb-1">
+                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500 text-yellow-950 border-yellow-500 whitespace-nowrap mb-1">
                                                                             Scale Winner
                                                                         </Badge>
                                                                     )}
@@ -456,17 +449,17 @@ export default function RecommendationCards({
                                                                                     value={editedBudgets[key] ?? suggestedBudget.toFixed(2)}
                                                                                     onChange={(e) => setEditedBudgets(prev => ({ ...prev, [key]: e.target.value }))}
                                                                                     className={cn(
-                                                                                        "w-24 pl-5 pr-2 py-4.5 text-xs font-medium border rounded-2xl bg-white shadow focus:outline-none focus:ring-2",
-                                                                                        rec.type === 'scale'
-                                                                                            ? "border-green-300 focus:ring-green-500 text-green-700"
-                                                                                            : "border-orange-300 focus:ring-orange-500 text-orange-700"
+                                                                                        "w-24 pl-5 pr-2 py-2.5 text-xs font-medium border rounded-2xl bg-white shadow focus:outline-none focus:ring-2",
+                                                                                        rec.type === 'consolidate'
+                                                                                            ? "border-orange-300 focus:ring-orange-500 text-orange-700"
+                                                                                            : "border-yellow-300 focus:ring-yellow-500 text-yellow-800"
                                                                                     )}
                                                                                 />
                                                                             </div>
                                                                             <span className="text-xs text-gray-500">/day</span>
                                                                             {rec.budgetChange && (
-                                                                                <span className={cn("text-[10px] font-medium",
-                                                                                    rec.budgetChange > 0 ? "text-green-600" : "text-orange-600"
+                                                                            <span className={cn("text-[10px] font-medium",
+                                                                                    rec.budgetChange > 0 ? "text-yellow-700" : "text-orange-600"
                                                                                 )}>
                                                                                     ({rec.budgetChange > 0 ? '+' : ''}{rec.budgetChange}%)
                                                                                 </span>
@@ -529,38 +522,38 @@ export default function RecommendationCards({
                                         <>
                                             {/* Grouped Scale Winners collapsible card */}
                                             {groupWinners && scaleWinners.length > 0 && (
-                                                <Card className="rounded-2xl border-blue-200 bg-blue-50/30">
+                                                <Card className="rounded-2xl border-yellow-200 bg-yellow-50/60">
                                                     <CardContent className="p-0">
                                                         <button
                                                             onClick={() => setScaleWinnersExpanded(prev => !prev)}
                                                             className="w-full p-4 flex items-center justify-between gap-3"
                                                         >
                                                             <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-100">
-                                                                    <Star className="w-5 h-5 text-blue-600" />
+                                                                <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-yellow-100">
+                                                                    <Star className="w-5 h-5 text-yellow-700" />
                                                                 </div>
                                                                 <div className="text-left">
                                                                     <div className="flex items-center gap-2">
-                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white border-blue-600 whitespace-nowrap">
+                                                                        <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500 text-yellow-950 border-yellow-500 whitespace-nowrap">
                                                                             Scale Winners
                                                                         </Badge>
-                                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-blue-100 text-blue-700 border-blue-200">
+                                                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-yellow-100 text-yellow-800 border-yellow-200">
                                                                             {scaleWinners.length} ads
                                                                         </Badge>
                                                                     </div>
-                                                                    <p className="text-sm text-blue-700 mt-1 font-medium">
+                                                                    <p className="text-sm text-yellow-800 mt-1 font-medium">
                                                                         {scaleWinners.length} ads are doing well that you should scale
                                                                     </p>
                                                                 </div>
                                                             </div>
                                                             <ChevronDown className={cn(
-                                                                "w-5 h-5 text-blue-500 transition-transform flex-shrink-0",
+                                                                "w-5 h-5 text-yellow-700 transition-transform flex-shrink-0",
                                                                 scaleWinnersExpanded && "rotate-180"
                                                             )} />
                                                         </button>
 
                                                         {scaleWinnersExpanded && (
-                                                            <div className="px-4 pb-4 space-y-2 border-t border-blue-100 pt-3">
+                                                            <div className="px-4 pb-4 space-y-2 border-t border-yellow-100 pt-3">
                                                                 {scaleWinners.map(rec => renderRecCard(rec, { neutralStyle: true }))}
                                                             </div>
                                                         )}
@@ -580,23 +573,19 @@ export default function RecommendationCards({
                         )}
                     </>
                 )}
-            </div>
+                </div>
+            )}
 
-            {/* ════════════════════════════════════════════════
-                SECTION 2: POOR PERFORMING ADS
-            ════════════════════════════════════════════════ */}
-            <div className="space-y-4">
-                {/* Section header — red banner */}
+            {section === "poor-performers" && (
+                <div className="space-y-4">
                 <div className="px-1">
-                    <div className="bg-red-500 rounded-2xl px-5 py-4">
-                        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5 text-white" />
-                            Poor Performing Ads {ads.length > 0 && <span className="text-base font-normal text-red-200">({ads.length})</span>}
-                        </h2>
-                        <p className="text-sm text-red-100 mt-1">
-                            Ads with spend {'>'} 0.5X account avg CPA, running 14+ days, performing below average
-                        </p>
-                    </div>
+                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-red-500" />
+                        Poor Performers {ads.length > 0 && <span className="text-base font-normal text-gray-400">({ads.length})</span>}
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Ads with spend {'>'} 0.5X account average CPA, running 14+ days, and performing below account baseline.
+                    </p>
                 </div>
 
                 {(poorAdsLoading || !poorAdsData) ? (
@@ -763,7 +752,8 @@ export default function RecommendationCards({
                         </div>
                     </>
                 )}
-            </div>
+                </div>
+            )}
 
             {/*
                 SHARED CONFIRM DIALOG

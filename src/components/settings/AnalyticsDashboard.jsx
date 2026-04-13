@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
-    AlertTriangle, RefreshCw, Loader2, ChevronsUpDown,
-    Target, Settings2, Activity, Zap, Eye, CheckCircle2, BarChart3, FileBarChart2, FileText
+    AlertTriangle, Loader2, ChevronsUpDown,
+    Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
@@ -21,7 +22,6 @@ import slackWhite from "@/assets/icons/analytics/slackwhite.svg"
 import KPIChart from "./analytics/KPIChart"
 import WeeklyChart from "./analytics/WeeklyChart"
 import RecommendationCards from "./analytics/RecommendationCards"
-import AnomalyCards from "./analytics/AnomalyCards"
 import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
@@ -36,9 +36,6 @@ const DEFAULT_THRESHOLDS = {
     overspend: 150,
 };
 
-// Slack brand color
-const SLACK_PURPLE = '#4A154B';
-
 export default function AnalyticsDashboard() {
     const { adAccounts, adAccountsLoading } = useAppData()
     const { loading: globalSettingsLoading, hasSeenAnalyticsOnboarding } = useGlobalSettings()
@@ -52,7 +49,7 @@ export default function AnalyticsDashboard() {
     const [searchValue, setSearchValue] = useState("")
     // const [metricMode, setMetricMode] = useState("cpr") // cpr | roas
     // const [modeAutoDetected, setModeAutoDetected] = useState(false)
-    const [activeTab, setActiveTab] = useState("recommendations")
+    const [activeTab, setActiveTab] = useState("budget")
     const [chartDays, setChartDays] = useState(14)
 
     // ── Aggregate KPI dialog 
@@ -87,9 +84,6 @@ export default function AnalyticsDashboard() {
     // ── Data state 
     const [recommendations, setRecommendations] = useState(null)
     const [recsLoading, setRecsLoading] = useState(false)
-
-    const [anomalies, setAnomalies] = useState(null)
-    const [anomaliesLoading, setAnomaliesLoading] = useState(false)
 
     const [poorAds, setPoorAds] = useState(null)
     const [poorAdsLoading, setPoorAdsLoading] = useState(false)
@@ -185,7 +179,7 @@ export default function AnalyticsDashboard() {
                 const data = await res.json()
                 setSlackConnected(!!data.connected)
                 setSlackChannelName(data.channelName || null)
-            } catch (err) { /* silent */ }
+            } catch { /* silent */ }
         }
         checkSlack()
     }, [])
@@ -204,11 +198,8 @@ export default function AnalyticsDashboard() {
         return adAccounts?.find((a) => a.id === selectedAdAccount)?.name || selectedAdAccount;
     }, [selectedAdAccount, adAccounts])
 
-    const anomalyCount = anomalies?.summary?.total || 0
     const recsCount = recommendations?.recommendations?.length || 0
     const poorAdsCount = poorAds?.ads?.length || 0
-    const recommendationsTabLoading = recsLoading || poorAdsLoading
-    const shouldShowRecommendationsCount = !recommendationsTabLoading && (recommendations || poorAds)
 
 
     // Auto-detect mode from account info (fallback if no saved preference)
@@ -378,33 +369,6 @@ export default function AnalyticsDashboard() {
     //     } finally { setPoorAdsLoading(false) }
     // }, [selectedAdAccount, metricMode, adAccountSettings?.conversionEvent])
 
-    const fetchAnomalies = useCallback(async (force = false) => {
-        if (!selectedAdAccount) return
-        const accountAtStart = selectedAdAccount
-
-        const key = `anomalies-${selectedAdAccount}`
-        if (!force && fetchedRef.current[key]) return
-        fetchedRef.current[key] = true
-
-        setAnomaliesLoading(true)
-        try {
-            const res = await fetch(
-                `${API_BASE_URL}/api/analytics/anomalies?adAccountId=${selectedAdAccount}&cpaThreshold=${anomalyThresholds.cpaSpike}&overspendThreshold=${anomalyThresholds.overspend}`,
-                { credentials: 'include' }
-            )
-            const data = await res.json()
-
-            if (currentAccountRef.current !== accountAtStart) return
-
-            if (res.ok) setAnomalies(data)
-            else toast.error(data.error || 'Failed to fetch anomalies')
-        } catch (err) {
-            console.error('Anomalies error:', err)
-            toast.error('Failed to fetch anomalies')
-        } finally { setAnomaliesLoading(false) }
-    }, [selectedAdAccount, anomalyThresholds])
-
-
     const fetchPoorAds = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
         const accountAtStart = selectedAdAccount
@@ -564,15 +528,11 @@ export default function AnalyticsDashboard() {
 
     useEffect(() => {
         if (!selectedAdAccount) return
-        if (adAccountSettingsLoading) return  // ← add this guard
+        if (adAccountSettingsLoading) return
 
-        if (activeTab === 'recommendations') {
-            fetchRecommendations()
-            fetchPoorAds()
-        } else if (activeTab === 'anomalies') {
-            fetchAnomalies()
-        }
-    }, [activeTab, selectedAdAccount, metricMode, adAccountSettingsLoading, fetchRecommendations, fetchAnomalies, fetchPoorAds])
+        fetchRecommendations()
+        fetchPoorAds()
+    }, [selectedAdAccount, adAccountSettingsLoading, fetchRecommendations, fetchPoorAds])
 
     useEffect(() => {
         if (
@@ -617,7 +577,6 @@ export default function AnalyticsDashboard() {
         pendingDailySettingsRef.current = accountId
         setRecsLoading(true)
         setPoorAdsLoading(true)
-        setAnomaliesLoading(true)
         setDailyLoading(true)
         setWeeklyLoading(true)
         setSelectedAdAccount(accountId)
@@ -626,7 +585,7 @@ export default function AnalyticsDashboard() {
         // Settings reset happens synchronously in useAdAccountSettings
         // metricMode, targetCPA, etc. all derive from settings automatically
 
-        setRecommendations(null); setAnomalies(null); setPoorAds(null)
+        setRecommendations(null); setPoorAds(null)
         setDailyInsights(null); setWeeklyInsights(null)
         if (dailyInsightsAbortRef.current) {
             dailyInsightsAbortRef.current.abort()
@@ -636,27 +595,23 @@ export default function AnalyticsDashboard() {
         fetchedRef.current = {}
     }
 
-    const handleRefresh = () => {
-        fetchedRef.current = {}
-        clearDailyInsightsCache(selectedAdAccount)
-        fetchAccountInfo(selectedAdAccount)
-        loadDailyInsights({ force: true })
-        fetchWeeklyInsights(true)
-        if (activeTab === 'recommendations') {
-            fetchRecommendations(true)
-            fetchPoorAds(true)
-        } else if (activeTab === 'anomalies') {
-            fetchAnomalies(true)
-        }
-        toast.success('Refreshing data...')
-    }
-
     const handleSaveSettings = async () => {
         setSavingSettings(true)
         const newTargetCPA = tempTargetCPA ? parseFloat(tempTargetCPA) : null
         const newTargetROAS = tempTargetROAS ? parseFloat(tempTargetROAS) : null
         const modeForStorage = tempAnalyticsMode === 'roas' ? 'roas' : 'cpa'
         const nextConversionEvent = tempConversionEvent
+        const nextMetricMode = modeForStorage === 'roas' ? 'roas' : 'cpr'
+        const previousConversionEvent = adAccountSettings?.conversionEvent || null
+        const shouldRefreshRecommendations =
+            targetCPA !== newTargetCPA ||
+            targetROAS !== newTargetROAS ||
+            metricMode !== nextMetricMode ||
+            previousConversionEvent !== nextConversionEvent
+        const shouldRefreshPoorAds =
+            metricMode !== nextMetricMode ||
+            previousConversionEvent !== nextConversionEvent
+        const shouldRefreshDailyInsights = previousConversionEvent !== nextConversionEvent
 
         try {
             await saveSettings({
@@ -683,18 +638,31 @@ export default function AnalyticsDashboard() {
             }))
             setShowSettingsDialog(false)
 
-            // Clear all caches for this account so effects re-fetch with new values
-            Object.keys(fetchedRef.current).forEach(k => {
-                if (k.includes(selectedAdAccount)) delete fetchedRef.current[k]
-            })
-            clearDailyInsightsCache(selectedAdAccount)
+            if (shouldRefreshRecommendations) {
+                setRecsLoading(true)
+                setRecommendations(null)
+                Object.keys(fetchedRef.current).forEach((key) => {
+                    if (key.startsWith(`recs-${selectedAdAccount}`)) delete fetchedRef.current[key]
+                })
+            }
 
-            loadDailyInsights({
-                force: true,
-                accountId: selectedAdAccount,
-                days: chartDays,
-                conversionEvent: nextConversionEvent,
-            })
+            if (shouldRefreshPoorAds) {
+                setPoorAdsLoading(true)
+                setPoorAds(null)
+                Object.keys(fetchedRef.current).forEach((key) => {
+                    if (key.startsWith(`poor-${selectedAdAccount}`)) delete fetchedRef.current[key]
+                })
+            }
+
+            if (shouldRefreshDailyInsights) {
+                clearDailyInsightsCache(selectedAdAccount)
+                loadDailyInsights({
+                    force: true,
+                    accountId: selectedAdAccount,
+                    days: chartDays,
+                    conversionEvent: nextConversionEvent,
+                })
+            }
 
             toast.success('Settings saved')
         } catch (err) {
@@ -705,25 +673,6 @@ export default function AnalyticsDashboard() {
         }
     }
 
-
-    const handleModeChange = (mode) => {
-        // Update the single source of truth — metricMode derives from this
-        setStableMetricMode(mode)
-        setAdAccountSettings(prev => ({
-            ...prev,
-            analyticsMode: mode === 'roas' ? 'roas' : 'cpa'
-        }))
-
-        setRecsLoading(true)
-        setPoorAdsLoading(true)
-        setRecommendations(null)
-        setPoorAds(null)
-        Object.keys(fetchedRef.current).forEach(k => {
-            if (k.startsWith(`recs-${selectedAdAccount}`) || k.startsWith(`poor-${selectedAdAccount}`)) {
-                delete fetchedRef.current[k]
-            }
-        })
-    }
 
     const handleSlackDisconnect = async () => {
         setSlackDisconnecting(true)
@@ -741,7 +690,7 @@ export default function AnalyticsDashboard() {
                 const data = await res.json().catch(() => ({}))
                 toast.error(`Disconnect failed: ${data.error || res.status}`)
             }
-        } catch (err) {
+        } catch {
             toast.error('Failed to disconnect Slack')
         } finally {
             setSlackDisconnecting(false)
@@ -764,8 +713,6 @@ export default function AnalyticsDashboard() {
     const handleOnboardingComplete = () => {
         setShowOnboarding(false)
     }
-
-    const isAnyLoading = recsLoading || anomaliesLoading || poorAdsLoading || dailyLoading || weeklyLoading
 
     // ── Loading / Empty states ──────────────────────────────
     if (adAccountsLoading || globalSettingsLoading) {
@@ -836,20 +783,6 @@ export default function AnalyticsDashboard() {
                                 />
                                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
                                     <CommandGroup>
-                                        {/* Aggregate View — first item in dropdown */}
-                                        {adAccounts?.length > 1 && (
-                                            <CommandItem
-                                                value="__aggregate__"
-                                                onSelect={() => {
-                                                    setShowAggregateDialog(true)
-                                                    setOpenAdAccount(false)
-                                                }}
-                                                className="mx-3 my-2 px-4 py-2.5 cursor-pointer rounded-xl bg-gray-50 border border-gray-200 transition-colors duration-150 hover:bg-gray-100 hover:border-gray-100 flex items-center gap-2 font-medium text-gray-700"
-                                            >
-                                                <BarChart3 className="w-4 h-4 text-gray-500" />
-                                                Aggregate View
-                                            </CommandItem>
-                                        )}
                                         {filteredAdAccounts.map((acct) => (
                                             <CommandItem
                                                 key={acct.id}
@@ -869,31 +802,16 @@ export default function AnalyticsDashboard() {
                         </PopoverContent>
                     </Popover>
 
-                    {/* CPA / ROAS Toggle */}
-                    <div className="flex p-1 bg-gray-100 rounded-2xl border border-gray-200/60">
-                        <button
-                            onClick={() => handleModeChange('cpr')}
-                            className={cn(
-                                "px-4 py-1.5 text-sm font-medium rounded-xl transition-all duration-200",
-                                metricMode === 'cpr'
-                                    ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
-                                    : "text-gray-500 hover:text-gray-700"
-                            )}
+                    {adAccounts?.length > 1 && (
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowAggregateDialog(true)}
+                            className="rounded-2xl h-11 px-4 bg-white shadow-xs hover:bg-white"
                         >
-                            CPA
-                        </button>
-                        <button
-                            onClick={() => handleModeChange('roas')}
-                            className={cn(
-                                "px-4 py-1.5 text-sm font-medium rounded-xl transition-all duration-200",
-                                metricMode === 'roas'
-                                    ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
-                                    : "text-gray-500 hover:text-gray-700"
-                            )}
-                        >
-                            ROAS
-                        </button>
-                    </div>
+                            <BarChart3 className="w-4 h-4 mr-2" />
+                            Aggregate View
+                        </Button>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -902,23 +820,35 @@ export default function AnalyticsDashboard() {
                         onClick={openSettingsDialog}
                         className="rounded-2xl h-11 px-4"
                     >
-                        <Settings2 className="w-4 h-4" />
-
+                        <Settings2 className="w-4 h-4 mr-2" />
+                        Preferences
                     </Button>
 
-
-                    <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)} className="rounded-2xl h-11 px-4">
-                        <FileBarChart2 className="w-3.5 h-3.5" />
-                        Audit Account
-                    </Button>
-                    <Button
-                        variant="outline" size="sm"
-                        onClick={() => setShowSummaryDialog(true)}
-                        className="rounded-2xl h-11 px-4"
-                    >
-                        <FileText className="w-4 h-4 mr-2" />
-                        Account Summary
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="rounded-2xl h-11 px-4">
+                                <FileText className="w-4 h-4 mr-2" />
+                                Reports
+                                <ChevronDown className="w-4 h-4 ml-2 text-gray-400" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[220px] rounded-2xl bg-white p-2 shadow-lg">
+                            <DropdownMenuItem
+                                onClick={() => setAuditOpen(true)}
+                                className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
+                            >
+                                <FileBarChart2 className="w-4 h-4 text-gray-500" />
+                                Audit Account
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                                onClick={() => setShowSummaryDialog(true)}
+                                className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
+                            >
+                                <FileText className="w-4 h-4 text-gray-500" />
+                                Account Summary
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button
                         variant="outline" size="sm"
                         onClick={() => setShowSlackDialog(true)}
@@ -949,41 +879,42 @@ export default function AnalyticsDashboard() {
                 </div>
             )}
 
-            {/* ── Tab Switcher (2 tabs: Recommendations + Anomalies) ── */}
+            {/* ── Tab Switcher ── */}
             <div className="w-full">
                 <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-2xl w-full border border-gray-200/60">
                     <button
-                        onClick={() => setActiveTab('recommendations')}
+                        onClick={() => setActiveTab('budget')}
                         className={cn(
                             "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-2xl transition-all duration-200",
-                            activeTab === 'recommendations'
+                            activeTab === 'budget'
                                 ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
                         )}
                     >
                         <Zap className="w-4 h-4" />
-                        <span className="hidden sm:inline">Recommendations</span>
-                        <span className="sm:hidden">Recs</span>
-                        {!recommendationsTabLoading && shouldShowRecommendationsCount && (recsCount + poorAdsCount) > 0 ? (
-                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-700 hover:bg-blue-100 rounded-2xl">
-                                {recsCount} + {poorAdsCount}
+                        <span className="hidden sm:inline">Budget Recommendations</span>
+                        <span className="sm:hidden">Budget</span>
+                        {!recsLoading && recommendations && recsCount > 0 ? (
+                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-yellow-100 text-yellow-800 hover:bg-yellow-100 rounded-2xl">
+                                {recsCount}
                             </Badge>
                         ) : null}
                     </button>
                     <button
-                        onClick={() => setActiveTab('anomalies')}
+                        onClick={() => setActiveTab('poor-performers')}
                         className={cn(
                             "flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium rounded-2xl transition-all duration-200",
-                            activeTab === 'anomalies'
+                            activeTab === 'poor-performers'
                                 ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
                                 : "text-gray-500 hover:text-gray-700 hover:bg-gray-200/50"
                         )}
                     >
                         <AlertTriangle className="w-4 h-4" />
-                        Anomalies
-                        {anomalyCount > 0 && (
-                            <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0 rounded-2xl">
-                                {anomalyCount}
+                        <span className="hidden sm:inline">Poor Performers</span>
+                        <span className="sm:hidden">Poor</span>
+                        {!poorAdsLoading && poorAds && poorAdsCount > 0 && (
+                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-red-100 text-red-700 hover:bg-red-100 rounded-2xl">
+                                {poorAdsCount}
                             </Badge>
                         )}
                     </button>
@@ -991,25 +922,29 @@ export default function AnalyticsDashboard() {
             </div>
 
             {/* ── Tab Content ── */}
-            {activeTab === 'recommendations' && (
+            {activeTab === 'budget' && (
                 <RecommendationCards
+                    section="budget"
                     data={recommendations}
                     loading={recsLoading}
                     mode={metricMode}
                     adAccountId={selectedAdAccount}
                     adAccounts={adAccounts}
-                    onApplied={() => fetchRecommendations(true)}
                     poorAdsData={poorAds}
                     poorAdsLoading={poorAdsLoading}
-                    onPoorAdsApplied={() => fetchPoorAds(true)}
                 />
             )}
 
-            {activeTab === 'anomalies' && (
-                <AnomalyCards
-                    data={anomalies}
-                    loading={anomaliesLoading}
-                    thresholds={anomalyThresholds}
+            {activeTab === 'poor-performers' && (
+                <RecommendationCards
+                    section="poor-performers"
+                    data={recommendations}
+                    loading={recsLoading}
+                    mode={metricMode}
+                    adAccountId={selectedAdAccount}
+                    adAccounts={adAccounts}
+                    poorAdsData={poorAds}
+                    poorAdsLoading={poorAdsLoading}
                 />
             )}
 
@@ -1030,7 +965,7 @@ export default function AnalyticsDashboard() {
                                         Recommendations
                                     </strong>
                                     <span>
-                                        compare each campaign/adset's {metricMode === 'cpr' ? 'CPA' : 'ROAS'} against
+                                        compare each campaign/adset&apos;s {metricMode === 'cpr' ? 'CPA' : 'ROAS'} against
                                         {(metricMode === 'cpr' && targetCPA) || (metricMode === 'roas' && targetROAS)
                                             ? ' your target KPI (or account average if target is less strict)'
                                             : ' the spend-weighted account average'
@@ -1040,21 +975,19 @@ export default function AnalyticsDashboard() {
 
                                 <div>
                                     <strong className="block text-gray-600">
-                                        Anomalies
+                                        Poor Performers
                                     </strong>
                                     <span>
-                                        flag CPA spikes exceeding {anomalyThresholds.cpaSpike}%
-                                        of the 7-day average and overspend above {anomalyThresholds.overspend}%
-                                        of daily budget.
+                                        identifies active ads ≥14 days old that aren&apos;t converting efficiently.
                                     </span>
                                 </div>
 
                                 <div>
                                     <strong className="block text-gray-600">
-                                        Poor Performers
+                                        Anomaly Detection
                                     </strong>
                                     <span>
-                                        identifies active ads ≥14 days old that aren't converting efficiently.
+                                        monitors CPA spikes above {anomalyThresholds.cpaSpike}% of the 7-day average and overspend above {anomalyThresholds.overspend}% of daily budget.
                                     </span>
                                 </div>
 
@@ -1229,7 +1162,7 @@ export default function AnalyticsDashboard() {
                                                         value={tempTargetCPA}
                                                         onChange={(e) => setTempTargetCPA(e.target.value)}
                                                         placeholder="e.g. 30"
-                                                        className="w-28 px-3 py-4.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        className="w-28 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                     />
                                                 </div>
                                             ) : (
@@ -1241,7 +1174,7 @@ export default function AnalyticsDashboard() {
                                                         value={tempTargetROAS}
                                                         onChange={(e) => setTempTargetROAS(e.target.value)}
                                                         placeholder="e.g. 3.0"
-                                                        className="w-28 px-3 py-4.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        className="w-28 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                     />
                                                 </div>
                                             )}
@@ -1256,6 +1189,9 @@ export default function AnalyticsDashboard() {
                                             <AlertTriangle className="w-4 h-4 text-orange-500" />
                                             Anomaly Thresholds
                                         </h3>
+                                        <p className="text-xs text-gray-500 pl-6">
+                                            Anomaly detection compares current CPA and spend pacing against recent account baselines, then flags unusual spikes early so you can review them before they compound.
+                                        </p>
 
                                         <div className="space-y-4 pl-6">
                                             <div className="space-y-2">
@@ -1266,7 +1202,7 @@ export default function AnalyticsDashboard() {
                                                         value={tempThresholds.cpaSpike}
                                                         onChange={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: e.target.value }))}
                                                         onBlur={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: parseInt(e.target.value) || 50 }))}
-                                                        className="w-24 px-3 py-4.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                     />
                                                     <span className="text-sm text-gray-500">
                                                         Alert when CPA increases by more than this % vs 7-day average
@@ -1282,7 +1218,7 @@ export default function AnalyticsDashboard() {
                                                         value={tempThresholds.overspend}
                                                         onChange={(e) => setTempThresholds(prev => ({ ...prev, overspend: e.target.value }))}
                                                         onBlur={(e) => setTempThresholds(prev => ({ ...prev, overspend: parseInt(e.target.value) || 150 }))}
-                                                        className="w-24 px-3 py-4.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                     />
                                                     <span className="text-sm text-gray-500">
                                                         Alert when daily spend exceeds this % of budget (ABO only)
