@@ -1,93 +1,3 @@
-// import { useEffect, useState, useContext, useMemo, createContext } from "react"
-// import useSubscription from "@/lib/useSubscriptionSettings"
-// import useGlobalSettings from "@/lib/useGlobalSettings"
-
-// const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-
-// const AppContext = createContext()
-
-// export const AppProvider = ({ children }) => {
-//   const [pages, setPages] = useState([])
-//   const [adAccounts, setAdAccounts] = useState([])
-//   const [allAdAccounts, setAllAdAccounts] = useState([]);
-//   const [pagesLoading, setPagesLoading] = useState(false);
-//   const [adAccountsLoading, setAdAccountsLoading] = useState(false);
-
-//   const { subscriptionData } = useSubscription()
-//   const { selectedAdAccountIds } = useGlobalSettings() // Changed from selectedAdAccountId
-
-
-//   // Filter ad accounts based on plan type
-//   const filteredAdAccounts = useMemo(() => {
-//     if (subscriptionData.planType === 'starter' && selectedAdAccountIds.length > 0) {
-//       // Starter plan: show only 1 selected account
-//       return allAdAccounts.filter(account => selectedAdAccountIds.includes(account.id))
-//     } else if (subscriptionData.planType === 'brand' && selectedAdAccountIds.length > 0) {
-//       // Brand plan: show up to 3 selected accounts
-//       return allAdAccounts.filter(account => selectedAdAccountIds.includes(account.id))
-//     }
-//     // Pro/Agency plan: show all accounts
-//     return allAdAccounts
-//   }, [allAdAccounts, subscriptionData.planType, selectedAdAccountIds])
-
-
-
-//   useEffect(() => {
-//     const fetchAdAccounts = async () => {
-//       setAdAccountsLoading(true);
-//       try {
-//         const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, {
-//           credentials: "include",
-//         })
-//         const data = await res.json()
-//         if (data.success && data.adAccounts) {
-//           setAdAccounts(data.adAccounts)
-//           setAllAdAccounts(data.adAccounts) // Store all accounts
-
-//         }
-//       } catch (err) {
-//         console.error("Failed to fetch ad accounts:", err)
-//       } finally {
-//         setAdAccountsLoading(false);
-//       }
-//     }
-//     const fetchPages = async () => {
-//       setPagesLoading(true);
-//       try {
-//         const res = await fetch(`${API_BASE_URL}/auth/fetch-pages`, {
-//           credentials: "include",
-//         })
-//         const data = await res.json()
-//         if (data.success && data.pages) {
-//           setPages(data.pages)
-//         }
-//       } catch (err) {
-//         console.error("Failed to fetch pages:", err)
-//       }
-//       finally {
-//         setPagesLoading(false);
-//       }
-//     }
-
-//     // Only fetch if empty
-//     if (adAccounts.length === 0) fetchAdAccounts()
-//     if (pages.length === 0) fetchPages()
-//   }, [])
-
-
-//   useEffect(() => {
-//     setAdAccounts(filteredAdAccounts)
-//   }, [filteredAdAccounts])
-
-//   return (
-//     <AppContext.Provider value={{
-//       pages, setPages, adAccounts, setAdAccounts, allAdAccounts, pagesLoading, adAccountsLoading
-//     }}>
-//       {children}
-//     </AppContext.Provider>
-//   )
-// }
-// export const useAppData = () => useContext(AppContext)
 import { useEffect, useState, useContext, useMemo, useCallback, createContext } from "react"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
@@ -166,6 +76,43 @@ export const AppProvider = ({ children }) => {
     }
   }, [])
 
+
+  const refreshPagePictures = useCallback(async (pagesToRefresh) => {
+    if (!pagesToRefresh.length) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/refresh-page-pictures`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pageIds: pagesToRefresh.map(p => p.id) }),
+      });
+      const data = await res.json();
+      if (!data.success) return;
+
+      const picMap = new Map(data.pictures.map(p => [p.id, p]));
+      setPages(prev => {
+        const updated = prev.map(page => {
+          const fresh = picMap.get(page.id);
+          if (!fresh) return page;
+          return {
+            ...page,
+            profilePicture: fresh.profilePicture || page.profilePicture,
+            instagramAccount: page.instagramAccount ? {
+              ...page.instagramAccount,
+              profilePictureUrl: fresh.instagramPicUrl || page.instagramAccount.profilePictureUrl,
+            } : page.instagramAccount,
+          };
+        });
+        writeCache('pages', updated);
+        return updated;
+      });
+    } catch (err) {
+      console.error("Failed to refresh page pictures:", err);
+    }
+  }, []);
+
+
+
   useEffect(() => {
     if (bustOnMount) {
       // Strip the flag so a manual refresh won't keep busting.
@@ -180,8 +127,12 @@ export const AppProvider = ({ children }) => {
 
     // Normal load: only fetch what isn't cached.
     if (!cachedAccounts) fetchAdAccounts()
-    if (!cachedPages) fetchPages()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!cachedPages) {
+      fetchPages();
+    } else {
+      // Cache hit — refresh just the pics in the background
+      refreshPagePictures(cachedPages);
+    }
   }, [])
 
   useEffect(() => {
