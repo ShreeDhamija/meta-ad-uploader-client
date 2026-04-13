@@ -246,7 +246,7 @@ export default function KPIChart({ data, loading, mode, days, onDaysChange }) {
                             </LineChart>
                         </ResponsiveContainer>
 
-                        {/* Custom legend — scrollable, 2-col grid, left-aligned */}
+
                         {campaigns.length > 0 && (
                             <div className="relative mt-3">
                                 <div
