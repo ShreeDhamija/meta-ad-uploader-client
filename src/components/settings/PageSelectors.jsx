@@ -160,7 +160,14 @@ function PageSelectors({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="min-w-[--radix-popover-trigger-width] p-0 rounded-xl bg-white" align="start">
+            <PopoverContent
+              className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white"
+              align="start"
+              style={{
+                minWidth: "var(--radix-popover-trigger-width)",
+                width: "auto",
+              }}
+            >
               <Command filter={() => 1} loop={false}>
                 <CommandInput
                   placeholder="Search pages..."
@@ -219,7 +226,14 @@ function PageSelectors({
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="min-w-[--radix-popover-trigger-width] p-0 rounded-xl bg-white" align="start">
+            <PopoverContent
+              className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white"
+              align="start"
+              style={{
+                minWidth: "var(--radix-popover-trigger-width)",
+                width: "auto",
+              }}
+            >
               <Command filter={() => 1} loop={false}>
                 <CommandInput
                   placeholder="Search IG accounts..."

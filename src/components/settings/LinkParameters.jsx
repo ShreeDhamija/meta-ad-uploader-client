@@ -349,9 +349,13 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent
-                            className="w-auto min-w-[--radix-popover-trigger-width] max-w-[700px] p-0 bg-white shadow-lg rounded-2xl"
+                            className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                             align="start"
                             sideOffset={5}
+                            style={{
+                                minWidth: "var(--radix-popover-trigger-width)",
+                                width: "auto",
+                            }}
                         >
                             <Command>
                                 <CommandList className="max-h-[500px] overflow-y-auto p-1">
