@@ -84,6 +84,7 @@ export default function AnalyticsDashboard() {
     // ── Data state 
     const [recommendations, setRecommendations] = useState(null)
     const [recsLoading, setRecsLoading] = useState(false)
+    const [budgetRefreshSignal, setBudgetRefreshSignal] = useState(null)
 
     const [poorAds, setPoorAds] = useState(null)
     const [poorAdsLoading, setPoorAdsLoading] = useState(false)
@@ -121,11 +122,32 @@ export default function AnalyticsDashboard() {
     const targetROAS = adAccountSettings?.targetROAS ?? null
     const anomalyThresholds = adAccountSettings?.anomalyThresholds ?? DEFAULT_THRESHOLDS
     const slackAlertsEnabled = adAccountSettings?.slackAlertsEnabled ?? false
+    const preferencesLoading = Boolean(selectedAdAccount) && adAccountSettingsLoading
 
     useEffect(() => {
         if (adAccountSettingsLoading) return
         setStableMetricMode(adAccountSettings?.analyticsMode === 'roas' ? 'roas' : 'cpr')
     }, [adAccountSettingsLoading, adAccountSettings?.analyticsMode])
+
+    useEffect(() => {
+        if (!showSettingsDialog || adAccountSettingsLoading) return
+
+        setTempThresholds(anomalyThresholds)
+        setTempTargetCPA(targetCPA ? String(targetCPA) : "")
+        setTempTargetROAS(targetROAS ? String(targetROAS) : "")
+        setTempSlackAlertsEnabled(slackAlertsEnabled)
+        setTempAnalyticsMode(adAccountSettings?.analyticsMode || 'roas')
+        setTempConversionEvent(adAccountSettings?.conversionEvent || null)
+    }, [
+        showSettingsDialog,
+        adAccountSettingsLoading,
+        anomalyThresholds,
+        targetCPA,
+        targetROAS,
+        slackAlertsEnabled,
+        adAccountSettings?.analyticsMode,
+        adAccountSettings?.conversionEvent
+    ])
 
 
     // ── Show onboarding on first visit ──────────────────────
@@ -249,6 +271,7 @@ export default function AnalyticsDashboard() {
 
     // ── Fetch conversion events for settings dialog ─────────
     const fetchConversionEvents = useCallback(async (accountId) => {
+        setConversionEvents([])
         setConversionEventsLoading(true)
         try {
             const res = await fetch(
@@ -510,10 +533,10 @@ export default function AnalyticsDashboard() {
 
     // Weekly insights don't depend on settings, fetch immediately
     useEffect(() => {
-        if (selectedAdAccount) {
+        if (selectedAdAccount && !adAccountSettingsLoading) {
             fetchWeeklyInsights()
         }
-    }, [selectedAdAccount, fetchWeeklyInsights])
+    }, [selectedAdAccount, adAccountSettingsLoading, fetchWeeklyInsights])
 
     // Account info auto-detection should only run AFTER settings have loaded,
     // so modeCache is already populated if the user has a saved preference
@@ -533,6 +556,13 @@ export default function AnalyticsDashboard() {
         fetchRecommendations()
         fetchPoorAds()
     }, [selectedAdAccount, adAccountSettingsLoading, fetchRecommendations, fetchPoorAds])
+
+    useEffect(() => {
+        if (!showSettingsDialog || !selectedAdAccount || adAccountSettingsLoading) return
+        if (tempAnalyticsMode !== 'cpa') return
+
+        fetchConversionEvents(selectedAdAccount)
+    }, [showSettingsDialog, selectedAdAccount, adAccountSettingsLoading, tempAnalyticsMode, fetchConversionEvents])
 
     useEffect(() => {
         if (
@@ -575,10 +605,10 @@ export default function AnalyticsDashboard() {
     const handleAdAccountSelect = (accountId) => {
         currentAccountRef.current = accountId  // ← add this
         pendingDailySettingsRef.current = accountId
-        setRecsLoading(true)
-        setPoorAdsLoading(true)
-        setDailyLoading(true)
-        setWeeklyLoading(true)
+        setRecsLoading(false)
+        setPoorAdsLoading(false)
+        setDailyLoading(false)
+        setWeeklyLoading(false)
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
 
@@ -591,9 +621,22 @@ export default function AnalyticsDashboard() {
             dailyInsightsAbortRef.current.abort()
             dailyInsightsAbortRef.current = null
         }
-        setDailyLoading(false)
         fetchedRef.current = {}
     }
+
+    const handleRefreshBudgetRecommendations = useCallback(() => {
+        if (!selectedAdAccount || adAccountSettingsLoading) return
+
+        setBudgetRefreshSignal(`${selectedAdAccount}:${Date.now()}`)
+        setRecommendations(null)
+        setRecsLoading(true)
+
+        Object.keys(fetchedRef.current).forEach((key) => {
+            if (key.startsWith(`recs-${selectedAdAccount}`)) delete fetchedRef.current[key]
+        })
+
+        fetchRecommendations(true)
+    }, [selectedAdAccount, adAccountSettingsLoading, fetchRecommendations])
 
     const handleSaveSettings = async () => {
         setSavingSettings(true)
@@ -698,16 +741,7 @@ export default function AnalyticsDashboard() {
     }
 
     const openSettingsDialog = () => {
-        setTempThresholds(anomalyThresholds)
-        setTempTargetCPA(targetCPA ? String(targetCPA) : "")
-        setTempTargetROAS(targetROAS ? String(targetROAS) : "")
-        setTempSlackAlertsEnabled(slackAlertsEnabled)
-        // Default to saved setting or ROAS for first session
-        setTempAnalyticsMode(adAccountSettings?.analyticsMode || 'roas')
-        setTempConversionEvent(adAccountSettings?.conversionEvent || null)
         setShowSettingsDialog(true)
-        // Pre-fetch conversion events for settings
-        if (selectedAdAccount) fetchConversionEvents(selectedAdAccount)
     }
 
     const handleOnboardingComplete = () => {
@@ -865,17 +899,40 @@ export default function AnalyticsDashboard() {
             {/* ── Charts Row  */}
             {selectedAdAccount && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <KPIChart
-                        data={dailyInsights}
-                        loading={dailyLoading}
-                        mode={metricMode}
-                        days={chartDays}
-                        onDaysChange={setChartDays}
-                    />
-                    <WeeklyChart
-                        data={weeklyInsights}
-                        loading={weeklyLoading}
-                    />
+                    {preferencesLoading ? (
+                        <>
+                            <Card className="rounded-2xl">
+                                <CardContent className="py-14">
+                                    <div className="flex flex-col items-center justify-center gap-3">
+                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                        <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <Card className="rounded-2xl">
+                                <CardContent className="py-14">
+                                    <div className="flex flex-col items-center justify-center gap-3">
+                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                        <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </>
+                    ) : (
+                        <>
+                            <KPIChart
+                                data={dailyInsights}
+                                loading={dailyLoading}
+                                mode={metricMode}
+                                days={chartDays}
+                                onDaysChange={setChartDays}
+                            />
+                            <WeeklyChart
+                                data={weeklyInsights}
+                                loading={weeklyLoading}
+                            />
+                        </>
+                    )}
                 </div>
             )}
 
@@ -922,30 +979,49 @@ export default function AnalyticsDashboard() {
             </div>
 
             {/* ── Tab Content ── */}
-            {activeTab === 'budget' && (
-                <RecommendationCards
-                    section="budget"
-                    data={recommendations}
-                    loading={recsLoading}
-                    mode={metricMode}
-                    adAccountId={selectedAdAccount}
-                    adAccounts={adAccounts}
-                    poorAdsData={poorAds}
-                    poorAdsLoading={poorAdsLoading}
-                />
-            )}
+            {preferencesLoading ? (
+                <Card className="rounded-2xl">
+                    <CardContent className="py-12">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                            <p className="text-sm text-gray-500">Loading saved analytics preferences before fetching insights...</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            ) : (
+                <>
+                    {activeTab === 'budget' && (
+                        <RecommendationCards
+                            section="budget"
+                            data={recommendations}
+                            loading={recsLoading}
+                            mode={metricMode}
+                            adAccountId={selectedAdAccount}
+                            adAccounts={adAccounts}
+                            poorAdsData={poorAds}
+                            poorAdsLoading={poorAdsLoading}
+                            onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
+                            budgetRefreshing={recsLoading}
+                            budgetRefreshToken={budgetRefreshSignal}
+                        />
+                    )}
 
-            {activeTab === 'poor-performers' && (
-                <RecommendationCards
-                    section="poor-performers"
-                    data={recommendations}
-                    loading={recsLoading}
-                    mode={metricMode}
-                    adAccountId={selectedAdAccount}
-                    adAccounts={adAccounts}
-                    poorAdsData={poorAds}
-                    poorAdsLoading={poorAdsLoading}
-                />
+                    {activeTab === 'poor-performers' && (
+                        <RecommendationCards
+                            section="poor-performers"
+                            data={recommendations}
+                            loading={recsLoading}
+                            mode={metricMode}
+                            adAccountId={selectedAdAccount}
+                            adAccounts={adAccounts}
+                            poorAdsData={poorAds}
+                            poorAdsLoading={poorAdsLoading}
+                            onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
+                            budgetRefreshing={recsLoading}
+                            budgetRefreshToken={budgetRefreshSignal}
+                        />
+                    )}
+                </>
             )}
 
             {/* ── Info Footer ── */}
@@ -1057,6 +1133,12 @@ export default function AnalyticsDashboard() {
                                     </button>
                                 </div>
 
+                                {adAccountSettingsLoading ? (
+                                    <div className="flex flex-col items-center justify-center gap-3 py-16">
+                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                        <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
+                                    </div>
+                                ) : (
                                 <div className="space-y-6">
 
                                     {/* ── Optimization Focus ── */}
@@ -1081,9 +1163,6 @@ export default function AnalyticsDashboard() {
                                                         onCheckedChange={(checked) => {
                                                             const next = checked ? 'roas' : 'cpa'
                                                             setTempAnalyticsMode(next)
-                                                            if (next === 'cpa' && selectedAdAccount) {
-                                                                fetchConversionEvents(selectedAdAccount)
-                                                            }
                                                         }}
                                                         className="data-[state=unchecked]:bg-green-500"
                                                     />
@@ -1232,6 +1311,7 @@ export default function AnalyticsDashboard() {
 
 
                                 </div>
+                                )}
                             </div>
 
                             {/* Sticky blue bottom bar */}
@@ -1239,7 +1319,7 @@ export default function AnalyticsDashboard() {
 
                                 <button
                                     onClick={handleSaveSettings}
-                                    disabled={savingSettings}
+                                    disabled={savingSettings || adAccountSettingsLoading}
                                     className="rounded-xl bg-white text-blue-600 hover:bg-gray-100 px-6 h-9 text-sm font-medium transition-colors disabled:opacity-70 flex items-center gap-2"
                                 >
                                     {savingSettings && <Loader2 className="w-3.5 h-3.5 animate-spin" />}

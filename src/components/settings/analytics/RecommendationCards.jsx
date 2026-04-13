@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
     TrendingUp, TrendingDown, Pause, Loader2, XCircle, Activity,
-    Star, Eye, CheckCircle2, AlertTriangle, Zap, ChevronDown,
+    Star, Eye, CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -125,6 +125,9 @@ export default function RecommendationCards({
     section = "budget",
     data, loading, mode, adAccountId, adAccounts,
     poorAdsData, poorAdsLoading,
+    onRefreshBudgetRecommendations,
+    budgetRefreshing = false,
+    budgetRefreshToken = null,
 }) {
     // ── Budget Recommendations State ────────────────────
     const [applyingId, setApplyingId] = useState(null)
@@ -175,6 +178,19 @@ export default function RecommendationCards({
             // Ignore storage failures and keep the in-memory fallback.
         }
     }, [dismissed, adAccountId, mode, section])
+
+    useEffect(() => {
+        if (section !== "budget" || !adAccountId || !budgetRefreshToken || typeof window === "undefined") return
+        if (!budgetRefreshToken.startsWith(`${adAccountId}:`)) return
+
+        setDismissed(new Set())
+
+        try {
+            window.sessionStorage.removeItem(getDismissedStorageKey(adAccountId, mode))
+        } catch {
+            // Ignore storage failures and keep the in-memory fallback.
+        }
+    }, [section, adAccountId, mode, budgetRefreshToken])
 
     // ── Budget Recommendations Logic ────────────────────
     function recKey(r) {
@@ -345,16 +361,29 @@ export default function RecommendationCards({
                 <div className="space-y-4">
                 {/* Section header */}
                 <div className="px-1">
-                    <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-blue-500" />
-                        Budget Recommendations {recs.length > 0 && <span className="text-base font-normal text-gray-400">({recs.length})</span>}
-
-                    </h2>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Compares each campaign and ad set&apos;s {mode === 'roas' ? 'ROAS' : 'CPA'} against the
-                        spend-weighted account average over 3-day windows. <br></br>Recommends scaling outperformers
-                        and reducing or pausing underperformers.
-                    </p>
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <Zap className="w-5 h-5 text-blue-500" />
+                                Budget Recommendations {recs.length > 0 && <span className="text-base font-normal text-gray-400">({recs.length})</span>}
+                            </h2>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Compares each campaign and ad set&apos;s {mode === 'roas' ? 'ROAS' : 'CPA'} against the
+                                spend-weighted account average over 3-day windows. <br></br>Recommends scaling outperformers
+                                and reducing or pausing underperformers.
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={onRefreshBudgetRecommendations}
+                            disabled={loading || budgetRefreshing}
+                            className="rounded-xl h-9 px-3 flex-shrink-0"
+                        >
+                            <RefreshCw className={cn("w-4 h-4", (loading || budgetRefreshing) && "animate-spin")} />
+                        </Button>
+                    </div>
                 </div>
 
                 {loading ? (
