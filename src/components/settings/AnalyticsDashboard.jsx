@@ -1210,7 +1210,7 @@ export default function AnalyticsDashboard() {
                 <>
                     <div
                         className="fixed inset-0 bg-black/50 z-50"
-                        style={{ top: -25, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                        style={{ top: 0, left: 0, right: 0, bottom: 0, position: 'fixed' }}
                         onClick={() => setShowSettingsDialog(false)}
                     />
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1247,178 +1247,178 @@ export default function AnalyticsDashboard() {
                                         <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
                                     </div>
                                 ) : (
-                                <div className="space-y-6">
+                                    <div className="space-y-6">
 
-                                    {/* ── Optimization Focus ── */}
-                                    <div className="space-y-4">
-                                        <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                            <Activity className="w-4 h-4 text-purple-500" />
-                                            Optimization Focus
-                                        </h3>
-                                        <div className="space-y-4 pl-6">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-sm text-gray-700">
-                                                        {tempAnalyticsMode === 'roas'
-                                                            ? 'Optimizing for Return on Ad Spend'
-                                                            : 'Optimizing for Cost Per Action'}
-                                                    </p>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <span className={cn("text-xs font-medium", tempAnalyticsMode === 'cpa' ? "text-green-600" : "text-gray-400")}>CPA</span>
-                                                    <Switch
-                                                        checked={tempAnalyticsMode === 'roas'}
-                                                        onCheckedChange={(checked) => {
-                                                            const next = checked ? 'roas' : 'cpa'
-                                                            setTempAnalyticsMode(next)
-                                                        }}
-                                                        className="data-[state=unchecked]:bg-green-500"
-                                                    />
-                                                    <span className={cn("text-xs font-medium", tempAnalyticsMode === 'roas' ? "text-blue-600" : "text-gray-400")}>ROAS</span>
-                                                </div>
-                                            </div>
-
-                                            {tempAnalyticsMode === 'cpa' && (
-                                                <div className="space-y-2">
-                                                    <p className="text-sm text-gray-600">Conversion Event</p>
-                                                    {conversionEventsLoading ? (
-                                                        <div className="flex items-center gap-2 py-2">
-                                                            <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-                                                            <span className="text-xs text-gray-400">Loading events...</span>
-                                                        </div>
-                                                    ) : conversionEvents.length > 0 ? (
-                                                        <div className="max-h-[150px] overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 custom-scrollbar">
-                                                            {conversionEvents.map((evt) => {
-                                                                const isSelected = tempConversionEvent === evt.event
-                                                                return (
-                                                                    <button
-                                                                        key={evt.event}
-                                                                        onClick={() => setTempConversionEvent(evt.event)}
-                                                                        className={cn(
-                                                                            "w-full flex items-center justify-between px-3.5 py-2 text-left transition-colors",
-                                                                            isSelected ? "bg-blue-50" : "hover:bg-gray-50"
-                                                                        )}
-                                                                    >
-                                                                        <div>
-                                                                            <p className={cn(
-                                                                                "text-sm",
-                                                                                isSelected ? "font-medium text-blue-700" : "text-gray-700"
-                                                                            )}>
-                                                                                {evt.label}
-                                                                            </p>
-                                                                            {evt.count > 0 && (
-                                                                                <p className="text-[10px] text-gray-400">
-                                                                                    {evt.count} ad set{evt.count !== 1 ? 's' : ''}
-                                                                                </p>
-                                                                            )}
-                                                                        </div>
-                                                                        {isSelected && (
-                                                                            <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                                                                        )}
-                                                                    </button>
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    ) : (
-                                                        <p className="text-xs text-gray-400 py-2">
-                                                            Events will be auto-detected from your ad sets.
+                                        {/* ── Optimization Focus ── */}
+                                        <div className="space-y-4">
+                                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                <Activity className="w-4 h-4 text-purple-500" />
+                                                Optimization Focus
+                                            </h3>
+                                            <div className="space-y-4 pl-6">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm text-gray-700">
+                                                            {tempAnalyticsMode === 'roas'
+                                                                ? 'Optimizing for Return on Ad Spend'
+                                                                : 'Optimizing for Cost Per Action'}
                                                         </p>
-                                                    )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={cn("text-xs font-medium", tempAnalyticsMode === 'cpa' ? "text-green-600" : "text-gray-400")}>CPA</span>
+                                                        <Switch
+                                                            checked={tempAnalyticsMode === 'roas'}
+                                                            onCheckedChange={(checked) => {
+                                                                const next = checked ? 'roas' : 'cpa'
+                                                                setTempAnalyticsMode(next)
+                                                            }}
+                                                            className="data-[state=unchecked]:bg-green-500"
+                                                        />
+                                                        <span className={cn("text-xs font-medium", tempAnalyticsMode === 'roas' ? "text-blue-600" : "text-gray-400")}>ROAS</span>
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </div>
 
-                                    <div className="border-t border-gray-200" />
-
-                                    {/* ── Target KPI (conditional) ── */}
-                                    <div className="space-y-4">
-                                        <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                            <Target className="w-4 h-4 text-blue-500" />
-                                            Target KPI
-                                        </h3>
-                                        <p className="text-xs text-gray-500 pl-6">
-                                            Sets a benchmark for recommendations. If your target is stricter than the account average, recommendations will use the target instead.
-                                        </p>
-                                        <div className="space-y-4 pl-6">
-                                            {tempAnalyticsMode === 'cpa' ? (
-                                                <div className="space-y-2">
-                                                    <p className="text-sm text-gray-600">Target CPA ($)</p>
-                                                    <input
-                                                        type="number"
-                                                        value={tempTargetCPA}
-                                                        onChange={(e) => setTempTargetCPA(e.target.value)}
-                                                        placeholder="e.g. 30"
-                                                        className="w-28 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-2">
-                                                    <p className="text-sm text-gray-600">Target ROAS (x)</p>
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        value={tempTargetROAS}
-                                                        onChange={(e) => setTempTargetROAS(e.target.value)}
-                                                        placeholder="e.g. 3.0"
-                                                        className="w-28 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="border-t border-gray-200" />
-
-                                    {/* ── Anomaly Thresholds ── */}
-                                    <div className="space-y-4">
-                                        <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                            <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                            Anomaly Thresholds
-                                        </h3>
-                                        <p className="text-xs text-gray-500 pl-6">
-                                            Anomaly detection compares current CPA and spend pacing against recent account baselines, then flags unusual spikes early so you can review them before they compound.
-                                        </p>
-
-                                        <div className="space-y-4 pl-6">
-                                            <div className="space-y-2">
-                                                <p className="text-sm text-gray-600">CPA Spike Threshold (%)</p>
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="number"
-                                                        value={tempThresholds.cpaSpike}
-                                                        onChange={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: e.target.value }))}
-                                                        onBlur={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: parseInt(e.target.value) || 50 }))}
-                                                        className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    />
-                                                    <span className="text-sm text-gray-500">
-                                                        Alert when CPA increases by more than this % vs 7-day average
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <p className="text-sm text-gray-600">Overspend Threshold (%)</p>
-                                                <div className="flex items-center gap-3">
-                                                    <input
-                                                        type="number"
-                                                        value={tempThresholds.overspend}
-                                                        onChange={(e) => setTempThresholds(prev => ({ ...prev, overspend: e.target.value }))}
-                                                        onBlur={(e) => setTempThresholds(prev => ({ ...prev, overspend: parseInt(e.target.value) || 150 }))}
-                                                        className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                                    />
-                                                    <span className="text-sm text-gray-500">
-                                                        Alert when daily spend exceeds this % of budget (ABO only)
-                                                    </span>
-                                                </div>
+                                                {tempAnalyticsMode === 'cpa' && (
+                                                    <div className="space-y-2">
+                                                        <p className="text-sm text-gray-600">Conversion Event</p>
+                                                        {conversionEventsLoading ? (
+                                                            <div className="flex items-center gap-2 py-2">
+                                                                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                                                <span className="text-xs text-gray-400">Loading events...</span>
+                                                            </div>
+                                                        ) : conversionEvents.length > 0 ? (
+                                                            <div className="max-h-[150px] overflow-y-auto rounded-xl border border-gray-200 divide-y divide-gray-100 custom-scrollbar">
+                                                                {conversionEvents.map((evt) => {
+                                                                    const isSelected = tempConversionEvent === evt.event
+                                                                    return (
+                                                                        <button
+                                                                            key={evt.event}
+                                                                            onClick={() => setTempConversionEvent(evt.event)}
+                                                                            className={cn(
+                                                                                "w-full flex items-center justify-between px-3.5 py-2 text-left transition-colors",
+                                                                                isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                                                                            )}
+                                                                        >
+                                                                            <div>
+                                                                                <p className={cn(
+                                                                                    "text-sm",
+                                                                                    isSelected ? "font-medium text-blue-700" : "text-gray-700"
+                                                                                )}>
+                                                                                    {evt.label}
+                                                                                </p>
+                                                                                {evt.count > 0 && (
+                                                                                    <p className="text-[10px] text-gray-400">
+                                                                                        {evt.count} ad set{evt.count !== 1 ? 's' : ''}
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                            {isSelected && (
+                                                                                <CheckCircle2 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                                                            )}
+                                                                        </button>
+                                                                    )
+                                                                })}
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs text-gray-400 py-2">
+                                                                Events will be auto-detected from your ad sets.
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
+
+                                        <div className="border-t border-gray-200" />
+
+                                        {/* ── Target KPI (conditional) ── */}
+                                        <div className="space-y-4">
+                                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                <Target className="w-4 h-4 text-blue-500" />
+                                                Target KPI
+                                            </h3>
+                                            <p className="text-xs text-gray-500 pl-6">
+                                                Sets a benchmark for recommendations. If your target is stricter than the account average, recommendations will use the target instead.
+                                            </p>
+                                            <div className="space-y-4 pl-6">
+                                                {tempAnalyticsMode === 'cpa' ? (
+                                                    <div className="space-y-2">
+                                                        <p className="text-sm text-gray-600">Target CPA ($)</p>
+                                                        <input
+                                                            type="number"
+                                                            value={tempTargetCPA}
+                                                            onChange={(e) => setTempTargetCPA(e.target.value)}
+                                                            placeholder="e.g. 30"
+                                                            className="w-28 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        <p className="text-sm text-gray-600">Target ROAS (x)</p>
+                                                        <input
+                                                            type="number"
+                                                            step="0.1"
+                                                            value={tempTargetROAS}
+                                                            onChange={(e) => setTempTargetROAS(e.target.value)}
+                                                            placeholder="e.g. 3.0"
+                                                            className="w-28 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="border-t border-gray-200" />
+
+                                        {/* ── Anomaly Thresholds ── */}
+                                        <div className="space-y-4">
+                                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                <AlertTriangle className="w-4 h-4 text-orange-500" />
+                                                Anomaly Thresholds
+                                            </h3>
+                                            <p className="text-xs text-gray-500 pl-6">
+                                                Anomaly detection compares current CPA and spend pacing against recent account baselines, then flags unusual spikes early so you can review them before they compound.
+                                            </p>
+
+                                            <div className="space-y-4 pl-6">
+                                                <div className="space-y-2">
+                                                    <p className="text-sm text-gray-600">CPA Spike Threshold (%)</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="number"
+                                                            value={tempThresholds.cpaSpike}
+                                                            onChange={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: e.target.value }))}
+                                                            onBlur={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: parseInt(e.target.value) || 50 }))}
+                                                            className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        />
+                                                        <span className="text-sm text-gray-500">
+                                                            Alert when CPA increases by more than this % vs 7-day average
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <p className="text-sm text-gray-600">Overspend Threshold (%)</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <input
+                                                            type="number"
+                                                            value={tempThresholds.overspend}
+                                                            onChange={(e) => setTempThresholds(prev => ({ ...prev, overspend: e.target.value }))}
+                                                            onBlur={(e) => setTempThresholds(prev => ({ ...prev, overspend: parseInt(e.target.value) || 150 }))}
+                                                            className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                        />
+                                                        <span className="text-sm text-gray-500">
+                                                            Alert when daily spend exceeds this % of budget (ABO only)
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+
+
                                     </div>
-
-
-
-
-                                </div>
                                 )}
                             </div>
 

@@ -4,7 +4,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { subDays } from "date-fns"
-import { CalendarRange, Check, ChevronDown } from "lucide-react"
+import { CalendarRange, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -79,7 +79,7 @@ export default function AnalyticsDateRangePicker({ value, onChange }) {
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
-                    className="min-w-[280px] justify-between rounded-2xl border-gray-200 bg-white px-4 py-2.5 text-left shadow-xs hover:bg-white"
+                    className="min-w-[280px] justify-between rounded-[20px] border-gray-200 bg-white px-4 pl-2 py-6 text-left shadow-xs hover:bg-white"
                 >
                     <div className="flex items-center gap-3">
                         <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
@@ -99,7 +99,8 @@ export default function AnalyticsDateRangePicker({ value, onChange }) {
                 <div className="flex flex-col gap-4 lg:flex-row">
                     <div className="flex w-full flex-col gap-2 lg:w-[190px]">
                         <div className="px-1">
-                            <p className="text-sm font-medium text-gray-500">Presets</p>
+                            <p className="text-sm font-semibold text-zinc-900">Presets</p>
+
                         </div>
 
                         {ANALYTICS_DATE_PRESETS.map((preset) => {
@@ -113,15 +114,17 @@ export default function AnalyticsDateRangePicker({ value, onChange }) {
                                     className={cn(
                                         "flex items-center justify-between rounded-2xl border px-3 py-2.5 text-sm transition-colors",
                                         isActive
-                                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                                            ? "bg-zinc-900 text-white"
                                             : "border-transparent bg-gray-50 text-gray-700 hover:border-gray-200 hover:bg-gray-100"
                                     )}
                                 >
                                     <span>{preset.label}</span>
-                                    {isActive ? <Check className="h-4 w-4" /> : null}
+
                                 </button>
+
                             )
                         })}
+                        <p className="mt-1 ml-1 text-xs font-semibold text-zinc-600">* Click on start/end date <br></br>to deselect</p>
                     </div>
 
                     <div className="min-w-0 flex-1 rounded-3xl border border-gray-200 bg-gray-50 p-3">

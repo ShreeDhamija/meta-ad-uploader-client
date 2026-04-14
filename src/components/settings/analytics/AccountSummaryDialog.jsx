@@ -101,7 +101,7 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId }) {
             {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-black/50 z-50"
-                style={{ top: -25, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                style={{ top: 0, left: 0, right: 0, bottom: 0, position: 'fixed' }}
                 onClick={onClose}
             />
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
