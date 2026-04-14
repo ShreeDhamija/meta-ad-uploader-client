@@ -4,7 +4,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { ChevronDown, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
@@ -1432,31 +1431,41 @@ export default function MediaPreview({
               </DndContext>
             </CardContent>
           </Card>
-          <Dialog open={showDisableVariantsDialog} onOpenChange={setShowDisableVariantsDialog}>
-            <DialogContent className="max-w-md rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0">
-              <DialogHeader>
-                <DialogTitle>Disable variants?</DialogTitle>
-                <DialogDescription>
-                  This will remove all variants and move every assignment back to Default.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="mt-2 grid grid-cols-2 gap-3">
-                <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDisableVariantsDialog(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  className="w-full rounded-xl"
-                  onClick={() => {
-                    setShowDisableVariantsDialog(false);
-                    handleDeleteAllVariants();
-                  }}
-                >
-                  Disable Variants
-                </Button>
+          {showDisableVariantsDialog && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+              <div
+                className="absolute inset-0 bg-black/30"
+                onClick={() => setShowDisableVariantsDialog(false)}
+              />
+              <div
+                className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl"
+                style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Disable variants?</h3>
+                  <p className="text-sm text-gray-500">
+                    This will remove all variants and move every assignment back to Default.
+                  </p>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDisableVariantsDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="w-full rounded-xl"
+                    onClick={() => {
+                      setShowDisableVariantsDialog(false);
+                      handleDeleteAllVariants();
+                    }}
+                  >
+                    Disable Variants
+                  </Button>
+                </div>
               </div>
-            </DialogContent>
-          </Dialog>
+            </div>
+          )}
         </>
       ) : (
         <div

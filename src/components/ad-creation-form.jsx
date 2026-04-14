@@ -10,13 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import TextareaAutosize from 'react-textarea-autosize'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7643,31 +7636,41 @@ export default function AdCreationForm({
           </div>
         </TooltipProvider>
       )}
-      <Dialog open={showDeleteAllVariantsDialog} onOpenChange={setShowDeleteAllVariantsDialog}>
-        <DialogContent className="max-w-md rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0">
-          <DialogHeader>
-            <DialogTitle>Delete all variants?</DialogTitle>
-            <DialogDescription>
-              This will remove every variant and move all assignments back to Default.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-2 grid grid-cols-2 gap-3">
-            <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              className="w-full rounded-xl"
-              onClick={() => {
-                setShowDeleteAllVariantsDialog(false);
-                handleDeleteAllVariants();
-              }}
-            >
-              Delete All Variants
-            </Button>
+      {showDeleteAllVariantsDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowDeleteAllVariantsDialog(false)}
+          />
+          <div
+            className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl"
+            style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Delete all variants?</h3>
+              <p className="text-sm text-gray-500">
+                This will remove every variant and move all assignments back to Default.
+              </p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="w-full rounded-xl"
+                onClick={() => {
+                  setShowDeleteAllVariantsDialog(false);
+                  handleDeleteAllVariants();
+                }}
+              >
+                Delete All Variants
+              </Button>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </Card >
 
   )

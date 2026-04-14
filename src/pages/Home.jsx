@@ -663,7 +663,7 @@ export default function Home() {
         const usedLetters = new Set(
             variants
                 .filter((variant) => variant.id !== "default")
-                .map((variant) => variant.name.replace("Form ", ""))
+                .map((variant) => variant.name.replace(/^(Form|Variant)\s+/, ""))
         );
         const nextLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find((letter) => !usedLetters.has(letter));
 
@@ -681,7 +681,7 @@ export default function Home() {
                     ? { ...variant, snapshot: currentSnapshot }
                     : variant
             )),
-            { id: newVariantId, name: `Variant ${nextLetter}`, snapshot: null }
+            { id: newVariantId, name: `Form ${nextLetter}`, snapshot: null }
         ]);
         setSelectedFiles(new Set());
     }, [activeVariantId, captureCurrentSnapshot, variants]);

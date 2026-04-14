@@ -471,32 +471,18 @@ export default function MetaMediaLibraryModal({
                         {mediaSource === 'meta_library' ? 'Meta Media Library' : 'Instagram Posts'}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex items-center gap-1 rounded-2xl border border-gray-200 bg-white p-1 shadow-sm">
-                            <button
-                                type="button"
-                                onClick={() => handleSourceChange('instagram')}
-                                aria-pressed={mediaSource === 'instagram'}
-                                className={`inline-flex h-9 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-all ${mediaSource === 'instagram'
-                                    ? 'bg-blue-600 text-white shadow-sm'
-                                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                                    }`}
-                            >
-                                <img src={Instagram} className="h-4 w-4 object-contain" alt="" aria-hidden="true" />
-                                Instagram Posts
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleSourceChange('meta_library')}
-                                aria-pressed={mediaSource === 'meta_library'}
-                                className={`inline-flex h-9 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-all ${mediaSource === 'meta_library'
-                                    ? 'bg-zinc-900 text-white shadow-sm'
-                                    : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
-                                    }`}
-                            >
-                                <FolderOpen className="h-4 w-4" />
-                                Meta Media Library
-                            </button>
-                        </div>
+                        <Tabs value={mediaSource} onValueChange={handleSourceChange}>
+                            <TabsList className="h-10 rounded-2xl bg-gray-100 p-1">
+                                <TabsTrigger value="instagram" className="gap-2 rounded-xl">
+                                    <img src={Instagram} className="h-4 w-4 object-contain" alt="" aria-hidden="true" />
+                                    Instagram Posts
+                                </TabsTrigger>
+                                <TabsTrigger value="meta_library" className="gap-2 rounded-xl">
+                                    <FolderOpen className="h-4 w-4" />
+                                    Meta Media Library
+                                </TabsTrigger>
+                            </TabsList>
+                        </Tabs>
                         <Button
                             type="button"
                             variant="outline"
