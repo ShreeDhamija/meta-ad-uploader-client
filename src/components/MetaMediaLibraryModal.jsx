@@ -472,7 +472,7 @@ export default function MetaMediaLibraryModal({
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
                         <Tabs value={mediaSource} onValueChange={handleSourceChange}>
-                            <TabsList className="h-10 rounded-2xl bg-gray-100 p-1">
+                            <TabsList className="h-10 rounded-full bg-gray-100 p-1">
                                 <TabsTrigger value="instagram" className="gap-2 rounded-xl">
                                     <img src={Instagram} className="h-4 w-4 object-contain" alt="" aria-hidden="true" />
                                     Instagram Posts

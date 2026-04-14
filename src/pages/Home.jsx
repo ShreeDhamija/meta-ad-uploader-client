@@ -673,6 +673,7 @@ export default function Home() {
         }
 
         const currentSnapshot = captureCurrentSnapshot();
+        const defaultSnapshot = cloneSnapshotValue(getVariantSnapshot("default")) || cloneSnapshotValue(currentSnapshot);
         const newVariantId = uuidv4();
 
         setVariants((prev) => [
@@ -681,10 +682,10 @@ export default function Home() {
                     ? { ...variant, snapshot: currentSnapshot }
                     : variant
             )),
-            { id: newVariantId, name: `Form ${nextLetter}`, snapshot: null }
+            { id: newVariantId, name: `Form ${nextLetter}`, snapshot: defaultSnapshot }
         ]);
         setSelectedFiles(new Set());
-    }, [activeVariantId, captureCurrentSnapshot, variants]);
+    }, [activeVariantId, captureCurrentSnapshot, getVariantSnapshot, variants]);
 
     const handleDeleteVariant = useCallback((variantId) => {
         if (variantId === "default") return;

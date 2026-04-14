@@ -7589,7 +7589,7 @@ export default function AdCreationForm({
                       <VariantDot variantId={variant.id} variants={variants} />
                       <span className="whitespace-nowrap">{variant.name}</span>
                       <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
-                        · {assignedCount}
+                        · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
                       </span>
                     </button>
                     {variant.id !== 'default' && (
