@@ -150,7 +150,7 @@ export default function WeeklyChart({ data, loading, className }) {
             ) : (
                 <>
                     <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                        <LineChart data={chartData} margin={{ top: 5, right: 0, left: -10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                             <XAxis
                                 dataKey="label"
