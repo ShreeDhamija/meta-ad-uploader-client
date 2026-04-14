@@ -16,7 +16,7 @@ const COLORS = [
 ]
 
 const MAX_NAME_LENGTH = 50
-const DAILY_CHART_LEFT_INSET = 50
+const DAILY_CHART_LEFT_INSET = 0
 
 function truncateName(name) {
     if (!name) return ''

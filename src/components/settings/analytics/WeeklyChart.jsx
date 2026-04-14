@@ -49,7 +49,7 @@ const METRIC_OPTIONS = {
     },
 }
 
-const WEEKLY_CHART_SIDE_INSET = 56
+const WEEKLY_CHART_SIDE_INSET = 0
 
 export default function WeeklyChart({ data, loading, className }) {
     const [selectedMetrics, setSelectedMetrics] = useState(["costPerLinkClick", "frequency"])
