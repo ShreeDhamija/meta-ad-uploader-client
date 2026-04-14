@@ -9,6 +9,7 @@ import AdCreationForm from "../components/ad-creation-form"
 import MediaPreview from "../components/media-preview"
 import OnboardingPopup from "../components/onboarding-popup"
 import AnalyticsHomePopup from "../components/AnalyticsHomePopup"
+import PowerupPopup from "../components/PowerupPopup"
 
 import { useAuth } from "../lib/AuthContext"
 import { useAppData } from "@/lib/AppContext"
@@ -131,11 +132,14 @@ export default function Home() {
 
     // Onboarding
     const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
+    const [showPowerupPopup, setShowPowerupPopup] = useState(false)
     const [showAnalyticsHomePopup, setShowAnalyticsHomePopup] = useState(false)
     const {
         hasSeenOnboarding,
         setHasSeenOnboarding,
         hasSeenSettingsOnboarding,
+        hasSeenPowerupPopup,
+        setHasSeenPowerupPopup,
         hasSeenAnalyticsHomePopup,
         setHasSeenAnalyticsHomePopup,
         loading,
@@ -157,6 +161,7 @@ export default function Home() {
     const preferredTemplateRef = useRef(null);
     const campaignsLoadedForAccountRef = useRef(null);
     const adSetsLoadedForSelectionRef = useRef("");
+    const hasMarkedPowerupPopupSeenRef = useRef(false);
 
     const getCachedState = () => {
         try {
@@ -265,7 +270,22 @@ export default function Home() {
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
-        if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup) return
+        if (!isLoggedIn || loading || showOnboardingPopup) return
+
+        if (!hasSeenPowerupPopup) {
+            setShowPowerupPopup(true)
+        }
+    }, [isLoggedIn, loading, showOnboardingPopup, hasSeenPowerupPopup])
+
+    useEffect(() => {
+        if (!showPowerupPopup || hasMarkedPowerupPopupSeenRef.current) return
+
+        hasMarkedPowerupPopupSeenRef.current = true
+        markPowerupPopupSeen()
+    }, [showPowerupPopup])
+
+    useEffect(() => {
+        if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup || showPowerupPopup) return
 
         const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
         const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
@@ -278,6 +298,7 @@ export default function Home() {
         isLoggedIn,
         loading,
         showOnboardingPopup,
+        showPowerupPopup,
         userCreatedAt,
         hasSeenAnalyticsHomePopup
     ])
@@ -477,6 +498,22 @@ export default function Home() {
         }).catch((err) => {
             console.error("Failed to save onboarding flag:", err)
         })
+    }
+
+    async function markPowerupPopupSeen() {
+        try {
+            await saveSettings({
+                globalSettings: { hasSeenPowerupPopup: true },
+            })
+            setHasSeenPowerupPopup(true)
+            window.dispatchEvent(new Event('globalSettingsUpdated'))
+        } catch (err) {
+            console.error("Failed to save powerup popup flag:", err)
+        }
+    }
+
+    const handleClosePowerupPopup = () => {
+        setShowPowerupPopup(false)
     }
 
     const markAnalyticsHomePopupSeen = async () => {
@@ -1399,6 +1436,10 @@ export default function Home() {
                     onClose={handleCloseAnalyticsHomePopup}
                     onCheckOutAnalytics={handleCheckOutAnalytics}
                 />
+            )}
+
+            {showPowerupPopup && (
+                <PowerupPopup onClose={handleClosePowerupPopup} />
             )}
 
             {showTrialExpiredPopup && (
