@@ -1000,14 +1000,6 @@ export default function AnalyticsDashboard() {
             {selectedAdAccount && (
                 <Card className="rounded-3xl border-gray-200 overflow-hidden">
                     <CardContent className="p-0">
-                        <div className="flex items-start justify-end border-b border-gray-200 px-4 py-3">
-                            <AnalyticsDateRangePicker
-                                value={analyticsDateRange}
-                                onChange={setAnalyticsDateRange}
-                                compact
-                            />
-                        </div>
-
                     {preferencesLoading ? (
                         <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-gray-200">
                             <div className="py-14">
@@ -1036,6 +1028,13 @@ export default function AnalyticsDashboard() {
                                 <WeeklyChart
                                     data={weeklyInsights}
                                     loading={weeklyLoading}
+                                    headerAction={(
+                                        <AnalyticsDateRangePicker
+                                            value={analyticsDateRange}
+                                            onChange={setAnalyticsDateRange}
+                                            compact
+                                        />
+                                    )}
                                 />
                             </div>
                         </div>

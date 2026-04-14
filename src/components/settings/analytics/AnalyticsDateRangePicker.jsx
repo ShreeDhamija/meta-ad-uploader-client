@@ -82,12 +82,12 @@ export default function AnalyticsDateRangePicker({ value, onChange, compact = fa
                     className={cn(
                         "justify-between border-gray-200 bg-white text-left shadow-xs hover:bg-white",
                         compact
-                            ? "min-w-[190px] rounded-2xl px-3 py-2 text-xs"
-                            : "min-w-[280px] rounded-[20px] px-4 pl-2 py-6"
+                            ? "min-w-[190px] rounded-2xl px-3 pl-2 py-2 text-xs"
+                            : "min-w-[280px] rounded-[20px] px-4 pl-3 py-6"
                     )}
                 >
                     <div className="flex items-center gap-3">
-                        <div className={cn("bg-blue-50 text-blue-600", compact ? "rounded-lg p-1.5" : "rounded-xl p-2")}>
+                        <div className={cn("text-blue-600", compact ? "p-0" : "p-0")}>
                             <CalendarRange className="h-4 w-4" />
                         </div>
                         <p className={cn("font-medium text-gray-900", compact ? "text-xs" : "text-sm")}>{triggerLabel}</p>
