@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -550,6 +551,7 @@ export default function AdCreationForm({
   switchVariant,
   handleAddVariant,
   handleDeleteVariant,
+  handleDeleteAllVariants,
   fileVariantMap,
   setFileVariantMap,
   groupVariantMap,
@@ -5350,6 +5352,7 @@ export default function AdCreationForm({
       count: countFilesForVariant(variant.id),
     }))
     .filter((variant) => variant.count > 0);
+  const shouldScrollVariantPicker = variants.length > 6;
 
   const publishDisabled = variants.length > 1
     ? (
@@ -7538,48 +7541,62 @@ export default function AdCreationForm({
         </div>
       )}
       {variants.length > 1 && (
-        <div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-white p-1 shadow-lg">
-          {variants.map((variant) => {
-            const isActive = variant.id === activeVariantId;
-            const assignedCount = countFilesForVariant(variant.id);
+        <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <ScrollArea className={cn("rounded-full", shouldScrollVariantPicker && "w-[30rem] max-w-[calc(100vw-9rem)]")}>
+            <div className="flex w-max items-center gap-1 pr-1">
+              {variants.map((variant) => {
+                const isActive = variant.id === activeVariantId;
+                const assignedCount = countFilesForVariant(variant.id);
 
-            return (
-              <div key={variant.id} className="group flex items-center">
-                <button
-                  type="button"
-                  onClick={() => switchVariant(variant.id)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition",
-                    isActive ? "bg-black text-white" : "hover:bg-gray-100"
-                  )}
-                >
-                  <VariantDot variantId={variant.id} variants={variants} />
-                  <span>{variant.name}</span>
-                  <span className={cn("text-xs", isActive ? "text-white/70" : "text-gray-500")}>
-                    · {assignedCount}
-                  </span>
-                </button>
-                {variant.id !== 'default' && (
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteVariant(variant.id)}
-                    className="ml-0.5 rounded-full p-1 text-red-600 opacity-0 transition group-hover:opacity-100 hover:bg-red-50"
-                    title="Delete variant"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-          <button
-            type="button"
-            onClick={handleAddVariant}
-            className="rounded-full p-1.5 hover:bg-gray-100"
-            title="Add variant"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
+                return (
+                  <div key={variant.id} className="group flex shrink-0 items-center">
+                    <button
+                      type="button"
+                      onClick={() => switchVariant(variant.id)}
+                      className={cn(
+                        "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
+                        isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      <VariantDot variantId={variant.id} variants={variants} />
+                      <span className="whitespace-nowrap">{variant.name}</span>
+                      <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
+                        · {assignedCount}
+                      </span>
+                    </button>
+                    {variant.id !== 'default' && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteVariant(variant.id)}
+                        className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
+                        title="Delete variant"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+          <div className="flex shrink-0 items-center gap-1 border-l border-white/10 pl-2">
+            <button
+              type="button"
+              onClick={handleAddVariant}
+              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              title="Add variant"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteAllVariants}
+              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+              title="Delete all variants"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
     </Card >

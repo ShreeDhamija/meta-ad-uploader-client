@@ -662,7 +662,6 @@ export default function Home() {
             )),
             { id: newVariantId, name: `Variant ${nextLetter}`, snapshot: null }
         ]);
-        setActiveVariantId(newVariantId);
         setSelectedFiles(new Set());
     }, [activeVariantId, captureCurrentSnapshot, variants]);
 
@@ -707,6 +706,43 @@ export default function Home() {
                 : "Variant deleted."
         );
     }, [activeVariantId, fileVariantMap, groupVariantMap, hydrateFromSnapshot, variants]);
+
+    const handleDeleteAllVariants = useCallback(() => {
+        if (variants.length <= 1) return;
+
+        const confirmed = window.confirm("Delete all variants and move every assignment back to Default?");
+        if (!confirmed) return;
+
+        const defaultVariant = variants.find((variant) => variant.id === "default");
+        const defaultSnapshot = activeVariantId === "default"
+            ? captureCurrentSnapshot()
+            : defaultVariant?.snapshot;
+        const clearedAssignments = Object.keys(fileVariantMap).length + Object.keys(groupVariantMap).length;
+
+        setFileVariantMap({});
+        setGroupVariantMap({});
+        setVariants([{ id: "default", name: "Default", snapshot: null }]);
+        setSelectedFiles(new Set());
+
+        if (activeVariantId !== "default" && defaultSnapshot) {
+            hydrateFromSnapshot(defaultSnapshot);
+        }
+
+        setActiveVariantId("default");
+
+        toast.success(
+            clearedAssignments > 0
+                ? `All variants deleted. ${clearedAssignments} assignment${clearedAssignments === 1 ? "" : "s"} moved to Default.`
+                : "All variants deleted."
+        );
+    }, [
+        activeVariantId,
+        captureCurrentSnapshot,
+        fileVariantMap,
+        groupVariantMap,
+        hydrateFromSnapshot,
+        variants,
+    ]);
 
     useEffect(() => {
         const activeVariantIds = new Set(variants.map((variant) => variant.id));
@@ -1132,8 +1168,6 @@ export default function Home() {
                             sortCampaigns={sortCampaigns}
                             useExistingPosts={useExistingPosts}
                             setUseExistingPosts={setUseExistingPosts}
-                            variants={variants}
-                            handleAddVariant={handleAddVariant}
                         />
 
                         <AdCreationForm
@@ -1252,6 +1286,7 @@ export default function Home() {
                             switchVariant={switchVariant}
                             handleAddVariant={handleAddVariant}
                             handleDeleteVariant={handleDeleteVariant}
+                            handleDeleteAllVariants={handleDeleteAllVariants}
                             fileVariantMap={fileVariantMap}
                             setFileVariantMap={setFileVariantMap}
                             groupVariantMap={groupVariantMap}
@@ -1291,6 +1326,7 @@ export default function Home() {
                                 setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                                 variants={variants}
                                 activeVariantId={activeVariantId}
+                                handleAddVariant={handleAddVariant}
                                 fileVariantMap={fileVariantMap}
                                 setFileVariantMap={setFileVariantMap}
                                 groupVariantMap={groupVariantMap}

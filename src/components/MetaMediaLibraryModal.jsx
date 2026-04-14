@@ -9,13 +9,6 @@ import Instagram from "@/assets/icons/ig.svg";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const IG_CACHE_KEY = 'ig_media_cache';
 
@@ -448,7 +441,7 @@ export default function MetaMediaLibraryModal({
                         openModal();
                     }}
                 >
-                    Import From
+                    Use Existing Media
                     <img src={IGColor} className="h-4 w-auto" alt="Instagram" />
                     <span className="text-gray-400">/</span>
                     <img src={Meta} className="h-2 w-auto" alt="Meta" />
@@ -457,7 +450,6 @@ export default function MetaMediaLibraryModal({
         );
     }
 
-    // NEW:
     return (
         <>
             {/* Overlay */}
@@ -470,7 +462,7 @@ export default function MetaMediaLibraryModal({
             <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-5xl max-h-[90vh] rounded-3xl bg-white p-6 shadow-lg flex flex-col">
 
                 {/* Header */}
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                         {mediaSource === 'meta_library'
                             ? <FolderOpen className="h-4 w-4" />
@@ -478,16 +470,33 @@ export default function MetaMediaLibraryModal({
                         }
                         {mediaSource === 'meta_library' ? 'Meta Media Library' : 'Instagram Posts'}
                     </h2>
-                    <div className="flex items-center gap-2">
-                        <Select value={mediaSource} onValueChange={handleSourceChange}>
-                            <SelectTrigger className="w-[200px] rounded-xl">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white rounded-xl">
-                                <SelectItem value="instagram" className="rounded-xl cursor-pointer">Instagram Posts</SelectItem>
-                                <SelectItem value="meta_library" className="rounded-xl cursor-pointer">Meta Media Library</SelectItem>
-                            </SelectContent>
-                        </Select>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-1 rounded-2xl border border-gray-200 bg-white p-1 shadow-sm">
+                            <button
+                                type="button"
+                                onClick={() => handleSourceChange('instagram')}
+                                aria-pressed={mediaSource === 'instagram'}
+                                className={`inline-flex h-9 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-all ${mediaSource === 'instagram'
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                    }`}
+                            >
+                                <img src={Instagram} className="h-4 w-4 object-contain" alt="" aria-hidden="true" />
+                                Instagram Posts
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleSourceChange('meta_library')}
+                                aria-pressed={mediaSource === 'meta_library'}
+                                className={`inline-flex h-9 items-center gap-2 rounded-xl px-3 text-sm font-medium transition-all ${mediaSource === 'meta_library'
+                                    ? 'bg-zinc-900 text-white shadow-sm'
+                                    : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'
+                                    }`}
+                            >
+                                <FolderOpen className="h-4 w-4" />
+                                Meta Media Library
+                            </button>
+                        </div>
                         <Button
                             type="button"
                             variant="outline"

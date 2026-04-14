@@ -1,14 +1,12 @@
 "use client"
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { ChevronDown, Rocket, Trash, Users } from 'lucide-react'
+import { ChevronDown, GripVertical, Loader2, Plus, Rocket, Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2 } from 'lucide-react'
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
-import { GripVertical } from 'lucide-react';
 import RocketImg from '@/assets/rocketpreview.webp';
 import Uploadimg from '@/assets/upload.webp';
 import { Checkbox } from "@/components/ui/checkbox"
@@ -57,6 +55,51 @@ function VariantDot({ variantId, variants }) {
   return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
 }
 
+function VariantAssignmentPopover({
+  assignedVariantId,
+  variants,
+  onAssignVariant,
+  triggerClassName = "",
+  sideOffset = 6,
+}) {
+  const activeVariantName = variants.find((variant) => variant.id === assignedVariantId)?.name || 'Default';
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-900 shadow-sm transition hover:bg-white ${triggerClassName}`.trim()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <VariantDot variantId={assignedVariantId} variants={variants} />
+          <span className="whitespace-nowrap">{activeVariantName}</span>
+          <ChevronDown className="h-3 w-3 shrink-0 text-gray-500" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        sideOffset={sideOffset}
+        className="w-44 rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg"
+        style={{ minWidth: 'var(--radix-popover-trigger-width)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {variants.map((variant) => (
+          <button
+            key={variant.id}
+            type="button"
+            onClick={() => onAssignVariant(variant.id)}
+            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-100"
+          >
+            <VariantDot variantId={variant.id} variants={variants} />
+            <span className="whitespace-nowrap">{variant.name}</span>
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
   file,
@@ -96,7 +139,6 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     zIndex: isDragging ? 1000 : 'auto',
-    opacity: dimmed ? 0.3 : (isDragging ? 0.5 : 1),
   };
 
   const fileId = file.isMetaLibrary
@@ -147,43 +189,31 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
 
       <div className="relative z-10">
         {/* {isCarouselAd && !enablePlacementCustomization && ( */}
-        {isCarouselAd && (
-          <Button
-            type="button"
-            ref={setActivatorNodeRef}
-            {...listeners}
-            variant="ghost"
-            size="icon"
-            className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-xs w-4.5 h-4.5 z-10 cursor-move touch-none"
-            style={{ opacity: 1, backgroundColor: "white" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical className="h-2 w-2 text-gray-600" />
-          </Button>
-        )}
+        <div className={`transition-opacity ${dimmed ? 'opacity-30' : (isDragging ? 'opacity-50' : 'opacity-100')}`}>
+          {isCarouselAd && (
+            <Button
+              type="button"
+              ref={setActivatorNodeRef}
+              {...listeners}
+              variant="ghost"
+              size="icon"
+              className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-xs w-4.5 h-4.5 z-10 cursor-move touch-none"
+              style={{ opacity: 1, backgroundColor: "white" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <GripVertical className="h-2 w-2 text-gray-600" />
+            </Button>
+          )}
 
-        <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
-          {file.isMetaLibrary ? (
-            // Meta library file
-            <img
-              src={
-                file.type === "image"
-                  ? file.url
-                  : file.thumbnail_url || "https://api.withblip.com/thumbnail.jpg"
-              }
-              alt={file.name}
-              title={file.name}
-              className="w-full h-auto object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "https://api.withblip.com/thumbnail.jpg";
-              }}
-            />
-          ) : isVideoFile(file) ? (
-            file.isDrive ? (
-              // Google Drive video - use Drive's thumbnail API
+          <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
+            {file.isMetaLibrary ? (
+              // Meta library file
               <img
-                src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`}
+                src={
+                  file.type === "image"
+                    ? file.url
+                    : file.thumbnail_url || "https://api.withblip.com/thumbnail.jpg"
+                }
                 alt={file.name}
                 title={file.name}
                 className="w-full h-auto object-cover"
@@ -192,21 +222,21 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                   e.target.src = "https://api.withblip.com/thumbnail.jpg";
                 }}
               />
-            ) : file.isDropbox ? (
-              // Dropbox video - use icon or fallback thumbnail
-              <img
-                src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
-                alt={file.name}
-                title={file.name}
-                className="w-full h-auto object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                }}
-              />
-            ) : (
-              // Local video - use generated thumbnail
-              videoThumbs[getFileId(file)] ? (
+            ) : isVideoFile(file) ? (
+              file.isDrive ? (
+                // Google Drive video - use Drive's thumbnail API
+                <img
+                  src={`https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`}
+                  alt={file.name}
+                  title={file.name}
+                  className="w-full h-auto object-cover"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                  }}
+                />
+              ) : file.isDropbox ? (
+                // Dropbox video - use icon or fallback thumbnail
                 <img
                   src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
                   alt={file.name}
@@ -216,90 +246,86 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                     e.target.onerror = null;
                     e.target.src = "https://api.withblip.com/thumbnail.jpg";
                   }}
-                  onLoad={(e) => {
-                    // Check if image actually rendered
-                    if (e.target.naturalWidth === 0) {
-                      e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                    }
-                  }}
                 />
               ) : (
-                <div className="w-full h-32 bg-gray-200 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-                  <span className="ml-2 text-sm text-gray-500">Generating...</span>
-                </div>
+                // Local video - use generated thumbnail
+                videoThumbs[getFileId(file)] ? (
+                  <img
+                    src={videoThumbs[getFileId(file)] || "https://api.withblip.com/thumbnail.jpg"}
+                    alt={file.name}
+                    title={file.name}
+                    className="w-full h-auto object-cover"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                    }}
+                    onLoad={(e) => {
+                      // Check if image actually rendered
+                      if (e.target.naturalWidth === 0) {
+                        e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-32 bg-gray-200 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                    <span className="ml-2 text-sm text-gray-500">Generating...</span>
+                  </div>
+                )
               )
-            )
-          ) : (
-            // Image files
-            <img
-              src={
-                file.isDrive
-                  ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`
-                  : file.isDropbox
-                    ? (videoThumbs[getFileId(file)] || file.directLink || file.icon)
-                    : URL.createObjectURL(file)
-              }
-              alt={file.name}
-              title={file.name}
-              className="w-full h-auto object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "https://api.withblip.com/thumbnail.jpg";
+            ) : (
+              // Image files
+              <img
+                src={
+                  file.isDrive
+                    ? `https://drive.google.com/thumbnail?id=${file.id}&sz=w400-h300`
+                    : file.isDropbox
+                      ? (videoThumbs[getFileId(file)] || file.directLink || file.icon)
+                      : URL.createObjectURL(file)
+                }
+                alt={file.name}
+                title={file.name}
+                className="w-full h-auto object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                }}
+              />
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              className={`absolute border rounded-lg bg-white shadow-xs z-30 ${isCarouselAd
+                ? 'bottom-16 right-1.5 border-gray-300 h-6 w-6 p-2'
+                : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
+                }`}
+              style={{ opacity: 0.9, backgroundColor: "white" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
               }}
-            />
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            className={`absolute border rounded-lg bg-white shadow-xs z-30 ${isCarouselAd
-              ? 'bottom-16 right-1.5 border-gray-300 h-6 w-6 p-2'
-              : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
-              }`}
-            style={{ opacity: 0.9, backgroundColor: "white" }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-          >
-            <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
-            <span className="sr-only">Remove</span>
-          </Button>
-          {showVariantDropdown && (
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="absolute bottom-2 left-2 z-30 flex items-center gap-1 rounded-md border bg-white/95 px-2 py-0.5 text-xs shadow-sm hover:bg-white"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <VariantDot variantId={assignedVariantId} variants={variants} />
-                  <span>{variants.find((variant) => variant.id === assignedVariantId)?.name || 'Default'}</span>
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-44 p-1" onClick={(e) => e.stopPropagation()}>
-                {variants.map((variant) => (
-                  <button
-                    key={variant.id}
-                    type="button"
-                    onClick={() => onAssignVariant(variant.id)}
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-                  >
-                    <VariantDot variantId={variant.id} variants={variants} />
-                    <span>{variant.name}</span>
-                  </button>
-                ))}
-              </PopoverContent>
-            </Popover>
+            >
+              <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
+              <span className="sr-only">Remove</span>
+            </Button>
+          </div>
+          <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
+
+          {isCarouselAd && (
+            <span className="text-[10px] px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
+              Card {(cardIndex !== undefined ? cardIndex : index) + 1}
+            </span>
           )}
         </div>
-        <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
 
-        {isCarouselAd && (
-          <span className="text-[10px] px-2 py-1 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 mt-1 block w-fit">
-            Card {(cardIndex !== undefined ? cardIndex : index) + 1}
-          </span>
+        {showVariantDropdown && (
+          <div className="absolute bottom-3 left-2 z-30">
+            <VariantAssignmentPopover
+              assignedVariantId={assignedVariantId}
+              variants={variants}
+              onAssignVariant={onAssignVariant}
+            />
+          </div>
         )}
       </div>
     </div>
@@ -333,6 +359,7 @@ export default function MediaPreview({
   setSelectedIgOrganicPosts,
   variants,
   activeVariantId,
+  handleAddVariant,
   fileVariantMap,
   setFileVariantMap,
   groupVariantMap,
@@ -506,6 +533,12 @@ export default function MediaPreview({
 
     return false;
   }, [selectedAdSets, adSets, duplicateAdSet]);
+
+  const showPlacementCustomizationRow = !isCarouselAd &&
+    hasOnlyNonDynamicCreativeAdSets &&
+    adType !== 'flexible' &&
+    importedPosts.length === 0 &&
+    selectedIgOrganicPosts.length === 0;
 
 
 
@@ -1000,6 +1033,18 @@ export default function MediaPreview({
             </div>
 
             <div className="flex gap-2">
+              {variants.length === 1 && !showPlacementCustomizationRow && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddVariant}
+                  className="rounded-xl bg-white"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Variants
+                </Button>
+              )}
 
               {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
                 <>
@@ -1084,25 +1129,35 @@ export default function MediaPreview({
           </CardHeader>
 
           {/* Placement Customization Checkbox - only show when carousel is disabled */}
-          {!isCarouselAd &&
-            hasOnlyNonDynamicCreativeAdSets &&
-            adType !== 'flexible' &&
-            importedPosts.length === 0 &&
-            selectedIgOrganicPosts.length === 0 && (
+          {showPlacementCustomizationRow && (
               <div className="px-6 pb-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="placementCustomization"
-                    checked={enablePlacementCustomization}
-                    onCheckedChange={handlePlacementCustomizationChange}
-                    className="border-gray-400 rounded-md"
-                  />
-                  <label
-                    htmlFor="placementCustomization"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Group media for placement customized ad.
-                  </label>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="placementCustomization"
+                      checked={enablePlacementCustomization}
+                      onCheckedChange={handlePlacementCustomizationChange}
+                      className="border-gray-400 rounded-md"
+                    />
+                    <label
+                      htmlFor="placementCustomization"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Enable placement customization
+                    </label>
+                  </div>
+                  {variants.length === 1 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddVariant}
+                      className="rounded-xl bg-white"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Variants
+                    </Button>
+                  )}
                 </div>
                 {enablePlacementCustomization && (
                   <span className="block text-xs text-gray-500 mt-1">
@@ -1133,18 +1188,17 @@ export default function MediaPreview({
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-4">
-                  {fileGroups.map((group, groupIndex) => (
+                  {fileGroups.map((group, groupIndex) => {
+                    const isGroupDimmed = activeVariantId !== 'default' && (groupVariantMap[group.id] || 'default') !== activeVariantId;
+
+                    return (
                     <div
                       key={group.id || `group-${groupIndex}`}
                       className="relative"
-                      style={{
-                        opacity: activeVariantId !== 'default' && (groupVariantMap[group.id] || 'default') !== activeVariantId ? 0.3 : 1,
-                        transition: 'opacity 150ms'
-                      }}
                     >
                       {/* Shared group background */}
                       <div
-                        className={`absolute inset-0 border-2 rounded-2xl -z-10 ${groupIndex % 2 === 0
+                        className={`absolute inset-0 -z-10 rounded-2xl border-2 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'} ${groupIndex % 2 === 0
                           ? 'bg-blue-100 border-blue-300'
                           : 'bg-orange-100 border-orange-300'
                           }`}
@@ -1161,34 +1215,16 @@ export default function MediaPreview({
                         Ungroup
                       </Button>
                       {variants.length > 1 && (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button
-                              type="button"
-                              className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-md border bg-white/95 px-2 py-0.5 text-xs shadow-sm hover:bg-white"
-                            >
-                              <VariantDot variantId={groupVariantMap[group.id] || 'default'} variants={variants} />
-                              <span>{variants.find((variant) => variant.id === (groupVariantMap[group.id] || 'default'))?.name || 'Default'}</span>
-                              <ChevronDown className="h-3 w-3" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-44 p-1">
-                            {variants.map((variant) => (
-                              <button
-                                key={variant.id}
-                                type="button"
-                                onClick={() => assignGroupToVariant(group.id, variant.id)}
-                                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-gray-100"
-                              >
-                                <VariantDot variantId={variant.id} variants={variants} />
-                                <span>{variant.name}</span>
-                              </button>
-                            ))}
-                          </PopoverContent>
-                        </Popover>
+                        <div className="absolute bottom-2 left-2 z-20">
+                          <VariantAssignmentPopover
+                            assignedVariantId={groupVariantMap[group.id] || 'default'}
+                            variants={variants}
+                            onAssignVariant={(variantId) => assignGroupToVariant(group.id, variantId)}
+                          />
+                        </div>
                       )}
                       {/* Group label */}
-                      <div className={`absolute bottom-2 right-2 z-20 text-white text-xs px-2 py-1 rounded-xl font-semibold ${groupIndex % 2 === 0
+                      <div className={`absolute bottom-2 right-2 z-20 text-white text-xs px-2 py-1 rounded-xl font-semibold transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'} ${groupIndex % 2 === 0
                         ? 'bg-blue-500'
                         : 'bg-orange-500'
                         }`}>
@@ -1197,50 +1233,52 @@ export default function MediaPreview({
 
                       {isCarouselAd ? (
                         /* Per-group DndContext for carousel reordering */
-                        <DndContext
-                          sensors={sensors}
-                          collisionDetection={closestCenter}
-                          onDragEnd={(event) => handleGroupDragEnd(group.id, event)}
-                        >
-                          <SortableContext
-                            items={getGroupFileIds(group)}
-                            strategy={verticalListSortingStrategy}
+                        <div className={`transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={(event) => handleGroupDragEnd(group.id, event)}
                           >
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
-                              {getGroupFileIds(group).map((fileId, cardIdx) => {
-                                const file = findFileById(fileId);
-                                if (!file) {
-                                  console.warn(`File not found for ID: ${fileId}`);
-                                  return null;
-                                }
-                                return (
-                                  <SortableMediaItem
-                                    key={fileId}
-                                    file={file}
-                                    index={cardIdx}
-                                    cardIndex={cardIdx}
-                                    isCarouselAd={isCarouselAd}
-                                    videoThumbs={videoThumbs}
-                                    onRemove={() => removeFile(file)}
-                                    isSelected={false}
-                                    onSelect={handleFileSelect}
-                                    groupNumber={groupIndex + 1}
-                                    enablePlacementCustomization={enablePlacementCustomization}
-                                    adType={adType}
-                                    dimmed={false}
-                                    showVariantDropdown={false}
-                                    assignedVariantId={groupVariantMap[group.id] || 'default'}
-                                    variants={variants}
-                                    onAssignVariant={() => { }}
-                                  />
-                                );
-                              })}
-                            </div>
-                          </SortableContext>
-                        </DndContext>
+                            <SortableContext
+                              items={getGroupFileIds(group)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
+                                {getGroupFileIds(group).map((fileId, cardIdx) => {
+                                  const file = findFileById(fileId);
+                                  if (!file) {
+                                    console.warn(`File not found for ID: ${fileId}`);
+                                    return null;
+                                  }
+                                  return (
+                                    <SortableMediaItem
+                                      key={fileId}
+                                      file={file}
+                                      index={cardIdx}
+                                      cardIndex={cardIdx}
+                                      isCarouselAd={isCarouselAd}
+                                      videoThumbs={videoThumbs}
+                                      onRemove={() => removeFile(file)}
+                                      isSelected={false}
+                                      onSelect={handleFileSelect}
+                                      groupNumber={groupIndex + 1}
+                                      enablePlacementCustomization={enablePlacementCustomization}
+                                      adType={adType}
+                                      dimmed={false}
+                                      showVariantDropdown={false}
+                                      assignedVariantId={groupVariantMap[group.id] || 'default'}
+                                      variants={variants}
+                                      onAssignVariant={() => { }}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </SortableContext>
+                          </DndContext>
+                        </div>
                       ) : (
                         /* Original non-DnD group rendering for placement customization / flexible */
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
+                        <div className={`grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
                           {getGroupFileIds(group).map((fileId) => {
                             const file = findFileById(fileId);
                             if (!file) {
@@ -1272,7 +1310,7 @@ export default function MediaPreview({
                         </div>
                       )}
                     </div>
-                  ))}
+                  )})}
 
                   {/* Ungrouped files */}
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-6" style={{ padding: '6px', }}>
