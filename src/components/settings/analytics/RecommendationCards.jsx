@@ -10,14 +10,20 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
-    TrendingUp, TrendingDown, Pause, Loader2, XCircle, Activity,
-    Star, CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw,
+    Loader2, XCircle, Activity, Pause,
+    CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogOverlay,
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
+import scaleIcon from "@/assets/icons/analytics/recommendations/scale.svg"
+import reduceIcon from "@/assets/icons/analytics/recommendations/reduce.svg"
+import pauseIcon from "@/assets/icons/analytics/recommendations/pause.svg"
+import consolidateIcon from "@/assets/icons/analytics/recommendations/Consolidate.svg"
+import trendAlertIcon from "@/assets/icons/analytics/recommendations/trend_alert.svg"
+import scaleWinnerIcon from "@/assets/icons/analytics/recommendations/Scale_Winner.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -54,45 +60,38 @@ function BoldedMessage({ text, emphasisClassName = "text-gray-900" }) {
 // ── Type config for budget recommendation cards ─────────
 const TYPE_CONFIG = {
     scale: {
-        color: 'green', bgClass: 'border-green-400 bg-green-50/30', iconBg: 'bg-green-100',
-        iconColor: 'text-green-600', badgeBg: 'bg-green-100 text-green-700 border-green-200',
+        color: 'green', bgClass: 'border-green-400 bg-green-50/30', badgeBg: 'bg-green-100 text-green-700 border-green-200',
         btnClass: 'bg-green-600 hover:bg-green-700', titleText: 'text-green-900', bodyText: 'text-green-900/70',
         metaText: 'text-green-900', subtleText: 'text-green-700', badgeLabelBg: 'bg-green-100 text-green-900 border-green-200',
-        Icon: TrendingUp, label: 'Scale',
+        iconSrc: scaleIcon, label: 'Scale',
     },
     reduce: {
-        color: 'yellow', bgClass: 'border-yellow-400 bg-yellow-50/30', iconBg: 'bg-yellow-100',
-        iconColor: 'text-yellow-700', badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+        color: 'yellow', bgClass: 'border-yellow-400 bg-yellow-50/30', badgeBg: 'bg-yellow-100 text-yellow-800 border-yellow-200',
         btnClass: 'bg-yellow-500 text-white hover:bg-yellow-600', titleText: 'text-yellow-900', bodyText: 'text-yellow-900/70',
         metaText: 'text-yellow-900', subtleText: 'text-yellow-700', badgeLabelBg: 'bg-yellow-100 text-yellow-900 border-yellow-200',
-        Icon: TrendingDown, label: 'Reduce',
+        iconSrc: reduceIcon, label: 'Reduce',
     },
     pause: {
-        color: 'red', bgClass: 'border-red-400 bg-red-50/80', iconBg: 'bg-red-100',
-        iconColor: 'text-red-600', badgeBg: 'bg-red-100 text-red-700 border-red-200',
+        color: 'red', bgClass: 'border-red-400 bg-red-50/80', badgeBg: 'bg-red-100 text-red-700 border-red-200',
         btnClass: 'bg-red-600 hover:bg-red-700', titleText: 'text-red-900', bodyText: 'text-red-900/70',
         metaText: 'text-red-900', subtleText: 'text-red-700', badgeLabelBg: 'bg-red-100 text-red-900 border-red-200',
-        Icon: Pause, label: 'Pause',
+        iconSrc: pauseIcon, label: 'Pause',
     },
     scale_winner: {
-        color: 'blue', bgClass: ' border-sky-400 bg-sky-100/30', iconBg: 'bg-blue-100',
-        iconColor: 'text-blue-600', badgeBg: 'bg-blue-100 text-blue-700 border-blue-200',
+        color: 'blue', bgClass: ' border-sky-400 bg-sky-100/30', badgeBg: 'bg-blue-100 text-blue-700 border-blue-200',
         btnClass: 'bg-blue-600 hover:bg-blue-700', titleText: 'text-blue-900', bodyText: 'text-blue-900/70',
         metaText: 'text-blue-900', subtleText: 'text-blue-700', badgeLabelBg: 'bg-blue-100 text-blue-900 border-blue-200',
-        Icon: Star, label: 'Scale Winner',
+        iconSrc: scaleWinnerIcon, label: 'Scale Winner',
     },
     consolidate: {
-        color: 'orange', bgClass: 'border-orange-400 bg-orange-50/80', iconBg: 'bg-orange-100',
-        iconColor: 'text-orange-700', badgeBg: 'bg-orange-100 text-orange-800 border-orange-200',
+        color: 'orange', bgClass: 'border-orange-400 bg-orange-50/80', badgeBg: 'bg-orange-100 text-orange-800 border-orange-200',
         btnClass: 'bg-orange-600 hover:bg-orange-700', titleText: 'text-orange-900', bodyText: 'text-orange-900/70',
         metaText: 'text-orange-900', subtleText: 'text-orange-700', badgeLabelBg: 'bg-orange-100 text-orange-900 border-orange-200',
-        Icon: Activity, label: 'Consolidate',
+        iconSrc: consolidateIcon, label: 'Consolidate',
     },
     trend_alert: {
         color: 'amber',
         bgClass: 'border-amber-400 bg-amber-50/80',
-        iconBg: 'bg-amber-100',
-        iconColor: 'text-amber-600',
         badgeBg: 'bg-amber-100 text-amber-700 border-amber-200',
         titleText: 'text-amber-900',
         bodyText: 'text-amber-900',
@@ -100,7 +99,7 @@ const TYPE_CONFIG = {
         subtleText: 'text-amber-700',
         badgeLabelBg: 'bg-amber-100 text-amber-900 border-amber-200',
         btnClass: '',
-        Icon: AlertTriangle,
+        iconSrc: trendAlertIcon,
         label: 'Alert',
     },
 }
@@ -448,8 +447,6 @@ export default function RecommendationCards({
                                             const cfg = (neutralStyle && rec.type === 'scale_winner') ? {
                                                 ...baseCfg,
                                                 bgClass: 'border-gray-200 bg-white',
-                                                iconBg: 'bg-gray-100',
-                                                iconColor: 'text-gray-500',
                                                 badgeBg: 'bg-gray-100 text-gray-600 border-gray-200',
                                                 titleText: 'text-gray-900',
                                                 bodyText: 'text-gray-900',
@@ -458,7 +455,6 @@ export default function RecommendationCards({
                                                 badgeLabelBg: 'bg-gray-100 text-gray-900 border-gray-200',
                                                 btnClass: 'bg-gray-700 hover:bg-gray-800',
                                             } : baseCfg
-                                            const Icon = baseCfg.Icon
                                             const applying = applyingId === key
 
                                             const suggestedBudget = rec.budgetChange && (rec.dailyBudget || rec.lifetimeBudget)
@@ -470,9 +466,13 @@ export default function RecommendationCards({
                                                     <CardContent className="p-4">
                                                         <div className="flex items-start justify-between gap-3">
                                                             <div className="flex items-start gap-3 flex-1 min-w-0">
-                                                                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", cfg.iconBg)}>
-                                                                    <Icon className={cn("w-5 h-5", cfg.iconColor)} />
-                                                                </div>
+                                                                <img
+                                                                    src={cfg.iconSrc}
+                                                                    alt=""
+                                                                    aria-hidden="true"
+                                                                    className="h-[38px] w-[38px] flex-shrink-0"
+                                                                    style={{ filter: "drop-shadow(0px 1px 5px rgba(0, 0, 0, 0.15))" }}
+                                                                />
                                                                 <div className="flex-1 min-w-0">
                                                                     <div className="min-w-0">
                                                                         {rec.type === 'scale_winner' && !neutralStyle && (
@@ -584,6 +584,7 @@ export default function RecommendationCards({
                                                                 variant="ghost" size="sm"
                                                                 onClick={() => handleDismiss(rec)}
                                                                 className="h-8 w-8 p-0 text-gray-400 hover:bg-transparent hover:text-red-600 focus-visible:bg-transparent focus-visible:text-red-600"
+                                                                title="Dismiss"
                                                             >
                                                                 <XCircle className="w-4 h-4" />
                                                             </Button>
@@ -605,9 +606,13 @@ export default function RecommendationCards({
                                                                 className="w-full p-4 flex items-center justify-between gap-3"
                                                             >
                                                                 <div className="flex items-center gap-3">
-                                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-blue-100">
-                                                                        <Star className="w-5 h-5 text-blue-600" />
-                                                                    </div>
+                                                                    <img
+                                                                        src={scaleWinnerIcon}
+                                                                        alt=""
+                                                                        aria-hidden="true"
+                                                                        className="h-[38px] w-[38px] flex-shrink-0"
+                                                                        style={{ filter: "drop-shadow(0px 1px 5px rgba(0, 0, 0, 0.15))" }}
+                                                                    />
                                                                     <div className="text-left">
                                                                         <div className="flex items-center gap-2">
                                                                             <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-blue-600 text-white border-blue-600 whitespace-nowrap">

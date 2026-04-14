@@ -117,14 +117,14 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
         {/* {isCarouselAd && !enablePlacementCustomization && ( */}
         {isCarouselAd && (
           <Button
+            type="button"
             ref={setActivatorNodeRef}
             {...listeners}
             variant="ghost"
             size="icon"
-            className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-xs w-4.5 h-4.5 z-10 cursor-move"
+            className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-xs w-4.5 h-4.5 z-10 cursor-move touch-none"
             style={{ opacity: 1, backgroundColor: "white" }}
             onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
           >
             <GripVertical className="h-2 w-2 text-gray-600" />
           </Button>
