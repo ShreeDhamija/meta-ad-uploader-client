@@ -1008,7 +1008,7 @@ export default function AnalyticsDashboard() {
                             />
                         </div>
                         {preferencesLoading ? (
-                            <div className="grid grid-cols-1 lg:relative lg:min-h-[420px] lg:grid-cols-2">
+                            <div className="grid grid-cols-1 lg:relative lg:min-h-[420px] lg:grid-cols-2 lg:pt-16">
                                 <div className="py-14">
                                     <div className="flex flex-col items-center justify-center gap-3">
                                         <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -1022,7 +1022,7 @@ export default function AnalyticsDashboard() {
                                     </div>
                                 </div>
                                 <div className="pointer-events-none absolute left-1/2 top-[10%] hidden h-[80%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
-                                <div className="absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
+                                <div className="absolute left-1/2 top-4 z-10 hidden -translate-x-1/2 lg:block">
                                     <AnalyticsDateRangePicker
                                         value={analyticsDateRange}
                                         onChange={setAnalyticsDateRange}
@@ -1031,7 +1031,7 @@ export default function AnalyticsDashboard() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 lg:relative lg:min-h-[390px] lg:grid-cols-2">
+                            <div className="grid grid-cols-1 lg:relative lg:min-h-[420px] lg:grid-cols-2 lg:pt-16">
                                 <div>
                                     <KPIChart
                                         data={dailyInsights}
@@ -1046,7 +1046,7 @@ export default function AnalyticsDashboard() {
                                     />
                                 </div>
                                 <div className="pointer-events-none absolute left-1/2 top-[10%] hidden h-[80%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
-                                <div className="absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
+                                <div className="absolute left-1/2 top-4 z-10 hidden -translate-x-1/2 lg:block">
                                     <AnalyticsDateRangePicker
                                         value={analyticsDateRange}
                                         onChange={setAnalyticsDateRange}
