@@ -49,6 +49,8 @@ const METRIC_OPTIONS = {
     },
 }
 
+const WEEKLY_CHART_SIDE_INSET = 56
+
 export default function WeeklyChart({ data, loading, className }) {
     const [selectedMetrics, setSelectedMetrics] = useState(["costPerLinkClick", "frequency"])
 
@@ -188,7 +190,13 @@ export default function WeeklyChart({ data, loading, className }) {
                         </LineChart>
                     </ResponsiveContainer>
 
-                    <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div
+                        className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+                        style={{
+                            paddingLeft: `${WEEKLY_CHART_SIDE_INSET}px`,
+                            paddingRight: `${WEEKLY_CHART_SIDE_INSET}px`,
+                        }}
+                    >
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
                             {selectedMetricConfigs.map((metric) => (
                                 <div key={metric.key} className="flex items-center gap-2">

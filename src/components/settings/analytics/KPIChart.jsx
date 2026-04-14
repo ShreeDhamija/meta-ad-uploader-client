@@ -16,6 +16,7 @@ const COLORS = [
 ]
 
 const MAX_NAME_LENGTH = 50
+const DAILY_CHART_LEFT_INSET = 50
 
 function truncateName(name) {
     if (!name) return ''
@@ -150,7 +151,7 @@ export default function KPIChart({ data, loading, mode }) {
 
     return (
         <div className="p-4">
-            <div className="mb-[22px] flex items-center justify-between">
+            <div className="mb-[22px] flex items-center justify-between" style={{ paddingLeft: `${DAILY_CHART_LEFT_INSET}px` }}>
                 <div>
                     <p className="text-sm font-medium text-gray-900">Daily {metricLabel} by Campaign</p>
                     <p className="text-xs text-gray-400">
@@ -187,7 +188,7 @@ export default function KPIChart({ data, loading, mode }) {
                                 tickLine={false}
                                 axisLine={false}
                                 tickFormatter={(v) => mode === 'roas' ? `${v.toFixed(1)}x` : `$${Math.round(v)}`}
-                                width={50}
+                                width={DAILY_CHART_LEFT_INSET}
                             />
                             <Tooltip
                                 contentStyle={{
@@ -230,6 +231,7 @@ export default function KPIChart({ data, loading, mode }) {
                             <div
                                 ref={legendRef}
                                 className="max-h-[88px] overflow-y-auto custom-scrollbar"
+                                style={{ paddingLeft: `${DAILY_CHART_LEFT_INSET}px` }}
                             >
                                 <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pr-4">
                                     {campaigns.map((name, i) => {

@@ -673,7 +673,7 @@ export default function ReorderAdNameParts({
             <Button
               variant="outline"
               size="sm"
-              className="rounded-2xl px-3 whitespace-nowrap hover:bg-white"
+              className="rounded-xl px-3 whitespace-nowrap hover:bg-white"
               onClick={() => setShowSetupDialog(true)}
             >
               Custom Variables
