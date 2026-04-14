@@ -24,7 +24,7 @@ function areRangesEqual(left, right) {
         && left?.until === right?.until
 }
 
-export default function AnalyticsDateRangePicker({ value, onChange }) {
+export default function AnalyticsDateRangePicker({ value, onChange, compact = false }) {
     const [open, setOpen] = useState(false)
     const [draftRange, setDraftRange] = useState(() => getAnalyticsDateRangeSelection(value))
     const [draftValue, setDraftValue] = useState(value)
@@ -79,13 +79,18 @@ export default function AnalyticsDateRangePicker({ value, onChange }) {
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
-                    className="min-w-[280px] justify-between rounded-[20px] border-gray-200 bg-white px-4 pl-2 py-6 text-left shadow-xs hover:bg-white"
+                    className={cn(
+                        "justify-between border-gray-200 bg-white text-left shadow-xs hover:bg-white",
+                        compact
+                            ? "min-w-[190px] rounded-2xl px-3 py-2 text-xs"
+                            : "min-w-[280px] rounded-[20px] px-4 pl-2 py-6"
+                    )}
                 >
                     <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-blue-50 p-2 text-blue-600">
+                        <div className={cn("bg-blue-50 text-blue-600", compact ? "rounded-lg p-1.5" : "rounded-xl p-2")}>
                             <CalendarRange className="h-4 w-4" />
                         </div>
-                        <p className="text-sm font-medium text-gray-900">{triggerLabel}</p>
+                        <p className={cn("font-medium text-gray-900", compact ? "text-xs" : "text-sm")}>{triggerLabel}</p>
                     </div>
                     <ChevronDown className="ml-3 h-4 w-4 shrink-0 text-gray-400" />
                 </Button>

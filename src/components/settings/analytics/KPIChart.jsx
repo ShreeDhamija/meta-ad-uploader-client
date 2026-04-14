@@ -5,7 +5,6 @@
 import { useMemo, useState, useCallback, useRef, useEffect } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
-import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -150,130 +149,128 @@ export default function KPIChart({ data, loading, mode }) {
         : (v) => v !== null && v !== undefined ? `$${v.toFixed(2)}` : 'N/A'
 
     return (
-        <Card className="rounded-2xl border-gray-200">
-            <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                    <div>
-                        <p className="text-sm font-medium text-gray-900">Daily {metricLabel} by Campaign</p>
-                        <p className="text-xs text-gray-400">
-                            {data?.primaryActionType
-                                ? `Event: ${formatEventName(data.primaryActionType)}`
-                                : 'Auto-detected event'}
-                        </p>
-                    </div>
+        <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+                <div>
+                    <p className="text-sm font-medium text-gray-900">Daily {metricLabel} by Campaign</p>
+                    <p className="text-xs text-gray-400">
+                        {data?.primaryActionType
+                            ? `Event: ${formatEventName(data.primaryActionType)}`
+                            : 'Auto-detected event'}
+                    </p>
                 </div>
+            </div>
 
-                {loading ? (
-                    <div className="flex items-center justify-center h-[200px]">
-                        <Helix size="36" speed="2.5" color="#3b82f6" />
-                    </div>
-                ) : chartData.length === 0 ? (
-                    <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
-                        No data available for this period
-                    </div>
-                ) : (
-                    <>
-                        {/* Chart — fixed height, never squished */}
-                        <ResponsiveContainer width="100%" height={200}>
-                            <LineChart data={chartDataWithTrend} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis
-                                    dataKey="label"
-                                    tick={{ fontSize: 10, fill: '#9ca3af' }}
-                                    tickLine={false}
-                                    axisLine={{ stroke: '#e5e7eb' }}
-                                    interval="preserveStartEnd"
-                                />
-                                <YAxis
-                                    tick={{ fontSize: 10, fill: '#9ca3af' }}
-                                    tickLine={false}
-                                    axisLine={false}
-                                    tickFormatter={(v) => mode === 'roas' ? `${v.toFixed(1)}x` : `$${Math.round(v)}`}
-                                    width={50}
-                                />
-                                <Tooltip
-                                    contentStyle={{
-                                        borderRadius: '12px', border: '1px solid #e5e7eb',
-                                        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '12px',
-                                    }}
-                                    formatter={(value, name) => [formatValue(value), name]}
-                                    labelStyle={{ fontWeight: 600, marginBottom: 4 }}
-                                />
+            {loading ? (
+                <div className="flex items-center justify-center h-[200px]">
+                    <Helix size="36" speed="2.5" color="#3b82f6" />
+                </div>
+            ) : chartData.length === 0 ? (
+                <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
+                    No data available for this period
+                </div>
+            ) : (
+                <>
+                    {/* Chart — fixed height, never squished */}
+                    <ResponsiveContainer width="100%" height={200}>
+                        <LineChart data={chartDataWithTrend} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                            <XAxis
+                                dataKey="label"
+                                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                                tickLine={false}
+                                axisLine={{ stroke: '#e5e7eb' }}
+                                interval="preserveStartEnd"
+                            />
+                            <YAxis
+                                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                                tickLine={false}
+                                axisLine={false}
+                                tickFormatter={(v) => mode === 'roas' ? `${v.toFixed(1)}x` : `$${Math.round(v)}`}
+                                width={50}
+                            />
+                            <Tooltip
+                                contentStyle={{
+                                    borderRadius: '12px', border: '1px solid #e5e7eb',
+                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '12px',
+                                }}
+                                formatter={(value, name) => [formatValue(value), name]}
+                                labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                            />
+                            <Line
+                                type="monotone"
+                                dataKey="__trend"
+                                name="Trend"
+                                stroke="#111827"
+                                strokeWidth={2}
+                                strokeDasharray="6 4"
+                                dot={false}
+                                activeDot={false}
+                                connectNulls
+                            />
+                            {campaigns.map((name, i) => (
                                 <Line
+                                    key={name}
                                     type="monotone"
-                                    dataKey="__trend"
-                                    name="Trend"
-                                    stroke="#111827"
+                                    dataKey={name}
+                                    stroke={COLORS[i % COLORS.length]}
                                     strokeWidth={2}
-                                    strokeDasharray="6 4"
                                     dot={false}
-                                    activeDot={false}
+                                    activeDot={{ r: 4, strokeWidth: 0 }}
                                     connectNulls
+                                    hide={hiddenCampaigns.has(name)}
                                 />
-                                {campaigns.map((name, i) => (
-                                    <Line
-                                        key={name}
-                                        type="monotone"
-                                        dataKey={name}
-                                        stroke={COLORS[i % COLORS.length]}
-                                        strokeWidth={2}
-                                        dot={false}
-                                        activeDot={{ r: 4, strokeWidth: 0 }}
-                                        connectNulls
-                                        hide={hiddenCampaigns.has(name)}
-                                    />
-                                ))}
-                            </LineChart>
-                        </ResponsiveContainer>
+                            ))}
+                        </LineChart>
+                    </ResponsiveContainer>
 
 
-                        {campaigns.length > 0 && (
-                            <div className="relative mt-3">
-                                <div
-                                    ref={legendRef}
-                                    className="max-h-[88px] overflow-y-auto custom-scrollbar"
-                                >
-                                    <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pr-4">
-                                        {campaigns.map((name, i) => {
-                                            const isHidden = hiddenCampaigns.has(name)
-                                            return (
-                                                <button
-                                                    key={name}
-                                                    onClick={() => handleToggleCampaign(name)}
-                                                    title={name}
-                                                    className="flex items-center gap-2 text-left min-w-0 py-0.5 group"
+                    {campaigns.length > 0 && (
+                        <div className="relative mt-3">
+                            <div
+                                ref={legendRef}
+                                className="max-h-[88px] overflow-y-auto custom-scrollbar"
+                            >
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-1.5 pr-4">
+                                    {campaigns.map((name, i) => {
+                                        const isHidden = hiddenCampaigns.has(name)
+                                        return (
+                                            <button
+                                                key={name}
+                                                onClick={() => handleToggleCampaign(name)}
+                                                title={name}
+                                                className="flex items-center gap-2 text-left min-w-0 py-0.5 group"
+                                            >
+                                                <span
+                                                    className="w-3 h-[3px] rounded-full flex-shrink-0 transition-opacity"
+                                                    style={{
+                                                        backgroundColor: COLORS[i % COLORS.length],
+                                                        opacity: isHidden ? 0.25 : 1,
+                                                    }}
+                                                />
+                                                <span
+                                                    className={cn(
+                                                        "text-[11px] truncate transition-colors",
+                                                        isHidden
+                                                            ? "text-gray-300 line-through"
+                                                            : "text-gray-600 group-hover:text-gray-900"
+                                                    )}
                                                 >
-                                                    <span
-                                                        className="w-3 h-[3px] rounded-full flex-shrink-0 transition-opacity"
-                                                        style={{
-                                                            backgroundColor: COLORS[i % COLORS.length],
-                                                            opacity: isHidden ? 0.25 : 1,
-                                                        }}
-                                                    />
-                                                    <span
-                                                        className={cn(
-                                                            "text-[11px] truncate transition-colors",
-                                                            isHidden
-                                                                ? "text-gray-300 line-through"
-                                                                : "text-gray-600 group-hover:text-gray-900"
-                                                        )}
-                                                    >
-                                                        {truncateName(name)}
-                                                    </span>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
+                                                    {truncateName(name)}
+                                                </span>
+                                            </button>
+                                        )
+                                    })}
                                 </div>
-                                {/* Fade hint when more items below */}
-                                {canScroll && !scrolledToBottom && (
-                                    <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none rounded-b" />
-                                )}
                             </div>
-                        )}
-                    </>
-                )}
-            </CardContent>
-        </Card>
+                            {/* Fade hint when more items below */}
+                            {canScroll && !scrolledToBottom && (
+                                <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-white to-transparent pointer-events-none rounded-b" />
+                            )}
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
     )
 }

@@ -996,52 +996,52 @@ export default function AnalyticsDashboard() {
                 </div>
             </div>
 
-            {selectedAdAccount && (
-                <div className="flex justify-end">
-                    <AnalyticsDateRangePicker
-                        value={analyticsDateRange}
-                        onChange={setAnalyticsDateRange}
-                    />
-                </div>
-            )}
-
             {/* ── Charts Row  */}
             {selectedAdAccount && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Card className="rounded-3xl border-gray-200 overflow-hidden">
+                    <CardContent className="p-0">
+                        <div className="flex items-start justify-end border-b border-gray-200 px-4 py-3">
+                            <AnalyticsDateRangePicker
+                                value={analyticsDateRange}
+                                onChange={setAnalyticsDateRange}
+                                compact
+                            />
+                        </div>
+
                     {preferencesLoading ? (
-                        <>
-                            <Card className="rounded-2xl">
-                                <CardContent className="py-14">
-                                    <div className="flex flex-col items-center justify-center gap-3">
-                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                                        <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                            <Card className="rounded-2xl">
-                                <CardContent className="py-14">
-                                    <div className="flex flex-col items-center justify-center gap-3">
-                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                                        <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-gray-200">
+                            <div className="py-14">
+                                <div className="flex flex-col items-center justify-center gap-3">
+                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                    <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
+                                </div>
+                            </div>
+                            <div className="border-t border-gray-200 py-14 lg:border-t-0">
+                                <div className="flex flex-col items-center justify-center gap-3">
+                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                    <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
+                                </div>
+                            </div>
+                        </div>
                     ) : (
-                        <>
-                            <KPIChart
-                                data={dailyInsights}
-                                loading={dailyLoading}
-                                mode={metricMode}
-                            />
-                            <WeeklyChart
-                                data={weeklyInsights}
-                                loading={weeklyLoading}
-                                dateRange={analyticsDateRange}
-                            />
-                        </>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-gray-200">
+                            <div>
+                                <KPIChart
+                                    data={dailyInsights}
+                                    loading={dailyLoading}
+                                    mode={metricMode}
+                                />
+                            </div>
+                            <div className="border-t border-gray-200 lg:border-t-0">
+                                <WeeklyChart
+                                    data={weeklyInsights}
+                                    loading={weeklyLoading}
+                                />
+                            </div>
+                        </div>
                     )}
-                </div>
+                    </CardContent>
+                </Card>
             )}
 
             {/* ── Tab Switcher ── */}
