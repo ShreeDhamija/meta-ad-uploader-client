@@ -1210,6 +1210,7 @@ export default function Home() {
                             selectedForm={selectedForm}
                             setSelectedForm={setSelectedForm}
                             newAdSetName={newAdSetName}
+                            setNewAdSetName={setNewAdSetName}
                             launchPaused={launchPaused}
                             setLaunchPaused={setLaunchPaused}
                             isCarouselAd={isCarouselAd}
@@ -1255,6 +1256,7 @@ export default function Home() {
                             setFileVariantMap={setFileVariantMap}
                             groupVariantMap={groupVariantMap}
                             setGroupVariantMap={setGroupVariantMap}
+
 
                         />
                     </div>

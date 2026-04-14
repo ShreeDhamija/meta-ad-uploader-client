@@ -509,6 +509,7 @@ export default function AdCreationForm({
   selectedForm,
   setSelectedForm,
   newAdSetName,
+  setNewAdSetName,
   launchPaused,
   setLaunchPaused,
   isCarouselAd,
