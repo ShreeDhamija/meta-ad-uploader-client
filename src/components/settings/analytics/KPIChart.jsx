@@ -150,7 +150,7 @@ export default function KPIChart({ data, loading, mode }) {
 
     return (
         <div className="p-4">
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-[22px] flex items-center justify-between">
                 <div>
                     <p className="text-sm font-medium text-gray-900">Daily {metricLabel} by Campaign</p>
                     <p className="text-xs text-gray-400">

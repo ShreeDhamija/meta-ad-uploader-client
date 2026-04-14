@@ -8,7 +8,6 @@ import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { cn } from "@/lib/utils"
 import { ChevronDown, CheckCircle2 } from "lucide-react"
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -50,7 +49,7 @@ const METRIC_OPTIONS = {
     },
 }
 
-export default function WeeklyChart({ data, loading, className, headerAction = null }) {
+export default function WeeklyChart({ data, loading, className }) {
     const [selectedMetrics, setSelectedMetrics] = useState(["costPerLinkClick", "frequency"])
 
     const chartData = useMemo(() => {
@@ -130,13 +129,12 @@ export default function WeeklyChart({ data, loading, className, headerAction = n
     }
 
     return (
-        <div className={cn("p-4", className)}>
-            <div className="mb-3 flex items-start justify-between gap-3">
+        <div className={className ? `p-4 ${className}` : "p-4"}>
+            <div className="mb-[22px] flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900">Weekly Metrics</p>
                     <p className="text-xs text-gray-400">{subtitle}</p>
                 </div>
-                {headerAction ? <div className="flex-shrink-0">{headerAction}</div> : null}
             </div>
 
             {loading ? (

@@ -1000,45 +1000,61 @@ export default function AnalyticsDashboard() {
             {selectedAdAccount && (
                 <Card className="rounded-3xl border-gray-200 overflow-hidden">
                     <CardContent className="p-0">
-                    {preferencesLoading ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-gray-200">
-                            <div className="py-14">
-                                <div className="flex flex-col items-center justify-center gap-3">
-                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                                    <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
+                        <div className="flex justify-end px-4 pt-4 lg:hidden">
+                            <AnalyticsDateRangePicker
+                                value={analyticsDateRange}
+                                onChange={setAnalyticsDateRange}
+                                compact
+                            />
+                        </div>
+                        {preferencesLoading ? (
+                            <div className="grid grid-cols-1 lg:relative lg:min-h-[420px] lg:grid-cols-2">
+                                <div className="py-14">
+                                    <div className="flex flex-col items-center justify-center gap-3">
+                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                        <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
+                                    </div>
+                                </div>
+                                <div className="border-t border-gray-200 py-14 lg:border-t-0">
+                                    <div className="flex flex-col items-center justify-center gap-3">
+                                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                                        <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
+                                    </div>
+                                </div>
+                                <div className="pointer-events-none absolute left-1/2 top-[10%] hidden h-[80%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
+                                <div className="absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
+                                    <AnalyticsDateRangePicker
+                                        value={analyticsDateRange}
+                                        onChange={setAnalyticsDateRange}
+                                        compact
+                                    />
                                 </div>
                             </div>
-                            <div className="border-t border-gray-200 py-14 lg:border-t-0">
-                                <div className="flex flex-col items-center justify-center gap-3">
-                                    <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                                    <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
+                        ) : (
+                            <div className="grid grid-cols-1 lg:relative lg:min-h-[390px] lg:grid-cols-2">
+                                <div>
+                                    <KPIChart
+                                        data={dailyInsights}
+                                        loading={dailyLoading}
+                                        mode={metricMode}
+                                    />
+                                </div>
+                                <div className="border-t border-gray-200 lg:border-t-0">
+                                    <WeeklyChart
+                                        data={weeklyInsights}
+                                        loading={weeklyLoading}
+                                    />
+                                </div>
+                                <div className="pointer-events-none absolute left-1/2 top-[10%] hidden h-[80%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
+                                <div className="absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
+                                    <AnalyticsDateRangePicker
+                                        value={analyticsDateRange}
+                                        onChange={setAnalyticsDateRange}
+                                        compact
+                                    />
                                 </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-gray-200">
-                            <div>
-                                <KPIChart
-                                    data={dailyInsights}
-                                    loading={dailyLoading}
-                                    mode={metricMode}
-                                />
-                            </div>
-                            <div className="border-t border-gray-200 lg:border-t-0">
-                                <WeeklyChart
-                                    data={weeklyInsights}
-                                    loading={weeklyLoading}
-                                    headerAction={(
-                                        <AnalyticsDateRangePicker
-                                            value={analyticsDateRange}
-                                            onChange={setAnalyticsDateRange}
-                                            compact
-                                        />
-                                    )}
-                                />
-                            </div>
-                        </div>
-                    )}
+                        )}
                     </CardContent>
                 </Card>
             )}
