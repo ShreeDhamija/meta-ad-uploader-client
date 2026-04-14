@@ -43,7 +43,7 @@ export default function PowerupPopup({ onClose }) {
             onClick={handleBackdropClick}
         >
             <div
-                className="relative w-full max-w-[470px] rounded-[30px] bg-[#FAF9F7] px-6 py-7 text-left shadow-2xl"
+                className="relative w-full max-w-[470px] rounded-[30px] bg-[#FAF9F7] px-6 py-5 text-left shadow-2xl"
                 onClick={(event) => event.stopPropagation()}
             >
                 {isLastStep && (
@@ -59,30 +59,30 @@ export default function PowerupPopup({ onClose }) {
 
                 <div className="animate-fadeSwap">
                     <div className="mx-auto w-full max-w-[390px]">
-                        <div className="mb-4 flex items-center gap-3">
+                        <div className="mb-3 flex items-center gap-2.5">
                             <img
                                 src={step.icon}
                                 alt=""
-                                className="h-10 w-10 object-contain"
+                                className="h-9 w-9 object-contain"
                             />
                             <h2 className="text-[24px] font-semibold text-[#3A3A3A]">
                                 {step.title}
                             </h2>
                         </div>
 
-                        <p className="mb-5 text-[15px] leading-7 text-[#6B5B53]">
+                        <p className="mb-4 text-[14px] font-medium leading-6 text-[#6B5B53]">
                             You can now upload all your media once and choose to split the media into different ad sets with different ad naming, copy and every other field available.
                         </p>
 
-                        <div className="mb-5 inline-flex rounded-full border border-[#F72585] px-4 py-1 text-[15px] font-semibold text-[#F72585]">
+                        <div className="mb-4 inline-flex rounded-full border border-[#F72585] px-4 py-1 text-[14px] font-semibold text-[#F72585]">
                             Step {step.id}
                         </div>
 
-                        <p className="mb-6 text-[15px] leading-8 text-[#6B5B53]">
+                        <p className="mb-4 text-[14px] font-medium leading-6 text-[#6B5B53]">
                             {step.body}
                         </p>
 
-                        <div className="mb-6 overflow-hidden rounded-[24px] border border-black/20 bg-white">
+                        <div className="mb-4 overflow-hidden rounded-[24px] border border-black/20 bg-white">
                             <img
                                 src={step.image}
                                 alt={`Powerup step ${step.id}`}
@@ -91,13 +91,13 @@ export default function PowerupPopup({ onClose }) {
                         </div>
 
                         {step.footer && (
-                            <p className="mb-6 text-[15px] font-semibold leading-7 text-[#6B5B53]">
+                            <p className="mb-4 text-[14px] font-medium leading-6 text-[#6B5B53]">
                                 {step.footer}
                             </p>
                         )}
 
                         {isLastStep ? (
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
                                 <Button
                                     type="button"
                                     variant="outline"
