@@ -97,9 +97,9 @@ export default function AnalyticsDateRangePicker({ value, onChange, compact = fa
             </PopoverTrigger>
 
             <PopoverContent
-                align="end"
+                align="center"
                 sideOffset={10}
-                className="w-[760px] max-w-[calc(100vw-2rem)] rounded-3xl border border-gray-200 bg-white p-4 shadow-xl"
+                className="w-[760px] max-w-[calc(100vw-2rem)] rounded-3xl border border-gray-200 bg-gray-50 p-4 shadow-2xl"
             >
                 <div className="flex flex-col gap-4 lg:flex-row">
                     <div className="flex w-full flex-col gap-2 lg:w-[190px]">
@@ -132,7 +132,7 @@ export default function AnalyticsDateRangePicker({ value, onChange, compact = fa
                         <p className="mt-1 ml-1 text-xs font-semibold text-zinc-600">* Click on start/end date <br></br>to deselect</p>
                     </div>
 
-                    <div className="min-w-0 flex-1 rounded-3xl border border-gray-200 bg-gray-50 p-3">
+                    <div className="min-w-0 flex-1 rounded-3xl border border-gray-200 bg-gray-100 p-3">
                         <Calendar
                             mode="range"
                             selected={draftRange}

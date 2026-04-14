@@ -998,7 +998,7 @@ export default function AnalyticsDashboard() {
 
             {/* ── Charts Row  */}
             {selectedAdAccount && (
-                <Card className="rounded-3xl border-gray-200 overflow-hidden">
+                <Card className="rounded-3xl border-gray-200 overflow-visible">
                     <CardContent className="p-0">
                         <div className="flex justify-end px-4 pt-4 lg:hidden">
                             <AnalyticsDateRangePicker
@@ -1008,7 +1008,7 @@ export default function AnalyticsDashboard() {
                             />
                         </div>
                         {preferencesLoading ? (
-                            <div className="grid grid-cols-1 lg:relative lg:min-h-[420px] lg:grid-cols-2 lg:pt-16">
+                            <div className="grid grid-cols-1 lg:relative lg:min-h-[420px] lg:grid-cols-2 lg:pt-4">
                                 <div className="py-14">
                                     <div className="flex flex-col items-center justify-center gap-3">
                                         <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -1021,8 +1021,8 @@ export default function AnalyticsDashboard() {
                                         <p className="text-sm text-gray-500">Loading saved analytics preferences...</p>
                                     </div>
                                 </div>
-                                <div className="pointer-events-none absolute left-1/2 top-[10%] hidden h-[80%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
-                                <div className="absolute left-1/2 top-0 z-10 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
+                                <div className="pointer-events-none absolute left-1/2 top-[10%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
+                                <div className="absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
                                     <AnalyticsDateRangePicker
                                         value={analyticsDateRange}
                                         onChange={setAnalyticsDateRange}
@@ -1031,7 +1031,7 @@ export default function AnalyticsDashboard() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 lg:relative lg:min-h-[420px] lg:grid-cols-2 lg:pt-16">
+                            <div className="grid grid-cols-1 lg:relative lg:min-h-[390px] lg:grid-cols-2 lg:pt-4">
                                 <div>
                                     <KPIChart
                                         data={dailyInsights}
@@ -1045,8 +1045,8 @@ export default function AnalyticsDashboard() {
                                         loading={weeklyLoading}
                                     />
                                 </div>
-                                <div className="pointer-events-none absolute left-1/2 top-[10%] hidden h-[80%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
-                                <div className="absolute left-1/2 top-0 z-10 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
+                                <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
+                                <div className="absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
                                     <AnalyticsDateRangePicker
                                         value={analyticsDateRange}
                                         onChange={setAnalyticsDateRange}
@@ -1224,10 +1224,17 @@ export default function AnalyticsDashboard() {
             {showSettingsDialog && (
                 <>
                     <div
-                        className="fixed inset-0 bg-black/50 z-50"
-                        style={{ top: 0, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                        className="fixed bg-black/50 z-50"
+                        style={{
+                            position: "fixed",
+                            top: 0,
+                            left: 0,
+                            width: "100vw",
+                            height: "100dvh",
+                        }}
                         onClick={() => setShowSettingsDialog(false)}
                     />
+
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div
                             className="bg-white rounded-[28px] shadow-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col overflow-hidden"

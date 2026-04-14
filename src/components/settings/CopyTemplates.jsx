@@ -1080,8 +1080,14 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       {showImportPopup && (
         <div
-          className="fixed inset-0 !z-[9999] bg-black bg-opacity-30 flex justify-center items-start pt-48"
-          style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+          className="fixed bg-black/50 z-50"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100dvh",
+          }}
           onClick={() => setShowImportPopup(false)} // Add this line
         >
           <div className="bg-white rounded-2xl max-h-[80vh] w-[750px] shadow-xl relative border border-gray-200 overflow-hidden self-start transition-all duration-300 ease-in-out"

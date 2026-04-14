@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,11 +19,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogPortal,
+  DialogOverlay,
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Info, Plus, X, Settings2, AlertTriangle } from "lucide-react"
@@ -113,7 +115,21 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg !rounded-2xl max-h-[80vh] flex flex-col">
+      <DialogPortal>
+        <DialogOverlay
+          className="bg-black/50"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100dvh",
+            minHeight: "100vh",
+          }}
+        />
+        <DialogPrimitive.Content
+          className="fixed left-1/2 top-1/2 z-50 flex w-full max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-2xl border bg-background p-6 shadow-lg duration-0"
+        >
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">
             Set Up Custom Variables
@@ -235,7 +251,8 @@ function CustomVariablesSetupDialog({ open, onOpenChange, variables, onSave }) {
             Save Variables
           </Button>
         </DialogFooter>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   )
 }
