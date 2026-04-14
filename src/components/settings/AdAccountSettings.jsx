@@ -685,7 +685,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               <Button
                 variant="outline"
                 role="combobox"
-                className="w-full justify-between rounded-2xl border border-gray-300 bg-white shadow hover:bg-white px-3 py-4.5"
+                className="w-full justify-between rounded-2xl border border-gray-300 bg-white shadow-xs hover:bg-white px-3 py-4.5"
               >
                 {selectedAdAccountName}
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
