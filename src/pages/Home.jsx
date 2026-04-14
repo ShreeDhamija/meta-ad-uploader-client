@@ -710,9 +710,6 @@ export default function Home() {
     const handleDeleteAllVariants = useCallback(() => {
         if (variants.length <= 1) return;
 
-        const confirmed = window.confirm("Delete all variants and move every assignment back to Default?");
-        if (!confirmed) return;
-
         const defaultVariant = variants.find((variant) => variant.id === "default");
         const defaultSnapshot = activeVariantId === "default"
             ? captureCurrentSnapshot()
@@ -1327,6 +1324,7 @@ export default function Home() {
                                 variants={variants}
                                 activeVariantId={activeVariantId}
                                 handleAddVariant={handleAddVariant}
+                                handleDeleteAllVariants={handleDeleteAllVariants}
                                 fileVariantMap={fileVariantMap}
                                 setFileVariantMap={setFileVariantMap}
                                 groupVariantMap={groupVariantMap}

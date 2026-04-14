@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -638,6 +639,7 @@ export default function AdCreationForm({
   const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false);
   const [newTemplateNameInput, setNewTemplateNameInput] = useState("");
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false);
+  const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false);
   const wasPhoneCallCtaAutoAppliedRef = useRef(false);
 
   const [activeIgCaptionIndex, setActiveIgCaptionIndex] = useState(0);
@@ -5352,7 +5354,7 @@ export default function AdCreationForm({
       count: countFilesForVariant(variant.id),
     }))
     .filter((variant) => variant.count > 0);
-  const shouldScrollVariantPicker = variants.length > 6;
+  const shouldScrollVariantPicker = variants.length > 5;
 
   const publishDisabled = variants.length > 1
     ? (
@@ -7541,9 +7543,16 @@ export default function AdCreationForm({
         </div>
       )}
       {variants.length > 1 && (
-        <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <ScrollArea className={cn("rounded-full", shouldScrollVariantPicker && "w-[30rem] max-w-[calc(100vw-9rem)]")}>
-            <div className="flex w-max items-center gap-1 pr-1">
+        <TooltipProvider delayDuration={0}>
+          <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <ScrollArea
+              type="always"
+              className={cn(
+                "rounded-full",
+                shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2"
+              )}
+            >
+              <div className="flex w-max items-center gap-1 pr-1">
               {variants.map((variant) => {
                 const isActive = variant.id === activeVariantId;
                 const assignedCount = countFilesForVariant(variant.id);
@@ -7577,28 +7586,62 @@ export default function AdCreationForm({
                   </div>
                 );
               })}
+              </div>
+            </ScrollArea>
+            <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleAddVariant}
+                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Add variant</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteAllVariantsDialog(true)}
+                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Delete all variants</TooltipContent>
+              </Tooltip>
             </div>
-          </ScrollArea>
-          <div className="flex shrink-0 items-center gap-1 border-l border-white/10 pl-2">
-            <button
-              type="button"
-              onClick={handleAddVariant}
-              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-              title="Add variant"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={handleDeleteAllVariants}
-              className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-              title="Delete all variants"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
           </div>
-        </div>
+        </TooltipProvider>
       )}
+      <Dialog open={showDeleteAllVariantsDialog} onOpenChange={setShowDeleteAllVariantsDialog}>
+        <DialogContent className="max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-xl">
+          <DialogHeader>
+            <DialogTitle>Delete all variants?</DialogTitle>
+            <DialogDescription>
+              This will remove every variant and move all assignments back to Default.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-2">
+            <Button variant="outline" className="rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="rounded-xl"
+              onClick={() => {
+                setShowDeleteAllVariantsDialog(false);
+                handleDeleteAllVariants();
+              }}
+            >
+              Delete All Variants
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card >
 
   )

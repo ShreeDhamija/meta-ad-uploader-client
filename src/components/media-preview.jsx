@@ -1,9 +1,10 @@
 "use client"
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { ChevronDown, GripVertical, Loader2, Plus, Rocket, Trash } from 'lucide-react'
+import { ChevronDown, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
@@ -14,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import Groupads from '@/assets/icons/groupads.svg?react';
 import { v4 as uuidv4 } from 'uuid';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
 
 function withUniqueId(file) {
   if (file.isDrive || file.isDropbox) return file; // Drive/Dropbox already have unique id
@@ -205,7 +207,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             </Button>
           )}
 
-          <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
+          <div className="relative overflow-hidden rounded-xl shadow-lg border border-gray-200">
             {file.isMetaLibrary ? (
               // Meta library file
               <img
@@ -308,6 +310,15 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
               <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
               <span className="sr-only">Remove</span>
             </Button>
+            {showVariantDropdown && (
+              <div className="absolute bottom-2 left-2 z-30">
+                <VariantAssignmentPopover
+                  assignedVariantId={assignedVariantId}
+                  variants={variants}
+                  onAssignVariant={onAssignVariant}
+                />
+              </div>
+            )}
           </div>
           <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
 
@@ -317,16 +328,6 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             </span>
           )}
         </div>
-
-        {showVariantDropdown && (
-          <div className="absolute bottom-3 left-2 z-30">
-            <VariantAssignmentPopover
-              assignedVariantId={assignedVariantId}
-              variants={variants}
-              onAssignVariant={onAssignVariant}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
@@ -360,6 +361,7 @@ export default function MediaPreview({
   variants,
   activeVariantId,
   handleAddVariant,
+  handleDeleteAllVariants,
   fileVariantMap,
   setFileVariantMap,
   groupVariantMap,
@@ -368,6 +370,7 @@ export default function MediaPreview({
   // const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isAIGrouping, setIsAIGrouping] = useState(false);
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
+  const [showDisableVariantsDialog, setShowDisableVariantsDialog] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor));
   const hideUngroupedVariantDropdowns = isCarouselAd || enablePlacementCustomization;
@@ -539,6 +542,8 @@ export default function MediaPreview({
     adType !== 'flexible' &&
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
+  const showVariantSetupButton = IS_STAGING;
+  const variantSetupLabel = variants.length === 1 ? 'Customize Ad Setup' : 'Disable Variants';
 
 
 
@@ -997,6 +1002,7 @@ export default function MediaPreview({
   return (
     <>
       {(files.length > 0 || driveFiles.length > 0 || (dropboxFiles?.length || 0) > 0 || importedPosts.length > 0 || importedFiles.length > 0 || selectedIgOrganicPosts.length > 0) ? (
+        <>
         <Card
           className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-3xl"
           style={{ height: "calc(100vh - 140px)" }}
@@ -1033,16 +1039,21 @@ export default function MediaPreview({
             </div>
 
             <div className="flex gap-2">
-              {variants.length === 1 && !showPlacementCustomizationRow && (
+              {showVariantSetupButton && !showPlacementCustomizationRow && (
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={handleAddVariant}
+                  onClick={() => {
+                    if (variants.length === 1) {
+                      handleAddVariant();
+                    } else {
+                      setShowDisableVariantsDialog(true);
+                    }
+                  }}
                   className="rounded-xl bg-white"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Variants
+                  {variantSetupLabel}
                 </Button>
               )}
 
@@ -1146,16 +1157,21 @@ export default function MediaPreview({
                       Enable placement customization
                     </label>
                   </div>
-                  {variants.length === 1 && (
+                  {showVariantSetupButton && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={handleAddVariant}
+                      onClick={() => {
+                        if (variants.length === 1) {
+                          handleAddVariant();
+                        } else {
+                          setShowDisableVariantsDialog(true);
+                        }
+                      }}
                       className="rounded-xl bg-white"
                     >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create Variants
+                      {variantSetupLabel}
                     </Button>
                   )}
                 </div>
@@ -1415,6 +1431,32 @@ export default function MediaPreview({
             </DndContext>
           </CardContent>
         </Card>
+        <Dialog open={showDisableVariantsDialog} onOpenChange={setShowDisableVariantsDialog}>
+          <DialogContent className="max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-xl">
+            <DialogHeader>
+              <DialogTitle>Disable variants?</DialogTitle>
+              <DialogDescription>
+                This will remove all variants and move every assignment back to Default.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => setShowDisableVariantsDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="rounded-xl"
+                onClick={() => {
+                  setShowDisableVariantsDialog(false);
+                  handleDeleteAllVariants();
+                }}
+              >
+                Disable Variants
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        </>
       ) : (
         <div
           className="sticky top-4 w-full mx-auto"
