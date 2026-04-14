@@ -63,9 +63,13 @@ export default function AdAccountSettings({
   sortAdSets,
   sortCampaigns,
   useExistingPosts,
-  setUseExistingPosts
+  setUseExistingPosts,
+  isFormFieldModified
 
 }) {
+  const renderDiffMark = (fieldKeys) => (
+    isFormFieldModified?.(fieldKeys) ? <span className="text-red-500 font-semibold">*</span> : null
+  );
   // Local state for comboboxes
   const { isLoggedIn } = useAuth()
   const [open, setOpen] = useState(false)
@@ -469,6 +473,7 @@ export default function AdAccountSettings({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="adAccount" className="flex items-center gap-2">
+                {renderDiffMark("selectedAdAccount")}
                 <AdAccountIcon className="w-4 h-4" />
                 Ad Account</Label>
               <RefreshCcw
@@ -592,6 +597,7 @@ export default function AdAccountSettings({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="campaign" className="flex items-center gap-2">
+                {renderDiffMark("selectedCampaign")}
                 <CampaignIcon className="w-4 h-4" />
                 Select a Campaign to launch Ads in
               </Label>
@@ -732,6 +738,7 @@ transition-all duration-150 hover:!bg-black
                 </button>
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="duplicateCampaign" className="flex items-center gap-2">
+                    {renderDiffMark("duplicateCampaign")}
                     <CopyIcon className="w-4 h-4" />
                     Select a campaign to duplicate
                   </Label>
@@ -813,8 +820,9 @@ transition-all duration-150 hover:!bg-black
                   {/* New Campaign Name Input */}
                   {duplicateCampaign && (
                     <div className="space-y-2" style={{ marginTop: '20px' }}>
-                      <Label htmlFor="newCampaignName" className="block">
-                        New campaign name
+                      <Label htmlFor="newCampaignName" className="inline-flex items-center gap-1">
+                        {renderDiffMark("newCampaignName")}
+                        <span>New campaign name</span>
                       </Label>
                       <Label className="text-gray-500 text-[12px] font-regular">
                         Enter a custom name for the new campaign
@@ -855,6 +863,7 @@ transition-all duration-150 hover:!bg-black
           <div className="space-y-2 ">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
+                {renderDiffMark(["selectedAdSets", "duplicateAdSet", "newAdSetName"])}
                 <AdSetIcon className="w-4 h-4" />
                 Launch in a new or existing ad set
               </Label>
@@ -1061,6 +1070,7 @@ transition-all duration-150 hover:!bg-black
                 </button>
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="duplicateAdSet" className="flex items-center gap-2" >
+                    {renderDiffMark("duplicateAdSet")}
                     <CopyIcon className="w-4 h-4" />
                     Select an ad set shell to duplicate
                   </Label>
@@ -1174,8 +1184,9 @@ transition-all duration-150 hover:!bg-black
                   {duplicateAdSet && (
                     <>
                       <div className="space-y-2" style={{ marginTop: '20px' }}>
-                        <Label htmlFor="newAdSetName" className="block">
-                          New ad set name
+                        <Label htmlFor="newAdSetName" className="inline-flex items-center gap-1">
+                          {renderDiffMark("newAdSetName")}
+                          <span>New ad set name</span>
                         </Label>
                         <Label className="text-gray-500 text-[12px] font-regular">
                           Enter a custom name for the duplicated ad set

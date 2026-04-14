@@ -15,6 +15,7 @@ export default function ShopDestinationSelector({
     selectedShopDestination,
     setSelectedShopDestination,
     setSelectedShopDestinationType,
+    isFieldModified,
     isVisible = false,
 }) {
     const [open, setOpen] = useState(false)
@@ -109,6 +110,7 @@ export default function ShopDestinationSelector({
         <div className="space-y-2">
             <div className="space-y-1">
                 <Label className="flex items-center gap-2">
+                    {isFieldModified?.() ? <span className="text-red-500 font-semibold">*</span> : null}
                     <ShopIcon alt="" className="w-4 h-4" />
                     Shop Destination
                 </Label>

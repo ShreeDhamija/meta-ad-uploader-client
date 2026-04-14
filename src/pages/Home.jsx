@@ -121,6 +121,8 @@ const cloneSnapshotValue = (value) => {
     return value;
 };
 
+const snapshotValuesEqual = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+
 export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading, userCreatedAt } = useAuth()
     const { showMessenger, hideMessenger } = useIntercom();
@@ -638,16 +640,35 @@ export default function Home() {
         setSelectedFiles(new Set());
     }, [activeVariantId, captureCurrentSnapshot, hydrateFromSnapshot, variants]);
 
+    const getVariantSnapshot = useCallback((variantId) => {
+        if (variantId === activeVariantId) {
+            return captureCurrentSnapshot();
+        }
+
+        return variants.find((variant) => variant.id === variantId)?.snapshot || null;
+    }, [activeVariantId, captureCurrentSnapshot, variants]);
+
+    const isFormFieldModified = useCallback((fieldKeys) => {
+        if (activeVariantId === "default") return false;
+
+        const activeSnapshot = getVariantSnapshot(activeVariantId);
+        const defaultSnapshot = getVariantSnapshot("default");
+        if (!activeSnapshot || !defaultSnapshot) return false;
+
+        const keys = Array.isArray(fieldKeys) ? fieldKeys : [fieldKeys];
+        return keys.some((key) => !snapshotValuesEqual(activeSnapshot[key], defaultSnapshot[key]));
+    }, [activeVariantId, getVariantSnapshot]);
+
     const handleAddVariant = useCallback(() => {
         const usedLetters = new Set(
             variants
                 .filter((variant) => variant.id !== "default")
-                .map((variant) => variant.name.replace("Variant ", ""))
+                .map((variant) => variant.name.replace("Form ", ""))
         );
         const nextLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find((letter) => !usedLetters.has(letter));
 
         if (!nextLetter) {
-            toast.error("Maximum 26 variants");
+            toast.error("Maximum 26 Forms");
             return;
         }
 
@@ -1165,6 +1186,7 @@ export default function Home() {
                             sortCampaigns={sortCampaigns}
                             useExistingPosts={useExistingPosts}
                             setUseExistingPosts={setUseExistingPosts}
+                            isFormFieldModified={isFormFieldModified}
                         />
 
                         <AdCreationForm
@@ -1284,6 +1306,7 @@ export default function Home() {
                             handleAddVariant={handleAddVariant}
                             handleDeleteVariant={handleDeleteVariant}
                             handleDeleteAllVariants={handleDeleteAllVariants}
+                            isFormFieldModified={isFormFieldModified}
                             fileVariantMap={fileVariantMap}
                             setFileVariantMap={setFileVariantMap}
                             groupVariantMap={groupVariantMap}

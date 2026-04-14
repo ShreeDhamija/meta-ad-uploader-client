@@ -4,7 +4,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { ChevronDown, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
@@ -543,7 +543,7 @@ export default function MediaPreview({
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
   const showVariantSetupButton = IS_STAGING;
-  const variantSetupLabel = variants.length === 1 ? 'Customize Ad Setup' : 'Disable Variants';
+  const variantSetupLabel = variants.length === 1 ? 'Split Ad Data' : 'Disable Split';
 
 
 
@@ -1003,144 +1003,144 @@ export default function MediaPreview({
     <>
       {(files.length > 0 || driveFiles.length > 0 || (dropboxFiles?.length || 0) > 0 || importedPosts.length > 0 || importedFiles.length > 0 || selectedIgOrganicPosts.length > 0) ? (
         <>
-        <Card
-          className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-3xl"
-          style={{ height: "calc(100vh - 140px)" }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onDragEnter={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          onDrop={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // const droppedFiles = Array.from(e.dataTransfer.files);
-            const droppedFiles = Array.from(e.dataTransfer.files).map(withUniqueId);
-            setFiles(prev => [...prev, ...droppedFiles]);
-          }}
-        >
-          <CardHeader className="flex flex-row justify-between items-start flex-nowrap w-full">
-            <div className="flex flex-col items-start">
-              <CardTitle className="text-left">Uploads Preview</CardTitle>
-              <CardDescription className="text-left">
-                {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
-                {isCarouselAd && (
-                  <span className="block text-xs text-gray-500 mt-1">
-                    {fileGroups.length > 0
-                      ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
-                      : 'Select files to group into separate carousel ads, or drag to reorder cards'
-                    }
-                  </span>
-                )}
-              </CardDescription>
-            </div>
+          <Card
+            className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-3xl"
+            style={{ height: "calc(100vh - 140px)" }}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDragEnter={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              // const droppedFiles = Array.from(e.dataTransfer.files);
+              const droppedFiles = Array.from(e.dataTransfer.files).map(withUniqueId);
+              setFiles(prev => [...prev, ...droppedFiles]);
+            }}
+          >
+            <CardHeader className="flex flex-row justify-between items-start flex-nowrap w-full">
+              <div className="flex flex-col items-start">
+                <CardTitle className="text-left">Uploads Preview</CardTitle>
+                <CardDescription className="text-left">
+                  {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
+                  {isCarouselAd && (
+                    <span className="block text-xs text-gray-500 mt-1">
+                      {fileGroups.length > 0
+                        ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
+                        : 'Select files to group into separate carousel ads, or drag to reorder cards'
+                      }
+                    </span>
+                  )}
+                </CardDescription>
+              </div>
 
-            <div className="flex gap-2">
-              {showVariantSetupButton && !showPlacementCustomizationRow && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (variants.length === 1) {
-                      handleAddVariant();
-                    } else {
-                      setShowDisableVariantsDialog(true);
-                    }
-                  }}
-                  className="rounded-xl bg-white"
-                >
-                  {variantSetupLabel}
-                </Button>
-              )}
-
-              {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
-                <>
+              <div className="flex gap-2">
+                {showVariantSetupButton && !showPlacementCustomizationRow && (
                   <Button
+                    type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleGroupAds}
-                    disabled={!canGroupFiles}
-                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
+                    onClick={() => {
+                      if (variants.length === 1) {
+                        handleAddVariant();
+                      } else {
+                        setShowDisableVariantsDialog(true);
+                      }
+                    }}
+                    className="rounded-xl bg-white"
                   >
-                    <Groupads />
-                    Group Ads
+                    {variantSetupLabel}
                   </Button>
+                )}
 
-                  {adType !== 'flexible' && !isCarouselAd && (
+                {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
+                  <>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={handleAIGroup}
-                      disabled={!canAIGroup || isAIGrouping}
-                      className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                      onClick={handleGroupAds}
+                      disabled={!canGroupFiles}
+                      className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
                     >
-                      {isAIGrouping ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Grouping...
-                        </>
-                      ) : (
-                        <>
-                          <Rocket className="h-4 w-4 mr-2" />
-                          AI Auto Group
-                        </>
-                      )}
+                      <Groupads />
+                      Group Ads
                     </Button>
-                  )}
-                </>
-              )}
 
-              {adType === 'flexible' && (
+                    {adType !== 'flexible' && !isCarouselAd && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAIGroup}
+                        disabled={!canAIGroup || isAIGrouping}
+                        className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                      >
+                        {isAIGrouping ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Grouping...
+                          </>
+                        ) : (
+                          <>
+                            <Rocket className="h-4 w-4 mr-2" />
+                            AI Auto Group
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </>
+                )}
+
+                {adType === 'flexible' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleFlexibleAutoGroup}
+                    disabled={isFlexAutoGrouping}
+                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                  >
+                    {isFlexAutoGrouping ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Grouping...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="h-4 w-4 mr-2" />
+                        Auto Group
+                      </>
+                    )}
+                  </Button>
+                )}
+
+
                 <Button
-                  variant="outline"
+                  variant="destructive"
                   size="sm"
-                  onClick={handleFlexibleAutoGroup}
-                  disabled={isFlexAutoGrouping}
-                  className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                  onClick={() => {
+                    setFiles([]);
+                    setDriveFiles([]);
+                    setDropboxFiles([]);
+                    setSelectedFiles(new Set());
+                    setFileGroups([]);
+                    setImportedPosts([]);
+                    setImportedFiles([]);
+                    setSelectedIgOrganicPosts([]);
+                    setFileVariantMap({});
+                    setGroupVariantMap({});
+                  }}
+                  className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
                 >
-                  {isFlexAutoGrouping ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Grouping...
-                    </>
-                  ) : (
-                    <>
-                      <Rocket className="h-4 w-4 mr-2" />
-                      Auto Group
-                    </>
-                  )}
+                  Clear All
                 </Button>
-              )}
+              </div>
+            </CardHeader>
 
-
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  setFiles([]);
-                  setDriveFiles([]);
-                  setDropboxFiles([]);
-                  setSelectedFiles(new Set());
-                  setFileGroups([]);
-                  setImportedPosts([]);
-                  setImportedFiles([]);
-                  setSelectedIgOrganicPosts([]);
-                  setFileVariantMap({});
-                  setGroupVariantMap({});
-                }}
-                className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
-              >
-                Clear All
-              </Button>
-            </div>
-          </CardHeader>
-
-          {/* Placement Customization Checkbox - only show when carousel is disabled */}
-          {showPlacementCustomizationRow && (
+            {/* Placement Customization Checkbox - only show when carousel is disabled */}
+            {showPlacementCustomizationRow && (
               <div className="px-6 pb-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center space-x-2">
@@ -1183,279 +1183,280 @@ export default function MediaPreview({
               </div>
             )}
 
-          <CardContent
-            className="flex-1 overflow-y-auto min-h-0 pr-2"
-            style={{
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#CBD5E0 transparent'
-            }}
-          >
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={isCarouselAd ? handleDragEnd : () => { }}
+            <CardContent
+              className="flex-1 overflow-y-auto min-h-0 pr-2"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#CBD5E0 transparent'
+              }}
             >
-              <SortableContext
-                items={[
-                  ...files.map(file => file.isDrive ? file.id : file.uniqueId || file.name),
-                  ...(dropboxFiles || []).map(file => file.dropboxId),
-                  ...importedFiles.map(file => file.type === 'image' ? file.hash : file.id)
-                ]}
-                strategy={verticalListSortingStrategy}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={isCarouselAd ? handleDragEnd : () => { }}
               >
-                <div className="space-y-4">
-                  {fileGroups.map((group, groupIndex) => {
-                    const isGroupDimmed = activeVariantId !== 'default' && (groupVariantMap[group.id] || 'default') !== activeVariantId;
+                <SortableContext
+                  items={[
+                    ...files.map(file => file.isDrive ? file.id : file.uniqueId || file.name),
+                    ...(dropboxFiles || []).map(file => file.dropboxId),
+                    ...importedFiles.map(file => file.type === 'image' ? file.hash : file.id)
+                  ]}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-4">
+                    {fileGroups.map((group, groupIndex) => {
+                      const isGroupDimmed = activeVariantId !== 'default' && (groupVariantMap[group.id] || 'default') !== activeVariantId;
 
-                    return (
-                    <div
-                      key={group.id || `group-${groupIndex}`}
-                      className="relative"
-                    >
-                      {/* Shared group background */}
-                      <div
-                        className={`absolute inset-0 -z-10 rounded-2xl border-2 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'} ${groupIndex % 2 === 0
-                          ? 'bg-blue-100 border-blue-300'
-                          : 'bg-orange-100 border-orange-300'
-                          }`}
-                        style={{ margin: '0px' }}
-                      />
-
-                      {/* Ungroup button */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleUngroup(group.id)}
-                        className="absolute top-2 right-2 z-20 bg-white hover:bg-red-50 text-red-700 border-red-200 rounded-xl text-xs px-2 py-1"
-                      >
-                        Ungroup
-                      </Button>
-                      {variants.length > 1 && (
-                        <div className="absolute bottom-2 left-2 z-20">
-                          <VariantAssignmentPopover
-                            assignedVariantId={groupVariantMap[group.id] || 'default'}
-                            variants={variants}
-                            onAssignVariant={(variantId) => assignGroupToVariant(group.id, variantId)}
+                      return (
+                        <div
+                          key={group.id || `group-${groupIndex}`}
+                          className="relative"
+                        >
+                          {/* Shared group background */}
+                          <div
+                            className={`absolute inset-0 -z-10 rounded-2xl border-2 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'} ${groupIndex % 2 === 0
+                              ? 'bg-blue-100 border-blue-300'
+                              : 'bg-orange-100 border-orange-300'
+                              }`}
+                            style={{ margin: '0px' }}
                           />
-                        </div>
-                      )}
-                      {/* Group label */}
-                      <div className={`absolute bottom-2 right-2 z-20 text-white text-xs px-2 py-1 rounded-xl font-semibold transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'} ${groupIndex % 2 === 0
-                        ? 'bg-blue-500'
-                        : 'bg-orange-500'
-                        }`}>
-                        {isCarouselAd ? `Carousel Ad ${groupIndex + 1}` : `Group ${groupIndex + 1}`}
-                      </div>
 
-                      {isCarouselAd ? (
-                        /* Per-group DndContext for carousel reordering */
-                        <div className={`transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
-                          <DndContext
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={(event) => handleGroupDragEnd(group.id, event)}
+                          {/* Ungroup button */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleUngroup(group.id)}
+                            className="absolute top-2 right-2 z-20 bg-white hover:bg-red-50 text-red-700 border-red-200 rounded-xl text-xs px-2 py-1"
                           >
-                            <SortableContext
-                              items={getGroupFileIds(group)}
-                              strategy={verticalListSortingStrategy}
-                            >
-                              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
-                                {getGroupFileIds(group).map((fileId, cardIdx) => {
-                                  const file = findFileById(fileId);
-                                  if (!file) {
-                                    console.warn(`File not found for ID: ${fileId}`);
-                                    return null;
-                                  }
-                                  return (
-                                    <SortableMediaItem
-                                      key={fileId}
-                                      file={file}
-                                      index={cardIdx}
-                                      cardIndex={cardIdx}
-                                      isCarouselAd={isCarouselAd}
-                                      videoThumbs={videoThumbs}
-                                      onRemove={() => removeFile(file)}
-                                      isSelected={false}
-                                      onSelect={handleFileSelect}
-                                      groupNumber={groupIndex + 1}
-                                      enablePlacementCustomization={enablePlacementCustomization}
-                                      adType={adType}
-                                      dimmed={false}
-                                      showVariantDropdown={false}
-                                      assignedVariantId={groupVariantMap[group.id] || 'default'}
-                                      variants={variants}
-                                      onAssignVariant={() => { }}
-                                    />
-                                  );
-                                })}
-                              </div>
-                            </SortableContext>
-                          </DndContext>
-                        </div>
-                      ) : (
-                        /* Original non-DnD group rendering for placement customization / flexible */
-                        <div className={`grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
-                          {getGroupFileIds(group).map((fileId) => {
-                            const file = findFileById(fileId);
-                            if (!file) {
-                              console.warn(`File not found for ID: ${fileId}`);
-                              return null;
-                            }
-                            const index = files.findIndex(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
-                            return file ? (
-                              <SortableMediaItem
-                                key={fileId}
-                                file={file}
-                                index={index}
-                                isCarouselAd={isCarouselAd}
-                                videoThumbs={videoThumbs}
-                                onRemove={() => removeFile(file)}
-                                isSelected={false}
-                                onSelect={handleFileSelect}
-                                groupNumber={groupIndex + 1}
-                                enablePlacementCustomization={enablePlacementCustomization}
-                                adType={adType}
-                                dimmed={false}
-                                showVariantDropdown={false}
+                            Ungroup
+                          </Button>
+                          {variants.length > 1 && (
+                            <div className="absolute bottom-2 left-2 z-20">
+                              <VariantAssignmentPopover
                                 assignedVariantId={groupVariantMap[group.id] || 'default'}
                                 variants={variants}
-                                onAssignVariant={() => { }}
+                                onAssignVariant={(variantId) => assignGroupToVariant(group.id, variantId)}
                               />
-                            ) : null;
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )})}
+                            </div>
+                          )}
+                          {/* Group label */}
+                          <div className={`absolute bottom-2 right-2 z-20 text-white text-xs px-2 py-1 rounded-xl font-semibold transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'} ${groupIndex % 2 === 0
+                            ? 'bg-blue-500'
+                            : 'bg-orange-500'
+                            }`}>
+                            {isCarouselAd ? `Carousel Ad ${groupIndex + 1}` : `Group ${groupIndex + 1}`}
+                          </div>
 
-                  {/* Ungrouped files */}
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-6" style={{ padding: '6px', }}>
-                    {ungroupedFiles.map((file, index) => {
-                      const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
-                      const assignedVariantId = fileVariantMap[fileId] || 'default';
-                      const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0);
-                      return (
-                        <SortableMediaItem
-                          key={fileId}
-                          file={file}
-                          index={index}
-                          cardIndex={index}
-                          isCarouselAd={isCarouselAd}
-                          videoThumbs={videoThumbs}
-                          onRemove={() => removeFile(file)}
-                          isSelected={selectedFiles.has(fileId)}
-                          onSelect={handleFileSelect}
-                          groupNumber={null}
-                          enablePlacementCustomization={enablePlacementCustomization}
-                          adType={adType}
-                          dimmed={activeVariantId !== 'default' && assignedVariantId !== activeVariantId}
-                          showVariantDropdown={showVariantDropdown}
-                          assignedVariantId={assignedVariantId}
-                          variants={variants}
-                          onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
-                        />
-                      );
+                          {isCarouselAd ? (
+                            /* Per-group DndContext for carousel reordering */
+                            <div className={`transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
+                              <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragEnd={(event) => handleGroupDragEnd(group.id, event)}
+                              >
+                                <SortableContext
+                                  items={getGroupFileIds(group)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
+                                    {getGroupFileIds(group).map((fileId, cardIdx) => {
+                                      const file = findFileById(fileId);
+                                      if (!file) {
+                                        console.warn(`File not found for ID: ${fileId}`);
+                                        return null;
+                                      }
+                                      return (
+                                        <SortableMediaItem
+                                          key={fileId}
+                                          file={file}
+                                          index={cardIdx}
+                                          cardIndex={cardIdx}
+                                          isCarouselAd={isCarouselAd}
+                                          videoThumbs={videoThumbs}
+                                          onRemove={() => removeFile(file)}
+                                          isSelected={false}
+                                          onSelect={handleFileSelect}
+                                          groupNumber={groupIndex + 1}
+                                          enablePlacementCustomization={enablePlacementCustomization}
+                                          adType={adType}
+                                          dimmed={false}
+                                          showVariantDropdown={false}
+                                          assignedVariantId={groupVariantMap[group.id] || 'default'}
+                                          variants={variants}
+                                          onAssignVariant={() => { }}
+                                        />
+                                      );
+                                    })}
+                                  </div>
+                                </SortableContext>
+                              </DndContext>
+                            </div>
+                          ) : (
+                            /* Original non-DnD group rendering for placement customization / flexible */
+                            <div className={`grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 transition-opacity ${isGroupDimmed ? 'opacity-30' : 'opacity-100'}`}>
+                              {getGroupFileIds(group).map((fileId) => {
+                                const file = findFileById(fileId);
+                                if (!file) {
+                                  console.warn(`File not found for ID: ${fileId}`);
+                                  return null;
+                                }
+                                const index = files.findIndex(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
+                                return file ? (
+                                  <SortableMediaItem
+                                    key={fileId}
+                                    file={file}
+                                    index={index}
+                                    isCarouselAd={isCarouselAd}
+                                    videoThumbs={videoThumbs}
+                                    onRemove={() => removeFile(file)}
+                                    isSelected={false}
+                                    onSelect={handleFileSelect}
+                                    groupNumber={groupIndex + 1}
+                                    enablePlacementCustomization={enablePlacementCustomization}
+                                    adType={adType}
+                                    dimmed={false}
+                                    showVariantDropdown={false}
+                                    assignedVariantId={groupVariantMap[group.id] || 'default'}
+                                    variants={variants}
+                                    onAssignVariant={() => { }}
+                                  />
+                                ) : null;
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
                     })}
 
-                    {importedPosts.map((post) => (
-                      <div
-                        key={post.id}
-                        className="relative group"
-                        title={post.ad_name}
-                        style={{
-                          opacity: activeVariantId !== 'default' ? 0.3 : 1,
-                          transition: 'opacity 150ms'
-                        }}
-                      >
-                        <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
-                          <img
-                            src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
-                            alt="Post"
-                            className="w-full h-auto object-cover"
+                    {/* Ungrouped files */}
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-6" style={{ padding: '6px', }}>
+                      {ungroupedFiles.map((file, index) => {
+                        const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
+                        const assignedVariantId = fileVariantMap[fileId] || 'default';
+                        const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0);
+                        return (
+                          <SortableMediaItem
+                            key={fileId}
+                            file={file}
+                            index={index}
+                            cardIndex={index}
+                            isCarouselAd={isCarouselAd}
+                            videoThumbs={videoThumbs}
+                            onRemove={() => removeFile(file)}
+                            isSelected={selectedFiles.has(fileId)}
+                            onSelect={handleFileSelect}
+                            groupNumber={null}
+                            enablePlacementCustomization={enablePlacementCustomization}
+                            adType={adType}
+                            dimmed={activeVariantId !== 'default' && assignedVariantId !== activeVariantId}
+                            showVariantDropdown={showVariantDropdown}
+                            assignedVariantId={assignedVariantId}
+                            variants={variants}
+                            onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
                           />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
-                            style={{ opacity: 0.9, backgroundColor: "white" }}
-                            onClick={() => setImportedPosts(prev => prev.filter(p => p.id !== post.id))}
-                          >
-                            <Trash className="h-2 w-2" />
-                          </Button>
+                        );
+                      })}
+
+                      {importedPosts.map((post) => (
+                        <div
+                          key={post.id}
+                          className="relative group"
+                          title={post.ad_name}
+                          style={{
+                            opacity: activeVariantId !== 'default' ? 0.3 : 1,
+                            transition: 'opacity 150ms'
+                          }}
+                        >
+                          <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
+                            <img
+                              src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
+                              alt="Post"
+                              className="w-full h-auto object-cover"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
+                              style={{ opacity: 0.9, backgroundColor: "white" }}
+                              onClick={() => setImportedPosts(prev => prev.filter(p => p.id !== post.id))}
+                            >
+                              <Trash className="h-2 w-2" />
+                            </Button>
+                          </div>
+                          {/* post_id below the image card */}
+                          <p className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full">
+                            {post.ad_name}
+                          </p>
                         </div>
-                        {/* post_id below the image card */}
-                        <p className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full">
-                          {post.ad_name}
-                        </p>
-                      </div>
-                    ))}
+                      ))}
 
-                    {selectedIgOrganicPosts.map((post) => (
-                      <div
-                        key={`ig-${post.source_instagram_media_id}`}
-                        className="relative group"
-                        title={post.ad_name}
-                        style={{
-                          opacity: activeVariantId !== 'default' ? 0.3 : 1,
-                          transition: 'opacity 150ms'
-                        }}
-                      >
-                        <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
-                          <img
-                            src={post.previewUrl || "https://api.withblip.com/thumbnail.jpg"}
-                            alt={post.ad_name}
-                            className="w-full h-auto object-cover"
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
-                            style={{ opacity: 0.9, backgroundColor: "white" }}
-                            onClick={() => setSelectedIgOrganicPosts(prev => prev.filter(p => p.source_instagram_media_id !== post.source_instagram_media_id))}
-                          >
-                            <Trash className="h-2 w-2" />
-                          </Button>
+                      {selectedIgOrganicPosts.map((post) => (
+                        <div
+                          key={`ig-${post.source_instagram_media_id}`}
+                          className="relative group"
+                          title={post.ad_name}
+                          style={{
+                            opacity: activeVariantId !== 'default' ? 0.3 : 1,
+                            transition: 'opacity 150ms'
+                          }}
+                        >
+                          <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
+                            <img
+                              src={post.previewUrl || "https://api.withblip.com/thumbnail.jpg"}
+                              alt={post.ad_name}
+                              className="w-full h-auto object-cover"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                              }}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
+                              style={{ opacity: 0.9, backgroundColor: "white" }}
+                              onClick={() => setSelectedIgOrganicPosts(prev => prev.filter(p => p.source_instagram_media_id !== post.source_instagram_media_id))}
+                            >
+                              <Trash className="h-2 w-2" />
+                            </Button>
+                          </div>
+
                         </div>
-
-                      </div>
-                    ))}
+                      ))}
 
 
+                    </div>
                   </div>
-                </div>
-              </SortableContext>
-            </DndContext>
-          </CardContent>
-        </Card>
-        <Dialog open={showDisableVariantsDialog} onOpenChange={setShowDisableVariantsDialog}>
-          <DialogContent className="max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-xl">
-            <DialogHeader>
-              <DialogTitle>Disable variants?</DialogTitle>
-              <DialogDescription>
-                This will remove all variants and move every assignment back to Default.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="mt-2">
-              <Button variant="outline" className="rounded-xl" onClick={() => setShowDisableVariantsDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                className="rounded-xl"
-                onClick={() => {
-                  setShowDisableVariantsDialog(false);
-                  handleDeleteAllVariants();
-                }}
-              >
-                Disable Variants
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+                </SortableContext>
+              </DndContext>
+            </CardContent>
+          </Card>
+          <Dialog open={showDisableVariantsDialog} onOpenChange={setShowDisableVariantsDialog}>
+            <DialogContent className="max-w-md rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0">
+              <DialogHeader>
+                <DialogTitle>Disable variants?</DialogTitle>
+                <DialogDescription>
+                  This will remove all variants and move every assignment back to Default.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDisableVariantsDialog(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full rounded-xl"
+                  onClick={() => {
+                    setShowDisableVariantsDialog(false);
+                    handleDeleteAllVariants();
+                  }}
+                >
+                  Disable Variants
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </>
       ) : (
         <div

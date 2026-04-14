@@ -16,8 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
-  DialogOverlay
 } from "@/components/ui/dialog";
 import TextareaAutosize from 'react-textarea-autosize'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -553,6 +551,7 @@ export default function AdCreationForm({
   handleAddVariant,
   handleDeleteVariant,
   handleDeleteAllVariants,
+  isFormFieldModified,
   fileVariantMap,
   setFileVariantMap,
   groupVariantMap,
@@ -562,6 +561,9 @@ export default function AdCreationForm({
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
   const formDropdownTriggerChrome = `${formFieldChrome} hover:bg-white`;
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
+  const renderDiffMark = (fieldKeys) => (
+    isFormFieldModified?.(fieldKeys) ? <span className="text-red-500 font-semibold">*</span> : null
+  );
 
   // Local state
   const [showPostSelector, setShowPostSelector] = useState(false);
@@ -5852,6 +5854,7 @@ export default function AdCreationForm({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="flex items-center gap-2">
+                        {renderDiffMark("pageId")}
                         <FacebookIcon className="w-4 h-4" />
                         Select a Page
                       </Label>
@@ -5975,6 +5978,7 @@ export default function AdCreationForm({
 
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
+                      {renderDiffMark("instagramAccountId")}
                       <InstagramIcon className="w-4 h-4" />
                       Select Instagram Account
                     </Label>
@@ -6065,7 +6069,10 @@ export default function AdCreationForm({
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-gray-600" />
                         <Label htmlFor="partnership-toggle" className="cursor-pointer">
-                          Add Partnership
+                          <span className="inline-flex items-center gap-1">
+                            {renderDiffMark("isPartnershipAd")}
+                            <span>Add Partnership</span>
+                          </span>
                         </Label>
                         <Switch
                           id="partnership-toggle"
@@ -6109,6 +6116,7 @@ export default function AdCreationForm({
                           {/* Partner Instagram Selector */}
                           <div className="space-y-2">
                             <Label className="flex items-center gap-2 text-sm text-gray-600">
+                              {renderDiffMark("partnerIgAccountId")}
                               <InstagramIcon className="w-4 h-4" />
                               Partner Instagram Account
                             </Label>
@@ -6192,6 +6200,7 @@ export default function AdCreationForm({
                           {partnerFbPageId && (
                             <div className="space-y-2">
                               <Label className="flex items-center gap-2 text-sm text-gray-600">
+                                {renderDiffMark("partnerFbPageId")}
                                 <FacebookIcon className="w-4 h-4" />
                                 Partner Facebook Page ID
                               </Label>
@@ -6206,7 +6215,10 @@ export default function AdCreationForm({
 
                           <div className="space-y-2">
                             <Label className="text-sm text-gray-600">
-                              Select identities in header
+                              <span className="inline-flex items-center gap-1">
+                                {renderDiffMark("partnershipIdentityMode")}
+                                <span>Select identities in header</span>
+                              </span>
                             </Label>
                             <RadioGroup
                               value={partnershipIdentityMode}
@@ -6255,6 +6267,7 @@ export default function AdCreationForm({
                 <div className="space-y-1">
                   <Label htmlFor="adName" className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
+                      {renderDiffMark("adNameFormulaV2")}
                       <LabelIcon className="w-4 h-4" />
                       Ad Name
                     </div>
@@ -6425,7 +6438,8 @@ export default function AdCreationForm({
                       {/* Primary text Section */}
                       <div className="space-y-2">
                         <Label className="flex items-center justify-between">
-                          <span>
+                          <span className="inline-flex items-center gap-1">
+                            {renderDiffMark("messages")}
                             {isCarouselAd ? "Headline" : "Primary Text"}
                             {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
                           </span>
@@ -6519,7 +6533,8 @@ export default function AdCreationForm({
                     {/* Headlines Section */}
                     <div className="space-y-2">
                       <Label className="flex items-center justify-between">
-                        <span>
+                        <span className="inline-flex items-center gap-1">
+                          {renderDiffMark("headlines")}
                           {isCarouselAd ? "Description" : "Headlines"}
                           {isCarouselAd && <span className="text-sm text-gray-500 ml-1">(One per carousel card)</span>}
                         </span>
@@ -6614,7 +6629,10 @@ export default function AdCreationForm({
 
                     {(isCarouselAd || descriptions.some(d => d !== "")) && (
                       <div className="space-y-2">
-                        <Label>{isCarouselAd ? "Primary Text" : "Descriptions"}</Label>
+                        <Label className="inline-flex items-center gap-1">
+                          {renderDiffMark("descriptions")}
+                          <span>{isCarouselAd ? "Primary Text" : "Descriptions"}</span>
+                        </Label>
                         <div className="space-y-3">
                           {isCarouselAd ? (
                             <div className="flex items-center gap-2">
@@ -6750,6 +6768,7 @@ export default function AdCreationForm({
                   <div className="space-y-2">
                     <Label className="flex items-center justify-between">
                       <span className="flex items-center gap-2">
+                        {renderDiffMark(showPhoneNumberField ? "phoneNumber" : "link")}
                         {showPhoneNumberField ? (
                           <Phone className="w-4 h-4" />
                         ) : (
@@ -7000,6 +7019,7 @@ export default function AdCreationForm({
 
                   <div className="space-y-2">
                     <Label htmlFor="cta" className="flex items-center gap-2">
+                      {renderDiffMark("cta")}
                       <CTAIcon className="w-4 h-4" />
                       Call-to-Action (CTA)
                     </Label>
@@ -7036,6 +7056,7 @@ export default function AdCreationForm({
                     setSelectedShopDestination={setSelectedShopDestination}
                     selectedShopDestinationType={selectedShopDestinationType}
                     setSelectedShopDestinationType={setSelectedShopDestinationType}
+                    isFieldModified={() => isFormFieldModified?.(["selectedShopDestination", "selectedShopDestinationType"])}
                     isVisible={showShopDestinationSelector}
                   />
                 </div>
@@ -7044,6 +7065,7 @@ export default function AdCreationForm({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="leadgen-form" className="flex items-center gap-2">
+                        {renderDiffMark("selectedForm")}
                         <FileText className="w-4 h-4" />
                         Select a Form
                       </Label>
@@ -7318,7 +7340,10 @@ export default function AdCreationForm({
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <Label className="text-sm font-medium">Ad Status:</Label>
+                <Label className="text-sm font-medium inline-flex items-center gap-1">
+                  {renderDiffMark("launchPaused")}
+                  <span>Ad Status:</span>
+                </Label>
 
                 <RadioGroup
                   value={launchPaused ? "paused" : "active"}
@@ -7394,6 +7419,7 @@ export default function AdCreationForm({
                           )}
                         >
                           <Clock className="w-3.5 h-3.5" />
+                          {renderDiffMark(["adScheduleStartTime", "adScheduleEndTime"])}
                           {(adScheduleStartTime || adScheduleEndTime) ? "Scheduled" : "Ad Schedule"}
                         </button>
                       </PopoverTrigger>
@@ -7618,20 +7644,20 @@ export default function AdCreationForm({
         </TooltipProvider>
       )}
       <Dialog open={showDeleteAllVariantsDialog} onOpenChange={setShowDeleteAllVariantsDialog}>
-        <DialogContent className="max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-xl">
+        <DialogContent className="max-w-md rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-0 data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-0">
           <DialogHeader>
             <DialogTitle>Delete all variants?</DialogTitle>
             <DialogDescription>
               This will remove every variant and move all assignments back to Default.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="mt-2">
-            <Button variant="outline" className="rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
-              className="rounded-xl"
+              className="w-full rounded-xl"
               onClick={() => {
                 setShowDeleteAllVariantsDialog(false);
                 handleDeleteAllVariants();
@@ -7639,7 +7665,7 @@ export default function AdCreationForm({
             >
               Delete All Variants
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </Card >
