@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { toast, Toaster } from "sonner"
 import { useNavigate } from "react-router-dom"
+import { v4 as uuidv4 } from "uuid";
 
 import Header from "../components/header"
 import AdAccountSettings from "../components/ad-account-settings"
@@ -112,6 +113,13 @@ const sortCampaigns = (campaigns) => {
     });
 };
 
+const cloneSnapshotValue = (value) => {
+    if (Array.isArray(value)) return [...value];
+    if (value && typeof value === "object") {
+        return JSON.parse(JSON.stringify(value));
+    }
+    return value;
+};
 
 export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading, userCreatedAt } = useAuth()
@@ -145,6 +153,8 @@ export default function Home() {
     const [hasDismissedTrialPopup, setHasDismissedTrialPopup] = useState(false);
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
     const preferredTemplateRef = useRef(null);
+    const campaignsLoadedForAccountRef = useRef(null);
+    const adSetsLoadedForSelectionRef = useRef("");
 
     const getCachedState = () => {
         try {
@@ -219,6 +229,18 @@ export default function Home() {
     const [selectedFiles, setSelectedFiles] = useState(new Set());
     const [useExistingPosts, setUseExistingPosts] = useState(false);
     const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([]);
+    const [selectedForm, setSelectedForm] = useState(null);
+    const [isPartnershipAd, setIsPartnershipAd] = useState(false);
+    const [partnerIgAccountId, setPartnerIgAccountId] = useState("");
+    const [partnerFbPageId, setPartnerFbPageId] = useState("");
+    const [partnershipIdentityMode, setPartnershipIdentityMode] = useState("dynamic");
+    const [adScheduleStartTime, setAdScheduleStartTime] = useState(null);
+    const [adScheduleEndTime, setAdScheduleEndTime] = useState(null);
+
+    const [variants, setVariants] = useState([{ id: "default", name: "Default", snapshot: null }]);
+    const [activeVariantId, setActiveVariantId] = useState("default");
+    const [fileVariantMap, setFileVariantMap] = useState({});
+    const [groupVariantMap, setGroupVariantMap] = useState({});
 
     const [showMobileBanner, setShowMobileBanner] = useState(true);
 
@@ -344,6 +366,7 @@ export default function Home() {
 
     useEffect(() => {
         if (selectedAdAccount) return;
+        if (variants.length > 1) return;
 
         setPageId("");
         setInstagramAccountId("");
@@ -358,10 +381,11 @@ export default function Home() {
         setSelectedItems([]);
         setAdValues({ dateType: "MonthYYYY", customTexts: {} });
         setAdNameFormulaV2({ rawInput: "" });
-    }, [selectedAdAccount]);
+    }, [selectedAdAccount, variants.length]);
 
     useEffect(() => {
         if (!selectedAdAccount) return;
+        if (variants.length > 1) return;
 
         setPageId(adAccountSettings.defaultPage?.id || "");
         setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
@@ -395,10 +419,12 @@ export default function Home() {
         adAccountSettings.defaultCTA,
         adAccountSettings.adNameFormula,
         adAccountSettings.adNameFormulaV2,
+        variants.length,
     ]);
 
     useEffect(() => {
         if (!selectedAdAccount) return;
+        if (variants.length > 1) return;
 
         const templates = adAccountSettings.copyTemplates || {};
         const keys = Object.keys(templates);
@@ -429,6 +455,7 @@ export default function Home() {
         selectedAdAccount,
         adAccountSettings.copyTemplates,
         adAccountSettings.defaultTemplateName,
+        variants.length,
     ]);
 
 
@@ -477,6 +504,375 @@ export default function Home() {
             prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
         );
     };
+
+    const captureCurrentSnapshot = useCallback(() => ({
+        headlines: cloneSnapshotValue(headlines),
+        descriptions: cloneSnapshotValue(descriptions),
+        messages: cloneSnapshotValue(messages),
+        link: cloneSnapshotValue(link),
+        cta,
+        phoneNumber,
+        selectedAdAccount,
+        selectedCampaign: cloneSnapshotValue(selectedCampaign),
+        selectedAdSets: cloneSnapshotValue(selectedAdSets),
+        duplicateAdSet,
+        newAdSetName,
+        pageId,
+        instagramAccountId,
+        selectedShopDestination,
+        selectedShopDestinationType,
+        selectedForm,
+        isPartnershipAd,
+        partnerIgAccountId,
+        partnerFbPageId,
+        partnershipIdentityMode,
+        adNameFormulaV2: cloneSnapshotValue(adNameFormulaV2),
+        adValues: cloneSnapshotValue(adValues),
+        adScheduleStartTime,
+        adScheduleEndTime,
+        launchPaused,
+    }), [
+        headlines,
+        descriptions,
+        messages,
+        link,
+        cta,
+        phoneNumber,
+        selectedAdAccount,
+        selectedCampaign,
+        selectedAdSets,
+        duplicateAdSet,
+        newAdSetName,
+        pageId,
+        instagramAccountId,
+        selectedShopDestination,
+        selectedShopDestinationType,
+        selectedForm,
+        isPartnershipAd,
+        partnerIgAccountId,
+        partnerFbPageId,
+        partnershipIdentityMode,
+        adNameFormulaV2,
+        adValues,
+        adScheduleStartTime,
+        adScheduleEndTime,
+        launchPaused,
+    ]);
+
+    const hydrateFromSnapshot = useCallback((snapshot) => {
+        if (!snapshot) return;
+
+        setHeadlines(cloneSnapshotValue(snapshot.headlines) || [""]);
+        setDescriptions(cloneSnapshotValue(snapshot.descriptions) || [""]);
+        setMessages(cloneSnapshotValue(snapshot.messages) || [""]);
+        setLink(cloneSnapshotValue(snapshot.link) || [""]);
+        setCta(snapshot.cta || "LEARN_MORE");
+        setPhoneNumber(snapshot.phoneNumber || "");
+        setSelectedAdAccount(snapshot.selectedAdAccount || "");
+        setSelectedCampaign(cloneSnapshotValue(snapshot.selectedCampaign) || []);
+        setSelectedAdSets(cloneSnapshotValue(snapshot.selectedAdSets) || []);
+        setDuplicateAdSet(snapshot.duplicateAdSet || "");
+        setNewAdSetName(snapshot.newAdSetName || "");
+        setPageId(snapshot.pageId || "");
+        setInstagramAccountId(snapshot.instagramAccountId || "");
+        setSelectedShopDestination(snapshot.selectedShopDestination || "");
+        setSelectedShopDestinationType(snapshot.selectedShopDestinationType || "");
+        setSelectedForm(snapshot.selectedForm || null);
+        setIsPartnershipAd(Boolean(snapshot.isPartnershipAd));
+        setPartnerIgAccountId(snapshot.partnerIgAccountId || "");
+        setPartnerFbPageId(snapshot.partnerFbPageId || "");
+        setPartnershipIdentityMode(snapshot.partnershipIdentityMode || "dynamic");
+        setAdNameFormulaV2(cloneSnapshotValue(snapshot.adNameFormulaV2) || { rawInput: "" });
+        setAdValues(cloneSnapshotValue(snapshot.adValues) || { dateType: "MonthYYYY", customTexts: {} });
+        setAdScheduleStartTime(snapshot.adScheduleStartTime || null);
+        setAdScheduleEndTime(snapshot.adScheduleEndTime || null);
+        setLaunchPaused(Boolean(snapshot.launchPaused));
+    }, [
+        setHeadlines,
+        setDescriptions,
+        setMessages,
+        setLink,
+        setCta,
+        setPhoneNumber,
+        setSelectedAdAccount,
+        setSelectedCampaign,
+        setSelectedAdSets,
+        setDuplicateAdSet,
+        setNewAdSetName,
+        setPageId,
+        setInstagramAccountId,
+        setSelectedShopDestination,
+        setSelectedShopDestinationType,
+        setSelectedForm,
+        setIsPartnershipAd,
+        setPartnerIgAccountId,
+        setPartnerFbPageId,
+        setPartnershipIdentityMode,
+        setAdNameFormulaV2,
+        setAdValues,
+        setAdScheduleStartTime,
+        setAdScheduleEndTime,
+        setLaunchPaused,
+    ]);
+
+    const switchVariant = useCallback((targetId) => {
+        if (targetId === activeVariantId) return;
+
+        const targetVariant = variants.find((variant) => variant.id === targetId);
+        if (!targetVariant) return;
+
+        const currentSnapshot = captureCurrentSnapshot();
+
+        setVariants((prev) => prev.map((variant) => {
+            if (variant.id === activeVariantId) {
+                return { ...variant, snapshot: currentSnapshot };
+            }
+            if (variant.id === targetId) {
+                return { ...variant, snapshot: null };
+            }
+            return variant;
+        }));
+
+        hydrateFromSnapshot(targetVariant.snapshot);
+        setActiveVariantId(targetId);
+        setSelectedFiles(new Set());
+    }, [activeVariantId, captureCurrentSnapshot, hydrateFromSnapshot, variants]);
+
+    const handleAddVariant = useCallback(() => {
+        const usedLetters = new Set(
+            variants
+                .filter((variant) => variant.id !== "default")
+                .map((variant) => variant.name.replace("Variant ", ""))
+        );
+        const nextLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find((letter) => !usedLetters.has(letter));
+
+        if (!nextLetter) {
+            toast.error("Maximum 26 variants");
+            return;
+        }
+
+        const currentSnapshot = captureCurrentSnapshot();
+        const newVariantId = uuidv4();
+
+        setVariants((prev) => [
+            ...prev.map((variant) => (
+                variant.id === activeVariantId
+                    ? { ...variant, snapshot: currentSnapshot }
+                    : variant
+            )),
+            { id: newVariantId, name: `Variant ${nextLetter}`, snapshot: null }
+        ]);
+        setActiveVariantId(newVariantId);
+        setSelectedFiles(new Set());
+    }, [activeVariantId, captureCurrentSnapshot, variants]);
+
+    const handleDeleteVariant = useCallback((variantId) => {
+        if (variantId === "default") return;
+
+        const defaultVariant = variants.find((variant) => variant.id === "default");
+        const wasActive = variantId === activeVariantId;
+        const reassignedCount =
+            Object.values(fileVariantMap).filter((value) => value === variantId).length +
+            Object.values(groupVariantMap).filter((value) => value === variantId).length;
+
+        setFileVariantMap((prev) => {
+            const next = { ...prev };
+            Object.keys(next).forEach((key) => {
+                if (next[key] === variantId) delete next[key];
+            });
+            return next;
+        });
+
+        setGroupVariantMap((prev) => {
+            const next = { ...prev };
+            Object.keys(next).forEach((key) => {
+                if (next[key] === variantId) delete next[key];
+            });
+            return next;
+        });
+
+        setVariants((prev) => prev.filter((variant) => variant.id !== variantId));
+
+        if (wasActive) {
+            hydrateFromSnapshot(defaultVariant?.snapshot);
+            setActiveVariantId("default");
+            setVariants((prev) => prev.map((variant) => (
+                variant.id === "default" ? { ...variant, snapshot: null } : variant
+            )));
+        }
+
+        toast.success(
+            reassignedCount > 0
+                ? `Variant deleted. ${reassignedCount} assignment${reassignedCount === 1 ? "" : "s"} moved to Default.`
+                : "Variant deleted."
+        );
+    }, [activeVariantId, fileVariantMap, groupVariantMap, hydrateFromSnapshot, variants]);
+
+    useEffect(() => {
+        const activeVariantIds = new Set(variants.map((variant) => variant.id));
+
+        setFileVariantMap((prev) => {
+            const next = { ...prev };
+            let changed = false;
+
+            Object.keys(next).forEach((key) => {
+                if (!activeVariantIds.has(next[key])) {
+                    delete next[key];
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
+
+        setGroupVariantMap((prev) => {
+            const next = { ...prev };
+            let changed = false;
+
+            Object.keys(next).forEach((key) => {
+                if (!activeVariantIds.has(next[key])) {
+                    delete next[key];
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
+    }, [variants]);
+
+    useEffect(() => {
+        const validFileIds = new Set([
+            ...files.map((file) => file.isDrive ? file.id : file.uniqueId || file.name),
+            ...driveFiles.map((file) => file.id),
+            ...dropboxFiles.map((file) => file.dropboxId),
+            ...importedFiles.map((file) => file.type === "image" ? file.hash : file.id),
+        ]);
+        const groupedFileIds = new Set(
+            fileGroups.flatMap((group) => group.fileIds || [])
+        );
+
+        setFileVariantMap((prev) => {
+            const next = { ...prev };
+            let changed = false;
+
+            Object.keys(next).forEach((key) => {
+                if (!validFileIds.has(key) || groupedFileIds.has(key)) {
+                    delete next[key];
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
+    }, [files, driveFiles, dropboxFiles, importedFiles, fileGroups]);
+
+    useEffect(() => {
+        const validGroupIds = new Set(fileGroups.map((group) => group.id));
+
+        setGroupVariantMap((prev) => {
+            const next = { ...prev };
+            let changed = false;
+
+            Object.keys(next).forEach((key) => {
+                if (!validGroupIds.has(key)) {
+                    delete next[key];
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
+    }, [fileGroups]);
+
+    useEffect(() => {
+        if (!selectedAdAccount) {
+            campaignsLoadedForAccountRef.current = null;
+            setCampaigns([]);
+            return;
+        }
+
+        if (campaignsLoadedForAccountRef.current === selectedAdAccount) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const fetchCampaignsForSelectedAccount = async () => {
+            try {
+                const res = await fetch(
+                    `${API_BASE_URL}/auth/fetch-campaigns?adAccountId=${selectedAdAccount}`,
+                    { credentials: "include" }
+                );
+                const data = await res.json();
+                if (!cancelled && data.campaigns) {
+                    setCampaigns(sortCampaigns(data.campaigns));
+                    campaignsLoadedForAccountRef.current = selectedAdAccount;
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    console.error("Failed to fetch campaigns for selected ad account:", err);
+                }
+            }
+        };
+
+        fetchCampaignsForSelectedAccount();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedAdAccount, setCampaigns]);
+
+    useEffect(() => {
+        const selectionKey = `${selectedAdAccount}:${JSON.stringify([...selectedCampaign].sort())}`;
+
+        if (!selectedAdAccount || selectedCampaign.length === 0) {
+            adSetsLoadedForSelectionRef.current = "";
+            setAdSets([]);
+            return;
+        }
+
+        if (adSetsLoadedForSelectionRef.current === selectionKey) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const fetchAdSetsForSelection = async () => {
+            try {
+                const adSetPromises = selectedCampaign.map((id) =>
+                    fetch(`${API_BASE_URL}/auth/fetch-adsets?campaignId=${id}`, {
+                        credentials: "include"
+                    }).then((res) => res.json())
+                );
+
+                const results = await Promise.all(adSetPromises);
+
+                const allAdSets = results.flatMap((data, index) => {
+                    if (!data.adSets) return [];
+                    return data.adSets.map((adset) => ({
+                        ...adset,
+                        campaignId: selectedCampaign[index],
+                        campaignName: campaigns.find((campaign) => campaign.id === selectedCampaign[index])?.name
+                    }));
+                });
+
+                if (!cancelled) {
+                    setAdSets(sortAdSets(allAdSets));
+                    adSetsLoadedForSelectionRef.current = selectionKey;
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    console.error("Failed to fetch ad sets for selected campaigns:", err);
+                }
+            }
+        };
+
+        fetchAdSetsForSelection();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [campaigns, selectedAdAccount, selectedCampaign, setAdSets]);
 
 
     const handleAdAccountChange = useCallback(async (value) => {
@@ -736,6 +1132,8 @@ export default function Home() {
                             sortCampaigns={sortCampaigns}
                             useExistingPosts={useExistingPosts}
                             setUseExistingPosts={setUseExistingPosts}
+                            variants={variants}
+                            handleAddVariant={handleAddVariant}
                         />
 
                         <AdCreationForm
@@ -788,10 +1186,14 @@ export default function Home() {
                             videoThumbs={videoThumbs}
                             setVideoThumbs={setVideoThumbs}
                             selectedAdSets={selectedAdSets}
+                            setSelectedAdSets={setSelectedAdSets}
                             duplicateAdSet={duplicateAdSet}
+                            setDuplicateAdSet={setDuplicateAdSet}
                             campaigns={campaigns}
                             selectedCampaign={selectedCampaign}
+                            setSelectedCampaign={setSelectedCampaign}
                             selectedAdAccount={selectedAdAccount}
+                            setSelectedAdAccount={setSelectedAdAccount}
                             adSets={adSets}
                             copyTemplates={adAccountSettings.copyTemplates || {}}
                             defaultTemplateName={adAccountSettings.defaultTemplateName || ""}
@@ -805,6 +1207,8 @@ export default function Home() {
                             setSelectedShopDestination={setSelectedShopDestination}
                             selectedShopDestinationType={selectedShopDestinationType}
                             setSelectedShopDestinationType={setSelectedShopDestinationType}
+                            selectedForm={selectedForm}
+                            setSelectedForm={setSelectedForm}
                             newAdSetName={newAdSetName}
                             launchPaused={launchPaused}
                             setLaunchPaused={setLaunchPaused}
@@ -828,6 +1232,29 @@ export default function Home() {
                             preferredTemplateRef={preferredTemplateRef}
                             onAdSetCountsCreated={handleAdSetAdCountsUpdate}
                             onAdSetCreated={handleLocalAdSetCreated}
+                            isPartnershipAd={isPartnershipAd}
+                            setIsPartnershipAd={setIsPartnershipAd}
+                            partnerIgAccountId={partnerIgAccountId}
+                            setPartnerIgAccountId={setPartnerIgAccountId}
+                            partnerFbPageId={partnerFbPageId}
+                            setPartnerFbPageId={setPartnerFbPageId}
+                            partnershipIdentityMode={partnershipIdentityMode}
+                            setPartnershipIdentityMode={setPartnershipIdentityMode}
+                            adScheduleStartTime={adScheduleStartTime}
+                            setAdScheduleStartTime={setAdScheduleStartTime}
+                            adScheduleEndTime={adScheduleEndTime}
+                            setAdScheduleEndTime={setAdScheduleEndTime}
+                            variants={variants}
+                            setVariants={setVariants}
+                            activeVariantId={activeVariantId}
+                            setActiveVariantId={setActiveVariantId}
+                            switchVariant={switchVariant}
+                            handleAddVariant={handleAddVariant}
+                            handleDeleteVariant={handleDeleteVariant}
+                            fileVariantMap={fileVariantMap}
+                            setFileVariantMap={setFileVariantMap}
+                            groupVariantMap={groupVariantMap}
+                            setGroupVariantMap={setGroupVariantMap}
 
                         />
                     </div>
@@ -860,6 +1287,12 @@ export default function Home() {
                                 setSelectedFiles={setSelectedFiles}
                                 selectedIgOrganicPosts={selectedIgOrganicPosts}
                                 setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
+                                variants={variants}
+                                activeVariantId={activeVariantId}
+                                fileVariantMap={fileVariantMap}
+                                setFileVariantMap={setFileVariantMap}
+                                groupVariantMap={groupVariantMap}
+                                setGroupVariantMap={setGroupVariantMap}
 
                             />
                         </ErrorBoundary>

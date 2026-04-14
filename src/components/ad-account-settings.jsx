@@ -63,7 +63,9 @@ export default function AdAccountSettings({
   sortAdSets,
   sortCampaigns,
   useExistingPosts,
-  setUseExistingPosts
+  setUseExistingPosts,
+  variants,
+  handleAddVariant
 
 }) {
   // Local state for comboboxes
@@ -456,9 +458,23 @@ export default function AdAccountSettings({
 
     <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CogIcon className="w-5 h-5" />
-          Ad Account Configuration</CardTitle>
+        <CardTitle className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CogIcon className="w-5 h-5" />
+            Ad Account Configuration
+          </div>
+          {variants?.length === 1 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddVariant}
+              className="rounded-xl"
+            >
+              Create Variants
+            </Button>
+          )}
+        </CardTitle>
         <CardDescription>Select your ad account, campaign and ad set</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

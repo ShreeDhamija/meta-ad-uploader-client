@@ -304,6 +304,7 @@ function withUniqueId(file) {
 const getFileId = (file) => {
   if (file.isDrive) return file.id;
   if (file.isDropbox) return file.dropboxId;
+  if (file.isMetaLibrary) return file.type === 'image' ? file.hash : file.id;
   return file.uniqueId || file.name;
 };
 
@@ -336,6 +337,23 @@ const getMimeFromName = (name) => {
   };
   return mimeMap[ext] || 'application/octet-stream';
 };
+
+const VARIANT_COLORS = ['#6b7280', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+const getGroupFileIds = (group) => Array.isArray(group) ? group : (group?.fileIds || []);
+
+const normalizeFileGroups = (groups = []) => groups.map((group) => (
+  Array.isArray(group)
+    ? { id: uuidv4(), fileIds: [...group] }
+    : { ...group, id: group.id || uuidv4(), fileIds: [...(group.fileIds || [])] }
+));
+
+function VariantDot({ variantId, variants }) {
+  const idx = variants.findIndex((variant) => variant.id === variantId);
+  const color = VARIANT_COLORS[Math.max(0, idx) % VARIANT_COLORS.length];
+
+  return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
+}
 
 
 const extractFolderId = (url) => {
@@ -467,10 +485,14 @@ export default function AdCreationForm({
   videoThumbs,
   setVideoThumbs,
   selectedAdSets,
+  setSelectedAdSets,
   duplicateAdSet,
+  setDuplicateAdSet,
   campaigns,
   selectedCampaign,
+  setSelectedCampaign,
   selectedAdAccount,
+  setSelectedAdAccount,
   adSets,
   copyTemplates,
   defaultTemplateName,
@@ -484,6 +506,8 @@ export default function AdCreationForm({
   setSelectedShopDestination,
   selectedShopDestinationType,
   setSelectedShopDestinationType,
+  selectedForm,
+  setSelectedForm,
   newAdSetName,
   launchPaused,
   setLaunchPaused,
@@ -505,7 +529,30 @@ export default function AdCreationForm({
   refetchCopyTemplates,
   preferredTemplateRef,
   onAdSetCountsCreated,
-  onAdSetCreated
+  onAdSetCreated,
+  isPartnershipAd,
+  setIsPartnershipAd,
+  partnerIgAccountId,
+  setPartnerIgAccountId,
+  partnerFbPageId,
+  setPartnerFbPageId,
+  partnershipIdentityMode,
+  setPartnershipIdentityMode,
+  adScheduleStartTime,
+  setAdScheduleStartTime,
+  adScheduleEndTime,
+  setAdScheduleEndTime,
+  variants,
+  setVariants,
+  activeVariantId,
+  setActiveVariantId,
+  switchVariant,
+  handleAddVariant,
+  handleDeleteVariant,
+  fileVariantMap,
+  setFileVariantMap,
+  groupVariantMap,
+  setGroupVariantMap
 }) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
@@ -576,20 +623,12 @@ export default function AdCreationForm({
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
   const [usePostID, setUsePostID] = useState(false);
   const [leadgenForms, setLeadgenForms] = useState([]);
-  const [selectedForm, setSelectedForm] = useState(null);
   const [loadingForms, setLoadingForms] = useState(false);
 
 
   // Partnership Ads State
-  const [isPartnershipAd, setIsPartnershipAd] = useState(false);
-  const [partnerIgAccountId, setPartnerIgAccountId] = useState("");
-  const [partnerFbPageId, setPartnerFbPageId] = useState("");
   const [openPartnerSelector, setOpenPartnerSelector] = useState(false);
   const [partnerSearchValue, setPartnerSearchValue] = useState("");
-  const [partnershipIdentityMode, setPartnershipIdentityMode] = useState("dynamic");
-
-  const [adScheduleStartTime, setAdScheduleStartTime] = useState(null);
-  const [adScheduleEndTime, setAdScheduleEndTime] = useState(null);
   const [showSchedule, setShowSchedule] = useState(false);
 
   const [isSavingNew, setIsSavingNew] = useState(false);
@@ -670,127 +709,294 @@ export default function AdCreationForm({
   const refreshPage = useCallback(() => {
     window.location.reload();
   }, []);
+  const fileGroupsAsArrays = useMemo(
+    () => fileGroups.map((group) => getGroupFileIds(group)),
+    [fileGroups]
+  );
 
+  const groupedFileIds = useMemo(
+    () => new Set(fileGroups.flatMap((group) => getGroupFileIds(group))),
+    [fileGroups]
+  );
 
-  const captureFormDataAsJob = () => {
+  const liveVariantSnapshot = useMemo(() => ({
+    headlines,
+    descriptions,
+    messages,
+    link,
+    cta,
+    phoneNumber,
+    selectedAdAccount,
+    selectedCampaign,
+    selectedAdSets,
+    duplicateAdSet,
+    newAdSetName,
+    pageId,
+    instagramAccountId,
+    selectedShopDestination,
+    selectedShopDestinationType,
+    selectedForm,
+    isPartnershipAd,
+    partnerIgAccountId,
+    partnerFbPageId,
+    partnershipIdentityMode,
+    adNameFormulaV2,
+    adValues,
+    adScheduleStartTime,
+    adScheduleEndTime,
+    launchPaused,
+  }), [
+    headlines,
+    descriptions,
+    messages,
+    link,
+    cta,
+    phoneNumber,
+    selectedAdAccount,
+    selectedCampaign,
+    selectedAdSets,
+    duplicateAdSet,
+    newAdSetName,
+    pageId,
+    instagramAccountId,
+    selectedShopDestination,
+    selectedShopDestinationType,
+    selectedForm,
+    isPartnershipAd,
+    partnerIgAccountId,
+    partnerFbPageId,
+    partnershipIdentityMode,
+    adNameFormulaV2,
+    adValues,
+    adScheduleStartTime,
+    adScheduleEndTime,
+    launchPaused,
+  ]);
 
-    let adCount = 0;
+  const getVariantState = useCallback((variantId) => {
+    if (variantId === activeVariantId) return liveVariantSnapshot;
+    return variants.find((variant) => variant.id === variantId)?.snapshot || null;
+  }, [activeVariantId, liveVariantSnapshot, variants]);
+
+  const hasMediaInFormData = useCallback((formData) => (
+    (formData.files?.length || 0) > 0 ||
+    (formData.driveFiles?.length || 0) > 0 ||
+    (formData.dropboxFiles?.length || 0) > 0 ||
+    (formData.importedPosts?.length || 0) > 0 ||
+    (formData.importedFiles?.length || 0) > 0 ||
+    (formData.selectedIgOrganicPosts?.length || 0) > 0
+  ), []);
+
+  const computeAdCount = useCallback((formData) => {
+    if (!hasMediaInFormData(formData)) return 0;
 
     const isDynamicAdSet = () => {
-      if (duplicateAdSet) {
-        // For duplicated adset, check the original adset's dynamic flag
-        const originalAdset = adSets.find((a) => a.id === duplicateAdSet);
+      if (formData.duplicateAdSet) {
+        const originalAdset = formData.adSets.find((adset) => adset.id === formData.duplicateAdSet);
         return originalAdset?.is_dynamic_creative || false;
-      } else {
-        // Check if any selected adsets are dynamic
-        return selectedAdSets.some((adsetId) => {
-          const adset = adSets.find((a) => a.id === adsetId);
-          return adset?.is_dynamic_creative || false;
-        });
       }
+
+      return (formData.selectedAdSets || []).some((adsetId) => {
+        const adset = formData.adSets.find((entry) => entry.id === adsetId);
+        return adset?.is_dynamic_creative || false;
+      });
     };
 
-    if (importedPosts.length > 0) {
-      adCount = importedPosts.length * (selectedAdSets.length || 1);
-    } else if (isCarouselAd) {
-      const carouselGroupCount = (fileGroups && fileGroups.length > 0) ? fileGroups.length : 1;
-      adCount = carouselGroupCount * (selectedAdSets.length || 1);
-    } else if (isDynamicAdSet()) {
-      adCount = selectedAdSets.length || 1;
-    } else if (enablePlacementCustomization && fileGroups && fileGroups.length > 0) {
-      const groupedFileIds = new Set(fileGroups.flat());
-      const ungroupedFiles = [
-        ...files,
-        ...driveFiles.map(f => ({ ...f, isDrive: true }))
-      ].filter(f => !groupedFileIds.has(getFileId(f)));
-      adCount = fileGroups.length + ungroupedFiles.length;
-    }
-    else if (adType === 'flexible') {
-      if (fileGroups.length > 0) {
-        adCount = fileGroups.length * (selectedAdSets.length || 1);
-      } else {
-        adCount = selectedAdSets.length || 1;
-      }
-    }
-    else if (selectedIgOrganicPosts.length > 0) {
-      adCount += selectedIgOrganicPosts.length * (selectedAdSets.length || 1);
-    }
-    else {
-      adCount = files.length + driveFiles.length + importedFiles.length + dropboxFiles.length;
+    if ((formData.importedPosts?.length || 0) > 0) {
+      return formData.importedPosts.length * (formData.selectedAdSets.length || 1);
     }
 
+    if (formData.isCarouselAd) {
+      const carouselGroupCount = formData.fileGroups.length > 0 ? formData.fileGroups.length : 1;
+      return carouselGroupCount * (formData.selectedAdSets.length || 1);
+    }
+
+    if (isDynamicAdSet()) {
+      return formData.selectedAdSets.length || 1;
+    }
+
+    if (formData.enablePlacementCustomization && formData.fileGroups.length > 0) {
+      const groupedIds = new Set(formData.fileGroups.flat());
+      const ungroupedCount = [
+        ...formData.files,
+        ...formData.driveFiles.map((file) => ({ ...file, isDrive: true })),
+        ...formData.dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+        ...formData.importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
+      ].filter((file) => !groupedIds.has(getFileId(file))).length;
+
+      return formData.fileGroups.length + ungroupedCount;
+    }
+
+    if (formData.adType === 'flexible') {
+      return formData.fileGroups.length > 0
+        ? formData.fileGroups.length * (formData.selectedAdSets.length || 1)
+        : (formData.selectedAdSets.length || 1);
+    }
+
+    if ((formData.selectedIgOrganicPosts?.length || 0) > 0) {
+      return formData.selectedIgOrganicPosts.length * (formData.selectedAdSets.length || 1);
+    }
+
+    return formData.files.length + formData.driveFiles.length + formData.importedFiles.length + formData.dropboxFiles.length;
+  }, [hasMediaInFormData]);
+
+  const countFilesForVariant = useCallback((variantId) => {
+    const variantGroups = fileGroups.filter(
+      (group) => (groupVariantMap[group.id] || 'default') === variantId
+    );
+    const allFiles = [
+      ...files,
+      ...driveFiles.map((file) => ({ ...file, isDrive: true })),
+      ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+      ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
+    ];
+
+    const ungroupedCount = allFiles.filter((file) => {
+      const fileId = getFileId(file);
+      if (groupedFileIds.has(fileId)) return false;
+      return (fileVariantMap[fileId] || 'default') === variantId;
+    }).length;
+
+    if (isCarouselAd || enablePlacementCustomization || adType === 'flexible') {
+      const defaultOnly = variantId === 'default'
+        ? [
+          ...files,
+          ...driveFiles.map((file) => ({ ...file, isDrive: true })),
+          ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+          ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
+        ].filter((file) => !groupedFileIds.has(getFileId(file))).length
+        : 0;
+
+      return variantGroups.length + (adType === 'flexible' && fileGroups.length === 0 ? ungroupedCount : defaultOnly) +
+        (variantId === 'default' ? importedPosts.length + selectedIgOrganicPosts.length : 0);
+    }
+
+    return ungroupedCount + (variantId === 'default' ? importedPosts.length + selectedIgOrganicPosts.length : 0);
+  }, [
+    adType,
+    driveFiles,
+    dropboxFiles,
+    enablePlacementCustomization,
+    fileGroups,
+    fileVariantMap,
+    files,
+    groupedFileIds,
+    groupVariantMap,
+    importedFiles,
+    importedPosts.length,
+    isCarouselAd,
+    selectedIgOrganicPosts.length,
+  ]);
+
+  const captureFormDataAsJob = useCallback((variantId = 'default') => {
+    const variantState = getVariantState(variantId);
+    if (!variantState) return null;
+
+    const filterFiles = (items, mapper = (item) => item) => items.filter((item) => {
+      const file = mapper(item);
+      const fileId = getFileId(file);
+      const owningGroup = fileGroups.find((group) => getGroupFileIds(group).includes(fileId));
+
+      if (owningGroup) {
+        return (groupVariantMap[owningGroup.id] || 'default') === variantId;
+      }
+
+      if (adType === 'flexible' && fileGroups.length > 0) {
+        return false;
+      }
+
+      if (isCarouselAd || enablePlacementCustomization) {
+        return variantId === 'default';
+      }
+
+      return (fileVariantMap[fileId] || 'default') === variantId;
+    });
+
+    const variantFiles = filterFiles(files);
+    const variantDriveFiles = filterFiles(driveFiles, (file) => ({ ...file, isDrive: true }));
+    const variantDropboxFiles = filterFiles(dropboxFiles, (file) => ({ ...file, isDropbox: true }));
+    const variantImportedFiles = filterFiles(importedFiles, (file) => ({ ...file, isMetaLibrary: true }));
+    const variantFileGroups = fileGroups.filter(
+      (group) => (groupVariantMap[group.id] || 'default') === variantId
+    );
+
+    const formData = {
+      headlines: [...(variantState.headlines || [''])],
+      descriptions: [...(variantState.descriptions || [''])],
+      messages: [...(variantState.messages || [''])],
+      link: [...(variantState.link || [''])],
+      phoneNumber: variantState.phoneNumber || '',
+      cta: variantState.cta || 'LEARN_MORE',
+      files: [...variantFiles],
+      driveFiles: [...variantDriveFiles],
+      dropboxFiles: [...variantDropboxFiles],
+      videoThumbs: { ...videoThumbs },
+      thumbnail,
+      importedPosts: variantId === 'default' ? [...importedPosts] : [],
+      importedFiles: [...variantImportedFiles],
+      selectedIgOrganicPosts: variantId === 'default' ? [...selectedIgOrganicPosts] : [],
+      selectedAdSets: [...(variantState.selectedAdSets || [])],
+      duplicateAdSet: variantState.duplicateAdSet || '',
+      newAdSetName: variantState.newAdSetName || '',
+      pageId: variantState.pageId || '',
+      instagramAccountId: variantState.instagramAccountId || '',
+      selectedAdAccount: variantState.selectedAdAccount || '',
+      selectedCampaign: Array.isArray(variantState.selectedCampaign)
+        ? [...variantState.selectedCampaign]
+        : variantState.selectedCampaign,
+      launchPaused: Boolean(variantState.launchPaused),
+      adType,
+      isCarouselAd,
+      enablePlacementCustomization,
+      fileGroups: variantFileGroups.map((group) => [...getGroupFileIds(group)]),
+      selectedShopDestination: variantState.selectedShopDestination || '',
+      selectedShopDestinationType: variantState.selectedShopDestinationType || '',
+      selectedForm: variantState.selectedForm || null,
+      isPartnershipAd: Boolean(variantState.isPartnershipAd),
+      partnerIgAccountId: variantState.partnerIgAccountId || '',
+      partnerFbPageId: variantState.partnerFbPageId || '',
+      partnershipIdentityMode: variantState.partnershipIdentityMode || 'dynamic',
+      adNameFormulaV2: variantState.adNameFormulaV2 ? { ...variantState.adNameFormulaV2 } : null,
+      adValues: variantState.adValues ? JSON.parse(JSON.stringify(variantState.adValues)) : {},
+      adScheduleStartTime: variantState.adScheduleStartTime || null,
+      adScheduleEndTime: variantState.adScheduleEndTime || null,
+      adSets: [...adSets],
+      adSetDisplayName: variantState.duplicateAdSet
+        ? (variantState.newAdSetName || 'New Ad Set')
+        : (variantState.selectedAdSets || []).length === 1
+          ? (adSets.find((entry) => entry.id === variantState.selectedAdSets[0])?.name || 'selected ad set')
+          : `${(variantState.selectedAdSets || []).length} adsets`,
+    };
 
     return {
       id: uuidv4(),
       createdAt: Date.now(),
       status: 'queued',
-      adCount: adCount,
-      formData: {
-        // Form content states
-        headlines: [...headlines],
-        descriptions: [...descriptions],
-        messages: [...messages],
-        link: [...link],
-        phoneNumber,
-        cta,
-
-        // File states
-        files: [...files],
-        driveFiles: [...driveFiles],
-        dropboxFiles: [...dropboxFiles],  // ADD THIS LINE
-        videoThumbs: { ...videoThumbs },
-        thumbnail,
-        importedPosts: [...importedPosts],
-        importedFiles: [...importedFiles],  // ADD THIS
-        selectedIgOrganicPosts: [...selectedIgOrganicPosts],
-
-
-
-
-        // Selection states
-        selectedAdSets: [...selectedAdSets],
-        duplicateAdSet,
-        newAdSetName,
-        pageId,
-        instagramAccountId,
-        selectedAdAccount,
-        selectedCampaign,
-
-        // Ad configuration
-        launchPaused,
-        adType,
-        isCarouselAd,
-        enablePlacementCustomization,
-        fileGroups: fileGroups ? [...fileGroups.map(group => [...group])] : [],
-
-        // Shop configuration
-        selectedShopDestination,
-        selectedShopDestinationType,
-        selectedForm,
-        //partnership ads
-        isPartnershipAd,
-        partnerIgAccountId,
-        partnerFbPageId,
-        partnershipIdentityMode,
-
-
-        // For computing adName
-        adNameFormulaV2: adNameFormulaV2 ? { ...adNameFormulaV2 } : null,
-        adValues,
-        adScheduleStartTime,
-        adScheduleEndTime,
-
-        // Reference data needed for processing
-        adSets: [...adSets],
-        adSetDisplayName: duplicateAdSet
-          ? (newAdSetName || 'New Ad Set')
-          : selectedAdSets.length === 1
-            ? (adSets.find(a => a.id === selectedAdSets[0])?.name || 'selected ad set')
-            : `${selectedAdSets.length} adsets`
-
-      }
+      adCount: computeAdCount(formData),
+      variantId,
+      variantName: variants.find((variant) => variant.id === variantId)?.name || 'Default',
+      formData,
     };
-  };
+  }, [
+    adSets,
+    adType,
+    computeAdCount,
+    driveFiles,
+    dropboxFiles,
+    enablePlacementCustomization,
+    fileGroups,
+    fileVariantMap,
+    files,
+    getVariantState,
+    groupVariantMap,
+    importedFiles,
+    importedPosts,
+    isCarouselAd,
+    selectedIgOrganicPosts,
+    thumbnail,
+    variants,
+    videoThumbs,
+  ]);
 
   const addCompletedJob = useCallback((completedJob) => {
     setCompletedJobs(prev => {
@@ -811,6 +1017,13 @@ export default function AdCreationForm({
     setLink(d.link || ['']);
     setPhoneNumber(d.phoneNumber || '');
     setCta(d.cta || '');
+    setSelectedAdAccount(d.selectedAdAccount || '');
+    setSelectedCampaign(Array.isArray(d.selectedCampaign) ? d.selectedCampaign : []);
+    setSelectedAdSets(d.selectedAdSets || []);
+    setDuplicateAdSet(d.duplicateAdSet || '');
+    setNewAdSetName(d.newAdSetName || '');
+    setPageId(d.pageId || '');
+    setInstagramAccountId(d.instagramAccountId || '');
 
     setFiles(d.files || []);
     setDriveFiles(d.driveFiles || []);
@@ -821,22 +1034,33 @@ export default function AdCreationForm({
     setVideoThumbs(d.videoThumbs || {});
     setThumbnail(d.thumbnail || null);
 
-    setAdType(d.adType || 'standard');
+    setVariants([{ id: 'default', name: 'Default', snapshot: null }]);
+    setActiveVariantId('default');
+    setFileVariantMap({});
+    setGroupVariantMap({});
+    setAdType(d.adType || 'regular');
     setIsCarouselAd(d.isCarouselAd || false);
     setEnablePlacementCustomization(d.enablePlacementCustomization || false);
-    setFileGroups(d.fileGroups || []);
+    setFileGroups(normalizeFileGroups(d.fileGroups || []));
     setSelectedFiles(new Set());
     setLaunchPaused(d.launchPaused || false);
 
-    setSelectedShopDestination(d.selectedShopDestination || null);
-    setSelectedShopDestinationType(d.selectedShopDestinationType || null);
+    setSelectedShopDestination(d.selectedShopDestination || '');
+    setSelectedShopDestinationType(d.selectedShopDestinationType || '');
+    setSelectedForm(d.selectedForm || null);
+    setIsPartnershipAd(Boolean(d.isPartnershipAd));
+    setPartnerIgAccountId(d.partnerIgAccountId || '');
+    setPartnerFbPageId(d.partnerFbPageId || '');
+    setPartnershipIdentityMode(d.partnershipIdentityMode || 'dynamic');
+    setAdScheduleStartTime(d.adScheduleStartTime || null);
+    setAdScheduleEndTime(d.adScheduleEndTime || null);
 
     if (d.adNameFormulaV2) setAdNameFormulaV2(d.adNameFormulaV2);
 
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setHeadlines, setDescriptions, setMessages, setLink, setPhoneNumber, setCta, setFiles, setDriveFiles, setDropboxFiles, setImportedPosts, setImportedFiles, setSelectedIgOrganicPosts, setVideoThumbs, setThumbnail, setAdType, setIsCarouselAd, setEnablePlacementCustomization, setFileGroups, setSelectedFiles, setLaunchPaused, setSelectedShopDestination, setSelectedShopDestinationType, setAdNameFormulaV2]);
+  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDriveFiles, setDropboxFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPhoneNumber, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setThumbnail, setVariants, setVideoThumbs]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -850,7 +1074,7 @@ export default function AdCreationForm({
     } else if (isCarouselAd) {
       newAdsPerAdSet = (fileGroups.length > 0) ? fileGroups.length : 1;
     } else if (enablePlacementCustomization) {
-      const groupedFileIds = new Set(fileGroups.flat());
+      const groupedFileIds = new Set(fileGroupsAsArrays.flat());
       const ungroupedCount = [
         ...files,
         ...driveFiles.map(f => ({ ...f, isDrive: true })),
@@ -880,7 +1104,7 @@ export default function AdCreationForm({
     if (overLimitAdSets.length === 0) return null;
 
     return overLimitAdSets.map(a => a.name || a.id);
-  }, [selectedAdSets, adSets, importedPosts, isCarouselAd, fileGroups, enablePlacementCustomization, files, driveFiles, dropboxFiles, importedFiles, adType, selectedIgOrganicPosts]);
+  }, [selectedAdSets, adSets, importedPosts, isCarouselAd, fileGroups, fileGroupsAsArrays, enablePlacementCustomization, files, driveFiles, dropboxFiles, importedFiles, adType, selectedIgOrganicPosts]);
 
 
   // Add this helper function
@@ -5052,39 +5276,100 @@ export default function AdCreationForm({
   const handleQueueJob = (e) => {
     e.preventDefault();
 
-    // Validation (keep your existing validation)
-    if (selectedAdSets.length === 0 && !duplicateAdSet) {
-      toast.error("Please select at least one ad set");
-      return;
-    }
-
     if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
 
-    // Capture current form state as a job
-    const newJob = captureFormDataAsJob();
-    // Add to queue
-    setJobQueue(prev => [...prev, newJob]);
+    const orderedVariants = [
+      variants.find((variant) => variant.id === 'default'),
+      ...variants.filter((variant) => variant.id !== 'default'),
+    ].filter(Boolean);
+
+    const newJobs = [];
+
+    for (const variant of orderedVariants) {
+      const job = captureFormDataAsJob(variant.id);
+      if (!job || job.adCount === 0 || !hasMediaInFormData(job.formData)) {
+        continue;
+      }
+
+      if ((job.formData.selectedAdSets || []).length === 0 && !job.formData.duplicateAdSet) {
+        toast.error(`${variant.name}: please select at least one ad set`);
+        return;
+      }
+
+      if (!job.formData.selectedAdAccount) {
+        toast.error(`${variant.name}: please select an ad account`);
+        return;
+      }
+
+      if (!job.formData.pageId) {
+        toast.error(`${variant.name}: please select a Facebook page`);
+        return;
+      }
+
+      newJobs.push(job);
+    }
+
+    if (newJobs.length === 0) {
+      toast.error('No variants have files assigned. Nothing to publish.');
+      return;
+    }
+
+    setJobQueue((prev) => [...prev, ...newJobs]);
+    toast.success(
+      newJobs.length === 1
+        ? 'Job queued'
+        : `Queued ${newJobs.length} jobs across variants`
+    );
 
     // Clear form immediately
     if (!preserveMedia) {
       setFiles([]);
       setDriveFiles([]);
-      setDropboxFiles([]);  // ADD THIS LINE
+      setDropboxFiles([]);
       setVideoThumbs({});
       setThumbnail(null);
       setFileGroups([]);
       setEnablePlacementCustomization(false);
-      setImportedPosts([]);  // ADD THIS
+      setImportedPosts([]);
       setImportedFiles([]);
       setSelectedIgOrganicPosts([]);
-
+      setFileVariantMap({});
+      setGroupVariantMap({});
+      setSelectedFiles(new Set());
     }
-
-
   };
+
+  const populatedVariantSummaries = variants
+    .map((variant) => ({
+      id: variant.id,
+      name: variant.name,
+      count: countFilesForVariant(variant.id),
+    }))
+    .filter((variant) => variant.count > 0);
+
+  const publishDisabled = variants.length > 1
+    ? (
+      !isLoggedIn ||
+      (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
+      (selectedFiles.size > 0) ||
+      (!isCarouselAd && hasDuplicates)
+    )
+    : (
+      !isLoggedIn ||
+      (selectedAdSets.length === 0 && !duplicateAdSet) ||
+      (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
+      (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
+      (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
+      (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||
+      (showShopDestinationSelector && !selectedShopDestination) ||
+      isMissingDestinationValue ||
+      (selectedFiles.size > 0) ||
+      (shouldShowLeadFormSelector && !selectedForm) ||
+      (!isCarouselAd && hasDuplicates)
+    );
 
 
   return (
@@ -5305,7 +5590,7 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">
-                        Posting {currentJob.adCount} Ad{currentJob.adCount !== 1 ? 's' : ''} to {currentJob.formData.adSetDisplayName}
+                        Posting {currentJob.variantName || 'Default'}: {currentJob.adCount} ad{currentJob.adCount !== 1 ? 's' : ''} to {currentJob.formData.adSetDisplayName}
                       </p>
                       <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
                     </div>
@@ -5419,7 +5704,7 @@ export default function AdCreationForm({
                       <QueueIcon className="w-6 h-6 text-yellow-600" />
                     </div>
                     <p className="flex-1 text-sm text-gray-600">
-                      Queued {job.adCount} ad{job.adCount !== 1 ? 's' : ''} to {job.formData.adSetDisplayName}
+                      Queued {job.variantName || 'Default'}: {job.adCount} ad{job.adCount !== 1 ? 's' : ''} to {job.formData.adSetDisplayName}
                     </p>
                     <button
                       onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
@@ -5443,7 +5728,7 @@ export default function AdCreationForm({
             Select ad preferences
           </div>
           {!(useExistingPosts || selectedIgOrganicPosts.length > 0) && (
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <Label htmlFor="ad-type" className="text-sm whitespace-nowrap">
                 Ad Type:
               </Label>
@@ -5456,6 +5741,11 @@ export default function AdCreationForm({
                 onValueChange={(value) => {
                   if (value === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))) {
                     setAdType('regular');
+                    return;
+                  }
+
+                  if (variants.length > 1) {
+                    toast.error('Ad type is locked while variants exist. Delete extra variants to change it.');
                     return;
                   }
 
@@ -5481,7 +5771,7 @@ export default function AdCreationForm({
                     }
                   }
                 }}
-                disabled={!isLoggedIn}
+                disabled={!isLoggedIn || variants.length > 1}
               >
                 <SelectTrigger className={cn("w-[180px] h-10 py-2 font-medium", formFieldChrome)}>
                   <SelectValue placeholder="Select ad type" />
@@ -5515,6 +5805,11 @@ export default function AdCreationForm({
             </div>
           )}
         </CardTitle>
+        {variants.length > 1 && (
+          <CardDescription>
+            Ad type is locked while variants exist. Delete extra variants if you need to change the ad structure.
+          </CardDescription>
+        )}
       </CardHeader>
 
       <CardContent>
@@ -6954,22 +7249,17 @@ export default function AdCreationForm({
 
 
           <div className="space-y-1">
+            {variants.length > 1 && populatedVariantSummaries.length > 0 && (
+              <div className="text-xs text-gray-500 mb-2">
+                Publishing {populatedVariantSummaries.length} job{populatedVariantSummaries.length === 1 ? '' : 's'}:
+                {' '}
+                {populatedVariantSummaries.map((variant) => `${variant.name} (${variant.count})`).join(' · ')}
+              </div>
+            )}
             <Button
               type="submit"
               className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl"
-              disabled={
-                !isLoggedIn ||
-                (selectedAdSets.length === 0 && !duplicateAdSet) ||
-                (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
-                (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-                (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
-                (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||
-                (showShopDestinationSelector && !selectedShopDestination) ||
-                isMissingDestinationValue ||
-                (selectedFiles.size > 0) ||
-                (shouldShowLeadFormSelector && !selectedForm) ||
-                (!isCarouselAd && hasDuplicates)
-              }
+              disabled={publishDisabled}
             >
               Publish Ads
             </Button>
@@ -7244,6 +7534,51 @@ export default function AdCreationForm({
               </Button>
             </div>
           </div>
+        </div>
+      )}
+      {variants.length > 1 && (
+        <div className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-1 rounded-full border bg-white p-1 shadow-lg">
+          {variants.map((variant) => {
+            const isActive = variant.id === activeVariantId;
+            const assignedCount = countFilesForVariant(variant.id);
+
+            return (
+              <div key={variant.id} className="group flex items-center">
+                <button
+                  type="button"
+                  onClick={() => switchVariant(variant.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition",
+                    isActive ? "bg-black text-white" : "hover:bg-gray-100"
+                  )}
+                >
+                  <VariantDot variantId={variant.id} variants={variants} />
+                  <span>{variant.name}</span>
+                  <span className={cn("text-xs", isActive ? "text-white/70" : "text-gray-500")}>
+                    · {assignedCount}
+                  </span>
+                </button>
+                {variant.id !== 'default' && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteVariant(variant.id)}
+                    className="ml-0.5 rounded-full p-1 text-red-600 opacity-0 transition group-hover:opacity-100 hover:bg-red-50"
+                    title="Delete variant"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={handleAddVariant}
+            className="rounded-full p-1.5 hover:bg-gray-100"
+            title="Add variant"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
         </div>
       )}
     </Card >

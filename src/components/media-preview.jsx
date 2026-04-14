@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Rocket, Trash, Users } from 'lucide-react'
+import { ChevronDown, Rocket, Trash, Users } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from 'lucide-react'
@@ -12,6 +12,7 @@ import { GripVertical } from 'lucide-react';
 import RocketImg from '@/assets/rocketpreview.webp';
 import Uploadimg from '@/assets/upload.webp';
 import { Checkbox } from "@/components/ui/checkbox"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Groupads from '@/assets/icons/groupads.svg?react';
 import { v4 as uuidv4 } from 'uuid';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -40,10 +41,40 @@ const isVideoFile = (file) => {
   return /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(name);
 };
 
+const VARIANT_COLORS = ['#6b7280', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+
+const getGroupFileIds = (group) => Array.isArray(group) ? group : (group?.fileIds || []);
+
+const createFileGroup = (fileIds) => ({
+  id: uuidv4(),
+  fileIds: [...fileIds],
+});
+
+function VariantDot({ variantId, variants }) {
+  const idx = variants.findIndex((variant) => variant.id === variantId);
+  const color = VARIANT_COLORS[Math.max(0, idx) % VARIANT_COLORS.length];
+
+  return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />;
+}
+
 // Sortable item component
 const SortableMediaItem = React.memo(function SortableMediaItem({
-
-  file, index, isCarouselAd, videoThumbs, onRemove, isSelected, onSelect, groupNumber, enablePlacementCustomization, adType, cardIndex
+  file,
+  index,
+  isCarouselAd,
+  videoThumbs,
+  onRemove,
+  isSelected,
+  onSelect,
+  groupNumber,
+  enablePlacementCustomization,
+  adType,
+  cardIndex,
+  dimmed,
+  showVariantDropdown,
+  assignedVariantId,
+  variants,
+  onAssignVariant
 }) {
   const {
     attributes,
@@ -65,6 +96,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     transition,
     zIndex: isDragging ? 1000 : 'auto',
+    opacity: dimmed ? 0.3 : (isDragging ? 0.5 : 1),
   };
 
   const fileId = file.isMetaLibrary
@@ -79,7 +111,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group ${isDragging ? 'opacity-50' : ''} ${isSelectable ? 'cursor-pointer' : ''}`}
+      className={`relative group ${isSelectable ? 'cursor-pointer' : ''}`}
       onClick={isSelectable ? () => onSelect(fileId) : undefined}
     >
       {/* Selection background for placement customization - only show when NOT grouped */}
@@ -233,6 +265,34 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
             <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
             <span className="sr-only">Remove</span>
           </Button>
+          {showVariantDropdown && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="absolute bottom-2 left-2 z-30 flex items-center gap-1 rounded-md border bg-white/95 px-2 py-0.5 text-xs shadow-sm hover:bg-white"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <VariantDot variantId={assignedVariantId} variants={variants} />
+                  <span>{variants.find((variant) => variant.id === assignedVariantId)?.name || 'Default'}</span>
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-44 p-1" onClick={(e) => e.stopPropagation()}>
+                {variants.map((variant) => (
+                  <button
+                    key={variant.id}
+                    type="button"
+                    onClick={() => onAssignVariant(variant.id)}
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                  >
+                    <VariantDot variantId={variant.id} variants={variants} />
+                    <span>{variant.name}</span>
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
         <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
 
@@ -270,18 +330,28 @@ export default function MediaPreview({
   selectedFiles,
   setSelectedFiles,
   selectedIgOrganicPosts = [],
-  setSelectedIgOrganicPosts
+  setSelectedIgOrganicPosts,
+  variants,
+  activeVariantId,
+  fileVariantMap,
+  setFileVariantMap,
+  groupVariantMap,
+  setGroupVariantMap
 }) {
   // const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isAIGrouping, setIsAIGrouping] = useState(false);
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor));
+  const hideUngroupedVariantDropdowns = isCarouselAd || enablePlacementCustomization;
+
+  const groupedFileIds = useMemo(
+    () => new Set(fileGroups.flatMap((group) => getGroupFileIds(group))),
+    [fileGroups]
+  );
 
   // Memoized computations
   const ungroupedFiles = useMemo(() => {
-    const groupedFileIds = new Set(fileGroups.flat());
-
     const ungroupedLocalFiles = files.filter(file =>
       !groupedFileIds.has(file.isDrive ? file.id : file.uniqueId || file.name)
     );
@@ -300,7 +370,7 @@ export default function MediaPreview({
       .filter(file => !groupedFileIds.has(file.type === 'image' ? file.hash : file.id));
 
     return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedImportedFiles];
-  }, [files, dropboxFiles, importedFiles, fileGroups]);
+  }, [files, dropboxFiles, importedFiles, groupedFileIds]);
 
   // const totalFileCount = useMemo(() => {
   //   return files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length;
@@ -444,11 +514,7 @@ export default function MediaPreview({
 
   // Event handlers with useCallback
   const removeFile = useCallback((file) => {
-    const fileId = file.isMetaLibrary
-      ? (file.type === 'image' ? file.hash : file.id)
-      : file.isDropbox
-        ? file.dropboxId
-        : (file.isDrive ? file.id : file.uniqueId || file.name);
+    const fileId = getFileId(file);
 
     // Remove from selection
     setSelectedFiles(prev => {
@@ -458,9 +524,13 @@ export default function MediaPreview({
     });
 
     // Remove from groups
-    setFileGroups(prev => prev.map(group =>
-      group.filter(id => id !== fileId)
-    ).filter(group => group.length > 0));
+    setFileGroups(prev => prev
+      .map(group => ({
+        ...group,
+        fileIds: getGroupFileIds(group).filter(id => id !== fileId)
+      }))
+      .filter(group => group.fileIds.length > 0)
+    );
 
     // Remove from appropriate state
     if (file.isMetaLibrary) {
@@ -481,13 +551,22 @@ export default function MediaPreview({
 
 
   const handlePlacementCustomizationChange = useCallback((checked) => {
+    const hasAssignments = Object.keys(fileVariantMap).length > 0 || Object.keys(groupVariantMap).length > 0;
+
+    if (checked !== enablePlacementCustomization && variants.length > 1 && hasAssignments) {
+      const confirmed = window.confirm('Changing placement customization will clear all variant media assignments. Continue?');
+      if (!confirmed) return;
+      setFileVariantMap({});
+      setGroupVariantMap({});
+    }
+
     setEnablePlacementCustomization(checked);
     if (!checked) {
       // Clear all grouping when disabled
       setFileGroups([]);
       setSelectedFiles(new Set());
     }
-  }, [setEnablePlacementCustomization, setFileGroups, setSelectedFiles]);
+  }, [enablePlacementCustomization, fileVariantMap, groupVariantMap, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setGroupVariantMap, setSelectedFiles, variants.length]);
 
   const handleFileSelect = useCallback((fileId) => {
     setSelectedFiles(prev => {
@@ -513,7 +592,7 @@ export default function MediaPreview({
       }
 
       const newGroup = Array.from(selectedFiles);
-      setFileGroups(prev => [...prev, newGroup]);
+      setFileGroups(prev => [...prev, createFileGroup(newGroup)]);
       setSelectedFiles(new Set());
       return;
     }
@@ -521,14 +600,14 @@ export default function MediaPreview({
     // Auto-group when exactly 2 total files exist and not enough are selected
     if (enablePlacementCustomization && totalFileCount === 2 && ungroupedFiles.length === 2 && selectedFiles.size === 0) {
       const newGroup = ungroupedFiles.map(f => getFileId(f));
-      setFileGroups(prev => [...prev, newGroup]);
+      setFileGroups(prev => [...prev, createFileGroup(newGroup)]);
       setSelectedFiles(new Set());
       return;
     }
 
     if (selectedFiles.size >= 2 && selectedFiles.size <= 3) {
       const newGroup = Array.from(selectedFiles);
-      setFileGroups(prev => [...prev, newGroup]);
+      setFileGroups(prev => [...prev, createFileGroup(newGroup)]);
 
       const selectedFileIds = Array.from(selectedFiles);
 
@@ -612,7 +691,7 @@ export default function MediaPreview({
       ));
       setSelectedFiles(new Set());
     }
-  }, [selectedFiles, setFileGroups, files, driveFiles, dropboxFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setImportedFiles, setSelectedFiles, adType, isCarouselAd]);
+  }, [selectedFiles, setFileGroups, files, driveFiles, dropboxFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setImportedFiles, setSelectedFiles, adType, enablePlacementCustomization, isCarouselAd, totalFileCount, ungroupedFiles]);
 
 
 
@@ -737,10 +816,10 @@ export default function MediaPreview({
       const result = JSON.parse(responseText);
 
       const newGroups = result.groups.map(indexGroup =>
-        indexGroup.map(idx => {
+        createFileGroup(indexGroup.map(idx => {
           const file = imageFiles[idx];
           return getFileId(file);
-        })
+        }))
       );
 
       setFileGroups(newGroups);
@@ -776,7 +855,7 @@ export default function MediaPreview({
           if (file.isDropbox) return file.dropboxId;
           return getFileId(file);
         });
-      newGroups.push(group);
+      newGroups.push(createFileGroup(group));
     }
 
     setFileGroups(newGroups);
@@ -788,21 +867,23 @@ export default function MediaPreview({
 
 
 
-  const handleUngroup = useCallback((groupIndex) => {
-    setFileGroups(prev => prev.filter((_, index) => index !== groupIndex));
+  const handleUngroup = useCallback((groupId) => {
+    setFileGroups(prev => prev.filter((group) => group.id !== groupId));
   }, [setFileGroups]);
 
 
-  const handleGroupDragEnd = useCallback((groupIndex, event) => {
+  const handleGroupDragEnd = useCallback((groupId, event) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setFileGroups(prev => {
       const newGroups = [...prev];
-      const group = [...newGroups[groupIndex]];
+      const groupIndex = newGroups.findIndex((group) => group.id === groupId);
+      if (groupIndex === -1) return prev;
+      const group = [...getGroupFileIds(newGroups[groupIndex])];
       const oldIdx = group.indexOf(String(active.id));
       const newIdx = group.indexOf(String(over.id));
       if (oldIdx === -1 || newIdx === -1) return prev;
-      newGroups[groupIndex] = arrayMove(group, oldIdx, newIdx);
+      newGroups[groupIndex] = { ...newGroups[groupIndex], fileIds: arrayMove(group, oldIdx, newIdx) };
       return newGroups;
     });
   }, [setFileGroups]);
@@ -841,9 +922,45 @@ export default function MediaPreview({
     }
   }, [files, driveFiles, dropboxFiles, importedFiles, setFiles, setDriveFiles, setDropboxFiles, setImportedFiles]);
 
+  const assignFileToVariant = useCallback((fileId, variantId) => {
+    setFileVariantMap((prev) => {
+      if (variantId === 'default') {
+        const next = { ...prev };
+        delete next[fileId];
+        return next;
+      }
 
-  const preload = new Image();
+      return { ...prev, [fileId]: variantId };
+    });
+  }, [setFileVariantMap]);
 
+  const assignGroupToVariant = useCallback((groupId, variantId) => {
+    setGroupVariantMap((prev) => {
+      if (variantId === 'default') {
+        const next = { ...prev };
+        delete next[groupId];
+        return next;
+      }
+
+      return { ...prev, [groupId]: variantId };
+    });
+  }, [setGroupVariantMap]);
+
+  const findFileById = useCallback((fileId) => {
+    let file = files.find((entry) => getFileId(entry) === fileId);
+    if (file) return file;
+
+    file = driveFiles.find((entry) => entry.id === fileId);
+    if (file) return { ...file, isDrive: true };
+
+    file = (dropboxFiles || []).find((entry) => entry.dropboxId === fileId);
+    if (file) return { ...file, isDropbox: true };
+
+    file = importedFiles.find((entry) => getFileId({ ...entry, isMetaLibrary: true }) === fileId);
+    if (file) return { ...file, isMetaLibrary: true, name: file.name };
+
+    return null;
+  }, [driveFiles, dropboxFiles, files, importedFiles]);
   return (
     <>
       {(files.length > 0 || driveFiles.length > 0 || (dropboxFiles?.length || 0) > 0 || importedPosts.length > 0 || importedFiles.length > 0 || selectedIgOrganicPosts.length > 0) ? (
@@ -956,6 +1073,8 @@ export default function MediaPreview({
                   setImportedPosts([]);
                   setImportedFiles([]);
                   setSelectedIgOrganicPosts([]);
+                  setFileVariantMap({});
+                  setGroupVariantMap({});
                 }}
                 className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
               >
@@ -1015,7 +1134,14 @@ export default function MediaPreview({
               >
                 <div className="space-y-4">
                   {fileGroups.map((group, groupIndex) => (
-                    <div key={`group-${groupIndex}`} className="relative">
+                    <div
+                      key={group.id || `group-${groupIndex}`}
+                      className="relative"
+                      style={{
+                        opacity: activeVariantId !== 'default' && (groupVariantMap[group.id] || 'default') !== activeVariantId ? 0.3 : 1,
+                        transition: 'opacity 150ms'
+                      }}
+                    >
                       {/* Shared group background */}
                       <div
                         className={`absolute inset-0 border-2 rounded-2xl -z-10 ${groupIndex % 2 === 0
@@ -1029,11 +1155,38 @@ export default function MediaPreview({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleUngroup(groupIndex)}
+                        onClick={() => handleUngroup(group.id)}
                         className="absolute top-2 right-2 z-20 bg-white hover:bg-red-50 text-red-700 border-red-200 rounded-xl text-xs px-2 py-1"
                       >
                         Ungroup
                       </Button>
+                      {variants.length > 1 && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-md border bg-white/95 px-2 py-0.5 text-xs shadow-sm hover:bg-white"
+                            >
+                              <VariantDot variantId={groupVariantMap[group.id] || 'default'} variants={variants} />
+                              <span>{variants.find((variant) => variant.id === (groupVariantMap[group.id] || 'default'))?.name || 'Default'}</span>
+                              <ChevronDown className="h-3 w-3" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-44 p-1">
+                            {variants.map((variant) => (
+                              <button
+                                key={variant.id}
+                                type="button"
+                                onClick={() => assignGroupToVariant(group.id, variant.id)}
+                                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-gray-100"
+                              >
+                                <VariantDot variantId={variant.id} variants={variants} />
+                                <span>{variant.name}</span>
+                              </button>
+                            ))}
+                          </PopoverContent>
+                        </Popover>
+                      )}
                       {/* Group label */}
                       <div className={`absolute bottom-2 right-2 z-20 text-white text-xs px-2 py-1 rounded-xl font-semibold ${groupIndex % 2 === 0
                         ? 'bg-blue-500'
@@ -1047,35 +1200,15 @@ export default function MediaPreview({
                         <DndContext
                           sensors={sensors}
                           collisionDetection={closestCenter}
-                          onDragEnd={(event) => handleGroupDragEnd(groupIndex, event)}
+                          onDragEnd={(event) => handleGroupDragEnd(group.id, event)}
                         >
                           <SortableContext
-                            items={group}
+                            items={getGroupFileIds(group)}
                             strategy={verticalListSortingStrategy}
                           >
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
-                              {group.map((fileId, cardIdx) => {
-                                let file = files.find(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
-                                if (!file) {
-                                  file = driveFiles.find(f => f.id === fileId);
-                                  if (file) {
-                                    file = { ...file, isDrive: true };
-                                  }
-                                }
-                                if (!file) {
-                                  file = (dropboxFiles || []).find(f => f.dropboxId === fileId);
-                                  if (file) {
-                                    file = { ...file, isDropbox: true };
-                                  }
-                                }
-                                if (!file) {
-                                  const metaFile = importedFiles.find(f =>
-                                    (f.type === 'image' ? f.hash : f.id) === fileId
-                                  );
-                                  if (metaFile) {
-                                    file = { ...metaFile, isMetaLibrary: true, name: metaFile.name };
-                                  }
-                                }
+                              {getGroupFileIds(group).map((fileId, cardIdx) => {
+                                const file = findFileById(fileId);
                                 if (!file) {
                                   console.warn(`File not found for ID: ${fileId}`);
                                   return null;
@@ -1094,6 +1227,11 @@ export default function MediaPreview({
                                     groupNumber={groupIndex + 1}
                                     enablePlacementCustomization={enablePlacementCustomization}
                                     adType={adType}
+                                    dimmed={false}
+                                    showVariantDropdown={false}
+                                    assignedVariantId={groupVariantMap[group.id] || 'default'}
+                                    variants={variants}
+                                    onAssignVariant={() => { }}
                                   />
                                 );
                               })}
@@ -1103,28 +1241,8 @@ export default function MediaPreview({
                       ) : (
                         /* Original non-DnD group rendering for placement customization / flexible */
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3">
-                          {group.map((fileId) => {
-                            let file = files.find(f => (f.isDrive ? f.id : (f.uniqueId || f.name)) === fileId);
-                            if (!file) {
-                              file = driveFiles.find(f => f.id === fileId);
-                              if (file) {
-                                file = { ...file, isDrive: true };
-                              }
-                            }
-                            if (!file) {
-                              file = (dropboxFiles || []).find(f => f.dropboxId === fileId);
-                              if (file) {
-                                file = { ...file, isDropbox: true };
-                              }
-                            }
-                            if (!file) {
-                              const metaFile = importedFiles.find(f =>
-                                (f.type === 'image' ? f.hash : f.id) === fileId
-                              );
-                              if (metaFile) {
-                                file = { ...metaFile, isMetaLibrary: true, name: metaFile.name };
-                              }
-                            }
+                          {getGroupFileIds(group).map((fileId) => {
+                            const file = findFileById(fileId);
                             if (!file) {
                               console.warn(`File not found for ID: ${fileId}`);
                               return null;
@@ -1143,6 +1261,11 @@ export default function MediaPreview({
                                 groupNumber={groupIndex + 1}
                                 enablePlacementCustomization={enablePlacementCustomization}
                                 adType={adType}
+                                dimmed={false}
+                                showVariantDropdown={false}
+                                assignedVariantId={groupVariantMap[group.id] || 'default'}
+                                variants={variants}
+                                onAssignVariant={() => { }}
                               />
                             ) : null;
                           })}
@@ -1155,6 +1278,8 @@ export default function MediaPreview({
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-6" style={{ padding: '6px', }}>
                     {ungroupedFiles.map((file, index) => {
                       const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
+                      const assignedVariantId = fileVariantMap[fileId] || 'default';
+                      const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0);
                       return (
                         <SortableMediaItem
                           key={fileId}
@@ -1169,13 +1294,25 @@ export default function MediaPreview({
                           groupNumber={null}
                           enablePlacementCustomization={enablePlacementCustomization}
                           adType={adType}
-
+                          dimmed={activeVariantId !== 'default' && assignedVariantId !== activeVariantId}
+                          showVariantDropdown={showVariantDropdown}
+                          assignedVariantId={assignedVariantId}
+                          variants={variants}
+                          onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
                         />
                       );
                     })}
 
                     {importedPosts.map((post) => (
-                      <div key={post.id} className="relative group" title={post.ad_name}>
+                      <div
+                        key={post.id}
+                        className="relative group"
+                        title={post.ad_name}
+                        style={{
+                          opacity: activeVariantId !== 'default' ? 0.3 : 1,
+                          transition: 'opacity 150ms'
+                        }}
+                      >
                         <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
                           <img
                             src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
@@ -1200,7 +1337,15 @@ export default function MediaPreview({
                     ))}
 
                     {selectedIgOrganicPosts.map((post) => (
-                      <div key={`ig-${post.source_instagram_media_id}`} className="relative group" title={post.ad_name}>
+                      <div
+                        key={`ig-${post.source_instagram_media_id}`}
+                        className="relative group"
+                        title={post.ad_name}
+                        style={{
+                          opacity: activeVariantId !== 'default' ? 0.3 : 1,
+                          transition: 'opacity 150ms'
+                        }}
+                      >
                         <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
                           <img
                             src={post.previewUrl || "https://api.withblip.com/thumbnail.jpg"}
