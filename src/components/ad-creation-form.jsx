@@ -975,6 +975,7 @@ export default function AdCreationForm({
       adCount: computeAdCount(formData),
       variantId,
       variantName: variants.find((variant) => variant.id === variantId)?.name || 'Default',
+      showVariantLabel: false,
       formData,
     };
   }, [
@@ -5317,12 +5318,18 @@ export default function AdCreationForm({
       return;
     }
 
-    setJobQueue((prev) => [...prev, ...newJobs]);
-    toast.success(
-      newJobs.length === 1
-        ? 'Job queued'
-        : `Queued ${newJobs.length} jobs across variants`
-    );
+    const shouldShowVariantLabel = newJobs.some((job) => job.variantId !== 'default');
+    const queuedJobs = newJobs.map((job) => ({
+      ...job,
+      showVariantLabel: shouldShowVariantLabel,
+    }));
+
+    setJobQueue((prev) => [...prev, ...queuedJobs]);
+    // toast.success(
+    //   newJobs.length === 1
+    //     ? 'Job queued'
+    //     : `Queued ${newJobs.length} jobs across variants`
+    // );
 
     // Clear form immediately
     if (!preserveMedia) {
@@ -5349,7 +5356,14 @@ export default function AdCreationForm({
       count: countFilesForVariant(variant.id),
     }))
     .filter((variant) => variant.count > 0);
+  const hasConfiguredFormSplits = populatedVariantSummaries.some((variant) => variant.id !== 'default');
   const shouldScrollVariantPicker = variants.length > 5;
+  const formatQueuedJobLabel = (job, prefix) => {
+    const summary = `${job.adCount} ad${job.adCount !== 1 ? 's' : ''} to ${job.formData.adSetDisplayName}`;
+    return job.showVariantLabel && job.variantName
+      ? `${prefix} ${job.variantName}: ${summary}`
+      : `${prefix} ${summary}`;
+  };
 
   const publishDisabled = variants.length > 1
     ? (
@@ -5591,7 +5605,7 @@ export default function AdCreationForm({
                         <UploadIcon className="w-6 h-6" />
                       </div>
                       <p className="flex-1 text-sm font-medium text-gray-700 break-all">
-                        Posting {currentJob.variantName || 'Default'}: {currentJob.adCount} ad{currentJob.adCount !== 1 ? 's' : ''} to {currentJob.formData.adSetDisplayName}
+                        {formatQueuedJobLabel(currentJob, 'Posting')}
                       </p>
                       <span className="text-sm font-semibold text-gray-900">{Math.round(progress || trackedProgress)}%</span>
                     </div>
@@ -5705,7 +5719,7 @@ export default function AdCreationForm({
                       <QueueIcon className="w-6 h-6 text-yellow-600" />
                     </div>
                     <p className="flex-1 text-sm text-gray-600">
-                      Queued {job.variantName || 'Default'}: {job.adCount} ad{job.adCount !== 1 ? 's' : ''} to {job.formData.adSetDisplayName}
+                      {formatQueuedJobLabel(job, 'Queued')}
                     </p>
                     <button
                       onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
@@ -7270,7 +7284,7 @@ export default function AdCreationForm({
 
 
           <div className="space-y-1">
-            {variants.length > 1 && populatedVariantSummaries.length > 0 && (
+            {variants.length > 1 && hasConfiguredFormSplits && (
               <div className="text-xs text-gray-500 mb-2">
                 Publishing {populatedVariantSummaries.length} job{populatedVariantSummaries.length === 1 ? '' : 's'}:
                 {' '}
@@ -7585,39 +7599,39 @@ export default function AdCreationForm({
               )}
             >
               <div className="flex w-max items-center gap-1 pr-1">
-              {variants.map((variant) => {
-                const isActive = variant.id === activeVariantId;
-                const assignedCount = countFilesForVariant(variant.id);
+                {variants.map((variant) => {
+                  const isActive = variant.id === activeVariantId;
+                  const assignedCount = countFilesForVariant(variant.id);
 
-                return (
-                  <div key={variant.id} className="group flex shrink-0 items-center">
-                    <button
-                      type="button"
-                      onClick={() => switchVariant(variant.id)}
-                      className={cn(
-                        "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
-                        isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
-                      )}
-                    >
-                      <VariantDot variantId={variant.id} variants={variants} />
-                      <span className="whitespace-nowrap">{variant.name}</span>
-                      <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
-                        · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
-                      </span>
-                    </button>
-                    {variant.id !== 'default' && (
+                  return (
+                    <div key={variant.id} className="group flex shrink-0 items-center">
                       <button
                         type="button"
-                        onClick={() => handleDeleteVariant(variant.id)}
-                        className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
-                        title="Delete variant"
+                        onClick={() => switchVariant(variant.id)}
+                        className={cn(
+                          "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
+                          isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                        )}
                       >
-                        <X className="h-3 w-3" />
+                        <VariantDot variantId={variant.id} variants={variants} />
+                        <span className="whitespace-nowrap">{variant.name}</span>
+                        <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
+                          · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
+                        </span>
                       </button>
-                    )}
-                  </div>
-                );
-              })}
+                      {variant.id !== 'default' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteVariant(variant.id)}
+                          className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
+                          title="Delete variant"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </ScrollArea>
             <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
