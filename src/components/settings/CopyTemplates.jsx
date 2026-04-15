@@ -19,7 +19,8 @@ import {
 import { toast } from "sonner"
 import Papa from "papaparse";
 import { useAuth } from "@/lib/AuthContext"
-import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload, ChevronsUpDown, ArrowUpDown, Check } from 'lucide-react';
+import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload, ChevronsUpDown, ArrowUpDown, Check, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate, deleteCopyTemplates } from "@/lib/deleteCopyTemplate"
 import TextareaAutosize from 'react-textarea-autosize'
@@ -672,22 +673,18 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       entries = entries.filter(([name]) => name.toLowerCase().includes(query))
     }
 
-    // Sort
-    entries.sort(([a], [b]) => {
-      // Default always stays at top regardless of sort mode
+    // Sort — default template always pinned at top
+    entries.sort(([a, aData], [b, bData]) => {
       if (a === defaultName) return -1
       if (b === defaultName) return 1
 
-      if (sortMode === "oldest") {
-        // Reverse the natural (recent-first) key order
-        return 0 // preserve original insertion order (oldest first is just natural object order)
+      if (sortMode === "most_used") {
+        return (bData?.usageCount || 0) - (aData?.usageCount || 0)
       }
-      // "default" and "most_used" keep natural order for now
       return 0
     })
 
     if (sortMode === "oldest") {
-      // Keep default at top, reverse the rest
       const defaultEntry = entries.find(([name]) => name === defaultName)
       const rest = entries.filter(([name]) => name !== defaultName)
       entries = defaultEntry ? [defaultEntry, ...rest.reverse()] : rest.reverse()
@@ -965,7 +962,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       {showSortMenu && (
                         <>
                           <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
-                          <div className="fixed z-[100] bg-white rounded-lg border border-gray-200 shadow-lg py-1 min-w-[150px]" style={{ top: 'auto', right: 'auto' }} ref={(el) => {
+                          <div className="fixed z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]" style={{ top: 'auto', right: 'auto' }} ref={(el) => {
                             if (!el) return;
                             const btn = el.previousElementSibling?.previousElementSibling;
                             if (!btn) return;
@@ -973,28 +970,42 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                             el.style.top = `${rect.bottom + 4}px`;
                             el.style.left = `${rect.right - el.offsetWidth}px`;
                           }}>
-                            {[
-                              { value: "default", label: "Recently Made" },
-                              { value: "oldest", label: "Oldest First" },
-                              { value: "most_used", label: "Most Used" },
-                            ].map((option) => (
-                              <button
-                                key={option.value}
-                                type="button"
-                                className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSortMode(option.value)
-                                  localStorage.setItem("templateSortMode", option.value)
-                                  setShowSortMenu(false)
-                                }}
-                              >
-                                {option.label}
-                                {sortMode === option.value && (
-                                  <Check className="h-3.5 w-3.5 text-blue-500" />
-                                )}
-                              </button>
-                            ))}
+                            <TooltipProvider delayDuration={0}>
+                              {[
+                                { value: "default", label: "Recently Made" },
+                                { value: "oldest", label: "Oldest First" },
+                                { value: "most_used", label: "Most Used" },
+                              ].map((option) => (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setSortMode(option.value)
+                                    localStorage.setItem("templateSortMode", option.value)
+                                    setShowSortMenu(false)
+                                  }}
+                                >
+                                  <span className="flex items-center gap-1.5">
+                                    {option.label}
+                                    {option.value === "most_used" && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                          <Info className="h-3 w-3 text-gray-400" />
+                                        </TooltipTrigger>
+                                        <TooltipContent side="right" className="text-xs">
+                                          Tracking since 17th Apr '26
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </span>
+                                  {sortMode === option.value && (
+                                    <Check className="h-3.5 w-3.5 text-blue-500" />
+                                  )}
+                                </button>
+                              ))}
+                            </TooltipProvider>
                           </div>
                         </>
                       )}

@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -2967,9 +2967,13 @@ export default function AdCreationForm({
       entries = entries.filter(([name]) => name.toLowerCase().includes(query));
     }
 
-    entries.sort(([a], [b]) => {
+    entries.sort(([a, aData], [b, bData]) => {
       if (a === defaultTemplateName) return -1;
       if (b === defaultTemplateName) return 1;
+
+      if (sortMode === "most_used") {
+        return (bData?.usageCount || 0) - (aData?.usageCount || 0);
+      }
       if (sortMode === "oldest") return 0;
       return a.localeCompare(b);
     });
@@ -5256,7 +5260,8 @@ export default function AdCreationForm({
             totalCount,
             errorMessages,
             selectedAdSets,
-            selectedAdAccount
+            selectedAdAccount,
+            selectedTemplate
           }, {
             withCredentials: true,
             timeout: 5000
@@ -6518,7 +6523,7 @@ export default function AdCreationForm({
                                   {showSortMenu && (
                                     <>
                                       <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
-                                      <div className="fixed z-[100] bg-white rounded-lg border border-gray-200 shadow-lg py-1 min-w-[150px]" style={{ top: 'auto', right: 'auto' }} ref={(el) => {
+                                      <div className="fixed z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]" style={{ top: 'auto', right: 'auto' }} ref={(el) => {
                                         if (!el) return;
                                         const btn = el.previousElementSibling?.previousElementSibling;
                                         if (!btn) return;
@@ -6526,28 +6531,42 @@ export default function AdCreationForm({
                                         el.style.top = `${rect.bottom + 4}px`;
                                         el.style.left = `${rect.right - el.offsetWidth}px`;
                                       }}>
-                                        {[
-                                          { value: "default", label: "Recently Made" },
-                                          { value: "oldest", label: "Oldest First" },
-                                          { value: "most_used", label: "Most Used" },
-                                        ].map((option) => (
-                                          <button
-                                            key={option.value}
-                                            type="button"
-                                            className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setSortMode(option.value);
-                                              localStorage.setItem("templateSortMode", option.value);
-                                              setShowSortMenu(false);
-                                            }}
-                                          >
-                                            {option.label}
-                                            {sortMode === option.value && (
-                                              <Check className="h-3.5 w-3.5 text-blue-500" />
-                                            )}
-                                          </button>
-                                        ))}
+                                        <TooltipProvider delayDuration={0}>
+                                          {[
+                                            { value: "default", label: "Recently Made" },
+                                            { value: "oldest", label: "Oldest First" },
+                                            { value: "most_used", label: "Most Used" },
+                                          ].map((option) => (
+                                            <button
+                                              key={option.value}
+                                              type="button"
+                                              className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSortMode(option.value);
+                                                localStorage.setItem("templateSortMode", option.value);
+                                                setShowSortMenu(false);
+                                              }}
+                                            >
+                                              <span className="flex items-center gap-1.5">
+                                                {option.label}
+                                                {option.value === "most_used" && (
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                      <Info className="h-3 w-3 text-gray-400" />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="right" className="text-xs">
+                                                      Tracking since 17th Apr '26
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                )}
+                                              </span>
+                                              {sortMode === option.value && (
+                                                <Check className="h-3.5 w-3.5 text-blue-500" />
+                                              )}
+                                            </button>
+                                          ))}
+                                        </TooltipProvider>
                                       </div>
                                     </>
                                   )}
