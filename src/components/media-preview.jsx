@@ -364,7 +364,9 @@ export default function MediaPreview({
   fileVariantMap,
   setFileVariantMap,
   groupVariantMap,
-  setGroupVariantMap
+  setGroupVariantMap,
+  hasSeenPowerupPopup,
+  setShowPowerupPopup
 }) {
   // const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isAIGrouping, setIsAIGrouping] = useState(false);
@@ -519,25 +521,20 @@ export default function MediaPreview({
     });
   };
 
-  const hasOnlyNonDynamicCreativeAdSets = useMemo(() => {
-    // Check if we have selected non-dynamic adsets
+  const hasAnyDynamicCreativeAdSets = useMemo(() => {
     if (selectedAdSets.length > 0) {
       return selectedAdSets
         .map(id => adSets.find(a => a.id === id))
-        .every(adset => adset && !adset.is_dynamic_creative);
+        .some(adset => adset && adset.is_dynamic_creative);
     }
-
-    // Check if we're duplicating a non-dynamic adset
     if (duplicateAdSet) {
       const originalAdset = adSets.find(a => a.id === duplicateAdSet);
-      return originalAdset && !originalAdset.is_dynamic_creative;
+      return originalAdset && originalAdset.is_dynamic_creative;
     }
-
     return false;
   }, [selectedAdSets, adSets, duplicateAdSet]);
 
   const showPlacementCustomizationRow = !isCarouselAd &&
-    hasOnlyNonDynamicCreativeAdSets &&
     adType !== 'flexible' &&
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
@@ -604,6 +601,15 @@ export default function MediaPreview({
       setSelectedFiles(new Set());
     }
   }, [enablePlacementCustomization, fileVariantMap, groupVariantMap, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setGroupVariantMap, setSelectedFiles, variants.length]);
+
+  // Auto-disable placement customization when a dynamic ad set is selected
+  useEffect(() => {
+    if (hasAnyDynamicCreativeAdSets && enablePlacementCustomization) {
+      setEnablePlacementCustomization(false);
+      setFileGroups([]);
+      setSelectedFiles(new Set());
+    }
+  }, [hasAnyDynamicCreativeAdSets]);
 
   const handleFileSelect = useCallback((fileId) => {
     setSelectedFiles(prev => {
@@ -1045,6 +1051,9 @@ export default function MediaPreview({
                     size="sm"
                     onClick={() => {
                       if (variants.length === 1) {
+                        if (!hasSeenPowerupPopup) {
+                          setShowPowerupPopup(true);
+                        }
                         handleAddVariant();
                       } else {
                         setShowDisableVariantsDialog(true);
@@ -1147,13 +1156,17 @@ export default function MediaPreview({
                       id="placementCustomization"
                       checked={enablePlacementCustomization}
                       onCheckedChange={handlePlacementCustomizationChange}
+                      disabled={hasAnyDynamicCreativeAdSets}
                       className="border-gray-400 rounded-md"
                     />
                     <label
                       htmlFor="placementCustomization"
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      className={`text-sm font-medium leading-none ${hasAnyDynamicCreativeAdSets ? 'cursor-not-allowed opacity-50' : 'peer-disabled:cursor-not-allowed peer-disabled:opacity-70'}`}
                     >
                       Enable placement customization
+                      {hasAnyDynamicCreativeAdSets && (
+                        <span className="text-xs text-gray-400 ml-1">(not available for dynamic creative ad sets)</span>
+                      )}
                     </label>
                   </div>
                   {showVariantSetupButton && (
@@ -1163,6 +1176,9 @@ export default function MediaPreview({
                       size="sm"
                       onClick={() => {
                         if (variants.length === 1) {
+                          if (!hasSeenPowerupPopup) {
+                            setShowPowerupPopup(true);
+                          }
                           handleAddVariant();
                         } else {
                           setShowDisableVariantsDialog(true);

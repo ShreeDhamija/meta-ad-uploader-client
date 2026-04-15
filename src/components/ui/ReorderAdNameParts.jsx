@@ -287,6 +287,9 @@ export default function ReorderAdNameParts({
 
   // Date format validation
   const [dateFormatError, setDateFormatError] = useState("")
+  // Variable name validation
+  const [variableWarning, setVariableWarning] = useState("")
+  const variableWarningTimer = useRef(null)
 
   const inputRef = useRef(null)
   const slashDropdownRef = useRef(null)
@@ -369,11 +372,57 @@ export default function ReorderAdNameParts({
     setDateFormatError("")
   }, [])
 
+  const KNOWN_VARIABLES = useMemo(() => {
+    const builtIn = AVAILABLE_VARIABLES.map(v => v.label.toLowerCase())
+    const customNames = customVariables.map(c => c.name.toLowerCase())
+    return new Set([...builtIn, ...customNames])
+  }, [customVariables])
+
+  const validateVariableNames = useCallback((value) => {
+    clearTimeout(variableWarningTimer.current)
+    variableWarningTimer.current = setTimeout(() => {
+      const tokenMatches = [...value.matchAll(/\{\{([^}]+)\}\}/g)]
+      if (tokenMatches.length === 0) {
+        setVariableWarning("")
+        return
+      }
+      const unrecognized = []
+      for (const match of tokenMatches) {
+        const content = match[1].trim()
+        const lower = content.toLowerCase()
+        // Skip Date(...) patterns — validated separately
+        if (/^date\s*\(/i.test(content)) continue
+        // Skip Category:Value pairs (custom variable with selected value)
+        if (content.includes(":")) continue
+        // Check against known variables
+        if (!KNOWN_VARIABLES.has(lower)) {
+          unrecognized.push(content)
+        }
+      }
+      if (unrecognized.length > 0) {
+        const names = [...new Set(unrecognized)]
+        setVariableWarning(
+          names.length === 1
+            ? `"${names[0]}" is not a recognized variable`
+            : `${names.map(n => `"${n}"`).join(", ")} are not recognized variables`
+        )
+      } else {
+        setVariableWarning("")
+      }
+    }, 800)
+  }, [KNOWN_VARIABLES])
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(variableWarningTimer.current)
+  }, [])
+
   const emitChange = useCallback((newValue) => {
     setInputValue(newValue)
     validateDateFormats(newValue)
+    validateVariableNames(newValue)
     if (onFormulaChange) onFormulaChange(newValue)
-  }, [onFormulaChange, validateDateFormats])
+  }, [onFormulaChange, validateDateFormats, validateVariableNames])
 
   // ── Detect cursor inside a category-only {{CategoryName}} ──
   // Returns dropdown config if cursor is inside a {{CategoryName}} block,
@@ -749,7 +798,8 @@ export default function ReorderAdNameParts({
           className={cn(
             "w-full rounded-2xl",
             variant === "home" && "border border-gray-300 shadow focus-visible:ring-0 focus-visible:ring-offset-0",
-            dateFormatError && "border-red-400 focus-visible:ring-red-400"
+            dateFormatError && "border-red-400 focus-visible:ring-red-400",
+            !dateFormatError && variableWarning && "border-amber-400 focus-visible:ring-amber-400"
           )}
         />
 
@@ -905,6 +955,13 @@ export default function ReorderAdNameParts({
           {dateFormatError} — hover on{" "}
           <Info className="w-3 h-3 inline-block align-text-top mx-0.5" /> to
           see valid formats
+        </p>
+      )}
+
+      {/* Unrecognized variable warning */}
+      {variableWarning && (
+        <p className="text-amber-600 text-xs mt-1">
+          {variableWarning} — it will be empty in the ad name
         </p>
       )}
 

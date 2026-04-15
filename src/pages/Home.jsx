@@ -24,6 +24,7 @@ import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 const ANALYTICS_LAUNCH_AT = new Date("2026-04-09T12:00:00+05:30");
+const POWERUP_LAUNCH_AT = new Date("2026-04-15T00:00:00+05:30");
 const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
 
 const parseUserCreatedAt = (value) => {
@@ -272,10 +273,14 @@ export default function Home() {
     useEffect(() => {
         if (!isLoggedIn || loading || showOnboardingPopup) return
 
-        if (!hasSeenPowerupPopup) {
+        const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
+        const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
+        const isExistingUser = isValidCreatedAt && parsedCreatedAt < POWERUP_LAUNCH_AT
+
+        if (isExistingUser && !hasSeenPowerupPopup) {
             setShowPowerupPopup(true)
         }
-    }, [isLoggedIn, loading, showOnboardingPopup, hasSeenPowerupPopup])
+    }, [isLoggedIn, loading, showOnboardingPopup, hasSeenPowerupPopup, userCreatedAt])
 
     useEffect(() => {
         if (!showPowerupPopup || hasMarkedPowerupPopupSeenRef.current) return
@@ -1390,7 +1395,8 @@ export default function Home() {
                                 setFileVariantMap={setFileVariantMap}
                                 groupVariantMap={groupVariantMap}
                                 setGroupVariantMap={setGroupVariantMap}
-
+                                hasSeenPowerupPopup={hasSeenPowerupPopup}
+                                setShowPowerupPopup={setShowPowerupPopup}
                             />
                         </ErrorBoundary>
 

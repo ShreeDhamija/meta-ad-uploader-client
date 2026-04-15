@@ -2676,14 +2676,14 @@ export default function AdCreationForm({
     const year = now.getFullYear();
 
     let adName = formulaToUse.rawInput
-      .replace(/\{\{File Name\}\}/g, fileName)
-      .replace(/\{\{File Type\}\}/g, fileType)
-      .replace(/\{\{Date \(MonthYYYY\)\}\}/g, `${monthAbbrev}${year}`)
-      .replace(/\{\{Date \(MonthDDYYYY\)\}\}/g, `${monthAbbrev}${date}${year}`)
-      .replace(/\{\{Date\(([^)]+)\)\}\}/g, (match, fmt) => formatDate(fmt))
-      .replace(/\{\{Iteration\}\}/g, String(iterationIndex + 1).padStart(2, "0"))
-      .replace(/\{\{URL Slug\}\}/g, urlSlug)
-      .replace(/\{\{Ad Type\}\}/g, adTypeLabel);
+      .replace(/\{\{File Name\}\}/gi, fileName)
+      .replace(/\{\{File Type\}\}/gi, fileType)
+      .replace(/\{\{Date \(MonthYYYY\)\}\}/gi, `${monthAbbrev}${year}`)
+      .replace(/\{\{Date \(MonthDDYYYY\)\}\}/gi, `${monthAbbrev}${date}${year}`)
+      .replace(/\{\{Date\(([^)]+)\)\}\}/gi, (match, fmt) => formatDate(fmt))
+      .replace(/\{\{Iteration\}\}/gi, String(iterationIndex + 1).padStart(2, "0"))
+      .replace(/\{\{URL Slug\}\}/gi, urlSlug)
+      .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
     adName = adName.replace(/\{\{([^:}]+):([^}]+)\}\}/g, (match, category, value) => value);
     adName = adName.replace(/\{\{([^}]+)\}\}/g, (match, content) => {
       // Don't touch built-in variables that weren't already replaced
@@ -6257,7 +6257,7 @@ export default function AdCreationForm({
 
                 </div>
 
-                <div className="space-y-1">
+                <div id="adName" className="space-y-1">
                   <Label htmlFor="adName" className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
                       {renderDiffMark("adNameFormulaV2")}
@@ -7325,6 +7325,19 @@ export default function AdCreationForm({
             {shouldShowLeadFormSelector && !selectedForm && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a lead form to publish lead ads
+              </div>
+            )}
+
+            {adName === "Ad Generated Through Blip" && (
+              <div className="text-xs text-orange-700 text-left p-2 bg-orange-50 border border-orange-200 rounded-xl">
+                Your ads will be named "Ad Generated Through Blip" since no ad name formula is set.{' '}
+                <button
+                  type="button"
+                  className="underline decoration-gray-400 text-orange-900 font-medium"
+                  onClick={() => document.getElementById('adName')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                >
+                  Set ad name
+                </button>
               </div>
             )}
 
