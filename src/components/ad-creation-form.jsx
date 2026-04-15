@@ -641,6 +641,7 @@ export default function AdCreationForm({
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState(new Set());
+  const [isDeletingTemplates, setIsDeletingTemplates] = useState(false);
   const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false);
   const wasPhoneCallCtaAutoAppliedRef = useRef(false);
 
@@ -2990,6 +2991,7 @@ export default function AdCreationForm({
   const handleBulkDeleteTemplates = useCallback(async () => {
     if (selectedForDelete.size === 0) return;
     const namesToDelete = [...selectedForDelete];
+    setIsDeletingTemplates(true);
     try {
       await deleteCopyTemplates(selectedAdAccount, namesToDelete);
       if (namesToDelete.includes(selectedTemplate)) {
@@ -3002,6 +3004,8 @@ export default function AdCreationForm({
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete templates");
+    } finally {
+      setIsDeletingTemplates(false);
     }
   }, [selectedAdAccount, selectedForDelete, selectedTemplate, setSelectedTemplate, refetchCopyTemplates]);
 
@@ -6498,7 +6502,7 @@ export default function AdCreationForm({
                             width: "auto",
                           }}
                         >
-                          <Command filter={() => 1} loop={false}>
+                          <Command filter={() => 1} loop={false} className="overflow-visible">
                             <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
                               <CommandInput
                                 placeholder="Search templates..."
@@ -6523,14 +6527,7 @@ export default function AdCreationForm({
                                   {showSortMenu && (
                                     <>
                                       <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
-                                      <div className="fixed z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]" style={{ top: 'auto', right: 'auto' }} ref={(el) => {
-                                        if (!el) return;
-                                        const btn = el.previousElementSibling?.previousElementSibling;
-                                        if (!btn) return;
-                                        const rect = btn.getBoundingClientRect();
-                                        el.style.top = `${rect.bottom + 4}px`;
-                                        el.style.left = `${rect.right - el.offsetWidth}px`;
-                                      }}>
+                                      <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]">
                                         <TooltipProvider delayDuration={0}>
                                           {[
                                             { value: "default", label: "Recently Made" },
@@ -6575,14 +6572,15 @@ export default function AdCreationForm({
                                 {bulkDeleteMode && selectedForDelete.size > 0 ? (
                                   <button
                                     type="button"
-                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors"
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-70"
+                                    disabled={isDeletingTemplates}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleBulkDeleteTemplates();
                                     }}
                                   >
-                                    <Trash2 className="h-3 w-3" />
-                                    Delete ({selectedForDelete.size})
+                                    {isDeletingTemplates ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                                    {isDeletingTemplates ? "Deleting..." : `Delete (${selectedForDelete.size})`}
                                   </button>
                                 ) : (
                                   <button
@@ -6609,7 +6607,7 @@ export default function AdCreationForm({
                               </div>
                             </div>
                             <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                              {sortedFilteredTemplates.map(([tplName]) => (
+                              {sortedFilteredTemplates.map(([tplName, tplData]) => (
                                 <CommandItem
                                   key={tplName}
                                   value={tplName}
@@ -6632,6 +6630,9 @@ export default function AdCreationForm({
                                       />
                                     )}
                                     <span className="text-sm truncate flex-1">{tplName}</span>
+                                    {sortMode === "most_used" && tplData?.usageCount > 0 && (
+                                      <span className="text-xs text-gray-400 shrink-0">{tplData.usageCount} ads</span>
+                                    )}
                                     {tplName === defaultTemplateName && (
                                       <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
                                         Default

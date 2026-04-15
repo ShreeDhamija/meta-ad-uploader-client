@@ -937,7 +937,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                 width: "auto",
               }}
             >
-              <Command filter={() => 1} loop={false}>
+              <Command filter={() => 1} loop={false} className="overflow-visible">
                 <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
                   <CommandInput
                     placeholder="Search templates..."
@@ -962,14 +962,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       {showSortMenu && (
                         <>
                           <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
-                          <div className="fixed z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]" style={{ top: 'auto', right: 'auto' }} ref={(el) => {
-                            if (!el) return;
-                            const btn = el.previousElementSibling?.previousElementSibling;
-                            if (!btn) return;
-                            const rect = btn.getBoundingClientRect();
-                            el.style.top = `${rect.bottom + 4}px`;
-                            el.style.left = `${rect.right - el.offsetWidth}px`;
-                          }}>
+                          <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]">
                             <TooltipProvider delayDuration={0}>
                               {[
                                 { value: "default", label: "Recently Made" },
@@ -1014,14 +1007,15 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     {bulkDeleteMode && selectedForDelete.size > 0 ? (
                       <button
                         type="button"
-                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-70"
+                        disabled={isProcessing}
                         onClick={(e) => {
                           e.stopPropagation()
                           handleBulkDelete()
                         }}
                       >
-                        <Trash2 className="h-3 w-3" />
-                        Delete ({selectedForDelete.size})
+                        {isProcessing ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                        {isProcessing ? "Deleting..." : `Delete (${selectedForDelete.size})`}
                       </button>
                     ) : (
                       <button
@@ -1048,7 +1042,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   </div>
                 </div>
                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                  {availableTemplates.map(([name]) => (
+                  {availableTemplates.map(([name, data]) => (
                     <CommandItem
                       key={name}
                       value={name}
@@ -1071,6 +1065,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                           />
                         )}
                         <span className="text-sm truncate flex-1">{name}</span>
+                        {sortMode === "most_used" && data?.usageCount > 0 && (
+                          <span className="text-xs text-gray-400 shrink-0">{data.usageCount} ads</span>
+                        )}
                         {name === defaultName && (
                           <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
                             Default
