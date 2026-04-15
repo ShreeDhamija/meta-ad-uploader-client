@@ -37,3 +37,12 @@ export const clearCache = (name) => {
     }
   } catch { }
 };
+
+export const clearAnalyticsCache = () => {
+  try {
+    localStorage.removeItem('analytics-selected-ad-account')
+    Object.keys(sessionStorage)
+      .filter((key) => key.startsWith('analytics-'))
+      .forEach((key) => sessionStorage.removeItem(key))
+  } catch { }
+};

@@ -1,10 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { Loader2, BarChart3 } from "lucide-react"
-import {
-    Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay,
-} from "@/components/ui/dialog"
+import { Loader2, BarChart3, X } from "lucide-react"
 import {
     ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
     ResponsiveContainer,
@@ -118,80 +115,107 @@ export default function AggregateKPIDialog({ open, onOpenChange, adAccounts }) {
         }).length
     }, [loading, adAccounts, accountData])
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogOverlay className="bg-black/50" />
-            <DialogContent className="sm:max-w-[960px] !rounded-[30px] p-8 space-y-5 max-h-[95vh] overflow-y-auto">
-                <DialogHeader className="space-y-1">
-                    <div className="flex items-center gap-4">
-                        <DialogTitle className="text-sm font-medium text-gray-600">
-                            Account Overview — Last {days} Days
-                        </DialogTitle>
-                        <div className="flex p-0.5 bg-gray-100 rounded-lg border border-gray-200/60">
-                            <button
-                                onClick={() => setDays(14)}
-                                className={cn(
-                                    "px-2.5 py-1 text-xs font-medium rounded-md transition-all",
-                                    days === 14 ? "bg-white shadow-xs text-gray-900" : "text-gray-500 hover:text-gray-700"
-                                )}
-                            >
-                                14d
-                            </button>
-                            <button
-                                onClick={() => setDays(30)}
-                                className={cn(
-                                    "px-2.5 py-1 text-xs font-medium rounded-md transition-all",
-                                    days === 30 ? "bg-white shadow-xs text-gray-900" : "text-gray-500 hover:text-gray-700"
-                                )}
-                            >
-                                30d
-                            </button>
-                        </div>
-                    </div>
-                </DialogHeader>
+    if (!open) return null
 
-                {loading ? (
-                    <div className="flex items-center justify-center h-[300px]">
-                        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-                    </div>
-                ) : (
-                    <>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {(adAccounts || []).filter((acct) => {
-                                // While loading show all; once loaded, filter out accounts with no data
-                                const data = accountData[acct.id]
-                                return !data || (data.insights && data.insights.length > 0)
-                            }).map((acct) => {
-                                const data = accountData[acct.id]
-                                if (!data) return (
-                                    <MiniChartCard
-                                        key={acct.id}
-                                        name={acct.name || acct.id}
-                                        mode="cpa"
-                                        chartData={[]}
-                                        loading={true}
-                                    />
-                                )
-                                return (
-                                    <MiniChartCard
-                                        key={acct.id}
-                                        name={data.name}
-                                        mode={data.mode}
-                                        insights={data.insights}
-                                        loading={false}
-                                    />
-                                )
-                            })}
+    return (
+        <>
+            {/* Backdrop */}
+            <div
+                className="fixed bg-black/50 z-50"
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100vw",
+                    height: "100dvh",
+                }}
+                onClick={() => onOpenChange(false)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                <div
+                    className="bg-white rounded-[30px] shadow-2xl w-full max-w-[960px] max-h-[95vh] flex flex-col overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Header */}
+                    <div className="p-8 pb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm font-medium text-gray-600">
+                                Account Overview — Last {days} Days
+                            </span>
+                            <div className="flex p-0.5 bg-gray-100 rounded-lg border border-gray-200/60">
+                                <button
+                                    onClick={() => setDays(14)}
+                                    className={cn(
+                                        "px-2.5 py-1 text-xs font-medium rounded-md transition-all",
+                                        days === 14 ? "bg-white shadow-xs text-gray-900" : "text-gray-500 hover:text-gray-700"
+                                    )}
+                                >
+                                    14d
+                                </button>
+                                <button
+                                    onClick={() => setDays(30)}
+                                    className={cn(
+                                        "px-2.5 py-1 text-xs font-medium rounded-md transition-all",
+                                        days === 30 ? "bg-white shadow-xs text-gray-900" : "text-gray-500 hover:text-gray-700"
+                                    )}
+                                >
+                                    30d
+                                </button>
+                            </div>
                         </div>
-                        {hiddenCount > 0 && (
-                            <p className="text-xs text-gray-400 text-center mt-2">
-                                {hiddenCount} account{hiddenCount > 1 ? 's' : ''} hidden (no data in this period)
-                            </p>
+                        <button
+                            onClick={() => onOpenChange(false)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    {/* Body */}
+                    <div className="px-8 pb-8 overflow-y-auto space-y-5">
+                        {loading ? (
+                            <div className="flex items-center justify-center h-[300px]">
+                                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {(adAccounts || []).filter((acct) => {
+                                        const data = accountData[acct.id]
+                                        return !data || (data.insights && data.insights.length > 0)
+                                    }).map((acct) => {
+                                        const data = accountData[acct.id]
+                                        if (!data) return (
+                                            <MiniChartCard
+                                                key={acct.id}
+                                                name={acct.name || acct.id}
+                                                mode="cpa"
+                                                chartData={[]}
+                                                loading={true}
+                                            />
+                                        )
+                                        return (
+                                            <MiniChartCard
+                                                key={acct.id}
+                                                name={data.name}
+                                                mode={data.mode}
+                                                insights={data.insights}
+                                                loading={false}
+                                            />
+                                        )
+                                    })}
+                                </div>
+                                {hiddenCount > 0 && (
+                                    <p className="text-xs text-gray-400 text-center mt-2">
+                                        {hiddenCount} account{hiddenCount > 1 ? 's' : ''} hidden (no data in this period)
+                                    </p>
+                                )}
+                            </>
                         )}
-                    </>
-                )}
-            </DialogContent>
-        </Dialog>
+                    </div>
+                </div>
+            </div>
+        </>
     )
 }
 

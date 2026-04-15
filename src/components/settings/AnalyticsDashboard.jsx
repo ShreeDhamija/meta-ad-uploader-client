@@ -635,7 +635,7 @@ export default function AnalyticsDashboard() {
         pendingDailySettingsRef.current = fallback
         currentAccountRef.current = fallback
         setSelectedAdAccount(fallback)
-        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, fallback) } catch {}
+        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, fallback) } catch { }
     }, [adAccountsLoading, adAccounts, selectedAdAccount])
 
     // useEffect(() => {
@@ -737,7 +737,7 @@ export default function AnalyticsDashboard() {
         pendingDailySettingsRef.current = accountId
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
-        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, accountId) } catch {}
+        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, accountId) } catch { }
 
         // Abort any in-flight fetches
         if (dailyInsightsAbortRef.current) {
@@ -996,7 +996,7 @@ export default function AnalyticsDashboard() {
                             className="rounded-2xl h-11 px-4 bg-white shadow-xs hover:bg-white"
                         >
                             <BarChart3 className="w-4 h-4 mr-2" />
-                            Aggregate View
+                            Aggregate KPI View
                         </Button>
                     )}
                 </div>
