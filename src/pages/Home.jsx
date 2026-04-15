@@ -271,7 +271,7 @@ export default function Home() {
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
-        if (!isLoggedIn || loading || showOnboardingPopup) return
+        if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup) return
 
         const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
         const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
