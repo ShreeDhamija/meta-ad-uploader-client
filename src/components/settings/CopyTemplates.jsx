@@ -5,13 +5,23 @@ import { useBlocker } from "react-router";
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover"
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandItem,
+} from "@/components/ui/command"
 import { toast } from "sonner"
 import Papa from "papaparse";
-import { useAuth } from "@/lib/AuthContext" // <--- Add this
-import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload } from 'lucide-react';
+import { useAuth } from "@/lib/AuthContext"
+import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload, ChevronsUpDown, ArrowUpDown, Check } from 'lucide-react';
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
-import { deleteCopyTemplate } from "@/lib/deleteCopyTemplate"
+import { deleteCopyTemplate, deleteCopyTemplates } from "@/lib/deleteCopyTemplate"
 import TextareaAutosize from 'react-textarea-autosize'
 import { RotateLoader } from "react-spinners"
 import TemplateIcon from '@/assets/icons/template.svg?react';
@@ -33,45 +43,6 @@ const settingsTextareaChrome = "rounded-2xl border border-gray-300 bg-white px-3
 
 
 
-// Custom SelectItem component with delete button
-const SelectItemWithDelete = React.memo(({ value, name, isDefault, onDelete }) => {
-  const handleDeleteClick = useCallback(
-    (e) => {
-      e.stopPropagation()
-      e.preventDefault()
-      onDelete(name)
-    },
-    [onDelete, name],
-  )
-
-  return (
-    <SelectItem
-      value={value}
-      className="text-sm data-[state=checked]:rounded-lg data-[highlighted]:rounded-lg group cursor-pointer pr-8"
-    >
-      <div className="flex items-center justify-between w-full">
-        <div className="flex items-center justify-between w-full">
-          <span className="text-sm truncate">
-            {name}
-          </span>
-          {isDefault && (
-            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg">
-              Default
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          className="absolute right-2 p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-50 rounded flex-shrink-0 data-[state=checked]:hidden"
-          onMouseDown={handleDeleteClick}
-          onClick={handleDeleteClick}
-        >
-          <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
-        </button>
-      </div>
-    </SelectItem>
-  )
-})
 
 
 const initialState = {
@@ -179,7 +150,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [descriptions, setDescriptions] = useState(["", "", "", "", ""])
   const [addDescriptions, setAddDescriptions] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
-  const { userEmail } = useAuth() // <--- Add this
+  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
+  const [templateSearch, setTemplateSearch] = useState("")
+  const [sortMode, setSortMode] = useState("default") // "default" | "oldest" | "most_used"
+  const [showSortMenu, setShowSortMenu] = useState(false)
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false)
+  const [selectedForDelete, setSelectedForDelete] = useState(new Set())
+  const { userEmail } = useAuth()
   const allowedEmail = "jb@anglercofishing.com"
   const isEditingDefault = useMemo(() =>
     defaultName === editingTemplate, [defaultName, editingTemplate]
@@ -637,13 +614,87 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     }
   }, [selectedAdAccount, setAdSettings, filterFilledDescriptions, filterFilledTexts])
 
-  const availableTemplates = useMemo(() =>
-    Object.entries(templates).sort(([a], [b]) => {
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedForDelete.size === 0) return
+
+    const namesToDelete = [...selectedForDelete]
+    setIsProcessing(true)
+    try {
+      await deleteCopyTemplates(selectedAdAccount, namesToDelete)
+
+      onTemplateUpdate();
+      setAdSettings((prev) => {
+        const updatedCopyTemplates = { ...prev.copyTemplates }
+        namesToDelete.forEach((name) => delete updatedCopyTemplates[name])
+
+        const updatedDefaultTemplateName =
+          namesToDelete.includes(prev.defaultTemplateName)
+            ? Object.keys(updatedCopyTemplates)[0] || ""
+            : prev.defaultTemplateName
+
+        return {
+          ...prev,
+          copyTemplates: updatedCopyTemplates,
+          defaultTemplateName: updatedDefaultTemplateName,
+        }
+      })
+
+      namesToDelete.forEach((name) => {
+        dispatch({ type: "DELETE_TEMPLATE", payload: name })
+      })
+
+      toast.success(`Deleted ${namesToDelete.length} template${namesToDelete.length > 1 ? "s" : ""}`)
+      setSelectedForDelete(new Set())
+      setBulkDeleteMode(false)
+    } catch (err) {
+      toast.error("Failed to delete templates")
+      console.error(err)
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [selectedAdAccount, selectedForDelete, onTemplateUpdate, setAdSettings])
+
+  const toggleDeleteSelection = useCallback((name) => {
+    setSelectedForDelete((prev) => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }, [])
+
+  const availableTemplates = useMemo(() => {
+    let entries = Object.entries(templates)
+
+    // Filter by search
+    if (templateSearch.trim()) {
+      const query = templateSearch.toLowerCase()
+      entries = entries.filter(([name]) => name.toLowerCase().includes(query))
+    }
+
+    // Sort
+    entries.sort(([a], [b]) => {
+      // Default always stays at top regardless of sort mode
       if (a === defaultName) return -1
       if (b === defaultName) return 1
+
+      if (sortMode === "oldest") {
+        // Reverse the natural (recent-first) key order
+        return 0 // preserve original insertion order (oldest first is just natural object order)
+      }
+      // "default" and "most_used" keep natural order for now
       return 0
-    }), [templates, defaultName]
-  )
+    })
+
+    if (sortMode === "oldest") {
+      // Keep default at top, reverse the rest
+      const defaultEntry = entries.find(([name]) => name === defaultName)
+      const rest = entries.filter(([name]) => name !== defaultName)
+      entries = defaultEntry ? [defaultEntry, ...rest.reverse()] : rest.reverse()
+    }
+
+    return entries
+  }, [templates, defaultName, templateSearch, sortMode])
 
   const createPrimaryTextImportHandler = useCallback((text) => () => {
     const currentTexts = [...primaryTexts];
@@ -856,29 +907,163 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         </div>
       </div>
 
-      {/* New row with template dropdown and set as default button */}
+      {/* Template dropdown and set as default button */}
       {Object.keys(templates).length > 0 && <div className="flex w-full items-center gap-3 mb-4 transition-all duration-300">
         <div className="flex-1 min-w-0">
-          <Select
-            value={selectedName}
-            onValueChange={(value) => dispatch({ type: "SELECT_TEMPLATE", payload: value })}
-            disabled={availableTemplates.length === 0}
-          >
-            <SelectTrigger className={`w-full overflow-hidden ${settingsFieldChrome} px-3 text-sm justify-between disabled:opacity-50 disabled:cursor-not-allowed`}>
-              <SelectValue placeholder={availableTemplates.length === 0 ? "No templates exist" : "Select a template"} />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl bg-white max-h-[300px] overflow-y-auto relative">
-              {availableTemplates.map(([name]) => (
-                <SelectItemWithDelete
-                  key={name}
-                  value={name}
-                  name={name}
-                  isDefault={name === defaultName}
-                  onDelete={handleDeleteTemplate}
-                />
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={templateDropdownOpen} onOpenChange={(open) => {
+            setTemplateDropdownOpen(open)
+            if (!open) {
+              setTemplateSearch("")
+              setShowSortMenu(false)
+              if (bulkDeleteMode && selectedForDelete.size === 0) {
+                setBulkDeleteMode(false)
+              }
+            }
+          }}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={`w-full justify-between ${settingsFieldChrome} px-3 text-sm hover:bg-white`}
+                disabled={Object.keys(templates).length === 0}
+              >
+                <span className="truncate">
+                  {selectedName || "Select a template"}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white"
+              align="start"
+              style={{
+                minWidth: "var(--radix-popover-trigger-width)",
+                width: "auto",
+              }}
+            >
+              <Command filter={() => 1} loop={false}>
+                <div className="flex items-center">
+                  <CommandInput
+                    placeholder="Search templates..."
+                    value={templateSearch}
+                    onValueChange={setTemplateSearch}
+                    className="bg-white flex-1"
+                  />
+                  <div className="flex items-center gap-1 pr-2">
+                    {/* Sort button */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setShowSortMenu(!showSortMenu)
+                        }}
+                        title="Sort templates"
+                      >
+                        <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
+                      </button>
+                      {showSortMenu && (
+                        <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-lg border border-gray-200 shadow-lg py-1 min-w-[150px]">
+                          {[
+                            { value: "default", label: "Recently Made" },
+                            { value: "oldest", label: "Oldest First" },
+                            { value: "most_used", label: "Most Used" },
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSortMode(option.value)
+                                setShowSortMenu(false)
+                              }}
+                            >
+                              {option.label}
+                              {sortMode === option.value && (
+                                <Check className="h-3.5 w-3.5 text-blue-500" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {/* Bulk delete button */}
+                    {bulkDeleteMode && selectedForDelete.size > 0 ? (
+                      <button
+                        type="button"
+                        className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleBulkDelete()
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        Delete ({selectedForDelete.size})
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (bulkDeleteMode) {
+                            setBulkDeleteMode(false)
+                            setSelectedForDelete(new Set())
+                          } else {
+                            setBulkDeleteMode(true)
+                          }
+                        }}
+                        title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
+                      >
+                        {bulkDeleteMode ? (
+                          <X className="h-3.5 w-3.5" />
+                        ) : (
+                          <Trash2 className="h-3.5 w-3.5 text-gray-500" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                  {availableTemplates.map(([name]) => (
+                    <CommandItem
+                      key={name}
+                      value={name}
+                      onSelect={() => {
+                        if (bulkDeleteMode) {
+                          toggleDeleteSelection(name)
+                        } else {
+                          dispatch({ type: "SELECT_TEMPLATE", payload: name })
+                          setTemplateDropdownOpen(false)
+                          setTemplateSearch("")
+                        }
+                      }}
+                      className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                    >
+                      <div className="flex items-center gap-2 w-full">
+                        {bulkDeleteMode && (
+                          <Checkbox
+                            checked={selectedForDelete.has(name)}
+                            className="border-gray-300 w-4 h-4 rounded-md pointer-events-none"
+                          />
+                        )}
+                        <span className="text-sm truncate flex-1">{name}</span>
+                        {name === defaultName && (
+                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
+                            Default
+                          </span>
+                        )}
+                        {!bulkDeleteMode && name === selectedName && (
+                          <Check className="h-4 w-4 text-blue-500 shrink-0" />
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <Button
           variant="outline"

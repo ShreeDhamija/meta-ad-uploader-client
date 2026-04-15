@@ -19,3 +19,13 @@ export async function deleteCopyTemplate(adAccountId, templateName) {
 
     return response.json();
 }
+
+export async function deleteCopyTemplates(adAccountId, templateNames) {
+    // Delete templates sequentially to avoid race conditions on the backend
+    const results = [];
+    for (const templateName of templateNames) {
+        const result = await deleteCopyTemplate(adAccountId, templateName);
+        results.push(result);
+    }
+    return results;
+}
