@@ -173,7 +173,7 @@ function PageSelectors({
                   placeholder="Search pages..."
                   value={pageSearch}
                   onValueChange={setPageSearch}
-                  className="bg-white"
+                  wrapperClassName="bg-gray-50 border-gray-200"
                 />
                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
                   {filteredPages.map((page) => (
@@ -239,7 +239,7 @@ function PageSelectors({
                   placeholder="Search IG accounts..."
                   value={instagramSearch}
                   onValueChange={setInstagramSearch}
-                  className="bg-white"
+                  wrapperClassName="bg-gray-50 border-gray-200"
                 />
                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
                   {filteredInstagramAccounts.map((page) => (

@@ -6,6 +6,7 @@ import { useDropzone } from "react-dropzone"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
+import { deleteCopyTemplate, deleteCopyTemplates } from "@/lib/deleteCopyTemplate"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -634,6 +635,12 @@ export default function AdCreationForm({
   const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false);
   const [newTemplateNameInput, setNewTemplateNameInput] = useState("");
   const [showSaveNewDialog, setShowSaveNewDialog] = useState(false);
+  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState("");
+  const [sortMode, setSortMode] = useState(() => localStorage.getItem("templateSortMode") || "default");
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false);
+  const [selectedForDelete, setSelectedForDelete] = useState(new Set());
   const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false);
   const wasPhoneCallCtaAutoAppliedRef = useRef(false);
 
@@ -2951,6 +2958,57 @@ export default function AdCreationForm({
       setIsUpdatingTemplate(false);
     }
   };
+
+  const sortedFilteredTemplates = useMemo(() => {
+    let entries = Object.entries(copyTemplates);
+
+    if (templateSearch.trim()) {
+      const query = templateSearch.toLowerCase();
+      entries = entries.filter(([name]) => name.toLowerCase().includes(query));
+    }
+
+    entries.sort(([a], [b]) => {
+      if (a === defaultTemplateName) return -1;
+      if (b === defaultTemplateName) return 1;
+      if (sortMode === "oldest") return 0;
+      return a.localeCompare(b);
+    });
+
+    if (sortMode === "oldest") {
+      const defaultEntry = entries.find(([name]) => name === defaultTemplateName);
+      const rest = entries.filter(([name]) => name !== defaultTemplateName);
+      entries = defaultEntry ? [defaultEntry, ...rest.reverse()] : rest.reverse();
+    }
+
+    return entries;
+  }, [copyTemplates, defaultTemplateName, templateSearch, sortMode]);
+
+  const handleBulkDeleteTemplates = useCallback(async () => {
+    if (selectedForDelete.size === 0) return;
+    const namesToDelete = [...selectedForDelete];
+    try {
+      await deleteCopyTemplates(selectedAdAccount, namesToDelete);
+      if (namesToDelete.includes(selectedTemplate)) {
+        setSelectedTemplate("");
+      }
+      await refetchCopyTemplates();
+      toast.success(`Deleted ${namesToDelete.length} template${namesToDelete.length > 1 ? "s" : ""}`);
+      setSelectedForDelete(new Set());
+      setBulkDeleteMode(false);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to delete templates");
+    }
+  }, [selectedAdAccount, selectedForDelete, selectedTemplate, setSelectedTemplate, refetchCopyTemplates]);
+
+  const toggleDeleteSelection = useCallback((name) => {
+    setSelectedForDelete((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }, []);
 
 
 
@@ -6403,41 +6461,163 @@ export default function AdCreationForm({
                         )}
                       </div>
 
-                      <Select
-                        value={selectedTemplate}
-                        onValueChange={setSelectedTemplate}
-                        disabled={Object.keys(copyTemplates).length === 0}
-                      >
-                        <SelectTrigger
-                          className={formFieldChrome}
-                          disabled={Object.keys(copyTemplates).length === 0}
-                        >
-                          <SelectValue
-                            placeholder={
-                              Object.keys(copyTemplates).length === 0
+                      <Popover open={templateDropdownOpen} onOpenChange={(open) => {
+                        setTemplateDropdownOpen(open);
+                        if (!open) {
+                          setTemplateSearch("");
+                          setShowSortMenu(false);
+                          if (bulkDeleteMode && selectedForDelete.size === 0) {
+                            setBulkDeleteMode(false);
+                          }
+                        }
+                      }}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={`w-full justify-between ${formFieldChrome} hover:bg-white`}
+                            disabled={Object.keys(copyTemplates).length === 0}
+                          >
+                            <span className="truncate">
+                              {Object.keys(copyTemplates).length === 0
                                 ? "No templates available for selected ad account"
-                                : "Choose a Template"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white shadow-lg rounded-xl max-h-[450px] p-0 pr-2">
-                          {Object.entries(copyTemplates)
-                            .sort(([a], [b]) => {
-                              if (a === defaultTemplateName) return -1;
-                              if (b === defaultTemplateName) return 1;
-                              return a.localeCompare(b);
-                            })
-                            .map(([templateName]) => (
-                              <SelectItem
-                                key={templateName}
-                                value={templateName}
-                                className="text-sm px-4 py-2 rounded-xl hover:bg-gray-100"
-                              >
-                                {templateName}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                                : selectedTemplate || "Choose a Template"}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white"
+                          align="start"
+                          style={{
+                            minWidth: "var(--radix-popover-trigger-width)",
+                            width: "auto",
+                          }}
+                        >
+                          <Command filter={() => 1} loop={false}>
+                            <div className="flex items-center gap-1 mx-2 mt-2 mb-1 rounded-2xl border border-gray-200 bg-gray-50 px-1 shadow">
+                              <CommandInput
+                                placeholder="Search templates..."
+                                value={templateSearch}
+                                onValueChange={setTemplateSearch}
+                                wrapperClassName="flex-1 border-0 shadow-none bg-transparent mx-0 mt-0 mb-0 px-2"
+                              />
+                              <div className="flex items-center gap-1 pr-1">
+                                {/* Sort button */}
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowSortMenu(!showSortMenu);
+                                    }}
+                                    title="Sort templates"
+                                  >
+                                    <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
+                                  </button>
+                                  {showSortMenu && (
+                                    <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-lg border border-gray-200 shadow-lg py-1 min-w-[150px]">
+                                      {[
+                                        { value: "default", label: "Recently Made" },
+                                        { value: "oldest", label: "Oldest First" },
+                                        { value: "most_used", label: "Most Used" },
+                                      ].map((option) => (
+                                        <button
+                                          key={option.value}
+                                          type="button"
+                                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSortMode(option.value);
+                                            localStorage.setItem("templateSortMode", option.value);
+                                            setShowSortMenu(false);
+                                          }}
+                                        >
+                                          {option.label}
+                                          {sortMode === option.value && (
+                                            <Check className="h-3.5 w-3.5 text-blue-500" />
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                {/* Bulk delete button */}
+                                {bulkDeleteMode && selectedForDelete.size > 0 ? (
+                                  <button
+                                    type="button"
+                                    className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleBulkDeleteTemplates();
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                    Delete ({selectedForDelete.size})
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (bulkDeleteMode) {
+                                        setBulkDeleteMode(false);
+                                        setSelectedForDelete(new Set());
+                                      } else {
+                                        setBulkDeleteMode(true);
+                                      }
+                                    }}
+                                    title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
+                                  >
+                                    {bulkDeleteMode ? (
+                                      <X className="h-3.5 w-3.5" />
+                                    ) : (
+                                      <Trash2 className="h-3.5 w-3.5 text-gray-500" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                              {sortedFilteredTemplates.map(([tplName]) => (
+                                <CommandItem
+                                  key={tplName}
+                                  value={tplName}
+                                  onSelect={() => {
+                                    if (bulkDeleteMode) {
+                                      toggleDeleteSelection(tplName);
+                                    } else {
+                                      setSelectedTemplate(tplName);
+                                      setTemplateDropdownOpen(false);
+                                      setTemplateSearch("");
+                                    }
+                                  }}
+                                  className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                                >
+                                  <div className="flex items-center gap-2 w-full">
+                                    {bulkDeleteMode && (
+                                      <Checkbox
+                                        checked={selectedForDelete.has(tplName)}
+                                        className="border-gray-300 w-4 h-4 rounded-md pointer-events-none"
+                                      />
+                                    )}
+                                    <span className="text-sm truncate flex-1">{tplName}</span>
+                                    {tplName === defaultTemplateName && (
+                                      <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
+                                        Default
+                                      </span>
+                                    )}
+                                    {!bulkDeleteMode && tplName === selectedTemplate && (
+                                      <Check className="h-4 w-4 text-blue-500 shrink-0" />
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
 

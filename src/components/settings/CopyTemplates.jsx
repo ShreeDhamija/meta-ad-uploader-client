@@ -152,7 +152,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [isProcessing, setIsProcessing] = useState(false)
   const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
   const [templateSearch, setTemplateSearch] = useState("")
-  const [sortMode, setSortMode] = useState("default") // "default" | "oldest" | "most_used"
+  const [sortMode, setSortMode] = useState(() => localStorage.getItem("templateSortMode") || "default")
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [bulkDeleteMode, setBulkDeleteMode] = useState(false)
   const [selectedForDelete, setSelectedForDelete] = useState(new Set())
@@ -941,14 +941,14 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               }}
             >
               <Command filter={() => 1} loop={false}>
-                <div className="flex items-center">
+                <div className="flex items-center gap-1 mx-2 mt-2 mb-1 rounded-2xl border border-gray-200 bg-gray-50 px-1 shadow">
                   <CommandInput
                     placeholder="Search templates..."
                     value={templateSearch}
                     onValueChange={setTemplateSearch}
-                    className="bg-white flex-1"
+                    wrapperClassName="flex-1 border-0 shadow-none bg-transparent mx-0 mt-0 mb-0 px-2"
                   />
-                  <div className="flex items-center gap-1 pr-2">
+                  <div className="flex items-center gap-1 pr-1">
                     {/* Sort button */}
                     <div className="relative">
                       <button
@@ -976,6 +976,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setSortMode(option.value)
+                                localStorage.setItem("templateSortMode", option.value)
                                 setShowSortMenu(false)
                               }}
                             >
