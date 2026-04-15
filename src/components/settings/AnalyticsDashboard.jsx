@@ -8,7 +8,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
-    AlertTriangle, Loader2, ChevronsUpDown,
+    AlertTriangle, Loader2, ChevronsUpDown, RefreshCw,
     Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown
 } from "lucide-react"
 import { toast } from "sonner"
@@ -36,6 +36,7 @@ import {
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const SELECTED_ACCOUNT_KEY = 'analytics-selected-ad-account'
 
 const DEFAULT_THRESHOLDS = {
     cpaSpike: 50,
@@ -49,8 +50,10 @@ export default function AnalyticsDashboard() {
     // ── Onboarding state 
     const [showOnboarding, setShowOnboarding] = useState(false)
 
-    // ── Core state 
-    const [selectedAdAccount, setSelectedAdAccount] = useState(null)
+    // ── Core state
+    const [selectedAdAccount, setSelectedAdAccount] = useState(() => {
+        try { return localStorage.getItem(SELECTED_ACCOUNT_KEY) || null } catch { return null }
+    })
     const [openAdAccount, setOpenAdAccount] = useState(false)
     const [searchValue, setSearchValue] = useState("")
     // const [metricMode, setMetricMode] = useState("cpr") // cpr | roas
@@ -105,9 +108,10 @@ export default function AnalyticsDashboard() {
 
 
     const [auditOpen, setAuditOpen] = useState(false)
-    // Track what we've already fetched for this account+mode combo
-    const fetchedRef = useRef({})
-    // const modeCache = useRef({})
+    // Per-account response caches (session-scoped, cleared on tab close)
+    const recsCacheRef = useRef({})       // { [accountId]: responsePayload }
+    const poorAdsCacheRef = useRef({})    // { [accountId]: responsePayload }
+    const fetchedRef = useRef({})         // dedup guard for account-info
     const dailyInsightsCacheRef = useRef({})
     const dailyInsightsAbortRef = useRef(null)
     const weeklyInsightsCacheRef = useRef({})
@@ -328,9 +332,12 @@ export default function AnalyticsDashboard() {
         if (!selectedAdAccount) return
         const accountAtStart = selectedAdAccount
 
-        const key = `recs-${selectedAdAccount}-${metricMode}`
-        if (!force && fetchedRef.current[key]) return
-        fetchedRef.current[key] = true
+        // Return cached data unless forced
+        if (!force && recsCacheRef.current[accountAtStart]) {
+            setRecommendations(recsCacheRef.current[accountAtStart])
+            setRecsLoading(false)
+            return
+        }
 
         setRecsLoading(true)
         try {
@@ -346,12 +353,20 @@ export default function AnalyticsDashboard() {
             // Discard if user switched accounts while we were fetching
             if (currentAccountRef.current !== accountAtStart) return
 
-            if (res.ok) setRecommendations(data)
-            else toast.error(data.error || 'Failed to fetch recommendations')
+            if (res.ok) {
+                recsCacheRef.current[accountAtStart] = data
+                setRecommendations(data)
+            } else {
+                toast.error(data.error || 'Failed to fetch recommendations')
+            }
         } catch (err) {
+            if (currentAccountRef.current !== accountAtStart) return
             console.error('Recommendations error:', err)
             toast.error('Failed to fetch recommendations')
-        } finally { setRecsLoading(false) }
+        } finally {
+            // Only update loading state if we're still on the same account
+            if (currentAccountRef.current === accountAtStart) setRecsLoading(false)
+        }
     }, [selectedAdAccount, metricMode, targetCPA, targetROAS, adAccountSettings?.conversionEvent])
 
 
@@ -404,9 +419,11 @@ export default function AnalyticsDashboard() {
         if (!selectedAdAccount) return
         const accountAtStart = selectedAdAccount
 
-        const key = `poor-${selectedAdAccount}-${metricMode}-${adAccountSettings?.conversionEvent || '__auto__'}`
-        if (!force && fetchedRef.current[key]) return
-        fetchedRef.current[key] = true
+        if (!force && poorAdsCacheRef.current[accountAtStart]) {
+            setPoorAds(poorAdsCacheRef.current[accountAtStart])
+            setPoorAdsLoading(false)
+            return
+        }
 
         setPoorAdsLoading(true)
         try {
@@ -420,12 +437,19 @@ export default function AnalyticsDashboard() {
 
             if (currentAccountRef.current !== accountAtStart) return
 
-            if (res.ok) setPoorAds(data)
-            else toast.error(data.error || 'Failed to fetch poor performing ads')
+            if (res.ok) {
+                poorAdsCacheRef.current[accountAtStart] = data
+                setPoorAds(data)
+            } else {
+                toast.error(data.error || 'Failed to fetch poor performing ads')
+            }
         } catch (err) {
+            if (currentAccountRef.current !== accountAtStart) return
             console.error('Poor ads error:', err)
             toast.error('Failed to fetch poor performing ads')
-        } finally { setPoorAdsLoading(false) }
+        } finally {
+            if (currentAccountRef.current === accountAtStart) setPoorAdsLoading(false)
+        }
     }, [selectedAdAccount, metricMode, adAccountSettings?.conversionEvent])
 
 
@@ -595,11 +619,23 @@ export default function AnalyticsDashboard() {
 
     // ── Data fetching triggers ──────────────────────────────
     useEffect(() => {
-        if (!adAccountsLoading && adAccounts?.length > 0 && !selectedAdAccount) {
-            pendingDailySettingsRef.current = adAccounts[0].id
-            currentAccountRef.current = adAccounts[0].id
-            setSelectedAdAccount(adAccounts[0].id)
+        if (adAccountsLoading || !adAccounts?.length) return
+
+        // If we already have a valid selection, just ensure refs are set
+        if (selectedAdAccount && adAccounts.some(a => a.id === selectedAdAccount)) {
+            if (!currentAccountRef.current) {
+                currentAccountRef.current = selectedAdAccount
+                pendingDailySettingsRef.current = selectedAdAccount
+            }
+            return
         }
+
+        // No valid selection — pick first account
+        const fallback = adAccounts[0].id
+        pendingDailySettingsRef.current = fallback
+        currentAccountRef.current = fallback
+        setSelectedAdAccount(fallback)
+        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, fallback) } catch {}
     }, [adAccountsLoading, adAccounts, selectedAdAccount])
 
     // useEffect(() => {
@@ -699,18 +735,11 @@ export default function AnalyticsDashboard() {
     const handleAdAccountSelect = (accountId) => {
         currentAccountRef.current = accountId
         pendingDailySettingsRef.current = accountId
-        setRecsLoading(false)
-        setPoorAdsLoading(false)
-        setDailyLoading(false)
-        setWeeklyLoading(false)
         setSelectedAdAccount(accountId)
         setOpenAdAccount(false)
+        try { localStorage.setItem(SELECTED_ACCOUNT_KEY, accountId) } catch {}
 
-        // Settings reset happens synchronously in useAdAccountSettings
-        // metricMode, targetCPA, etc. all derive from settings automatically
-
-        setRecommendations(null); setPoorAds(null)
-        setDailyInsights(null); setWeeklyInsights(null)
+        // Abort any in-flight fetches
         if (dailyInsightsAbortRef.current) {
             dailyInsightsAbortRef.current.abort()
             dailyInsightsAbortRef.current = null
@@ -719,24 +748,52 @@ export default function AnalyticsDashboard() {
             weeklyInsightsAbortRef.current.abort()
             weeklyInsightsAbortRef.current = null
         }
-        clearDailyInsightsCache(accountId)
-        clearWeeklyInsightsCache(accountId)
-        fetchedRef.current = {}
+
+        // Restore from session cache if available, otherwise null + fetch later
+        const recsCache = recsCacheRef.current[accountId]
+        const poorCache = poorAdsCacheRef.current[accountId]
+        setRecommendations(recsCache ?? null)
+        setPoorAds(poorCache ?? null)
+        setRecsLoading(!recsCache)
+        setPoorAdsLoading(!poorCache)
+
+        const dailyKey = getDailyInsightsCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent)
+        const weeklyKey = getWeeklyInsightsCacheKey(accountId, analyticsDateRange)
+        const cachedDaily = dailyInsightsCacheRef.current[dailyKey]
+        const cachedWeekly = weeklyInsightsCacheRef.current[weeklyKey]
+        setDailyInsights(cachedDaily ?? null)
+        setWeeklyInsights(cachedWeekly ?? null)
+        setDailyLoading(!cachedDaily)
+        setWeeklyLoading(!cachedWeekly)
     }
 
     const handleRefreshBudgetRecommendations = useCallback(() => {
         if (!selectedAdAccount || adAccountSettingsLoading) return
 
         setBudgetRefreshSignal(`${selectedAdAccount}:${Date.now()}`)
+        delete recsCacheRef.current[selectedAdAccount]
         setRecommendations(null)
         setRecsLoading(true)
-
-        Object.keys(fetchedRef.current).forEach((key) => {
-            if (key.startsWith(`recs-${selectedAdAccount}`)) delete fetchedRef.current[key]
-        })
-
         fetchRecommendations(true)
     }, [selectedAdAccount, adAccountSettingsLoading, fetchRecommendations])
+
+    const handleRefreshPoorAds = useCallback(() => {
+        if (!selectedAdAccount || adAccountSettingsLoading) return
+
+        delete poorAdsCacheRef.current[selectedAdAccount]
+        setPoorAds(null)
+        setPoorAdsLoading(true)
+        fetchPoorAds(true)
+    }, [selectedAdAccount, adAccountSettingsLoading, fetchPoorAds])
+
+    const handleRefreshCharts = useCallback(() => {
+        if (!selectedAdAccount || adAccountSettingsLoading) return
+
+        clearDailyInsightsCache(selectedAdAccount)
+        clearWeeklyInsightsCache(selectedAdAccount)
+        loadDailyInsights({ force: true })
+        fetchWeeklyInsights({ force: true })
+    }, [selectedAdAccount, adAccountSettingsLoading, clearDailyInsightsCache, clearWeeklyInsightsCache, loadDailyInsights, fetchWeeklyInsights])
 
     const handleSaveSettings = async () => {
         setSavingSettings(true)
@@ -782,19 +839,15 @@ export default function AnalyticsDashboard() {
             setShowSettingsDialog(false)
 
             if (shouldRefreshRecommendations) {
+                delete recsCacheRef.current[selectedAdAccount]
                 setRecsLoading(true)
                 setRecommendations(null)
-                Object.keys(fetchedRef.current).forEach((key) => {
-                    if (key.startsWith(`recs-${selectedAdAccount}`)) delete fetchedRef.current[key]
-                })
             }
 
             if (shouldRefreshPoorAds) {
+                delete poorAdsCacheRef.current[selectedAdAccount]
                 setPoorAdsLoading(true)
                 setPoorAds(null)
-                Object.keys(fetchedRef.current).forEach((key) => {
-                    if (key.startsWith(`poor-${selectedAdAccount}`)) delete fetchedRef.current[key]
-                })
             }
 
             if (shouldRefreshDailyInsights) {
@@ -1000,12 +1053,22 @@ export default function AnalyticsDashboard() {
             {selectedAdAccount && (
                 <Card className="rounded-3xl border-gray-200 overflow-visible">
                     <CardContent className="p-0">
-                        <div className="flex justify-end px-4 pt-4 lg:hidden">
+                        <div className="flex justify-end items-center gap-2 px-4 pt-4 lg:hidden">
                             <AnalyticsDateRangePicker
                                 value={analyticsDateRange}
                                 onChange={setAnalyticsDateRange}
                                 compact
                             />
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefreshCharts}
+                                disabled={dailyLoading || weeklyLoading}
+                                className="rounded-xl h-9 w-9 p-0"
+                                title="Refresh charts"
+                            >
+                                <RefreshCw className={cn("w-3.5 h-3.5", (dailyLoading || weeklyLoading) && "animate-spin")} />
+                            </Button>
                         </div>
 
                         <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4">
@@ -1023,12 +1086,22 @@ export default function AnalyticsDashboard() {
                                 />
                             </div>
                             <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
-                            <div className="absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 lg:block">
+                            <div className="absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 lg:flex">
                                 <AnalyticsDateRangePicker
                                     value={analyticsDateRange}
                                     onChange={setAnalyticsDateRange}
                                     compact
                                 />
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleRefreshCharts}
+                                    disabled={dailyLoading || weeklyLoading}
+                                    className="rounded-xl h-9 w-9 p-0 bg-white"
+                                    title="Refresh charts"
+                                >
+                                    <RefreshCw className={cn("w-3.5 h-3.5", (dailyLoading || weeklyLoading) && "animate-spin")} />
+                                </Button>
                             </div>
                         </div>
 
@@ -1101,6 +1174,7 @@ export default function AnalyticsDashboard() {
                             poorAdsData={poorAds}
                             poorAdsLoading={poorAdsLoading}
                             onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
+                            onRefreshPoorAds={handleRefreshPoorAds}
                             budgetRefreshing={recsLoading}
                             budgetRefreshToken={budgetRefreshSignal}
                         />
@@ -1117,6 +1191,7 @@ export default function AnalyticsDashboard() {
                             poorAdsData={poorAds}
                             poorAdsLoading={poorAdsLoading}
                             onRefreshBudgetRecommendations={handleRefreshBudgetRecommendations}
+                            onRefreshPoorAds={handleRefreshPoorAds}
                             budgetRefreshing={recsLoading}
                             budgetRefreshToken={budgetRefreshSignal}
                         />

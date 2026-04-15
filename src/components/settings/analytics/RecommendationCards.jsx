@@ -140,6 +140,7 @@ export default function RecommendationCards({
     data, loading, mode, adAccountId, adAccounts,
     poorAdsData, poorAdsLoading,
     onRefreshBudgetRecommendations,
+    onRefreshPoorAds,
     budgetRefreshing = false,
     budgetRefreshToken = null,
 }) {
@@ -181,19 +182,6 @@ export default function RecommendationCards({
     }, [adAccountId, mode, section])
 
     useEffect(() => {
-        if (section !== "budget" || !adAccountId || typeof window === "undefined") return
-
-        try {
-            window.sessionStorage.setItem(
-                getDismissedStorageKey(adAccountId, mode),
-                JSON.stringify([...dismissed])
-            )
-        } catch {
-            // Ignore storage failures and keep the in-memory fallback.
-        }
-    }, [dismissed, adAccountId, mode, section])
-
-    useEffect(() => {
         if (section !== "budget" || !adAccountId || !budgetRefreshToken || typeof window === "undefined") return
         if (!budgetRefreshToken.startsWith(`${adAccountId}:`)) return
 
@@ -217,8 +205,16 @@ export default function RecommendationCards({
     }, [data, dismissed])
 
     const handleDismiss = (rec) => {
-        setDismissed(prev => new Set([...prev, recKey(rec)]))
-
+        setDismissed(prev => {
+            const next = new Set([...prev, recKey(rec)])
+            try {
+                window.sessionStorage.setItem(
+                    getDismissedStorageKey(adAccountId, mode),
+                    JSON.stringify([...next])
+                )
+            } catch { /* keep in-memory fallback */ }
+            return next
+        })
     }
 
     const handleApply = async (rec) => {
@@ -660,13 +656,27 @@ export default function RecommendationCards({
             {section === "poor-performers" && (
                 <div className="space-y-4">
                     <div className="px-1">
-                        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                            <AlertTriangle className="w-5 h-5 text-red-500" />
-                            Poor Performers {ads.length > 0 && <span className="text-base font-normal text-gray-400">({ads.length})</span>}
-                        </h2>
-                        <p className="text-sm text-gray-500 mt-1">
-                            Ads with spend {'>'} 0.5X account average CPA, running 14+ days, and performing below account baseline.
-                        </p>
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                                    Poor Performers {ads.length > 0 && <span className="text-base font-normal text-gray-400">({ads.length})</span>}
+                                </h2>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Ads with spend {'>'} 0.5X account average CPA, running 14+ days, and performing below account baseline.
+                                </p>
+                            </div>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={onRefreshPoorAds}
+                                disabled={poorAdsLoading}
+                                className="rounded-xl h-9 px-3 flex-shrink-0"
+                            >
+                                <RefreshCw className={cn("w-4 h-4", poorAdsLoading && "animate-spin")} />
+                            </Button>
+                        </div>
                     </div>
 
                     {(poorAdsLoading || !poorAdsData) ? (
