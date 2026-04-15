@@ -941,14 +941,14 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               }}
             >
               <Command filter={() => 1} loop={false}>
-                <div className="flex items-center gap-1 mx-2 mt-2 mb-1 rounded-2xl border border-gray-200 bg-gray-50 px-1 shadow">
+                <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
                   <CommandInput
                     placeholder="Search templates..."
                     value={templateSearch}
                     onValueChange={setTemplateSearch}
-                    wrapperClassName="flex-1 border-0 shadow-none bg-transparent mx-0 mt-0 mb-0 px-2"
+                    wrapperClassName="flex-1 border-gray-200 bg-gray-50 mx-0 mt-0 mb-0"
                   />
-                  <div className="flex items-center gap-1 pr-1">
+                  <div className="flex items-center gap-1">
                     {/* Sort button */}
                     <div className="relative">
                       <button
@@ -963,30 +963,40 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
                       </button>
                       {showSortMenu && (
-                        <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-lg border border-gray-200 shadow-lg py-1 min-w-[150px]">
-                          {[
-                            { value: "default", label: "Recently Made" },
-                            { value: "oldest", label: "Oldest First" },
-                            { value: "most_used", label: "Most Used" },
-                          ].map((option) => (
-                            <button
-                              key={option.value}
-                              type="button"
-                              className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSortMode(option.value)
-                                localStorage.setItem("templateSortMode", option.value)
-                                setShowSortMenu(false)
-                              }}
-                            >
-                              {option.label}
-                              {sortMode === option.value && (
-                                <Check className="h-3.5 w-3.5 text-blue-500" />
-                              )}
-                            </button>
-                          ))}
-                        </div>
+                        <>
+                          <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
+                          <div className="fixed z-[100] bg-white rounded-lg border border-gray-200 shadow-lg py-1 min-w-[150px]" style={{ top: 'auto', right: 'auto' }} ref={(el) => {
+                            if (!el) return;
+                            const btn = el.previousElementSibling?.previousElementSibling;
+                            if (!btn) return;
+                            const rect = btn.getBoundingClientRect();
+                            el.style.top = `${rect.bottom + 4}px`;
+                            el.style.left = `${rect.right - el.offsetWidth}px`;
+                          }}>
+                            {[
+                              { value: "default", label: "Recently Made" },
+                              { value: "oldest", label: "Oldest First" },
+                              { value: "most_used", label: "Most Used" },
+                            ].map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSortMode(option.value)
+                                  localStorage.setItem("templateSortMode", option.value)
+                                  setShowSortMenu(false)
+                                }}
+                              >
+                                {option.label}
+                                {sortMode === option.value && (
+                                  <Check className="h-3.5 w-3.5 text-blue-500" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        </>
                       )}
                     </div>
                     {/* Bulk delete button */}
