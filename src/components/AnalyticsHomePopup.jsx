@@ -30,7 +30,7 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                         <img
                             src={AnalyticsPopup}
                             alt="Analytics preview"
-                            className="w-[88%] h-auto object-contain rounded-[16px] shadow-lg"
+                            className="w-[88%] h-auto object-contain rounded-[16px]"
                         />
                     </div>
 
@@ -43,12 +43,12 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                                     alt="Analytics icon"
                                     className="w-12 h-12 object-contain"
                                 />
-                                <h2 className="text-[22px] font-bold text-black italic">
+                                <h2 className="text-[22px] font-bold text-black">
                                     Introducing Analytics
                                 </h2>
                             </div>
 
-                            <p className="text-[15px] leading-7 text-[#6B5B53] mb-6">
+                            <p className="text-[13px] font-medium leading-7 text-black mb-6">
                                 We took the playbook behind $3M/month in ad
                                 spend and put it in your hands. Review
                                 recommendations and apply them in one
@@ -60,14 +60,14 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="text-black text-[14px] font-semibold px-3 py-3 shrink-0"
+                                className="text-gray-400 text-[14px] font-semibold px-3 py-3 shrink-0"
                             >
                                 I dont want cool insights
                             </button>
 
                             <Button
                                 onClick={onCheckOutAnalytics}
-                                className="flex-1 bg-black hover:bg-black/80 text-white text-[16px] font-semibold rounded-full py-[24px] px-[10px]"
+                                className="flex-1 bg-black hover:bg-black/80 text-white text-[16px] font-semibold rounded-full py-[24px] px-[20px]"
                             >
                                 Check out Analytics
                             </Button>

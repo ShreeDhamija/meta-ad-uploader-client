@@ -21,18 +21,9 @@ const steps = [
 
 export default function PowerupPopup({ onClose }) {
     const [stepIndex, setStepIndex] = useState(0)
-    const [isTransitioning, setIsTransitioning] = useState(false)
 
     const step = steps[stepIndex]
     const isLastStep = stepIndex === steps.length - 1
-
-    const handleNext = () => {
-        setIsTransitioning(true)
-        setTimeout(() => {
-            setStepIndex((prev) => Math.min(prev + 1, steps.length - 1))
-            requestAnimationFrame(() => setIsTransitioning(false))
-        }, 250)
-    }
 
     const handleBackdropClick = (event) => {
         if (isLastStep && event.target === event.currentTarget) {
@@ -46,8 +37,8 @@ export default function PowerupPopup({ onClose }) {
             onClick={handleBackdropClick}
         >
             <div
-                className="relative w-full max-w-[470px] rounded-[30px] bg-[#FAF9F7] text-left shadow-2xl overflow-hidden animate-fadeSwap"
-                style={{ maxHeight: "580px" }}
+                className="relative w-full max-w-[432px] rounded-[30px] bg-[#FAF9F7] text-left shadow-2xl overflow-hidden animate-fadeSwap"
+                style={{ maxHeight: "563px" }}
                 onClick={(event) => event.stopPropagation()}
             >
                 {/* Image area with background */}
@@ -60,14 +51,9 @@ export default function PowerupPopup({ onClose }) {
                     }}
                 >
                     <img
-                        key={step.id}
                         src={step.image}
                         alt={`Powerup step ${step.id}`}
-                        className={`w-[88%] h-auto object-contain rounded-[16px] shadow-lg transition-all duration-250 ${
-                            isTransitioning
-                                ? "scale-95 opacity-0"
-                                : "popup-bounceIn"
-                        }`}
+                        className="w-[88%] h-auto object-contain rounded-[16px]"
                     />
                 </div>
 
@@ -85,50 +71,46 @@ export default function PowerupPopup({ onClose }) {
                             </h2>
                         </div>
 
-                        <p className="mb-3 text-[14px] font-medium leading-6 text-[#6B5B53]">
+                        <p className="mb-3 text-[13px] font-medium leading-6 text-black">
                             You can now upload all your media once and choose to
                             split the media into different ad sets with different
                             ad naming, copy and every other field available.
                         </p>
 
-                        <div
-                            className={`mb-3 inline-flex rounded-full border border-black px-4 py-1 text-[14px] font-semibold text-black transition-opacity duration-250 ${
-                                isTransitioning ? "opacity-0" : "opacity-100"
-                            }`}
-                        >
+                        <div className="mb-3 inline-flex rounded-full border border-black px-4 py-1 text-[13px] font-semibold text-black">
                             Step {step.id}
                         </div>
 
-                        <p
-                            className={`mb-4 text-[14px] font-medium leading-6 text-[#6B5B53] transition-opacity duration-250 ${
-                                isTransitioning ? "opacity-0" : "opacity-100"
-                            }`}
-                        >
+                        <p className="mb-4 text-[13px] font-medium leading-6 text-black">
                             {step.body}
                         </p>
 
                         <div className="flex items-center gap-3">
-                            <div
-                                className={`overflow-hidden transition-all duration-300 ease-out ${
-                                    isLastStep
-                                        ? "flex-1 opacity-100 max-w-[50%]"
-                                        : "flex-[0] opacity-0 max-w-0"
-                                }`}
-                            >
+                            {isLastStep && (
                                 <Button
                                     type="button"
                                     variant="outline"
                                     onClick={onClose}
-                                    className="h-auto w-full rounded-full border-black bg-transparent py-3 text-[16px] font-semibold text-black hover:bg-black/5 hover:text-black"
+                                    className="h-auto flex-1 rounded-full border-black bg-transparent py-3 text-[16px] font-semibold text-black hover:bg-black/5 hover:text-black"
                                 >
                                     Close
                                 </Button>
-                            </div>
+                            )}
 
                             <Button
                                 type="button"
-                                onClick={isLastStep ? onClose : handleNext}
-                                className={`h-auto rounded-full bg-black py-3 text-[16px] font-semibold text-white hover:bg-black/80 transition-all duration-300 ${
+                                onClick={
+                                    isLastStep
+                                        ? onClose
+                                        : () =>
+                                              setStepIndex((prev) =>
+                                                  Math.min(
+                                                      prev + 1,
+                                                      steps.length - 1
+                                                  )
+                                              )
+                                }
+                                className={`h-auto rounded-full bg-black py-3 text-[16px] font-semibold text-white hover:bg-black/80 ${
                                     isLastStep ? "flex-1" : "w-full"
                                 }`}
                             >
@@ -146,15 +128,6 @@ export default function PowerupPopup({ onClose }) {
                         }
                         .animate-fadeSwap {
                             animation: fadeSwap 0.3s ease-out forwards;
-                        }
-
-                        @keyframes popupBounceIn {
-                            0%   { transform: scale(0.95); opacity: 0.6; }
-                            60%  { transform: scale(1.02); }
-                            100% { transform: scale(1);    opacity: 1;   }
-                        }
-                        .popup-bounceIn {
-                            animation: popupBounceIn 0.4s ease-out forwards;
                         }
                     `}
                 </style>

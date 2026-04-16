@@ -283,16 +283,21 @@ export default function Home() {
     }, [isLoggedIn, loading, showOnboardingPopup, hasSeenAnalyticsHomePopup, userCreatedAt])
 
     useEffect(() => {
-        if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup || showAnalyticsHomePopup) return
+        if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup) return
 
         const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
         const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
+
+        // Don't show powerup if the analytics popup still needs to be shown first
+        const needsAnalyticsPopup = isValidCreatedAt && parsedCreatedAt < ANALYTICS_LAUNCH_AT && !hasSeenAnalyticsHomePopup
+        if (needsAnalyticsPopup) return
+
         const isExistingUser = isValidCreatedAt && parsedCreatedAt < POWERUP_LAUNCH_AT
 
         if (isExistingUser && !hasSeenPowerupPopup) {
             setShowPowerupPopup(true)
         }
-    }, [isLoggedIn, loading, showOnboardingPopup, showAnalyticsHomePopup, hasSeenPowerupPopup, userCreatedAt])
+    }, [isLoggedIn, loading, showOnboardingPopup, hasSeenAnalyticsHomePopup, hasSeenPowerupPopup, userCreatedAt])
 
     useEffect(() => {
         if (!showPowerupPopup || hasMarkedPowerupPopupSeenRef.current) return
