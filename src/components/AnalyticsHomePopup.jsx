@@ -30,33 +30,32 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                         <img
                             src={AnalyticsPopup}
                             alt="Analytics preview"
-                            className="w-[88%] h-auto object-contain rounded-[16px]"
+                            className="object-contain rounded-[16px]"
+                            style={{ width: "377px", height: "407px" }}
                         />
                     </div>
 
                     {/* Text content */}
                     <div className="px-6 pt-4 pb-6">
-                        <div className="w-[370px] max-w-full mx-auto">
-                            <div className="flex items-center gap-3 mb-3">
-                                <img
-                                    src={AnalyticsIcon}
-                                    alt="Analytics icon"
-                                    className="w-12 h-12 object-contain"
-                                />
-                                <h2 className="text-[22px] font-bold text-black">
-                                    Introducing Analytics
-                                </h2>
-                            </div>
-
-                            <p className="text-[13px] font-medium leading-7 text-black mb-6">
-                                We took the playbook behind $3M/month in ad
-                                spend and put it in your hands. Review
-                                recommendations and apply them in one
-                                click&mdash;or not.
-                            </p>
+                        <div className="flex items-center gap-3 mb-3">
+                            <img
+                                src={AnalyticsIcon}
+                                alt="Analytics icon"
+                                className="w-12 h-12 object-contain"
+                            />
+                            <h2 className="text-[22px] font-bold text-black">
+                                Introducing Analytics
+                            </h2>
                         </div>
 
-                        <div className="w-[370px] max-w-full mx-auto flex items-center gap-3">
+                        <p className="text-[13px] font-normal leading-5 text-black mb-6">
+                            We took the playbook behind $3M/month in ad
+                            spend and put it in your hands. Review
+                            recommendations and apply them in one
+                            click&mdash;or not.
+                        </p>
+
+                        <div className="flex items-center gap-3">
                             <button
                                 type="button"
                                 onClick={onClose}

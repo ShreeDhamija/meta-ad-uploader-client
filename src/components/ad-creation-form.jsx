@@ -549,7 +549,8 @@ export default function AdCreationForm({
   fileVariantMap,
   setFileVariantMap,
   groupVariantMap,
-  setGroupVariantMap
+  setGroupVariantMap,
+  onBeforeMediaClear
 }) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
@@ -584,6 +585,7 @@ export default function AdCreationForm({
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
+  const [isQueueingJobs, setIsQueueingJobs] = useState(false);
   const [isPagesLoading, setIsPagesLoading] = useState(false);
   // const [isPostSelectorOpen, setIsPostSelectorOpen] = useState(false)
   const [linkCustomStates, setLinkCustomStates] = useState({}) // Track which carousel links are custom
@@ -5341,8 +5343,28 @@ export default function AdCreationForm({
     }
   }
 
-  const handleQueueJob = (e) => {
+  const clearQueuedMedia = () => {
+    setFiles([]);
+    setDriveFiles([]);
+    setDropboxFiles([]);
+    setVideoThumbs({});
+    setThumbnail(null);
+    setFileGroups([]);
+    setEnablePlacementCustomization(false);
+    setImportedPosts([]);
+    setImportedFiles([]);
+    setSelectedIgOrganicPosts([]);
+    setFileVariantMap({});
+    setGroupVariantMap({});
+    setSelectedFiles(new Set());
+  };
+
+  const handleQueueJob = async (e) => {
     e.preventDefault();
+
+    if (isQueueingJobs) {
+      return;
+    }
 
     if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) {
       toast.error("Please upload at least one file or import from Drive");
@@ -5391,28 +5413,27 @@ export default function AdCreationForm({
       showVariantLabel: shouldShowVariantLabel,
     }));
 
-    setJobQueue((prev) => [...prev, ...queuedJobs]);
-    // toast.success(
-    //   newJobs.length === 1
-    //     ? 'Job queued'
-    //     : `Queued ${newJobs.length} jobs across variants`
-    // );
+    setIsQueueingJobs(true);
 
-    // Clear form immediately
-    if (!preserveMedia) {
-      setFiles([]);
-      setDriveFiles([]);
-      setDropboxFiles([]);
-      setVideoThumbs({});
-      setThumbnail(null);
-      setFileGroups([]);
-      setEnablePlacementCustomization(false);
-      setImportedPosts([]);
-      setImportedFiles([]);
-      setSelectedIgOrganicPosts([]);
-      setFileVariantMap({});
-      setGroupVariantMap({});
-      setSelectedFiles(new Set());
+    try {
+      setJobQueue((prev) => [...prev, ...queuedJobs]);
+      // toast.success(
+      //   newJobs.length === 1
+      //     ? 'Job queued'
+      //     : `Queued ${newJobs.length} jobs across variants`
+      // );
+
+      if (!preserveMedia) {
+        try {
+          await onBeforeMediaClear?.();
+        } catch (error) {
+          console.error("Failed to launch media preview animation:", error);
+        }
+
+        clearQueuedMedia();
+      }
+    } finally {
+      setIsQueueingJobs(false);
     }
   };
 
@@ -7504,9 +7525,9 @@ export default function AdCreationForm({
             <Button
               type="submit"
               className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl"
-              disabled={publishDisabled}
+              disabled={publishDisabled || isQueueingJobs}
             >
-              Publish Ads
+              {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
             </Button>
 
             {!isCarouselAd && hasDuplicates && (

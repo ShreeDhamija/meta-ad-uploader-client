@@ -26,6 +26,7 @@ const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 const ANALYTICS_LAUNCH_AT = new Date("2026-04-09T12:00:00+05:30");
 const POWERUP_LAUNCH_AT = new Date("2026-04-15T00:00:00+05:30");
 const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
+const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 420;
 
 const parseUserCreatedAt = (value) => {
     if (!value) return null;
@@ -237,6 +238,7 @@ export default function Home() {
     const [selectedFiles, setSelectedFiles] = useState(new Set());
     const [useExistingPosts, setUseExistingPosts] = useState(false);
     const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([]);
+    const [isLaunchingMediaPreview, setIsLaunchingMediaPreview] = useState(false);
     const [selectedForm, setSelectedForm] = useState(null);
     const [isPartnershipAd, setIsPartnershipAd] = useState(false);
     const [partnerIgAccountId, setPartnerIgAccountId] = useState("");
@@ -251,8 +253,57 @@ export default function Home() {
     const [groupVariantMap, setGroupVariantMap] = useState({});
 
     const [showMobileBanner, setShowMobileBanner] = useState(true);
+    const mediaPreviewLaunchTimeoutRef = useRef(null);
 
     if (authLoading) return null
+
+    useEffect(() => {
+        return () => {
+            if (mediaPreviewLaunchTimeoutRef.current) {
+                clearTimeout(mediaPreviewLaunchTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    const triggerMediaPreviewLaunch = useCallback(() => {
+        const hasMediaToLaunch = (
+            files.length > 0 ||
+            driveFiles.length > 0 ||
+            dropboxFiles.length > 0 ||
+            importedPosts.length > 0 ||
+            importedFiles.length > 0 ||
+            selectedIgOrganicPosts.length > 0
+        );
+
+        if (!hasMediaToLaunch) {
+            return Promise.resolve();
+        }
+
+        if (mediaPreviewLaunchTimeoutRef.current) {
+            clearTimeout(mediaPreviewLaunchTimeoutRef.current);
+        }
+
+        const prefersReducedMotion = typeof window !== "undefined" &&
+            window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+        const launchDuration = prefersReducedMotion ? 140 : MEDIA_PREVIEW_LAUNCH_DURATION_MS;
+
+        setIsLaunchingMediaPreview(true);
+
+        return new Promise((resolve) => {
+            mediaPreviewLaunchTimeoutRef.current = setTimeout(() => {
+                setIsLaunchingMediaPreview(false);
+                mediaPreviewLaunchTimeoutRef.current = null;
+                resolve();
+            }, launchDuration);
+        });
+    }, [
+        files.length,
+        driveFiles.length,
+        dropboxFiles.length,
+        importedPosts.length,
+        importedFiles.length,
+        selectedIgOrganicPosts.length,
+    ]);
 
 
     useEffect(() => {
@@ -1352,6 +1403,7 @@ export default function Home() {
                             setFileVariantMap={setFileVariantMap}
                             groupVariantMap={groupVariantMap}
                             setGroupVariantMap={setGroupVariantMap}
+                            onBeforeMediaClear={triggerMediaPreviewLaunch}
 
 
                         />
@@ -1395,6 +1447,7 @@ export default function Home() {
                                 setGroupVariantMap={setGroupVariantMap}
                                 hasSeenPowerupPopup={hasSeenPowerupPopup}
                                 setShowPowerupPopup={setShowPowerupPopup}
+                                isLaunchingMedia={isLaunchingMediaPreview}
                             />
                         </ErrorBoundary>
 

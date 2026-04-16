@@ -53,7 +53,8 @@ export default function PowerupPopup({ onClose }) {
                     <img
                         src={step.image}
                         alt={`Powerup step ${step.id}`}
-                        className="w-[88%] h-auto object-contain rounded-[16px]"
+                        className="object-contain rounded-[16px]"
+                        style={{ width: "395px", height: "196px" }}
                     />
                 </div>
 
@@ -71,7 +72,7 @@ export default function PowerupPopup({ onClose }) {
                             </h2>
                         </div>
 
-                        <p className="mb-3 text-[13px] font-medium leading-6 text-black">
+                        <p className="mb-3 text-[13px] font-normal leading-5 text-black">
                             You can now upload all your media once and choose to
                             split the media into different ad sets with different
                             ad naming, copy and every other field available.
@@ -81,7 +82,7 @@ export default function PowerupPopup({ onClose }) {
                             Step {step.id}
                         </div>
 
-                        <p className="mb-4 text-[13px] font-medium leading-6 text-black">
+                        <p className="mb-4 text-[13px] font-normal leading-5 text-black">
                             {step.body}
                         </p>
 

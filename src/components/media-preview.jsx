@@ -41,6 +41,7 @@ const isVideoFile = (file) => {
 };
 
 const VARIANT_COLORS = ['#6b7280', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
+const MEDIA_PREVIEW_LAUNCH_STAGGER_MS = 28;
 
 const getGroupFileIds = (group) => Array.isArray(group) ? group : (group?.fileIds || []);
 
@@ -366,7 +367,8 @@ export default function MediaPreview({
   groupVariantMap,
   setGroupVariantMap,
   hasSeenPowerupPopup,
-  setShowPowerupPopup
+  setShowPowerupPopup,
+  isLaunchingMedia = false
 }) {
   // const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isAIGrouping, setIsAIGrouping] = useState(false);
@@ -430,6 +432,12 @@ export default function MediaPreview({
     const imageFiles = allFiles.filter(file => !isVideoFile(file));
     return imageFiles.length >= 2;
   }, [files, driveFiles, dropboxFiles]);
+
+  const getLaunchStyle = (order) => (
+    isLaunchingMedia
+      ? { '--media-launch-delay': `${order * MEDIA_PREVIEW_LAUNCH_STAGGER_MS}ms` }
+      : undefined
+  );
 
 
 
@@ -1008,6 +1016,40 @@ export default function MediaPreview({
     <>
       {(files.length > 0 || driveFiles.length > 0 || (dropboxFiles?.length || 0) > 0 || importedPosts.length > 0 || importedFiles.length > 0 || selectedIgOrganicPosts.length > 0) ? (
         <>
+          <style>{`
+            @keyframes mediaPreviewSlingshot {
+              0% {
+                transform: translate3d(0, 0, 0) scale(1);
+                opacity: 1;
+              }
+              18% {
+                transform: translate3d(0, 12px, 0) scale(0.985);
+                opacity: 1;
+              }
+              52% {
+                transform: translate3d(0, -28px, 0) scale(1.01);
+                opacity: 1;
+              }
+              100% {
+                transform: translate3d(0, -150%, 0) scale(0.92);
+                opacity: 0;
+              }
+            }
+
+            .media-preview-launch-item {
+              animation: mediaPreviewSlingshot 420ms cubic-bezier(0.2, 0.75, 0.24, 1) forwards;
+              animation-delay: var(--media-launch-delay, 0ms);
+              will-change: transform, opacity;
+              transform-origin: center bottom;
+              pointer-events: none;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+              .media-preview-launch-item {
+                animation-duration: 140ms;
+              }
+            }
+          `}</style>
           <Card
             className="flex flex-col sticky top-4 w-full border border-gray-300 !bg-white rounded-3xl"
             style={{ height: "calc(100vh - 140px)" }}
@@ -1199,7 +1241,7 @@ export default function MediaPreview({
             )}
 
             <CardContent
-              className="flex-1 overflow-y-auto min-h-0 pr-2"
+              className={`flex-1 overflow-y-auto min-h-0 pr-2 ${isLaunchingMedia ? 'pointer-events-none' : ''}`}
               style={{
                 scrollbarWidth: 'thin',
                 scrollbarColor: '#CBD5E0 transparent'
@@ -1225,7 +1267,8 @@ export default function MediaPreview({
                       return (
                         <div
                           key={group.id || `group-${groupIndex}`}
-                          className="relative"
+                          className={`relative ${isLaunchingMedia && !isGroupDimmed ? 'media-preview-launch-item' : ''}`}
+                          style={isLaunchingMedia && !isGroupDimmed ? getLaunchStyle(groupIndex) : undefined}
                         >
                           {/* Shared group background */}
                           <div
@@ -1349,38 +1392,47 @@ export default function MediaPreview({
                       {ungroupedFiles.map((file, index) => {
                         const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
                         const assignedVariantId = fileVariantMap[fileId] || 'default';
+                        const isDimmed = activeVariantId !== 'default' && assignedVariantId !== activeVariantId;
                         const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0);
                         return (
-                          <SortableMediaItem
+                          <div
                             key={fileId}
-                            file={file}
-                            index={index}
-                            cardIndex={index}
-                            isCarouselAd={isCarouselAd}
-                            videoThumbs={videoThumbs}
-                            onRemove={() => removeFile(file)}
-                            isSelected={selectedFiles.has(fileId)}
-                            onSelect={handleFileSelect}
-                            groupNumber={null}
-                            enablePlacementCustomization={enablePlacementCustomization}
-                            adType={adType}
-                            dimmed={activeVariantId !== 'default' && assignedVariantId !== activeVariantId}
-                            showVariantDropdown={showVariantDropdown}
-                            assignedVariantId={assignedVariantId}
-                            variants={variants}
-                            onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
-                          />
+                            className={isLaunchingMedia && !isDimmed ? 'media-preview-launch-item' : ''}
+                            style={isLaunchingMedia && !isDimmed ? getLaunchStyle(fileGroups.length + index) : undefined}
+                          >
+                            <SortableMediaItem
+                              file={file}
+                              index={index}
+                              cardIndex={index}
+                              isCarouselAd={isCarouselAd}
+                              videoThumbs={videoThumbs}
+                              onRemove={() => removeFile(file)}
+                              isSelected={selectedFiles.has(fileId)}
+                              onSelect={handleFileSelect}
+                              groupNumber={null}
+                              enablePlacementCustomization={enablePlacementCustomization}
+                              adType={adType}
+                              dimmed={isDimmed}
+                              showVariantDropdown={showVariantDropdown}
+                              assignedVariantId={assignedVariantId}
+                              variants={variants}
+                              onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
+                            />
+                          </div>
                         );
                       })}
 
-                      {importedPosts.map((post) => (
+                      {importedPosts.map((post, index) => (
                         <div
                           key={post.id}
-                          className="relative group"
+                          className={`relative group ${isLaunchingMedia && activeVariantId === 'default' ? 'media-preview-launch-item' : ''}`}
                           title={post.ad_name}
                           style={{
                             opacity: activeVariantId !== 'default' ? 0.3 : 1,
-                            transition: 'opacity 150ms'
+                            transition: 'opacity 150ms',
+                            ...(isLaunchingMedia && activeVariantId === 'default'
+                              ? getLaunchStyle(fileGroups.length + ungroupedFiles.length + index)
+                              : {})
                           }}
                         >
                           <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
@@ -1406,14 +1458,17 @@ export default function MediaPreview({
                         </div>
                       ))}
 
-                      {selectedIgOrganicPosts.map((post) => (
+                      {selectedIgOrganicPosts.map((post, index) => (
                         <div
                           key={`ig-${post.source_instagram_media_id}`}
-                          className="relative group"
+                          className={`relative group ${isLaunchingMedia && activeVariantId === 'default' ? 'media-preview-launch-item' : ''}`}
                           title={post.ad_name}
                           style={{
                             opacity: activeVariantId !== 'default' ? 0.3 : 1,
-                            transition: 'opacity 150ms'
+                            transition: 'opacity 150ms',
+                            ...(isLaunchingMedia && activeVariantId === 'default'
+                              ? getLaunchStyle(fileGroups.length + ungroupedFiles.length + importedPosts.length + index)
+                              : {})
                           }}
                         >
                           <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
