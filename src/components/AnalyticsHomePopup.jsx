@@ -15,7 +15,6 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
         >
             <div
                 className="bg-[#FAF9F7] rounded-[30px] shadow-2xl w-full max-w-[430px] relative overflow-hidden text-left"
-                style={{ maxHeight: "650px" }}
             >
                 <div className="animate-fadeSwap">
                     {/* Image area with background */}
@@ -36,7 +35,7 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                     </div>
 
                     {/* Text content */}
-                    <div className="px-6 pt-4 pb-8">
+                    <div className="pl-5 pr-6 pt-4 pb-8">
                         <div className="flex items-center gap-3 mb-3">
                             <img
                                 src={AnalyticsIcon}

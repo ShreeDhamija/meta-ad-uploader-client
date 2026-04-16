@@ -1013,10 +1013,6 @@ export default function MediaPreview({
                 transform: translate3d(0, 0, 0) scale(1);
                 opacity: 1;
               }
-              55% {
-                transform: translate3d(0, -18px, 0) scale(1);
-                opacity: 1;
-              }
               100% {
                 transform: translate3d(0, -105%, 0) scale(0.97);
                 opacity: 0;
