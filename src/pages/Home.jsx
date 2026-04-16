@@ -26,7 +26,7 @@ const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 const ANALYTICS_LAUNCH_AT = new Date("2026-04-09T12:00:00+05:30");
 const POWERUP_LAUNCH_AT = new Date("2026-04-15T00:00:00+05:30");
 const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
-const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 420;
+const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
 
 const parseUserCreatedAt = (value) => {
     if (!value) return null;
@@ -587,10 +587,10 @@ export default function Home() {
         await markAnalyticsHomePopupSeen()
     }
 
-    const handleCheckOutAnalytics = async () => {
+    const handleCheckOutAnalytics = () => {
         setShowAnalyticsHomePopup(false)
-        await markAnalyticsHomePopupSeen()
         navigate("/analytics")
+        markAnalyticsHomePopupSeen()
     }
     const onItemToggle = (item) => {
         setSelectedItems((prev) =>

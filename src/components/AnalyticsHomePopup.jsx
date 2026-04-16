@@ -36,7 +36,7 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                     </div>
 
                     {/* Text content */}
-                    <div className="px-6 pt-4 pb-6">
+                    <div className="px-6 pt-4 pb-8">
                         <div className="flex items-center gap-3 mb-3">
                             <img
                                 src={AnalyticsIcon}

@@ -41,7 +41,6 @@ const isVideoFile = (file) => {
 };
 
 const VARIANT_COLORS = ['#6b7280', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
-const MEDIA_PREVIEW_LAUNCH_STAGGER_MS = 28;
 
 const getGroupFileIds = (group) => Array.isArray(group) ? group : (group?.fileIds || []);
 
@@ -432,14 +431,6 @@ export default function MediaPreview({
     const imageFiles = allFiles.filter(file => !isVideoFile(file));
     return imageFiles.length >= 2;
   }, [files, driveFiles, dropboxFiles]);
-
-  const getLaunchStyle = (order) => (
-    isLaunchingMedia
-      ? { '--media-launch-delay': `${order * MEDIA_PREVIEW_LAUNCH_STAGGER_MS}ms` }
-      : undefined
-  );
-
-
 
   const compressAndConvertToBase64 = async (file) => {
     return new Promise(async (resolve, reject) => {
@@ -1022,23 +1013,22 @@ export default function MediaPreview({
                 transform: translate3d(0, 0, 0) scale(1);
                 opacity: 1;
               }
-              18% {
-                transform: translate3d(0, 12px, 0) scale(0.985);
+              20% {
+                transform: translate3d(0, 6px, 0) scale(0.995);
                 opacity: 1;
               }
-              52% {
-                transform: translate3d(0, -28px, 0) scale(1.01);
+              58% {
+                transform: translate3d(0, -18px, 0) scale(1);
                 opacity: 1;
               }
               100% {
-                transform: translate3d(0, -150%, 0) scale(0.92);
+                transform: translate3d(0, -105%, 0) scale(0.97);
                 opacity: 0;
               }
             }
 
             .media-preview-launch-item {
-              animation: mediaPreviewSlingshot 420ms cubic-bezier(0.2, 0.75, 0.24, 1) forwards;
-              animation-delay: var(--media-launch-delay, 0ms);
+              animation: mediaPreviewSlingshot 560ms cubic-bezier(0.22, 0.7, 0.2, 1) forwards;
               will-change: transform, opacity;
               transform-origin: center bottom;
               pointer-events: none;
@@ -1046,7 +1036,7 @@ export default function MediaPreview({
 
             @media (prefers-reduced-motion: reduce) {
               .media-preview-launch-item {
-                animation-duration: 140ms;
+                animation-duration: 180ms;
               }
             }
           `}</style>
@@ -1268,7 +1258,6 @@ export default function MediaPreview({
                         <div
                           key={group.id || `group-${groupIndex}`}
                           className={`relative ${isLaunchingMedia && !isGroupDimmed ? 'media-preview-launch-item' : ''}`}
-                          style={isLaunchingMedia && !isGroupDimmed ? getLaunchStyle(groupIndex) : undefined}
                         >
                           {/* Shared group background */}
                           <div
@@ -1398,7 +1387,6 @@ export default function MediaPreview({
                           <div
                             key={fileId}
                             className={isLaunchingMedia && !isDimmed ? 'media-preview-launch-item' : ''}
-                            style={isLaunchingMedia && !isDimmed ? getLaunchStyle(fileGroups.length + index) : undefined}
                           >
                             <SortableMediaItem
                               file={file}
@@ -1429,10 +1417,7 @@ export default function MediaPreview({
                           title={post.ad_name}
                           style={{
                             opacity: activeVariantId !== 'default' ? 0.3 : 1,
-                            transition: 'opacity 150ms',
-                            ...(isLaunchingMedia && activeVariantId === 'default'
-                              ? getLaunchStyle(fileGroups.length + ungroupedFiles.length + index)
-                              : {})
+                            transition: 'opacity 150ms'
                           }}
                         >
                           <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
@@ -1465,10 +1450,7 @@ export default function MediaPreview({
                           title={post.ad_name}
                           style={{
                             opacity: activeVariantId !== 'default' ? 0.3 : 1,
-                            transition: 'opacity 150ms',
-                            ...(isLaunchingMedia && activeVariantId === 'default'
-                              ? getLaunchStyle(fileGroups.length + ungroupedFiles.length + importedPosts.length + index)
-                              : {})
+                            transition: 'opacity 150ms'
                           }}
                         >
                           <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
