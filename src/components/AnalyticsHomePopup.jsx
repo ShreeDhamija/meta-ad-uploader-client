@@ -54,7 +54,7 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
                             click&mdash;or not.
                         </p>
 
-                        <div className="flex items-center gap-3 mb-4">
+                        <div className="flex items-center gap-3">
                             <button
                                 type="button"
                                 onClick={onClose}
