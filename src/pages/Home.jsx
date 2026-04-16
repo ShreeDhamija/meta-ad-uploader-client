@@ -275,12 +275,24 @@ export default function Home() {
 
         const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
         const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
+        const isExistingUser = isValidCreatedAt && parsedCreatedAt < ANALYTICS_LAUNCH_AT
+
+        if (isExistingUser && !hasSeenAnalyticsHomePopup) {
+            setShowAnalyticsHomePopup(true)
+        }
+    }, [isLoggedIn, loading, showOnboardingPopup, hasSeenAnalyticsHomePopup, userCreatedAt])
+
+    useEffect(() => {
+        if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup || showAnalyticsHomePopup) return
+
+        const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
+        const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
         const isExistingUser = isValidCreatedAt && parsedCreatedAt < POWERUP_LAUNCH_AT
 
         if (isExistingUser && !hasSeenPowerupPopup) {
             setShowPowerupPopup(true)
         }
-    }, [isLoggedIn, loading, showOnboardingPopup, hasSeenPowerupPopup, userCreatedAt])
+    }, [isLoggedIn, loading, showOnboardingPopup, showAnalyticsHomePopup, hasSeenPowerupPopup, userCreatedAt])
 
     useEffect(() => {
         if (!showPowerupPopup || hasMarkedPowerupPopupSeenRef.current) return
@@ -288,25 +300,6 @@ export default function Home() {
         hasMarkedPowerupPopupSeenRef.current = true
         markPowerupPopupSeen()
     }, [showPowerupPopup])
-
-    useEffect(() => {
-        if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup || showPowerupPopup) return
-
-        const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
-        const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
-        const isExistingUser = isValidCreatedAt && parsedCreatedAt < ANALYTICS_LAUNCH_AT
-
-        if (isExistingUser && !hasSeenAnalyticsHomePopup) {
-            setShowAnalyticsHomePopup(true)
-        }
-    }, [
-        isLoggedIn,
-        loading,
-        showOnboardingPopup,
-        showPowerupPopup,
-        userCreatedAt,
-        hasSeenAnalyticsHomePopup
-    ])
 
     useEffect(() => {
         if (loading || subscriptionLoading) return;
