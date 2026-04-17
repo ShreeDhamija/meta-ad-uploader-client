@@ -189,24 +189,23 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       )}
 
       <div className="relative z-10">
-        {/* {isCarouselAd && !enablePlacementCustomization && ( */}
-        <div className={`transition-opacity ${dimmed ? 'opacity-30' : (isDragging ? 'opacity-50' : 'opacity-100')}`}>
-          {isCarouselAd && (
-            <Button
-              type="button"
-              ref={setActivatorNodeRef}
-              {...listeners}
-              variant="ghost"
-              size="icon"
-              className="absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-xs w-4.5 h-4.5 z-10 cursor-move touch-none"
-              style={{ opacity: 1, backgroundColor: "white" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <GripVertical className="h-2 w-2 text-gray-600" />
-            </Button>
-          )}
+        {isCarouselAd && (
+          <Button
+            type="button"
+            ref={setActivatorNodeRef}
+            {...listeners}
+            variant="ghost"
+            size="icon"
+            className={`absolute top-1.5 left-1.5 border border-gray-400 rounded-md bg-white shadow-xs w-4.5 h-4.5 z-10 cursor-move touch-none transition-opacity ${dimmed ? 'opacity-30' : (isDragging ? 'opacity-50' : 'opacity-100')}`}
+            style={{ backgroundColor: "white" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical className="h-2 w-2 text-gray-600" />
+          </Button>
+        )}
 
-          <div className="relative overflow-hidden rounded-xl shadow-lg border border-gray-200">
+        <div className="relative overflow-hidden rounded-xl shadow-lg border border-gray-200">
+          <div className={`transition-opacity ${dimmed ? 'opacity-30' : (isDragging ? 'opacity-50' : 'opacity-100')}`}>
             {file.isMetaLibrary ? (
               // Meta library file
               <img
@@ -293,32 +292,34 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                 }}
               />
             )}
-            <Button
-              type="button"
-              variant="ghost"
-              className={`absolute border rounded-lg bg-white shadow-xs z-30 ${isCarouselAd
-                ? 'bottom-1.5 right-1.5 border-gray-300 h-6 w-6 p-2'
-                : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
-                }`}
-              style={{ opacity: 0.9, backgroundColor: "white" }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-            >
-              <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
-              <span className="sr-only">Remove</span>
-            </Button>
-            {showVariantDropdown && (
-              <div className="absolute bottom-2 left-2 z-30">
-                <VariantAssignmentPopover
-                  assignedVariantId={assignedVariantId}
-                  variants={variants}
-                  onAssignVariant={onAssignVariant}
-                />
-              </div>
-            )}
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            className={`absolute border rounded-lg bg-white shadow-xs z-30 transition-opacity ${isCarouselAd
+              ? 'bottom-1.5 right-1.5 border-gray-300 h-6 w-6 p-2'
+              : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
+              } ${dimmed ? 'opacity-30' : 'opacity-90'}`}
+            style={{ backgroundColor: "white" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+          >
+            <Trash className={isCarouselAd ? 'h-1.5 w-1.5' : 'h-2 w-2'} />
+            <span className="sr-only">Remove</span>
+          </Button>
+          {showVariantDropdown && (
+            <div className="absolute bottom-2 left-2 z-30">
+              <VariantAssignmentPopover
+                assignedVariantId={assignedVariantId}
+                variants={variants}
+                onAssignVariant={onAssignVariant}
+              />
+            </div>
+          )}
+        </div>
+        <div className={`transition-opacity ${dimmed ? 'opacity-30' : (isDragging ? 'opacity-50' : 'opacity-100')}`}>
           <p className="mt-1 ml-1 text-sm truncate" title={file.name} > {file.name} </p>
 
           {isCarouselAd && (
@@ -1244,7 +1245,7 @@ export default function MediaPreview({
                 >
                   <div className="space-y-4">
                     {fileGroups.map((group, groupIndex) => {
-                      const isGroupDimmed = activeVariantId !== 'default' && (groupVariantMap[group.id] || 'default') !== activeVariantId;
+                      const isGroupDimmed = (groupVariantMap[group.id] || 'default') !== activeVariantId;
 
                       return (
                         <div
@@ -1373,7 +1374,7 @@ export default function MediaPreview({
                       {ungroupedFiles.map((file, index) => {
                         const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
                         const assignedVariantId = fileVariantMap[fileId] || 'default';
-                        const isDimmed = activeVariantId !== 'default' && assignedVariantId !== activeVariantId;
+                        const isDimmed = assignedVariantId !== activeVariantId;
                         const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0);
                         return (
                           <div

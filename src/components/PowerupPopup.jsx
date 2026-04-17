@@ -68,7 +68,7 @@ export default function PowerupPopup({ onClose }) {
                                 className="h-9 w-9 object-contain"
                             />
                             <h2 className="text-[22px] font-bold text-black">
-                                A New Powerup
+                                Split Ad Data Across Media Files!
                             </h2>
                         </div>
 
@@ -104,16 +104,15 @@ export default function PowerupPopup({ onClose }) {
                                     isLastStep
                                         ? onClose
                                         : () =>
-                                              setStepIndex((prev) =>
-                                                  Math.min(
-                                                      prev + 1,
-                                                      steps.length - 1
-                                                  )
-                                              )
+                                            setStepIndex((prev) =>
+                                                Math.min(
+                                                    prev + 1,
+                                                    steps.length - 1
+                                                )
+                                            )
                                 }
-                                className={`h-auto rounded-full bg-black py-3 text-[16px] font-semibold text-white hover:bg-black/80 ${
-                                    isLastStep ? "flex-1" : "w-full"
-                                }`}
+                                className={`h-auto rounded-full bg-black py-3 text-[16px] font-semibold text-white hover:bg-black/80 ${isLastStep ? "flex-1" : "w-full"
+                                    }`}
                             >
                                 {isLastStep ? "Got it" : "Next"}
                             </Button>

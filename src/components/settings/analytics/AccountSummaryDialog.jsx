@@ -132,7 +132,7 @@ export default function AccountSummaryDialog({ open, onClose, adAccountId }) {
                                 <h2 className="text-[20px] font-bold leading-tight text-gray-900">
                                     Account Summary
                                 </h2>
-                                <p className="text-[14px] font-semibold text-gray-500">
+                                <p className="text-[14px] font-medium text-gray-500">
                                     Recap of changes over the last 7 days
                                 </p>
                             </div>
