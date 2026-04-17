@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ChevronDown, CirclePlus, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -42,44 +42,6 @@ const isVideoFile = (file) => {
 };
 
 const VARIANT_COLORS = ['#6b7280', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'];
-
-function useFlipAnimation(orderKey) {
-  const elementsRef = useRef(new Map());
-  const positionsRef = useRef(new Map());
-
-  useLayoutEffect(() => {
-    const prev = positionsRef.current;
-    const next = new Map();
-    elementsRef.current.forEach((el, id) => {
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      next.set(id, { left: rect.left, top: rect.top });
-      const old = prev.get(id);
-      if (!old) return;
-      const dx = old.left - rect.left;
-      const dy = old.top - rect.top;
-      if (dx === 0 && dy === 0) return;
-      el.style.transition = 'none';
-      el.style.transform = `translate(${dx}px, ${dy}px)`;
-      void el.offsetHeight;
-      requestAnimationFrame(() => {
-        el.style.transition = 'transform 400ms cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-        el.style.transform = '';
-      });
-    });
-    positionsRef.current = next;
-  }, [orderKey]);
-
-  const setRef = useCallback((id) => (el) => {
-    if (el) {
-      elementsRef.current.set(id, el);
-    } else {
-      elementsRef.current.delete(id);
-    }
-  }, []);
-
-  return setRef;
-}
 
 const getGroupFileIds = (group) => Array.isArray(group) ? group : (group?.fileIds || []);
 
@@ -482,59 +444,6 @@ export default function MediaPreview({
     return [...ungroupedLocalFiles, ...ungroupedDropboxFiles, ...ungroupedImportedFiles];
   }, [files, dropboxFiles, importedFiles, groupedFileIds]);
 
-  // Cluster display order by variant assignment: active variant first, then others in variant order.
-  // Within each variant bucket, preserve the original relative ordering so dnd-kit reorders remain intuitive.
-  const variantOrderIndex = useMemo(() => {
-    const map = new Map();
-    const activeIdx = variants.findIndex(v => v.id === activeVariantId);
-    variants.forEach((v, i) => {
-      const priority = i === activeIdx ? -1 : i;
-      map.set(v.id, priority);
-    });
-    return map;
-  }, [variants, activeVariantId]);
-
-  const displayUngroupedFiles = useMemo(() => {
-    if (variants.length <= 1) return ungroupedFiles;
-    return ungroupedFiles
-      .map((file, idx) => ({ file, idx, variantId: fileVariantMap[getFileId(file)] || 'default' }))
-      .sort((a, b) => {
-        const av = variantOrderIndex.has(a.variantId) ? variantOrderIndex.get(a.variantId) : 999;
-        const bv = variantOrderIndex.has(b.variantId) ? variantOrderIndex.get(b.variantId) : 999;
-        if (av !== bv) return av - bv;
-        return a.idx - b.idx;
-      })
-      .map(entry => entry.file);
-  }, [ungroupedFiles, fileVariantMap, variants.length, variantOrderIndex]);
-
-  const displayFileGroups = useMemo(() => {
-    if (variants.length <= 1) return fileGroups.map((group, idx) => ({ group, originalIndex: idx }));
-    return fileGroups
-      .map((group, originalIndex) => ({
-        group,
-        originalIndex,
-        variantId: groupVariantMap[group.id] || 'default',
-      }))
-      .sort((a, b) => {
-        const av = variantOrderIndex.has(a.variantId) ? variantOrderIndex.get(a.variantId) : 999;
-        const bv = variantOrderIndex.has(b.variantId) ? variantOrderIndex.get(b.variantId) : 999;
-        if (av !== bv) return av - bv;
-        return a.originalIndex - b.originalIndex;
-      });
-  }, [fileGroups, groupVariantMap, variants.length, variantOrderIndex]);
-
-  const ungroupedOrderKey = useMemo(
-    () => displayUngroupedFiles.map(f => getFileId(f)).join('|'),
-    [displayUngroupedFiles]
-  );
-  const groupOrderKey = useMemo(
-    () => displayFileGroups.map(entry => entry.group.id).join('|'),
-    [displayFileGroups]
-  );
-
-  const setFileFlipRef = useFlipAnimation(ungroupedOrderKey);
-  const setGroupFlipRef = useFlipAnimation(groupOrderKey);
-
   // const totalFileCount = useMemo(() => {
   //   return files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length;
   // }, [files, driveFiles, dropboxFiles, importedFiles]);
@@ -668,7 +577,7 @@ export default function MediaPreview({
     adType !== 'flexible' &&
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
-  const showVariantSetupButton = IS_STAGING;
+  const showVariantSetupButton = IS_STAGING && (variants.length > 1 || totalFileCount >= 2);
   const variantSetupLabel = variants.length === 1 ? 'Split Ad Data' : 'Disable Split';
 
 
@@ -1396,14 +1305,12 @@ export default function MediaPreview({
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="space-y-4">
-                    {displayFileGroups.map(({ group, originalIndex }) => {
-                      const groupIndex = originalIndex;
+                    {fileGroups.map((group, groupIndex) => {
                       const isGroupDimmed = (groupVariantMap[group.id] || 'default') !== activeVariantId;
 
                       return (
                         <div
                           key={group.id || `group-${groupIndex}`}
-                          ref={setGroupFlipRef(group.id || `group-${groupIndex}`)}
                           className={`relative ${isLaunchingMedia && !isGroupDimmed ? 'media-preview-launch-item' : ''}`}
                         >
                           {/* Shared group background */}
@@ -1526,16 +1433,14 @@ export default function MediaPreview({
 
                     {/* Ungrouped files */}
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-6" style={{ padding: '6px', }}>
-                      {displayUngroupedFiles.map((file) => {
+                      {ungroupedFiles.map((file, index) => {
                         const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
-                        const index = ungroupedFiles.indexOf(file);
                         const assignedVariantId = fileVariantMap[fileId] || 'default';
                         const isDimmed = assignedVariantId !== activeVariantId;
                         const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0);
                         return (
                           <div
                             key={fileId}
-                            ref={setFileFlipRef(fileId)}
                             className={isLaunchingMedia && !isDimmed ? 'media-preview-launch-item' : ''}
                           >
                             <SortableMediaItem

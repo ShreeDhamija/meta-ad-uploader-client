@@ -1311,6 +1311,8 @@ export default function Home() {
                             useExistingPosts={useExistingPosts}
                             setUseExistingPosts={setUseExistingPosts}
                             isFormFieldModified={isFormFieldModified}
+                            variants={variants}
+                            activeVariantId={activeVariantId}
                         />
 
                         <AdCreationForm

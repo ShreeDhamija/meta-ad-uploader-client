@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Check, ChevronsUpDown, RefreshCcw, X, Loader, AlertTriangle } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -64,7 +65,9 @@ export default function AdAccountSettings({
   sortCampaigns,
   useExistingPosts,
   setUseExistingPosts,
-  isFormFieldModified
+  isFormFieldModified,
+  variants = [],
+  activeVariantId = 'default'
 
 }) {
   const renderDiffMark = (fieldKeys) => (
@@ -486,13 +489,14 @@ export default function AdAccountSettings({
                 onClick={refreshAdAccounts}
               />
             </div>
-            <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild>
+            {(() => {
+              const isAdAccountLocked = variants.length > 1 && activeVariantId !== 'default';
+              const triggerButton = (
                 <Button
                   variant="outline"
                   role="combobox"
                   aria-expanded={open}
-                  disabled={!isLoggedIn || isLoading}
+                  disabled={!isLoggedIn || isLoading || isAdAccountLocked}
                   className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
                   {selectedAdAccount
@@ -500,7 +504,28 @@ export default function AdAccountSettings({
                     : "Select an Ad Account"}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
-              </PopoverTrigger>
+              );
+
+              if (isAdAccountLocked) {
+                return (
+                  <TooltipProvider delayDuration={100}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="block w-full">{triggerButton}</span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Ad account can only be changed in the default variant.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              }
+
+              return (
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    {triggerButton}
+                  </PopoverTrigger>
               <PopoverContent
                 className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                 align="start"
@@ -568,7 +593,9 @@ export default function AdAccountSettings({
                 </Command>
 
               </PopoverContent>
-            </Popover>
+                </Popover>
+              );
+            })()}
             {selectedAdAccount && isAdAccountChanging && (
               <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
                 <Loader className="h-3 w-3 animate-spin" />
@@ -819,13 +846,10 @@ transition-all duration-150 hover:!bg-black
 
                   {/* New Campaign Name Input */}
                   {duplicateCampaign && (
-                    <div className="space-y-2" style={{ marginTop: '20px' }}>
+                    <div className="space-y-2" style={{ marginTop: '8px' }}>
                       <Label htmlFor="newCampaignName" className="inline-flex items-center gap-1">
                         {renderDiffMark("newCampaignName")}
                         <span>New campaign name</span>
-                      </Label>
-                      <Label className="text-gray-500 text-[12px] font-regular">
-                        Enter a custom name for the new campaign
                       </Label>
                       <Input
                         id="newCampaignName"
@@ -852,6 +876,11 @@ transition-all duration-150 hover:!bg-black
                           "Create Campaign"
                         )}
                       </Button>
+                      {variants && variants.length > 1 && (
+                        <Label className="text-gray-500 text-[12px] font-regular block mt-2">
+                          You only need to create the campaign in the default variant.
+                        </Label>
+                      )}
                     </div>
                   )}
                 </div>
