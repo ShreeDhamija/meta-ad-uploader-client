@@ -615,6 +615,7 @@ export default function Home() {
         selectedShopDestination,
         selectedShopDestinationType,
         selectedForm,
+        selectedTemplate,
         isPartnershipAd,
         partnerIgAccountId,
         partnerFbPageId,
@@ -641,6 +642,7 @@ export default function Home() {
         selectedShopDestination,
         selectedShopDestinationType,
         selectedForm,
+        selectedTemplate,
         isPartnershipAd,
         partnerIgAccountId,
         partnerFbPageId,
@@ -671,6 +673,7 @@ export default function Home() {
         setSelectedShopDestination(snapshot.selectedShopDestination || "");
         setSelectedShopDestinationType(snapshot.selectedShopDestinationType || "");
         setSelectedForm(snapshot.selectedForm || null);
+        setSelectedTemplate(snapshot.selectedTemplate ?? "");
         setIsPartnershipAd(Boolean(snapshot.isPartnershipAd));
         setPartnerIgAccountId(snapshot.partnerIgAccountId || "");
         setPartnerFbPageId(snapshot.partnerFbPageId || "");
@@ -697,6 +700,7 @@ export default function Home() {
         setSelectedShopDestination,
         setSelectedShopDestinationType,
         setSelectedForm,
+        setSelectedTemplate,
         setIsPartnershipAd,
         setPartnerIgAccountId,
         setPartnerFbPageId,

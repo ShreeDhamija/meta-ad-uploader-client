@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
+import { ChevronDown, GripVertical, Loader2, Plus, Rocket, Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -61,13 +61,25 @@ function VariantAssignmentPopover({
   assignedVariantId,
   variants,
   onAssignVariant,
+  onAddVariant,
   triggerClassName = "",
   sideOffset = 6,
 }) {
+  const [open, setOpen] = useState(false);
   const activeVariantName = variants.find((variant) => variant.id === assignedVariantId)?.name || 'Default';
 
+  const handleSelect = (variantId) => {
+    onAssignVariant(variantId);
+    setOpen(false);
+  };
+
+  const handleAdd = () => {
+    setOpen(false);
+    onAddVariant?.();
+  };
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -90,13 +102,26 @@ function VariantAssignmentPopover({
           <button
             key={variant.id}
             type="button"
-            onClick={() => onAssignVariant(variant.id)}
+            onClick={() => handleSelect(variant.id)}
             className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-100"
           >
             <VariantDot variantId={variant.id} variants={variants} />
             <span className="whitespace-nowrap">{variant.name}</span>
           </button>
         ))}
+        {onAddVariant && (
+          <>
+            <div className="my-1 h-px bg-gray-100" />
+            <button
+              type="button"
+              onClick={handleAdd}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+            >
+              <Plus className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+              <span className="whitespace-nowrap">Add variant</span>
+            </button>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );
@@ -119,7 +144,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
   showVariantDropdown,
   assignedVariantId,
   variants,
-  onAssignVariant
+  onAssignVariant,
+  onAddVariant
 }) {
   const {
     attributes,
@@ -316,6 +342,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
                 assignedVariantId={assignedVariantId}
                 variants={variants}
                 onAssignVariant={onAssignVariant}
+                onAddVariant={onAddVariant}
               />
             </div>
           )}
@@ -1299,6 +1326,7 @@ export default function MediaPreview({
                                 assignedVariantId={groupVariantMap[group.id] || 'default'}
                                 variants={variants}
                                 onAssignVariant={(variantId) => assignGroupToVariant(group.id, variantId)}
+                                onAddVariant={handleAddVariant}
                               />
                             </div>
                           )}
@@ -1421,6 +1449,7 @@ export default function MediaPreview({
                               assignedVariantId={assignedVariantId}
                               variants={variants}
                               onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
+                              onAddVariant={handleAddVariant}
                             />
                           </div>
                         );

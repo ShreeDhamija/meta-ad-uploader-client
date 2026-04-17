@@ -1248,7 +1248,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           {nameAlreadyExists
             ? "This template name already exists"
             : isProcessing
-              ? "Saving..."
+              ? (
+                <>
+                  <Loader className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              )
               : !templateName.trim() && (primaryTexts.some(hasFilledTextValue) || headlines.some(hasFilledTextValue))
                 ? "Enter Template Name to Save"
                 : "Save Template"
