@@ -1183,13 +1183,10 @@ transition-all duration-150 hover:!bg-black
                   {/* New Ad Set Name Input */}
                   {duplicateAdSet && (
                     <>
-                      <div className="space-y-2" style={{ marginTop: '20px' }}>
+                      <div className="space-y-2" style={{ marginTop: '8px' }}>
                         <Label htmlFor="newAdSetName" className="inline-flex items-center gap-1">
                           {renderDiffMark("newAdSetName")}
                           <span>New ad set name</span>
-                        </Label>
-                        <Label className="text-gray-500 text-[12px] font-regular">
-                          Enter a custom name for the duplicated ad set
                         </Label>
                         <Input
                           id="newAdSetName"
