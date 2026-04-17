@@ -2782,12 +2782,13 @@ export default function AdCreationForm({
 
   const showShopDestinationSelector = hasShopAutomaticAdSets && pageId;
   const showPhoneNumberField = areAllAdSetsPhoneCall();
-  const requiresDestinationValue = importedPosts.length === 0;
+  const requiresDestinationValue = importedPosts.length === 0 && !useExistingPosts;
   const isMissingDestinationValue = requiresDestinationValue && (
     showPhoneNumberField
       ? !phoneNumber.trim()
       : ((!showCustomLink && !link[0]) || (showCustomLink && !customLink.trim()))
   );
+  const hasAdNameFormulaConfigured = Boolean(adNameFormulaV2?.rawInput?.trim());
 
   useEffect(() => {
     const defaultCta = adAccountSettings?.defaultCTA || "LEARN_MORE";
@@ -7573,7 +7574,7 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {!publishDisabled && adName === "Ad Generated Through Blip" && !(showShopDestinationSelector && !selectedShopDestination) && !(!isCarouselAd && hasDuplicates) && !isMissingDestinationValue && !(shouldShowLeadFormSelector && !selectedForm) && (
+            {!publishDisabled && !hasAdNameFormulaConfigured && adName === "Ad Generated Through Blip" && !(showShopDestinationSelector && !selectedShopDestination) && !(!isCarouselAd && hasDuplicates) && !isMissingDestinationValue && !(shouldShowLeadFormSelector && !selectedForm) && (
               <div className="text-xs text-orange-700 text-left p-2 bg-orange-50 border border-orange-200 rounded-xl">
                 Your ads will be named "Ad Generated Through Blip" since no ad name formula is set.{' '}
                 <button
