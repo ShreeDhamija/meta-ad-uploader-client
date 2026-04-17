@@ -7574,7 +7574,7 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {!publishDisabled && !hasAdNameFormulaConfigured && adName === "Ad Generated Through Blip" && !(showShopDestinationSelector && !selectedShopDestination) && !(!isCarouselAd && hasDuplicates) && !isMissingDestinationValue && !(shouldShowLeadFormSelector && !selectedForm) && (
+            {!useExistingPosts && !publishDisabled && !hasAdNameFormulaConfigured && adName === "Ad Generated Through Blip" && !(showShopDestinationSelector && !selectedShopDestination) && !(!isCarouselAd && hasDuplicates) && !isMissingDestinationValue && !(shouldShowLeadFormSelector && !selectedForm) && (
               <div className="text-xs text-orange-700 text-left p-2 bg-orange-50 border border-orange-200 rounded-xl">
                 Your ads will be named "Ad Generated Through Blip" since no ad name formula is set.{' '}
                 <button

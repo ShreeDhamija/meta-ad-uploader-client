@@ -297,7 +297,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
               type="button"
               variant="ghost"
               className={`absolute border rounded-lg bg-white shadow-xs z-30 ${isCarouselAd
-                ? 'bottom-16 right-1.5 border-gray-300 h-6 w-6 p-2'
+                ? 'bottom-1.5 right-1.5 border-gray-300 h-6 w-6 p-2'
                 : 'top-1.5 right-1.5 border-gray-400 h-7 w-7 p-3'
                 }`}
               style={{ opacity: 0.9, backgroundColor: "white" }}
