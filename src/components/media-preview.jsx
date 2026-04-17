@@ -1,7 +1,7 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ChevronDown, GripVertical, Loader2, Plus, Rocket, Trash } from 'lucide-react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { ChevronDown, CirclePlus, GripVertical, Loader2, Rocket, Trash } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -68,13 +68,21 @@ function VariantAssignmentPopover({
   const [open, setOpen] = useState(false);
   const activeVariantName = variants.find((variant) => variant.id === assignedVariantId)?.name || 'Default';
 
+  const knownVariantIdsRef = useRef(null);
+  if (knownVariantIdsRef.current === null) {
+    knownVariantIdsRef.current = new Set(variants.map((variant) => variant.id));
+  }
+
+  useEffect(() => {
+    variants.forEach((variant) => knownVariantIdsRef.current.add(variant.id));
+  }, [variants]);
+
   const handleSelect = (variantId) => {
     onAssignVariant(variantId);
     setOpen(false);
   };
 
   const handleAdd = () => {
-    setOpen(false);
     onAddVariant?.();
   };
 
@@ -98,17 +106,20 @@ function VariantAssignmentPopover({
         style={{ minWidth: 'var(--radix-popover-trigger-width)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {variants.map((variant) => (
-          <button
-            key={variant.id}
-            type="button"
-            onClick={() => handleSelect(variant.id)}
-            className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-100"
-          >
-            <VariantDot variantId={variant.id} variants={variants} />
-            <span className="whitespace-nowrap">{variant.name}</span>
-          </button>
-        ))}
+        {variants.map((variant) => {
+          const isNew = !knownVariantIdsRef.current.has(variant.id);
+          return (
+            <button
+              key={variant.id}
+              type="button"
+              onClick={() => handleSelect(variant.id)}
+              className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-gray-100 ${isNew ? 'animate-in slide-in-from-top-2 fade-in duration-300' : ''}`}
+            >
+              <VariantDot variantId={variant.id} variants={variants} />
+              <span className="whitespace-nowrap">{variant.name}</span>
+            </button>
+          );
+        })}
         {onAddVariant && (
           <>
             <div className="my-1 h-px bg-gray-100" />
@@ -117,7 +128,7 @@ function VariantAssignmentPopover({
               onClick={handleAdd}
               className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
             >
-              <Plus className="h-3.5 w-3.5 shrink-0 text-gray-500" />
+              <CirclePlus className="h-3.5 w-3.5 shrink-0 text-gray-500" />
               <span className="whitespace-nowrap">Add variant</span>
             </button>
           </>
