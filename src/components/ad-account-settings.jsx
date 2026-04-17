@@ -514,7 +514,7 @@ export default function AdAccountSettings({
                         <span className="block w-full">{triggerButton}</span>
                       </TooltipTrigger>
                       <TooltipContent>
-                        Ad account can only be changed in the default variant.
+                        Ad account can only be changed from the default variant.
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

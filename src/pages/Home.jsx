@@ -443,7 +443,6 @@ export default function Home() {
 
     useEffect(() => {
         if (selectedAdAccount) return;
-        if (variants.length > 1) return;
 
         setPageId("");
         setInstagramAccountId("");
@@ -458,11 +457,10 @@ export default function Home() {
         setSelectedItems([]);
         setAdValues({ dateType: "MonthYYYY", customTexts: {} });
         setAdNameFormulaV2({ rawInput: "" });
-    }, [selectedAdAccount, variants.length]);
+    }, [selectedAdAccount]);
 
     useEffect(() => {
         if (!selectedAdAccount) return;
-        if (variants.length > 1) return;
 
         setPageId(adAccountSettings.defaultPage?.id || "");
         setInstagramAccountId(adAccountSettings.defaultInstagram?.id || "");
@@ -496,12 +494,10 @@ export default function Home() {
         adAccountSettings.defaultCTA,
         adAccountSettings.adNameFormula,
         adAccountSettings.adNameFormulaV2,
-        variants.length,
     ]);
 
     useEffect(() => {
         if (!selectedAdAccount) return;
-        if (variants.length > 1) return;
 
         const templates = adAccountSettings.copyTemplates || {};
         const keys = Object.keys(templates);
@@ -532,8 +528,19 @@ export default function Home() {
         selectedAdAccount,
         adAccountSettings.copyTemplates,
         adAccountSettings.defaultTemplateName,
-        variants.length,
     ]);
+
+    // When the ad account changes while variants exist, wipe each variant's saved snapshot
+    // so that switching to it inherits the new account's defaults instead of restoring stale values
+    // (page/IG/templates/ad sets that no longer apply to the new account).
+    const previousAdAccountRef = useRef(selectedAdAccount);
+    useEffect(() => {
+        if (previousAdAccountRef.current === selectedAdAccount) return;
+        const hadPrevious = Boolean(previousAdAccountRef.current);
+        previousAdAccountRef.current = selectedAdAccount;
+        if (!hadPrevious) return;
+        setVariants((prev) => prev.map((variant) => ({ ...variant, snapshot: null })));
+    }, [selectedAdAccount]);
 
 
 
