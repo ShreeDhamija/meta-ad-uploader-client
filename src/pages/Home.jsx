@@ -759,7 +759,7 @@ export default function Home() {
         const nextLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find((letter) => !usedLetters.has(letter));
 
         if (!nextLetter) {
-            toast.error("Maximum 26 Forms");
+            toast.error("Maximum 26 Variants");
             return;
         }
 
@@ -773,7 +773,7 @@ export default function Home() {
                     ? { ...variant, snapshot: currentSnapshot }
                     : variant
             )),
-            { id: newVariantId, name: `Form ${nextLetter}`, snapshot: defaultSnapshot }
+            { id: newVariantId, name: `Variant ${nextLetter}`, snapshot: defaultSnapshot }
         ]);
         setSelectedFiles(new Set());
     }, [activeVariantId, captureCurrentSnapshot, getVariantSnapshot, variants]);

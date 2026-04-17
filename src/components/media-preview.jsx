@@ -11,6 +11,7 @@ import RocketImg from '@/assets/rocketpreview.webp';
 import Uploadimg from '@/assets/upload.webp';
 import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Groupads from '@/assets/icons/groupads.svg?react';
 import { v4 as uuidv4 } from 'uuid';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -1070,24 +1071,35 @@ export default function MediaPreview({
 
               <div className="flex gap-2">
                 {showVariantSetupButton && !showPlacementCustomizationRow && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      if (variants.length === 1) {
-                        if (!hasSeenPowerupPopup) {
-                          setShowPowerupPopup(true);
-                        }
-                        handleAddVariant();
-                      } else {
-                        setShowDisableVariantsDialog(true);
-                      }
-                    }}
-                    className="rounded-xl bg-white"
-                  >
-                    {variantSetupLabel}
-                  </Button>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (variants.length === 1) {
+                              if (!hasSeenPowerupPopup) {
+                                setShowPowerupPopup(true);
+                              }
+                              handleAddVariant();
+                            } else {
+                              setShowDisableVariantsDialog(true);
+                            }
+                          }}
+                          className="rounded-xl bg-white"
+                        >
+                          {variantSetupLabel}
+                        </Button>
+                      </TooltipTrigger>
+                      {variants.length === 1 && (
+                        <TooltipContent className="max-w-xs">
+                          upload all your media once and split it into different ad sets with different naming, copy & more.
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
 
                 {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
@@ -1195,24 +1207,35 @@ export default function MediaPreview({
                     </label>
                   </div>
                   {showVariantSetupButton && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (variants.length === 1) {
-                          if (!hasSeenPowerupPopup) {
-                            setShowPowerupPopup(true);
-                          }
-                          handleAddVariant();
-                        } else {
-                          setShowDisableVariantsDialog(true);
-                        }
-                      }}
-                      className="rounded-xl bg-white"
-                    >
-                      {variantSetupLabel}
-                    </Button>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (variants.length === 1) {
+                                if (!hasSeenPowerupPopup) {
+                                  setShowPowerupPopup(true);
+                                }
+                                handleAddVariant();
+                              } else {
+                                setShowDisableVariantsDialog(true);
+                              }
+                            }}
+                            className="rounded-xl bg-white"
+                          >
+                            {variantSetupLabel}
+                          </Button>
+                        </TooltipTrigger>
+                        {variants.length === 1 && (
+                          <TooltipContent className="max-w-xs">
+                            upload all your media once and split it into different ad sets with different naming, copy & more.
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
                 {enablePlacementCustomization && (

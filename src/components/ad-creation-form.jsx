@@ -2743,10 +2743,10 @@ export default function AdCreationForm({
   ]);
 
 
-  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId) => {
+  const duplicateAdSetRequest = async (adSetId, campaignId, adAccountId, adSetName) => {
     const response = await axios.post(
       `${API_BASE_URL}/auth/duplicate-adset`,
-      { adSetId, campaignId, adAccountId, newAdSetName },
+      { adSetId, campaignId, adAccountId, newAdSetName: adSetName ?? newAdSetName },
       { withCredentials: true },
     )
     return response.data.copied_adset_id
