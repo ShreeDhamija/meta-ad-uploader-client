@@ -603,6 +603,8 @@ export default function Home() {
         descriptions: cloneSnapshotValue(descriptions),
         messages: cloneSnapshotValue(messages),
         link: cloneSnapshotValue(link),
+        customLink,
+        showCustomLink,
         cta,
         phoneNumber,
         selectedAdAccount,
@@ -610,6 +612,11 @@ export default function Home() {
         selectedAdSets: cloneSnapshotValue(selectedAdSets),
         duplicateAdSet,
         newAdSetName,
+        showDuplicateBlock,
+        duplicateCampaign,
+        newCampaignName,
+        showDuplicateCampaignBlock,
+        campaignObjective: cloneSnapshotValue(campaignObjective),
         pageId,
         instagramAccountId,
         selectedShopDestination,
@@ -630,6 +637,8 @@ export default function Home() {
         descriptions,
         messages,
         link,
+        customLink,
+        showCustomLink,
         cta,
         phoneNumber,
         selectedAdAccount,
@@ -637,6 +646,11 @@ export default function Home() {
         selectedAdSets,
         duplicateAdSet,
         newAdSetName,
+        showDuplicateBlock,
+        duplicateCampaign,
+        newCampaignName,
+        showDuplicateCampaignBlock,
+        campaignObjective,
         pageId,
         instagramAccountId,
         selectedShopDestination,
@@ -661,6 +675,8 @@ export default function Home() {
         setDescriptions(cloneSnapshotValue(snapshot.descriptions) || [""]);
         setMessages(cloneSnapshotValue(snapshot.messages) || [""]);
         setLink(cloneSnapshotValue(snapshot.link) || [""]);
+        setCustomLink(snapshot.customLink || "");
+        setShowCustomLink(Boolean(snapshot.showCustomLink));
         setCta(snapshot.cta || "LEARN_MORE");
         setPhoneNumber(snapshot.phoneNumber || "");
         setSelectedAdAccount(snapshot.selectedAdAccount || "");
@@ -668,6 +684,11 @@ export default function Home() {
         setSelectedAdSets(cloneSnapshotValue(snapshot.selectedAdSets) || []);
         setDuplicateAdSet(snapshot.duplicateAdSet || "");
         setNewAdSetName(snapshot.newAdSetName || "");
+        setShowDuplicateBlock(Boolean(snapshot.showDuplicateBlock));
+        setDuplicateCampaign(snapshot.duplicateCampaign || "");
+        setNewCampaignName(snapshot.newCampaignName || "");
+        setShowDuplicateCampaignBlock(Boolean(snapshot.showDuplicateCampaignBlock));
+        setCampaignObjective(cloneSnapshotValue(snapshot.campaignObjective) || []);
         setPageId(snapshot.pageId || "");
         setInstagramAccountId(snapshot.instagramAccountId || "");
         setSelectedShopDestination(snapshot.selectedShopDestination || "");
@@ -688,6 +709,8 @@ export default function Home() {
         setDescriptions,
         setMessages,
         setLink,
+        setCustomLink,
+        setShowCustomLink,
         setCta,
         setPhoneNumber,
         setSelectedAdAccount,
@@ -695,6 +718,11 @@ export default function Home() {
         setSelectedAdSets,
         setDuplicateAdSet,
         setNewAdSetName,
+        setShowDuplicateBlock,
+        setDuplicateCampaign,
+        setNewCampaignName,
+        setShowDuplicateCampaignBlock,
+        setCampaignObjective,
         setPageId,
         setInstagramAccountId,
         setSelectedShopDestination,
