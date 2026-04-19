@@ -617,6 +617,7 @@ export default function Home() {
         selectedAdAccount,
         selectedCampaign: cloneSnapshotValue(selectedCampaign),
         selectedAdSets: cloneSnapshotValue(selectedAdSets),
+        adSets: cloneSnapshotValue(adSets),
         duplicateAdSet,
         newAdSetName,
         showDuplicateBlock,
@@ -651,6 +652,7 @@ export default function Home() {
         selectedAdAccount,
         selectedCampaign,
         selectedAdSets,
+        adSets,
         duplicateAdSet,
         newAdSetName,
         showDuplicateBlock,
@@ -689,6 +691,9 @@ export default function Home() {
         setSelectedAdAccount(snapshot.selectedAdAccount || "");
         setSelectedCampaign(cloneSnapshotValue(snapshot.selectedCampaign) || []);
         setSelectedAdSets(cloneSnapshotValue(snapshot.selectedAdSets) || []);
+        if (snapshot.adSets) {
+            setAdSets(cloneSnapshotValue(snapshot.adSets));
+        }
         setDuplicateAdSet(snapshot.duplicateAdSet || "");
         setNewAdSetName(snapshot.newAdSetName || "");
         setShowDuplicateBlock(Boolean(snapshot.showDuplicateBlock));
@@ -723,6 +728,7 @@ export default function Home() {
         setSelectedAdAccount,
         setSelectedCampaign,
         setSelectedAdSets,
+        setAdSets,
         setDuplicateAdSet,
         setNewAdSetName,
         setShowDuplicateBlock,

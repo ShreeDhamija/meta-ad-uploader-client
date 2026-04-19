@@ -739,6 +739,7 @@ export default function AdCreationForm({
     selectedAdAccount,
     selectedCampaign,
     selectedAdSets,
+    adSets,
     duplicateAdSet,
     newAdSetName,
     pageId,
@@ -765,6 +766,7 @@ export default function AdCreationForm({
     selectedAdAccount,
     selectedCampaign,
     selectedAdSets,
+    adSets,
     duplicateAdSet,
     newAdSetName,
     pageId,
@@ -902,6 +904,8 @@ export default function AdCreationForm({
     const variantState = getVariantState(variantId);
     if (!variantState) return null;
 
+    const variantAdSets = Array.isArray(variantState.adSets) ? variantState.adSets : adSets;
+
     const filterFiles = (items, mapper = (item) => item) => items.filter((item) => {
       const file = mapper(item);
       const fileId = getFileId(file);
@@ -970,11 +974,11 @@ export default function AdCreationForm({
       adValues: variantState.adValues ? JSON.parse(JSON.stringify(variantState.adValues)) : {},
       adScheduleStartTime: variantState.adScheduleStartTime || null,
       adScheduleEndTime: variantState.adScheduleEndTime || null,
-      adSets: [...adSets],
+      adSets: [...variantAdSets],
       adSetDisplayName: variantState.duplicateAdSet
         ? (variantState.newAdSetName || 'New Ad Set')
         : (variantState.selectedAdSets || []).length === 1
-          ? (adSets.find((entry) => entry.id === variantState.selectedAdSets[0])?.name || 'selected ad set')
+          ? (variantAdSets.find((entry) => entry.id === variantState.selectedAdSets[0])?.name || 'selected ad set')
           : `${(variantState.selectedAdSets || []).length} adsets`,
     };
 

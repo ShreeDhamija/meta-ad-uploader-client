@@ -580,6 +580,38 @@ export default function MediaPreview({
   const showVariantSetupButton = IS_STAGING && (variants.length > 1 || totalFileCount >= 2);
   const variantSetupLabel = variants.length === 1 ? 'Split Ad Data' : 'Disable Split';
 
+  const renderVariantSetupButton = () => (
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (variants.length === 1) {
+                if (!hasSeenPowerupPopup) {
+                  setShowPowerupPopup(true);
+                }
+                handleAddVariant();
+              } else {
+                setShowDisableVariantsDialog(true);
+              }
+            }}
+            className="rounded-xl bg-white"
+          >
+            {variantSetupLabel}
+          </Button>
+        </TooltipTrigger>
+        {variants.length === 1 && (
+          <TooltipContent className="max-w-xs">
+            upload all your media once and split it into different ad sets with different naming, copy & more.
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
+  );
+
 
 
 
@@ -1091,135 +1123,110 @@ export default function MediaPreview({
               setFiles(prev => [...prev, ...droppedFiles]);
             }}
           >
-            <CardHeader className="flex flex-row justify-between items-start flex-nowrap w-full">
-              <div className="flex flex-col items-start">
-                <CardTitle className="text-left">Uploads Preview</CardTitle>
-                <CardDescription className="text-left">
-                  {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
-                  {isCarouselAd && (
-                    <span className="block text-xs text-gray-500 mt-1">
-                      {fileGroups.length > 0
-                        ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
-                        : 'Select files to group into separate carousel ads, or drag to reorder cards'
-                      }
-                    </span>
-                  )}
-                </CardDescription>
-              </div>
+            <CardHeader className="w-full">
+              <div className="flex flex-row justify-between items-start flex-nowrap w-full">
+                <div className="flex flex-col items-start">
+                  <CardTitle className="text-left">Uploads Preview</CardTitle>
+                  <CardDescription className="text-left">
+                    {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
+                    {isCarouselAd && (
+                      <span className="block text-xs text-gray-500 mt-1">
+                        {fileGroups.length > 0
+                          ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
+                          : 'Select files to group into separate carousel ads, or drag to reorder cards'
+                        }
+                      </span>
+                    )}
+                  </CardDescription>
+                </div>
 
-              <div className="flex gap-2">
-                {showVariantSetupButton && !showPlacementCustomizationRow && (
-                  <TooltipProvider delayDuration={0}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (variants.length === 1) {
-                              if (!hasSeenPowerupPopup) {
-                                setShowPowerupPopup(true);
-                              }
-                              handleAddVariant();
-                            } else {
-                              setShowDisableVariantsDialog(true);
-                            }
-                          }}
-                          className="rounded-xl bg-white"
-                        >
-                          {variantSetupLabel}
-                        </Button>
-                      </TooltipTrigger>
-                      {variants.length === 1 && (
-                        <TooltipContent className="max-w-xs">
-                          upload all your media once and split it into different ad sets with different naming, copy & more.
-                        </TooltipContent>
-                      )}
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-
-                {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleGroupAds}
-                      disabled={!canGroupFiles}
-                      className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
-                    >
-                      <Groupads />
-                      Group Ads
-                    </Button>
-
-                    {adType !== 'flexible' && !isCarouselAd && (
+                <div className="flex gap-2">
+                  {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
+                    <>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={handleAIGroup}
-                        disabled={!canAIGroup || isAIGrouping}
-                        className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                        onClick={handleGroupAds}
+                        disabled={!canGroupFiles}
+                        className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 rounded-xl"
                       >
-                        {isAIGrouping ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Grouping...
-                          </>
-                        ) : (
-                          <>
-                            <Rocket className="h-4 w-4 mr-2" />
-                            AI Auto Group
-                          </>
-                        )}
+                        <Groupads />
+                        Group Ads
                       </Button>
-                    )}
-                  </>
-                )}
 
-                {adType === 'flexible' && (
+                      {adType !== 'flexible' && !isCarouselAd && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAIGroup}
+                          disabled={!canAIGroup || isAIGrouping}
+                          className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                        >
+                          {isAIGrouping ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              Grouping...
+                            </>
+                          ) : (
+                            <>
+                              <Rocket className="h-4 w-4 mr-2" />
+                              AI Auto Group
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </>
+                  )}
+
+                  {adType === 'flexible' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleFlexibleAutoGroup}
+                      disabled={isFlexAutoGrouping}
+                      className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                    >
+                      {isFlexAutoGrouping ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Grouping...
+                        </>
+                      ) : (
+                        <>
+                          <Rocket className="h-4 w-4 mr-2" />
+                          Auto Group
+                        </>
+                      )}
+                    </Button>
+                  )}
+
                   <Button
-                    variant="outline"
+                    variant="destructive"
                     size="sm"
-                    onClick={handleFlexibleAutoGroup}
-                    disabled={isFlexAutoGrouping}
-                    className="bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200 rounded-xl hover:text-purple-800"
+                    onClick={() => {
+                      setFiles([]);
+                      setDriveFiles([]);
+                      setDropboxFiles([]);
+                      setSelectedFiles(new Set());
+                      setFileGroups([]);
+                      setImportedPosts([]);
+                      setImportedFiles([]);
+                      setSelectedIgOrganicPosts([]);
+                      setFileVariantMap({});
+                      setGroupVariantMap({});
+                    }}
+                    className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
                   >
-                    {isFlexAutoGrouping ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Grouping...
-                      </>
-                    ) : (
-                      <>
-                        <Rocket className="h-4 w-4 mr-2" />
-                        Auto Group
-                      </>
-                    )}
+                    Clear All
                   </Button>
-                )}
-
-
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    setFiles([]);
-                    setDriveFiles([]);
-                    setDropboxFiles([]);
-                    setSelectedFiles(new Set());
-                    setFileGroups([]);
-                    setImportedPosts([]);
-                    setImportedFiles([]);
-                    setSelectedIgOrganicPosts([]);
-                    setFileVariantMap({});
-                    setGroupVariantMap({});
-                  }}
-                  className="bg-red-500 hover:bg-red-600 text-white rounded-xl mt-0"
-                >
-                  Clear All
-                </Button>
+                </div>
               </div>
+
+              {showVariantSetupButton && (
+                <div className="mt-3 flex justify-end">
+                  {renderVariantSetupButton()}
+                </div>
+              )}
             </CardHeader>
 
             {/* Placement Customization Checkbox - only show when carousel is disabled */}
@@ -1244,37 +1251,6 @@ export default function MediaPreview({
                       )}
                     </label>
                   </div>
-                  {showVariantSetupButton && (
-                    <TooltipProvider delayDuration={0}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              if (variants.length === 1) {
-                                if (!hasSeenPowerupPopup) {
-                                  setShowPowerupPopup(true);
-                                }
-                                handleAddVariant();
-                              } else {
-                                setShowDisableVariantsDialog(true);
-                              }
-                            }}
-                            className="rounded-xl bg-white"
-                          >
-                            {variantSetupLabel}
-                          </Button>
-                        </TooltipTrigger>
-                        {variants.length === 1 && (
-                          <TooltipContent className="max-w-xs">
-                            upload all your media once and split it into different ad sets with different naming, copy & more.
-                          </TooltipContent>
-                        )}
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
                 </div>
                 {enablePlacementCustomization && (
                   <span className="block text-xs text-gray-500 mt-1">
@@ -1436,7 +1412,7 @@ export default function MediaPreview({
                       {ungroupedFiles.map((file, index) => {
                         const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
                         const assignedVariantId = fileVariantMap[fileId] || 'default';
-                        const isDimmed = assignedVariantId !== activeVariantId;
+                        const isDimmed = !enablePlacementCustomization && assignedVariantId !== activeVariantId;
                         const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0);
                         return (
                           <div
