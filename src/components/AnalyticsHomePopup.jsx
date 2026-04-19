@@ -16,74 +16,60 @@ export default function AnalyticsHomePopup({ onClose, onCheckOutAnalytics }) {
             <div
                 className="bg-[#FAF9F7] rounded-[30px] shadow-2xl w-full max-w-[430px] relative overflow-hidden text-left"
             >
-                <div className="animate-fadeSwap">
-                    {/* Image area with background */}
-                    <div
-                        className="w-full flex items-center justify-center px-5 pt-5 pb-4"
-                        style={{
-                            backgroundImage: `url(${AnalyticsBG})`,
-                            backgroundSize: "cover",
-                            backgroundPosition: "center",
-                        }}
-                    >
-                        <img
-                            src={AnalyticsPopup}
-                            alt="Analytics preview"
-                            className="object-contain rounded-[16px]"
-                            style={{ width: "377px", height: "407px" }}
-                        />
-                    </div>
-
-                    {/* Text content */}
-                    <div className="pl-5 pr-6 pt-4 pb-6">
-                        <div className="flex items-center gap-3 mb-3">
-                            <img
-                                src={AnalyticsIcon}
-                                alt="Analytics icon"
-                                className="w-12 h-12 object-contain"
-                            />
-                            <h2 className="text-[22px] font-bold text-black">
-                                Introducing Analytics
-                            </h2>
-                        </div>
-
-                        <p className="text-[13px] font-normal leading-5 text-black mb-6">
-                            We took the playbook behind $3M/month in ad
-                            spend and put it in your hands. Review
-                            recommendations and apply them in one
-                            click&mdash;or not.
-                        </p>
-
-                        <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="text-gray-400 text-[14px] font-semibold px-3 py-3 shrink-0"
-                            >
-                                I dont want cool insights
-                            </button>
-
-                            <Button
-                                onClick={onCheckOutAnalytics}
-                                className="flex-1 bg-black hover:bg-black/80 text-white text-[16px] font-semibold rounded-full py-[24px] px-[20px]"
-                            >
-                                Check out Analytics
-                            </Button>
-                        </div>
-                    </div>
+                {/* Image area with background */}
+                <div
+                    className="w-full flex items-center justify-center px-5 pt-5 pb-4"
+                    style={{
+                        backgroundImage: `url(${AnalyticsBG})`,
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
+                    }}
+                >
+                    <img
+                        src={AnalyticsPopup}
+                        alt="Analytics preview"
+                        className="object-contain rounded-[16px]"
+                        style={{ width: "377px", height: "407px" }}
+                    />
                 </div>
 
-                <style>
-                    {`
-                        @keyframes fadeSwap {
-                            from { opacity: 0; }
-                            to   { opacity: 1; }
-                        }
-                        .animate-fadeSwap {
-                            animation: fadeSwap 0.3s ease-out forwards;
-                        }
-                    `}
-                </style>
+                {/* Text content */}
+                <div className="pl-5 pr-6 pt-4 pb-6">
+                    <div className="flex items-center gap-3 mb-3">
+                        <img
+                            src={AnalyticsIcon}
+                            alt="Analytics icon"
+                            className="w-12 h-12 object-contain"
+                        />
+                        <h2 className="text-[22px] font-bold text-black">
+                            Introducing Analytics
+                        </h2>
+                    </div>
+
+                    <p className="text-[13px] font-normal leading-5 text-black mb-6">
+                        We took the playbook behind $3M/month in ad
+                        spend and put it in your hands. Review
+                        recommendations and apply them in one
+                        click&mdash;or not.
+                    </p>
+
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="text-gray-400 text-[14px] font-semibold px-3 py-3 shrink-0"
+                        >
+                            I dont want cool insights
+                        </button>
+
+                        <Button
+                            onClick={onCheckOutAnalytics}
+                            className="flex-1 bg-black hover:bg-black/80 text-white text-[16px] font-semibold rounded-full py-[24px] px-[20px]"
+                        >
+                            Check out Analytics
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     )
