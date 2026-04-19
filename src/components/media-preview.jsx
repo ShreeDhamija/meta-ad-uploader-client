@@ -578,6 +578,8 @@ export default function MediaPreview({
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
   const showVariantSetupButton = IS_STAGING && (variants.length > 1 || totalFileCount >= 2);
+  const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
+  const showVariantButtonInHeader = showVariantSetupButton && !showPlacementCustomizationRow;
   const variantSetupLabel = variants.length === 1 ? 'Split Ad Data' : 'Disable Split';
 
   const renderVariantSetupButton = () => (
@@ -1123,14 +1125,14 @@ export default function MediaPreview({
               setFiles(prev => [...prev, ...droppedFiles]);
             }}
           >
-            <CardHeader className="w-full">
+            <CardHeader className={`w-full ${showVariantButtonInHeader ? 'pb-4' : ''}`}>
               <div className="flex flex-row justify-between items-start flex-nowrap w-full">
                 <div className="flex flex-col items-start">
                   <CardTitle className="text-left">Uploads Preview</CardTitle>
                   <CardDescription className="text-left">
                     {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
                     {isCarouselAd && (
-                      <span className="block text-xs text-gray-500 mt-1">
+                      <span className="block text-xs text-gray-500 mt-1 whitespace-nowrap">
                         {fileGroups.length > 0
                           ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
                           : 'Select files to group into separate carousel ads, or drag to reorder cards'
@@ -1222,8 +1224,8 @@ export default function MediaPreview({
                 </div>
               </div>
 
-              {showVariantSetupButton && (
-                <div className="mt-3 flex justify-end">
+              {showVariantButtonInHeader && (
+                <div className="mt-2 flex justify-end">
                   {renderVariantSetupButton()}
                 </div>
               )}
@@ -1251,6 +1253,12 @@ export default function MediaPreview({
                       )}
                     </label>
                   </div>
+
+                  {showVariantButtonInPlacementRow && (
+                    <div className="shrink-0">
+                      {renderVariantSetupButton()}
+                    </div>
+                  )}
                 </div>
                 {enablePlacementCustomization && (
                   <span className="block text-xs text-gray-500 mt-1">

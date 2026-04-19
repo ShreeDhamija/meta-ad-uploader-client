@@ -4235,7 +4235,20 @@ export default function AdCreationForm({
       };
 
       // Pre-compute common JSON strings and values
-      const usePhoneNumberField = showPhoneNumberField;
+      // NOTE: derive phone-vs-link from THIS job's ad sets (not the component's
+      // currently-active variant) so variants whose ad sets belong to different
+      // campaigns (e.g. one PHONE_CALL, one WEBSITE) send the correct field.
+      const usePhoneNumberField = (() => {
+        if (duplicateAdSet) {
+          const adset = adSets.find((a) => a.id === duplicateAdSet);
+          return adset?.destination_type === "PHONE_CALL";
+        }
+        if (!selectedAdSets || selectedAdSets.length === 0) return false;
+        return selectedAdSets.every((adsetId) => {
+          const adset = adSets.find((a) => a.id === adsetId);
+          return adset?.destination_type === "PHONE_CALL";
+        });
+      })();
       const commonPrecomputed = preComputeCommonValues(headlines, descriptions, messages, link);
 
       // ============================================================================
