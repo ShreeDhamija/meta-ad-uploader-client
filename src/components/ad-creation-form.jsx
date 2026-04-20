@@ -5877,75 +5877,75 @@ export default function AdCreationForm({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <span className={activeVariantId !== 'default' ? 'cursor-not-allowed' : ''}>
-              <Select
-                value={
-                  adType === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))
-                    ? 'regular'
-                    : adType
-                }
-                onValueChange={(value) => {
-                  if (value === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))) {
-                    setAdType('regular');
-                    return;
-                  }
+                      <Select
+                        value={
+                          adType === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))
+                            ? 'regular'
+                            : adType
+                        }
+                        onValueChange={(value) => {
+                          if (value === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))) {
+                            setAdType('regular');
+                            return;
+                          }
 
-                  if (activeVariantId !== 'default') {
-                    return;
-                  }
+                          if (activeVariantId !== 'default') {
+                            return;
+                          }
 
-                  setAdType(value);
+                          setAdType(value);
 
-                  // Reset link states when switching away from carousel
-                  if (value !== 'carousel' && link.length > 1) {
-                    setLink([link[0] || ""]);
-                    setLinkCustomStates({});
-                    setShowCustomLink(false);
-                  }
+                          // Reset link states when switching away from carousel
+                          if (value !== 'carousel' && link.length > 1) {
+                            setLink([link[0] || ""]);
+                            setLinkCustomStates({});
+                            setShowCustomLink(false);
+                          }
 
-                  // Reset the "apply to all" states and restore from template
-                  if (value !== 'carousel') {
-                    setApplyTextToAllCards(false);
-                    setApplyHeadlinesToAllCards(false);
+                          // Reset the "apply to all" states and restore from template
+                          if (value !== 'carousel') {
+                            setApplyTextToAllCards(false);
+                            setApplyHeadlinesToAllCards(false);
 
-                    if (selectedTemplate && copyTemplates[selectedTemplate]) {
-                      const tpl = copyTemplates[selectedTemplate];
-                      setMessages(tpl.primaryTexts || [""]);
-                      setHeadlines(tpl.headlines || [""]);
-                      setDescriptions(tpl.descriptions || [""]);
-                    }
-                  }
-                }}
-                disabled={!isLoggedIn || activeVariantId !== 'default'}
-              >
-                <SelectTrigger className={cn("w-[180px] h-10 py-2 font-medium", formFieldChrome)}>
-                  <SelectValue placeholder="Select ad type" />
-                </SelectTrigger>
-                <SelectContent className="bg-white rounded-xl gap-4" >
-                  <SelectItem
-                    value="regular"
-                    className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
-                  >
-                    Image / Video
-                  </SelectItem>
+                            if (selectedTemplate && copyTemplates[selectedTemplate]) {
+                              const tpl = copyTemplates[selectedTemplate];
+                              setMessages(tpl.primaryTexts || [""]);
+                              setHeadlines(tpl.headlines || [""]);
+                              setDescriptions(tpl.descriptions || [""]);
+                            }
+                          }
+                        }}
+                        disabled={!isLoggedIn || activeVariantId !== 'default'}
+                      >
+                        <SelectTrigger className={cn("w-[180px] h-10 py-2 font-medium", formFieldChrome)}>
+                          <SelectValue placeholder="Select ad type" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white rounded-xl gap-4" >
+                          <SelectItem
+                            value="regular"
+                            className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                          >
+                            Image / Video
+                          </SelectItem>
 
-                  <SelectItem
-                    value="carousel"
-                    className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
-                  >
-                    Carousel
-                  </SelectItem>
+                          <SelectItem
+                            value="carousel"
+                            className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                          >
+                            Carousel
+                          </SelectItem>
 
-                  {campaignObjective.length > 0 && campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)) && (
-                    <SelectItem
-                      value="flexible"
-                      className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
-                    >
-                      Flexible
+                          {campaignObjective.length > 0 && campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)) && (
+                            <SelectItem
+                              value="flexible"
+                              className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                            >
+                              Flexible
 
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                     </span>
                   </TooltipTrigger>
                   {activeVariantId !== 'default' && (
@@ -6619,7 +6619,7 @@ export default function AdCreationForm({
                                                       <Info className="h-3 w-3 text-gray-400" />
                                                     </TooltipTrigger>
                                                     <TooltipContent side="right" className="text-xs">
-                                                      Tracking since 17th Apr '26
+                                                      Tracking since 20th Apr '26
                                                     </TooltipContent>
                                                   </Tooltip>
                                                 )}

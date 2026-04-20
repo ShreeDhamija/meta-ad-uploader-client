@@ -988,7 +988,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                           <Info className="h-3 w-3 text-gray-400" />
                                         </TooltipTrigger>
                                         <TooltipContent side="right" className="text-xs">
-                                          Tracking since 17th Apr '26
+                                          Tracking since 20th Apr '26
                                         </TooltipContent>
                                       </Tooltip>
                                     )}
