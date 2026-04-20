@@ -26,6 +26,8 @@ const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 const ANALYTICS_LAUNCH_AT = new Date("2026-04-09T12:00:00+05:30");
 const POWERUP_LAUNCH_AT = new Date("2026-04-20T12:20:00+05:30");
 const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
+const ANALYTICS_HOME_POPUP_ENABLED = IS_STAGING;
+const POWERUP_HOME_POPUP_ENABLED = true;
 const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
 
 const parseUserCreatedAt = (value) => {
@@ -163,7 +165,6 @@ export default function Home() {
     const preferredTemplateRef = useRef(null);
     const campaignsLoadedForAccountRef = useRef(null);
     const adSetsLoadedForSelectionRef = useRef("");
-    const hasMarkedPowerupPopupSeenRef = useRef(false);
 
     const getCachedState = () => {
         try {
@@ -323,40 +324,40 @@ export default function Home() {
     }, [isLoggedIn, loading, hasSeenOnboarding])
 
     useEffect(() => {
-        if (!IS_STAGING || !isLoggedIn || loading || showOnboardingPopup) return
+        if (!isLoggedIn || loading || showOnboardingPopup || showAnalyticsHomePopup || showPowerupPopup) return
 
         const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
         const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
-        const isExistingUser = isValidCreatedAt && parsedCreatedAt < ANALYTICS_LAUNCH_AT
+        if (!isValidCreatedAt) return
 
-        if (isExistingUser && !hasSeenAnalyticsHomePopup) {
+        const isEligibleForAnalyticsHomePopup =
+            ANALYTICS_HOME_POPUP_ENABLED &&
+            parsedCreatedAt < ANALYTICS_LAUNCH_AT &&
+            !hasSeenAnalyticsHomePopup
+
+        if (isEligibleForAnalyticsHomePopup) {
             setShowAnalyticsHomePopup(true)
+            return
         }
-    }, [isLoggedIn, loading, showOnboardingPopup, hasSeenAnalyticsHomePopup, userCreatedAt])
 
-    useEffect(() => {
-        if (!isLoggedIn || loading || showOnboardingPopup) return
+        const isEligibleForPowerupHomePopup =
+            POWERUP_HOME_POPUP_ENABLED &&
+            parsedCreatedAt < POWERUP_LAUNCH_AT &&
+            !hasSeenPowerupPopup
 
-        const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
-        const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
-
-        // Don't show powerup if the analytics popup still needs to be shown first
-        const needsAnalyticsPopup = isValidCreatedAt && parsedCreatedAt < ANALYTICS_LAUNCH_AT && !hasSeenAnalyticsHomePopup
-        if (needsAnalyticsPopup) return
-
-        const isExistingUser = isValidCreatedAt && parsedCreatedAt < POWERUP_LAUNCH_AT
-
-        if (isExistingUser && !hasSeenPowerupPopup) {
+        if (isEligibleForPowerupHomePopup) {
             setShowPowerupPopup(true)
         }
-    }, [isLoggedIn, loading, showOnboardingPopup, hasSeenAnalyticsHomePopup, hasSeenPowerupPopup, userCreatedAt])
-
-    useEffect(() => {
-        if (!showPowerupPopup || hasMarkedPowerupPopupSeenRef.current) return
-
-        hasMarkedPowerupPopupSeenRef.current = true
-        markPowerupPopupSeen()
-    }, [showPowerupPopup])
+    }, [
+        isLoggedIn,
+        loading,
+        showOnboardingPopup,
+        showAnalyticsHomePopup,
+        showPowerupPopup,
+        hasSeenAnalyticsHomePopup,
+        hasSeenPowerupPopup,
+        userCreatedAt,
+    ])
 
     useEffect(() => {
         if (loading || subscriptionLoading) return;
@@ -563,29 +564,36 @@ export default function Home() {
     }
 
     async function markPowerupPopupSeen() {
+        const previousValue = hasSeenPowerupPopup
+        setHasSeenPowerupPopup(true)
+
         try {
             await saveSettings({
                 globalSettings: { hasSeenPowerupPopup: true },
             })
-            setHasSeenPowerupPopup(true)
             window.dispatchEvent(new Event('globalSettingsUpdated'))
         } catch (err) {
+            setHasSeenPowerupPopup(previousValue)
             console.error("Failed to save powerup popup flag:", err)
         }
     }
 
-    const handleClosePowerupPopup = () => {
+    const handleClosePowerupPopup = async () => {
         setShowPowerupPopup(false)
+        await markPowerupPopupSeen()
     }
 
     const markAnalyticsHomePopupSeen = async () => {
+        const previousValue = hasSeenAnalyticsHomePopup
+        setHasSeenAnalyticsHomePopup(true)
+
         try {
             await saveSettings({
                 globalSettings: { hasSeenAnalyticsHomePopup: true },
             })
-            setHasSeenAnalyticsHomePopup(true)
             window.dispatchEvent(new Event('globalSettingsUpdated'))
         } catch (err) {
+            setHasSeenAnalyticsHomePopup(previousValue)
             console.error("Failed to save analytics home popup flag:", err)
         }
     }
