@@ -1126,8 +1126,8 @@ export default function MediaPreview({
             }}
           >
             <CardHeader className={`w-full ${showVariantButtonInHeader ? 'pb-4' : ''}`}>
-              <div className="flex flex-row justify-between items-start flex-nowrap w-full">
-                <div className="flex flex-col items-start">
+              <div className={`flex w-full gap-3 ${isCarouselAd ? 'flex-col' : 'flex-row justify-between items-start flex-nowrap'}`}>
+                <div className={`flex flex-col items-start ${isCarouselAd ? 'w-full' : ''}`}>
                   <CardTitle className="text-left">Uploads Preview</CardTitle>
                   <CardDescription className="text-left">
                     {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
@@ -1142,7 +1142,7 @@ export default function MediaPreview({
                   </CardDescription>
                 </div>
 
-                <div className="flex gap-2">
+                <div className={`flex gap-2 ${isCarouselAd ? 'w-full flex-wrap justify-end' : ''}`}>
                   {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
                     <>
                       <Button
