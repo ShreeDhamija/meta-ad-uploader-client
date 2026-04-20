@@ -15,7 +15,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Groupads from '@/assets/icons/groupads.svg?react';
 import { v4 as uuidv4 } from 'uuid';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
 
 function withUniqueId(file) {
   if (file.isDrive || file.isDropbox) return file; // Drive/Dropbox already have unique id
@@ -579,7 +578,7 @@ export default function MediaPreview({
     adType !== 'flexible' &&
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
-  const showVariantSetupButton = IS_STAGING && (variants.length > 1 || totalFileCount >= 2);
+  const showVariantSetupButton = variants.length > 1 || totalFileCount >= 2;
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
   const showVariantButtonInHeader = showVariantSetupButton && !showPlacementCustomizationRow;
   const variantSetupLabel = variants.length === 1 ? 'Split Ad Data' : 'Disable Split';
