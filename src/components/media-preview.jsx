@@ -405,6 +405,8 @@ export default function MediaPreview({
   setFileVariantMap,
   groupVariantMap,
   setGroupVariantMap,
+  postVariantMap,
+  setPostVariantMap,
   hasSeenPowerupPopup,
   setShowPowerupPopup,
   isLaunchingMedia = false
@@ -1062,6 +1064,18 @@ export default function MediaPreview({
     });
   }, [setGroupVariantMap]);
 
+  const assignPostToVariant = useCallback((postKey, variantId) => {
+    setPostVariantMap((prev) => {
+      if (variantId === 'default') {
+        const next = { ...prev };
+        delete next[postKey];
+        return next;
+      }
+
+      return { ...prev, [postKey]: variantId };
+    });
+  }, [setPostVariantMap]);
+
   const findFileById = useCallback((fileId) => {
     let file = files.find((entry) => getFileId(entry) === fileId);
     if (file) return file;
@@ -1125,24 +1139,16 @@ export default function MediaPreview({
               setFiles(prev => [...prev, ...droppedFiles]);
             }}
           >
-            <CardHeader className={`w-full ${showVariantButtonInHeader ? 'pb-4' : ''}`}>
-              <div className={`flex w-full gap-3 ${isCarouselAd ? 'flex-col' : 'flex-row justify-between items-start flex-nowrap'}`}>
-                <div className={`flex flex-col items-start ${isCarouselAd ? 'w-full' : ''}`}>
+            <CardHeader className={`w-full ${showVariantButtonInHeader || showPlacementCustomizationRow ? 'pb-4' : ''}`}>
+              <div className="flex w-full items-start justify-between gap-3 flex-nowrap">
+                <div className="flex flex-col items-start">
                   <CardTitle className="text-left">Uploads Preview</CardTitle>
                   <CardDescription className="text-left">
                     {`${files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length} file${(files.filter(f => !f.isDrive).length + driveFiles.length + (dropboxFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length) > 1 ? "s" : ""} selected`}
-                    {isCarouselAd && (
-                      <span className="block text-xs text-gray-500 mt-1 whitespace-nowrap">
-                        {fileGroups.length > 0
-                          ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
-                          : 'Select files to group into separate carousel ads, or drag to reorder cards'
-                        }
-                      </span>
-                    )}
                   </CardDescription>
                 </div>
 
-                <div className={`flex gap-2 ${isCarouselAd ? 'w-full flex-wrap justify-end' : ''}`}>
+                <div className="flex shrink-0 gap-2">
                   {(enablePlacementCustomization || adType === 'flexible' || isCarouselAd) && (
                     <>
                       <Button
@@ -1224,49 +1230,59 @@ export default function MediaPreview({
                 </div>
               </div>
 
+              {isCarouselAd && (
+                <div className="mt-1">
+                  <CardDescription className="text-left text-xs text-gray-500 whitespace-nowrap">
+                    {fileGroups.length > 0
+                      ? 'Drag to reorder cards within each carousel group. Select files to create new groups.'
+                      : 'Select files to group into separate carousel ads, or drag to reorder cards'
+                    }
+                  </CardDescription>
+                </div>
+              )}
+
+              {showPlacementCustomizationRow && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="placementCustomization"
+                        checked={enablePlacementCustomization}
+                        onCheckedChange={handlePlacementCustomizationChange}
+                        disabled={hasAnyDynamicCreativeAdSets}
+                        className="border-gray-400 rounded-md"
+                      />
+                      <label
+                        htmlFor="placementCustomization"
+                        className={`text-sm font-medium leading-none ${hasAnyDynamicCreativeAdSets ? 'cursor-not-allowed opacity-50' : 'peer-disabled:cursor-not-allowed peer-disabled:opacity-70'}`}
+                      >
+                        Enable placement customization
+                        {hasAnyDynamicCreativeAdSets && (
+                          <span className="text-xs text-gray-400 ml-1">(not available for dynamic creative ad sets)</span>
+                        )}
+                      </label>
+                    </div>
+
+                    {showVariantButtonInPlacementRow && (
+                      <div className="shrink-0">
+                        {renderVariantSetupButton()}
+                      </div>
+                    )}
+                  </div>
+                  {enablePlacementCustomization && (
+                    <span className="block text-xs text-gray-500 mt-1">
+                      AI Auto Group only works for images
+                    </span>
+                  )}
+                </div>
+              )}
+
               {showVariantButtonInHeader && (
                 <div className="mt-2 flex justify-end">
                   {renderVariantSetupButton()}
                 </div>
               )}
             </CardHeader>
-
-            {/* Placement Customization Checkbox - only show when carousel is disabled */}
-            {showPlacementCustomizationRow && (
-              <div className="px-6 pb-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="placementCustomization"
-                      checked={enablePlacementCustomization}
-                      onCheckedChange={handlePlacementCustomizationChange}
-                      disabled={hasAnyDynamicCreativeAdSets}
-                      className="border-gray-400 rounded-md"
-                    />
-                    <label
-                      htmlFor="placementCustomization"
-                      className={`text-sm font-medium leading-none ${hasAnyDynamicCreativeAdSets ? 'cursor-not-allowed opacity-50' : 'peer-disabled:cursor-not-allowed peer-disabled:opacity-70'}`}
-                    >
-                      Enable placement customization
-                      {hasAnyDynamicCreativeAdSets && (
-                        <span className="text-xs text-gray-400 ml-1">(not available for dynamic creative ad sets)</span>
-                      )}
-                    </label>
-                  </div>
-
-                  {showVariantButtonInPlacementRow && (
-                    <div className="shrink-0">
-                      {renderVariantSetupButton()}
-                    </div>
-                  )}
-                </div>
-                {enablePlacementCustomization && (
-                  <span className="block text-xs text-gray-500 mt-1">
-                    AI Auto Group only works for images
-                  </span>
-                )}
-              </div>
-            )}
 
             <CardContent
               className={`flex-1 overflow-y-auto min-h-0 pr-2 ${isLaunchingMedia ? 'pointer-events-none' : ''}`}
@@ -1450,72 +1466,104 @@ export default function MediaPreview({
                         );
                       })}
 
-                      {importedPosts.map((post, index) => (
-                        <div
-                          key={post.id}
-                          className={`relative group ${isLaunchingMedia && activeVariantId === 'default' ? 'media-preview-launch-item' : ''}`}
-                          title={post.ad_name}
-                          style={{
-                            opacity: activeVariantId !== 'default' ? 0.3 : 1,
-                            transition: 'opacity 150ms'
-                          }}
-                        >
-                          <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
-                            <img
-                              src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
-                              alt="Post"
-                              className="w-full h-auto object-cover"
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
-                              style={{ opacity: 0.9, backgroundColor: "white" }}
-                              onClick={() => setImportedPosts(prev => prev.filter(p => p.id !== post.id))}
-                            >
-                              <Trash className="h-2 w-2" />
-                            </Button>
+                      {importedPosts.map((post, index) => {
+                        const postKey = `post:${post.id}`;
+                        const assignedVariantId = postVariantMap[postKey] || 'default';
+                        const isDimmed = assignedVariantId !== activeVariantId;
+                        const showVariantDropdown = variants.length > 1;
+                        return (
+                          <div
+                            key={post.id}
+                            className={`relative group ${isLaunchingMedia && !isDimmed ? 'media-preview-launch-item' : ''}`}
+                            title={post.ad_name}
+                            style={{
+                              opacity: isDimmed ? 0.3 : 1,
+                              transition: 'opacity 150ms'
+                            }}
+                          >
+                            <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200 relative">
+                              <img
+                                src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
+                                alt="Post"
+                                className="w-full h-auto object-cover"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
+                                style={{ opacity: 0.9, backgroundColor: "white" }}
+                                onClick={() => setImportedPosts(prev => prev.filter(p => p.id !== post.id))}
+                              >
+                                <Trash className="h-2 w-2" />
+                              </Button>
+                              {showVariantDropdown && (
+                                <div className="absolute bottom-2 left-2 z-30">
+                                  <VariantAssignmentPopover
+                                    assignedVariantId={assignedVariantId}
+                                    variants={variants}
+                                    onAssignVariant={(variantId) => assignPostToVariant(postKey, variantId)}
+                                    onAddVariant={handleAddVariant}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            {/* post_id below the image card */}
+                            <p className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full">
+                              {post.ad_name}
+                            </p>
                           </div>
-                          {/* post_id below the image card */}
-                          <p className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full">
-                            {post.ad_name}
-                          </p>
-                        </div>
-                      ))}
+                        );
+                      })}
 
-                      {selectedIgOrganicPosts.map((post, index) => (
-                        <div
-                          key={`ig-${post.source_instagram_media_id}`}
-                          className={`relative group ${isLaunchingMedia && activeVariantId === 'default' ? 'media-preview-launch-item' : ''}`}
-                          title={post.ad_name}
-                          style={{
-                            opacity: activeVariantId !== 'default' ? 0.3 : 1,
-                            transition: 'opacity 150ms'
-                          }}
-                        >
-                          <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200">
-                            <img
-                              src={post.previewUrl || "https://api.withblip.com/thumbnail.jpg"}
-                              alt={post.ad_name}
-                              className="w-full h-auto object-cover"
-                              onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
-                              style={{ opacity: 0.9, backgroundColor: "white" }}
-                              onClick={() => setSelectedIgOrganicPosts(prev => prev.filter(p => p.source_instagram_media_id !== post.source_instagram_media_id))}
-                            >
-                              <Trash className="h-2 w-2" />
-                            </Button>
+                      {selectedIgOrganicPosts.map((post, index) => {
+                        const postKey = `igpost:${post.source_instagram_media_id}`;
+                        const assignedVariantId = postVariantMap[postKey] || 'default';
+                        const isDimmed = assignedVariantId !== activeVariantId;
+                        const showVariantDropdown = variants.length > 1;
+                        return (
+                          <div
+                            key={`ig-${post.source_instagram_media_id}`}
+                            className={`relative group ${isLaunchingMedia && !isDimmed ? 'media-preview-launch-item' : ''}`}
+                            title={post.ad_name}
+                            style={{
+                              opacity: isDimmed ? 0.3 : 1,
+                              transition: 'opacity 150ms'
+                            }}
+                          >
+                            <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200 relative">
+                              <img
+                                src={post.previewUrl || "https://api.withblip.com/thumbnail.jpg"}
+                                alt={post.ad_name}
+                                className="w-full h-auto object-cover"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                                }}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
+                                style={{ opacity: 0.9, backgroundColor: "white" }}
+                                onClick={() => setSelectedIgOrganicPosts(prev => prev.filter(p => p.source_instagram_media_id !== post.source_instagram_media_id))}
+                              >
+                                <Trash className="h-2 w-2" />
+                              </Button>
+                              {showVariantDropdown && (
+                                <div className="absolute bottom-2 left-2 z-30">
+                                  <VariantAssignmentPopover
+                                    assignedVariantId={assignedVariantId}
+                                    variants={variants}
+                                    onAssignVariant={(variantId) => assignPostToVariant(postKey, variantId)}
+                                    onAddVariant={handleAddVariant}
+                                  />
+                                </div>
+                              )}
+                            </div>
+
                           </div>
-
-                        </div>
-                      ))}
+                        );
+                      })}
 
 
                     </div>

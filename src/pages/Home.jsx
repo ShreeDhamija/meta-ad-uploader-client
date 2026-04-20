@@ -251,6 +251,7 @@ export default function Home() {
     const [activeVariantId, setActiveVariantId] = useState("default");
     const [fileVariantMap, setFileVariantMap] = useState({});
     const [groupVariantMap, setGroupVariantMap] = useState({});
+    const [postVariantMap, setPostVariantMap] = useState({});
 
     const [showMobileBanner, setShowMobileBanner] = useState(true);
     const mediaPreviewLaunchTimeoutRef = useRef(null);
@@ -830,7 +831,8 @@ export default function Home() {
         const wasActive = variantId === activeVariantId;
         const reassignedCount =
             Object.values(fileVariantMap).filter((value) => value === variantId).length +
-            Object.values(groupVariantMap).filter((value) => value === variantId).length;
+            Object.values(groupVariantMap).filter((value) => value === variantId).length +
+            Object.values(postVariantMap).filter((value) => value === variantId).length;
 
         setFileVariantMap((prev) => {
             const next = { ...prev };
@@ -841,6 +843,14 @@ export default function Home() {
         });
 
         setGroupVariantMap((prev) => {
+            const next = { ...prev };
+            Object.keys(next).forEach((key) => {
+                if (next[key] === variantId) delete next[key];
+            });
+            return next;
+        });
+
+        setPostVariantMap((prev) => {
             const next = { ...prev };
             Object.keys(next).forEach((key) => {
                 if (next[key] === variantId) delete next[key];
@@ -863,7 +873,7 @@ export default function Home() {
                 ? `Variant deleted. ${reassignedCount} assignment${reassignedCount === 1 ? "" : "s"} moved to Default.`
                 : "Variant deleted."
         );
-    }, [activeVariantId, fileVariantMap, groupVariantMap, hydrateFromSnapshot, variants]);
+    }, [activeVariantId, fileVariantMap, groupVariantMap, postVariantMap, hydrateFromSnapshot, variants]);
 
     const handleDeleteAllVariants = useCallback(() => {
         if (variants.length <= 1) return;
@@ -872,10 +882,11 @@ export default function Home() {
         const defaultSnapshot = activeVariantId === "default"
             ? captureCurrentSnapshot()
             : defaultVariant?.snapshot;
-        const clearedAssignments = Object.keys(fileVariantMap).length + Object.keys(groupVariantMap).length;
+        const clearedAssignments = Object.keys(fileVariantMap).length + Object.keys(groupVariantMap).length + Object.keys(postVariantMap).length;
 
         setFileVariantMap({});
         setGroupVariantMap({});
+        setPostVariantMap({});
         setVariants([{ id: "default", name: "Default", snapshot: null }]);
         setSelectedFiles(new Set());
 
@@ -895,6 +906,7 @@ export default function Home() {
         captureCurrentSnapshot,
         fileVariantMap,
         groupVariantMap,
+        postVariantMap,
         hydrateFromSnapshot,
         variants,
     ]);
@@ -917,6 +929,20 @@ export default function Home() {
         });
 
         setGroupVariantMap((prev) => {
+            const next = { ...prev };
+            let changed = false;
+
+            Object.keys(next).forEach((key) => {
+                if (!activeVariantIds.has(next[key])) {
+                    delete next[key];
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
+
+        setPostVariantMap((prev) => {
             const next = { ...prev };
             let changed = false;
 
@@ -974,6 +1000,27 @@ export default function Home() {
             return changed ? next : prev;
         });
     }, [fileGroups]);
+
+    useEffect(() => {
+        const validPostKeys = new Set([
+            ...importedPosts.map((post) => `post:${post.id}`),
+            ...selectedIgOrganicPosts.map((post) => `igpost:${post.source_instagram_media_id}`),
+        ]);
+
+        setPostVariantMap((prev) => {
+            const next = { ...prev };
+            let changed = false;
+
+            Object.keys(next).forEach((key) => {
+                if (!validPostKeys.has(key)) {
+                    delete next[key];
+                    changed = true;
+                }
+            });
+
+            return changed ? next : prev;
+        });
+    }, [importedPosts, selectedIgOrganicPosts]);
 
     useEffect(() => {
         if (!selectedAdAccount) {
@@ -1450,6 +1497,8 @@ export default function Home() {
                             setFileVariantMap={setFileVariantMap}
                             groupVariantMap={groupVariantMap}
                             setGroupVariantMap={setGroupVariantMap}
+                            postVariantMap={postVariantMap}
+                            setPostVariantMap={setPostVariantMap}
                             onBeforeMediaClear={triggerMediaPreviewLaunch}
 
 
@@ -1492,6 +1541,8 @@ export default function Home() {
                                 setFileVariantMap={setFileVariantMap}
                                 groupVariantMap={groupVariantMap}
                                 setGroupVariantMap={setGroupVariantMap}
+                                postVariantMap={postVariantMap}
+                                setPostVariantMap={setPostVariantMap}
                                 hasSeenPowerupPopup={hasSeenPowerupPopup}
                                 setShowPowerupPopup={setShowPowerupPopup}
                                 isLaunchingMedia={isLaunchingMediaPreview}

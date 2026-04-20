@@ -550,6 +550,8 @@ export default function AdCreationForm({
   setFileVariantMap,
   groupVariantMap,
   setGroupVariantMap,
+  postVariantMap,
+  setPostVariantMap,
   onBeforeMediaClear
 }) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
@@ -869,6 +871,14 @@ export default function AdCreationForm({
       return (fileVariantMap[fileId] || 'default') === variantId;
     }).length;
 
+    const importedPostsForVariant = importedPosts.filter(
+      (post) => (postVariantMap[`post:${post.id}`] || 'default') === variantId
+    ).length;
+    const igOrganicPostsForVariant = selectedIgOrganicPosts.filter(
+      (post) => (postVariantMap[`igpost:${post.source_instagram_media_id}`] || 'default') === variantId
+    ).length;
+    const postsForVariant = importedPostsForVariant + igOrganicPostsForVariant;
+
     if (isCarouselAd || enablePlacementCustomization || adType === 'flexible') {
       const defaultOnly = variantId === 'default'
         ? [
@@ -880,10 +890,10 @@ export default function AdCreationForm({
         : 0;
 
       return variantGroups.length + (adType === 'flexible' && fileGroups.length === 0 ? ungroupedCount : defaultOnly) +
-        (variantId === 'default' ? importedPosts.length + selectedIgOrganicPosts.length : 0);
+        postsForVariant;
     }
 
-    return ungroupedCount + (variantId === 'default' ? importedPosts.length + selectedIgOrganicPosts.length : 0);
+    return ungroupedCount + postsForVariant;
   }, [
     adType,
     driveFiles,
@@ -895,9 +905,10 @@ export default function AdCreationForm({
     groupedFileIds,
     groupVariantMap,
     importedFiles,
-    importedPosts.length,
+    importedPosts,
     isCarouselAd,
-    selectedIgOrganicPosts.length,
+    postVariantMap,
+    selectedIgOrganicPosts,
   ]);
 
   const captureFormDataAsJob = useCallback((variantId = 'default') => {
@@ -933,6 +944,12 @@ export default function AdCreationForm({
     const variantFileGroups = fileGroups.filter(
       (group) => (groupVariantMap[group.id] || 'default') === variantId
     );
+    const variantImportedPosts = importedPosts.filter(
+      (post) => (postVariantMap[`post:${post.id}`] || 'default') === variantId
+    );
+    const variantIgOrganicPosts = selectedIgOrganicPosts.filter(
+      (post) => (postVariantMap[`igpost:${post.source_instagram_media_id}`] || 'default') === variantId
+    );
 
     const formData = {
       headlines: [...(variantState.headlines || [''])],
@@ -946,9 +963,9 @@ export default function AdCreationForm({
       dropboxFiles: [...variantDropboxFiles],
       videoThumbs: { ...videoThumbs },
       thumbnail,
-      importedPosts: variantId === 'default' ? [...importedPosts] : [],
+      importedPosts: [...variantImportedPosts],
       importedFiles: [...variantImportedFiles],
-      selectedIgOrganicPosts: variantId === 'default' ? [...selectedIgOrganicPosts] : [],
+      selectedIgOrganicPosts: [...variantIgOrganicPosts],
       selectedAdSets: [...(variantState.selectedAdSets || [])],
       duplicateAdSet: variantState.duplicateAdSet || '',
       newAdSetName: variantState.newAdSetName || '',
@@ -1007,6 +1024,7 @@ export default function AdCreationForm({
     importedFiles,
     importedPosts,
     isCarouselAd,
+    postVariantMap,
     selectedIgOrganicPosts,
     thumbnail,
     variants,
@@ -1053,6 +1071,7 @@ export default function AdCreationForm({
     setActiveVariantId('default');
     setFileVariantMap({});
     setGroupVariantMap({});
+    setPostVariantMap({});
     setAdType(d.adType || 'regular');
     setIsCarouselAd(d.isCarouselAd || false);
     setEnablePlacementCustomization(d.enablePlacementCustomization || false);
@@ -1075,7 +1094,7 @@ export default function AdCreationForm({
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDriveFiles, setDropboxFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPhoneNumber, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setThumbnail, setVariants, setVideoThumbs]);
+  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDriveFiles, setDropboxFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPhoneNumber, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setThumbnail, setVariants, setVideoThumbs]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -5374,6 +5393,7 @@ export default function AdCreationForm({
     setSelectedIgOrganicPosts([]);
     setFileVariantMap({});
     setGroupVariantMap({});
+    setPostVariantMap({});
     setSelectedFiles(new Set());
   };
 
@@ -5853,6 +5873,10 @@ export default function AdCreationForm({
               <Label htmlFor="ad-type" className="text-sm whitespace-nowrap">
                 Ad Type:
               </Label>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={activeVariantId !== 'default' ? 'cursor-not-allowed' : ''}>
               <Select
                 value={
                   adType === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))
@@ -5865,8 +5889,7 @@ export default function AdCreationForm({
                     return;
                   }
 
-                  if (variants.length > 1) {
-                    toast.error('Ad type is locked while variants exist. Delete extra variants to change it.');
+                  if (activeVariantId !== 'default') {
                     return;
                   }
 
@@ -5892,7 +5915,7 @@ export default function AdCreationForm({
                     }
                   }
                 }}
-                disabled={!isLoggedIn || variants.length > 1}
+                disabled={!isLoggedIn || activeVariantId !== 'default'}
               >
                 <SelectTrigger className={cn("w-[180px] h-10 py-2 font-medium", formFieldChrome)}>
                   <SelectValue placeholder="Select ad type" />
@@ -5923,14 +5946,18 @@ export default function AdCreationForm({
                   )}
                 </SelectContent>
               </Select>
+                    </span>
+                  </TooltipTrigger>
+                  {activeVariantId !== 'default' && (
+                    <TooltipContent side="bottom" className="max-w-xs text-xs">
+                      Ad type is only changeable in the Default variant. Changing it there will apply to all variants.
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           )}
         </CardTitle>
-        {variants.length > 1 && (
-          <CardDescription>
-            Ad type is locked while variants exist. Delete extra variants if you need to change the ad structure.
-          </CardDescription>
-        )}
       </CardHeader>
 
       <CardContent>
