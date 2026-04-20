@@ -6798,7 +6798,7 @@ export default function AdCreationForm({
                               )}
                             </div>
                           ))}
-                          {messages.length < (isCarouselAd ? 10 : 5) && (
+                          {messages.length < (isCarouselAd ? 10 : 5) && !(isCarouselAd && applyTextToAllCards) && (
                             <Button
                               type="button"
                               size="sm"
@@ -6893,7 +6893,7 @@ export default function AdCreationForm({
                             )}
                           </div>
                         ))}
-                        {headlines.length < (isCarouselAd ? 10 : 5) && (
+                        {headlines.length < (isCarouselAd ? 10 : 5) && !(isCarouselAd && applyHeadlinesToAllCards) && (
                           <Button
                             type="button"
                             size="sm"
@@ -7560,13 +7560,6 @@ export default function AdCreationForm({
 
 
           <div className="space-y-1">
-            {variants.length > 1 && hasConfiguredFormSplits && (
-              <div className="text-xs text-gray-500 mb-2">
-                Publishing {populatedVariantSummaries.length} job{populatedVariantSummaries.length === 1 ? '' : 's'}:
-                {' '}
-                {populatedVariantSummaries.map((variant) => `${variant.name} (${variant.count})`).join(' · ')}
-              </div>
-            )}
             <Button
               type="submit"
               className="w-full h-12 bg-neutral-950 hover:bg-blue-700 text-white rounded-2xl"
@@ -7574,6 +7567,14 @@ export default function AdCreationForm({
             >
               {isQueueingJobs ? "Publishing Ads..." : "Publish Ads"}
             </Button>
+
+            {variants.length > 1 && hasConfiguredFormSplits && (
+              <div className="text-xs text-gray-500 mt-2">
+                Publishing {populatedVariantSummaries.length} job{populatedVariantSummaries.length === 1 ? '' : 's'}:
+                {' '}
+                {populatedVariantSummaries.map((variant) => `${variant.name} (${variant.count})`).join(' · ')}
+              </div>
+            )}
 
             {!isCarouselAd && hasDuplicates && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">

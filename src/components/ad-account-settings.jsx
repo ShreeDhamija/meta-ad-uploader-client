@@ -18,6 +18,7 @@ import CogIcon from '@/assets/icons/cog.svg?react';
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react';
 import CampaignIcon from '@/assets/icons/folder.svg?react';
 import AdSetIcon from '@/assets/icons/grid.svg?react';
+import CheckBlackIcon from '@/assets/icons/CheckBlack.svg?react';
 import CopyIcon from '@/assets/icons/copy.svg?react';
 import { useNavigate } from "react-router-dom"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -1248,7 +1249,7 @@ transition-all duration-150 hover:!bg-black
                         className="w-4 h-4 p-0 bg-white border border-gray-300 rounded-2xl"
                       >
                         <Checkbox.Indicator className="flex items-center justify-center">
-                          <X className="w-3 h-3 text-gray-500" />
+                          <CheckBlackIcon className="w-3 h-3" />
                         </Checkbox.Indicator>
                       </Checkbox>
                       <span className="text-gray-800 text-xs break-all">{adset ? adset.name : id}</span>

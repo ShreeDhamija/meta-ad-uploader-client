@@ -215,7 +215,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       {/* Selection checkbox for placement customization - only show when NOT grouped */}
       {isSelectable && (
         <div
-          className={`absolute z-20 ${isCarouselAd ? 'top-2 right-2' : 'top-1 left-1'}`}
+          className={`absolute z-20 ${isCarouselAd ? 'top-1.5 right-2' : 'top-1 left-1'}`}
           onClick={(e) => e.stopPropagation()}
         >
           <Checkbox
@@ -1476,22 +1476,23 @@ export default function MediaPreview({
                             key={post.id}
                             className={`relative group ${isLaunchingMedia && !isDimmed ? 'media-preview-launch-item' : ''}`}
                             title={post.ad_name}
-                            style={{
-                              opacity: isDimmed ? 0.3 : 1,
-                              transition: 'opacity 150ms'
-                            }}
                           >
                             <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200 relative">
-                              <img
-                                src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
-                                alt="Post"
-                                className="w-full h-auto object-cover"
-                              />
+                              <div
+                                className="transition-opacity"
+                                style={{ opacity: isDimmed ? 0.3 : 1 }}
+                              >
+                                <img
+                                  src={post.image_url || "https://api.withblip.com/thumbnail.jpg"}
+                                  alt="Post"
+                                  className="w-full h-auto object-cover"
+                                />
+                              </div>
                               <Button
                                 type="button"
                                 variant="ghost"
-                                className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
-                                style={{ opacity: 0.9, backgroundColor: "white" }}
+                                className={`absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30 transition-opacity ${isDimmed ? 'opacity-30' : 'opacity-90'}`}
+                                style={{ backgroundColor: "white" }}
                                 onClick={() => setImportedPosts(prev => prev.filter(p => p.id !== post.id))}
                               >
                                 <Trash className="h-2 w-2" />
@@ -1508,7 +1509,10 @@ export default function MediaPreview({
                               )}
                             </div>
                             {/* post_id below the image card */}
-                            <p className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full">
+                            <p
+                              className="mt-1 ml-1 text-xs font-mono text-gray-700 truncate max-w-full transition-opacity"
+                              style={{ opacity: isDimmed ? 0.3 : 1 }}
+                            >
                               {post.ad_name}
                             </p>
                           </div>
@@ -1525,26 +1529,27 @@ export default function MediaPreview({
                             key={`ig-${post.source_instagram_media_id}`}
                             className={`relative group ${isLaunchingMedia && !isDimmed ? 'media-preview-launch-item' : ''}`}
                             title={post.ad_name}
-                            style={{
-                              opacity: isDimmed ? 0.3 : 1,
-                              transition: 'opacity 150ms'
-                            }}
                           >
                             <div className="overflow-hidden rounded-xl shadow-lg border border-gray-200 relative">
-                              <img
-                                src={post.previewUrl || "https://api.withblip.com/thumbnail.jpg"}
-                                alt={post.ad_name}
-                                className="w-full h-auto object-cover"
-                                onError={(e) => {
-                                  e.target.onerror = null;
-                                  e.target.src = "https://api.withblip.com/thumbnail.jpg";
-                                }}
-                              />
+                              <div
+                                className="transition-opacity"
+                                style={{ opacity: isDimmed ? 0.3 : 1 }}
+                              >
+                                <img
+                                  src={post.previewUrl || "https://api.withblip.com/thumbnail.jpg"}
+                                  alt={post.ad_name}
+                                  className="w-full h-auto object-cover"
+                                  onError={(e) => {
+                                    e.target.onerror = null;
+                                    e.target.src = "https://api.withblip.com/thumbnail.jpg";
+                                  }}
+                                />
+                              </div>
                               <Button
                                 type="button"
                                 variant="ghost"
-                                className="absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30"
-                                style={{ opacity: 0.9, backgroundColor: "white" }}
+                                className={`absolute top-1.5 right-1.5 border border-gray-400 rounded-lg bg-white shadow-xs h-7 w-7 p-3 z-30 transition-opacity ${isDimmed ? 'opacity-30' : 'opacity-90'}`}
+                                style={{ backgroundColor: "white" }}
                                 onClick={() => setSelectedIgOrganicPosts(prev => prev.filter(p => p.source_instagram_media_id !== post.source_instagram_media_id))}
                               >
                                 <Trash className="h-2 w-2" />
