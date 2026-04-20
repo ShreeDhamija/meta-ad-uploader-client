@@ -1008,7 +1008,7 @@ export default function AnalyticsDashboard() {
                         className="rounded-2xl h-11 px-4"
                     >
                         <Settings2 className="w-4 h-4 mr-2" />
-                        Preferences
+                        Configuration
                     </Button>
 
                     <DropdownMenu>

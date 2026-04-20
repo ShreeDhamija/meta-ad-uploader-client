@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
     Loader2, XCircle, Activity, Pause,
-    CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw,
+    CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw, ExternalLink,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -365,6 +365,35 @@ export default function RecommendationCards({
         return spend / activeDays
     }
 
+    const getAdsManagerAdUrl = ({ adId, adsetId }) => {
+        if (!adAccountId || !adId || !adsetId) return null
+
+        const account = adAccounts?.find((entry) => entry.id === adAccountId)
+        const bizId = account?.business_id
+        const params = new URLSearchParams({
+            act: adAccountId,
+            selected_adset_ids: String(adsetId),
+            selected_ad_ids: String(adId),
+        })
+
+        if (bizId) {
+            params.set("business_id", bizId)
+            params.set("global_scope_id", bizId)
+        }
+
+        return `https://adsmanager.facebook.com/adsmanager/manage/ads/edit/standalone?${params.toString()}`
+    }
+
+    const openAdInAdsManager = ({ adId, adsetId }) => {
+        const url = getAdsManagerAdUrl({ adId, adsetId })
+        if (!url) {
+            toast.error("Unable to open this ad in Ads Manager")
+            return
+        }
+
+        window.open(url, "_blank", "noopener,noreferrer")
+    }
+
     return (
         <div className="space-y-8">
             {section === "budget" && (
@@ -549,12 +578,7 @@ export default function RecommendationCards({
                                                                 ) : rec.type === 'scale_winner' ? (
                                                                     <Button
                                                                         size="sm"
-                                                                        onClick={() => {
-                                                                            const account = adAccounts?.find(a => a.id === adAccountId);
-                                                                            const bizId = account?.business_id || '';
-                                                                            const url = `https://adsmanager.facebook.com/adsmanager/manage/ads/edit/standalone?act=${adAccountId}&business_id=${bizId}&global_scope_id=${bizId}&selected_adset_ids=${rec.adsetId}&selected_ad_ids=${rec.adId}`;
-                                                                            window.open(url, '_blank');
-                                                                        }}
+                                                                        onClick={() => openAdInAdsManager({ adId: rec.adId, adsetId: rec.adsetId })}
                                                                         className={cn("rounded-xl text-xs", cfg.btnClass)}
                                                                     >
                                                                         View Ad
@@ -779,12 +803,23 @@ export default function RecommendationCards({
 
                                                     {/* Ad info */}
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 min-w-0">
+                                                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                                             <p className="font-medium text-gray-900 text-sm break-words line-clamp-2 min-w-0">{ad.adName}</p>
                                                             {daysOld && (
                                                                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-gray-100 text-gray-500 border-gray-200 flex-shrink-0">
                                                                     {daysOld}d old
                                                                 </Badge>
+                                                            )}
+                                                            {ad.adId && ad.adsetId && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openAdInAdsManager({ adId: ad.adId, adsetId: ad.adsetId })}
+                                                                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                                                                    title="View ad"
+                                                                    aria-label={`View ${ad.adName} in Ads Manager`}
+                                                                >
+                                                                    <ExternalLink className="h-3.5 w-3.5" />
+                                                                </button>
                                                             )}
                                                         </div>
                                                         <p className="text-xs text-zinc-400 mt-0.5 break-words line-clamp-1">Campaign: {ad.campaignName}</p>
