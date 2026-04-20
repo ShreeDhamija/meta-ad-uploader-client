@@ -20,7 +20,6 @@ import TeamSettings from "@/components/settings/TeamSettings"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
 import DesktopIcon from '@/assets/Desktop.webp';
-import { logPopupDebug } from "@/lib/popupDebug";
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const SETTINGS_TABS = ["adaccount", "billing", "team"]
@@ -69,10 +68,6 @@ export default function Settings() {
 
 
     const handleCloseSettingsPopup = () => {
-        logPopupDebug("Settings.handleCloseSettingsPopup", {
-            hasSeenSettingsOnboarding,
-            selectedAdAccountIds,
-        }, { trace: true });
         setShowSettingsPopup(false)
         fetch(`${API_BASE_URL}/settings/save`, {
             method: "POST",
@@ -105,10 +100,6 @@ export default function Settings() {
 
     useEffect(() => {
         if (!loading && !hasSeenSettingsOnboarding) {
-            logPopupDebug("Settings.showSettingsPopup", {
-                hasSeenSettingsOnboarding,
-                selectedAdAccountIds,
-            });
             setShowSettingsPopup(true)
         }
     }, [loading, hasSeenSettingsOnboarding])
