@@ -365,7 +365,15 @@ export default function RecommendationCards({
         return spend / activeDays
     }
 
-    const getAdsManagerAdUrl = ({ adId, adsetId }) => {
+    const getAdsManagerIdentifiers = (entity = {}) => {
+        const adId = entity.adId ?? entity.ad_id ?? entity.id ?? null
+        const adsetId = entity.adsetId ?? entity.adset_id ?? null
+
+        return { adId, adsetId }
+    }
+
+    const getAdsManagerAdUrl = (entity) => {
+        const { adId, adsetId } = getAdsManagerIdentifiers(entity)
         if (!adAccountId || !adId || !adsetId) return null
 
         const account = adAccounts?.find((entry) => entry.id === adAccountId)
@@ -384,8 +392,8 @@ export default function RecommendationCards({
         return `https://adsmanager.facebook.com/adsmanager/manage/ads/edit/standalone?${params.toString()}`
     }
 
-    const openAdInAdsManager = ({ adId, adsetId }) => {
-        const url = getAdsManagerAdUrl({ adId, adsetId })
+    const openAdInAdsManager = (entity) => {
+        const url = getAdsManagerAdUrl(entity)
         if (!url) {
             toast.error("Unable to open this ad in Ads Manager")
             return
@@ -578,7 +586,7 @@ export default function RecommendationCards({
                                                                 ) : rec.type === 'scale_winner' ? (
                                                                     <Button
                                                                         size="sm"
-                                                                        onClick={() => openAdInAdsManager({ adId: rec.adId, adsetId: rec.adsetId })}
+                                                                        onClick={() => openAdInAdsManager(rec)}
                                                                         className={cn("rounded-xl text-xs", cfg.btnClass)}
                                                                     >
                                                                         View Ad
@@ -778,6 +786,7 @@ export default function RecommendationCards({
                                     const avgDailySpend = getAvgDailySpend(ad.spend, ad.createdTime)
                                     const isSelected = selected.has(ad.adId)
                                     const isPausing = pausingId === ad.adId
+                                    const { adId: poorPerformerAdId, adsetId: poorPerformerAdsetId } = getAdsManagerIdentifiers(ad)
 
                                     return (
                                         <Card key={ad.adId} className={cn(
@@ -810,10 +819,10 @@ export default function RecommendationCards({
                                                                     {daysOld}d old
                                                                 </Badge>
                                                             )}
-                                                            {ad.adId && ad.adsetId && (
+                                                            {poorPerformerAdId && poorPerformerAdsetId && (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => openAdInAdsManager({ adId: ad.adId, adsetId: ad.adsetId })}
+                                                                    onClick={() => openAdInAdsManager(ad)}
                                                                     className="inline-flex h-6 w-6 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
                                                                     title="View ad"
                                                                     aria-label={`View ${ad.adName} in Ads Manager`}
