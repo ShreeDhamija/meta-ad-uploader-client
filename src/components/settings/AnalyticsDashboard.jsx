@@ -70,8 +70,6 @@ export default function AnalyticsDashboard() {
     const [tempThresholds, setTempThresholds] = useState(DEFAULT_THRESHOLDS)
 
     // ── Target KPI (lives in settings dialog, feeds recommendations) 
-    // const [targetCPA, setTargetCPA] = useState(null)
-    // const [targetROAS, setTargetROAS] = useState(null)
     const [tempTargetCPA, setTempTargetCPA] = useState("")
     const [tempTargetROAS, setTempTargetROAS] = useState("")
 
@@ -169,7 +167,7 @@ export default function AnalyticsDashboard() {
         }
     }, [globalSettingsLoading, adAccountsLoading, adAccounts, hasSeenAnalyticsOnboarding])
 
-    // Sync settings from hook (including analyticsMode + conversionEvent)
+
     // useEffect(() => {
     //     if (!adAccountSettingsLoading && adAccountSettings) {
     //         if (adAccountSettings.anomalyThresholds) {
@@ -206,6 +204,7 @@ export default function AnalyticsDashboard() {
     // }, [adAccountSettingsLoading, adAccountSettings, selectedAdAccount])
 
     // ── Check Slack connection (per-user, runs once) 
+
     useEffect(() => {
         const checkSlack = async () => {
             try {
@@ -236,26 +235,7 @@ export default function AnalyticsDashboard() {
     const poorAdsCount = poorAds?.ads?.length || 0
 
 
-    // Auto-detect mode from account info (fallback if no saved preference)
-    // const fetchAccountInfo = useCallback(async (accountId) => {
-    //     try {
-    //         const res = await fetch(
-    //             `${API_BASE_URL}/api/analytics/account-info?adAccountId=${accountId}`,
-    //             { credentials: 'include' }
-    //         )
-    //         const data = await res.json()
 
-    //         // Only auto-set if the user hasn't manually selected or saved a mode for this account
-    //         const cached = modeCache.current[accountId]
-
-    //         if (res.ok && data.suggestedMode) {
-    //             setMetricMode(data.suggestedMode)
-    //             setModeAutoDetected(true)
-    //         }
-    //     } catch (err) {
-    //         console.error('Account info error:', err)
-    //     }
-    // }, [])
 
     const fetchAccountInfo = useCallback(async (accountId) => {
         const key = `account-info-${accountId}`
@@ -301,31 +281,7 @@ export default function AnalyticsDashboard() {
         }
     }, [])
 
-    // ── Fetch functions
-    // const fetchRecommendations = useCallback(async (force = false) => {
-    //     if (!selectedAdAccount) return
-    //     const key = `recs-${selectedAdAccount}-${metricMode}`
-    //     if (!force && fetchedRef.current[key]) return
-    //     fetchedRef.current[key] = true
 
-    //     setRecsLoading(true)
-    //     try {
-    //         let url = `${API_BASE_URL}/api/analytics/recommendations?adAccountId=${selectedAdAccount}&mode=${metricMode}`
-    //         if (metricMode === 'cpr' && targetCPA) url += `&targetCPA=${targetCPA}`
-    //         if (metricMode === 'roas' && targetROAS) url += `&targetROAS=${targetROAS}`
-    //         if (adAccountSettings?.conversionEvent) {
-    //             url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
-    //         }
-
-    //         const res = await fetch(url, { credentials: 'include' })
-    //         const data = await res.json()
-    //         if (res.ok) setRecommendations(data)
-    //         else toast.error(data.error || 'Failed to fetch recommendations')
-    //     } catch (err) {
-    //         console.error('Recommendations error:', err)
-    //         toast.error('Failed to fetch recommendations')
-    //     } finally { setRecsLoading(false) }
-    // }, [selectedAdAccount, metricMode, targetCPA, targetROAS, adAccountSettings?.conversionEvent])
 
 
     const fetchRecommendations = useCallback(async (force = false) => {
@@ -371,49 +327,6 @@ export default function AnalyticsDashboard() {
 
 
 
-    // const fetchAnomalies = useCallback(async (force = false) => {
-    //     if (!selectedAdAccount) return
-    //     const key = `anomalies-${selectedAdAccount}`
-    //     if (!force && fetchedRef.current[key]) return
-    //     fetchedRef.current[key] = true
-
-    //     setAnomaliesLoading(true)
-    //     try {
-    //         const res = await fetch(
-    //             `${API_BASE_URL}/api/analytics/anomalies?adAccountId=${selectedAdAccount}&cpaThreshold=${anomalyThresholds.cpaSpike}&overspendThreshold=${anomalyThresholds.overspend}`,
-    //             { credentials: 'include' }
-    //         )
-    //         const data = await res.json()
-    //         if (res.ok) setAnomalies(data)
-    //         else toast.error(data.error || 'Failed to fetch anomalies')
-    //     } catch (err) {
-    //         console.error('Anomalies error:', err)
-    //         toast.error('Failed to fetch anomalies')
-    //     } finally { setAnomaliesLoading(false) }
-    // }, [selectedAdAccount, anomalyThresholds])
-
-    // const fetchPoorAds = useCallback(async (force = false) => {
-    //     if (!selectedAdAccount) return
-    //     const key = `poor-${selectedAdAccount}-${metricMode}-${adAccountSettings?.conversionEvent || '__auto__'}`
-    //     if (!force && fetchedRef.current[key]) return
-    //     fetchedRef.current[key] = true
-
-    //     setPoorAdsLoading(true)
-    //     try {
-    //         let url = `${API_BASE_URL}/api/analytics/poor-performing-ads?adAccountId=${selectedAdAccount}&mode=${metricMode}`
-    //         if (adAccountSettings?.conversionEvent) {
-    //             url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
-    //         }
-
-    //         const res = await fetch(url, { credentials: 'include' })
-    //         const data = await res.json()
-    //         if (res.ok) setPoorAds(data)
-    //         else toast.error(data.error || 'Failed to fetch poor performing ads')
-    //     } catch (err) {
-    //         console.error('Poor ads error:', err)
-    //         toast.error('Failed to fetch poor performing ads')
-    //     } finally { setPoorAdsLoading(false) }
-    // }, [selectedAdAccount, metricMode, adAccountSettings?.conversionEvent])
 
     const fetchPoorAds = useCallback(async (force = false) => {
         if (!selectedAdAccount) return
@@ -638,12 +551,7 @@ export default function AnalyticsDashboard() {
         try { localStorage.setItem(SELECTED_ACCOUNT_KEY, fallback) } catch { }
     }, [adAccountsLoading, adAccounts, selectedAdAccount])
 
-    // useEffect(() => {
-    //     if (selectedAdAccount) {
-    //         fetchAccountInfo(selectedAdAccount)
-    //         fetchWeeklyInsights()
-    //     }
-    // }, [selectedAdAccount, fetchAccountInfo, fetchWeeklyInsights])
+
 
 
     // Weekly insights don't depend on settings, fetch immediately
@@ -1125,7 +1033,7 @@ export default function AnalyticsDashboard() {
                         <span className="hidden sm:inline">Budget Recommendations</span>
                         <span className="sm:hidden">Budget</span>
                         {!recsLoading && recommendations && recsCount > 0 ? (
-                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-800 border-blue-500 hover:bg-yellow-100 rounded-2xl shadow-none">
+                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-blue-100 text-blue-800 hover:bg-yellow-100 rounded-2xl shadow-none">
                                 {recsCount}
                             </Badge>
                         ) : null}
@@ -1143,7 +1051,7 @@ export default function AnalyticsDashboard() {
                         <span className="hidden sm:inline">Poor Performers</span>
                         <span className="sm:hidden">Poor</span>
                         {!poorAdsLoading && poorAds && poorAdsCount > 0 && (
-                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-red-100 text-red-700 border-red-500 hover:bg-red-100 rounded-2xl shadow-none">
+                            <Badge className="ml-1 text-xs px-1.5 py-0 bg-red-100 text-red-700 hover:bg-red-100 rounded-2xl shadow-none">
                                 {poorAdsCount}
                             </Badge>
                         )}
