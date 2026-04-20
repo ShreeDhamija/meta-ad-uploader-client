@@ -19,6 +19,7 @@ import { useAppData } from "@/lib/AppContext"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import { cn } from "@/lib/utils"
 import { Search } from "lucide-react"
+import { logPopupDebug } from "@/lib/popupDebug"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -61,6 +62,10 @@ export default function AdAccountSelectionPopup({ isOpen, onClose, onSave, selec
 
         setIsLoading(true)
         try {
+            logPopupDebug("AdAccountSelectionPopup.handleSave", {
+                selectedAccountIds,
+                selectedAdAccountIds,
+            }, { trace: true });
             const response = await fetch(`${API_BASE_URL}/settings/save`, {
                 method: 'POST',
                 headers: {

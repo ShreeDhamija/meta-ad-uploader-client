@@ -19,6 +19,7 @@ import useSubscription from "@/lib/useSubscriptionSettings"
 import { saveSettings } from "@/lib/saveSettings"
 import AdAccountSelectionPopup from "../components/AdAccountSelectionPopup"
 import { useIntercom } from "@/lib/useIntercom";
+import { logPopupDebug } from "@/lib/popupDebug";
 import DesktopIcon from '@/assets/Desktop.webp';
 import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -318,6 +319,13 @@ export default function Home() {
     useEffect(() => {
         if (!isLoggedIn || loading) return
         if (!hasSeenOnboarding) {
+            logPopupDebug("Home.showOnboardingPopup", {
+                hasSeenOnboarding,
+                hasSeenSettingsOnboarding,
+                hasSeenPowerupPopup,
+                hasSeenAnalyticsHomePopup,
+                userCreatedAt,
+            });
             setShowOnboardingPopup(true)
         }
     }, [isLoggedIn, loading, hasSeenOnboarding])
@@ -330,6 +338,11 @@ export default function Home() {
         const isExistingUser = isValidCreatedAt && parsedCreatedAt < ANALYTICS_LAUNCH_AT
 
         if (isExistingUser && !hasSeenAnalyticsHomePopup) {
+            logPopupDebug("Home.showAnalyticsHomePopup", {
+                parsedCreatedAt,
+                userCreatedAt,
+                hasSeenAnalyticsHomePopup,
+            });
             setShowAnalyticsHomePopup(true)
         }
     }, [isLoggedIn, loading, showOnboardingPopup, hasSeenAnalyticsHomePopup, userCreatedAt])
@@ -347,6 +360,12 @@ export default function Home() {
         const isExistingUser = isValidCreatedAt && parsedCreatedAt < POWERUP_LAUNCH_AT
 
         if (isExistingUser && !hasSeenPowerupPopup) {
+            logPopupDebug("Home.showPowerupPopup.auto", {
+                parsedCreatedAt,
+                userCreatedAt,
+                hasSeenPowerupPopup,
+                hasSeenAnalyticsHomePopup,
+            });
             setShowPowerupPopup(true)
         }
     }, [isLoggedIn, loading, showOnboardingPopup, hasSeenAnalyticsHomePopup, hasSeenPowerupPopup, userCreatedAt])
@@ -354,6 +373,10 @@ export default function Home() {
     useEffect(() => {
         if (!showPowerupPopup || hasMarkedPowerupPopupSeenRef.current) return
 
+        logPopupDebug("Home.markPowerupPopupSeen.effect", {
+            showPowerupPopup,
+            hasSeenPowerupPopup,
+        });
         hasMarkedPowerupPopupSeenRef.current = true
         markPowerupPopupSeen()
     }, [showPowerupPopup])
@@ -546,6 +569,10 @@ export default function Home() {
 
 
     const handleCloseOnboarding = () => {
+        logPopupDebug("Home.handleCloseOnboarding", {
+            hasSeenOnboarding,
+            hasSeenSettingsOnboarding,
+        }, { trace: true });
         setShowOnboardingPopup(false) // closes instantly
 
         fetch(`${API_BASE_URL}/settings/save`, {
@@ -564,6 +591,9 @@ export default function Home() {
 
     async function markPowerupPopupSeen() {
         try {
+            logPopupDebug("Home.markPowerupPopupSeen", {
+                hasSeenPowerupPopup,
+            }, { trace: true });
             await saveSettings({
                 globalSettings: { hasSeenPowerupPopup: true },
             })
@@ -575,11 +605,17 @@ export default function Home() {
     }
 
     const handleClosePowerupPopup = () => {
+        logPopupDebug("Home.handleClosePowerupPopup", {
+            hasSeenPowerupPopup,
+        });
         setShowPowerupPopup(false)
     }
 
     const markAnalyticsHomePopupSeen = async () => {
         try {
+            logPopupDebug("Home.markAnalyticsHomePopupSeen", {
+                hasSeenAnalyticsHomePopup,
+            }, { trace: true });
             await saveSettings({
                 globalSettings: { hasSeenAnalyticsHomePopup: true },
             })
@@ -591,11 +627,17 @@ export default function Home() {
     }
 
     const handleCloseAnalyticsHomePopup = async () => {
+        logPopupDebug("Home.handleCloseAnalyticsHomePopup", {
+            hasSeenAnalyticsHomePopup,
+        });
         setShowAnalyticsHomePopup(false)
         await markAnalyticsHomePopupSeen()
     }
 
     const handleCheckOutAnalytics = () => {
+        logPopupDebug("Home.handleCheckOutAnalytics", {
+            hasSeenAnalyticsHomePopup,
+        }, { trace: true });
         setShowAnalyticsHomePopup(false)
         navigate("/analytics")
         markAnalyticsHomePopupSeen()
@@ -1562,6 +1604,10 @@ export default function Home() {
                     onImport={handleOnboardingImport}
                     hasAnySettings={hasAnyAdAccountSettings}  // PASS THIS
                     onGoToSettings={() => {
+                        logPopupDebug("Home.onGoToSettings", {
+                            hasSeenOnboarding,
+                            hasSeenSettingsOnboarding,
+                        }, { trace: true });
 
                         try {
                             // Navigate FIRST, before unmounting the component                                

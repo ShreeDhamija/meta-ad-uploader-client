@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Groupads from '@/assets/icons/groupads.svg?react';
 import { v4 as uuidv4 } from 'uuid';
+import { logPopupDebug } from '@/lib/popupDebug';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
 
@@ -593,6 +594,11 @@ export default function MediaPreview({
             variant="outline"
             size="sm"
             onClick={() => {
+              logPopupDebug("MediaPreview.splitAdData.click", {
+                variantsLength: variants.length,
+                hasSeenPowerupPopup,
+              }, { trace: true });
+
               if (variants.length === 1) {
                 if (!hasSeenPowerupPopup) {
                   setShowPowerupPopup(true);

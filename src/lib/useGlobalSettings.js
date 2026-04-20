@@ -55,6 +55,7 @@
 // }
 
 import { useEffect, useState } from "react";
+import { logPopupDebug } from "@/lib/popupDebug";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function useGlobalSettings() {
@@ -68,10 +69,16 @@ export default function useGlobalSettings() {
 
     const fetchSettings = async () => {
         try {
+            logPopupDebug("useGlobalSettings.fetch.start");
+
             const res = await fetch(`${API_BASE_URL}/settings/global`, {
                 credentials: "include",
             });
             const data = await res.json();
+
+            logPopupDebug("useGlobalSettings.fetch.success", {
+                settings: data?.settings || null,
+            });
 
             setHasSeenOnboarding(data?.settings?.hasSeenOnboarding || false);
             setHasSeenSettingsOnboarding(data?.settings?.hasSeenSettingsOnboarding || false);
@@ -82,6 +89,7 @@ export default function useGlobalSettings() {
 
         } catch (err) {
             console.error("Failed to fetch global settings:", err);
+            logPopupDebug("useGlobalSettings.fetch.error", { error: err?.message || err });
             setHasSeenOnboarding(false);
             setSelectedAdAccountIds([]);
             setHasSeenSettingsOnboarding(false);
@@ -97,7 +105,10 @@ export default function useGlobalSettings() {
         fetchSettings();
 
         // Listen for updates and refetch
-        const handleUpdate = () => fetchSettings();
+        const handleUpdate = () => {
+            logPopupDebug("useGlobalSettings.globalSettingsUpdated");
+            fetchSettings();
+        };
         window.addEventListener('globalSettingsUpdated', handleUpdate);
 
         return () => window.removeEventListener('globalSettingsUpdated', handleUpdate);
