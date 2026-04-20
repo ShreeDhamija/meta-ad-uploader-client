@@ -1229,7 +1229,7 @@ transition-all duration-150 hover:!bg-black
                         onClick={() => handleAdSetCheckboxChange(id, false)}
                         className="flex h-4 w-4 items-center justify-center"
                       >
-                        <CheckBlackIcon className="w-3 h-3" />
+                        <CheckBlackIcon className="w-4.5 h-4.5" />
                       </button>
                       <span className="text-gray-800 text-xs break-all">{adset ? adset.name : id}</span>
                     </label>
