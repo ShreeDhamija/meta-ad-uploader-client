@@ -24,7 +24,7 @@ import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
 const ANALYTICS_LAUNCH_AT = new Date("2026-04-09T12:00:00+05:30");
-const POWERUP_LAUNCH_AT = new Date("2026-04-15T00:00:00+05:30");
+const POWERUP_LAUNCH_AT = new Date("2026-04-20T12:20:00+05:30");
 const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
 const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
 

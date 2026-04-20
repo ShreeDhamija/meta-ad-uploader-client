@@ -274,27 +274,8 @@ export default function AdAccountSettings({
     }
   });
 
-  // Refresh functions
-  // const refreshAdAccounts = useCallback(async () => {
-  //   setIsLoading(true)
-  //   setIsLoadingAdAccounts(true)
-  //   try {
-  //     const res = await fetch(`${API_BASE_URL}/auth/fetch-ad-accounts`, {
-  //       credentials: "include",
-  //     })
-  //     const data = await res.json()
-  //     if (data.success && data.adAccounts) {
-  //       setAdAccounts(data.adAccounts)
-  //       toast.success("Ad accounts refreshed successfully!")
-  //     }
-  //   } catch (err) {
-  //     toast.error(`Failed to fetch ad accounts: ${err.message || "Unknown error"}`)
-  //     console.error("Failed to fetch ad accounts:", err)
-  //   } finally {
-  //     setIsLoading(false)
-  //     setIsLoadingAdAccounts(false)
-  //   }
-  // });
+
+
 
   const refreshAdAccounts = async () => {
     try {
@@ -527,73 +508,73 @@ export default function AdAccountSettings({
                   <PopoverTrigger asChild>
                     {triggerButton}
                   </PopoverTrigger>
-              <PopoverContent
-                className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-2xl"
-                align="start"
-                sideOffset={4}
-                side="bottom"
-                avoidCollisions={false}
-                style={{
-                  minWidth: "var(--radix-popover-trigger-width)",
-                  width: "auto",
-                  maxWidth: "var(--radix-popover-trigger-width)",
+                  <PopoverContent
+                    className="min-w-[--radix-popover-trigger-width] !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                    align="start"
+                    sideOffset={4}
+                    side="bottom"
+                    avoidCollisions={false}
+                    style={{
+                      minWidth: "var(--radix-popover-trigger-width)",
+                      width: "auto",
+                      maxWidth: "var(--radix-popover-trigger-width)",
 
-                }}
-              >
-                <Command
-                  filter={(value, search) => {
-                    return 1
-                  }}
-                  loop={false}
-                  defaultValue={selectedAdAccount}
-                >
-                  <CommandInput
-                    placeholder="Search ad accounts..."
-                    value={searchValue}
-                    onValueChange={setSearchValue}
-                    className="bg-transparent"
-                    wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
-                  />
-                  {/* <CommandEmpty>No ad account found.</CommandEmpty> */}
-                  <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
-                    {(isLoadingAdAccounts || adAccountsLoading) ? (
-                      <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
-                        <Loader className="h-4 w-4 animate-spin" />
-                        Fetching ad accounts...
-                      </div>
-                    ) : (
-                      <CommandGroup>
-                        {filteredAccounts.length > 0 ? (
-                          filteredAccounts.map((acct) => (
-                            <CommandItem
-                              key={acct.id}
-                              value={acct.id}
-                              onSelect={() => {
-                                handleAdAccountChange(acct.id)
-                                setOpen(false)
-                              }}
-                              className={cn(
-                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                "data-[selected=true]:bg-gray-100",
-                                selectedAdAccount === acct.id && "bg-gray-100 rounded-2xl font-semibold",
-                                "hover:bg-gray-100",
-                              )}
-                              data-selected={acct.id === selectedAdAccount}
-                            >
-                              {acct.name || acct.id}
-                            </CommandItem>
-                          ))
+                    }}
+                  >
+                    <Command
+                      filter={(value, search) => {
+                        return 1
+                      }}
+                      loop={false}
+                      defaultValue={selectedAdAccount}
+                    >
+                      <CommandInput
+                        placeholder="Search ad accounts..."
+                        value={searchValue}
+                        onValueChange={setSearchValue}
+                        className="bg-transparent"
+                        wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
+                      />
+                      {/* <CommandEmpty>No ad account found.</CommandEmpty> */}
+                      <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
+                        {(isLoadingAdAccounts || adAccountsLoading) ? (
+                          <div className="flex items-center justify-center py-6 gap-2 text-sm text-gray-500">
+                            <Loader className="h-4 w-4 animate-spin" />
+                            Fetching ad accounts...
+                          </div>
                         ) : (
-                          <CommandItem disabled className="opacity-50 cursor-not-allowed">
-                            No ad account found.
-                          </CommandItem>
+                          <CommandGroup>
+                            {filteredAccounts.length > 0 ? (
+                              filteredAccounts.map((acct) => (
+                                <CommandItem
+                                  key={acct.id}
+                                  value={acct.id}
+                                  onSelect={() => {
+                                    handleAdAccountChange(acct.id)
+                                    setOpen(false)
+                                  }}
+                                  className={cn(
+                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                    "data-[selected=true]:bg-gray-100",
+                                    selectedAdAccount === acct.id && "bg-gray-100 rounded-2xl font-semibold",
+                                    "hover:bg-gray-100",
+                                  )}
+                                  data-selected={acct.id === selectedAdAccount}
+                                >
+                                  {acct.name || acct.id}
+                                </CommandItem>
+                              ))
+                            ) : (
+                              <CommandItem disabled className="opacity-50 cursor-not-allowed">
+                                No ad account found.
+                              </CommandItem>
+                            )}
+                          </CommandGroup>
                         )}
-                      </CommandGroup>
-                    )}
-                  </CommandList>
-                </Command>
+                      </CommandList>
+                    </Command>
 
-              </PopoverContent>
+                  </PopoverContent>
                 </Popover>
               );
             })()}
@@ -1242,16 +1223,14 @@ transition-all duration-150 hover:!bg-black
                       key={id}
                       className="inline-flex items-center gap-2 bg-white rounded-2xl border border-gray-300 px-4 py-2 cursor-pointer hover:bg-gray-50"
                     >
-                      <Checkbox
-                        id={`selected-adset-${id}`}
-                        checked={true}
-                        onCheckedChange={() => handleAdSetCheckboxChange(id, false)}
-                        className="w-4 h-4 p-0 bg-white border border-gray-300 rounded-2xl"
+                      <button
+                        type="button"
+                        aria-label={`Remove ${adset ? adset.name : id}`}
+                        onClick={() => handleAdSetCheckboxChange(id, false)}
+                        className="flex h-4 w-4 items-center justify-center"
                       >
-                        <Checkbox.Indicator className="flex items-center justify-center">
-                          <CheckBlackIcon className="w-3 h-3" />
-                        </Checkbox.Indicator>
-                      </Checkbox>
+                        <CheckBlackIcon className="w-3 h-3" />
+                      </button>
                       <span className="text-gray-800 text-xs break-all">{adset ? adset.name : id}</span>
                     </label>
                   )

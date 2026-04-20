@@ -215,7 +215,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
       {/* Selection checkbox for placement customization - only show when NOT grouped */}
       {isSelectable && (
         <div
-          className={`absolute z-20 ${isCarouselAd ? 'top-1.5 right-2' : 'top-1 left-1'}`}
+          className={`absolute z-20 ${isCarouselAd ? 'top-1 right-2' : 'top-1 left-1'}`}
           onClick={(e) => e.stopPropagation()}
         >
           <Checkbox
