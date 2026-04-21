@@ -7770,7 +7770,7 @@ export default function AdCreationForm({
                   </div>
                 )}
 
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <Label className="block">Upload Media</Label>
 
@@ -7801,59 +7801,58 @@ export default function AdCreationForm({
                       )}
                     </div>
                   </div>
-                </div>
+                  <div className="mb-2 flex gap-2">
+                    {/* Google Drive */}
+                    <div className="flex-1">
+                      <Button
+                        type="button"
+                        onClick={handleDriveClick}
+                        className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
+                      >
+                        <img
+                          src="https://api.withblip.com/googledrive.png"
+                          alt="Drive Icon"
+                          className="h-4 w-4"
+                        />
+                        Choose Files from Google Drive
+                      </Button>
 
-                <div className="flex gap-2 mt-4 mb-2">
-                  {/* Google Drive */}
-                  <div className="flex-1">
-                    <Button
-                      type="button"
-                      onClick={handleDriveClick}
-                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
-                    >
-                      <img
-                        src="https://api.withblip.com/googledrive.png"
-                        alt="Drive Icon"
-                        className="h-4 w-4"
-                      />
-                      Choose Files from Google Drive
-                    </Button>
-
-                    <div className="mt-0.5 text-left text-xs text-gray-500 whitespace-nowrap">
-                      Google Drive and Dropbox Files upload 5X faster
+                      <div className="mt-0.5 text-left text-xs text-gray-500 whitespace-nowrap">
+                        Google Drive and Dropbox Files upload 5X faster
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Dropbox */}
-                  <div className="flex-1">
-                    <Button
-                      type="button"
-                      onClick={handleDropboxClick}
-                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
-                    >
-                      <img
-                        src={DropboxIcon}
-                        alt="Dropbox Icon"
-                        className="h-4 w-4"
-                      />
-                      Choose Files from Dropbox
-                    </Button>
-                  </div>
+                    {/* Dropbox */}
+                    <div className="flex-1">
+                      <Button
+                        type="button"
+                        onClick={handleDropboxClick}
+                        className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
+                      >
+                        <img
+                          src={DropboxIcon}
+                          alt="Dropbox Icon"
+                          className="h-4 w-4"
+                        />
+                        Choose Files from Dropbox
+                      </Button>
+                    </div>
 
-                  {/* Frame.io */}
-                  <div className="flex-1">
-                    <Button
-                      type="button"
-                      onClick={handleFrameioClick}
-                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
-                    >
-                      <img
-                        src={FrameIcon}
-                        alt="Frame.io Icon"
-                        className="h-4 w-4 rounded-sm object-cover"
-                      />
-                      Choose Files from Frame.io
-                    </Button>
+                    {/* Frame.io */}
+                    <div className="flex-1">
+                      <Button
+                        type="button"
+                        onClick={handleFrameioClick}
+                        className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
+                      >
+                        <img
+                          src={FrameIcon}
+                          alt="Frame.io Icon"
+                          className="h-4 w-4 rounded-sm object-cover"
+                        />
+                        Choose Files from Frame.io
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
