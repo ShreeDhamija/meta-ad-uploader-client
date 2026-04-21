@@ -7869,7 +7869,7 @@ export default function AdCreationForm({
                           type="button"
                           size="sm"
                           className={cn(
-                            "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white shadow-xs",
+                            "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
                             formFieldChrome
                           )}
                         >
