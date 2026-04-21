@@ -2321,69 +2321,16 @@ export default function AdCreationForm({
           credentials: 'include',
           body: JSON.stringify({
             accountId: file.frameioAccountId,
-            fileId: file.frameioId,
-            debugRaw: true,
-            probeCandidates: true
+            fileId: file.frameioId
           })
         });
         if (response.ok) {
           const data = await response.json();
-          console.log('[Frame.io aspect ratio] metadata response', {
-            fileId: file.frameioId,
-            accountId: file.frameioAccountId,
-            width: data.width || null,
-            height: data.height || null,
-            pickerThumbnail: file.pickerThumbnail || null,
-          });
           if (data.width && data.height) return data.width / data.height;
         }
-
-        if (file.pickerThumbnail) {
-          try {
-            const aspectRatio = await getImageUrlAspectRatio(file.pickerThumbnail);
-            console.log('[Frame.io aspect ratio] thumbnail fallback', {
-              fileId: file.frameioId,
-              accountId: file.frameioAccountId,
-              aspectRatio,
-              pickerThumbnail: file.pickerThumbnail,
-            });
-            return aspectRatio;
-          } catch (thumbnailError) {
-            console.warn('[Frame.io aspect ratio] thumbnail fallback failed', {
-              fileId: file.frameioId,
-              accountId: file.frameioAccountId,
-              error: thumbnailError?.message || thumbnailError,
-            });
-          }
-        }
-
-        console.warn('[Frame.io aspect ratio] using default fallback', {
-          fileId: file.frameioId,
-          accountId: file.frameioAccountId,
-        });
         return 16 / 9;
       } catch (error) {
         console.error('Error getting Frame.io video metadata:', error);
-
-        if (file.pickerThumbnail) {
-          try {
-            const aspectRatio = await getImageUrlAspectRatio(file.pickerThumbnail);
-            console.log('[Frame.io aspect ratio] thumbnail fallback after metadata error', {
-              fileId: file.frameioId,
-              accountId: file.frameioAccountId,
-              aspectRatio,
-              pickerThumbnail: file.pickerThumbnail,
-            });
-            return aspectRatio;
-          } catch (thumbnailError) {
-            console.warn('[Frame.io aspect ratio] thumbnail fallback after metadata error failed', {
-              fileId: file.frameioId,
-              accountId: file.frameioAccountId,
-              error: thumbnailError?.message || thumbnailError,
-            });
-          }
-        }
-
         return 16 / 9;
       }
     }
@@ -2460,21 +2407,6 @@ export default function AdCreationForm({
     }
     return null; // Not a video file
   };
-
-  const getImageUrlAspectRatio = useCallback((src) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-          resolve(img.naturalWidth / img.naturalHeight);
-        } else {
-          reject(new Error('Image loaded without dimensions'));
-        }
-      };
-      img.onerror = () => reject(new Error('Failed to load thumbnail image'));
-      img.src = src;
-    });
-  }, []);
 
 
 
