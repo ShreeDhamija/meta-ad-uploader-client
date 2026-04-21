@@ -8400,7 +8400,7 @@ export default function AdCreationForm({
               <button
                 type="button"
                 onClick={() => setShowFrameioConnectHelp(prev => !prev)}
-                className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+                className="inline-flex items-start gap-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
               >
                 What to do if your Frame account is not connected to Adobe / Not sure if it is.
                 <ChevronDown className={cn("h-4 w-4 transition-transform", showFrameioConnectHelp && "rotate-180")} />
@@ -8409,9 +8409,9 @@ export default function AdCreationForm({
 
             {showFrameioConnectHelp && (
               <div className="mt-3 rounded-2xl bg-blue-50 p-4 text-sm text-blue-900">
-                <p>In Frame.io go to <br></br> Avatar → Settings → Profile → Authentication → Connect next to Adobe Authentication.</p>
+                <p>In Frame.io go to <br></br> <span className="font-bold">Avatar → Settings → Profile → Authentication → Connect next to Adobe Authentication.</span></p>
                 <p className="mt-2">Your Adobe and Frame emails must match. </p>
-                <p>If Connect Option is missing, it could be due to SSO or Google sign-in being enabled.<br></br>You will have to disbale those.</p>
+                <p className="mt-2">If Connect Option is missing, it could be due to SSO or Google sign-in being enabled. You will have to disbale those.</p>
               </div>
             )}
 
