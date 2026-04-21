@@ -235,7 +235,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
         <DialogPrimitive.Content
           onOpenAutoFocus={(event) => event.preventDefault()}
           className={cn(
-            "fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 border-0 bg-[#FFFFFF] px-5 py-5 shadow-xl transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 focus:outline-none sm:rounded-[28px]"
+            "fixed left-1/2 top-1/2 z-50 flex w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 border-0 bg-[#FFFFFF] px-5 py-5 shadow-xl transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 focus:outline-none max-h-[min(625px,calc(100vh-2rem))] sm:rounded-[28px]"
           )}
         >
           <DialogPrimitive.Close className="absolute right-5 top-5 rounded-full p-2 text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2">
@@ -291,7 +291,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
           </div>
 
           {/* List */}
-          <ScrollArea className="flex-1 overflow-hidden rounded-[20px] border border-[#E2E2E2] bg-[#F0F0F0]">
+          <ScrollArea className="min-h-0 flex-1 overflow-hidden rounded-[20px] border border-[#E2E2E2] bg-[#F0F0F0]">
             <div className="divide-y divide-[#E1E1E1]">
               {loading && (
                 <div className="flex items-center justify-center py-8">
