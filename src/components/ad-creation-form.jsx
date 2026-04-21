@@ -7802,7 +7802,7 @@ export default function AdCreationForm({
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-2 mb-4">
+                <div className="flex gap-2 mt-2 mb-2">
                   {/* Google Drive */}
                   <div className="flex-1">
                     <Button
