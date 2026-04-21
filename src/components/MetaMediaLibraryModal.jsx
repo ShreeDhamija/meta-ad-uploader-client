@@ -115,6 +115,8 @@ export default function MetaMediaLibraryModal({
     instagramAccountId,
     selectedIgOrganicPosts = [],
     setSelectedIgOrganicPosts = () => { },
+    renderTrigger,
+    enabledSources = ['instagram', 'meta_library'],
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [mediaSource, setMediaSource] = useState('instagram');
@@ -426,7 +428,31 @@ export default function MetaMediaLibraryModal({
 
     const selectionCount =
         mediaSource === 'meta_library' ? selectedMetaFiles.length : selectedIgPosts.length;
+
+    const openWithSource = (source) => {
+        if (!adAccountId) {
+            toast.error("Please select an ad account");
+            return;
+        }
+        if (source === 'instagram' && !instagramAccountId) {
+            toast.error('Please select an Instagram account first');
+            return;
+        }
+        setMediaSource(source);
+        setSelectedMetaFiles([]);
+        setSelectedIgPosts([]);
+        setIsOpen(true);
+        if (source === 'meta_library') {
+            fetchMetaLibrary();
+        } else {
+            fetchInstagramPosts();
+        }
+    };
+
     if (!isOpen) {
+        if (renderTrigger) {
+            return renderTrigger(openWithSource);
+        }
         return (
             <div className="p-[1.5px] rounded-2xl bg-gradient-to-r from-blue-400 to-purple-400 shadow-xs">
                 <Button
@@ -471,18 +497,20 @@ export default function MetaMediaLibraryModal({
                         {mediaSource === 'meta_library' ? 'Meta Media Library' : 'Instagram Posts'}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
-                        <Tabs value={mediaSource} onValueChange={handleSourceChange}>
-                            <TabsList className="h-10 rounded-full bg-gray-100 p-1">
-                                <TabsTrigger value="instagram" className="gap-2 rounded-xl">
-                                    <img src={Instagram} className="h-4 w-4 object-contain" alt="" aria-hidden="true" />
-                                    Instagram Posts
-                                </TabsTrigger>
-                                <TabsTrigger value="meta_library" className="gap-2 rounded-xl">
-                                    <FolderOpen className="h-4 w-4" />
-                                    Meta Media Library
-                                </TabsTrigger>
-                            </TabsList>
-                        </Tabs>
+                        {enabledSources.length > 1 && (
+                            <Tabs value={mediaSource} onValueChange={handleSourceChange}>
+                                <TabsList className="h-10 rounded-full bg-gray-100 p-1">
+                                    <TabsTrigger value="instagram" className="gap-2 rounded-xl">
+                                        <img src={Instagram} className="h-4 w-4 object-contain" alt="" aria-hidden="true" />
+                                        Instagram Posts
+                                    </TabsTrigger>
+                                    <TabsTrigger value="meta_library" className="gap-2 rounded-xl">
+                                        <FolderOpen className="h-4 w-4" />
+                                        Meta Media Library
+                                    </TabsTrigger>
+                                </TabsList>
+                            </Tabs>
+                        )}
                         <Button
                             type="button"
                             variant="outline"

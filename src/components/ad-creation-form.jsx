@@ -7,6 +7,8 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate, deleteCopyTemplates } from "@/lib/deleteCopyTemplate"
+import { saveSettings } from "@/lib/saveSettings"
+import useGlobalSettings from "@/lib/useGlobalSettings"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,6 +36,9 @@ import FacebookIcon from '@/assets/icons/fb.svg?react';
 import InstagramIcon from '@/assets/icons/ig.svg?react';
 import DropboxIcon from '@/assets/Dropbox.png';
 import FrameIcon from '@/assets/icons/Frame.webp';
+import DesktopIcon from '@/assets/Desktop.webp';
+import MetaIcon from '@/assets/icons/Meta2.svg';
+import IGColorIcon from '@/assets/icons/IGColor.webp';
 import LabelIcon from '@/assets/icons/label.svg?react';
 import TemplateIcon from '@/assets/icons/file.svg?react';
 import LinkIcon from '@/assets/icons/link.svg?react';
@@ -47,6 +52,52 @@ import QueueIcon from '@/assets/icons/queue.svg?react';
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+const UPLOAD_SOURCE_OPTIONS = [
+  {
+    id: 'local',
+    name: 'Local PC',
+    icon: DesktopIcon,
+    fullLabel: 'Local PC',
+    compactLabel: 'Local PC',
+  },
+  {
+    id: 'drive',
+    name: 'Google Drive',
+    icon: 'https://api.withblip.com/googledrive.png',
+    fullLabel: 'Choose Files from Google Drive',
+    compactLabel: 'Google Drive',
+  },
+  {
+    id: 'dropbox',
+    name: 'Dropbox',
+    icon: DropboxIcon,
+    fullLabel: 'Choose Files from Dropbox',
+    compactLabel: 'Dropbox',
+  },
+  {
+    id: 'frameio',
+    name: 'Frame.io',
+    icon: FrameIcon,
+    iconClass: 'h-5 w-5 rounded-sm object-cover',
+    fullLabel: 'Choose Files from Frame.io',
+    compactLabel: 'Frame.io',
+  },
+  {
+    id: 'instagram',
+    name: 'Instagram Posts',
+    icon: IGColorIcon,
+    fullLabel: 'Import from Instagram',
+    compactLabel: 'Instagram',
+  },
+  {
+    id: 'meta_library',
+    name: 'Ads Manager Media Library',
+    icon: MetaIcon,
+    fullLabel: 'Import from Meta',
+    compactLabel: 'Meta Library',
+  },
+];
 
 
 
@@ -617,6 +668,44 @@ export default function AdCreationForm({
   const [isCancelling, setIsCancelling] = useState(false);
 
   const [preserveMedia, setPreserveMedia] = useState(false);
+
+  // Upload sources config — which upload options to display
+  const {
+    uploadSources: globalUploadSources,
+    setUploadSources: setGlobalUploadSources,
+  } = useGlobalSettings();
+  const [uploadSources, setUploadSourcesLocal] = useState(globalUploadSources);
+  const [uploadSourcesDirty, setUploadSourcesDirty] = useState(false);
+  const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false);
+
+  useEffect(() => {
+    if (!uploadSourcesDirty) {
+      setUploadSourcesLocal(globalUploadSources);
+    }
+  }, [globalUploadSources, uploadSourcesDirty]);
+
+  const toggleUploadSource = useCallback((id) => {
+    setUploadSourcesDirty(true);
+    setUploadSourcesLocal((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
+  }, []);
+
+  const handleUploadSourcesOpenChange = useCallback(async (open) => {
+    setUploadSourcesOpen(open);
+    if (!open && uploadSourcesDirty) {
+      const next = uploadSources;
+      setUploadSourcesDirty(false);
+      setGlobalUploadSources(next);
+      try {
+        await saveSettings({ globalSettings: { uploadSources: next } });
+        window.dispatchEvent(new Event('globalSettingsUpdated'));
+      } catch (err) {
+        console.error('Failed to save upload sources:', err);
+        toast.error('Failed to save upload sources');
+      }
+    }
+  }, [uploadSources, uploadSourcesDirty, setGlobalUploadSources]);
 
   const [liveProgress, setLiveProgress] = useState({
     completed: 0,
@@ -7774,86 +7863,129 @@ export default function AdCreationForm({
                   <div className="flex items-center justify-between">
                     <Label className="block">Upload Media</Label>
 
-                    <MetaMediaLibraryModal
-                      adAccountId={selectedAdAccount}
-                      isLoggedIn={isLoggedIn}
-                      importedFiles={importedFiles}
-                      setImportedFiles={setImportedFiles}
-                      instagramAccountId={instagramAccountId}
-                      selectedIgOrganicPosts={selectedIgOrganicPosts}
-                      setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
-                    />
+                    <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="rounded-xl h-9 px-3 flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white"
+                        >
+                          <CogIcon className="h-4 w-4" />
+                          Manage Upload Sources
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                        <div className="flex flex-col">
+                          {UPLOAD_SOURCE_OPTIONS.map((src) => {
+                            const checked = uploadSources.includes(src.id);
+                            return (
+                              <label
+                                key={src.id}
+                                className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-50"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={() => toggleUploadSource(src.id)}
+                                />
+                                <img src={src.icon} alt="" className="h-4 w-4 object-contain" />
+                                <span className="text-sm text-gray-800">{src.name}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
-                  <div
-                    {...getRootProps()}
-                    className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
-                      }`}
-                  >
-                    <input {...getInputProps()} disabled={!isLoggedIn} />
-                    <div className="flex flex-col items-center gap-2">
-                      <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
-                      {isDragActive ? (
-                        <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
-                      ) : (
-                        <p className="text-sm text-gray-500 group-hover:text-black">
-                          Drag & drop files here, or click to select files
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mb-2 flex gap-2">
-                    {/* Google Drive */}
-                    <div className="flex-1">
-                      <Button
-                        type="button"
-                        onClick={handleDriveClick}
-                        className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
-                      >
-                        <img
-                          src="https://api.withblip.com/googledrive.png"
-                          alt="Drive Icon"
-                          className="h-4 w-4"
-                        />
-                        Choose Files from Google Drive
-                      </Button>
 
-                      <div className="mt-0.5 text-left text-xs text-gray-500 whitespace-nowrap">
-                        Google Drive and Dropbox Files upload 5X faster
+                  {uploadSources.includes('local') && (
+                    <div
+                      {...getRootProps()}
+                      className={`group cursor-pointer border-2 border-dashed rounded-2xl p-6 text-center transition-colors ${isDragActive ? "border-primary bg-primary/5" : "border-gray-300 hover:border-primary/50"
+                        }`}
+                    >
+                      <input {...getInputProps()} disabled={!isLoggedIn} />
+                      <div className="flex flex-col items-center gap-2">
+                        <Upload className="h-6 w-6 text-gray-500 group-hover:text-black" />
+                        {isDragActive ? (
+                          <p className="text-sm text-gray-500 group-hover:text-black">Drop files here ...</p>
+                        ) : (
+                          <p className="text-sm text-gray-500 group-hover:text-black">
+                            Drag & drop files here, or click to select files
+                          </p>
+                        )}
                       </div>
                     </div>
+                  )}
 
-                    {/* Dropbox */}
-                    <div className="flex-1">
-                      <Button
-                        type="button"
-                        onClick={handleDropboxClick}
-                        className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
-                      >
-                        <img
-                          src={DropboxIcon}
-                          alt="Dropbox Icon"
-                          className="h-4 w-4"
-                        />
-                        Choose Files from Dropbox
-                      </Button>
-                    </div>
+                  {(() => {
+                    const rowSources = uploadSources.filter((s) => s !== 'local');
+                    if (rowSources.length === 0) return null;
+                    const mode = rowSources.length <= 2 ? 'full' : rowSources.length === 3 ? 'compact' : 'icon';
 
-                    {/* Frame.io */}
-                    <div className="flex-1">
-                      <Button
-                        type="button"
-                        onClick={handleFrameioClick}
-                        className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
-                      >
+                    const renderButton = (src, onClick) => {
+                      const fullLabel = src.fullLabel;
+                      const compactLabel = src.compactLabel;
+                      const iconImg = (
                         <img
-                          src={FrameIcon}
-                          alt="Frame.io Icon"
-                          className="h-4 w-4 rounded-sm object-cover"
+                          src={src.icon}
+                          alt={src.name}
+                          className={src.iconClass || 'h-4 w-4 object-contain'}
                         />
-                        Choose Files from Frame.io
-                      </Button>
-                    </div>
-                  </div>
+                      );
+                      return (
+                        <Button
+                          type="button"
+                          onClick={onClick}
+                          className="w-full bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3"
+                        >
+                          {iconImg}
+                          {mode === 'full' && <span className="truncate">{fullLabel}</span>}
+                          {mode === 'compact' && <span className="truncate">{compactLabel}</span>}
+                        </Button>
+                      );
+                    };
+
+                    return (
+                      <div className="mb-2 flex gap-2">
+                        {rowSources.map((id) => {
+                          const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
+                          if (!src) return null;
+
+                          if (id === 'instagram' || id === 'meta_library') {
+                            return (
+                              <div className="flex-1" key={id}>
+                                <MetaMediaLibraryModal
+                                  adAccountId={selectedAdAccount}
+                                  isLoggedIn={isLoggedIn}
+                                  importedFiles={importedFiles}
+                                  setImportedFiles={setImportedFiles}
+                                  instagramAccountId={instagramAccountId}
+                                  selectedIgOrganicPosts={selectedIgOrganicPosts}
+                                  setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
+                                  enabledSources={uploadSources.filter((s) => s === 'instagram' || s === 'meta_library')}
+                                  renderTrigger={(openWithSource) =>
+                                    renderButton(src, () => openWithSource(id))
+                                  }
+                                />
+                              </div>
+                            );
+                          }
+
+                          const clickHandler =
+                            id === 'drive' ? handleDriveClick :
+                              id === 'dropbox' ? handleDropboxClick :
+                                id === 'frameio' ? handleFrameioClick :
+                                  () => { };
+
+                          return (
+                            <div className="flex-1" key={id}>
+                              {renderButton(src, clickHandler)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <FrameioPickerModal

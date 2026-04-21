@@ -65,6 +65,7 @@ export default function useGlobalSettings() {
     const [hasSeenAnalyticsHomePopup, setHasSeenAnalyticsHomePopup] = useState(false);
     const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false);
     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
+    const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox']);
 
     const fetchSettings = async () => {
         try {
@@ -79,6 +80,11 @@ export default function useGlobalSettings() {
             setHasSeenAnalyticsHomePopup(data?.settings?.hasSeenAnalyticsHomePopup || false);
             setHasSeenPowerupPopup(data?.settings?.hasSeenPowerupPopup || false);
             setSelectedAdAccountIds(data?.settings?.selectedAdAccountIds || [])
+            setUploadSources(
+                Array.isArray(data?.settings?.uploadSources)
+                    ? data.settings.uploadSources
+                    : ['local', 'drive', 'dropbox']
+            );
 
         } catch (err) {
             console.error("Failed to fetch global settings:", err);
@@ -88,6 +94,7 @@ export default function useGlobalSettings() {
             setHasSeenAnalyticsOnboarding(false);
             setHasSeenAnalyticsHomePopup(false);
             setHasSeenPowerupPopup(false);
+            setUploadSources(['local', 'drive', 'dropbox']);
         } finally {
             setLoading(false);
         }
@@ -115,5 +122,7 @@ export default function useGlobalSettings() {
         hasSeenPowerupPopup,
         setHasSeenPowerupPopup,
         selectedAdAccountIds,
+        uploadSources,
+        setUploadSources,
     };
 }
