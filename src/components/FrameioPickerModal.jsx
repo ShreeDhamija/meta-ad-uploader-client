@@ -1,11 +1,13 @@
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronRight, Film, Image as ImageIcon, Loader2, ArrowLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { ChevronRight, Film, Image as ImageIcon, Loader2, ArrowLeft, X } from "lucide-react";
 import FrameHeaderImage from "@/assets/icons/Frame.webp";
-import FolderIcon from "@/assets/icons/folder.svg?react";
+import BlueFolderIcon from "@/assets/icons/BlueFolder.svg?react";
 import { toast } from "sonner";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
@@ -194,183 +196,195 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] max-w-3xl flex flex-col gap-5 border-0 bg-[#FFFFFF] p-10 shadow-xl sm:rounded-[28px] data-[state=closed]:slide-out-to-left-0 data-[state=closed]:slide-out-to-top-[50%] data-[state=closed]:zoom-out-100 data-[state=open]:slide-in-from-left-0 data-[state=open]:slide-in-from-top-[50%] data-[state=open]:zoom-in-100">
-        <DialogHeader className="space-y-0">
-          <div className="flex items-center gap-4 pr-8">
-            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[18px] bg-white">
-              <img src={FrameHeaderImage} alt="Frame.io" className="h-full w-full object-cover" />
-            </div>
-            <DialogTitle className="text-[28px] font-semibold tracking-[-0.02em] text-[#111111]">
-              Select Media
-            </DialogTitle>
-          </div>
-        </DialogHeader>
-
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-3 text-sm text-[#5F5F5F]">
-          {stack.length > 1 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleBack}
-              className="h-9 rounded-full px-3 text-[#4D4D4D] hover:bg-[#F0F0F0] hover:text-[#111111]"
-            >
-              <ArrowLeft className="h-3 w-3 mr-1" /> Back
-            </Button>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#111111]/42 backdrop-blur-[2px] transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100" />
+        <DialogPrimitive.Content
+          className={cn(
+            "fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 border-0 bg-[#FFFFFF] px-10 py-5 shadow-xl transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 focus:outline-none sm:rounded-[28px]"
           )}
-          <div className="min-w-0 flex-1 overflow-x-auto">
-            <div className="flex min-w-max items-center gap-1 whitespace-nowrap pr-1">
-              {stack.map((entry, idx) => {
-                const isLast = idx === stack.length - 1;
+        >
+          <DialogPrimitive.Close className="absolute right-5 top-5 rounded-full p-2 text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+
+          <DialogHeader className="space-y-0">
+            <div className="flex items-center gap-4 pr-10">
+              <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-[18px] bg-white">
+                <img src={FrameHeaderImage} alt="Frame.io" className="h-full w-full object-cover" />
+              </div>
+              <DialogTitle className="text-[28px] font-semibold tracking-[-0.02em] text-[#111111]">
+                Select Media
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-3 text-sm text-[#5F5F5F]">
+            {stack.length > 1 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleBack}
+                className="h-9 rounded-full px-3 text-[#4D4D4D] hover:bg-[#F0F0F0] hover:text-[#111111]"
+              >
+                <ArrowLeft className="h-3 w-3 mr-1" /> Back
+              </Button>
+            )}
+            <div className="min-w-0 flex-1 overflow-x-auto">
+              <div className="flex min-w-max items-center gap-1 whitespace-nowrap pr-1">
+                {stack.map((entry, idx) => {
+                  const isLast = idx === stack.length - 1;
+
+                  return (
+                    <div key={idx} className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleBreadcrumbClick(idx)}
+                        title={entry.name}
+                        className={`max-w-[140px] truncate rounded-full px-2 py-1 transition-colors sm:max-w-[180px] ${isLast ? "bg-[#F0F0F0] font-medium text-[#111111]" : "text-[#5F5F5F] hover:bg-[#F0F0F0] hover:text-[#111111]"}`}
+                      >
+                        {entry.name}
+                      </button>
+                      {!isLast && <ChevronRight className="h-3 w-3 text-[#A3A3A3]" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* List */}
+          <ScrollArea className="flex-1 overflow-hidden rounded-[20px] border border-[#E2E2E2] bg-[#F0F0F0]">
+            <div className="divide-y divide-[#E1E1E1]">
+              {loading && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
+                </div>
+              )}
+
+              {error && !loading && (
+                <div className="p-4 text-sm text-red-600">{error}</div>
+              )}
+
+              {!loading && !error && items.length === 0 && (
+                <div className="p-4 text-sm text-[#6B7280]">No items.</div>
+              )}
+
+              {!loading && !error && items.map((item) => {
+                const folder = isFolder(item);
+                const navigable = isNavigable(item, current.kind);
+                const mediaOk = !navigable && isImageOrVideo(item);
+                const disabled = !navigable && !mediaOk;
+                const isSelected = !!selected[item.id];
+                const itemThumbnail = mediaOk
+                  ? getFrameioItemThumbnailUrl(item) || buildFrameioThumbnailProxyUrl(currentAccountId, item.id)
+                  : null;
 
                 return (
-                  <div key={idx} className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleBreadcrumbClick(idx)}
-                      title={entry.name}
-                      className={`max-w-[140px] truncate rounded-full px-2 py-1 transition-colors sm:max-w-[180px] ${isLast ? "bg-[#F0F0F0] font-medium text-[#111111]" : "text-[#5F5F5F] hover:bg-[#F0F0F0] hover:text-[#111111]"}`}
-                    >
-                      {entry.name}
-                    </button>
-                    {!isLast && <ChevronRight className="h-3 w-3 text-[#A3A3A3]" />}
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-4 px-4 py-2 transition-colors ${disabled ? "opacity-50" : "cursor-pointer hover:bg-[#E3E3E3]"} ${isSelected ? "bg-[#DCEBFF] hover:bg-[#D2E7FF]" : ""}`}
+                    onClick={() => {
+                      if (navigable) {
+                        if (current.kind === "accounts") {
+                          handleNavigate({ kind: "workspaces", accountId: item.id, name: item.display_name || item.name });
+                        } else if (current.kind === "workspaces") {
+                          handleNavigate({ kind: "projects", accountId: current.accountId, workspaceId: item.id, name: item.name });
+                        } else if (current.kind === "projects") {
+                          handleNavigate({ kind: "project-root", accountId: current.accountId, projectId: item.id, name: item.name });
+                        } else if (current.kind === "folder") {
+                          handleNavigate({ kind: "folder", accountId: current.accountId, projectId: current.projectId, folderId: item.id, name: item.name });
+                        }
+                      } else if (mediaOk) {
+                        toggleSelect(item, currentAccountId);
+                      }
+                    }}
+                  >
+                    {/* Thumb / icon */}
+                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(17,17,17,0.06)]">
+                      {(current.kind === "accounts" || current.kind === "workspaces" || current.kind === "projects") ? (
+                        <BlueFolderIcon className="h-5 w-5" />
+                      ) : folder ? (
+                        <BlueFolderIcon className="h-5 w-5" />
+                      ) : itemThumbnail ? (
+                        <img src={itemThumbnail} alt="" className="h-full w-full object-cover" />
+                      ) : (item.media_type || "").startsWith("video") ? (
+                        <Film className="h-5 w-5 text-[#6B7280]" />
+                      ) : (
+                        <ImageIcon className="h-5 w-5 text-[#6B7280]" />
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate text-sm font-medium text-[#111111]">{item.display_name || item.name}</div>
+                      {!navigable && current.kind === "folder" && (
+                        <div className="text-xs text-[#6B7280]">
+                          {(item.media_type || guessMime(item.name) || "").split("/")[0] || "file"}
+                          {(item.file_size || item.filesize) ? ` • ${formatBytes(item.file_size || item.filesize)}` : ""}
+                        </div>
+                      )}
+                    </div>
+
+                    {!navigable && mediaOk && (
+                      <div
+                        className="flex items-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(item, currentAccountId)}
+                          className="h-5 w-5 rounded-md border-[#C7C7C7] data-[state=checked]:border-[#2563EB] data-[state=checked]:bg-[#2563EB]"
+                        />
+                      </div>
+                    )}
+
+                    {navigable && <ChevronRight className="h-4 w-4 text-[#9CA3AF]" />}
                   </div>
                 );
               })}
-            </div>
-          </div>
-        </div>
 
-        {/* List */}
-        <ScrollArea className="flex-1 overflow-hidden rounded-[20px] border border-[#E2E2E2] bg-[#F0F0F0]">
-          <div className="divide-y divide-[#E1E1E1]">
-            {loading && (
-              <div className="flex items-center justify-center py-10">
-                <Loader2 className="h-5 w-5 animate-spin text-[#6B7280]" />
-              </div>
-            )}
-
-            {error && !loading && (
-              <div className="p-4 text-sm text-red-600">{error}</div>
-            )}
-
-            {!loading && !error && items.length === 0 && (
-              <div className="p-4 text-sm text-[#6B7280]">No items.</div>
-            )}
-
-            {!loading && !error && items.map((item) => {
-              const folder = isFolder(item);
-              const navigable = isNavigable(item, current.kind);
-              const mediaOk = !navigable && isImageOrVideo(item);
-              const disabled = !navigable && !mediaOk;
-              const isSelected = !!selected[item.id];
-              const itemThumbnail = mediaOk
-                ? getFrameioItemThumbnailUrl(item) || buildFrameioThumbnailProxyUrl(currentAccountId, item.id)
-                : null;
-
-              return (
-                <div
-                  key={item.id}
-                  className={`flex items-center gap-4 px-4 py-3 transition-colors ${disabled ? "opacity-50" : "cursor-pointer hover:bg-[#E3E3E3]"} ${isSelected ? "bg-[#DCEBFF] hover:bg-[#D2E7FF]" : ""}`}
-                  onClick={() => {
-                    if (navigable) {
-                      if (current.kind === "accounts") {
-                        handleNavigate({ kind: "workspaces", accountId: item.id, name: item.display_name || item.name });
-                      } else if (current.kind === "workspaces") {
-                        handleNavigate({ kind: "projects", accountId: current.accountId, workspaceId: item.id, name: item.name });
-                      } else if (current.kind === "projects") {
-                        handleNavigate({ kind: "project-root", accountId: current.accountId, projectId: item.id, name: item.name });
-                      } else if (current.kind === "folder") {
-                        handleNavigate({ kind: "folder", accountId: current.accountId, projectId: current.projectId, folderId: item.id, name: item.name });
-                      }
-                    } else if (mediaOk) {
-                      toggleSelect(item, currentAccountId);
-                    }
-                  }}
-                >
-                  {/* Thumb / icon */}
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(17,17,17,0.06)]">
-                    {(current.kind === "accounts" || current.kind === "workspaces" || current.kind === "projects") ? (
-                      <FolderIcon className="h-5 w-5 text-[#3478F6]" />
-                    ) : folder ? (
-                      <FolderIcon className="h-5 w-5 text-[#3478F6]" />
-                    ) : itemThumbnail ? (
-                      <img src={itemThumbnail} alt="" className="w-full h-full object-cover" />
-                    ) : (item.media_type || "").startsWith("video") ? (
-                      <Film className="h-5 w-5 text-[#6B7280]" />
-                    ) : (
-                      <ImageIcon className="h-5 w-5 text-[#6B7280]" />
-                    )}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate text-sm font-medium text-[#111111]">{item.display_name || item.name}</div>
-                    {!navigable && current.kind === "folder" && (
-                      <div className="text-xs text-[#6B7280]">
-                        {(item.media_type || guessMime(item.name) || "").split("/")[0] || "file"}
-                        {(item.file_size || item.filesize) ? ` • ${formatBytes(item.file_size || item.filesize)}` : ""}
-                      </div>
-                    )}
-                  </div>
-
-                  {!navigable && mediaOk && (
-                    <div
-                      className="flex items-center"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => toggleSelect(item, currentAccountId)}
-                        className="h-5 w-5 rounded-md border-[#C7C7C7] data-[state=checked]:border-[#2563EB] data-[state=checked]:bg-[#2563EB]"
-                      />
-                    </div>
-                  )}
-
-                  {navigable && <ChevronRight className="h-4 w-4 text-[#9CA3AF]" />}
+              {nextAfter && !loading && (
+                <div className="flex justify-center py-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="rounded-full border-[#D7D7D7] bg-white px-4 hover:bg-[#E3E3E3]"
+                  >
+                    {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load more"}
+                  </Button>
                 </div>
-              );
-            })}
+              )}
+            </div>
+          </ScrollArea>
 
-            {nextAfter && !loading && (
-              <div className="flex justify-center py-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLoadMore}
-                  disabled={loadingMore}
-                  className="rounded-full border-[#D7D7D7] bg-white px-4 hover:bg-[#E3E3E3]"
-                >
-                  {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load more"}
-                </Button>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-
-        <DialogFooter className="flex items-center justify-between border-t border-[#ECECEC] pt-5">
-          <div className="text-sm text-[#5F5F5F]">{selectedCount} selected</div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="h-11 rounded-full border-[#D7D7D7] bg-white px-6 text-[#111111] hover:bg-[#F3F3F3]"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleConfirm}
-              disabled={selectedCount === 0}
-              className="h-11 rounded-full bg-[#111111] px-6 text-white hover:bg-[#2563EB]"
-            >
-              Add Files
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
+          <DialogFooter className="flex items-center justify-between pt-2">
+            <div className="text-sm text-[#5F5F5F]">{selectedCount} selected</div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="h-11 rounded-full border-[#D7D7D7] bg-white px-6 text-[#111111] hover:bg-[#F3F3F3]"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={handleConfirm}
+                disabled={selectedCount === 0}
+                className="h-11 rounded-full bg-[#111111] px-6 text-white hover:bg-[#2563EB]"
+              >
+                Add Files
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
     </Dialog>
   );
 }
