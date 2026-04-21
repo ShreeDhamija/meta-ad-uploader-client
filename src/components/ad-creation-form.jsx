@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -7868,13 +7868,16 @@ export default function AdCreationForm({
                         <Button
                           type="button"
                           size="sm"
-                          className="rounded-xl h-9 px-3 flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white"
+                          className={cn(
+                            "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white shadow-xs",
+                            formFieldChrome
+                          )}
                         >
-                          <CogIcon className="h-4 w-4" />
+                          <CloudUpload className="h-4 w-4" />
                           Manage Upload Sources
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent align="end" className="bg-white rounded-xl p-2 w-80 border border-gray-200 shadow-lg">
+                      <PopoverContent align="end" className="bg-white rounded-xl p-2 w-72 border border-gray-200 shadow-lg">
                         <div className="flex flex-col">
                           {UPLOAD_SOURCE_OPTIONS.map((src) => {
                             const checked = uploadSources.includes(src.id);
