@@ -140,6 +140,13 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
     return item.type === "folder" || item.kind === "folder" || item._type === "folder";
   }, []);
 
+  const isNavigable = useCallback((item, viewKind) => {
+    if (viewKind === "accounts" || viewKind === "workspaces" || viewKind === "projects") {
+      return true;
+    }
+    return isFolder(item);
+  }, [isFolder]);
+
   const toggleSelect = useCallback((item, accountId) => {
     const id = item.id;
     setSelected(prev => {
@@ -230,8 +237,9 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
 
             {!loading && !error && items.map((item) => {
               const folder = isFolder(item);
-              const mediaOk = !folder && isImageOrVideo(item);
-              const disabled = !folder && !mediaOk;
+              const navigable = isNavigable(item, current.kind);
+              const mediaOk = !navigable && isImageOrVideo(item);
+              const disabled = !navigable && !mediaOk;
               const isSelected = !!selected[item.id];
 
               return (
@@ -239,7 +247,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                   key={item.id}
                   className={`flex items-center gap-3 px-2 py-2 rounded-md ${disabled ? "opacity-50" : "hover:bg-gray-100 cursor-pointer"} ${isSelected ? "bg-blue-50" : ""}`}
                   onClick={() => {
-                    if (folder) {
+                    if (navigable) {
                       if (current.kind === "accounts") {
                         handleNavigate({ kind: "workspaces", accountId: item.id, name: item.display_name || item.name });
                       } else if (current.kind === "workspaces") {
@@ -271,7 +279,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
 
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{item.display_name || item.name}</div>
-                    {!folder && current.kind === "folder" && (
+                    {!navigable && current.kind === "folder" && (
                       <div className="text-xs text-gray-500">
                         {(item.media_type || guessMime(item.name) || "").split("/")[0] || "file"}
                         {item.filesize ? ` • ${formatBytes(item.filesize)}` : ""}
@@ -279,7 +287,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                     )}
                   </div>
 
-                  {!folder && mediaOk && (
+                  {!navigable && mediaOk && (
                     <input
                       type="checkbox"
                       checked={isSelected}
@@ -289,7 +297,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                     />
                   )}
 
-                  {folder && <ChevronRight className="h-4 w-4 text-gray-400" />}
+                  {navigable && <ChevronRight className="h-4 w-4 text-gray-400" />}
                 </div>
               );
             })}
