@@ -52,6 +52,7 @@ import QueueIcon from '@/assets/icons/queue.svg?react';
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+const FRAMEIO_CONNECT_WARNING_SESSION_KEY = 'frameio_connect_warning_seen';
 
 const UPLOAD_SOURCE_OPTIONS = [
   {
@@ -631,6 +632,8 @@ export default function AdCreationForm({
   const [showFolderInput, setShowFolderInput] = useState(false);
   const [folderLinkValue, setFolderLinkValue] = useState("");
   const [isImportingFolder, setIsImportingFolder] = useState(false);
+  const [showFrameioConnectDialog, setShowFrameioConnectDialog] = useState(false);
+  const [showFrameioConnectHelp, setShowFrameioConnectHelp] = useState(false);
   const pickerInstanceRef = useRef(null);
 
   //gogle drive pickers
@@ -2291,22 +2294,7 @@ export default function AdCreationForm({
   const [frameioPickerOpen, setFrameioPickerOpen] = useState(false);
   const [frameioAccessToken, setFrameioAccessToken] = useState(null);
 
-  const handleFrameioClick = useCallback(async () => {
-    try {
-      const statusRes = await fetch(`${API_BASE_URL}/auth/frame/status`, {
-        credentials: 'include'
-      });
-      const statusData = await statusRes.json();
-
-      if (statusData.authenticated && statusData.accessToken) {
-        setFrameioAccessToken(statusData.accessToken);
-        setFrameioPickerOpen(true);
-        return;
-      }
-    } catch (err) {
-      console.warn("No valid Frame.io session, opening popup login.");
-    }
-
+  const launchFrameioAuthPopup = useCallback(() => {
     const width = 600;
     const height = 750;
     const left = window.screenX + (window.outerWidth - width) / 2;
@@ -2348,6 +2336,32 @@ export default function AdCreationForm({
 
     window.addEventListener("message", listener);
   }, []);
+
+  const handleFrameioClick = useCallback(async () => {
+    try {
+      const statusRes = await fetch(`${API_BASE_URL}/auth/frame/status`, {
+        credentials: 'include'
+      });
+      const statusData = await statusRes.json();
+
+      if (statusData.authenticated && statusData.accessToken) {
+        setFrameioAccessToken(statusData.accessToken);
+        setFrameioPickerOpen(true);
+        return;
+      }
+    } catch (err) {
+      console.warn("No valid Frame.io session, checking whether to show connect guidance first.");
+    }
+
+    const hasSeenWarning = sessionStorage.getItem(FRAMEIO_CONNECT_WARNING_SESSION_KEY) === 'true';
+    if (hasSeenWarning) {
+      launchFrameioAuthPopup();
+      return;
+    }
+
+    setShowFrameioConnectHelp(false);
+    setShowFrameioConnectDialog(true);
+  }, [launchFrameioAuthPopup]);
 
   const handleFrameioFilesSelected = useCallback((selected) => {
     // Each item: { frameioId, frameioAccountId, name, mimeType, size, thumbnailUrl, width, height }
@@ -8366,6 +8380,68 @@ export default function AdCreationForm({
                 ) : (
                   "Save"
                 )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showFrameioConnectDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/35"
+            onClick={() => {
+              setShowFrameioConnectDialog(false);
+              setShowFrameioConnectHelp(false);
+            }}
+          />
+          <div
+            className="relative w-[min(28rem,calc(100vw-2rem))] rounded-[28px] border border-gray-200 bg-white p-6 shadow-xl"
+            style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-gray-900">Connect Adobe Authentication</h3>
+              <p className="text-sm text-gray-600">
+                Frame.io needs Adobe Authentication connected before this picker can work.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowFrameioConnectHelp(prev => !prev)}
+                className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+              >
+                What to do if it is not connected
+                <ChevronDown className={cn("h-4 w-4 transition-transform", showFrameioConnectHelp && "rotate-180")} />
+              </button>
+            </div>
+
+            {showFrameioConnectHelp && (
+              <div className="mt-3 rounded-2xl bg-blue-50 p-4 text-sm text-blue-900">
+                <p>In Frame.io go to Avatar → Settings → Profile → Authentication → Connect next to Adobe Authentication.</p>
+                <p className="mt-2">Use the same email in Frame.io and Adobe. If Connect is missing, disable SSO or Google sign-in first.</p>
+              </div>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                className="rounded-xl"
+                onClick={() => {
+                  setShowFrameioConnectDialog(false);
+                  setShowFrameioConnectHelp(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="rounded-xl bg-blue-600 text-white hover:bg-blue-700"
+                onClick={() => {
+                  sessionStorage.setItem(FRAMEIO_CONNECT_WARNING_SESSION_KEY, 'true');
+                  setShowFrameioConnectDialog(false);
+                  setShowFrameioConnectHelp(false);
+                  launchFrameioAuthPopup();
+                }}
+              >
+                Continue to Sign In
               </Button>
             </div>
           </div>
