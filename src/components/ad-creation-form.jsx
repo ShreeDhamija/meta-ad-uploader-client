@@ -8400,7 +8400,7 @@ export default function AdCreationForm({
               <button
                 type="button"
                 onClick={() => setShowFrameioConnectHelp(prev => !prev)}
-                className="inline-flex items-start gap-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
+                className="inline-flex w-full items-start justify-start gap-1 text-left text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
               >
                 What to do if your Frame account is not connected to Adobe / Not sure if it is.
                 <ChevronDown className={cn("h-4 w-4 transition-transform", showFrameioConnectHelp && "rotate-180")} />
