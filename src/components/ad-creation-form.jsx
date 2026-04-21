@@ -5735,6 +5735,7 @@ export default function AdCreationForm({
     setFiles([]);
     setDriveFiles([]);
     setDropboxFiles([]);
+    setFrameioFiles([]);
     setVideoThumbs({});
     setThumbnail(null);
     setFileGroups([]);
@@ -5806,11 +5807,7 @@ export default function AdCreationForm({
 
     try {
       setJobQueue((prev) => [...prev, ...queuedJobs]);
-      // toast.success(
-      //   newJobs.length === 1
-      //     ? 'Job queued'
-      //     : `Queued ${newJobs.length} jobs across variants`
-      // );
+
 
       if (!preserveMedia) {
         try {

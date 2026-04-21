@@ -161,8 +161,8 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
           frameioAccountId: accountId,
           name: item.name,
           mimeType,
-          size: item.filesize || item.size || 0,
-          thumbnailUrl: item.thumb || item.thumbnail || item.cover_asset_id || null,
+          size: item.file_size || item.filesize || item.size || 0,
+          thumbnailUrl: buildFrameioThumbnailProxyUrl(accountId, id),
           width: meta.width || item.width || null,
           height: meta.height || item.height || null,
         };
@@ -240,6 +240,9 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
               const mediaOk = !navigable && isImageOrVideo(item);
               const disabled = !navigable && !mediaOk;
               const isSelected = !!selected[item.id];
+              const itemThumbnail = mediaOk
+                ? getFrameioItemThumbnailUrl(item) || buildFrameioThumbnailProxyUrl(currentAccountId, item.id)
+                : null;
 
               return (
                 <div
@@ -267,8 +270,8 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                       <Folder className="h-5 w-5 text-gray-500" />
                     ) : folder ? (
                       <Folder className="h-5 w-5 text-gray-500" />
-                    ) : item.thumb ? (
-                      <img src={item.thumb} alt="" className="w-full h-full object-cover" />
+                    ) : itemThumbnail ? (
+                      <img src={itemThumbnail} alt="" className="w-full h-full object-cover" />
                     ) : (item.media_type || "").startsWith("video") ? (
                       <Film className="h-5 w-5 text-gray-500" />
                     ) : (
@@ -281,7 +284,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
                     {!navigable && current.kind === "folder" && (
                       <div className="text-xs text-gray-500">
                         {(item.media_type || guessMime(item.name) || "").split("/")[0] || "file"}
-                        {item.filesize ? ` • ${formatBytes(item.filesize)}` : ""}
+                        {(item.file_size || item.filesize) ? ` • ${formatBytes(item.file_size || item.filesize)}` : ""}
                       </div>
                     )}
                   </div>
@@ -343,4 +346,21 @@ function formatBytes(bytes) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function getFrameioItemThumbnailUrl(item) {
+  return item?.thumbnail_download_url
+    || item?.thumbnail_url
+    || item?.thumb
+    || item?.thumbnail
+    || item?.media_links?.thumbnail?.download_url
+    || item?.media_links?.thumbnail?.url
+    || item?.cover_asset?.thumbnail_download_url
+    || item?.cover_asset?.thumbnail_url
+    || null;
+}
+
+function buildFrameioThumbnailProxyUrl(accountId, fileId) {
+  if (!accountId || !fileId) return null;
+  return `${API_BASE_URL}/api/frameio/thumbnail?accountId=${encodeURIComponent(accountId)}&fileId=${encodeURIComponent(fileId)}`;
 }
