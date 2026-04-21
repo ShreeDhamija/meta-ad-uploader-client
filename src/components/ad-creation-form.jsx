@@ -37,7 +37,7 @@ import InstagramIcon from '@/assets/icons/ig.svg?react';
 import DropboxIcon from '@/assets/Dropbox.png';
 import FrameIcon from '@/assets/icons/Frame.webp';
 import DesktopIcon from '@/assets/Desktop.webp';
-import MetaIcon from '@/assets/icons/Meta2.svg';
+import MetaIcon from '@/assets/icons/MetaTag.svg';
 import IGColorIcon from '@/assets/icons/IGColor.webp';
 import LabelIcon from '@/assets/icons/label.svg?react';
 import TemplateIcon from '@/assets/icons/file.svg?react';
@@ -7874,14 +7874,14 @@ export default function AdCreationForm({
                           Manage Upload Sources
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent align="end" className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                      <PopoverContent align="end" className="bg-white rounded-xl p-2 w-80 border border-gray-200 shadow-lg">
                         <div className="flex flex-col">
                           {UPLOAD_SOURCE_OPTIONS.map((src) => {
                             const checked = uploadSources.includes(src.id);
                             return (
                               <label
                                 key={src.id}
-                                className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-50"
+                                className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
                               >
                                 <Checkbox
                                   checked={checked}
@@ -7962,7 +7962,7 @@ export default function AdCreationForm({
                                   instagramAccountId={instagramAccountId}
                                   selectedIgOrganicPosts={selectedIgOrganicPosts}
                                   setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
-                                  enabledSources={uploadSources.filter((s) => s === 'instagram' || s === 'meta_library')}
+                                  showSourceSwitcher={false}
                                   renderTrigger={(openWithSource) =>
                                     renderButton(src, () => openWithSource(id))
                                   }

@@ -116,7 +116,7 @@ export default function MetaMediaLibraryModal({
     selectedIgOrganicPosts = [],
     setSelectedIgOrganicPosts = () => { },
     renderTrigger,
-    enabledSources = ['instagram', 'meta_library'],
+    showSourceSwitcher = true,
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [mediaSource, setMediaSource] = useState('instagram');
@@ -497,7 +497,7 @@ export default function MetaMediaLibraryModal({
                         {mediaSource === 'meta_library' ? 'Meta Media Library' : 'Instagram Posts'}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2">
-                        {enabledSources.length > 1 && (
+                        {showSourceSwitcher && (
                             <Tabs value={mediaSource} onValueChange={handleSourceChange}>
                                 <TabsList className="h-10 rounded-full bg-gray-100 p-1">
                                     <TabsTrigger value="instagram" className="gap-2 rounded-xl">
