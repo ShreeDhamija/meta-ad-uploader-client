@@ -5755,8 +5755,8 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) {
-      toast.error("Please upload at least one file or import from Drive");
+    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) {
+      toast.error("Please upload at least one file");
       return;
     }
 
@@ -5845,17 +5845,17 @@ export default function AdCreationForm({
   const publishDisabled = variants.length > 1
     ? (
       !isLoggedIn ||
-      (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
+      (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
       (selectedFiles.size > 0) ||
       (!isCarouselAd && hasDuplicates)
     )
     : (
       !isLoggedIn ||
       (selectedAdSets.length === 0 && !duplicateAdSet) ||
-      (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
+      (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
       (duplicateAdSet && (!newAdSetName || newAdSetName.trim() === "")) ||
-      (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) < 2) ||
-      (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length) > 10) ||
+      (adType === 'carousel' && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) < 2) ||
+      (adType === 'flexible' && fileGroups.length === 0 && (files.length + driveFiles.length + importedFiles.length + dropboxFiles.length + frameioFiles.length) > 10) ||
       (showShopDestinationSelector && !selectedShopDestination) ||
       isMissingDestinationValue ||
       (selectedFiles.size > 0) ||
@@ -6788,8 +6788,8 @@ export default function AdCreationForm({
                   <div className="mt-1">
                     <Label className="text-xs text-gray-500">
                       Ad Name Preview: {
-                        (files.length > 0 || driveFiles.length > 0 || importedFiles.length > 0 || importedPosts.length > 0 || selectedIgOrganicPosts.length > 0)
-                          ? computeAdNameFromFormula(files[0] || driveFiles[0], 0, link[0], null, adType)
+                        (files.length > 0 || driveFiles.length > 0 || dropboxFiles.length > 0 || frameioFiles.length > 0 || importedFiles.length > 0 || importedPosts.length > 0 || selectedIgOrganicPosts.length > 0)
+                          ? computeAdNameFromFormula(files[0] || driveFiles[0] || frameioFiles[0], 0, link[0], null, adType)
                           : "Upload a file to see example"
                       }
                     </Label>
@@ -7086,7 +7086,7 @@ export default function AdCreationForm({
                                   setApplyTextToAllCards(checked);
                                   if (checked && messages.length > 0) {
                                     const firstMessage = messages[0];
-                                    const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
+                                    const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length + frameioFiles.length;
                                     if (fileCount > 0) {
                                       setMessages(new Array(fileCount).fill(firstMessage));
                                     }
@@ -7967,7 +7967,7 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {isCarouselAd && (files.length + driveFiles.length + dropboxFiles.length) > 0 && (files.length + driveFiles.length + dropboxFiles.length) < 2 && (
+            {isCarouselAd && (files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length) > 0 && (files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length) < 2 && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Carousel ads require at least 2 files. You have {files.length + driveFiles.length + dropboxFiles.length}.
               </div>
