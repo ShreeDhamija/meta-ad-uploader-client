@@ -22,8 +22,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
   const current = stack[stack.length - 1];
 
   const [items, setItems] = useState([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(false);
+  const [nextAfter, setNextAfter] = useState(null);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
@@ -41,7 +40,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
   }, [open]);
 
   const fetchView = useCallback(async (view, opts = {}) => {
-    const { append = false, pageNum = 1 } = opts;
+    const { append = false, after = null } = opts;
     if (append) setLoadingMore(true); else setLoading(true);
     setError(null);
 
@@ -54,7 +53,8 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
         url = `${API_BASE_URL}/api/frameio/workspaces?accountId=${encodeURIComponent(view.accountId)}`;
         listKey = "workspaces";
       } else if (view.kind === "projects") {
-        url = `${API_BASE_URL}/api/frameio/projects?accountId=${encodeURIComponent(view.accountId)}&workspaceId=${encodeURIComponent(view.workspaceId)}&page=${pageNum}&pageSize=${PAGE_SIZE}`;
+        url = `${API_BASE_URL}/api/frameio/projects?accountId=${encodeURIComponent(view.accountId)}&workspaceId=${encodeURIComponent(view.workspaceId)}&pageSize=${PAGE_SIZE}`;
+        if (after) url += `&after=${encodeURIComponent(after)}`;
         listKey = "projects";
       } else if (view.kind === "project-root") {
         // Fetch project to discover its root folder, then list folder-children
@@ -71,7 +71,8 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
         });
         return; // useEffect will re-fetch
       } else if (view.kind === "folder") {
-        url = `${API_BASE_URL}/api/frameio/folder-children?accountId=${encodeURIComponent(view.accountId)}&folderId=${encodeURIComponent(view.folderId)}&page=${pageNum}&pageSize=${PAGE_SIZE}`;
+        url = `${API_BASE_URL}/api/frameio/folder-children?accountId=${encodeURIComponent(view.accountId)}&folderId=${encodeURIComponent(view.folderId)}&pageSize=${PAGE_SIZE}`;
+        if (after) url += `&after=${encodeURIComponent(after)}`;
         listKey = "items";
       } else {
         throw new Error(`Unknown view kind: ${view.kind}`);
@@ -83,12 +84,10 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
 
       const list = data[listKey] || data.data || [];
       const pagination = data.pagination || {};
-      const totalPages = pagination.total_pages || pagination.totalPages || 1;
-      const more = pageNum < totalPages;
+      const next = pagination.after || null;
 
       setItems(prev => append ? [...prev, ...list] : list);
-      setHasMore(more);
-      setPage(pageNum);
+      setNextAfter(next);
     } catch (e) {
       console.error("Frame.io picker error:", e);
       setError(e.message || "Failed to load");
@@ -101,9 +100,8 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
   useEffect(() => {
     if (!open) return;
     setItems([]);
-    setPage(1);
-    setHasMore(false);
-    fetchView(current, { pageNum: 1 });
+    setNextAfter(null);
+    fetchView(current);
   }, [open, current, fetchView]);
 
   const handleNavigate = useCallback((nextEntry) => {
@@ -119,8 +117,9 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
   }, []);
 
   const handleLoadMore = useCallback(() => {
-    fetchView(current, { append: true, pageNum: page + 1 });
-  }, [current, page, fetchView]);
+    if (!nextAfter) return;
+    fetchView(current, { append: true, after: nextAfter });
+  }, [current, nextAfter, fetchView]);
 
   const isImageOrVideo = useCallback((item) => {
     if (item.type === "folder" || item.kind === "folder") return false;
@@ -302,7 +301,7 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
               );
             })}
 
-            {hasMore && !loading && (
+            {nextAfter && !loading && (
               <div className="flex justify-center py-3">
                 <Button type="button" variant="outline" size="sm" onClick={handleLoadMore} disabled={loadingMore}>
                   {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : "Load more"}
