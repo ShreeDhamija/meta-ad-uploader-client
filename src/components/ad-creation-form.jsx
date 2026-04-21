@@ -27,6 +27,7 @@ import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostSelectorInline from "@/components/PostIDSelector"
 import MetaMediaLibraryModal from "@/components/MetaMediaLibraryModal";
+import FrameioPickerModal from "@/components/FrameioPickerModal";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -298,6 +299,7 @@ function withUniqueId(file) {
 const getFileId = (file) => {
   if (file.isDrive) return file.id;
   if (file.isDropbox) return file.dropboxId;
+  if (file.isFrameio) return file.frameioId;
   if (file.isMetaLibrary) return file.type === 'image' ? file.hash : file.id;
   return file.uniqueId || file.name;
 };
@@ -496,6 +498,8 @@ export default function AdCreationForm({
   setDriveFiles,
   dropboxFiles,
   setDropboxFiles,
+  frameioFiles,
+  setFrameioFiles,
   selectedShopDestination,
   setSelectedShopDestination,
   selectedShopDestinationType,
@@ -796,6 +800,7 @@ export default function AdCreationForm({
     (formData.files?.length || 0) > 0 ||
     (formData.driveFiles?.length || 0) > 0 ||
     (formData.dropboxFiles?.length || 0) > 0 ||
+    (formData.frameioFiles?.length || 0) > 0 ||
     (formData.importedPosts?.length || 0) > 0 ||
     (formData.importedFiles?.length || 0) > 0 ||
     (formData.selectedIgOrganicPosts?.length || 0) > 0
@@ -835,6 +840,7 @@ export default function AdCreationForm({
         ...formData.files,
         ...formData.driveFiles.map((file) => ({ ...file, isDrive: true })),
         ...formData.dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+        ...(formData.frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
         ...formData.importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
       ].filter((file) => !groupedIds.has(getFileId(file))).length;
 
@@ -851,7 +857,7 @@ export default function AdCreationForm({
       return formData.selectedIgOrganicPosts.length * (formData.selectedAdSets.length || 1);
     }
 
-    return formData.files.length + formData.driveFiles.length + formData.importedFiles.length + formData.dropboxFiles.length;
+    return formData.files.length + formData.driveFiles.length + formData.importedFiles.length + formData.dropboxFiles.length + (formData.frameioFiles?.length || 0);
   }, [hasMediaInFormData]);
 
   const countFilesForVariant = useCallback((variantId) => {
@@ -862,6 +868,7 @@ export default function AdCreationForm({
       ...files,
       ...driveFiles.map((file) => ({ ...file, isDrive: true })),
       ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+      ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
       ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
     ];
 
@@ -885,6 +892,7 @@ export default function AdCreationForm({
           ...files,
           ...driveFiles.map((file) => ({ ...file, isDrive: true })),
           ...dropboxFiles.map((file) => ({ ...file, isDropbox: true })),
+          ...(frameioFiles || []).map((file) => ({ ...file, isFrameio: true })),
           ...importedFiles.map((file) => ({ ...file, isMetaLibrary: true })),
         ].filter((file) => !groupedFileIds.has(getFileId(file))).length
         : 0;
@@ -898,6 +906,7 @@ export default function AdCreationForm({
     adType,
     driveFiles,
     dropboxFiles,
+    frameioFiles,
     enablePlacementCustomization,
     fileGroups,
     fileVariantMap,
@@ -940,6 +949,7 @@ export default function AdCreationForm({
     const variantFiles = filterFiles(files);
     const variantDriveFiles = filterFiles(driveFiles, (file) => ({ ...file, isDrive: true }));
     const variantDropboxFiles = filterFiles(dropboxFiles, (file) => ({ ...file, isDropbox: true }));
+    const variantFrameioFiles = filterFiles(frameioFiles || [], (file) => ({ ...file, isFrameio: true }));
     const variantImportedFiles = filterFiles(importedFiles, (file) => ({ ...file, isMetaLibrary: true }));
     const variantFileGroups = fileGroups.filter(
       (group) => (groupVariantMap[group.id] || 'default') === variantId
@@ -961,6 +971,7 @@ export default function AdCreationForm({
       files: [...variantFiles],
       driveFiles: [...variantDriveFiles],
       dropboxFiles: [...variantDropboxFiles],
+      frameioFiles: [...variantFrameioFiles],
       videoThumbs: { ...videoThumbs },
       thumbnail,
       importedPosts: [...variantImportedPosts],
@@ -1015,6 +1026,7 @@ export default function AdCreationForm({
     computeAdCount,
     driveFiles,
     dropboxFiles,
+    frameioFiles,
     enablePlacementCustomization,
     fileGroups,
     fileVariantMap,
@@ -1061,6 +1073,7 @@ export default function AdCreationForm({
     setFiles(d.files || []);
     setDriveFiles(d.driveFiles || []);
     setDropboxFiles(d.dropboxFiles || []);
+    setFrameioFiles(d.frameioFiles || []);
     setImportedPosts(d.importedPosts || []);
     setImportedFiles(d.importedFiles || []);
     setSelectedIgOrganicPosts(d.selectedIgOrganicPosts || []);
@@ -1094,7 +1107,7 @@ export default function AdCreationForm({
     setCompletedJobs(prev => prev.filter(j => j.id !== job.id));
 
     toast.success('Form restored — review and resubmit when ready.');
-  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDriveFiles, setDropboxFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPhoneNumber, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setThumbnail, setVariants, setVideoThumbs]);
+  }, [setActiveVariantId, setAdNameFormulaV2, setAdScheduleEndTime, setAdScheduleStartTime, setAdType, setCta, setDescriptions, setDriveFiles, setDropboxFiles, setFrameioFiles, setDuplicateAdSet, setEnablePlacementCustomization, setFileGroups, setFileVariantMap, setFiles, setGroupVariantMap, setHeadlines, setImportedFiles, setImportedPosts, setInstagramAccountId, setIsCarouselAd, setIsPartnershipAd, setLaunchPaused, setLink, setMessages, setNewAdSetName, setPageId, setPartnerFbPageId, setPartnerIgAccountId, setPartnershipIdentityMode, setPhoneNumber, setPostVariantMap, setSelectedAdAccount, setSelectedAdSets, setSelectedCampaign, setSelectedFiles, setSelectedForm, setSelectedIgOrganicPosts, setSelectedShopDestination, setSelectedShopDestinationType, setThumbnail, setVariants, setVideoThumbs]);
 
 
   const adLimitWarning = useMemo(() => {
@@ -1113,11 +1126,13 @@ export default function AdCreationForm({
         ...files,
         ...driveFiles.map(f => ({ ...f, isDrive: true })),
         ...(dropboxFiles || []).map(f => ({ ...f, isDropbox: true })),
+        ...(frameioFiles || []).map(f => ({ ...f, isFrameio: true })),
         ...importedFiles.map(f => ({ ...f, isMetaLibrary: true })),
       ].filter(f => {
         const id = f.isMetaLibrary ? (f.type === 'image' ? f.hash : f.id)
           : f.isDropbox ? f.dropboxId
-            : f.isDrive ? f.id : f.uniqueId || f.name;
+            : f.isFrameio ? f.frameioId
+              : f.isDrive ? f.id : f.uniqueId || f.name;
         return !groupedFileIds.has(id);
       }).length;
       // ungrouped files pair up as placement groups of 2
@@ -1127,7 +1142,7 @@ export default function AdCreationForm({
     } else if (selectedIgOrganicPosts.length > 0) {
       newAdsPerAdSet = selectedIgOrganicPosts.length;
     } else {
-      newAdsPerAdSet = files.length + driveFiles.length + importedFiles.length + (dropboxFiles?.length || 0);
+      newAdsPerAdSet = files.length + driveFiles.length + importedFiles.length + (dropboxFiles?.length || 0) + (frameioFiles?.length || 0);
     }
 
     // Find any ad set that would exceed 50
@@ -1138,7 +1153,7 @@ export default function AdCreationForm({
     if (overLimitAdSets.length === 0) return null;
 
     return overLimitAdSets.map(a => a.name || a.id);
-  }, [selectedAdSets, adSets, importedPosts, isCarouselAd, fileGroups, fileGroupsAsArrays, enablePlacementCustomization, files, driveFiles, dropboxFiles, importedFiles, adType, selectedIgOrganicPosts]);
+  }, [selectedAdSets, adSets, importedPosts, isCarouselAd, fileGroups, fileGroupsAsArrays, enablePlacementCustomization, files, driveFiles, dropboxFiles, frameioFiles, importedFiles, adType, selectedIgOrganicPosts]);
 
 
   // Add this helper function
@@ -1452,6 +1467,43 @@ export default function AdCreationForm({
 
         if (attempt === maxRetries) {
           throw new Error(`Dropbox S3 upload failed after ${maxRetries} attempts: ${error.message}`);
+        }
+        const delayMs = Math.pow(2, attempt - 1) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+
+  async function uploadFrameioFileToS3(file, maxRetries = 3, signal = null) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/upload-from-frameio`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            accountId: file.frameioAccountId,
+            fileId: file.frameioId,
+            fileName: file.name,
+            mimeType: file.mimeType || getMimeFromName(file.name)
+          }),
+          signal
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "S3 upload failed");
+
+        return {
+          ...file,
+          s3Url: data.s3Url,
+          isS3Upload: true
+        };
+      } catch (error) {
+        if (axios.isCancel(error) || error.name === 'AbortError' || signal?.aborted) {
+          throw new DOMException(`Upload cancelled for ${file.name}`, 'AbortError');
+        }
+        if (attempt === maxRetries) {
+          throw new Error(`Frame.io S3 upload failed after ${maxRetries} attempts: ${error.message}`);
         }
         const delayMs = Math.pow(2, attempt - 1) * 1000;
         await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -2146,6 +2198,84 @@ export default function AdCreationForm({
     }
   }, [openDropboxChooser]);
 
+  const [frameioPickerOpen, setFrameioPickerOpen] = useState(false);
+  const [frameioAccessToken, setFrameioAccessToken] = useState(null);
+
+  const handleFrameioClick = useCallback(async () => {
+    try {
+      const statusRes = await fetch(`${API_BASE_URL}/auth/frame/status`, {
+        credentials: 'include'
+      });
+      const statusData = await statusRes.json();
+
+      if (statusData.authenticated && statusData.accessToken) {
+        setFrameioAccessToken(statusData.accessToken);
+        setFrameioPickerOpen(true);
+        return;
+      }
+    } catch (err) {
+      console.warn("No valid Frame.io session, opening popup login.");
+    }
+
+    const width = 600;
+    const height = 750;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const authWindow = window.open(
+      `${API_BASE_URL}/auth/frame?popup=true`,
+      "frameio-auth",
+      `width=${width},height=${height},left=${left},top=${top}`
+    );
+
+    if (!authWindow) {
+      toast.error("Popup blocked. Please allow popups and try again.");
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      window.removeEventListener("message", listener);
+      if (!authWindow.closed) authWindow.close();
+    }, 120000);
+
+    const listener = (event) => {
+      if (event.origin !== API_BASE_URL) return;
+      const { type, accessToken } = event.data || {};
+      if (type === "frameio-auth-success") {
+        clearTimeout(timeoutId);
+        window.removeEventListener("message", listener);
+        authWindow.close();
+        setFrameioAccessToken(accessToken);
+        setFrameioPickerOpen(true);
+        toast.success("Frame.io connected!");
+      } else if (type === "frameio-auth-error") {
+        clearTimeout(timeoutId);
+        window.removeEventListener("message", listener);
+        authWindow.close();
+        toast.error("Frame.io authentication failed");
+      }
+    };
+
+    window.addEventListener("message", listener);
+  }, []);
+
+  const handleFrameioFilesSelected = useCallback((selected) => {
+    // Each item: { frameioId, frameioAccountId, name, mimeType, size, thumbnailUrl, width, height }
+    const mapped = selected.map(f => ({
+      frameioId: f.frameioId,
+      frameioAccountId: f.frameioAccountId,
+      name: f.name,
+      mimeType: f.mimeType || getMimeFromName(f.name),
+      size: f.size,
+      isFrameio: true,
+      pickerThumbnail: f.thumbnailUrl || null,
+      width: f.width,
+      height: f.height,
+    }));
+    setFrameioFiles(prev => [...prev, ...mapped]);
+    setFrameioPickerOpen(false);
+  }, [setFrameioFiles]);
+
 
   // Dropzone logic
   const onDrop = useCallback((acceptedFiles) => {
@@ -2182,6 +2312,28 @@ export default function AdCreationForm({
       return null; // Not a video file
     }
 
+    if (file.isFrameio) {
+      if (file.width && file.height) return file.width / file.height;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/frameio/video-metadata`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            accountId: file.frameioAccountId,
+            fileId: file.frameioId
+          })
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.width && data.height) return data.width / data.height;
+        }
+        return 16 / 9;
+      } catch (error) {
+        console.error('Error getting Frame.io video metadata:', error);
+        return 16 / 9;
+      }
+    }
 
     if (file.isDropbox) {
       try {
@@ -2525,6 +2677,21 @@ export default function AdCreationForm({
           }
         }
       }
+
+      // --- 4. FRAME.IO ---
+      // Frame.io picker provides pickerThumbnail upfront; just stash it.
+      const frameioFilesNeedingThumbs = (frameioFiles || []).filter(file => {
+        const fileId = file.frameioId;
+        return !videoThumbsRef.current[fileId] && !processingRef.current.has(fileId);
+      });
+
+      if (frameioFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        const newThumbs = {};
+        frameioFilesNeedingThumbs.forEach(file => {
+          newThumbs[file.frameioId] = file.pickerThumbnail || "https://api.withblip.com/thumbnail.jpg";
+        });
+        setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+      }
     };
 
     processThumbnails();
@@ -2533,7 +2700,7 @@ export default function AdCreationForm({
       abortController.abort();
       processingRef.current.clear();
     };
-  }, [files, driveFiles, dropboxFiles, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+  }, [files, driveFiles, dropboxFiles, frameioFiles, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
 
 
   const addField = (setter, values) => {
@@ -2738,7 +2905,7 @@ export default function AdCreationForm({
 
   useEffect(() => {
     if (!isCarouselAd) return;
-    const fileCount = files.length + driveFiles.length + dropboxFiles.length + importedFiles.length;
+    const fileCount = files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + importedFiles.length;
 
     if (applyTextToAllCards && fileCount > 0) {
       const firstMessage = messages[0] || "";
@@ -2757,6 +2924,7 @@ export default function AdCreationForm({
     files.length,
     driveFiles.length,
     dropboxFiles.length,
+    frameioFiles?.length,
     importedFiles.length,
     isCarouselAd,
     applyTextToAllCards,
@@ -3103,6 +3271,7 @@ export default function AdCreationForm({
       files,
       driveFiles,
       dropboxFiles,
+      frameioFiles = [],
       videoThumbs,
       thumbnail,
       importedPosts,
@@ -3162,7 +3331,7 @@ export default function AdCreationForm({
       return;
     }
 
-    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)) {
+    if (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && (!selectedIgOrganicPosts || selectedIgOrganicPosts.length === 0)) {
       toast.error("Please upload at least one file or import from Drive");
       return;
     }
@@ -3183,7 +3352,7 @@ export default function AdCreationForm({
       setProgressMessage('Analyzing video files...');
 
       try {
-        const allFiles = [...files, ...driveFiles, ...dropboxFiles];
+        const allFiles = [...files, ...driveFiles, ...dropboxFiles, ...frameioFiles];
         const videoFiles = allFiles.filter(isVideoFile);
 
         if (videoFiles.length > 0) {
@@ -3253,12 +3422,16 @@ export default function AdCreationForm({
     const largeDropboxFiles = dropboxFiles.filter(file =>
       isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD
     );
+    // Frame.io videos always go to S3 (matches Drive/Dropbox large-video pattern).
+    // Frame.io images skip S3 — backend streams them from Frame.io directly.
+    const largeFrameioFiles = frameioFiles.filter(file => isVideoFile(file));
 
     let s3Results = [];
     const s3DriveResults = [];
     const s3DropboxResults = [];
+    const s3FrameioResults = [];
 
-    const totalLargeFiles = largeFiles.length + largeDriveFiles.length + largeDropboxFiles.length;
+    const totalLargeFiles = largeFiles.length + largeDriveFiles.length + largeDropboxFiles.length + largeFrameioFiles.length;
     if (totalLargeFiles > 0) {
       setProgressMessage(`Uploading videos...`);
 
@@ -3384,6 +3557,37 @@ export default function AdCreationForm({
           console.error("❌ Dropbox to S3 upload failed", result.reason);
         }
       });
+
+      // Upload Frame.io files with concurrency control (always uploaded to S3)
+      const frameioUploadPromises = largeFrameioFiles.map(file =>
+        limit(() => {
+          throwIfCancelled();
+          return uploadFrameioFileToS3(file, 3, signal);
+        })
+      );
+
+      const frameioResults = await Promise.allSettled(frameioUploadPromises);
+
+      frameioResults.forEach((result, index) => {
+        if (result.status === 'fulfilled') {
+          const uploadResult = result.value;
+          if (enablePlacementCustomization && aspectRatioMap[getFileId(largeFrameioFiles[index])]) {
+            uploadResult.aspectRatio = aspectRatioMap[getFileId(largeFrameioFiles[index])];
+          }
+          uploadResult.frameioId = largeFrameioFiles[index].frameioId;
+          s3FrameioResults.push(uploadResult);
+        } else {
+          const isCancellation = result.reason?.name === 'AbortError' ||
+            axios.isCancel(result.reason) ||
+            signal?.aborted;
+
+          if (!isCancellation) {
+            toast.error(`Failed to upload Frame.io file: ${largeFrameioFiles[index].name}`);
+          }
+          console.error("❌ Frame.io to S3 upload failed", result.reason);
+        }
+      });
+
       throwIfCancelled();
       setProgress(100);
       setProgressMessage('File upload complete! Creating ads...');
@@ -3400,6 +3604,8 @@ export default function AdCreationForm({
     const smallDropboxFiles = dropboxFiles.filter(file =>
       !(isVideoFile(file) && file.size > S3_UPLOAD_THRESHOLD)
     );
+    // Frame.io images stream as JSON blobs (backend fetches from Frame.io directly)
+    const smallFrameioFiles = frameioFiles.filter(file => !isVideoFile(file));
 
 
     // Determine the ad set(s) to use: if "Create New AdSet" is chosen, duplicate it
@@ -3464,7 +3670,7 @@ export default function AdCreationForm({
           }
         }
       } else {
-        const totalFiles = files.length + driveFiles.length + dropboxFiles.length + (importedFiles?.length || 0);
+        const totalFiles = files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + (importedFiles?.length || 0);
         if (totalFiles < 2) {
           toast.error("Carousel ads require at least 2 files");
           setIsLoading(false);
@@ -3480,7 +3686,7 @@ export default function AdCreationForm({
 
     // Add flexible ads validation
     if (adType === 'flexible') {
-      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + (importedFiles?.length || 0);
+      const totalFiles = files.length + driveFiles.length + dropboxFiles.length + frameioFiles.length + (importedFiles?.length || 0);
 
 
       // If no groups, validate single ad
@@ -3663,9 +3869,11 @@ export default function AdCreationForm({
         files,
         smallDriveFiles,
         smallDropboxFiles,
+        smallFrameioFiles = [],
         s3Results,
         s3DriveResults,
         s3DropboxResults,
+        s3FrameioResults = [],
         S3_UPLOAD_THRESHOLD,
         getFileId,
         isVideoFile,
@@ -3734,37 +3942,34 @@ export default function AdCreationForm({
         }
       });
 
-      // CONSOLIDATED: Add ALL S3 files from this group (local, drive, and dropbox)
+      // Add Frame.io image files from this group (videos go through s3 below)
       group.forEach(fileId => {
-        const allS3Results = [...s3Results, ...s3DriveResults, ...s3DropboxResults];
+        const frameioFile = smallFrameioFiles.find(f => f.frameioId === fileId);
+        if (frameioFile) {
+          formData.append("frameioFiles", JSON.stringify({
+            frameioId: frameioFile.frameioId,
+            frameioAccountId: frameioFile.frameioAccountId,
+            name: frameioFile.name,
+            mimeType: frameioFile.mimeType || getMimeFromName(frameioFile.name)
+          }));
+        }
+      });
 
-
+      // Add ALL S3 files from this group (local, drive, dropbox, frameio videos)
+      group.forEach(fileId => {
+        const allS3Results = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults];
 
         const s3File = allS3Results.find(f =>
-          f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId
+          f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId
         );
-
-
-
 
         if (s3File) {
           formData.append("s3VideoUrls", s3File.s3Url);
           formData.append("s3VideoNames", s3File.name);
-
-
-
-          if (isVideoFile(s3File)) {
-            groupVideoMetadata.push({
-              s3Url: s3File.s3Url,
-              aspectRatio: s3File.aspectRatio || 16 / 9
-            });
-
-
-
-          }
-        } else {
-          // 🔴 ADD THIS LOG
-
+          groupVideoMetadata.push({
+            s3Url: s3File.s3Url,
+            aspectRatio: s3File.aspectRatio || 16 / 9
+          });
         }
       });
 
@@ -3810,9 +4015,11 @@ export default function AdCreationForm({
         files,
         smallDriveFiles,
         smallDropboxFiles,
+        smallFrameioFiles = [],
         s3Results,
         s3DriveResults,
-        s3DropboxResults,   // ADD THIS
+        s3DropboxResults,
+        s3FrameioResults = [],
         S3_UPLOAD_THRESHOLD,
         importedFiles,
       }
@@ -3843,8 +4050,18 @@ export default function AdCreationForm({
         }));
       });
 
-      // Add all large file URLs (S3)
-      [...s3Results, ...s3DriveResults, ...s3DropboxResults].forEach((s3File) => {
+      // Frame.io image files (videos go through s3FrameioResults below)
+      smallFrameioFiles.forEach((frameioFile) => {
+        formData.append("frameioFiles", JSON.stringify({
+          frameioId: frameioFile.frameioId,
+          frameioAccountId: frameioFile.frameioAccountId,
+          name: frameioFile.name,
+          mimeType: frameioFile.mimeType || getMimeFromName(frameioFile.name)
+        }));
+      });
+
+      // Add all large file URLs (S3) — includes Frame.io videos
+      [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].forEach((s3File) => {
         formData.append("s3VideoUrls", s3File.s3Url);
         formData.append("s3VideoNames", s3File.name);
       });
@@ -3903,6 +4120,15 @@ export default function AdCreationForm({
       formData.append("dropboxMimeType", dropboxFile.mimeType || getMimeFromName(dropboxFile.name));
     };
 
+    const appendSingleFrameioFile = (formData, frameioFile) => {
+      formData.append("enablePlacementCustomization", false);
+      formData.append("frameioFile", "true");
+      formData.append("frameioId", frameioFile.frameioId);
+      formData.append("frameioAccountId", frameioFile.frameioAccountId);
+      formData.append("frameioName", frameioFile.name);
+      formData.append("frameioMimeType", frameioFile.mimeType || getMimeFromName(frameioFile.name));
+    };
+
     /**
      * Append single S3 file fields
      */
@@ -3937,9 +4163,11 @@ export default function AdCreationForm({
       files,
       driveFiles,
       dropboxFiles,      // ADD THIS
+      frameioFiles,
       s3Results,
       s3DriveResults,
       s3DropboxResults,  // ADD THIS
+      s3FrameioResults,
       S3_UPLOAD_THRESHOLD,
       importedFiles  // ADD THIS PARAMETER
 
@@ -4014,6 +4242,29 @@ export default function AdCreationForm({
         }
       });
 
+      // Process frame.io files: videos go through S3, images stream as JSON blobs
+      (frameioFiles || []).forEach((frameioFile) => {
+        if (isVideoFile(frameioFile)) {
+          const s3FrameioFile = (s3FrameioResults || []).find(s3f => s3f.frameioId === frameioFile.frameioId);
+          if (s3FrameioFile) {
+            fileOrder.push({
+              index: fileIndex++,
+              type: 's3',
+              url: s3FrameioFile.s3Url,
+              name: frameioFile.name,
+              frameioId: frameioFile.frameioId
+            });
+          }
+        } else {
+          fileOrder.push({
+            index: fileIndex++,
+            type: 'frameio',
+            frameioId: frameioFile.frameioId,
+            name: frameioFile.name
+          });
+        }
+      });
+
 
       if (importedFiles && importedFiles.length > 0) {
         importedFiles.forEach((metaFile) => {
@@ -4048,9 +4299,11 @@ export default function AdCreationForm({
       files,
       driveFiles,
       dropboxFiles,
+      frameioFiles,
       s3Results,
       s3DriveResults,
       s3DropboxResults,
+      s3FrameioResults,
       S3_UPLOAD_THRESHOLD,
       importedFiles
     ) => {
@@ -4100,9 +4353,23 @@ export default function AdCreationForm({
           return;
         }
 
+        // Check frame.io files: videos via S3, images via JSON blob
+        const frameioFile = (frameioFiles || []).find(f => f.frameioId === fileId);
+        if (frameioFile) {
+          if (isVideoFile(frameioFile)) {
+            const s3File = (s3FrameioResults || []).find(s3f => s3f.frameioId === fileId);
+            if (s3File) {
+              fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: frameioFile.name, frameioId: frameioFile.frameioId });
+            }
+          } else {
+            fileOrder.push({ index: fileIndex++, type: 'frameio', frameioId: frameioFile.frameioId, name: frameioFile.name });
+          }
+          return;
+        }
+
         // Check S3 results (for files that were already uploaded)
-        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults];
-        const s3File = allS3.find(f => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId);
+        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...(s3FrameioResults || [])];
+        const s3File = allS3.find(f => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId);
         if (s3File) {
           fileOrder.push({ index: fileIndex++, type: 's3', url: s3File.s3Url, name: s3File.name });
           return;
@@ -4137,9 +4404,11 @@ export default function AdCreationForm({
         files,
         smallDriveFiles,
         smallDropboxFiles,
+        smallFrameioFiles = [],
         s3Results,
         s3DriveResults,
         s3DropboxResults,
+        s3FrameioResults = [],
         S3_UPLOAD_THRESHOLD,
         importedFiles
       }
@@ -4178,9 +4447,21 @@ export default function AdCreationForm({
           return;
         }
 
-        // S3 files
-        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults];
-        const s3File = allS3.find(f => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId);
+        // Frame.io image files (videos go through s3 below)
+        const frameioFile = smallFrameioFiles.find(f => f.frameioId === fileId);
+        if (frameioFile) {
+          formData.append("frameioFiles", JSON.stringify({
+            frameioId: frameioFile.frameioId,
+            frameioAccountId: frameioFile.frameioAccountId,
+            name: frameioFile.name,
+            mimeType: frameioFile.mimeType || getMimeFromName(frameioFile.name)
+          }));
+          return;
+        }
+
+        // S3 files (videos only — local, drive, dropbox, frameio video)
+        const allS3 = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults];
+        const s3File = allS3.find(f => f.uniqueId === fileId || f.id === fileId || f.dropboxId === fileId || f.frameioId === fileId);
         if (s3File) {
           formData.append("s3VideoUrls", s3File.s3Url);
           formData.append("s3VideoNames", s3File.name);
@@ -4376,9 +4657,11 @@ export default function AdCreationForm({
               files,
               driveFiles,
               dropboxFiles,
+              frameioFiles,
               s3Results,
               s3DriveResults,
               s3DropboxResults,
+              s3FrameioResults,
               S3_UPLOAD_THRESHOLD,
               importedFiles
             );
@@ -4388,9 +4671,11 @@ export default function AdCreationForm({
               files,
               driveFiles,
               dropboxFiles,
+              frameioFiles,
               s3Results,
               s3DriveResults,
               s3DropboxResults,
+              s3FrameioResults,
               S3_UPLOAD_THRESHOLD,
               importedFiles
             );
@@ -4403,13 +4688,14 @@ export default function AdCreationForm({
               return files.find(f => getFileId(f) === firstId) ||
                 driveFiles.find(f => f.id === firstId) ||
                 dropboxFiles.find(f => f.dropboxId === firstId) ||
+                frameioFiles.find(f => f.frameioId === firstId) ||
                 (importedFiles || []).find(f =>
                   (f.type === 'image' && f.hash === firstId) ||
                   (f.type === 'video' && f.id === firstId)
                 ) ||
                 files[0];
             })()
-            : files[0] || driveFiles[0] || dropboxFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null);
+            : files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null);
 
           const carouselAdName = computeAdNameFromFormula(
             firstFile,
@@ -4464,9 +4750,11 @@ export default function AdCreationForm({
                 files,
                 smallDriveFiles,
                 smallDropboxFiles,
+                smallFrameioFiles,
                 s3Results,
                 s3DriveResults,
                 s3DropboxResults,
+                s3FrameioResults,
                 S3_UPLOAD_THRESHOLD,
                 importedFiles
               });
@@ -4496,7 +4784,16 @@ export default function AdCreationForm({
                 }));
               });
 
-              [...s3Results, ...s3DriveResults, ...s3DropboxResults].forEach((s3File) => {
+              smallFrameioFiles.forEach((frameioFile) => {
+                formData.append("frameioFiles", JSON.stringify({
+                  frameioId: frameioFile.frameioId,
+                  frameioAccountId: frameioFile.frameioAccountId,
+                  name: frameioFile.name,
+                  mimeType: frameioFile.mimeType || getMimeFromName(frameioFile.name)
+                }));
+              });
+
+              [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].forEach((s3File) => {
                 formData.append("s3VideoUrls", s3File.s3Url);
                 formData.append("s3VideoNames", s3File.name);
               });
@@ -4536,13 +4833,14 @@ export default function AdCreationForm({
             const firstFile = files.find(f => getFileId(f) === firstFileId) ||
               driveFiles.find(f => f.id === firstFileId) ||
               dropboxFiles.find(f => f.dropboxId === firstFileId) ||  // ADD
+              frameioFiles.find(f => f.frameioId === firstFileId) ||
               (importedFiles || []).find(f =>
                 (f.type === 'image' && f.hash === firstFileId) ||
                 (f.type === 'video' && f.id === firstFileId)
               );
 
             return computeAdNameFromFormula(
-              firstFile || files[0] || driveFiles[0] || dropboxFiles[0],  // ADD dropboxFiles[0]
+              firstFile || files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0],
               groupIndex,
               link[0],
               jobData.formData.adNameFormulaV2,
@@ -4590,10 +4888,12 @@ export default function AdCreationForm({
               const groupVideoMetadata = appendGroupMediaFiles(formData, group, {
                 files,
                 smallDriveFiles,
-                smallDropboxFiles,  // ADD
+                smallDropboxFiles,
+                smallFrameioFiles,
                 s3Results,
                 s3DriveResults,
-                s3DropboxResults,   // ADD
+                s3DropboxResults,
+                s3FrameioResults,
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
@@ -4612,7 +4912,7 @@ export default function AdCreationForm({
 
           // Pre-compute ad name once for ungrouped flexible
           const ungroupedFlexibleAdName = computeAdNameFromFormula(
-            files[0] || driveFiles[0] || dropboxFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),  // ADD
+            files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0] || (importedFiles?.[0] ? { name: importedFiles[0].name } : null),
             0,
             link[0],
             jobData.formData.adNameFormulaV2,
@@ -4654,10 +4954,12 @@ export default function AdCreationForm({
             appendAllMediaFiles(formData, {
               files,
               smallDriveFiles,
-              smallDropboxFiles,  // ADD
+              smallDropboxFiles,
+              smallFrameioFiles,
               s3Results,
               s3DriveResults,
-              s3DropboxResults,   // ADD
+              s3DropboxResults,
+              s3FrameioResults,
               S3_UPLOAD_THRESHOLD,
               importedFiles
             });
@@ -4681,7 +4983,7 @@ export default function AdCreationForm({
       if (dynamicAdSetIds.length > 0) {
         // Pre-compute ad name for dynamic ads
         const dynamicAdName = computeAdNameFromFormula(
-          files[0] || driveFiles[0] || dropboxFiles[0],  // ADD dropboxFiles[0]
+          files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0],
           0,
           link[0],
           jobData.formData.adNameFormulaV2
@@ -4723,10 +5025,12 @@ export default function AdCreationForm({
           appendAllMediaFiles(formData, {
             files,
             smallDriveFiles,
-            smallDropboxFiles,  // ADD
+            smallDropboxFiles,
+            smallFrameioFiles,
             s3Results,
             s3DriveResults,
-            s3DropboxResults,   // ADD
+            s3DropboxResults,
+            s3FrameioResults,
             S3_UPLOAD_THRESHOLD,
             importedFiles
           });
@@ -4747,9 +5051,10 @@ export default function AdCreationForm({
           const hasUngroupedFiles = (
             files.some(file => !groupedFileIds.has(getFileId(file)) && (!isVideoFile(file) || file.size <= S3_UPLOAD_THRESHOLD)) ||
             smallDriveFiles.some(driveFile => !groupedFileIds.has(driveFile.id)) ||
-            smallDropboxFiles.some(dropboxFile => !groupedFileIds.has(dropboxFile.dropboxId)) ||  // ADD THIS
-            [...s3Results, ...s3DriveResults, ...s3DropboxResults].some(s3File =>  // ADD s3DropboxResults
-              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id) || groupedFileIds.has(s3File.dropboxId))  // ADD dropboxId check
+            smallDropboxFiles.some(dropboxFile => !groupedFileIds.has(dropboxFile.dropboxId)) ||
+            smallFrameioFiles.some(frameioFile => !groupedFileIds.has(frameioFile.frameioId)) ||
+            [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].some(s3File =>
+              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id) || groupedFileIds.has(s3File.dropboxId) || groupedFileIds.has(s3File.frameioId))
             ) ||
             (importedFiles && importedFiles.some(f => {
               const fileId = f.type === 'image' ? f.hash : f.id;
@@ -4770,9 +5075,10 @@ export default function AdCreationForm({
 
               const firstFileForNaming = files.find(f => getFileId(f) === firstFileId) ||
                 smallDriveFiles.find(f => f.id === firstFileId) ||
-                smallDropboxFiles.find(f => f.dropboxId === firstFileId) ||  // ADD THIS
-                [...s3Results, ...s3DriveResults, ...s3DropboxResults].find(f =>   // ADD s3DropboxResults
-                  f.uniqueId === firstFileId || f.id === firstFileId || f.dropboxId === firstFileId  // ADD dropboxId
+                smallDropboxFiles.find(f => f.dropboxId === firstFileId) ||
+                smallFrameioFiles.find(f => f.frameioId === firstFileId) ||
+                [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].find(f =>
+                  f.uniqueId === firstFileId || f.id === firstFileId || f.dropboxId === firstFileId || f.frameioId === firstFileId
                 ) ||
                 (importedFiles || []).find(f =>
                   (f.type === 'image' && f.hash === firstFileId) ||
@@ -4780,7 +5086,7 @@ export default function AdCreationForm({
                 );
 
               return computeAdNameFromFormula(
-                firstFileForNaming || files[0] || driveFiles[0] || dropboxFiles[0],  // ADD dropboxFiles[0]
+                firstFileForNaming || files[0] || driveFiles[0] || dropboxFiles[0] || frameioFiles[0],
                 localIterationIndex + groupIndex,
                 link[0],
                 jobData.formData.adNameFormulaV2,
@@ -4822,10 +5128,12 @@ export default function AdCreationForm({
               const groupVideoMetadata = appendGroupMediaFiles(formData, group, {
                 files,
                 smallDriveFiles,
-                smallDropboxFiles,  // ADD
+                smallDropboxFiles,
+                smallFrameioFiles,
                 s3Results,
                 s3DriveResults,
-                s3DropboxResults,   // ADD
+                s3DropboxResults,
+                s3FrameioResults,
                 S3_UPLOAD_THRESHOLD,
                 getFileId,
                 isVideoFile,
@@ -4865,8 +5173,11 @@ export default function AdCreationForm({
             const ungroupedDropboxFiles = smallDropboxFiles.filter(dropboxFile =>
               !groupedFileIds.has(dropboxFile.dropboxId)
             );
-            const ungroupedS3Files = [...s3Results, ...s3DriveResults, ...s3DropboxResults].filter(s3File =>
-              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id) || groupedFileIds.has(s3File.dropboxId))
+            const ungroupedFrameioFiles = smallFrameioFiles.filter(frameioFile =>
+              !groupedFileIds.has(frameioFile.frameioId)
+            );
+            const ungroupedS3Files = [...s3Results, ...s3DriveResults, ...s3DropboxResults, ...s3FrameioResults].filter(s3File =>
+              !(groupedFileIds.has(s3File.uniqueId) || groupedFileIds.has(s3File.id) || groupedFileIds.has(s3File.dropboxId) || groupedFileIds.has(s3File.frameioId))
             );
 
             // Pre-compute ad names
@@ -4887,6 +5198,12 @@ export default function AdCreationForm({
             );
 
             localIterationIndex += ungroupedDropboxFiles.length;
+
+            const frameioFileAdNames = ungroupedFrameioFiles.map((frameioFile, index) =>
+              computeAdNameFromFormula(frameioFile, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
+            );
+
+            localIterationIndex += ungroupedFrameioFiles.length;
 
             const s3FileAdNames = ungroupedS3Files.map((s3File, index) =>
               computeAdNameFromFormula(s3File, localIterationIndex + index, link[0], jobData.formData.adNameFormulaV2, adType)
@@ -5002,6 +5319,40 @@ export default function AdCreationForm({
               appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
 
               queueCreateAdPromise(formData, { fileName: dropboxFile.name });
+            });
+
+            // Handle Frame.io image files (videos go through ungroupedS3Files below)
+            ungroupedFrameioFiles.forEach((frameioFile, index) => {
+              const formData = new FormData();
+
+              appendCommonFields(formData, {
+                adName: frameioFileAdNames[index],
+                headlinesJSON: commonPrecomputed.headlinesJSON,
+                descriptionsJSON: commonPrecomputed.descriptionsJSON,
+                messagesJSON: commonPrecomputed.messagesJSON,
+                selectedAdAccount,
+                adSetId,
+                pageId,
+                instagramAccountId,
+                linkJSON: commonPrecomputed.linkJSON,
+                phoneNumber,
+                usePhoneNumberField,
+                cta,
+                launchPaused,
+                jobId: frontendJobId,
+                selectedForm,
+                isPartnershipAd,
+                partnerIgAccountId,
+                partnerFbPageId,
+                partnershipIdentityMode,
+                adScheduleStartTime,
+                adScheduleEndTime,
+              });
+
+              appendSingleFrameioFile(formData, frameioFile);
+              appendShopDestination(formData, selectedShopDestination, selectedShopDestinationType, showShopDestinationSelector);
+
+              queueCreateAdPromise(formData, { fileName: frameioFile.name });
             });
 
             // Handle S3 uploaded files
@@ -7490,7 +7841,26 @@ export default function AdCreationForm({
                       Choose Files from Dropbox
                     </Button>
                   </div>
+
+                  {/* Frame.io */}
+                  <div className="flex-1">
+                    <Button
+                      type="button"
+                      onClick={handleFrameioClick}
+                      className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
+                    >
+                      <span className="text-xs font-bold">F.io</span>
+                      Choose Files from Frame.io
+                    </Button>
+                  </div>
                 </div>
+
+                <FrameioPickerModal
+                  open={frameioPickerOpen}
+                  onOpenChange={setFrameioPickerOpen}
+                  accessToken={frameioAccessToken}
+                  onConfirm={handleFrameioFilesSelected}
+                />
 
 
                 {showFolderInput && (

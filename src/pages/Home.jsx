@@ -220,6 +220,7 @@ export default function Home() {
     });
     const [driveFiles, setDriveFiles] = useState([])
     const [dropboxFiles, setDropboxFiles] = useState([]);
+    const [frameioFiles, setFrameioFiles] = useState([]);
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [adType, setAdType] = useState('regular'); // 'regular' | 'carousel' | 'flexible'
@@ -272,6 +273,7 @@ export default function Home() {
             files.length > 0 ||
             driveFiles.length > 0 ||
             dropboxFiles.length > 0 ||
+            frameioFiles.length > 0 ||
             importedPosts.length > 0 ||
             importedFiles.length > 0 ||
             selectedIgOrganicPosts.length > 0
@@ -302,6 +304,7 @@ export default function Home() {
         files.length,
         driveFiles.length,
         dropboxFiles.length,
+        frameioFiles.length,
         importedPosts.length,
         importedFiles.length,
         selectedIgOrganicPosts.length,
@@ -970,6 +973,7 @@ export default function Home() {
             ...files.map((file) => file.isDrive ? file.id : file.uniqueId || file.name),
             ...driveFiles.map((file) => file.id),
             ...dropboxFiles.map((file) => file.dropboxId),
+            ...frameioFiles.map((file) => file.frameioId),
             ...importedFiles.map((file) => file.type === "image" ? file.hash : file.id),
         ]);
         const groupedFileIds = new Set(
@@ -989,7 +993,7 @@ export default function Home() {
 
             return changed ? next : prev;
         });
-    }, [files, driveFiles, dropboxFiles, importedFiles, fileGroups]);
+    }, [files, driveFiles, dropboxFiles, frameioFiles, importedFiles, fileGroups]);
 
     useEffect(() => {
         const validGroupIds = new Set(fileGroups.map((group) => group.id));
@@ -1450,6 +1454,8 @@ export default function Home() {
                             setDriveFiles={setDriveFiles}
                             dropboxFiles={dropboxFiles}
                             setDropboxFiles={setDropboxFiles}
+                            frameioFiles={frameioFiles}
+                            setFrameioFiles={setFrameioFiles}
                             selectedShopDestination={selectedShopDestination}
                             setSelectedShopDestination={setSelectedShopDestination}
                             selectedShopDestinationType={selectedShopDestinationType}
@@ -1525,6 +1531,8 @@ export default function Home() {
                                 setDriveFiles={setDriveFiles}
                                 dropboxFiles={dropboxFiles}
                                 setDropboxFiles={setDropboxFiles}
+                                frameioFiles={frameioFiles}
+                                setFrameioFiles={setFrameioFiles}
                                 importedFiles={importedFiles}
                                 setImportedFiles={setImportedFiles}
                                 videoThumbs={videoThumbs}
