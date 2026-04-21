@@ -1,5 +1,5 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Dialog, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com";
 const PAGE_SIZE = 50;
+const ROOT_STACK = [{ kind: "accounts", name: "Accounts" }];
 
 /**
  * Frame.io media picker.
@@ -23,8 +24,10 @@ const PAGE_SIZE = 50;
  */
 export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
   // Navigation stack: each entry = { kind: 'accounts'|'workspaces'|'projects'|'folder', accountId?, workspaceId?, projectId?, folderId?, name }
-  const [stack, setStack] = useState([{ kind: "accounts", name: "Accounts" }]);
+  const [stack, setStack] = useState(ROOT_STACK);
   const current = stack[stack.length - 1];
+  const latestRequestRef = useRef(0);
+  const lastViewedStackRef = useRef(ROOT_STACK);
 
   const [items, setItems] = useState([]);
   const [nextAfter, setNextAfter] = useState(null);
@@ -35,17 +38,33 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
   // selected[frameioId] = { frameioId, frameioAccountId, name, mimeType, size, thumbnailUrl, width, height }
   const [selected, setSelected] = useState({});
 
-  // Reset on open
+  // Restore the last viewed location within the current app session.
   useEffect(() => {
     if (open) {
-      setStack([{ kind: "accounts", name: "Accounts" }]);
+      setStack(lastViewedStackRef.current);
       setSelected({});
       setError(null);
     }
   }, [open]);
 
+  useEffect(() => {
+    if (stack.length > 0) {
+      lastViewedStackRef.current = stack;
+    }
+  }, [stack]);
+
+  // Invalidate in-flight responses when the popup closes so stale data can't overwrite the next open.
+  useEffect(() => {
+    if (!open) {
+      latestRequestRef.current += 1;
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [open]);
+
   const fetchView = useCallback(async (view, opts = {}) => {
     const { append = false, after = null } = opts;
+    const requestId = ++latestRequestRef.current;
     if (append) setLoadingMore(true); else setLoading(true);
     setError(null);
 
@@ -64,12 +83,15 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
       } else if (view.kind === "project-root") {
         // Fetch project to discover its root folder, then list folder-children
         const projRes = await fetch(`${API_BASE_URL}/api/frameio/project?accountId=${encodeURIComponent(view.accountId)}&projectId=${encodeURIComponent(view.projectId)}`, { credentials: "include" });
+        if (requestId !== latestRequestRef.current) return;
         if (!projRes.ok) throw new Error(`Failed to load project (${projRes.status})`);
         const projData = await projRes.json();
+        if (requestId !== latestRequestRef.current) return;
         const rootFolderId = projData?.project?.root_folder_id || projData?.root_folder_id || projData?.data?.root_folder_id;
         if (!rootFolderId) throw new Error("Project has no root folder");
         // Replace current stack entry with a 'folder' entry pointing to root
         setStack(prev => {
+          if (requestId !== latestRequestRef.current || prev.length === 0) return prev;
           const copy = [...prev];
           copy[copy.length - 1] = { kind: "folder", accountId: view.accountId, projectId: view.projectId, folderId: rootFolderId, name: view.name };
           return copy;
@@ -84,8 +106,10 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
       }
 
       const res = await fetch(url, { credentials: "include" });
+      if (requestId !== latestRequestRef.current) return;
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
       const data = await res.json();
+      if (requestId !== latestRequestRef.current) return;
 
       const list = data[listKey] || data.data || [];
       const pagination = data.pagination || {};
@@ -94,10 +118,13 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
       setItems(prev => append ? [...prev, ...list] : list);
       setNextAfter(next);
     } catch (e) {
+      if (requestId !== latestRequestRef.current) return;
       console.error("Frame.io picker error:", e);
       setError(e.message || "Failed to load");
     } finally {
-      if (append) setLoadingMore(false); else setLoading(false);
+      if (requestId === latestRequestRef.current) {
+        if (append) setLoadingMore(false); else setLoading(false);
+      }
     }
   }, []);
 
@@ -194,13 +221,21 @@ export default function FrameioPickerModal({ open, onOpenChange, onConfirm }) {
     return null;
   }, [stack]);
 
+  const handleOpenChange = useCallback((nextOpen) => {
+    if (!nextOpen) {
+      lastViewedStackRef.current = stack;
+    }
+    onOpenChange(nextOpen);
+  }, [onOpenChange, stack]);
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#111111]/42 backdrop-blur-[2px] transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100" />
         <DialogPrimitive.Content
+          onOpenAutoFocus={(event) => event.preventDefault()}
           className={cn(
-            "fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 border-0 bg-[#FFFFFF] px-10 py-5 shadow-xl transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 focus:outline-none sm:rounded-[28px]"
+            "fixed left-1/2 top-1/2 z-50 flex max-h-[80vh] w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col gap-4 border-0 bg-[#FFFFFF] px-5 py-5 shadow-xl transition-opacity duration-200 data-[state=closed]:opacity-0 data-[state=open]:opacity-100 focus:outline-none sm:rounded-[28px]"
           )}
         >
           <DialogPrimitive.Close className="absolute right-5 top-5 rounded-full p-2 text-[#6B7280] transition-colors hover:bg-[#F3F4F6] hover:text-[#111111] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:ring-offset-2">

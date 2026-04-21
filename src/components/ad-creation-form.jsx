@@ -33,6 +33,7 @@ import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
 import InstagramIcon from '@/assets/icons/ig.svg?react';
 import DropboxIcon from '@/assets/Dropbox.png';
+import FrameIcon from '@/assets/icons/Frame.webp';
 import LabelIcon from '@/assets/icons/label.svg?react';
 import TemplateIcon from '@/assets/icons/file.svg?react';
 import LinkIcon from '@/assets/icons/link.svg?react';
@@ -7802,7 +7803,7 @@ export default function AdCreationForm({
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-2 mb-2">
+                <div className="flex gap-2 mt-4 mb-2">
                   {/* Google Drive */}
                   <div className="flex-1">
                     <Button
@@ -7818,8 +7819,8 @@ export default function AdCreationForm({
                       Choose Files from Google Drive
                     </Button>
 
-                    <div className="text-xs text-gray-500 text-left mt-0.5">
-                      Google Drive  and Dropbox Files upload 5X faster
+                    <div className="mt-0.5 text-left text-xs text-gray-500 whitespace-nowrap">
+                      Google Drive and Dropbox Files upload 5X faster
                     </div>
                   </div>
 
@@ -7846,7 +7847,11 @@ export default function AdCreationForm({
                       onClick={handleFrameioClick}
                       className="w-full bg-zinc-800 border border-gray-300 hover:bg-blue-700 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2"
                     >
-                      <span className="text-xs font-bold">F.io</span>
+                      <img
+                        src={FrameIcon}
+                        alt="Frame.io Icon"
+                        className="h-4 w-4 rounded-sm object-cover"
+                      />
                       Choose Files from Frame.io
                     </Button>
                   </div>
