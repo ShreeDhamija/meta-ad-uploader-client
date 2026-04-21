@@ -52,7 +52,6 @@ import QueueIcon from '@/assets/icons/queue.svg?react';
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const FRAMEIO_CONNECT_WARNING_SESSION_KEY = 'frameio_connect_warning_seen';
 
 const UPLOAD_SOURCE_OPTIONS = [
   {
@@ -80,7 +79,7 @@ const UPLOAD_SOURCE_OPTIONS = [
     id: 'frameio',
     name: 'Frame.io',
     icon: FrameIcon,
-    iconClass: 'h-5 w-5 rounded-sm object-cover',
+    iconClass: 'h-6 w-6 rounded-sm object-cover',
     fullLabel: 'Choose Files from Frame.io',
     compactLabel: 'Frame.io',
   },
@@ -2351,12 +2350,6 @@ export default function AdCreationForm({
       }
     } catch (err) {
       console.warn("No valid Frame.io session, checking whether to show connect guidance first.");
-    }
-
-    const hasSeenWarning = sessionStorage.getItem(FRAMEIO_CONNECT_WARNING_SESSION_KEY) === 'true';
-    if (hasSeenWarning) {
-      launchFrameioAuthPopup();
-      return;
     }
 
     setShowFrameioConnectHelp(false);
@@ -8400,24 +8393,25 @@ export default function AdCreationForm({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-gray-900">Connect Adobe Authentication</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Connect Frame IO</h3>
               <p className="text-sm text-gray-600">
-                Frame.io needs Adobe Authentication connected before this picker can work.
+                Heads up, your Frame.io account needs to be connected to Adobe Authentication for this integratation to work.
               </p>
               <button
                 type="button"
                 onClick={() => setShowFrameioConnectHelp(prev => !prev)}
                 className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-700"
               >
-                What to do if it is not connected
+                What to do if your Frame account is not connected to Adobe / Not sure if it is.
                 <ChevronDown className={cn("h-4 w-4 transition-transform", showFrameioConnectHelp && "rotate-180")} />
               </button>
             </div>
 
             {showFrameioConnectHelp && (
               <div className="mt-3 rounded-2xl bg-blue-50 p-4 text-sm text-blue-900">
-                <p>In Frame.io go to Avatar → Settings → Profile → Authentication → Connect next to Adobe Authentication.</p>
-                <p className="mt-2">Use the same email in Frame.io and Adobe. If Connect is missing, disable SSO or Google sign-in first.</p>
+                <p>In Frame.io go to <br></br> Avatar → Settings → Profile → Authentication → Connect next to Adobe Authentication.</p>
+                <p className="mt-2">Your Adobe and Frame emails must match. </p>
+                <p>If Connect Option is missing, it could be due to SSO or Google sign-in being enabled.<br></br>You will have to disbale those.</p>
               </div>
             )}
 
@@ -8435,7 +8429,6 @@ export default function AdCreationForm({
               <Button
                 className="rounded-xl bg-blue-600 text-white hover:bg-blue-700"
                 onClick={() => {
-                  sessionStorage.setItem(FRAMEIO_CONNECT_WARNING_SESSION_KEY, 'true');
                   setShowFrameioConnectDialog(false);
                   setShowFrameioConnectHelp(false);
                   launchFrameioAuthPopup();
