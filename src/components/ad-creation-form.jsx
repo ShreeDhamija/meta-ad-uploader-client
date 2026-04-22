@@ -80,6 +80,7 @@ const UPLOAD_SOURCE_OPTIONS = [
     name: 'Frame.io',
     icon: FrameIcon,
     iconClass: 'h-6 w-6 rounded-sm object-cover',
+    dropdownIconClass: 'h-6 w-6 rounded-sm object-cover',
     fullLabel: 'Choose Files from Frame.io',
     compactLabel: 'Frame.io',
   },
@@ -763,6 +764,14 @@ export default function AdCreationForm({
     if (adScheduleEndTime) parts.push(`End: ${fmt(adScheduleEndTime)}`);
     return parts.join(" · ");
   };
+
+  const isStartScheduleNotFuture = adScheduleStartTime
+    ? new Date(adScheduleStartTime) <= new Date()
+    : false;
+
+  const isEndScheduleBeforeStart = adScheduleStartTime && adScheduleEndTime
+    ? new Date(adScheduleEndTime) <= new Date(adScheduleStartTime)
+    : false;
 
   // Get the selected page's access token
   const selectedPageAccessToken = useMemo(() => {
@@ -6435,7 +6444,7 @@ export default function AdCreationForm({
             ) : (
               // Show regular form content when toggle is OFF
               <>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="flex items-center gap-2">
@@ -7897,7 +7906,11 @@ export default function AdCreationForm({
                                   checked={checked}
                                   onCheckedChange={() => toggleUploadSource(src.id)}
                                 />
-                                <img src={src.icon} alt="" className="h-4 w-4 object-contain" />
+                                <img
+                                  src={src.icon}
+                                  alt=""
+                                  className={src.dropdownIconClass || 'h-4 w-4 object-contain'}
+                                />
                                 <span className="text-sm text-gray-800">{src.name}</span>
                               </label>
                             );
@@ -7955,44 +7968,56 @@ export default function AdCreationForm({
                       );
                     };
 
-                    return (
-                      <div className="mb-2 flex gap-2">
-                        {rowSources.map((id) => {
-                          const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
-                          if (!src) return null;
+                    const hasFastUploadSource = rowSources.some((id) =>
+                      ['drive', 'dropbox', 'frameio'].includes(id)
+                    );
 
-                          if (id === 'instagram' || id === 'meta_library') {
+                    return (
+                      <div className="mb-2 space-y-1">
+                        <div className="flex gap-2">
+                          {rowSources.map((id) => {
+                            const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
+                            if (!src) return null;
+
+                            if (id === 'instagram' || id === 'meta_library') {
+                              return (
+                                <div className="flex-1" key={id}>
+                                  <MetaMediaLibraryModal
+                                    adAccountId={selectedAdAccount}
+                                    isLoggedIn={isLoggedIn}
+                                    importedFiles={importedFiles}
+                                    setImportedFiles={setImportedFiles}
+                                    instagramAccountId={instagramAccountId}
+                                    selectedIgOrganicPosts={selectedIgOrganicPosts}
+                                    setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
+                                    showSourceSwitcher={false}
+                                    renderTrigger={(openWithSource) =>
+                                      renderButton(src, () => openWithSource(id))
+                                    }
+                                  />
+                                </div>
+                              );
+                            }
+
+                            const clickHandler =
+                              id === 'drive' ? handleDriveClick :
+                                id === 'dropbox' ? handleDropboxClick :
+                                  id === 'frameio' ? handleFrameioClick :
+                                    () => { };
+
                             return (
                               <div className="flex-1" key={id}>
-                                <MetaMediaLibraryModal
-                                  adAccountId={selectedAdAccount}
-                                  isLoggedIn={isLoggedIn}
-                                  importedFiles={importedFiles}
-                                  setImportedFiles={setImportedFiles}
-                                  instagramAccountId={instagramAccountId}
-                                  selectedIgOrganicPosts={selectedIgOrganicPosts}
-                                  setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
-                                  showSourceSwitcher={false}
-                                  renderTrigger={(openWithSource) =>
-                                    renderButton(src, () => openWithSource(id))
-                                  }
-                                />
+                                {renderButton(src, clickHandler)}
                               </div>
                             );
-                          }
+                          })}
+                        </div>
 
-                          const clickHandler =
-                            id === 'drive' ? handleDriveClick :
-                              id === 'dropbox' ? handleDropboxClick :
-                                id === 'frameio' ? handleFrameioClick :
-                                  () => { };
-
-                          return (
-                            <div className="flex-1" key={id}>
-                              {renderButton(src, clickHandler)}
-                            </div>
-                          );
-                        })}
+                        {hasFastUploadSource && (
+                          <p className="px-1 text-[11px] leading-tight text-gray-500">
+                            Google Drive/Dropbox/Frame files upload 5X faster
+                          </p>
+                        )}
                       </div>
                     );
                   })()}
@@ -8245,6 +8270,7 @@ export default function AdCreationForm({
                           <ScheduleDateTimePicker
                             label="Start Time"
                             value={adScheduleStartTime}
+                            minDateTime={new Date()}
                             onChange={(iso) => setAdScheduleStartTime(iso)}
                             onClear={() => setAdScheduleStartTime(null)}
                           />
@@ -8256,12 +8282,23 @@ export default function AdCreationForm({
                             onClear={() => setAdScheduleEndTime(null)}
                           />
 
-                          {(adScheduleStartTime && adScheduleEndTime) &&
-                            new Date(adScheduleEndTime) <= new Date(adScheduleStartTime) && (
-                              <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
-                                End time must be after start time
-                              </p>
-                            )}
+                          {formatScheduleLabel() && (
+                            <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                              <p className="text-xs font-medium text-gray-600">{formatScheduleLabel()}</p>
+
+                              {isStartScheduleNotFuture && (
+                                <p className="text-xs text-amber-700">
+                                  Start time must be in the future.
+                                </p>
+                              )}
+                            </div>
+                          )}
+
+                          {isEndScheduleBeforeStart && (
+                            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                              End time must be after start time
+                            </p>
+                          )}
                         </div>
                       </PopoverContent>
                     </Popover>
@@ -8393,9 +8430,15 @@ export default function AdCreationForm({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-gray-900">Connect Frame IO</h3>
+              <div className="flex items-center gap-2">
+                <img src={FrameIcon} alt="Frame.io" className="h-7 w-7 rounded-sm object-cover" />
+                <h3 className="text-lg font-semibold text-gray-900">Connect Frame IO</h3>
+              </div>
               <p className="text-sm text-gray-600">
                 Heads up, your Frame.io account needs to be connected to Adobe Authentication for this integratation to work.
+              </p>
+              <p className="text-sm font-bold text-gray-600">
+                This is mostly an issue for older Frame Accounts.
               </p>
               <button
                 type="button"
@@ -8409,9 +8452,20 @@ export default function AdCreationForm({
 
             {showFrameioConnectHelp && (
               <div className="mt-3 rounded-2xl bg-blue-50 p-4 text-sm text-blue-900">
-                <p>In Frame.io go to <br></br> <span className="font-bold">Avatar → Settings → Profile → Authentication → Connect next to Adobe Authentication.</span></p>
-                <p className="mt-2">Your Adobe and Frame emails must match. </p>
-                <p className="mt-2">If Connect Option is missing, it could be due to SSO or Google sign-in being enabled. You will have to disbale those.</p>
+                <div className="space-y-2">
+                  <p>
+                    <span className="mr-1 font-semibold">1.</span>
+                    In Frame.io go to <span className="font-bold">Avatar → Settings → Profile → Authentication → Connect next to Adobe Authentication.</span>
+                  </p>
+                  <p>
+                    <span className="mr-1 font-semibold">2.</span>
+                    Your Adobe and Frame emails must match.
+                  </p>
+                  <p>
+                    <span className="mr-1 font-semibold">3.</span>
+                    If Connect Option is missing, it could be due to SSO or Google sign-in being enabled. You will have to disbale those.
+                  </p>
+                </div>
               </div>
             )}
 

@@ -5,7 +5,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Clock, Calendar as CalendarIcon } from "lucide-react";
 
-export default function ScheduleDateTimePicker({ label, value, onChange, onClear }) {
+const formatTimeValue = (date) =>
+    `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+const isSameLocalDay = (firstDate, secondDate) =>
+    firstDate &&
+    secondDate &&
+    firstDate.getFullYear() === secondDate.getFullYear() &&
+    firstDate.getMonth() === secondDate.getMonth() &&
+    firstDate.getDate() === secondDate.getDate();
+
+export default function ScheduleDateTimePicker({ label, value, onChange, onClear, minDateTime = null }) {
     // Parse existing value back into date + time
     const existingDate = value ? new Date(value) : null;
     const existingTime = existingDate
@@ -15,35 +25,67 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
     const [selectedDate, setSelectedDate] = useState(existingDate);
     const [time, setTime] = useState(existingTime);
     const [showCal, setShowCal] = useState(false);
+    const minDate = minDateTime ? new Date(minDateTime) : null;
+
+    const getMinimumTimeForDate = (date) => {
+        if (!date || !minDate || !isSameLocalDay(date, minDate)) {
+            return null;
+        }
+
+        return formatTimeValue(minDate);
+    };
+
+    const clampTimeForDate = (date, nextTime) => {
+        const minimumTime = getMinimumTimeForDate(date);
+        if (!minimumTime || !nextTime) {
+            return nextTime;
+        }
+
+        return nextTime < minimumTime ? minimumTime : nextTime;
+    };
 
     // Sync from parent when value changes externally (e.g. clear)
     useEffect(() => {
         if (!value) {
             setSelectedDate(null);
             setTime("00:00");
+            return;
         }
+
+        const nextDate = new Date(value);
+        setSelectedDate(nextDate);
+        setTime(formatTimeValue(nextDate));
     }, [value]);
 
     const handleDateSelect = (date) => {
         setSelectedDate(date);
         setShowCal(false);
         if (date) {
-            const [h, m] = time.split(":").map(Number);
+            const nextTime = clampTimeForDate(date, time);
+            const [h, m] = nextTime.split(":").map(Number);
             const d = new Date(date);
             d.setHours(h, m, 0, 0);
+            setTime(nextTime);
             onChange(d.toISOString().replace(/\.\d{3}Z$/, "Z"));
         }
     };
 
     const handleTimeChange = (newTime) => {
-        setTime(newTime);
+        const nextTime = clampTimeForDate(selectedDate, newTime);
+        setTime(nextTime);
         if (selectedDate) {
-            const [h, m] = newTime.split(":").map(Number);
+            const [h, m] = nextTime.split(":").map(Number);
             const d = new Date(selectedDate);
             d.setHours(h, m, 0, 0);
             onChange(d.toISOString().replace(/\.\d{3}Z$/, "Z"));
         }
     };
+
+    const minimumSelectableDate = minDate ?? new Date();
+    const minimumSelectableDayStart = new Date(minimumSelectableDate);
+    minimumSelectableDayStart.setHours(0, 0, 0, 0);
+    const minimumTime = getMinimumTimeForDate(selectedDate);
+
     return (
         <div className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
             <div className="flex items-center justify-between">
@@ -91,7 +133,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                             mode="single"
                             selected={selectedDate}
                             onSelect={handleDateSelect}
-                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                            disabled={(date) => date < minimumSelectableDayStart}
                             className="p-4 [--cell-size:2.65rem]"
                             classNames={{
                                 month: "flex w-full flex-col gap-3",
@@ -120,6 +162,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                         type="time"
                         value={time}
                         onChange={(e) => handleTimeChange(e.target.value)}
+                        min={minimumTime || undefined}
                         className="w-full bg-transparent text-sm text-gray-700 outline-none [&::-webkit-calendar-picker-indicator]:hidden"
                     />
                 </div>
