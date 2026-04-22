@@ -531,11 +531,17 @@ export default function MediaPreview({
           if (!file.pickerThumbnail) {
             throw new Error('Frame.io file missing pickerThumbnail');
           }
-          const res = await fetch(file.pickerThumbnail);
+          const res = await fetch(file.pickerThumbnail, {
+            credentials: 'include',
+          });
           if (!res.ok) {
             throw new Error(`Failed to fetch Frame.io thumbnail: ${res.statusText}`);
           }
-          blobToProcess = await res.blob();
+          const blob = await res.blob();
+          if (!blob.type.startsWith('image/')) {
+            throw new Error(`Frame.io thumbnail returned non-image (${blob.type})`);
+          }
+          blobToProcess = blob;
         } catch (err) {
           console.error("Error fetching Frame.io file:", err);
           return reject(err);
