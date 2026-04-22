@@ -100,9 +100,21 @@ export default function AdAccountSettings({
     [campaigns, selectedCampaign]
   );
 
+  const selectedDuplicateCampaignData = useMemo(
+    () => campaigns.find((campaign) => campaign.id === duplicateCampaign) || null,
+    [campaigns, duplicateCampaign]
+  );
+
   const isAdvantagePlusCampaign = useMemo(() =>
-    ADVANTAGE_PLUS_TYPES.includes(selectedCampaignData?.smart_promotion_type),
-    [selectedCampaignData?.smart_promotion_type]
+    selectedCampaignData.some((campaign) =>
+      ADVANTAGE_PLUS_TYPES.includes(campaign.smart_promotion_type)
+    ),
+    [selectedCampaignData]
+  );
+
+  const isDuplicateCampaignDeprecated = useMemo(() =>
+    ADVANTAGE_PLUS_TYPES.includes(selectedDuplicateCampaignData?.smart_promotion_type),
+    [selectedDuplicateCampaignData]
   );
 
 
@@ -324,6 +336,11 @@ export default function AdAccountSettings({
       return;
     }
 
+    if (isDuplicateCampaignDeprecated) {
+      toast.error("Facebook has deprecated Advantage+ Shopping Campaigns and Advantage+ App Campaigns, so they can't be duplicated anymore.");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/duplicate-campaign`, {
@@ -379,7 +396,7 @@ export default function AdAccountSettings({
     } finally {
       setIsLoading(false);
     }
-  });
+  }, [duplicateCampaign, isDuplicateCampaignDeprecated, newCampaignName, refreshCampaigns, selectedAdAccount, setAdSets, setDuplicateCampaign, setIsLoading, setNewCampaignName, setSelectedAdSets, setSelectedCampaign, setShowDuplicateCampaignBlock, sortAdSets]);
 
 
   // Auto-populate new ad set name when duplicate ad set is selected
@@ -846,7 +863,7 @@ transition-all duration-150 hover:!bg-black
 
                       <Button
                         onClick={duplicateCampaignFunction}
-                        disabled={!isLoggedIn || !duplicateCampaign || isLoading}
+                        disabled={!isLoggedIn || !duplicateCampaign || isLoading || isDuplicateCampaignDeprecated}
                         className="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
                       >
                         {isLoading ? (
@@ -858,6 +875,14 @@ transition-all duration-150 hover:!bg-black
                           "Create Campaign"
                         )}
                       </Button>
+                      {isDuplicateCampaignDeprecated && (
+                        <div className="flex items-start gap-1.5 text-xs text-red-600">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                          <span>
+                            Facebook has deprecated Advantage+ Shopping Campaigns and Advantage+ App Campaigns so they can&apos;t be duplicated anymore.
+                          </span>
+                        </div>
+                      )}
                       {variants && variants.length > 1 && (
                         <Label className="text-gray-500 text-[12px] font-regular block mt-2">
                           You only need to create the campaign in the default variant.

@@ -773,6 +773,14 @@ export default function AdCreationForm({
     ? new Date(adScheduleEndTime) <= new Date(adScheduleStartTime)
     : false;
 
+  const scheduleStartMinTime = useMemo(() => {
+    if (!showSchedule) {
+      return new Date(Date.now() + 5 * 60 * 1000);
+    }
+
+    return new Date(Date.now() + 5 * 60 * 1000);
+  }, [showSchedule]);
+
   // Get the selected page's access token
   const selectedPageAccessToken = useMemo(() => {
     const selectedPage = pages.find(p => p.id === pageId);
@@ -3450,6 +3458,10 @@ export default function AdCreationForm({
       toast.error("Please enter a name for the new ad set")
       return
     }
+    if (!pageId) {
+      toast.error("Please select a Facebook page")
+      return
+    }
 
 
     let aspectRatioMap = {};
@@ -5945,7 +5957,8 @@ export default function AdCreationForm({
       : `${prefix} ${summary}`;
   };
 
-  const publishDisabled = variants.length > 1
+  const isPageMissing = !pageId;
+  const hasPublishBlockingIssueBeforePage = variants.length > 1
     ? (
       !isLoggedIn ||
       (files.length === 0 && driveFiles.length === 0 && dropboxFiles.length === 0 && frameioFiles.length === 0 && importedPosts.length === 0 && importedFiles.length === 0 && selectedIgOrganicPosts.length === 0) ||
@@ -5965,6 +5978,7 @@ export default function AdCreationForm({
       (shouldShowLeadFormSelector && !selectedForm) ||
       (!isCarouselAd && hasDuplicates)
     );
+  const publishDisabled = hasPublishBlockingIssueBeforePage || isPageMissing;
 
 
   return (
@@ -8157,6 +8171,12 @@ export default function AdCreationForm({
               </div>
             )}
 
+            {!hasPublishBlockingIssueBeforePage && isPageMissing && (
+              <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                Please select a Facebook page to publish ads
+              </div>
+            )}
+
             {!useExistingPosts && !publishDisabled && !hasAdNameFormulaConfigured && adName === "Ad Generated Through Blip" && !(showShopDestinationSelector && !selectedShopDestination) && !(!isCarouselAd && hasDuplicates) && !isMissingDestinationValue && !(shouldShowLeadFormSelector && !selectedForm) && (
               <div className="text-xs text-orange-700 text-left p-2 bg-orange-50 border border-orange-200 rounded-xl">
                 Your ads will be named "Ad Generated Through Blip" since no ad name formula is set.{' '}
@@ -8247,7 +8267,7 @@ export default function AdCreationForm({
                         <button
                           type="button"
                           className={cn(
-                            "inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-medium shadow-sm transition-colors",
+                            "inline-flex h-10 min-w-[128px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium shadow-sm transition-colors",
                             (adScheduleStartTime || adScheduleEndTime)
                               ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                               : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
@@ -8255,7 +8275,7 @@ export default function AdCreationForm({
                         >
                           <Clock className="w-3.5 h-3.5" />
                           {renderDiffMark(["adScheduleStartTime", "adScheduleEndTime"])}
-                          {(adScheduleStartTime || adScheduleEndTime) ? "Scheduled" : "Ad Schedule"}
+                          <span>Ad Schedule</span>
                         </button>
                       </PopoverTrigger>
 
@@ -8270,7 +8290,7 @@ export default function AdCreationForm({
                           <ScheduleDateTimePicker
                             label="Start Time"
                             value={adScheduleStartTime}
-                            minDateTime={new Date(Date.now() + 5 * 60 * 1000)}
+                            minDateTime={scheduleStartMinTime}
                             onChange={(iso) => setAdScheduleStartTime(iso)}
                             onClear={() => setAdScheduleStartTime(null)}
                           />

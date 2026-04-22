@@ -195,17 +195,17 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
 
                 {/* Time Picker */}
                 <div className={cn(
-                    "flex h-11 w-full items-center gap-2 rounded-xl border bg-white px-3 text-sm shadow-sm sm:w-[148px]",
+                    "flex h-11 w-full items-center gap-1.5 rounded-xl border bg-white px-2.5 text-sm shadow-sm sm:w-[140px]",
                     selectedDate ? "border-gray-300" : "border-gray-200 opacity-50 pointer-events-none"
                 )}>
                     <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                    <div className="flex min-w-0 flex-1 items-center justify-between gap-1">
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-0.5">
                         <Select
                             value={formatTimePart(selectedHour)}
                             onValueChange={handleHourChange}
                             disabled={!selectedDate}
                         >
-                            <SelectTrigger className="h-8 w-[40px] shrink-0 rounded-lg border-0 bg-transparent px-1 py-0 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
+                            <SelectTrigger className="h-8 w-[44px] shrink-0 rounded-lg border-0 bg-transparent px-1.5 py-0 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
                                 <SelectValue placeholder="HH" />
                             </SelectTrigger>
                             <SelectContent
@@ -225,14 +225,14 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                             </SelectContent>
                         </Select>
 
-                        <span className="text-sm font-semibold text-gray-400">:</span>
+                        <span className="px-0.5 text-sm font-semibold text-gray-400">:</span>
 
                         <Select
                             value={formatTimePart(selectedMinute)}
                             onValueChange={handleMinuteChange}
                             disabled={!selectedDate}
                         >
-                            <SelectTrigger className="h-8 w-[40px] shrink-0 rounded-lg border-0 bg-transparent px-1 py-0 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
+                            <SelectTrigger className="h-8 w-[44px] shrink-0 rounded-lg border-0 bg-transparent px-1.5 py-0 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
                                 <SelectValue placeholder="MM" />
                             </SelectTrigger>
                             <SelectContent
