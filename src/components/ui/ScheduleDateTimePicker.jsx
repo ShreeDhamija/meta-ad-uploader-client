@@ -147,20 +147,22 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                         <button
                             type="button"
                             className={cn(
-                                "inline-flex h-11 w-full items-center justify-start gap-2 rounded-xl border bg-white px-4 text-sm shadow-sm transition-colors sm:flex-1",
+                                "inline-flex h-11 w-full min-w-0 items-center justify-start gap-2 rounded-xl border bg-white px-4 text-sm shadow-sm transition-colors sm:flex-1",
                                 selectedDate
                                     ? "border-gray-300 text-gray-900"
                                     : "border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
                             )}
                         >
                             <CalendarIcon className="w-3.5 h-3.5 shrink-0" />
-                            {selectedDate
-                                ? selectedDate.toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                })
-                                : "Pick date"}
+                            <span className="truncate whitespace-nowrap">
+                                {selectedDate
+                                    ? selectedDate.toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                        year: "numeric",
+                                    })
+                                    : "Pick date"}
+                            </span>
                         </button>
                     </PopoverTrigger>
                     <PopoverContent
@@ -193,17 +195,17 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
 
                 {/* Time Picker */}
                 <div className={cn(
-                    "flex h-11 w-full items-center gap-2 rounded-xl border bg-white px-3 text-sm shadow-sm sm:w-[205px]",
+                    "flex h-11 w-full items-center gap-2 rounded-xl border bg-white px-3 text-sm shadow-sm sm:w-[148px]",
                     selectedDate ? "border-gray-300" : "border-gray-200 opacity-50 pointer-events-none"
                 )}>
                     <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                    <div className="flex min-w-0 flex-1 items-center gap-1">
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-1">
                         <Select
                             value={formatTimePart(selectedHour)}
                             onValueChange={handleHourChange}
                             disabled={!selectedDate}
                         >
-                            <SelectTrigger className="h-9 min-w-0 flex-1 rounded-xl border-0 px-2 py-0 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
+                            <SelectTrigger className="h-8 w-[40px] shrink-0 rounded-lg border-0 bg-transparent px-1 py-0 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
                                 <SelectValue placeholder="HH" />
                             </SelectTrigger>
                             <SelectContent
@@ -230,7 +232,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                             onValueChange={handleMinuteChange}
                             disabled={!selectedDate}
                         >
-                            <SelectTrigger className="h-9 min-w-0 flex-1 rounded-xl border-0 px-2 py-0 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
+                            <SelectTrigger className="h-8 w-[40px] shrink-0 rounded-lg border-0 bg-transparent px-1 py-0 text-sm font-medium shadow-none focus:ring-0 focus:ring-offset-0">
                                 <SelectValue placeholder="MM" />
                             </SelectTrigger>
                             <SelectContent

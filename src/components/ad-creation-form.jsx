@@ -8270,7 +8270,7 @@ export default function AdCreationForm({
                           <ScheduleDateTimePicker
                             label="Start Time"
                             value={adScheduleStartTime}
-                            minDateTime={new Date()}
+                            minDateTime={new Date(Date.now() + 5 * 60 * 1000)}
                             onChange={(iso) => setAdScheduleStartTime(iso)}
                             onClear={() => setAdScheduleStartTime(null)}
                           />
