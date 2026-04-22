@@ -1057,7 +1057,7 @@ function PostSelectorInline({
                                                 role="combobox"
                                                 aria-expanded={openBrowseCampaign}
                                                 disabled={campaigns.length === 0}
-                                                className="w-full justify-between  border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white h-9 text-sm"
+                                                className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                                             >
                                                 <div className="w-full overflow-hidden flex items-center gap-2">
 
@@ -1071,24 +1071,31 @@ function PostSelectorInline({
                                                     </span>
 
                                                 </div>
-                                                <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent
-                                            className="w-[--radix-popover-trigger-width] md:w-auto md:min-w-[--radix-popover-trigger-width] p-0 bg-white shadow-lg rounded-xl"
+                                            className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                                             align="start"
                                             sideOffset={4}
                                             side="bottom"
                                             avoidCollisions={false}
+                                            style={{
+                                                minWidth: "var(--radix-popover-trigger-width)",
+                                                width: "max-content",
+                                                maxWidth: "min(calc(100vw - 2rem), 48rem)",
+                                            }}
                                         >
                                             <Command loop={false}>
                                                 <CommandInput
                                                     placeholder="Search campaigns..."
                                                     value={browseCampaignSearch}
                                                     onValueChange={setBrowseCampaignSearch}
+                                                    className="bg-transparent"
+                                                    wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                                                 />
                                                 <CommandEmpty>No campaigns found.</CommandEmpty>
-                                                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                                                <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
                                                     <CommandGroup>
                                                         {filteredBrowseCampaigns.map((camp) => (
                                                             <CommandItem
@@ -1096,7 +1103,7 @@ function PostSelectorInline({
                                                                 value={camp.name || camp.id}
                                                                 onSelect={() => handleBrowseCampaignChange(camp.id)}
                                                                 className={cn(
-                                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
                                                                     adsetBrowseCampaignId === camp.id && "bg-gray-100 font-semibold",
                                                                     camp.status !== "ACTIVE" && "text-gray-400"
                                                                 )}
@@ -1126,7 +1133,7 @@ function PostSelectorInline({
                                                 role="combobox"
                                                 aria-expanded={openBrowseAdSet}
                                                 disabled={!adsetBrowseCampaignId || adsetBrowseAdSets.length === 0 || isLoadingBrowseAdSets}
-                                                className="w-full justify-between  border border-gray-400 rounded-xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white h-9 text-sm"
+                                                className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                                             >
                                                 <div className="w-full overflow-hidden flex items-center gap-2">
                                                     {isLoadingBrowseAdSets ? (
@@ -1147,24 +1154,31 @@ function PostSelectorInline({
                                                         </span>
                                                     )}
                                                 </div>
-                                                <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent
-                                            className="w-[--radix-popover-trigger-width] md:w-auto md:min-w-[--radix-popover-trigger-width] p-0 bg-white shadow-lg rounded-xl"
+                                            className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
                                             align="start"
                                             sideOffset={4}
                                             side="bottom"
                                             avoidCollisions={false}
+                                            style={{
+                                                minWidth: "var(--radix-popover-trigger-width)",
+                                                width: "max-content",
+                                                maxWidth: "min(calc(100vw - 2rem), 48rem)",
+                                            }}
                                         >
                                             <Command loop={false}>
                                                 <CommandInput
                                                     placeholder="Search ad sets..."
                                                     value={browseAdSetSearch}
                                                     onValueChange={setBrowseAdSetSearch}
+                                                    className="bg-transparent"
+                                                    wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
                                                 />
                                                 <CommandEmpty>No ad sets found.</CommandEmpty>
-                                                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+                                                <CommandList className="max-h-[500px] overflow-y-auto rounded-2xl custom-scrollbar" selectOnFocus={false}>
                                                     <CommandGroup>
                                                         {filteredBrowseAdSets.map((adset) => (
                                                             <CommandItem
@@ -1172,7 +1186,7 @@ function PostSelectorInline({
                                                                 value={adset.name || adset.id}
                                                                 onSelect={() => handleBrowseAdSetChange(adset.id)}
                                                                 className={cn(
-                                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150",
+                                                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
                                                                     adsetBrowseSelectedAdSetId === adset.id && "bg-gray-100 font-semibold",
                                                                     adset.status !== "ACTIVE" && "text-gray-400"
                                                                 )}

@@ -1348,7 +1348,7 @@ export default function MediaPreview({
                     )}
                   </div>
                   {enablePlacementCustomization && (
-                    <span className="block text-xs text-gray-500 mt-1">
+                    <span className="block text-xs leading-tight text-gray-500 mt-0">
                       AI Auto Group only works for images
                     </span>
                   )}

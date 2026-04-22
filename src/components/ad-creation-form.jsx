@@ -80,7 +80,7 @@ const UPLOAD_SOURCE_OPTIONS = [
     name: 'Frame.io',
     icon: FrameIcon,
     iconClass: 'h-6 w-6 rounded-sm object-cover',
-    dropdownIconClass: 'h-6 w-6 rounded-sm object-cover',
+    dropdownIconClass: '-ml-0.5 h-6 w-6 rounded-sm object-cover',
     fullLabel: 'Choose Files from Frame.io',
     compactLabel: 'Frame.io',
   },
@@ -773,6 +773,11 @@ export default function AdCreationForm({
     ? new Date(adScheduleEndTime) <= new Date(adScheduleStartTime)
     : false;
 
+  const canShowAdSchedule = campaignObjective.length > 0 &&
+    campaignObjective.every(obj =>
+      ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)
+    );
+
   const scheduleStartMinTime = useMemo(() => {
     if (!showSchedule) {
       return new Date(Date.now() + 5 * 60 * 1000);
@@ -780,6 +785,12 @@ export default function AdCreationForm({
 
     return new Date(Date.now() + 5 * 60 * 1000);
   }, [showSchedule]);
+
+  useEffect(() => {
+    if (!canShowAdSchedule) {
+      setShowSchedule(false);
+    }
+  }, [canShowAdSchedule]);
 
   // Get the selected page's access token
   const selectedPageAccessToken = useMemo(() => {
@@ -8257,10 +8268,7 @@ export default function AdCreationForm({
               </div>
 
               {/* Schedule — pushed to the right, only for sales/app promo */}
-              {campaignObjective.length > 0 &&
-                campaignObjective.every(obj =>
-                  ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)
-                ) && (
+              {canShowAdSchedule && (
                   <div className="flex items-center gap-2">
                     <Popover open={showSchedule} onOpenChange={setShowSchedule}>
                       <PopoverTrigger asChild>
@@ -8329,7 +8337,7 @@ export default function AdCreationForm({
             </div>
 
             {/* Schedule summary — right-aligned */}
-            {formatScheduleLabel() && (
+            {canShowAdSchedule && formatScheduleLabel() && (
               <div className="flex items-center justify-end gap-1.5">
                 <p className="text-xs text-blue-600">{formatScheduleLabel()}</p>
                 <button

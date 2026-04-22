@@ -63,27 +63,32 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
     // Sync from parent when value changes externally (e.g. clear)
     useEffect(() => {
         if (!value) {
-            setSelectedDate(null);
-            setTime("00:00");
+            setSelectedDate((prev) => (prev === null ? prev : null));
+            setTime((prev) => (prev === "00:00" ? prev : "00:00"));
             return;
         }
 
         const nextDate = new Date(value);
-        setSelectedDate(nextDate);
-        setTime(formatTimeValue(nextDate));
+        const nextTime = formatTimeValue(nextDate);
+        setSelectedDate((prev) =>
+            prev && prev.getTime() === nextDate.getTime() ? prev : nextDate
+        );
+        setTime((prev) => (prev === nextTime ? prev : nextTime));
     }, [value]);
 
     const handleDateSelect = (date) => {
-        setSelectedDate(date);
         setShowCal(false);
-        if (date) {
-            const nextTime = clampTimeForDate(date, time);
-            const [h, m] = nextTime.split(":").map(Number);
-            const d = new Date(date);
-            d.setHours(h, m, 0, 0);
-            setTime(nextTime);
-            onChange(d.toISOString().replace(/\.\d{3}Z$/, "Z"));
+        if (!date) {
+            setSelectedDate(null);
+            return;
         }
+        const nextTime = clampTimeForDate(date, time);
+        const [h, m] = nextTime.split(":").map(Number);
+        const d = new Date(date);
+        d.setHours(h, m, 0, 0);
+        setSelectedDate(d);
+        setTime(nextTime);
+        onChange(d.toISOString().replace(/\.\d{3}Z$/, "Z"));
     };
 
     const commitTimeChange = (newTime) => {
