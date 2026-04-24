@@ -137,7 +137,7 @@ const useAdCreationProgress = (jobId, isCreatingAds) => {
     let connectionTimeoutId = null;
     let isSubscribed = true;
     let retryCount = 0;
-    let jobNotFoundCount = 0; // Separate counter for job not found
+    let jobNotFoundCount = 0;
 
     const baseRetryDelay = 500;
     const maxRetryDelay = 5000;
@@ -8269,71 +8269,71 @@ export default function AdCreationForm({
 
               {/* Schedule — pushed to the right, only for sales/app promo */}
               {canShowAdSchedule && (
-                  <div className="flex items-center gap-2">
-                    <Popover open={showSchedule} onOpenChange={setShowSchedule}>
-                      <PopoverTrigger asChild>
-                        <button
-                          type="button"
-                          className={cn(
-                            "inline-flex h-10 min-w-[128px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium shadow-sm transition-colors",
-                            (adScheduleStartTime || adScheduleEndTime)
-                              ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                              : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-                          )}
-                        >
-                          <Clock className="w-3.5 h-3.5" />
-                          {renderDiffMark(["adScheduleStartTime", "adScheduleEndTime"])}
-                          <span>Ad Schedule</span>
-                        </button>
-                      </PopoverTrigger>
-
-                      <PopoverContent
-                        className="w-[380px] max-w-[92vw] rounded-2xl border border-gray-200 bg-white p-5 shadow-xl"
-                        align="end"
-                        sideOffset={10}
+                <div className="flex items-center gap-2">
+                  <Popover open={showSchedule} onOpenChange={setShowSchedule}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className={cn(
+                          "inline-flex h-10 min-w-[128px] items-center justify-center gap-2 rounded-xl border px-4 text-sm font-medium shadow-sm transition-colors",
+                          (adScheduleStartTime || adScheduleEndTime)
+                            ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                            : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                        )}
                       >
-                        <div className="space-y-5">
-                          <p className="text-sm font-semibold text-gray-800">Ad Schedule</p>
+                        <Clock className="w-3.5 h-3.5" />
+                        {renderDiffMark(["adScheduleStartTime", "adScheduleEndTime"])}
+                        <span>Ad Schedule</span>
+                      </button>
+                    </PopoverTrigger>
 
-                          <ScheduleDateTimePicker
-                            label="Start Time"
-                            value={adScheduleStartTime}
-                            minDateTime={scheduleStartMinTime}
-                            onChange={(iso) => setAdScheduleStartTime(iso)}
-                            onClear={() => setAdScheduleStartTime(null)}
-                          />
+                    <PopoverContent
+                      className="w-[380px] max-w-[92vw] rounded-2xl border border-gray-200 bg-white p-5 shadow-xl"
+                      align="end"
+                      sideOffset={10}
+                    >
+                      <div className="space-y-5">
+                        <p className="text-sm font-semibold text-gray-800">Ad Schedule</p>
 
-                          <ScheduleDateTimePicker
-                            label="End Time"
-                            value={adScheduleEndTime}
-                            onChange={(iso) => setAdScheduleEndTime(iso)}
-                            onClear={() => setAdScheduleEndTime(null)}
-                          />
+                        <ScheduleDateTimePicker
+                          label="Start Time"
+                          value={adScheduleStartTime}
+                          minDateTime={scheduleStartMinTime}
+                          onChange={(iso) => setAdScheduleStartTime(iso)}
+                          onClear={() => setAdScheduleStartTime(null)}
+                        />
 
-                          {formatScheduleLabel() && (
-                            <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-                              <p className="text-xs font-medium text-gray-600">{formatScheduleLabel()}</p>
+                        <ScheduleDateTimePicker
+                          label="End Time"
+                          value={adScheduleEndTime}
+                          onChange={(iso) => setAdScheduleEndTime(iso)}
+                          onClear={() => setAdScheduleEndTime(null)}
+                        />
 
-                              {isStartScheduleNotFuture && (
-                                <p className="text-xs text-amber-700">
-                                  Start time must be in the future.
-                                </p>
-                              )}
-                            </div>
-                          )}
+                        {formatScheduleLabel() && (
+                          <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                            <p className="text-xs font-medium text-gray-600">{formatScheduleLabel()}</p>
 
-                          {isEndScheduleBeforeStart && (
-                            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
-                              End time must be after start time
-                            </p>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                            {isStartScheduleNotFuture && (
+                              <p className="text-xs text-amber-700">
+                                Start time must be in the future.
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {isEndScheduleBeforeStart && (
+                          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+                            End time must be after start time
+                          </p>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
 
 
-                  </div>
-                )}
+                </div>
+              )}
             </div>
 
             {/* Schedule summary — right-aligned */}
