@@ -27,6 +27,12 @@ import { useAppData } from "@/lib/AppContext"
 
 // Add constant
 const ADVANTAGE_PLUS_TYPES = ["AUTOMATED_SHOPPING_ADS", "SMART_APP_PROMOTION"];
+const DROPDOWN_MAX_WIDTH = "min(calc(100vw - 2rem), 850px)";
+const dropdownContentStyle = {
+  minWidth: "var(--radix-popover-trigger-width)",
+  width: "max-content",
+  maxWidth: DROPDOWN_MAX_WIDTH,
+};
 
 export default function AdAccountSettings({
 
@@ -655,7 +661,14 @@ export default function AdAccountSettings({
                         <span className="block truncate flex-1 text-left text-gray-500">Fetching campaigns...</span>
                       </>
                     ) : (
-                      <span className="block truncate flex-1 text-left">
+                      <span
+                        className="block truncate flex-1 text-left"
+                        title={
+                          selectedCampaign.length === 1
+                            ? campaigns.find((c) => c.id === selectedCampaign[0])?.name || selectedCampaign[0]
+                            : undefined
+                        }
+                      >
                         {selectedAdAccount && campaigns.length === 0
                           ? "No campaigns exist in this ad account. Try selecting a different account."
                           : selectedCampaign.length === 0
@@ -670,16 +683,12 @@ export default function AdAccountSettings({
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                className="w-auto max-w-[min(calc(100vw-2rem),850px)] p-0 bg-white shadow-lg rounded-2xl"
                 align="start"
                 sideOffset={4}
                 side="bottom"
                 avoidCollisions={false}
-                style={{
-                  minWidth: "var(--radix-popover-trigger-width)",
-                  width: "max-content",
-                  maxWidth: "min(calc(100vw - 2rem), 48rem)",
-                }}
+                style={dropdownContentStyle}
               >
                 <Command loop={false}>
                   <CommandInput
@@ -701,7 +710,7 @@ export default function AdAccountSettings({
                             onSelect={() => handleCampaignChange(camp.id)}
                             className="px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150"
                           >
-                            <div className="flex items-center gap-2 w-full">
+                            <div className="flex items-center gap-2 w-full min-w-0">
                               <Checkbox
                                 id={`campaign-${camp.id}`}
                                 checked={isSelected}
@@ -711,8 +720,8 @@ export default function AdAccountSettings({
                                   <Check className="w-3 h-3 text-green-500" />
                                 </Checkbox.Indicator>
                               </Checkbox>
-                              <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", camp.status !== "ACTIVE" && "text-gray-400")}>
-                                <span className="truncate leading-[1.25]">{camp.name || camp.id}</span>
+                              <Label className={cn("min-w-0 flex-1 cursor-pointer flex items-center justify-between", camp.status !== "ACTIVE" && "text-gray-400")}>
+                                <span className="min-w-0 truncate leading-[1.25]" title={camp.name || camp.id}>{camp.name || camp.id}</span>
                                 {camp.status === "ACTIVE" && (
                                   <span className="ml-2 w-2 h-2 rounded-full bg-green-500" />
                                 )}
@@ -780,7 +789,14 @@ transition-all duration-150 hover:!bg-black
                         className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                       >
                         <div className="w-full overflow-hidden">
-                          <span className="block truncate flex-1 text-left">
+                          <span
+                            className="block truncate flex-1 text-left"
+                            title={
+                              duplicateCampaign
+                                ? campaigns.find((campaign) => campaign.id === duplicateCampaign)?.name || duplicateCampaign
+                                : undefined
+                            }
+                          >
                             {duplicateCampaign
                               ? campaigns.find((campaign) => campaign.id === duplicateCampaign)?.name || duplicateCampaign
                               : "Select campaign to duplicate"}
@@ -790,16 +806,12 @@ transition-all duration-150 hover:!bg-black
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                      className="w-auto max-w-[min(calc(100vw-2rem),850px)] p-0 bg-white shadow-lg rounded-2xl"
                       align="start"
                       sideOffset={4}
                       side="bottom"
                       avoidCollisions={false}
-                      style={{
-                        minWidth: "var(--radix-popover-trigger-width)",
-                        width: "max-content",
-                        maxWidth: "min(calc(100vw - 2rem), 48rem)",
-                      }}
+                      style={dropdownContentStyle}
                     >
                       <Command loop={false}>
                         <CommandInput
@@ -829,8 +841,8 @@ transition-all duration-150 hover:!bg-black
                                     campaign.status !== "ACTIVE" && "text-gray-400"
                                   )}
                                 >
-                                  <div className="flex justify-between items-center w-full truncate">
-                                    <span className="truncate">{campaign.name || campaign.id}</span>
+                                  <div className="flex justify-between items-center w-full min-w-0">
+                                    <span className="min-w-0 truncate" title={campaign.name || campaign.id}>{campaign.name || campaign.id}</span>
                                     {campaign.status === "ACTIVE" && (
                                       <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
                                     )}
@@ -945,16 +957,12 @@ transition-all duration-150 hover:!bg-black
                 </Button>
               </PopoverTrigger>
               <PopoverContent
-                className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                className="w-auto max-w-[min(calc(100vw-2rem),850px)] p-0 bg-white shadow-lg rounded-2xl"
                 align="start"
                 sideOffset={4}
                 side="bottom"
                 avoidCollisions={false}
-                style={{
-                  minWidth: "var(--radix-popover-trigger-width)",
-                  width: "max-content",
-                  maxWidth: "min(calc(100vw - 2rem), 48rem)",
-                }}
+                style={dropdownContentStyle}
               >
                 <Command loop={false}>
                   <CommandInput
@@ -1019,7 +1027,10 @@ transition-all duration-150 hover:!bg-black
                               <div key={campaignId}>
                                 {/* Campaign separator */}
                                 {selectedCampaign.length >= 2 && (
-                                  <div className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none">
+                                  <div
+                                    className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none truncate"
+                                    title={`${campaignName} Ad Sets`}
+                                  >
                                     {campaignName} Ad Sets
                                   </div>
                                 )}
@@ -1036,7 +1047,7 @@ transition-all duration-150 hover:!bg-black
                                         isSelected ? "bg-gray-100 hover:!bg-gray-100 font-semibold" : "hover:!bg-gray-200",
                                       )}
                                     >
-                                      <div className="flex items-center space-x-2 w-full">
+                                      <div className="flex items-center space-x-2 w-full min-w-0">
                                         <Checkbox
                                           id={`adset-${adset.id}`}
                                           checked={isSelected}
@@ -1046,9 +1057,9 @@ transition-all duration-150 hover:!bg-black
                                             <Check className="w-3 h-3 text-green-500" />
                                           </Checkbox.Indicator>
                                         </Checkbox>
-                                        <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
-                                          <span className="truncate leading-[1.25]">{adset.name || adset.id}</span>
-                                          <span className="flex items-center">
+                                        <Label className={cn("min-w-0 flex-1 cursor-pointer flex items-center justify-between", adset.status !== "ACTIVE" && "text-gray-400")}>
+                                          <span className="min-w-0 truncate leading-[1.25]" title={adset.name || adset.id}>{adset.name || adset.id}</span>
+                                          <span className="ml-2 flex shrink-0 items-center">
                                             {adset.totalAds != null && (
                                               <span className="text-xs text-gray-400 mr-1.5">({adset.totalAds} {adset.totalAds === 1 ? 'Ad' : 'Ads'})</span>
                                             )}
@@ -1122,7 +1133,14 @@ transition-all duration-150 hover:!bg-black
                         className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow overflow-hidden whitespace-nowrap hover:!bg-white"
                       >
                         <div className="w-full overflow-hidden">
-                          <span className="block truncate flex-1 text-left">
+                          <span
+                            className="block truncate flex-1 text-left"
+                            title={
+                              duplicateAdSet
+                                ? adSets.find((adset) => adset.id === duplicateAdSet)?.name || duplicateAdSet
+                                : undefined
+                            }
+                          >
                             {duplicateAdSet
                               ? adSets.find((adset) => adset.id === duplicateAdSet)?.name || duplicateAdSet
                               : "Select existing ad set"}
@@ -1132,16 +1150,12 @@ transition-all duration-150 hover:!bg-black
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="!w-auto !max-w-none p-0 bg-white shadow-lg rounded-2xl"
+                      className="w-auto max-w-[min(calc(100vw-2rem),850px)] p-0 bg-white shadow-lg rounded-2xl"
                       align="start"
                       sideOffset={4}
                       side="bottom"
                       avoidCollisions={false}
-                      style={{
-                        minWidth: "var(--radix-popover-trigger-width)",
-                        width: "max-content",
-                        maxWidth: "min(calc(100vw - 2rem), 48rem)",
-                      }}
+                      style={dropdownContentStyle}
                     >
                       <Command loop={false}>
                         <CommandInput
@@ -1173,7 +1187,10 @@ transition-all duration-150 hover:!bg-black
                                     <div key={campaignId}>
                                       {/* Campaign separator */}
                                       {selectedCampaign.length >= 2 && (
-                                        <div className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none">
+                                        <div
+                                          className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none truncate"
+                                          title={`${campaignName} Ad Sets`}
+                                        >
                                           {campaignName} Ad Sets
                                         </div>
                                       )}
@@ -1193,8 +1210,8 @@ transition-all duration-150 hover:!bg-black
                                               adset.status !== "ACTIVE" && "text-gray-400"
                                             )}
                                           >
-                                            <div className="flex justify-between items-center w-full truncate">
-                                              <span className="truncate">{adset.name || adset.id}</span>
+                                            <div className="flex justify-between items-center w-full min-w-0">
+                                              <span className="min-w-0 truncate" title={adset.name || adset.id}>{adset.name || adset.id}</span>
                                               {adset.status === "ACTIVE" && (
                                                 <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
                                               )}
