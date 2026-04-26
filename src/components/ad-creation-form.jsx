@@ -413,14 +413,14 @@ const extractFolderId = (url) => {
 /**
  * Hook to fetch approved partnership ad partners for a given Instagram account
  */
-const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
+const usePartnershipAdPartners = (instagramAccountId, pageId) => {
   const [partners, setPartners] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const fetchPartners = useCallback(async () => {
     // Skip if missing required params
-    if (!instagramAccountId || !pageAccessToken) {
+    if (!instagramAccountId || !pageId) {
       setPartners([]);
       return;
     }
@@ -433,7 +433,7 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
       const response = await axios.get(
         `${API_BASE_URL}/auth/partnership-ads/partners`,
         {
-          params: { instagramAccountId, pageAccessToken },
+          params: { instagramAccountId, pageId },
           withCredentials: true
         }
       );
@@ -453,7 +453,7 @@ const usePartnershipAdPartners = (instagramAccountId, pageAccessToken) => {
     } finally {
       setIsLoading(false);
     }
-  }, [instagramAccountId, pageAccessToken]);
+  }, [instagramAccountId, pageId]);
 
   useEffect(() => {
     fetchPartners();
@@ -799,12 +799,6 @@ export default function AdCreationForm({
     }
   }, [canShowAdSchedule]);
 
-  // Get the selected page's access token
-  const selectedPageAccessToken = useMemo(() => {
-    const selectedPage = pages.find(p => p.id === pageId);
-    return selectedPage?.access_token || null;
-  }, [pages, pageId]);
-
   // Fetch partners only when toggle is ON (lazy loading)
   const {
     partners: availablePartners,
@@ -813,7 +807,7 @@ export default function AdCreationForm({
     refetch: refetchPartners
   } = usePartnershipAdPartners(
     isPartnershipAd ? instagramAccountId : null,
-    isPartnershipAd ? selectedPageAccessToken : null
+    isPartnershipAd ? pageId : null
   );
 
   // Filter partners based on search
@@ -1528,11 +1522,11 @@ export default function AdCreationForm({
           headers: {
             "Content-Type": "application/json"
           },
+          credentials: "include",
           body: JSON.stringify({
             driveFileUrl: driveDownloadUrl,
             fileName: file.name,
             mimeType: file.mimeType,
-            accessToken: file.accessToken,
             size: file.size
           }),
           signal
@@ -1571,11 +1565,11 @@ export default function AdCreationForm({
         const res = await fetch(`${API_BASE_URL}/api/upload-from-dropbox`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
-            fileId: file.dropboxId, // ✅ Send the ID
+            fileId: file.dropboxId,
             fileName: file.name,
-            mimeType: file.mimeType || getMimeFromName(file.name),
-            accessToken: file.accessToken // ✅ Send the Token
+            mimeType: file.mimeType || getMimeFromName(file.name)
           })
         });
 
@@ -2193,22 +2187,33 @@ export default function AdCreationForm({
       // toast.error("Google login timed out.");
     }, 65000);
 
-    const listener = (event) => {
+    const listener = async (event) => {
       if (event.origin !== `${API_BASE_URL}`) return;
 
-      const { type, accessToken } = event.data || {};
+      const { type } = event.data || {};
       if (type === "google-auth-success") {
         clearTimeout(timeoutId);
         window.removeEventListener("message", listener);
         authWindow.close();
 
-        setGoogleAuthStatus({
-          authenticated: true,
-          checking: false,
-          accessToken
-        });
-
-        openPicker(accessToken);
+        try {
+          const res = await axios.get(
+            `${API_BASE_URL}/auth/google/status`,
+            { withCredentials: true }
+          );
+          if (res.data.authenticated && res.data.accessToken) {
+            setGoogleAuthStatus({
+              authenticated: true,
+              checking: false,
+              accessToken: res.data.accessToken
+            });
+            openPicker(res.data.accessToken);
+          } else {
+            toast.error("Google authentication failed");
+          }
+        } catch (err) {
+          toast.error("Google authentication failed");
+        }
       } else if (type === "google-auth-error") {
         clearTimeout(timeoutId);
         window.removeEventListener("message", listener);
@@ -2240,8 +2245,8 @@ export default function AdCreationForm({
 
 
 
-  // ✅ CHANGE: Accept accessToken as an argument so we can attach it to files
-  const openDropboxChooser = useCallback((accessToken) => {
+  // Backend uses session token for upload — no client-side accessToken needed.
+  const openDropboxChooser = useCallback(() => {
     window.Dropbox.choose({
       success: async (selectedFiles) => {
 
@@ -2249,14 +2254,13 @@ export default function AdCreationForm({
         selectedFiles.forEach(f => console.log(`File: ${f.name} ID: ${f.id}`));
 
         const dropboxFilesData = selectedFiles.map((file) => ({
-          dropboxId: file.id, // ✅ We use this ID for the backend now
+          dropboxId: file.id,
           name: file.name,
-          link: file.link, // Kept for UI, but not used for upload
-          directLink: file.link, // ✅ ADD THIS LINE
+          link: file.link,
+          directLink: file.link,
           size: file.bytes,
           isDropbox: true,
           mimeType: getMimeFromName(file.name),
-          accessToken: accessToken // ✅ Attach token to file object
         }));
 
         setDropboxFiles(prev => [...prev, ...dropboxFilesData]);
@@ -2285,9 +2289,8 @@ export default function AdCreationForm({
       });
       const statusData = await statusRes.json();
 
-      // ✅ CHECK: If authenticated, pass the token immediately
-      if (statusData.authenticated && statusData.accessToken) {
-        openDropboxChooser(statusData.accessToken);
+      if (statusData.authenticated) {
+        openDropboxChooser();
         return;
       }
 
@@ -2304,13 +2307,11 @@ export default function AdCreationForm({
       );
 
       const handleMessage = (event) => {
-        // ✅ CHANGE: Extract accessToken from success message
+        if (event.origin !== API_BASE_URL) return;
         if (event.data?.type === 'dropbox-auth-success') {
           window.removeEventListener('message', handleMessage);
           toast.success("Dropbox connected! Opening file picker...");
-
-          // Pass the new token to the chooser
-          openDropboxChooser(event.data.accessToken);
+          openDropboxChooser();
         } else if (event.data?.type === 'dropbox-auth-error') {
           window.removeEventListener('message', handleMessage);
           toast.error("Failed to connect Dropbox");
@@ -2326,7 +2327,6 @@ export default function AdCreationForm({
   }, [openDropboxChooser]);
 
   const [frameioPickerOpen, setFrameioPickerOpen] = useState(false);
-  const [frameioAccessToken, setFrameioAccessToken] = useState(null);
 
   const launchFrameioAuthPopup = useCallback(() => {
     const width = 600;
@@ -2352,12 +2352,11 @@ export default function AdCreationForm({
 
     const listener = (event) => {
       if (event.origin !== API_BASE_URL) return;
-      const { type, accessToken } = event.data || {};
+      const { type } = event.data || {};
       if (type === "frameio-auth-success") {
         clearTimeout(timeoutId);
         window.removeEventListener("message", listener);
         authWindow.close();
-        setFrameioAccessToken(accessToken);
         setFrameioPickerOpen(true);
         toast.success("Frame.io connected!");
       } else if (type === "frameio-auth-error") {
@@ -2378,8 +2377,7 @@ export default function AdCreationForm({
       });
       const statusData = await statusRes.json();
 
-      if (statusData.authenticated && statusData.accessToken) {
-        setFrameioAccessToken(statusData.accessToken);
+      if (statusData.authenticated) {
         setFrameioPickerOpen(true);
         return;
       }
@@ -8058,7 +8056,6 @@ export default function AdCreationForm({
                 <FrameioPickerModal
                   open={frameioPickerOpen}
                   onOpenChange={setFrameioPickerOpen}
-                  accessToken={frameioAccessToken}
                   onConfirm={handleFrameioFilesSelected}
                 />
 
