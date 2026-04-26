@@ -785,7 +785,13 @@ export default function AdCreationForm({
 
     return new Date(Date.now() + 5 * 60 * 1000);
   }, [showSchedule]);
-  const userTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
+  const userTimeZone = useMemo(() => {
+    const offsetMinutes = -new Date().getTimezoneOffset();
+    const sign = offsetMinutes >= 0 ? "+" : "-";
+    const hours = Math.floor(Math.abs(offsetMinutes) / 60);
+    const minutes = String(Math.abs(offsetMinutes) % 60).padStart(2, "0");
+    return `${Intl.DateTimeFormat().resolvedOptions().timeZone} ${sign}${hours}:${minutes}`;
+  }, []);
 
   useEffect(() => {
     if (!canShowAdSchedule) {
@@ -8289,7 +8295,7 @@ export default function AdCreationForm({
                     </PopoverTrigger>
 
                     <PopoverContent
-                      className="w-[380px] max-w-[92vw] rounded-2xl border border-gray-200 bg-white p-5 shadow-xl"
+                      className="w-[380px] max-w-[92vw] rounded-2xl border border-gray-200 bg-gray-50 p-5 shadow-xl"
                       align="end"
                       sideOffset={10}
                     >
@@ -8315,12 +8321,12 @@ export default function AdCreationForm({
                         />
 
                         {formatScheduleLabel() && (
-                          <div className="space-y-2 rounded-[17px] border border-gray-200 bg-gray-50 px-3 py-2">
+                          <div className="space-y-2 rounded-[22px] border border-gray-200 bg-white px-3 py-2">
                             <p className="text-xs font-medium text-gray-600">{formatScheduleLabel()}</p>
 
                             {isStartScheduleNotFuture && (
                               <p className="text-xs text-amber-700">
-                                Start time must be in the future.
+                                Start time selected is in the past.
                               </p>
                             )}
                           </div>
