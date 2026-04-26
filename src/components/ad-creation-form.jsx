@@ -785,6 +785,7 @@ export default function AdCreationForm({
 
     return new Date(Date.now() + 5 * 60 * 1000);
   }, [showSchedule]);
+  const userTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
   useEffect(() => {
     if (!canShowAdSchedule) {
@@ -8292,8 +8293,11 @@ export default function AdCreationForm({
                       align="end"
                       sideOffset={10}
                     >
-                      <div className="space-y-5">
-                        <p className="text-sm font-semibold text-gray-800">Ad Schedule</p>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-gray-800">Ad Schedule</p>
+                          <span className="truncate text-xs font-medium text-gray-400">{userTimeZone}</span>
+                        </div>
 
                         <ScheduleDateTimePicker
                           label="Start Time"
@@ -8311,7 +8315,7 @@ export default function AdCreationForm({
                         />
 
                         {formatScheduleLabel() && (
-                          <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                          <div className="space-y-2 rounded-[17px] border border-gray-200 bg-gray-50 px-3 py-2">
                             <p className="text-xs font-medium text-gray-600">{formatScheduleLabel()}</p>
 
                             {isStartScheduleNotFuture && (
