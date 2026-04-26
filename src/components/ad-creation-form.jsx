@@ -6903,9 +6903,9 @@ export default function AdCreationForm({
                         size="sm"
                         variant="outline"
                         onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                        className="text-xs px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
+                        className="text-xs gap-1 px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
                       >
-                        <CogIcon className="w-3 h-3 mr-1 text-white" />
+                        <CogIcon className="w-3 h-3 text-white" />
                         Set Up Ad Name Formula
                       </Button>
                     )}
@@ -6951,7 +6951,7 @@ export default function AdCreationForm({
                             size="sm"
                             variant="outline"
                             onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                            className="text-xs px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900 ml-auto"
+                            className="text-xs gap-1 px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900 ml-auto"
                           >
                             <CogIcon className="w-3 h-3 text-white" />
                             Set Up Templates
