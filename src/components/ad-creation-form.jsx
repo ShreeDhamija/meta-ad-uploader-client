@@ -4043,8 +4043,7 @@ export default function AdCreationForm({
           formData.append("driveFiles", JSON.stringify({
             id: driveFile.id,
             name: driveFile.name,
-            mimeType: driveFile.mimeType,
-            accessToken: driveFile.accessToken
+            mimeType: driveFile.mimeType
           }));
 
           if (isVideoFile(driveFile)) {
@@ -4170,8 +4169,7 @@ export default function AdCreationForm({
         formData.append("driveFiles", JSON.stringify({
           id: driveFile.id,
           name: driveFile.name,
-          mimeType: driveFile.mimeType,
-          accessToken: driveFile.accessToken
+          mimeType: driveFile.mimeType
         }));
       });
 
@@ -4237,7 +4235,6 @@ export default function AdCreationForm({
       formData.append("driveFile", "true");
       formData.append("driveId", driveFile.id);
       formData.append("driveMimeType", driveFile.mimeType);
-      formData.append("driveAccessToken", driveFile.accessToken);
       formData.append("driveName", driveFile.name);
     };
 
@@ -4563,8 +4560,7 @@ export default function AdCreationForm({
           formData.append("driveFiles", JSON.stringify({
             id: driveFile.id,
             name: driveFile.name,
-            mimeType: driveFile.mimeType,
-            accessToken: driveFile.accessToken
+            mimeType: driveFile.mimeType
           }));
           return;
         }
@@ -4904,8 +4900,7 @@ export default function AdCreationForm({
                 formData.append("driveFiles", JSON.stringify({
                   id: driveFile.id,
                   name: driveFile.name,
-                  mimeType: driveFile.mimeType,
-                  accessToken: driveFile.accessToken
+                  mimeType: driveFile.mimeType
                 }));
               });
 
