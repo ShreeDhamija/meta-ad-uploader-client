@@ -702,7 +702,7 @@ export default function ReorderAdNameParts({
           <span className="inline-block mx-1 px-1.5 py-0.5 bg-white border border-gray-300 rounded-md shadow-xs text-black">
             /
           </span>
-          to see a list of variables
+          to see a list of variables.
           {customVariables.length > 0 && (
             <>
               {" "}Type
@@ -710,10 +710,10 @@ export default function ReorderAdNameParts({
                 @
               </span>
               for custom variables.
+              <br />
             </>
           )}
-          <br />
-          You can also save custom text.
+          {" "}You can also save custom text.
         </Label>
 
         <div className="flex items-center gap-1.5">
