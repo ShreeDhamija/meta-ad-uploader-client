@@ -138,7 +138,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
     };
 
     return (
-        <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4">
+        <div className="space-y-3 rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
             <div className="flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700">{label}</label>
                 {value && (
@@ -159,7 +159,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
                         <button
                             type="button"
                             className={cn(
-                                "inline-flex h-11 w-full min-w-0 items-center justify-start gap-2 rounded-xl border bg-gray-50/80 px-4 text-sm shadow-sm transition-colors sm:flex-1",
+                                "inline-flex h-11 w-full min-w-0 items-center justify-start gap-2 rounded-xl border bg-white px-4 text-sm shadow-sm transition-colors sm:flex-1",
                                 selectedDate
                                     ? "border-gray-300 text-gray-900"
                                     : "border-dashed border-gray-300 text-gray-400 hover:border-gray-400"
@@ -207,7 +207,7 @@ export default function ScheduleDateTimePicker({ label, value, onChange, onClear
 
                 {/* Time Picker */}
                 <div className={cn(
-                    "flex h-11 w-full items-center gap-1.5 rounded-xl border bg-gray-50/80 px-2.5 text-sm shadow-sm sm:w-[140px]",
+                    "flex h-11 w-full items-center gap-1.5 rounded-xl border bg-white px-2.5 text-sm shadow-sm sm:w-[140px]",
                     selectedDate ? "border-gray-300" : "border-gray-200 opacity-50 pointer-events-none"
                 )}>
                     <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
