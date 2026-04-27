@@ -573,12 +573,12 @@ export default function BillingSettings() {
                 </>
             )}
 
-            <div className="rounded-[24px] border border-black/10 bg-white px-5 py-5 text-center shadow-xs">
+            <div className="bg-white px-5 py-5 text-left">
                 <h3 className="text-[20px] font-bold leading-tight text-black">
                     Pricing doesn't fit right for you?
                 </h3>
-                <p className="mx-auto mt-2 max-w-[620px] text-[14px] leading-6 text-[#5F5F63]">
-                    In case you really enjoyed using Blip and want to continue using the app but the number of ad accounts you want to use don't fit well in any tier just hit us up through the chat or email us{" "}
+                <p className="mt-2 max-w-[620px] text-[14px] leading-6 text-[#5F5F63]">
+                    If you enjoy using Blip but your ad account needs don't fit any tier, reach out via chat or email{" "}
                     <span className="inline-flex items-center gap-1 font-semibold text-black">
                         shree@withblip.com
                         <button
@@ -590,7 +590,7 @@ export default function BillingSettings() {
                             <Copy className="h-3.5 w-3.5" />
                         </button>
                     </span>{" "}
-                    and we'll figure out a custom pricing plan just for you
+                    and we'll create a custom plan for you.
                 </p>
             </div>
 
