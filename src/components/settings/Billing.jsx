@@ -573,7 +573,7 @@ export default function BillingSettings() {
                 </>
             )}
 
-            <div className="bg-white py-5 text-left">
+            <div className="bg-white py-2 text-left">
                 <h3 className="text-[20px] font-bold leading-tight text-black">
                     Pricing doesn't fit you right?
                 </h3>
