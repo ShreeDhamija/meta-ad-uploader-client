@@ -573,9 +573,9 @@ export default function BillingSettings() {
                 </>
             )}
 
-            <div className="bg-white px-5 py-5 text-left">
+            <div className="bg-white py-5 text-left">
                 <h3 className="text-[20px] font-bold leading-tight text-black">
-                    Pricing doesn't fit right for you?
+                    Pricing doesn't fit you right?
                 </h3>
                 <p className="mt-2 max-w-[620px] text-[14px] leading-6 text-[#5F5F63]">
                     If you enjoy using Blip but your ad account needs don't fit any tier, reach out via chat or email{" "}
