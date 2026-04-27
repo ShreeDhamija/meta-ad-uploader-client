@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { AuthProvider } from "./lib/AuthContext";
+import { TikTokAuthProvider } from "./lib/TikTokAuthContext";
 import { AppProvider } from "./lib/AppContext";
 import { PostHogProvider } from 'posthog-js/react'
 
@@ -17,6 +18,8 @@ import Signup from "./pages/Login.jsx";
 import Settings from "./pages/Settings.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import NotFound from "./pages/NotFound.jsx";
+import TikTokLogin from "./pages/TikTokLogin.jsx";
+import TikTokAds from "./pages/TikTokAds.jsx";
 import TermsOfService from "./pages/Landing/TermsOfService.jsx";
 import PrivacyPolicy from "./pages/Landing/PrivacyPolicy.jsx";
 
@@ -30,6 +33,9 @@ const router = createBrowserRouter([
       { path: "signup", element: <Signup /> },
       { path: "settings", element: <Settings /> },
       { path: "analytics", element: <Analytics /> },
+      { path: "tiktok-login", element: <TikTokLogin /> },
+      { path: "tiktok-signup", element: <TikTokLogin /> },
+      { path: "tiktok-ads", element: <TikTokAds /> },
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
       { path: "*", element: <NotFound /> },
@@ -47,11 +53,13 @@ const options = {
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <AuthProvider>
-      <AppProvider>
-        <PostHogProvider apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY} options={options}>
-          <RouterProvider router={router} />
-        </PostHogProvider>
-      </AppProvider>
+      <TikTokAuthProvider>
+        <AppProvider>
+          <PostHogProvider apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY} options={options}>
+            <RouterProvider router={router} />
+          </PostHogProvider>
+        </AppProvider>
+      </TikTokAuthProvider>
     </AuthProvider>
   </StrictMode>
 );

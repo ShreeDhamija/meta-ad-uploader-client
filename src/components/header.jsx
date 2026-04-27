@@ -8,6 +8,7 @@ import ChatIcon from "@/assets/icons/chat.svg?react"
 import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
 import RocketBtn from "@/assets/rocket2.webp"
 import { useAuth } from "@/lib/AuthContext"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { useLocation, useNavigate } from "react-router-dom"
 import useSubscription from "@/lib/useSubscriptionSettings"
 import useNotifications from "@/lib/useNotifications"
@@ -22,6 +23,7 @@ import {
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
+  const { isTikTokLoggedIn } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const {
@@ -208,6 +210,20 @@ export default function Header({ showMessenger, hideMessenger }) {
           <span className="hidden md:inline text-gray-900 text-[14px] font-medium">Preferences</span>
         </button>
         <div className="h-8 w-px bg-gray-300" />
+        {/* TikTok Nav */}
+        <button
+          onClick={() => navigate(isTikTokLoggedIn ? '/tiktok-ads' : '/tiktok-login')}
+          title="TikTok Ads"
+          className="hidden md:flex items-center gap-1.5 rounded-full transition-colors px-3 py-2 bg-transparent hover:bg-gray-100"
+        >
+          <svg width="18" height="18" viewBox="0 0 48 48" fill="none">
+            <path d="M34.1 6C34.7 9.5 36.7 12.5 39.7 14.3V20.3C37.2 20.3 34.9 19.5 32.9 18.2V30.4C32.9 37.4 27.2 43 20.1 43C13 43 7.3 37.4 7.3 30.4C7.3 23.4 13 17.8 20.1 17.8C20.7 17.8 21.3 17.8 21.9 17.9V23.9C21.3 23.8 20.7 23.7 20.1 23.7C16.2 23.7 13.1 26.7 13.1 30.5C13.1 34.3 16.2 37.3 20.1 37.3C24 37.3 27.3 34.2 27.3 30.4V6H34.1Z" fill="#010101"/>
+          </svg>
+          <span className="inline text-[14px] text-gray-900 font-medium">TikTok Ads</span>
+          {isTikTokLoggedIn && (
+            <span className="w-2 h-2 rounded-full" style={{ background: '#25F4EE' }} title="TikTok Connected" />
+          )}
+        </button>
         {showAnalyticsNav && (
           <>
             <button
