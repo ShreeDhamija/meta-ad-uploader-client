@@ -15,6 +15,7 @@ import BillingSwitchIcon from "@/assets/icons/Billing/Switch.svg?react"
 import BillingCancelIcon from "@/assets/icons/Billing/Cancel.svg?react"
 import BillingInvoiceIcon from "@/assets/icons/Billing/Frame.svg?react"
 import MailIcon from "@/assets/icons/mail.svg?react"
+import { Copy } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -113,6 +114,15 @@ export default function BillingSettings() {
     const currentPlan = isPaidSubscriber()
         ? (getPlanMeta(subscriptionData.planType) || PLANS[0])
         : null
+
+    const handleCopySupportEmail = async () => {
+        try {
+            await navigator.clipboard.writeText("shree@withblip.com")
+            toast.success("Email copied")
+        } catch {
+            toast.error("Couldn't copy email")
+        }
+    }
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
@@ -563,9 +573,30 @@ export default function BillingSettings() {
                 </>
             )}
 
+            <div className="rounded-[24px] border border-black/10 bg-white px-5 py-5 text-center shadow-xs">
+                <h3 className="text-[20px] font-bold leading-tight text-black">
+                    Pricing doesn't fit right for you?
+                </h3>
+                <p className="mx-auto mt-2 max-w-[620px] text-[14px] leading-6 text-[#5F5F63]">
+                    In case you really enjoyed using Blip and want to continue using the app but the number of ad accounts you want to use don't fit well in any tier just hit us up through the chat or email us{" "}
+                    <span className="inline-flex items-center gap-1 font-semibold text-black">
+                        shree@withblip.com
+                        <button
+                            type="button"
+                            onClick={handleCopySupportEmail}
+                            aria-label="Copy support email"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[#5F5F63] transition hover:bg-black/5 hover:text-black"
+                        >
+                            <Copy className="h-3.5 w-3.5" />
+                        </button>
+                    </span>{" "}
+                    and we'll figure out a custom pricing plan just for you
+                </p>
+            </div>
+
             <Button
                 asChild
-                className="h-[52px] w-full rounded-[20px] border border-black/10 bg-white text-black shadow-none hover:bg-white hover:text-black shadow-xs"
+                className="h-[52px] w-full rounded-[20px] border border-black/10 bg-white text-black shadow-none shadow-xs hover:bg-white hover:text-black"
             >
                 <a
                     href="mailto:shree@withblip.com"
