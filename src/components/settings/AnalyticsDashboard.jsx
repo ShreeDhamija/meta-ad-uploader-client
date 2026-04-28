@@ -922,7 +922,7 @@ export default function AnalyticsDashboard() {
 	                                                        setOpenAdAccount(false)
 	                                                        setShowAggregateDialog(true)
 	                                                    }}
-	                                                    className="px-4 py-2 cursor-pointer m-1 rounded-xl border border-gray-200 bg-white font-medium shadow-xs transition-colors duration-150 hover:!bg-white data-[selected=true]:bg-white"
+                                                    className="mx-2 my-1 cursor-pointer rounded-[20px] border border-gray-200 bg-gray-50 px-4 py-2 font-medium shadow transition-colors duration-150 hover:!bg-gray-50 data-[selected=true]:bg-gray-50"
 	                                                >
 	                                                    <BarChart3 className="w-4 h-4 text-gray-500" />
 	                                                    Aggregate KPI View
