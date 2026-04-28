@@ -175,7 +175,7 @@ export default function KPIChart({ data, loading, mode }) {
 
     return (
         <div className="p-4">
-            <div className="mb-[22px] flex items-center justify-between" style={{ paddingLeft: `${DAILY_CHART_LEFT_INSET}px` }}>
+            <div className="mb-[22px] flex items-center justify-between">
                 <div>
                     <p className="text-sm font-medium text-gray-900">Daily {metricLabel} by Campaign</p>
                     <p className="text-xs text-gray-400">

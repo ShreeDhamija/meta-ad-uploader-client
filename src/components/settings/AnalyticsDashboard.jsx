@@ -911,12 +911,30 @@ export default function AnalyticsDashboard() {
                                     onValueChange={setSearchValue}
                                     className="bg-transparent"
                                     wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
-                                />
-                                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-                                    <CommandGroup>
-                                        {filteredAdAccounts.map((acct) => (
-                                            <CommandItem
-                                                key={acct.id}
+	                                />
+	                                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
+	                                    {adAccounts?.length > 1 && (
+	                                        <>
+	                                            <CommandGroup>
+	                                                <CommandItem
+	                                                    value="__aggregate_kpi_view"
+	                                                    onSelect={() => {
+	                                                        setOpenAdAccount(false)
+	                                                        setShowAggregateDialog(true)
+	                                                    }}
+	                                                    className="mx-2 my-2 cursor-pointer justify-center rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:!bg-gray-800 data-[selected=true]:bg-gray-800 data-[selected=true]:text-white"
+	                                                >
+	                                                    <BarChart3 className="w-4 h-4 text-white" />
+	                                                    Aggregate KPI View
+	                                                </CommandItem>
+	                                            </CommandGroup>
+	                                            <CommandSeparator className="mx-2 my-1 bg-gray-100" />
+	                                        </>
+	                                    )}
+	                                    <CommandGroup>
+	                                        {filteredAdAccounts.map((acct) => (
+	                                            <CommandItem
+	                                                key={acct.id}
                                                 value={acct.id}
                                                 onSelect={handleAdAccountSelect}
                                                 className={cn(
@@ -925,30 +943,12 @@ export default function AnalyticsDashboard() {
                                                 )}
                                             >
                                                 {acct.name || acct.id}
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                    {adAccounts?.length > 1 && (
-                                        <>
-                                            <CommandSeparator className="mx-2 my-1 bg-gray-100" />
-                                            <CommandGroup>
-                                                <CommandItem
-                                                    value="__aggregate_kpi_view"
-                                                    onSelect={() => {
-                                                        setOpenAdAccount(false)
-                                                        setShowAggregateDialog(true)
-                                                    }}
-                                                    className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
-                                                >
-                                                    <BarChart3 className="w-4 h-4 text-gray-500" />
-                                                    Aggregate KPI View
-                                                </CommandItem>
-                                            </CommandGroup>
-                                        </>
-                                    )}
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
+	                                            </CommandItem>
+	                                        ))}
+	                                    </CommandGroup>
+	                                </CommandList>
+	                            </Command>
+	                        </PopoverContent>
                     </Popover>
                 </div>
 
@@ -1246,10 +1246,13 @@ export default function AnalyticsDashboard() {
                         onClick={() => setShowSettingsDialog(false)}
                     />
 
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div
-                            className="bg-white rounded-[28px] shadow-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col overflow-hidden"
-                            onClick={(e) => e.stopPropagation()}
+	                    <div
+	                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+	                        onClick={() => setShowSettingsDialog(false)}
+	                    >
+	                        <div
+	                            className="bg-white rounded-[28px] shadow-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col overflow-hidden"
+	                            onClick={(e) => e.stopPropagation()}
                         >
                             {/* Scrollable area */}
                             <div className="p-8 pb-6 space-y-6 flex-1 overflow-y-auto min-h-0">
