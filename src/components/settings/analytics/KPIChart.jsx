@@ -16,7 +16,7 @@ const COLORS = [
 ]
 
 const MAX_NAME_LENGTH = 50
-const DAILY_CHART_LEFT_INSET = 0
+const DAILY_CHART_LEFT_INSET = 46
 
 function truncateName(name) {
     if (!name) return ''
@@ -147,7 +147,31 @@ export default function KPIChart({ data, loading, mode }) {
     const metricLabel = mode === 'roas' ? 'ROAS' : 'CPA'
     const formatValue = mode === 'roas'
         ? (v) => v !== null && v !== undefined ? `${v.toFixed(2)}x` : 'N/A'
-        : (v) => v !== null && v !== undefined ? `$${v.toFixed(2)}` : 'N/A'
+        : (v) => v !== null && v !== undefined ? `$${Math.round(v).toLocaleString()}` : 'N/A'
+
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (!active || !payload?.length) return null
+        const visiblePayload = payload.filter((item) => item.dataKey !== "__trend")
+        if (visiblePayload.length === 0) return null
+
+        return (
+            <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs shadow-lg">
+                <p className="mb-2 font-semibold text-gray-900">{label}</p>
+                <div className="space-y-1">
+                    {visiblePayload.map((item) => (
+                        <p key={item.dataKey} className="flex items-center gap-2 text-gray-600">
+                            <span
+                                className="h-2 w-2 rounded-full"
+                                style={{ backgroundColor: item.color }}
+                            />
+                            <span className="max-w-[180px] truncate">{item.name}</span>
+                            <span className="font-medium text-gray-900">{formatValue(item.value)}</span>
+                        </p>
+                    ))}
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="p-4">
@@ -186,18 +210,11 @@ export default function KPIChart({ data, loading, mode }) {
                             <YAxis
                                 tick={{ fontSize: 10, fill: '#9ca3af' }}
                                 tickLine={false}
-                                axisLine={false}
+                                axisLine={{ stroke: '#e5e7eb' }}
                                 tickFormatter={(v) => mode === 'roas' ? `${v.toFixed(1)}x` : `$${Math.round(v)}`}
                                 width={DAILY_CHART_LEFT_INSET}
                             />
-                            <Tooltip
-                                contentStyle={{
-                                    borderRadius: '12px', border: '1px solid #e5e7eb',
-                                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontSize: '12px',
-                                }}
-                                formatter={(value, name) => [formatValue(value), name]}
-                                labelStyle={{ fontWeight: 600, marginBottom: 4 }}
-                            />
+                            <Tooltip content={<CustomTooltip />} />
                             <Line
                                 type="monotone"
                                 dataKey="__trend"

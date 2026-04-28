@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { Command, CommandInput, CommandList, CommandItem, CommandGroup, CommandSeparator } from "@/components/ui/command"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
     AlertTriangle, Loader2, ChevronsUpDown, RefreshCw,
@@ -42,6 +42,23 @@ const DEFAULT_THRESHOLDS = {
     cpaSpike: 50,
     overspend: 150,
 };
+
+function formatEventName(actionType) {
+    if (!actionType) return 'Auto-detected event'
+    if (actionType.startsWith('offsite_conversion.fb_pixel_custom.')) {
+        return actionType.slice('offsite_conversion.fb_pixel_custom.'.length)
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase())
+    }
+    if (actionType === 'offsite_conversion.fb_pixel_custom') return 'Custom Event'
+    if (actionType.startsWith('offsite_conversion.custom.')) return 'Custom Conversion'
+    if (actionType.startsWith('offsite_conversion.fb_pixel_')) {
+        return actionType.slice('offsite_conversion.fb_pixel_'.length)
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, c => c.toUpperCase())
+    }
+    return actionType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+}
 
 export default function AnalyticsDashboard() {
     const { adAccounts, adAccountsLoading } = useAppData()
@@ -230,6 +247,25 @@ export default function AnalyticsDashboard() {
         if (!selectedAdAccount) return "Select an Ad Account";
         return adAccounts?.find((a) => a.id === selectedAdAccount)?.name || selectedAdAccount;
     }, [selectedAdAccount, adAccounts])
+
+    const optimizationFocusLabel = useMemo(() => {
+        if (metricMode === 'roas') return 'Optimization Focus: ROAS'
+
+        const conversionEventLabel = adAccountSettings?.conversionEvent
+            ? formatEventName(adAccountSettings.conversionEvent)
+            : null
+
+        return conversionEventLabel
+            ? `Optimization Focus: CPA · ${conversionEventLabel}`
+            : 'Optimization Focus: CPA'
+    }, [metricMode, adAccountSettings?.conversionEvent])
+
+    const anomalyDetectionDescription = useMemo(() => {
+        const cpaSpike = parseInt(anomalyThresholds.cpaSpike, 10) || DEFAULT_THRESHOLDS.cpaSpike
+        const overspend = parseInt(anomalyThresholds.overspend, 10) || DEFAULT_THRESHOLDS.overspend
+
+        return `monitors CPA spikes above ${cpaSpike}% of the 7-day average and overspend above ${overspend}% of daily budget.`
+    }, [anomalyThresholds.cpaSpike, anomalyThresholds.overspend])
 
     const recsCount = recommendations?.recommendations?.length || 0
     const poorAdsCount = poorAds?.ads?.length || 0
@@ -554,12 +590,12 @@ export default function AnalyticsDashboard() {
 
 
 
-    // Weekly insights don't depend on settings, fetch immediately
+    // Traffic metrics don't depend on settings, fetch immediately.
     useEffect(() => {
-        if (selectedAdAccount && !adAccountSettingsLoading) {
+        if (selectedAdAccount) {
             fetchWeeklyInsights()
         }
-    }, [selectedAdAccount, adAccountSettingsLoading, analyticsDateRange, fetchWeeklyInsights])
+    }, [selectedAdAccount, analyticsDateRange, fetchWeeklyInsights])
 
     // Account info auto-detection should only run AFTER settings have loaded,
     // so modeCache is already populated if the user has a saved preference
@@ -892,31 +928,42 @@ export default function AnalyticsDashboard() {
                                             </CommandItem>
                                         ))}
                                     </CommandGroup>
+                                    {adAccounts?.length > 1 && (
+                                        <>
+                                            <CommandSeparator className="mx-2 my-1 bg-gray-100" />
+                                            <CommandGroup>
+                                                <CommandItem
+                                                    value="__aggregate_kpi_view"
+                                                    onSelect={() => {
+                                                        setOpenAdAccount(false)
+                                                        setShowAggregateDialog(true)
+                                                    }}
+                                                    className="px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                                                >
+                                                    <BarChart3 className="w-4 h-4 text-gray-500" />
+                                                    Aggregate KPI View
+                                                </CommandItem>
+                                            </CommandGroup>
+                                        </>
+                                    )}
                                 </CommandList>
                             </Command>
                         </PopoverContent>
                     </Popover>
-
-                    {adAccounts?.length > 1 && (
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowAggregateDialog(true)}
-                            className="rounded-2xl h-11 px-4 bg-white shadow-xs hover:bg-white"
-                        >
-                            <BarChart3 className="w-4 h-4 mr-2" />
-                            Aggregate KPI View
-                        </Button>
-                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline" size="sm"
                         onClick={openSettingsDialog}
-                        className="rounded-2xl h-11 px-4"
+                        className="rounded-2xl h-11 min-w-[220px] max-w-full px-4"
                     >
                         <Settings2 className="w-4 h-4 mr-2" />
-                        Configuration
+                        {adAccountSettingsLoading ? (
+                            <span className="h-4 w-44 rounded-full bg-gray-200 animate-pulse" />
+                        ) : (
+                            <span className="truncate">{optimizationFocusLabel}</span>
+                        )}
                     </Button>
 
                     <DropdownMenu>
@@ -1146,7 +1193,11 @@ export default function AnalyticsDashboard() {
                                         Anomaly Detection
                                     </strong>
                                     <span>
-                                        monitors CPA spikes above {anomalyThresholds.cpaSpike}% of the 7-day average and overspend above {anomalyThresholds.overspend}% of daily budget.
+                                        {adAccountSettingsLoading ? (
+                                            <span className="inline-block h-3 w-80 max-w-full rounded-full bg-gray-200 align-middle animate-pulse" />
+                                        ) : (
+                                            anomalyDetectionDescription
+                                        )}
                                     </span>
                                 </div>
 

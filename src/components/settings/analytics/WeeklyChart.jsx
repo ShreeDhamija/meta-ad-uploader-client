@@ -20,7 +20,7 @@ const METRIC_OPTIONS = {
         color: '#3b82f6',
         tickFormatter: (value) => `$${value.toFixed(2)}`,
         valueFormatter: (value) => value !== null && value !== undefined ? `$${value.toFixed(2)}` : 'N/A',
-        subtitle: 'Weekly cost per link click',
+        subtitle: 'Traffic cost per link click',
         yAxisWidth: 56,
     },
     cpm: {
@@ -28,7 +28,7 @@ const METRIC_OPTIONS = {
         color: '#f97316',
         tickFormatter: (value) => `$${value.toFixed(2)}`,
         valueFormatter: (value) => value !== null && value !== undefined ? `$${value.toFixed(2)}` : 'N/A',
-        subtitle: 'Weekly CPM',
+        subtitle: 'Traffic CPM',
         yAxisWidth: 56,
     },
     linkCtr: {
@@ -36,7 +36,7 @@ const METRIC_OPTIONS = {
         color: '#14b8a6',
         tickFormatter: (value) => `${value.toFixed(1)}%`,
         valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}%` : 'N/A',
-        subtitle: 'Weekly link CTR',
+        subtitle: 'Traffic link CTR',
         yAxisWidth: 52,
     },
     frequency: {
@@ -44,7 +44,7 @@ const METRIC_OPTIONS = {
         color: '#a855f7',
         tickFormatter: (value) => `${value.toFixed(1)}x`,
         valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}x` : 'N/A',
-        subtitle: 'Weekly frequency',
+        subtitle: 'Traffic frequency',
         yAxisWidth: 48,
     },
 }
@@ -134,7 +134,7 @@ export default function WeeklyChart({ data, loading, className }) {
         <div className={className ? `p-4 ${className}` : "p-4"}>
             <div className="mb-[22px] flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900">Weekly Metrics</p>
+                    <p className="text-sm font-medium text-gray-900">Traffic Metrics</p>
                     <p className="text-xs text-gray-400">{subtitle}</p>
                 </div>
             </div>
@@ -145,7 +145,7 @@ export default function WeeklyChart({ data, loading, className }) {
                 </div>
             ) : chartData.length === 0 ? (
                 <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
-                    No weekly data available
+                    No traffic data available
                 </div>
             ) : (
                 <>
