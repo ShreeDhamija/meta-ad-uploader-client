@@ -41,6 +41,7 @@ export default function TikTokLogin() {
   }, [email])
 
   const [error, setError] = useState(null)
+  const [isRedirecting, setIsRedirecting] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -51,6 +52,7 @@ export default function TikTokLogin() {
   }, [location])
 
   const handleTikTokLogin = () => {
+    setIsRedirecting(true)
     // Strip any existing protocol so we always get exactly one https://
     const cleanApiUrl = API_BASE_URL.replace(/^https?:\/\//, '')
     if (isSignupPage) {
@@ -197,21 +199,23 @@ export default function TikTokLogin() {
             )}
             <Button
               onClick={handleTikTokLogin}
-              disabled={isSignupPage && !isValidEmail}
+              disabled={(isSignupPage && !isValidEmail) || isRedirecting}
               className="w-full h-11 rounded-xl font-semibold text-sm flex items-center justify-center gap-2.5 transition-all"
               style={{
-                background: isSignupPage && !isValidEmail
+                background: (isSignupPage && !isValidEmail) || isRedirecting
                   ? 'rgba(254,44,85,0.3)'
                   : `linear-gradient(135deg, ${TIKTOK_PINK}, #c9184a)`,
                 color: '#fff',
                 border: 'none',
-                boxShadow: isSignupPage && !isValidEmail ? 'none' : `0 4px 20px ${TIKTOK_PINK}55`,
-                cursor: isSignupPage && !isValidEmail ? 'not-allowed' : 'pointer',
-                opacity: isSignupPage && !isValidEmail ? 0.5 : 1,
+                boxShadow: (isSignupPage && !isValidEmail) || isRedirecting ? 'none' : `0 4px 20px ${TIKTOK_PINK}55`,
+                cursor: (isSignupPage && !isValidEmail) || isRedirecting ? 'not-allowed' : 'pointer',
+                opacity: (isSignupPage && !isValidEmail) || isRedirecting ? 0.6 : 1,
               }}
             >
               <TikTokLogo size={20} />
-              {isSignupPage ? 'Sign up with TikTok' : 'Login with TikTok'}
+              {isRedirecting
+                ? 'Redirecting to TikTok...'
+                : isSignupPage ? 'Sign up with TikTok' : 'Login with TikTok'}
             </Button>
           </div>
         </div>

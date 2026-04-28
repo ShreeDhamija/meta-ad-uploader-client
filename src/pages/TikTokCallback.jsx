@@ -22,7 +22,6 @@ export default function TikTokCallback() {
       setStatus('error')
       setError(decodedError)
       toast.error(`TikTok Connection Failed: ${decodedError}`)
-      setTimeout(() => navigate('/tiktok-login'), 3000)
       return
     }
 
@@ -39,7 +38,6 @@ export default function TikTokCallback() {
       const defaultError = 'Authentication was not successful'
       setError(defaultError)
       toast.error(defaultError)
-      setTimeout(() => navigate('/tiktok-login'), 3000)
     }
   }, [location, navigate, refreshTikTokUser])
 
@@ -87,12 +85,15 @@ export default function TikTokCallback() {
           <>
             <div className="mb-6 text-5xl">❌</div>
             <h2 className="text-xl font-bold text-white mb-2">Connection Failed</h2>
-            <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.6)' }}>
+            <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.6)' }}>
               {error || 'An unexpected error occurred during authentication'}
             </p>
-            <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              Redirecting back to login...
-            </p>
+            <button
+              onClick={() => navigate('/tiktok-login')}
+              style={{ background: '#FE2C55', color: '#fff', padding: '8px 24px', borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 600 }}
+            >
+              Try Again
+            </button>
           </>
         )}
       </div>
