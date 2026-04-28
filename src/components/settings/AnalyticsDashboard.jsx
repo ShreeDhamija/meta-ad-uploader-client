@@ -251,7 +251,8 @@ export default function AnalyticsDashboard() {
 
     const adAccountDropdownHeight = useMemo(() => {
         const rowCount = filteredAdAccounts.length + (adAccounts?.length > 1 ? 1 : 0)
-        return Math.min(300, Math.max(44, rowCount * 40 + 8))
+        const groupCount = (filteredAdAccounts.length > 0 ? 1 : 0) + (adAccounts?.length > 1 ? 1 : 0)
+        return Math.min(300, Math.max(58, rowCount * 42 + groupCount * 8 + 8))
     }, [filteredAdAccounts.length, adAccounts?.length])
 
     const optimizationFocusLabel = useMemo(() => {
@@ -345,11 +346,6 @@ export default function AnalyticsDashboard() {
             if (adAccountSettings?.conversionEvent) {
                 url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
             }
-            console.log('[recs/frontend] fetching', {
-                accountId: selectedAdAccount,
-                rawConversionEvent: adAccountSettings?.conversionEvent,
-                url,
-            })
             const res = await fetch(url, { credentials: 'include' })
             const data = await res.json()
 
@@ -927,7 +923,7 @@ export default function AnalyticsDashboard() {
                                     className="rounded-xl [&_[data-orientation=vertical]]:!w-1.5 [&_[data-orientation=vertical]]:!p-0"
                                     style={{ height: adAccountDropdownHeight }}
                                 >
-                                    <CommandList className="max-h-none overflow-visible rounded-xl" selectOnFocus={false}>
+                                    <CommandList className="max-h-none overflow-visible rounded-xl pb-1" selectOnFocus={false}>
                                         {adAccounts?.length > 1 && (
                                             <CommandGroup>
                                                 <CommandItem
