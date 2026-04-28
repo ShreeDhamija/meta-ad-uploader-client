@@ -1,8 +1,8 @@
-import { useTikTokAuth } from "@/lib/TikTokAuthContext"
-import { useNavigate, useLocation } from "react-router-dom"
-import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -40,12 +40,24 @@ export default function TikTokLogin() {
     setIsValidEmail(emailRegex.test(email))
   }, [email])
 
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const errorMsg = params.get('error')
+    if (errorMsg) {
+      setError(decodeURIComponent(errorMsg))
+    }
+  }, [location])
+
   const handleTikTokLogin = () => {
+    // Strip any existing protocol so we always get exactly one https://
+    const cleanApiUrl = API_BASE_URL.replace(/^https?:\/\//, '')
     if (isSignupPage) {
       const encodedEmail = encodeURIComponent(email)
-      window.location.href = `${API_BASE_URL}/api/tiktok/auth/tiktok?state=signup&user_email=${encodedEmail}`
+      window.location.href = `https://${cleanApiUrl}/api/tiktok/auth/tiktok?state=signup&user_email=${encodedEmail}`
     } else {
-      window.location.href = `${API_BASE_URL}/api/tiktok/auth/tiktok?state=login`
+      window.location.href = `https://${cleanApiUrl}/api/tiktok/auth/tiktok?state=login`
     }
   }
 
@@ -128,6 +140,20 @@ export default function TikTokLogin() {
           <div style={{ flex: 1, background: TIKTOK_CYAN }} />
           <div style={{ flex: 1, background: TIKTOK_PINK }} />
         </div>
+
+        {/* Error banner */}
+        {error && (
+          <div
+            className="p-3 rounded-lg text-sm"
+            style={{
+              background: 'rgba(254, 44, 85, 0.1)',
+              border: '1px solid rgba(254, 44, 85, 0.3)',
+              color: TIKTOK_PINK,
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         {/* Form */}
         <div className="flex flex-col gap-4">
