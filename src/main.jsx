@@ -1,10 +1,10 @@
+import { PostHogProvider } from 'posthog-js/react';
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
+import { AppProvider } from "./lib/AppContext";
 import { AuthProvider } from "./lib/AuthContext";
 import { TikTokAuthProvider } from "./lib/TikTokAuthContext";
-import { AppProvider } from "./lib/AppContext";
-import { PostHogProvider } from 'posthog-js/react'
 
 import {
   createBrowserRouter,
@@ -12,16 +12,16 @@ import {
 } from "react-router-dom";
 
 import App from "./App.jsx";
-import Home from "./pages/Home.jsx";
-import Login from "./pages/Login.jsx";
-import Signup from "./pages/Login.jsx";
-import Settings from "./pages/Settings.jsx";
 import Analytics from "./pages/Analytics.jsx";
-import NotFound from "./pages/NotFound.jsx";
-import TikTokLogin from "./pages/TikTokLogin.jsx";
-import TikTokAds from "./pages/TikTokAds.jsx";
-import TermsOfService from "./pages/Landing/TermsOfService.jsx";
+import Home from "./pages/Home.jsx";
 import PrivacyPolicy from "./pages/Landing/PrivacyPolicy.jsx";
+import TermsOfService from "./pages/Landing/TermsOfService.jsx";
+import { default as Login, default as Signup } from "./pages/Login.jsx";
+import NotFound from "./pages/NotFound.jsx";
+import Settings from "./pages/Settings.jsx";
+import TikTokAds from "./pages/TikTokAds.jsx";
+import TikTokCallback from "./pages/TikTokCallback.jsx";
+import TikTokLogin from "./pages/TikTokLogin.jsx";
 
 const router = createBrowserRouter([
   {
@@ -36,6 +36,7 @@ const router = createBrowserRouter([
       { path: "tiktok-login", element: <TikTokLogin /> },
       { path: "tiktok-signup", element: <TikTokLogin /> },
       { path: "tiktok-ads", element: <TikTokAds /> },
+      { path: "tiktok-callback", element: <TikTokCallback /> },
       { path: "terms-of-service", element: <TermsOfService /> },
       { path: "privacy-policy", element: <PrivacyPolicy /> },
       { path: "*", element: <NotFound /> },
