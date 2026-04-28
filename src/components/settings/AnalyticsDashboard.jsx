@@ -345,6 +345,11 @@ export default function AnalyticsDashboard() {
             if (adAccountSettings?.conversionEvent) {
                 url += `&conversionEvent=${encodeURIComponent(adAccountSettings.conversionEvent)}`
             }
+            console.log('[recs/frontend] fetching', {
+                accountId: selectedAdAccount,
+                rawConversionEvent: adAccountSettings?.conversionEvent,
+                url,
+            })
             const res = await fetch(url, { credentials: 'include' })
             const data = await res.json()
 
@@ -918,7 +923,10 @@ export default function AnalyticsDashboard() {
                                     className="bg-transparent"
                                     wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
 	                                />
-                                <ScrollArea className="rounded-xl" style={{ height: adAccountDropdownHeight }}>
+                                <ScrollArea
+                                    className="rounded-xl [&_[data-orientation=vertical]]:!w-1.5 [&_[data-orientation=vertical]]:!p-0"
+                                    style={{ height: adAccountDropdownHeight }}
+                                >
                                     <CommandList className="max-h-none overflow-visible rounded-xl" selectOnFocus={false}>
                                         {adAccounts?.length > 1 && (
                                             <CommandGroup>
