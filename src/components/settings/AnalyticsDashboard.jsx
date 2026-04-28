@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
     AlertTriangle, Loader2, ChevronsUpDown, RefreshCw,
@@ -247,6 +248,11 @@ export default function AnalyticsDashboard() {
         if (!selectedAdAccount) return "Select an Ad Account";
         return adAccounts?.find((a) => a.id === selectedAdAccount)?.name || selectedAdAccount;
     }, [selectedAdAccount, adAccounts])
+
+    const adAccountDropdownHeight = useMemo(() => {
+        const rowCount = filteredAdAccounts.length + (adAccounts?.length > 1 ? 1 : 0)
+        return Math.min(300, Math.max(44, rowCount * 40 + 8))
+    }, [filteredAdAccounts.length, adAccounts?.length])
 
     const optimizationFocusLabel = useMemo(() => {
         if (metricMode === 'roas') return 'Optimization Focus: ROAS'
@@ -912,40 +918,40 @@ export default function AnalyticsDashboard() {
                                     className="bg-transparent"
                                     wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
 	                                />
-	                                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl custom-scrollbar" selectOnFocus={false}>
-	                                    {adAccounts?.length > 1 && (
-	                                        <>
-	                                            <CommandGroup>
-	                                                <CommandItem
-	                                                    value="__aggregate_kpi_view"
-	                                                    onSelect={() => {
-	                                                        setOpenAdAccount(false)
-	                                                        setShowAggregateDialog(true)
-	                                                    }}
-                                                    className="mx-2 my-1 cursor-pointer rounded-[20px] border border-gray-200 bg-gray-50 px-4 py-2 font-medium shadow transition-colors duration-150 hover:!bg-gray-50 data-[selected=true]:bg-gray-50"
-	                                                >
-	                                                    <BarChart3 className="w-4 h-4 text-gray-500" />
-	                                                    Aggregate KPI View
-	                                                </CommandItem>
-	                                            </CommandGroup>
-	                                        </>
-	                                    )}
-	                                    <CommandGroup>
-	                                        {filteredAdAccounts.map((acct) => (
-	                                            <CommandItem
-	                                                key={acct.id}
-                                                value={acct.id}
-                                                onSelect={handleAdAccountSelect}
-                                                className={cn(
-                                                    "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100",
-                                                    selectedAdAccount === acct.id && "bg-gray-100 font-semibold"
-                                                )}
-                                            >
-                                                {acct.name || acct.id}
-	                                            </CommandItem>
-	                                        ))}
-	                                    </CommandGroup>
-	                                </CommandList>
+                                <ScrollArea className="rounded-xl" style={{ height: adAccountDropdownHeight }}>
+                                    <CommandList className="max-h-none overflow-visible rounded-xl" selectOnFocus={false}>
+                                        {adAccounts?.length > 1 && (
+                                            <CommandGroup>
+                                                <CommandItem
+                                                    value="__aggregate_kpi_view"
+                                                    onSelect={() => {
+                                                        setOpenAdAccount(false)
+                                                        setShowAggregateDialog(true)
+                                                    }}
+                                                    className="mx-2 my-1 cursor-pointer rounded-xl border border-gray-200 bg-gray-50 px-4 py-2 font-medium shadow transition-colors duration-150 hover:!bg-gray-50 data-[selected=true]:bg-gray-50"
+                                                >
+                                                    <BarChart3 className="w-4 h-4 text-gray-500" />
+                                                    Aggregate KPI View
+                                                </CommandItem>
+                                            </CommandGroup>
+                                        )}
+                                        <CommandGroup>
+                                            {filteredAdAccounts.map((acct) => (
+                                                <CommandItem
+                                                    key={acct.id}
+                                                    value={acct.id}
+                                                    onSelect={handleAdAccountSelect}
+                                                    className={cn(
+                                                        "px-4 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100",
+                                                        selectedAdAccount === acct.id && "bg-gray-100 font-semibold"
+                                                    )}
+                                                >
+                                                    {acct.name || acct.id}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </ScrollArea>
 	                            </Command>
 	                        </PopoverContent>
                     </Popover>
