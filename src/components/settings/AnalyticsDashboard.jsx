@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { Command, CommandInput, CommandList, CommandItem, CommandGroup, CommandSeparator } from "@/components/ui/command"
+import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@/components/ui/command"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
     AlertTriangle, Loader2, ChevronsUpDown, RefreshCw,
@@ -922,13 +922,12 @@ export default function AnalyticsDashboard() {
 	                                                        setOpenAdAccount(false)
 	                                                        setShowAggregateDialog(true)
 	                                                    }}
-	                                                    className="mx-2 my-2 cursor-pointer justify-center rounded-xl bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:!bg-gray-800 data-[selected=true]:bg-gray-800 data-[selected=true]:text-white"
+	                                                    className="px-4 py-2 cursor-pointer m-1 rounded-xl border border-gray-200 bg-white font-medium shadow-xs transition-colors duration-150 hover:!bg-white data-[selected=true]:bg-white"
 	                                                >
-	                                                    <BarChart3 className="w-4 h-4 text-white" />
+	                                                    <BarChart3 className="w-4 h-4 text-gray-500" />
 	                                                    Aggregate KPI View
 	                                                </CommandItem>
 	                                            </CommandGroup>
-	                                            <CommandSeparator className="mx-2 my-1 bg-gray-100" />
 	                                        </>
 	                                    )}
 	                                    <CommandGroup>
