@@ -163,13 +163,14 @@ export default function BillingSettings() {
     const handleCheckout = async (planKey) => {
         setCheckoutLoadingPlan(planKey)
         try {
+            const referral = window.Rewardful?.referral
             const response = await fetch(`${API_BASE_URL}/api/stripe/create-checkout-session`, {
                 method: "POST",
                 credentials: "include",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ planType: planKey }),
+                body: JSON.stringify({ planType: planKey, referral }),
             })
 
             const { url } = await response.json()
