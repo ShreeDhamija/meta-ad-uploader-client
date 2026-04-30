@@ -669,7 +669,7 @@ export default function MediaPreview({
   const renderSingleMediaSplitNote = () => (
     isSingleMediaSplit && variants.length > 1 ? (
       <span className="block text-xs text-gray-500 leading-tight mt-1">
-        note: With 1 file uploaded, every variant will reuse the same file while you edit all other fields independently.
+        Note: With 1 file uploaded, every variant will reuse the same file while you edit all other fields independently.
       </span>
     ) : null
   );
