@@ -3474,10 +3474,7 @@ export default function AdCreationForm({
       toast.error("Please enter a name for the new ad set")
       return
     }
-    if (!pageId) {
-      toast.error("Please select a Facebook page")
-      return
-    }
+
 
 
     let aspectRatioMap = {};
@@ -5913,7 +5910,7 @@ export default function AdCreationForm({
         return;
       }
 
-      if (!job.formData.pageId) {
+      if (!job.formData.pageId && !useExistingPosts) {
         toast.error(`${variant.name}: please select a Facebook page`);
         return;
       }
