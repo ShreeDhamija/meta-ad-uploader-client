@@ -6447,10 +6447,7 @@ export default function AdCreationForm({
           className="space-y-6">
           <div className="space-y-10 overflow-hidden">
             {useExistingPosts ? (
-              <div
-                className="relative overflow-hidden"
-                style={{ height: 'min(600px, calc(100vh - 400px))', contain: 'strict' }}
-              >
+              <div className="relative">
                 <PostSelectorInline
                   adAccountId={selectedAdAccount}
                   onImport={setImportedPosts}

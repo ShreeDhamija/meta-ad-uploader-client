@@ -427,10 +427,10 @@ function PostSelectorInline({
     const showStatusColumn = viewMode === 'search' || viewMode === 'adset'
 
     return (
-        <div className="flex flex-col h-full min-h-[700px] overflow-hidden">
+        <div className="flex flex-col">
 
             {(ads.length > 0 || viewMode === 'search' || viewMode === 'adset' || isLoading || hasFetched) && (
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                <div className="flex flex-col">
                     {/* Header Section - Fixed, never scrolls */}
                     <div className="flex-shrink-0 space-y-3 pb-2">
                         <div className="flex items-center justify-between">
@@ -888,7 +888,7 @@ function PostSelectorInline({
                     </div>
 
                     {ads.length > 0 && (
-                        <ScrollArea className="flex-1 outline-none focus:outline-none">
+                        <ScrollArea className="h-[700px] outline-none focus:outline-none">
                             <div className="space-y-1.5">
                                 {(viewMode === 'adset' ? displayedAdsetAds : ads).map((ad) => (
                                     <label
