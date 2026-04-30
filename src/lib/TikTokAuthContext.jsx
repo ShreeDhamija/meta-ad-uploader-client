@@ -13,27 +13,31 @@ export function TikTokAuthProvider({ children }) {
 
   const refreshTikTokUser = async () => {
     try {
+      console.log("🔍 [TikTok Auth] Checking authentication status...");
       const res = await fetch(`${API_BASE_URL}/api/tiktok/auth/me`, {
         credentials: 'include',
       })
       if (res.ok) {
         const data = await res.json()
         if (data.connected && data.user) {
+          console.log("✅ [TikTok Auth] User connected:", data.user.name);
           setIsTikTokLoggedIn(true)
           setTikTokUser(data.user)
           setTikTokAdvertisers(data.advertisers || [])
         } else {
+          console.log("ℹ️ [TikTok Auth] User not connected.");
           setIsTikTokLoggedIn(false)
           setTikTokUser(null)
           setTikTokAdvertisers([])
         }
       } else {
+        console.log("ℹ️ [TikTok Auth] Failed to fetch status - Not logged in.");
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
         setTikTokAdvertisers([])
       }
     } catch (err) {
-      console.error('Error fetching TikTok user info:', err)
+      console.error('❌ [TikTok Auth] Error fetching status:', err)
       setIsTikTokLoggedIn(false)
       setTikTokUser(null)
       setTikTokAdvertisers([])
@@ -44,19 +48,23 @@ export function TikTokAuthProvider({ children }) {
 
   const logoutTikTok = async () => {
     try {
+      console.log("🚪 [TikTok Auth] Logging out...");
       const res = await fetch(`${API_BASE_URL}/api/tiktok/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       })
       if (res.ok) {
+        console.log("✅ [TikTok Auth] Logout successful.");
         toast.info('Logged out of TikTok successfully!')
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
         setTikTokAdvertisers([])
       } else {
+        console.warn("⚠️ [TikTok Auth] Logout failed on server.");
         toast.error('Failed to log out of TikTok')
       }
     } catch (error) {
+      console.error("❌ [TikTok Auth] Logout error:", error)
       toast.error('TikTok logout error: ' + error.message)
     }
   }

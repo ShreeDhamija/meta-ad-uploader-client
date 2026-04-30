@@ -46,19 +46,28 @@ export default function TikTokAds() {
   // Auto-select first advertiser
   useEffect(() => {
     if (tiktokAdvertisers.length > 0 && !selectedAdvertiser) {
-      setSelectedAdvertiser(tiktokAdvertisers[0].advertiser_id || tiktokAdvertisers[0].id)
+      const firstId = tiktokAdvertisers[0].advertiser_id || tiktokAdvertisers[0].id;
+      console.log("📊 [TikTok Ads] Auto-selecting first advertiser:", firstId);
+      setSelectedAdvertiser(firstId);
     }
   }, [tiktokAdvertisers])
 
   // Fetch existing ads
   useEffect(() => {
     if (!selectedAdvertiser || activeTab !== 'ads') return
+    console.log(`🚀 [TikTok Ads] Fetching ads for Advertiser: ${selectedAdvertiser}...`);
     setLoadingAds(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '20' })
     fetch(`${API_BASE_URL}/api/tiktok/fetch-ads?${params}`, { credentials: 'include' })
       .then(r => r.json())
-      .then(d => setExistingAds(d.ads || []))
-      .catch(() => toast.error('Failed to load ads'))
+      .then(d => {
+        console.log(`✅ [TikTok Ads] Successfully fetched ${d.ads?.length || 0} ads.`);
+        setExistingAds(d.ads || [])
+      })
+      .catch((err) => {
+        console.error("❌ [TikTok Ads] Failed to load ads:", err);
+        toast.error('Failed to load ads')
+      })
       .finally(() => setLoadingAds(false))
   }, [selectedAdvertiser, activeTab])
 
