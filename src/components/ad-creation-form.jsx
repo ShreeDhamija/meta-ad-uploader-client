@@ -5968,7 +5968,7 @@ export default function AdCreationForm({
       : `${prefix} ${summary}`;
   };
 
-  const isPageMissing = !pageId;
+  const isPageMissing = !pageId && !useExistingPosts;
   const hasPublishBlockingIssueBeforePage = variants.length > 1
     ? (
       !isLoggedIn ||
