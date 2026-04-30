@@ -8181,7 +8181,7 @@ export default function AdCreationForm({
               </div>
             )}
 
-            {!hasPublishBlockingIssueBeforePage && isPageMissing && (
+            {!useExistingPosts && !hasPublishBlockingIssueBeforePage && isPageMissing && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
                 Please select a Facebook page to publish ads
               </div>
