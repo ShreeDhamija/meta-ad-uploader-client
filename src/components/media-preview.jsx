@@ -628,41 +628,49 @@ export default function MediaPreview({
     adType !== 'flexible' &&
     importedPosts.length === 0 &&
     selectedIgOrganicPosts.length === 0;
-  const showVariantSetupButton = variants.length > 1 || totalFileCount >= 2;
+  const showVariantSetupButton = variants.length > 1 || totalFileCount >= 1;
+  const isSingleMediaSplit = totalFileCount === 1;
   const showVariantButtonInPlacementRow = showVariantSetupButton && showPlacementCustomizationRow;
   const showVariantButtonInHeader = showVariantSetupButton && !showPlacementCustomizationRow;
   const variantSetupLabel = variants.length === 1 ? 'Split Ad Data' : 'Disable Split';
 
   const renderVariantSetupButton = () => (
-    <TooltipProvider delayDuration={0}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              if (variants.length === 1) {
-                if (!hasSeenPowerupPopup) {
-                  setShowPowerupPopup(true);
+    <div className="flex flex-col items-end gap-1">
+      <TooltipProvider delayDuration={0}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (variants.length === 1) {
+                  if (!hasSeenPowerupPopup) {
+                    setShowPowerupPopup(true);
+                  }
+                  handleAddVariant();
+                } else {
+                  setShowDisableVariantsDialog(true);
                 }
-                handleAddVariant();
-              } else {
-                setShowDisableVariantsDialog(true);
-              }
-            }}
-            className="rounded-xl bg-white"
-          >
-            {variantSetupLabel}
-          </Button>
-        </TooltipTrigger>
-        {variants.length === 1 && (
-          <TooltipContent className="max-w-xs">
-            upload all your media once and split it into different ad sets with different naming, copy & more.
-          </TooltipContent>
-        )}
-      </Tooltip>
-    </TooltipProvider>
+              }}
+              className="rounded-xl bg-white"
+            >
+              {variantSetupLabel}
+            </Button>
+          </TooltipTrigger>
+          {variants.length === 1 && (
+            <TooltipContent className="max-w-xs">
+              upload all your media once and split it into different ad sets with different naming, copy & more.
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
+      {isSingleMediaSplit && (
+        <span className="text-xs text-gray-500 text-right max-w-xs leading-tight">
+          With 1 file uploaded, every variant will reuse the same file while you edit all other fields independently.
+        </span>
+      )}
+    </div>
   );
 
 
@@ -1515,8 +1523,8 @@ export default function MediaPreview({
                       {ungroupedFiles.map((file, index) => {
                         const fileId = getFileId(file);  // ✅ Use the helper that handles all file types
                         const assignedVariantId = fileVariantMap[fileId] || 'default';
-                        const isDimmed = !enablePlacementCustomization && assignedVariantId !== activeVariantId;
-                        const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0);
+                        const isDimmed = !isSingleMediaSplit && !enablePlacementCustomization && assignedVariantId !== activeVariantId;
+                        const showVariantDropdown = variants.length > 1 && !hideUngroupedVariantDropdowns && !(adType === 'flexible' && fileGroups.length > 0) && !isSingleMediaSplit;
                         return (
                           <div
                             key={fileId}
@@ -1548,8 +1556,8 @@ export default function MediaPreview({
                       {importedPosts.map((post, index) => {
                         const postKey = `post:${post.id}`;
                         const assignedVariantId = postVariantMap[postKey] || 'default';
-                        const isDimmed = assignedVariantId !== activeVariantId;
-                        const showVariantDropdown = variants.length > 1;
+                        const isDimmed = !isSingleMediaSplit && assignedVariantId !== activeVariantId;
+                        const showVariantDropdown = variants.length > 1 && !isSingleMediaSplit;
                         return (
                           <div
                             key={post.id}
@@ -1601,8 +1609,8 @@ export default function MediaPreview({
                       {selectedIgOrganicPosts.map((post, index) => {
                         const postKey = `igpost:${post.source_instagram_media_id}`;
                         const assignedVariantId = postVariantMap[postKey] || 'default';
-                        const isDimmed = assignedVariantId !== activeVariantId;
-                        const showVariantDropdown = variants.length > 1;
+                        const isDimmed = !isSingleMediaSplit && assignedVariantId !== activeVariantId;
+                        const showVariantDropdown = variants.length > 1 && !isSingleMediaSplit;
                         return (
                           <div
                             key={`ig-${post.source_instagram_media_id}`}

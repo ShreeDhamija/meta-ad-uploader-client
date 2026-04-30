@@ -982,6 +982,9 @@ export default function AdCreationForm({
   }, [hasMediaInFormData]);
 
   const countFilesForVariant = useCallback((variantId) => {
+    const totalMediaCount = files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length;
+    if (totalMediaCount === 1) return 1;
+
     const variantGroups = fileGroups.filter(
       (group) => (groupVariantMap[group.id] || 'default') === variantId
     );
@@ -1047,7 +1050,11 @@ export default function AdCreationForm({
 
     const variantAdSets = Array.isArray(variantState.adSets) ? variantState.adSets : adSets;
 
+    const totalMediaCount = files.length + driveFiles.length + dropboxFiles.length + (frameioFiles?.length || 0) + importedFiles.length + importedPosts.length + selectedIgOrganicPosts.length;
+    const isSingleMediaSplit = totalMediaCount === 1;
+
     const filterFiles = (items, mapper = (item) => item) => items.filter((item) => {
+      if (isSingleMediaSplit) return true;
       const file = mapper(item);
       const fileId = getFileId(file);
       const owningGroup = fileGroups.find((group) => getGroupFileIds(group).includes(fileId));
@@ -1076,10 +1083,10 @@ export default function AdCreationForm({
       (group) => (groupVariantMap[group.id] || 'default') === variantId
     );
     const variantImportedPosts = importedPosts.filter(
-      (post) => (postVariantMap[`post:${post.id}`] || 'default') === variantId
+      (post) => isSingleMediaSplit || (postVariantMap[`post:${post.id}`] || 'default') === variantId
     );
     const variantIgOrganicPosts = selectedIgOrganicPosts.filter(
-      (post) => (postVariantMap[`igpost:${post.source_instagram_media_id}`] || 'default') === variantId
+      (post) => isSingleMediaSplit || (postVariantMap[`igpost:${post.source_instagram_media_id}`] || 'default') === variantId
     );
 
     const formData = {
