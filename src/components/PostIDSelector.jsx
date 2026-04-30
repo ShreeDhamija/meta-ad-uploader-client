@@ -888,7 +888,7 @@ function PostSelectorInline({
                     </div>
 
                     {ads.length > 0 && (
-                        <ScrollArea className="h-[700px] outline-none focus:outline-none">
+                        <ScrollArea className="h-[550px] outline-none focus:outline-none">
                             <div className="space-y-1.5">
                                 {(viewMode === 'adset' ? displayedAdsetAds : ads).map((ad) => (
                                     <label
