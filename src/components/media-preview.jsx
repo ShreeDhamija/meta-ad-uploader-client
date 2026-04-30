@@ -635,42 +635,43 @@ export default function MediaPreview({
   const variantSetupLabel = variants.length === 1 ? 'Split Ad Data' : 'Disable Split';
 
   const renderVariantSetupButton = () => (
-    <div className="flex flex-col items-end gap-1">
-      <TooltipProvider delayDuration={0}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (variants.length === 1) {
-                  if (!hasSeenPowerupPopup) {
-                    setShowPowerupPopup(true);
-                  }
-                  handleAddVariant();
-                } else {
-                  setShowDisableVariantsDialog(true);
+    <TooltipProvider delayDuration={0}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (variants.length === 1) {
+                if (!hasSeenPowerupPopup) {
+                  setShowPowerupPopup(true);
                 }
-              }}
-              className="rounded-xl bg-white"
-            >
-              {variantSetupLabel}
-            </Button>
-          </TooltipTrigger>
-          {variants.length === 1 && (
-            <TooltipContent className="max-w-xs">
-              upload all your media once and split it into different ad sets with different naming, copy & more.
-            </TooltipContent>
-          )}
-        </Tooltip>
-      </TooltipProvider>
-      {isSingleMediaSplit && (
-        <span className="text-xs text-gray-500 text-right max-w-xs leading-tight">
-          With 1 file uploaded, every variant will reuse the same file while you edit all other fields independently.
-        </span>
-      )}
-    </div>
+                handleAddVariant();
+              } else {
+                setShowDisableVariantsDialog(true);
+              }
+            }}
+            className="rounded-xl bg-white"
+          >
+            {variantSetupLabel}
+          </Button>
+        </TooltipTrigger>
+        {variants.length === 1 && (
+          <TooltipContent className="max-w-xs">
+            upload all your media once and split it into different ad sets with different naming, copy & more.
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
+  );
+
+  const renderSingleMediaSplitNote = () => (
+    isSingleMediaSplit && variants.length > 1 ? (
+      <span className="block text-xs text-gray-500 leading-tight mt-1">
+        note: With 1 file uploaded, every variant will reuse the same file while you edit all other fields independently.
+      </span>
+    ) : null
   );
 
 
@@ -1360,13 +1361,17 @@ export default function MediaPreview({
                       AI Auto Group only works for images
                     </span>
                   )}
+                  {showVariantButtonInPlacementRow && renderSingleMediaSplitNote()}
                 </div>
               )}
 
               {showVariantButtonInHeader && (
-                <div className="mt-2 flex justify-end">
-                  {renderVariantSetupButton()}
-                </div>
+                <>
+                  <div className="mt-2 flex justify-end">
+                    {renderVariantSetupButton()}
+                  </div>
+                  {renderSingleMediaSplitNote()}
+                </>
               )}
             </CardHeader>
 
