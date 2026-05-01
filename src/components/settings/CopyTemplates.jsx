@@ -263,11 +263,16 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
 
   const [showImportPopup, setShowImportPopup] = useState(false)
-  const [recentAds, setRecentAds] = useState([])
+  const [recentAds, setRecentAds] = useState({
+    primaryTexts: [],
+    headlines: [],
+    descriptions: []
+  })
   const [isFetchingCopy, setIsFetchingCopy] = useState(false)
   const [previouslyFetched, setPreviouslyFetched] = useState({
     primaryTexts: [],
-    headlines: []
+    headlines: [],
+    descriptions: []
   });
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -291,20 +296,23 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         adAccountId: selectedAdAccount,
         excludePrimaryTexts: [],
         excludeHeadlines: [],
+        excludeDescriptions: [],
         after: null // Initial fetch
       })
     })
       .then(res => res.json())
       .then(data => {
-        if (data.primaryTexts || data.headlines) {
+        if (data.primaryTexts || data.headlines || data.descriptions) {
           setRecentAds({
             primaryTexts: data.primaryTexts || [],
-            headlines: data.headlines || []
+            headlines: data.headlines || [],
+            descriptions: data.descriptions || []
           });
 
           setPreviouslyFetched({
             primaryTexts: data.primaryTexts || [],
-            headlines: data.headlines || []
+            headlines: data.headlines || [],
+            descriptions: data.descriptions || []
           });
 
           // Store pagination cursor
@@ -394,6 +402,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           adAccountId: selectedAdAccount,
           excludePrimaryTexts: previouslyFetched.primaryTexts,
           excludeHeadlines: previouslyFetched.headlines,
+          excludeDescriptions: previouslyFetched.descriptions,
           after: paginationCursor // Use stored cursor
         })
       });
@@ -402,17 +411,20 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       const newPrimaryCount = data.primaryTexts?.length || 0;
       const newHeadlineCount = data.headlines?.length || 0;
-      const hasNewCopy = newPrimaryCount > 0 || newHeadlineCount > 0;
+      const newDescriptionCount = data.descriptions?.length || 0;
+      const hasNewCopy = newPrimaryCount > 0 || newHeadlineCount > 0 || newDescriptionCount > 0;
 
       if (hasNewCopy) {
         setRecentAds(prev => ({
           primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
-          headlines: [...(prev.headlines || []), ...(data.headlines || [])]
+          headlines: [...(prev.headlines || []), ...(data.headlines || [])],
+          descriptions: [...(prev.descriptions || []), ...(data.descriptions || [])]
         }));
 
         setPreviouslyFetched(prev => ({
           primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
-          headlines: [...prev.headlines, ...(data.headlines || [])]
+          headlines: [...prev.headlines, ...(data.headlines || [])],
+          descriptions: [...prev.descriptions, ...(data.descriptions || [])]
         }));
 
         // Update pagination cursor
@@ -732,6 +744,29 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     setHeadlines(currentHeadlines);
     toast.success(`Imported text into Headline ${importedToIndex + 1}`);
   }, [headlines])
+
+  const createDescriptionImportHandler = useCallback((text) => () => {
+    setAddDescriptions(true);
+    setDescriptions((currentDescriptions) => {
+      const nextDescriptions = [...currentDescriptions];
+      const emptyIndex = nextDescriptions.findIndex(t => t === "");
+      let importedToIndex;
+
+      if (emptyIndex !== -1) {
+        nextDescriptions[emptyIndex] = text;
+        importedToIndex = emptyIndex;
+      } else if (nextDescriptions.length < 5) {
+        nextDescriptions.push(text);
+        importedToIndex = nextDescriptions.length - 1;
+      } else {
+        nextDescriptions[nextDescriptions.length - 1] = text;
+        importedToIndex = nextDescriptions.length - 1;
+      }
+
+      toast.success(`Imported text into Description ${importedToIndex + 1}`);
+      return nextDescriptions;
+    });
+  }, [])
 
   // Helper function to normalize text for comparison (removes extra whitespace, case insensitive)
   const normalizeText = (text) => text.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -1316,23 +1351,33 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                   </div>
                 ) : (
                   <Tabs defaultValue="primary-texts" className="w-full">
-                    <div className="flex items-center justify-between mb-4 w-full">
-                      <TabsList className="flex h-10 items-center justify-start rounded-full bg-muted p-1 text-muted-foreground w-fit">
+                    <div className="flex items-center justify-between gap-3 mb-4 w-full">
+                      <TabsList className="flex h-10 max-w-full items-center justify-start overflow-x-auto rounded-full bg-muted p-1 text-muted-foreground w-fit">
                         <TabsTrigger
+                          type="button"
                           value="primary-texts"
                           className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
                         >
                           Primary Texts ({recentAds.primaryTexts?.length || 0})
                         </TabsTrigger>
                         <TabsTrigger
+                          type="button"
                           value="headlines"
                           className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
                         >
                           Headlines ({recentAds.headlines?.length || 0})
                         </TabsTrigger>
+                        <TabsTrigger
+                          type="button"
+                          value="descriptions"
+                          className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
+                        >
+                          Descriptions ({recentAds.descriptions?.length || 0})
+                        </TabsTrigger>
                       </TabsList>
                       <Button
-                        className="bg-red-600 hover:bg-red-700 !shadow-none rounded-xl"
+                        type="button"
+                        className="bg-red-600 hover:bg-red-700 !shadow-none rounded-xl shrink-0"
                         onClick={() => setShowImportPopup(false)}
                       >
                         <CirclePlus className="w-4 h-4 rotate-45 text-white" />
@@ -1351,6 +1396,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   Primary Text {index + 1}
                                 </div>
                                 <Button
+                                  type="button"
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, primaryTexts)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -1385,6 +1431,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   Headline {index + 1}
                                 </div>
                                 <Button
+                                  type="button"
                                   className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, headlines)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
@@ -1408,8 +1455,43 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         </div>
                       )}
                     </TabsContent>
+
+                    <TabsContent value="descriptions" className="space-y-4">
+                      {recentAds.descriptions?.length > 0 ? (
+                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
+                          {recentAds.descriptions.map((text, index) => (
+                            <div key={index} className="rounded-lg p-4">
+                              <div className="flex justify-between items-center mb-2">
+                                <div className="text-xs font-medium text-gray-500">
+                                  Description {index + 1}
+                                </div>
+                                <Button
+                                  type="button"
+                                  className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, descriptions)
+                                    ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
+                                  onClick={textExistsInTemplate(text, descriptions) ? undefined : createDescriptionImportHandler(text)}
+                                  disabled={textExistsInTemplate(text, descriptions)}
+                                >
+                                  {textExistsInTemplate(text, descriptions) ? 'Exists' : 'Import'}
+                                </Button>
+                              </div>
+                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                                {text}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10 text-gray-500">
+                          No descriptions found
+                        </div>
+                      )}
+                    </TabsContent>
                     <div className="text-center pt-4 mt-4">
                       <Button
+                        type="button"
                         className="bg-gray-700 text-white hover:bg-gray-900 rounded-xl w-full"
                         onClick={handleLoadMore}
                         disabled={isFetchingCopy || isLoadingMore}

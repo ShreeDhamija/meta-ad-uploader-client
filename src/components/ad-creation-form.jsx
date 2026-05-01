@@ -615,6 +615,8 @@ export default function AdCreationForm({
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
   const formDropdownTriggerChrome = `${formFieldChrome} hover:bg-white`;
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
+  const isPlacementCustomizedSingleDescription = enablePlacementCustomization && !isCarouselAd;
+  const hasPlacementCustomizationExtraDescriptions = isPlacementCustomizedSingleDescription && descriptions.length > 1;
   const renderDiffMark = (fieldKeys) => (
     isFormFieldModified?.(fieldKeys) ? <span className="text-red-500 font-semibold">*</span> : null
   );
@@ -1089,9 +1091,13 @@ export default function AdCreationForm({
       (post) => isSingleMediaSplit || (postVariantMap[`igpost:${post.source_instagram_media_id}`] || 'default') === variantId
     );
 
+    const formDescriptions = enablePlacementCustomization
+      ? [(variantState.descriptions || [''])[0] || '']
+      : [...(variantState.descriptions || [''])];
+
     const formData = {
       headlines: [...(variantState.headlines || [''])],
-      descriptions: [...(variantState.descriptions || [''])],
+      descriptions: formDescriptions,
       messages: [...(variantState.messages || [''])],
       link: [...(variantState.link || [''])],
       phoneNumber: variantState.phoneNumber || '',
@@ -3372,9 +3378,9 @@ export default function AdCreationForm({
     return {
       messages: findDupes(messages),
       headlines: findDupes(headlines),
-      descriptions: findDupes(descriptions),
+      descriptions: findDupes(enablePlacementCustomization ? descriptions.slice(0, 1) : descriptions),
     };
-  }, [messages, headlines, descriptions, isCarouselAd]);
+  }, [messages, headlines, descriptions, isCarouselAd, enablePlacementCustomization]);
 
   const hasDuplicates = useMemo(() =>
     duplicateIndices.messages.size > 0 ||
@@ -7396,6 +7402,11 @@ export default function AdCreationForm({
                           {renderDiffMark("descriptions")}
                           <span>{isCarouselAd ? "Primary Text" : "Descriptions"}</span>
                         </Label>
+                        {hasPlacementCustomizationExtraDescriptions && (
+                          <p className="text-xs text-red-500">
+                            Placement Customized Ads can only have 1 description field.
+                          </p>
+                        )}
                         <div className="space-y-3">
                           {isCarouselAd ? (
                             <div className="flex items-center gap-2">
@@ -7415,8 +7426,11 @@ export default function AdCreationForm({
                             </div>
                           ) : (
                             <>
-                              {descriptions.map((value, index) => (
-                                <div key={index} className="flex items-center gap-2">
+                              {descriptions.map((value, index) => {
+                                const isInactivePlacementDescription = isPlacementCustomizedSingleDescription && index > 0;
+
+                                return (
+                                <div key={index} className={`flex items-center gap-2 ${isInactivePlacementDescription ? "opacity-60" : ""}`}>
                                   <div className="flex flex-col w-full">
                                     <TextareaAutosize
                                       value={value}
@@ -7426,13 +7440,13 @@ export default function AdCreationForm({
                                       className={`${formTextareaChrome} ${duplicateIndices.descriptions.has(index)
                                         ? "!border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
                                         : ""
-                                        }`}
+                                        } ${isInactivePlacementDescription ? "!bg-gray-100 text-gray-500 cursor-not-allowed" : ""}`}
                                       style={{
                                         scrollbarWidth: 'thin',
                                         scrollbarColor: '#c7c7c7 transparent'
                                       }}
                                       placeholder="Enter description"
-                                      disabled={!isLoggedIn}
+                                      disabled={!isLoggedIn || isInactivePlacementDescription}
                                     />
                                     {duplicateIndices.descriptions.has(index) && (
                                       <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
@@ -7451,17 +7465,52 @@ export default function AdCreationForm({
                                     </Button>
                                   )}
                                 </div>
-                              ))}
+                              )})}
                               {descriptions.length < 5 && (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
-                                  onClick={() => addField(setDescriptions, descriptions)}
-                                >
-                                  <Plus className="mr-2 h-4 w-4 text-white" />
-                                  Add description option
-                                </Button>
+                                isPlacementCustomizedSingleDescription ? (
+                                  descriptions.length <= 1 ? (
+                                    <TooltipProvider delayDuration={0}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="block w-full">
+                                            <Button
+                                              type="button"
+                                              size="sm"
+                                              className="w-full rounded-xl shadow bg-gray-200 text-gray-500 cursor-not-allowed hover:bg-gray-200"
+                                              disabled
+                                            >
+                                              <Plus className="mr-2 h-4 w-4 text-gray-500" />
+                                              Add description option
+                                            </Button>
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="text-xs">
+                                          You can't add more than 1 description to placement customized ads.
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      className="w-full rounded-xl shadow bg-gray-200 text-gray-500 cursor-not-allowed hover:bg-gray-200"
+                                      disabled
+                                    >
+                                      <Plus className="mr-2 h-4 w-4 text-gray-500" />
+                                      Add description option
+                                    </Button>
+                                  )
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="w-full rounded-xl shadow bg-zinc-600 hover:bg-black text-white"
+                                    onClick={() => addField(setDescriptions, descriptions)}
+                                  >
+                                    <Plus className="mr-2 h-4 w-4 text-white" />
+                                    Add description option
+                                  </Button>
+                                )
                               )}
                             </>
                           )}
