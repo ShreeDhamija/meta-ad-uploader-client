@@ -553,7 +553,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                         </Button>
                                     </div>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 rounded-[24px] border border-gray-200 bg-gray-50 p-2">
                                         {linkImportPreview.map((linkUrl, idx) => {
                                             const alreadyExists = links.some(link => link.url === linkUrl);
                                             return (
@@ -563,7 +563,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                                     </div>
                                                     <Button
                                                         size="sm"
-                                                        className="h-7 rounded-[14px] px-4 py-0.5"
+                                                        className="h-7 rounded-xl px-4 py-0.5"
                                                         variant={alreadyExists ? "outline" : "default"}
                                                         disabled={alreadyExists}
                                                         onClick={() => handleImportLink(linkUrl)}

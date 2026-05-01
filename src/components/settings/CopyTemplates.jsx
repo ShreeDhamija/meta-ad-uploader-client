@@ -1397,7 +1397,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   type="button"
-                                  className={`flex h-7 items-center text-xs rounded-[14px] px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, primaryTexts)
+                                  className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, primaryTexts)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
@@ -1432,7 +1432,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   type="button"
-                                  className={`flex h-7 items-center text-xs rounded-[14px] px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, headlines)
+                                  className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, headlines)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
@@ -1467,7 +1467,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   type="button"
-                                  className={`flex h-7 items-center text-xs rounded-[14px] px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, descriptions)
+                                  className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, descriptions)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
