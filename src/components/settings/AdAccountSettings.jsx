@@ -646,8 +646,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             {/* Reauth dialog (opened from dropdown) */}
             <Dialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
               <DialogOverlay className="bg-black/20" />
-              <DialogContent className="sm:max-w-md !rounded-xl">
-                <div className="text-left space-y-4 p-6 !rounded-xl">
+              <DialogContent className="sm:max-w-md !rounded-[28px] data-[state=open]:!slide-in-from-left-0 data-[state=closed]:!slide-out-to-left-0">
+                <div className="text-left space-y-4 p-6 !rounded-[28px]">
                   <div className="space-y-2">
                     <img
                       src="https://api.withblip.com/logo.webp"
