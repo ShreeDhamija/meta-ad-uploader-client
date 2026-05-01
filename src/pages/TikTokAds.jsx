@@ -67,7 +67,7 @@ export default function TikTokAds() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[#f3f4f6]">
+      <div className="flex items-center justify-center h-screen">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
           <p className="text-sm font-medium text-gray-500 uppercase tracking-widest">Loading TikTok Ads...</p>
@@ -79,7 +79,7 @@ export default function TikTokAds() {
   if (!isTikTokLoggedIn) return null
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] px-4 md:px-12 lg:px-24">
+    <div className="min-h-screen px-4 md:px-12 lg:px-24">
       <Toaster richColors position="bottom-left" closeButton />
       
       <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
