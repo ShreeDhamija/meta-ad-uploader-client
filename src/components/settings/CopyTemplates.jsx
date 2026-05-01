@@ -1298,11 +1298,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             height: "100dvh",
             minHeight: "100vh",
           }}
-          onClick={(e) => {
+          onPointerDown={(e) => {
             if (e.target === e.currentTarget) setShowImportPopup(false)
           }}
         >
           <div className="relative w-[750px] max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden rounded-[32px] border border-gray-200 bg-white shadow-xl transition-all duration-300 ease-in-out"
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
