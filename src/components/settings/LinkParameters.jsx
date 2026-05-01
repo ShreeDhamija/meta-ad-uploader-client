@@ -305,7 +305,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 {/* Requirement 1: Only Import Links */}
                 <Button
                     variant="outline"
-                    className="text-xs gap-1 px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
+                    className="text-xs gap-1 px-3.5 pl-2.5 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
                     onClick={handleOpenLinkImport}
                 >
                     <Download className="w-4 h-4 text-white" />
@@ -408,7 +408,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 </div>}
 
                 {showAddForm ? (
-                    <div className="border border-gray-200 rounded-xl p-3 bg-white space-y-3">
+                    <div className="border border-gray-200 rounded-2xl p-3 bg-white space-y-3">
                         <div className="space-y-2">
                             <Input
                                 placeholder="Enter Link URL"
@@ -420,7 +420,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                         <div className="flex gap-2">
                             <Button
                                 onClick={handleAddNewLink}
-                                className="bg-blue-500 text-white rounded-xl hover:bg-blue-600"
+                                className="bg-blue-500 text-white rounded-[14px] hover:bg-blue-600"
                                 size="sm"
                             >
                                 Add Link
@@ -431,7 +431,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                     setNewLinkUrl("");
                                 }}
                                 variant="outline"
-                                className="rounded-xl"
+                                className="rounded-[14px]"
                                 size="sm"
                             >
                                 Cancel
@@ -441,7 +441,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 ) : (
                     <Button
                         onClick={() => setShowAddForm(true)}
-                        className="bg-zinc-600 text-white w-full rounded-xl hover:zinc-800 mt-2 h-[40px]"
+                        className="bg-zinc-600 text-white w-full rounded-[14px] hover:zinc-800 mt-2 h-[40px]"
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         Add New Link
@@ -477,7 +477,7 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
 
                 <Button
                     onClick={handleOpenUtmSetup}
-                    className="bg-zinc-600 text-white w-full rounded-xl hover:bg-zinc-800 mt-2 h-[40px]"
+                    className="bg-zinc-600 text-white w-full rounded-[14px] hover:bg-zinc-800 mt-2 h-[40px]"
                 >
                     <Settings2 className="w-4 h-4 mr-2" />
                     Set Up UTMs
@@ -553,17 +553,17 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                         </Button>
                                     </div>
 
-                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                                    <div className="space-y-2">
                                         {linkImportPreview.map((linkUrl, idx) => {
                                             const alreadyExists = links.some(link => link.url === linkUrl);
                                             return (
                                                 <div key={idx} className="flex gap-3 items-center">
-                                                    <div className={`flex-1 rounded-2xl border border-gray-300 bg-white px-3 py-4.5 text-sm shadow-xs truncate ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
+                                                    <div className={`flex-1 rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-xs truncate ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
                                                         {linkUrl}
                                                     </div>
                                                     <Button
                                                         size="sm"
-                                                        className="h-7 rounded-2xl px-4 py-0.5"
+                                                        className="h-7 rounded-[14px] px-4 py-0.5"
                                                         variant={alreadyExists ? "outline" : "default"}
                                                         disabled={alreadyExists}
                                                         onClick={() => handleImportLink(linkUrl)}
