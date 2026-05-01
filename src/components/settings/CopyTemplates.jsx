@@ -929,11 +929,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
           {/* This button remains visible to everyone */}
           <Button
-            variant="ghost"
-            className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
+            variant="outline"
+            className="text-xs gap-1 px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
             onClick={() => setShowImportPopup(true)}
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-4 h-4 text-white" />
             Auto Import Copy Variants
           </Button>
         </div>
@@ -1337,7 +1337,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
             if (e.target === e.currentTarget) setShowImportPopup(false)
           }}
         >
-          <div className="relative w-[750px] max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden rounded-[32px] border border-gray-200 bg-white shadow-xl transition-all duration-300 ease-in-out"
+          <div className="relative w-[750px] max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden rounded-[40px] border border-gray-200 bg-white shadow-xl transition-all duration-300 ease-in-out"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1377,7 +1377,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       </TabsList>
                       <Button
                         type="button"
-                        className="bg-red-600 hover:bg-red-700 !shadow-none rounded-xl shrink-0"
+                        className="bg-red-600 hover:bg-red-700 !shadow-none rounded-2xl shrink-0"
                         onClick={() => setShowImportPopup(false)}
                       >
                         <CirclePlus className="w-4 h-4 rotate-45 text-white" />
@@ -1388,7 +1388,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
                     <TabsContent value="primary-texts" className="space-y-4">
                       {recentAds.primaryTexts?.length > 0 ? (
-                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
+                        <div className="border bg-gray-50 border-gray-200 rounded-[28px] p-2 space-y-2">
                           {recentAds.primaryTexts.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
@@ -1397,7 +1397,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   type="button"
-                                  className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, primaryTexts)
+                                  className={`flex h-7 items-center text-xs rounded-2xl px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, primaryTexts)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
@@ -1408,7 +1408,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   {textExistsInTemplate(text, primaryTexts) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
-                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="rounded-2xl border border-gray-300 bg-white px-3 py-4.5 text-sm text-gray-800 shadow-xs whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
@@ -1423,7 +1423,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
                     <TabsContent value="headlines" className="space-y-4">
                       {recentAds.headlines?.length > 0 ? (
-                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
+                        <div className="border bg-gray-50 border-gray-200 rounded-[28px] p-2 space-y-2">
                           {recentAds.headlines.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
@@ -1432,7 +1432,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   type="button"
-                                  className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, headlines)
+                                  className={`flex h-7 items-center text-xs rounded-2xl px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, headlines)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
@@ -1443,7 +1443,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   {textExistsInTemplate(text, headlines) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
-                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="rounded-2xl border border-gray-300 bg-white px-3 py-4.5 text-sm text-gray-800 shadow-xs whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
@@ -1458,7 +1458,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
                     <TabsContent value="descriptions" className="space-y-4">
                       {recentAds.descriptions?.length > 0 ? (
-                        <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
+                        <div className="border bg-gray-50 border-gray-200 rounded-[28px] p-2 space-y-2">
                           {recentAds.descriptions.map((text, index) => (
                             <div key={index} className="rounded-lg p-4">
                               <div className="flex justify-between items-center mb-2">
@@ -1467,7 +1467,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 </div>
                                 <Button
                                   type="button"
-                                  className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text, descriptions)
+                                  className={`flex h-7 items-center text-xs rounded-2xl px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, descriptions)
                                     ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
                                     : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
@@ -1477,7 +1477,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   {textExistsInTemplate(text, descriptions) ? 'Exists' : 'Import'}
                                 </Button>
                               </div>
-                              <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                              <div className="rounded-2xl border border-gray-300 bg-white px-3 py-4.5 text-sm text-gray-800 shadow-xs whitespace-pre-line">
                                 {text}
                               </div>
                             </div>
@@ -1492,7 +1492,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     <div className="text-center pt-4 mt-4">
                       <Button
                         type="button"
-                        className="bg-gray-700 text-white hover:bg-gray-900 rounded-xl w-full"
+                        className="h-12 w-full rounded-2xl bg-zinc-700 py-3 text-white hover:bg-black"
                         onClick={handleLoadMore}
                         disabled={isFetchingCopy || isLoadingMore}
                       >

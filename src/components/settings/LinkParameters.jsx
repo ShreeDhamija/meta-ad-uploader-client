@@ -304,11 +304,11 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                 </div>
                 {/* Requirement 1: Only Import Links */}
                 <Button
-                    variant="ghost"
-                    className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
+                    variant="outline"
+                    className="text-xs gap-1 px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
                     onClick={handleOpenLinkImport}
                 >
-                    <Download className="w-4 h-4" />
+                    <Download className="w-4 h-4 text-white" />
                     Import Links from Recent Ads
                 </Button>
             </div>
@@ -517,22 +517,22 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                     style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
                     onClick={() => setShowLinkImportModal(false)}
                 >
-                    <div className="bg-white rounded-2xl max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200"
+                    <div className="bg-white rounded-[32px] max-h-[80vh] overflow-y-auto w-[600px] shadow-xl relative border border-gray-200"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="sticky top-0 bg-white z-10 px-6 py-6 border-b border-gray-200 flex justify-between items-center">
+                        <div className="sticky top-0 bg-white z-10 px-6 pt-5 pb-2 flex justify-between items-center">
                             <h3 className="text-lg font-semibold">Import Recent Links</h3>
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="rounded-full hover:bg-gray-100"
+                                className="rounded-2xl hover:bg-gray-100"
                                 onClick={() => setShowLinkImportModal(false)}
                             >
                                 <X className="w-5 h-5" />
                             </Button>
                         </div>
 
-                        <div className="p-6">
+                        <div className="px-6 pb-6 pt-2">
                             {isFetchingLinks ? (
                                 <div className="flex flex-col items-center justify-center py-10 space-y-4">
                                     <RotateLoader size={6} margin={-16} color="#adadad" />
@@ -540,29 +540,30 @@ function LinkParameters({ links, setLinks, utmPairs, setUtmPairs, selectedAdAcco
                                 </div>
                             ) : linkImportPreview.length > 0 ? (
                                 <>
-                                    <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center justify-between mb-3">
                                         <p className="text-sm text-gray-500">
                                             Found {linkImportPreview.length} recent link{linkImportPreview.length > 1 ? 's' : ''}.
                                         </p>
                                         <Button
-                                            className="bg-black text-white rounded-xl hover:bg-zinc-800 px-4"
+                                            className="rounded-2xl bg-zinc-800 px-4 text-white hover:bg-black"
                                             onClick={handleImportAllLinks}
                                         >
+                                            <Download className="h-4 w-4 text-white" />
                                             Import All
                                         </Button>
                                     </div>
 
-                                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                                    <div className="space-y-3 max-h-[300px] overflow-y-auto">
                                         {linkImportPreview.map((linkUrl, idx) => {
                                             const alreadyExists = links.some(link => link.url === linkUrl);
                                             return (
                                                 <div key={idx} className="flex gap-3 items-center">
-                                                    <div className={`flex-1 bg-gray-100 text-sm px-3 py-[10px] rounded-xl truncate ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
+                                                    <div className={`flex-1 rounded-2xl border border-gray-300 bg-white px-3 py-4.5 text-sm shadow-xs truncate ${alreadyExists ? 'opacity-50' : 'text-zinc-800'}`}>
                                                         {linkUrl}
                                                     </div>
                                                     <Button
                                                         size="sm"
-                                                        className="rounded-xl"
+                                                        className="h-7 rounded-2xl px-4 py-0.5"
                                                         variant={alreadyExists ? "outline" : "default"}
                                                         disabled={alreadyExists}
                                                         onClick={() => handleImportLink(linkUrl)}
