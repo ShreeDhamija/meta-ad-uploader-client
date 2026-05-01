@@ -57,9 +57,9 @@ export default function TikTokLogin() {
     const cleanApiUrl = API_BASE_URL.replace(/^https?:\/\//, '')
     if (isSignupPage) {
       const encodedEmail = encodeURIComponent(email)
-      window.location.href = `https://${cleanApiUrl}/api/tiktok/auth/tiktok?state=signup&user_email=${encodedEmail}`
+      window.location.href = `https://${cleanApiUrl}/auth/tikok/login?state=signup&user_email=${encodedEmail}`
     } else {
-      window.location.href = `https://${cleanApiUrl}/api/tiktok/auth/tiktok?state=login`
+      window.location.href = `https://${cleanApiUrl}/auth/tikok/login?state=login`
     }
   }
 
