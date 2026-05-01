@@ -1,11 +1,27 @@
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { useEffect, useRef, useState } from 'react'
-import { toast } from 'sonner'
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { 
+  Users, 
+  Loader, 
+  Upload, 
+  RefreshCcw, 
+  FileText, 
+  Link as LinkIcon, 
+  PlayCircle,
+  Video
+} from "lucide-react"
+import TextareaAutosize from 'react-textarea-autosize'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
-const TIKTOK_CYAN = '#25F4EE'
 
 const CTA_OPTIONS = [
   { value: 'SHOP_NOW', label: 'Shop Now' },
@@ -20,54 +36,13 @@ const CTA_OPTIONS = [
   { value: 'WATCH_NOW', label: 'Watch Now' },
 ]
 
-function FieldLabel({ children }) {
-  return (
-    <label className="text-xs font-semibold uppercase tracking-widest mb-1 block" style={{ color: 'rgba(255,255,255,0.45)' }}>
-      {children}
-    </label>
-  )
-}
-
-function StyledSelect({ value, onChange, children, disabled }) {
-  return (
-    <select
-      value={value}
-      onChange={onChange}
-      disabled={disabled}
-      style={{
-        width: '100%',
-        background: 'rgba(255,255,255,0.06)',
-        border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: 10,
-        color: value ? '#fff' : 'rgba(255,255,255,0.35)',
-        padding: '9px 12px',
-        fontSize: 14,
-        outline: 'none',
-        opacity: disabled ? 0.5 : 1,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-      }}
-    >
-      {children}
-    </select>
-  )
-}
-
-function StyledInput({ style, ...props }) {
-  return (
-    <Input
-      {...props}
-      style={{
-        background: 'rgba(255,255,255,0.06)',
-        border: '1px solid rgba(255,255,255,0.12)',
-        borderRadius: 10,
-        color: '#fff',
-        ...style,
-      }}
-    />
-  )
-}
-
 export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
+  // Constants from Meta Form for exact visual match
+  const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
+  const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
+  const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
+
+  // State
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
   const [campaigns, setCampaigns] = useState([])
   const [adGroups, setAdGroups] = useState([])
@@ -84,6 +59,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadingCampaigns, setLoadingCampaigns] = useState(false)
   const [loadingAdGroups, setLoadingAdGroups] = useState(false)
+  
   const fileRef = useRef()
 
   // Sync advertiser prop
@@ -93,24 +69,39 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
 
   // Fetch campaigns when advertiser changes
   useEffect(() => {
-    if (!selectedAdvertiser) { setCampaigns([]); setSelectedCampaign(''); return }
+    if (!selectedAdvertiser) { 
+      setCampaigns([]); 
+      setSelectedCampaign(''); 
+      return 
+    }
     setLoadingCampaigns(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
     fetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`, { credentials: 'include' })
       .then(r => r.json())
-      .then(d => { setCampaigns(d.campaigns || []); setSelectedCampaign(''); setAdGroups([]) })
+      .then(d => { 
+        setCampaigns(d.campaigns || []); 
+        setSelectedCampaign(''); 
+        setAdGroups([]) 
+      })
       .catch(() => toast.error('Failed to load campaigns'))
       .finally(() => setLoadingCampaigns(false))
   }, [selectedAdvertiser])
 
   // Fetch ad groups when campaign changes
   useEffect(() => {
-    if (!selectedCampaign || !selectedAdvertiser) { setAdGroups([]); setSelectedAdGroup(''); return }
+    if (!selectedCampaign || !selectedAdvertiser) { 
+      setAdGroups([]); 
+      setSelectedAdGroup(''); 
+      return 
+    }
     setLoadingAdGroups(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, campaignId: selectedCampaign, page: '1', pageSize: '100' })
     fetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`, { credentials: 'include' })
       .then(r => r.json())
-      .then(d => { setAdGroups(d.adGroups || d.adgroups || []); setSelectedAdGroup('') })
+      .then(d => { 
+        setAdGroups(d.adGroups || d.adgroups || []); 
+        setSelectedAdGroup('') 
+      })
       .catch(() => toast.error('Failed to load ad groups'))
       .finally(() => setLoadingAdGroups(false))
   }, [selectedCampaign, selectedAdvertiser])
@@ -187,162 +178,279 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-      {/* Advertiser */}
-      {advertisers && advertisers.length > 0 && (
-        <div>
-          <FieldLabel>Advertiser Account</FieldLabel>
-          <StyledSelect value={selectedAdvertiser} onChange={e => setSelectedAdvertiser(e.target.value)}>
-            <option value="">Select advertiser…</option>
-            {advertisers.map(a => (
-              <option key={a.advertiser_id || a.id} value={a.advertiser_id || a.id}>
-                {a.advertiser_name || a.name}
-              </option>
-            ))}
-          </StyledSelect>
-        </div>
-      )}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Identity Section */}
+      <Card className="border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+        <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Users className="w-4 h-4 text-gray-500" />
+            Identity
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Advertiser Account
+            </Label>
+            <Select 
+              value={selectedAdvertiser} 
+              onValueChange={setSelectedAdvertiser}
+              disabled={!advertisers || advertisers.length === 0}
+            >
+              <SelectTrigger className={formFieldChrome}>
+                <SelectValue placeholder="Select advertiser account" />
+              </SelectTrigger>
+              <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
+                {advertisers?.map(a => (
+                  <SelectItem 
+                    key={a.advertiser_id || a.id} 
+                    value={a.advertiser_id || a.id}
+                    className="cursor-pointer hover:bg-gray-50 rounded-lg m-1"
+                  >
+                    {a.advertiser_name || a.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Campaign */}
-      <div>
-        <FieldLabel>Campaign {loadingCampaigns && '(loading…)'}</FieldLabel>
-        <StyledSelect
-          value={selectedCampaign}
-          onChange={e => setSelectedCampaign(e.target.value)}
-          disabled={!selectedAdvertiser || loadingCampaigns}
-        >
-          <option value="">Select campaign…</option>
-          {campaigns.map(c => (
-            <option key={c.campaign_id} value={c.campaign_id}>{c.campaign_name}</option>
-          ))}
-        </StyledSelect>
-      </div>
-
-      {/* Ad Group */}
-      <div>
-        <FieldLabel>Ad Group {loadingAdGroups && '(loading…)'}</FieldLabel>
-        <StyledSelect
-          value={selectedAdGroup}
-          onChange={e => setSelectedAdGroup(e.target.value)}
-          disabled={!selectedCampaign || loadingAdGroups}
-        >
-          <option value="">Select ad group…</option>
-          {adGroups.map(g => (
-            <option key={g.adgroup_id} value={g.adgroup_id}>{g.adgroup_name}</option>
-          ))}
-        </StyledSelect>
-      </div>
-
-      {/* Ad Name */}
-      <div>
-        <FieldLabel>Ad Name</FieldLabel>
-        <StyledInput
-          type="text"
-          placeholder="My TikTok Ad"
-          value={adName}
-          onChange={e => setAdName(e.target.value)}
-        />
-      </div>
-
-      {/* Video Upload */}
-      <div>
-        <FieldLabel>Video (required) — .mp4 / .mov</FieldLabel>
-        <div
-          onClick={() => fileRef.current?.click()}
-          style={{
-            border: `2px dashed ${videoFile ? TIKTOK_CYAN + '88' : 'rgba(255,255,255,0.15)'}`,
-            borderRadius: 12,
-            padding: '20px',
-            textAlign: 'center',
-            cursor: 'pointer',
-            background: videoFile ? 'rgba(37,244,238,0.04)' : 'rgba(255,255,255,0.02)',
-            transition: 'all 0.2s',
-          }}
-        >
-          {videoPreview ? (
-            <video src={videoPreview} controls className="mx-auto max-h-40 rounded-lg" />
-          ) : (
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              Click to select video file
-            </p>
-          )}
-          {isUploading && (
-            <div className="mt-3">
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%`, background: `linear-gradient(90deg, ${TIKTOK_CYAN}, ${TIKTOK_PINK})` }}
-                />
+      {/* Placement Section */}
+      <Card className="border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+        <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <PlayCircle className="w-4 h-4 text-gray-500" />
+            Placement
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Campaign
+                </Label>
+                {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
               </div>
-              <p className="text-xs mt-1" style={{ color: TIKTOK_CYAN }}>Uploading…</p>
+              <Select 
+                value={selectedCampaign} 
+                onValueChange={setSelectedCampaign}
+                disabled={!selectedAdvertiser || loadingCampaigns}
+              >
+                <SelectTrigger className={formFieldChrome}>
+                  <SelectValue placeholder="Select campaign" />
+                </SelectTrigger>
+                <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
+                  {campaigns.map(c => (
+                    <SelectItem key={c.campaign_id} value={c.campaign_id} className="cursor-pointer hover:bg-gray-50 rounded-lg m-1">
+                      {c.campaign_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ad Group
+                </Label>
+                {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+              </div>
+              <Select 
+                value={selectedAdGroup} 
+                onValueChange={setSelectedAdGroup}
+                disabled={!selectedCampaign || loadingAdGroups}
+              >
+                <SelectTrigger className={formFieldChrome}>
+                  <SelectValue placeholder="Select ad group" />
+                </SelectTrigger>
+                <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
+                  {adGroups.map(g => (
+                    <SelectItem key={g.adgroup_id} value={g.adgroup_id} className="cursor-pointer hover:bg-gray-50 rounded-lg m-1">
+                      {g.adgroup_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Ad Details Section */}
+      <Card className="border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+        <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <FileText className="w-4 h-4 text-gray-500" />
+            Ad Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Ad Name
+            </Label>
+            <Input
+              type="text"
+              placeholder="Enter your ad name"
+              value={adName}
+              onChange={e => setAdName(e.target.value)}
+              className={formInputChrome}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Creative Section */}
+      <Card className="border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+        <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Video className="w-4 h-4 text-gray-500" />
+            Creative
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          {/* Video Upload */}
+          <div className="space-y-3">
+            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Video (.mp4, .mov)
+            </Label>
+            <div
+              onClick={() => fileRef.current?.click()}
+              className={cn(
+                "group cursor-pointer border-2 border-dashed rounded-2xl p-8 text-center transition-all",
+                videoFile ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+              )}
+            >
+              <input
+                ref={fileRef}
+                type="file"
+                accept="video/mp4,video/quicktime"
+                className="hidden"
+                onChange={handleVideoSelect}
+              />
+              
+              <div className="flex flex-col items-center gap-3">
+                {videoPreview ? (
+                  <div className="relative group">
+                    <video src={videoPreview} className="mx-auto max-h-48 rounded-xl shadow-md border border-white" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                      <RefreshCcw className="w-8 h-8 text-white" />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Click to upload video</p>
+                      <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok</p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {isUploading && (
+                <div className="mt-4 max-w-xs mx-auto">
+                  <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] font-medium text-emerald-600 mt-1 uppercase tracking-widest">
+                    Uploading {uploadProgress}%
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Ad Text */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Ad Copy / Caption
+            </Label>
+            <TextareaAutosize
+              value={adText}
+              onChange={e => setAdText(e.target.value)}
+              placeholder="What's your ad about? 🔥"
+              minRows={3}
+              maxRows={10}
+              className={formTextareaChrome}
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#e5e7eb transparent'
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* CTA */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Call to Action
+              </Label>
+              <Select value={cta} onValueChange={setCta}>
+                <SelectTrigger className={formFieldChrome}>
+                  <SelectValue placeholder="Select CTA" />
+                </SelectTrigger>
+                <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200 max-h-64">
+                  {CTA_OPTIONS.map(o => (
+                    <SelectItem key={o.value} value={o.value} className="cursor-pointer hover:bg-gray-50 rounded-lg m-1">
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* URL */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                <LinkIcon className="w-3 h-3" />
+                Landing Page URL
+              </Label>
+              <Input
+                type="url"
+                placeholder="https://myshop.com/product"
+                value={landingUrl}
+                onChange={e => setLandingUrl(e.target.value)}
+                className={formInputChrome}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Submit Button */}
+      <div className="pt-4">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className={cn(
+            "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg",
+            isSubmitting 
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+              : "bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99]"
           )}
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="video/mp4,video/quicktime"
-          className="hidden"
-          onChange={handleVideoSelect}
-        />
+        >
+          {isSubmitting ? (
+            <div className="flex items-center gap-2">
+              <Loader className="w-5 h-5 animate-spin" />
+              {isUploading ? 'Uploading Media...' : 'Creating TikTok Ad...'}
+            </div>
+          ) : (
+            'Create TikTok Ad'
+          )}
+        </Button>
+        <p className="text-center text-[11px] text-gray-400 mt-3 font-medium uppercase tracking-widest">
+          Your ad will be live after TikTok's review process
+        </p>
       </div>
-
-      {/* Ad Text */}
-      <div>
-        <FieldLabel>Ad Copy / Text</FieldLabel>
-        <textarea
-          value={adText}
-          onChange={e => setAdText(e.target.value)}
-          placeholder="Check this out! 🔥"
-          rows={3}
-          style={{
-            width: '100%',
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 10,
-            color: '#fff',
-            padding: '9px 12px',
-            fontSize: 14,
-            outline: 'none',
-            resize: 'vertical',
-          }}
-        />
-      </div>
-
-      {/* CTA */}
-      <div>
-        <FieldLabel>Call to Action</FieldLabel>
-        <StyledSelect value={cta} onChange={e => setCta(e.target.value)}>
-          {CTA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </StyledSelect>
-      </div>
-
-      {/* Landing URL */}
-      <div>
-        <FieldLabel>Landing Page URL</FieldLabel>
-        <StyledInput
-          type="url"
-          placeholder="https://example.com"
-          value={landingUrl}
-          onChange={e => setLandingUrl(e.target.value)}
-        />
-      </div>
-
-      {/* Submit */}
-      <Button
-        type="submit"
-        disabled={isSubmitting}
-        className="w-full h-11 rounded-xl font-semibold text-sm mt-1"
-        style={{
-          background: isSubmitting ? 'rgba(254,44,85,0.4)' : `linear-gradient(135deg, ${TIKTOK_PINK}, #c9184a)`,
-          color: '#fff',
-          border: 'none',
-          boxShadow: isSubmitting ? 'none' : `0 4px 20px ${TIKTOK_PINK}55`,
-          cursor: isSubmitting ? 'not-allowed' : 'pointer',
-        }}
-      >
-        {isSubmitting ? 'Creating Ad…' : 'Create TikTok Ad'}
-      </Button>
     </form>
   )
 }
