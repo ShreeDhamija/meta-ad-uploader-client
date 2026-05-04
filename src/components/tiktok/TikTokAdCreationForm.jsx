@@ -1,24 +1,24 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { toast } from "sonner"
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
-  Users, 
-  Loader, 
-  Upload, 
-  RefreshCcw, 
-  FileText, 
-  Link as LinkIcon, 
+import { cn } from "@/lib/utils"
+import {
+  FileText,
+  Link as LinkIcon,
+  Loader,
   PlayCircle,
+  RefreshCcw,
+  Upload,
+  Users,
   Video
 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
+import { toast } from "sonner"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
@@ -50,7 +50,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const [selectedAdGroup, setSelectedAdGroup] = useState('')
   const [adName, setAdName] = useState('')
   const [adText, setAdText] = useState('')
-  const [cta, setCta] = useState('SHOP_NOW')
+  const [cta, setCta] = useState(['SHOP_NOW'])
   const [landingUrl, setLandingUrl] = useState('')
   const [videoFile, setVideoFile] = useState(null)
   const [videoPreview, setVideoPreview] = useState(null)
@@ -61,6 +61,14 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const [loadingAdGroups, setLoadingAdGroups] = useState(false)
   
   const fileRef = useRef()
+
+  const toggleCta = (value) => {
+    setCta(prev => 
+      prev.includes(value) 
+        ? (prev.length > 1 ? prev.filter(v => v !== value) : prev)
+        : [...prev, value]
+    )
+  }
 
   // Sync advertiser prop
   useEffect(() => {
@@ -120,6 +128,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
     if (!selectedAdGroup) return toast.error('Please select an ad group')
     if (!videoFile) return toast.error('Video is required for TikTok ads')
     if (!adName.trim()) return toast.error('Ad name is required')
+    if (cta.length === 0) return toast.error('Please select at least one Call to Action')
 
     setIsSubmitting(true)
     setIsUploading(true)
@@ -143,8 +152,17 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       setIsUploading(false)
       toast.success('Video uploaded!')
 
-      // Step 2: Create ad
-      toast.info('Creating ad...')
+      // Step 2: Create ads (One for each CTA)
+      toast.info(`Creating ${cta.length} ad(s)...`)
+      
+      const creatives = cta.map(action => ({
+        video_id: uploadData.videoId,
+        ad_text: adText,
+        call_to_action: action,
+        landing_page_url: landingUrl,
+        ad_name: `${adName.trim()} (${action})`
+      }))
+
       const createRes = await fetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
         method: 'POST',
         credentials: 'include',
@@ -153,21 +171,16 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
           advertiserId: selectedAdvertiser,
           adgroupId: selectedAdGroup,
           adName: adName.trim(),
-          creatives: [{
-            video_id: uploadData.videoId,
-            ad_text: adText,
-            call_to_action: cta,
-            landing_page_url: landingUrl,
-          }],
+          creatives
         }),
       })
       const createData = await createRes.json()
       if (!createRes.ok || !createData.success) {
         throw new Error(createData.error || 'Ad creation failed')
       }
-      toast.success('🎉 TikTok ad created successfully!')
+      toast.success(`🎉 ${cta.length} TikTok ad(s) created successfully!`)
       // Reset form
-      setAdName(''); setAdText(''); setLandingUrl(''); setCta('SHOP_NOW')
+      setAdName(''); setAdText(''); setLandingUrl(''); setCta(['SHOP_NOW'])
       setVideoFile(null); setVideoPreview(null); setUploadProgress(0)
     } catch (err) {
       toast.error(err.message)
@@ -389,23 +402,29 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* CTA */}
-            <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            {/* CTA Multi-select */}
+            <div className="space-y-3">
+              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
                 Call to Action
+                <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase">Multi-select</span>
               </Label>
-              <Select value={cta} onValueChange={setCta}>
-                <SelectTrigger className={formFieldChrome}>
-                  <SelectValue placeholder="Select CTA" />
-                </SelectTrigger>
-                <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200 max-h-64">
-                  {CTA_OPTIONS.map(o => (
-                    <SelectItem key={o.value} value={o.value} className="cursor-pointer hover:bg-gray-50 rounded-lg m-1">
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-2">
+                {CTA_OPTIONS.map(o => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => toggleCta(o.value)}
+                    className={cn(
+                      "px-4 py-2.5 rounded-xl text-xs font-bold transition-all border shadow-sm",
+                      cta.includes(o.value)
+                        ? "bg-black text-white border-black scale-[1.02]"
+                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* URL */}
