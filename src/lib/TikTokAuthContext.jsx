@@ -22,6 +22,10 @@ export function TikTokAuthProvider({ children }) {
     setTikTokUser(user)
     setTikTokAdvertisers(advertisers)
     setIsLoading(false)
+    // Persist tiktokId to localStorage so the server can recover the session from Firestore
+    if (user?.tiktokId) {
+      try { localStorage.setItem('tiktok_uid', user.tiktokId) } catch (_) {}
+    }
   }
 
   const refreshTikTokUser = async () => {
@@ -32,7 +36,15 @@ export function TikTokAuthProvider({ children }) {
       console.log('  credentials       : include')
       console.log('  document.cookie   :', document.cookie || 'EMPTY (httpOnly cookies not visible here)')
 
-      const res = await fetch(endpoint, { credentials: 'include' })
+      // Send stored tiktokId as a hint so the server can recover from Firestore
+      const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
+      const headers = { 'Content-Type': 'application/json' }
+      if (storedUid) {
+        headers['x-tiktok-user-id'] = storedUid
+        console.log('  Sending x-tiktok-user-id hint:', storedUid)
+      }
+
+      const res = await fetch(endpoint, { credentials: 'include', headers })
 
       console.log('  HTTP Status       :', res.status, res.statusText)
       console.log('  Response Headers  :')
@@ -64,6 +76,10 @@ export function TikTokAuthProvider({ children }) {
           setIsTikTokLoggedIn(true)
           setTikTokUser(data.user)
           setTikTokAdvertisers(data.advertisers || [])
+          // Keep localStorage in sync
+          if (data.user?.tiktokId) {
+            try { localStorage.setItem('tiktok_uid', data.user.tiktokId) } catch (_) {}
+          }
         } else {
           console.warn('⚠️ [TikTok Auth] Response OK but connected=false. Reason:', data.error || 'unknown')
           setIsTikTokLoggedIn(false)
@@ -99,6 +115,7 @@ export function TikTokAuthProvider({ children }) {
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
         setTikTokAdvertisers([])
+        try { localStorage.removeItem('tiktok_uid') } catch (_) {}
       } else {
         console.warn("⚠️ [TikTok Auth] Logout failed on server.");
         toast.error('Failed to log out of TikTok')
