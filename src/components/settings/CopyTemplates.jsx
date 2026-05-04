@@ -1468,7 +1468,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
                     <TabsContent value="primaryTexts" className="space-y-2">
                       {(!copyLoaded.primaryTexts || copyLoading.primaryTexts) && recentAds.primaryTexts.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                        <div className="flex min-h-[260px] flex-col items-center justify-center pt-8 pb-4 space-y-4">
                           <RotateLoader size={6} margin={-16} color="#adadad" />
                           <span className="text-sm text-gray-600">Loading primary texts...</span>
                         </div>
@@ -1508,7 +1508,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
                     <TabsContent value="headlines" className="space-y-2">
                       {(!copyLoaded.headlines || copyLoading.headlines) && recentAds.headlines.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                        <div className="flex min-h-[260px] flex-col items-center justify-center pt-8 pb-4 space-y-4">
                           <RotateLoader size={6} margin={-16} color="#adadad" />
                           <span className="text-sm text-gray-600">Loading headlines...</span>
                         </div>
@@ -1548,7 +1548,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
                     <TabsContent value="descriptions" className="space-y-2">
                       {(!copyLoaded.descriptions || copyLoading.descriptions) && recentAds.descriptions.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                        <div className="flex min-h-[260px] flex-col items-center justify-center pt-8 pb-4 space-y-4">
                           <RotateLoader size={6} margin={-16} color="#adadad" />
                           <span className="text-sm text-gray-600">Loading descriptions...</span>
                         </div>
