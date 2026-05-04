@@ -6966,7 +6966,7 @@ export default function AdCreationForm({
                         </Label>
 
                         {/* No templates + no content → Setup button */}
-                        {Object.keys(copyTemplates).length === 0 && !hasAnyContent && (
+                        {selectedAdAccount && Object.keys(copyTemplates).length === 0 && !hasAnyContent && (
                           <Button
                             type="button"
                             size="sm"
