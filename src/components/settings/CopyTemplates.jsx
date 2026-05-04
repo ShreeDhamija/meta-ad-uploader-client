@@ -283,6 +283,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   const [previouslyFetched, setPreviouslyFetched] = useState(emptyRecentCopy);
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isRefreshingCopy, setIsRefreshingCopy] = useState(false);
   const [paginationCursor, setPaginationCursor] = useState(emptyCopyCursors);
 
 
@@ -423,8 +424,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     loadRecentCopy();
   }, [showImportPopup, selectedAdAccount, loadRecentCopy]);
 
-  const handleRefreshRecentCopy = useCallback(() => {
-    loadRecentCopy({ forceRefresh: true });
+  const handleRefreshRecentCopy = useCallback(async () => {
+    setIsRefreshingCopy(true);
+    try {
+      await loadRecentCopy({ forceRefresh: true });
+    } finally {
+      setIsRefreshingCopy(false);
+    }
   }, [loadRecentCopy]);
 
 
@@ -1433,26 +1439,28 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                           Descriptions ({recentAds.descriptions?.length || 0})
                         </TabsTrigger>
                       </TabsList>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="rounded-2xl hover:bg-gray-100 shrink-0"
-                        onClick={handleRefreshRecentCopy}
-                        disabled={Object.values(copyLoading).some(Boolean)}
-                      >
-                        <RefreshCw className={`w-4 h-4 ${Object.values(copyLoading).some(Boolean) ? "animate-spin" : ""}`} />
-                        <span className="sr-only">Refresh recent copy</span>
-                      </Button>
-                      <Button
-                        type="button"
-                        className="bg-red-600 hover:bg-red-700 !shadow-none rounded-2xl shrink-0"
-                        onClick={() => setShowImportPopup(false)}
-                      >
-                        <CirclePlus className="w-4 h-4 rotate-45 text-white" />
-                        <p className="text-white">Close</p>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-2xl hover:bg-gray-100"
+                          onClick={handleRefreshRecentCopy}
+                          disabled={isRefreshingCopy}
+                        >
+                          <RefreshCw className={`w-4 h-4 ${isRefreshingCopy ? "animate-spin" : ""}`} />
+                          <span className="sr-only">Refresh recent copy</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          className="bg-red-600 hover:bg-red-700 !shadow-none rounded-2xl"
+                          onClick={() => setShowImportPopup(false)}
+                        >
+                          <CirclePlus className="w-4 h-4 rotate-45 text-white" />
+                          <p className="text-white">Close</p>
 
-                      </Button>
+                        </Button>
+                      </div>
                     </div>
 
                     <TabsContent value="primaryTexts" className="space-y-2">
