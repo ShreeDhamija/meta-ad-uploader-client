@@ -1,34 +1,50 @@
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 const TIKTOK_PINK = '#FE2C55'
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
+// ✅ GLOBAL GUARD: Module-level variable persists across React remounts/StrictMode
+let isExchangeInProgress = false;
+
 export default function TikTokCallback() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { refreshTikTokUser, setTikTokSession } = useTikTokAuth()
+  const { isTikTokLoggedIn, refreshTikTokUser, setTikTokSession } = useTikTokAuth()
   const [status, setStatus] = useState('processing')
   const [error, setError] = useState(null)
 
-  useEffect(() => {
-    console.log('\n🟡====== [TikTokCallback] Page Loaded ======')
-    console.log('  Full search string :', location.search)
-    console.log('  Full href          :', window.location.href)
+  const hasExchanged = useRef(false)
 
+  useEffect(() => {
     const params = new URLSearchParams(location.search)
     const connected = params.get('connected')
     const errorMsg = params.get('error')
     const exchangeToken = params.get('t')
 
+    // 1. Check if already logged in (context might already have it)
+    if (isTikTokLoggedIn) {
+      console.log('✅ [TikTokCallback] User already logged in via context. Redirecting...')
+      setStatus('success')
+      setTimeout(() => navigate('/tiktok-ads'), 1000)
+      return
+    }
+
+    // 2. Prevent double-execution using the GLOBAL guard
+    if (isExchangeInProgress) {
+      console.log('⏳ [TikTokCallback] Exchange already in progress or completed (Global Guard). Skipping.')
+      return
+    }
+    
+    console.log('\n🟡====== [TikTokCallback] Starting Exchange Process ======')
     console.log('  Param [connected]  :', connected)
     console.log('  Param [error]      :', errorMsg)
     console.log('  Param [t] token    :', exchangeToken ? exchangeToken.substring(0, 8) + '...' : 'NONE')
-    console.log('==========================================\n')
 
     if (errorMsg) {
+      isExchangeInProgress = true
       const decodedError = decodeURIComponent(errorMsg)
       console.error('❌ [TikTokCallback] Error param received:', decodedError)
       setStatus('error')
@@ -38,51 +54,71 @@ export default function TikTokCallback() {
     }
 
     if (connected === 'true') {
-      setStatus('success')
-      toast.success('Successfully connected to TikTok Ads!')
-
       if (exchangeToken) {
-        // ✅ PRIMARY PATH: exchange the one-time token for user data + session
+        isExchangeInProgress = true
         console.log('🔄 [TikTokCallback] Calling /auth/exchange with token...')
+        // Note: Using 'api/tiktok' prefix as seen in logs
         const exchangeUrl = `${API_BASE_URL}/api/tiktok/auth/exchange?t=${exchangeToken}`
-        console.log('   Exchange URL:', exchangeUrl)
 
         fetch(exchangeUrl, { credentials: 'include' })
           .then(async (res) => {
             const body = await res.text()
-            console.log('  Exchange HTTP status:', res.status)
             console.log('  Exchange response   :', body)
-            const data = JSON.parse(body)
+            
+            let data
+            try {
+              data = JSON.parse(body)
+            } catch (e) {
+              throw new Error('Invalid response from server')
+            }
+
             if (data.connected && data.user) {
               console.log('✅ [TikTokCallback] Exchange success! User:', data.user.name)
+              setStatus('success')
+              toast.success('Successfully connected to TikTok Ads!')
               setTikTokSession(data.user, data.advertisers || [])
+              
+              // Clean up URL to prevent reuse on refresh
+              window.history.replaceState({}, document.title, window.location.pathname)
+              
               setTimeout(() => navigate('/tiktok-ads'), 1500)
             } else {
               console.warn('⚠️ [TikTokCallback] Exchange returned connected=false:', data)
-              // Fallback: try refreshTikTokUser
-              return refreshTikTokUser().then(() => setTimeout(() => navigate('/tiktok-ads'), 1500))
+              
+              // Handle "token consumed" as a possible success if we already have a session
+              if (data.error === 'Invalid or expired exchange token') {
+                 console.log('🔄 [TikTokCallback] Token already consumed. Checking session status...')
+                 return refreshTikTokUser().then(() => {
+                   setStatus('success')
+                   setTimeout(() => navigate('/tiktok-ads'), 1500)
+                 })
+              }
+              
+              setStatus('error')
+              setError(data.error || 'Failed to connect TikTok account')
+              isExchangeInProgress = false // Allow retry on real failure
             }
           })
           .catch((err) => {
             console.error('❌ [TikTokCallback] Exchange fetch failed:', err)
-            // Fallback: try refreshTikTokUser
-            refreshTikTokUser().then(() => setTimeout(() => navigate('/tiktok-ads'), 1500))
+            setStatus('error')
+            setError('Network error during authentication')
+            isExchangeInProgress = false
           })
       } else {
-        // Fallback: no token, try the session cookie path
+        isExchangeInProgress = true
         console.log('⚠️ [TikTokCallback] No exchange token — falling back to refreshTikTokUser()')
         refreshTikTokUser().then(() => {
+          setStatus('success')
           setTimeout(() => navigate('/tiktok-ads'), 1500)
         })
       }
-    } else {
+    } else if (connected === 'false' || (!connected && !errorMsg)) {
       console.warn('⚠️ [TikTokCallback] No connected=true and no error. search:', location.search)
       setStatus('error')
-      const defaultError = 'Authentication was not successful'
-      setError(defaultError)
-      toast.error(defaultError)
+      setError('Authentication was not successful')
     }
-  }, [location, navigate, refreshTikTokUser, setTikTokSession])
+  }, [isTikTokLoggedIn]) // Re-run if login state changes
 
   return (
     <div
