@@ -80,6 +80,8 @@ const commonFeatureLines = [
     "Unlimited Team Seats",
 ]
 
+const planActionButtonClass = "border border-[#6C3403] bg-[#FFBE85] text-[#6C3403] shadow-[0_2px_2px_rgba(0,0,0,0.2)] hover:bg-[#FFBE85] hover:text-[#6C3403]"
+
 function formatPlanPrice(price) {
     return `$${price}/month`
 }
@@ -467,9 +469,9 @@ export default function BillingSettings() {
                                                     return (
                                                         <div
                                                             key={plan.key}
-                                                            className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-white"
+                                                            className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-[#FFFBF5]"
                                                         >
-                                                            <div className="bg-black px-4 pb-4 pt-3 text-white">
+                                                            <div className="bg-[#250900] px-4 pb-4 pt-3 text-white">
                                                                 <div className="flex items-center gap-2">
                                                                     <img src={plan.image} alt={plan.name} className="h-7 w-7 object-contain" />
                                                                     <p className="billing-plan-display text-[18px] font-semibold">{plan.name}</p>
@@ -484,12 +486,12 @@ export default function BillingSettings() {
                                                                 </div>
                                                             </div>
 
-                                                            <div className="flex flex-1 flex-col px-4 py-3">
+                                                            <div className="flex flex-1 flex-col bg-[#FFFBF5] px-4 py-3">
                                                                 <div className="space-y-5">
                                                                     {[plan.accountLine, ...commonFeatureLines].map((feature, index) => (
                                                                         <div key={feature} className="flex items-start gap-1.5">
-                                                                            <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-black" />
-                                                                            <span className={`text-[14px] ${index === 0 ? "font-semibold text-black" : "text-[#5F5F63]"}`}>
+                                                                            <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-[#330C00]" />
+                                                                            <span className={`text-[14px] text-[#330C00] ${index === 0 ? "font-semibold" : "font-normal"}`}>
                                                                                 {feature}
                                                                             </span>
                                                                         </div>
@@ -501,9 +503,9 @@ export default function BillingSettings() {
                                                                         if (!isCurrentPlan) handleChangePlanClick(plan.key)
                                                                     }}
                                                                     disabled={isCurrentPlan || isCardLoading}
-                                                                    className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold shadow-none ${isCurrentPlan
-                                                                        ? "bg-[#E8E8EA] text-[#6A6A70] hover:bg-[#E8E8EA] hover:text-[#6A6A70]"
-                                                                        : plan.buttonClass
+                                                                    className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold ${isCurrentPlan
+                                                                        ? "bg-[#E8E8EA] text-[#6A6A70] shadow-none hover:bg-[#E8E8EA] hover:text-[#6A6A70]"
+                                                                        : planActionButtonClass
                                                                         }`}
                                                                 >
                                                                     <span>{buttonLabel}</span>
@@ -529,9 +531,9 @@ export default function BillingSettings() {
                                 return (
                                     <div
                                         key={plan.key}
-                                        className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-white"
+                                        className="flex min-h-[438px] flex-col overflow-hidden rounded-[22px] border border-black/50 bg-[#FFFBF5]"
                                     >
-                                        <div className="bg-black px-4 pb-4 pt-3 text-white">
+                                        <div className="bg-[#250900] px-4 pb-4 pt-3 text-white">
                                             <div className="flex items-center gap-2">
                                                 <img src={plan.image} alt={plan.name} className="h-7 w-7 object-contain" />
                                                 <p className="billing-plan-display text-[18px] font-extrabold">{plan.name}</p>
@@ -546,12 +548,12 @@ export default function BillingSettings() {
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-1 flex-col px-4 py-3">
+                                        <div className="flex flex-1 flex-col bg-[#FFFBF5] px-4 py-3">
                                             <div className="space-y-5">
                                                 {[plan.accountLine, ...commonFeatureLines].map((feature, index) => (
                                                     <div key={feature} className="flex items-start gap-1.5">
-                                                        <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-black" />
-                                                        <span className={`text-[14px] ${index === 0 ? "font-semibold text-black" : "text-[#5F5F63]"}`}>
+                                                        <CheckCircleIcon className="mt-0.5 h-[18px] w-[18px] flex-shrink-0 text-[#330C00]" />
+                                                        <span className={`text-[14px] text-[#330C00] ${index === 0 ? "font-semibold" : "font-normal"}`}>
                                                             {feature}
                                                         </span>
                                                     </div>
@@ -561,7 +563,7 @@ export default function BillingSettings() {
                                             <Button
                                                 onClick={() => handleCheckout(plan.key)}
                                                 disabled={isCardLoading}
-                                                className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold shadow-none ${plan.buttonClass}`}
+                                                className={`mt-auto h-[46px] rounded-full px-3 text-[16px] font-bold ${planActionButtonClass}`}
                                             >
                                                 <span>{buttonLabel}</span>
                                             </Button>

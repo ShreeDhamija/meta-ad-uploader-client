@@ -41,6 +41,11 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const settingsFieldChrome = "rounded-2xl border border-gray-300 py-4.5 bg-white shadow";
 const settingsTextareaChrome = "rounded-2xl border border-gray-300 bg-white px-3 pt-2.5 pb-2.5 leading-5 shadow";
+const COPY_IMPORT_TYPES = {
+  primaryTexts: { excludeKey: "excludePrimaryTexts" },
+  headlines: { excludeKey: "excludeHeadlines" },
+  descriptions: { excludeKey: "excludeDescriptions" },
+};
 
 
 
@@ -268,7 +273,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     headlines: [],
     descriptions: []
   })
-  const [isFetchingCopy, setIsFetchingCopy] = useState(false)
+  const [activeImportTab, setActiveImportTab] = useState("primaryTexts")
+  const [copyLoading, setCopyLoading] = useState({
+    primaryTexts: false,
+    headlines: false,
+    descriptions: false
+  })
   const [previouslyFetched, setPreviouslyFetched] = useState({
     primaryTexts: [],
     headlines: [],
@@ -276,59 +286,76 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
   });
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [paginationCursor, setPaginationCursor] = useState(null);
+  const [paginationCursor, setPaginationCursor] = useState({
+    primaryTexts: null,
+    headlines: null,
+    descriptions: null
+  });
 
+
+  const fetchCopyType = useCallback(async (copyType, { replace = false, after = null, exclude = [], showErrorToast = true } = {}) => {
+    if (!selectedAdAccount) return [];
+
+    const config = COPY_IMPORT_TYPES[copyType];
+    setCopyLoading(prev => ({ ...prev, [copyType]: true }));
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          adAccountId: selectedAdAccount,
+          copyType,
+          [config.excludeKey]: exclude,
+          after
+        })
+      });
+
+      const data = await response.json();
+      const items = data[copyType] || [];
+
+      setRecentAds(prev => ({
+        ...prev,
+        [copyType]: replace ? items : [...(prev[copyType] || []), ...items]
+      }));
+
+      setPreviouslyFetched(prev => ({
+        ...prev,
+        [copyType]: replace ? items : [...(prev[copyType] || []), ...items]
+      }));
+
+      setPaginationCursor(prev => ({
+        ...prev,
+        [copyType]: data.nextCursor || null
+      }));
+
+      return items;
+    } catch (err) {
+      console.error(`Error fetching ${copyType}:`, err);
+      if (showErrorToast) {
+        toast.error("Failed to load recent ad copy");
+      }
+      return [];
+    } finally {
+      setCopyLoading(prev => ({ ...prev, [copyType]: false }));
+    }
+  }, [selectedAdAccount]);
 
   useEffect(() => {
     if (!showImportPopup || !selectedAdAccount) return;
 
-    setIsFetchingCopy(true);
-    // Reset pagination cursor on initial fetch
-    setPaginationCursor(null);
+    setActiveImportTab("primaryTexts");
+    setRecentAds({ primaryTexts: [], headlines: [], descriptions: [] });
+    setPreviouslyFetched({ primaryTexts: [], headlines: [], descriptions: [] });
+    setPaginationCursor({ primaryTexts: null, headlines: null, descriptions: null });
 
-    fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        adAccountId: selectedAdAccount,
-        excludePrimaryTexts: [],
-        excludeHeadlines: [],
-        excludeDescriptions: [],
-        after: null // Initial fetch
-      })
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.primaryTexts || data.headlines || data.descriptions) {
-          setRecentAds({
-            primaryTexts: data.primaryTexts || [],
-            headlines: data.headlines || [],
-            descriptions: data.descriptions || []
-          });
-
-          setPreviouslyFetched({
-            primaryTexts: data.primaryTexts || [],
-            headlines: data.headlines || [],
-            descriptions: data.descriptions || []
-          });
-
-          // Store pagination cursor
-          setPaginationCursor(data.nextCursor);
-        } else {
-          throw new Error("No data");
-        }
-      })
-      .catch(err => {
-        console.error("Error fetching ad copy:", err);
-        toast.error("Failed to load recent ad copy");
-      })
-      .finally(() => {
-        setIsFetchingCopy(false);
-      });
-  }, [showImportPopup, selectedAdAccount]);
+    fetchCopyType("primaryTexts", { replace: true });
+    fetchCopyType("headlines", { replace: true, showErrorToast: false });
+    fetchCopyType("descriptions", { replace: true, showErrorToast: false });
+  }, [showImportPopup, selectedAdAccount, fetchCopyType]);
 
 
   useEffect(() => {
@@ -385,61 +412,29 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
 
   const handleLoadMore = useCallback(async () => {
-    if (!paginationCursor) {
+    const cursor = paginationCursor[activeImportTab];
+    if (!cursor) {
       toast.info("No more copy available");
       return;
     }
 
     setIsLoadingMore(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/fetch-recent-copy`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          adAccountId: selectedAdAccount,
-          excludePrimaryTexts: previouslyFetched.primaryTexts,
-          excludeHeadlines: previouslyFetched.headlines,
-          excludeDescriptions: previouslyFetched.descriptions,
-          after: paginationCursor // Use stored cursor
-        })
+      const items = await fetchCopyType(activeImportTab, {
+        after: cursor,
+        exclude: previouslyFetched[activeImportTab] || []
       });
 
-      const data = await response.json();
-
-      const newPrimaryCount = data.primaryTexts?.length || 0;
-      const newHeadlineCount = data.headlines?.length || 0;
-      const newDescriptionCount = data.descriptions?.length || 0;
-      const hasNewCopy = newPrimaryCount > 0 || newHeadlineCount > 0 || newDescriptionCount > 0;
-
-      if (hasNewCopy) {
-        setRecentAds(prev => ({
-          primaryTexts: [...(prev.primaryTexts || []), ...(data.primaryTexts || [])],
-          headlines: [...(prev.headlines || []), ...(data.headlines || [])],
-          descriptions: [...(prev.descriptions || []), ...(data.descriptions || [])]
-        }));
-
-        setPreviouslyFetched(prev => ({
-          primaryTexts: [...prev.primaryTexts, ...(data.primaryTexts || [])],
-          headlines: [...prev.headlines, ...(data.headlines || [])],
-          descriptions: [...prev.descriptions, ...(data.descriptions || [])]
-        }));
-
-        // Update pagination cursor
-        setPaginationCursor(data.nextCursor);
-      } else {
+      if (items.length === 0) {
         toast.info("No more unique copy found");
       }
-
     } catch (err) {
       console.error("Error loading more:", err);
       toast.error("Failed to load more copy");
     } finally {
       setIsLoadingMore(false);
     }
-  }, [selectedAdAccount, previouslyFetched, paginationCursor]);
+  }, [activeImportTab, fetchCopyType, paginationCursor, previouslyFetched]);
 
 
   const handleAdd = useCallback((setter, state) => {
@@ -1343,19 +1338,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           >
             <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
               <div className="px-6 pb-6 pt-4">
-                {isFetchingCopy ? (
-                  <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                    <RotateLoader size={6} margin={-16} color="#adadad" />
-                    <span className="text-sm text-gray-600">Loading text copy...</span>
-                    <span className="text-sm text-gray-600">This can take a few seconds depending on Facebooks Mood.</span>
-                  </div>
-                ) : (
-                  <Tabs defaultValue="primary-texts" className="w-full">
+                <Tabs value={activeImportTab} onValueChange={setActiveImportTab} className="w-full">
                     <div className="flex items-center justify-between gap-3 mb-4 w-full">
                       <TabsList className="flex h-10 max-w-full items-center justify-start overflow-x-auto rounded-full bg-muted p-1 text-muted-foreground w-fit">
                         <TabsTrigger
                           type="button"
-                          value="primary-texts"
+                          value="primaryTexts"
                           className="inline-flex items-center justify-center whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
                         >
                           Primary Texts ({recentAds.primaryTexts?.length || 0})
@@ -1386,8 +1374,13 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       </Button>
                     </div>
 
-                    <TabsContent value="primary-texts" className="space-y-2">
-                      {recentAds.primaryTexts?.length > 0 ? (
+                    <TabsContent value="primaryTexts" className="space-y-2">
+                      {copyLoading.primaryTexts && recentAds.primaryTexts.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                          <RotateLoader size={6} margin={-16} color="#adadad" />
+                          <span className="text-sm text-gray-600">Loading primary texts...</span>
+                        </div>
+                      ) : recentAds.primaryTexts?.length > 0 ? (
                         <div className="border bg-gray-50 border-gray-200 rounded-[28px] p-1.5 space-y-1">
                           {recentAds.primaryTexts.map((text, index) => (
                             <div key={index} className="rounded-lg p-2.5">
@@ -1422,7 +1415,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     </TabsContent>
 
                     <TabsContent value="headlines" className="space-y-2">
-                      {recentAds.headlines?.length > 0 ? (
+                      {copyLoading.headlines && recentAds.headlines.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                          <RotateLoader size={6} margin={-16} color="#adadad" />
+                          <span className="text-sm text-gray-600">Loading headlines...</span>
+                        </div>
+                      ) : recentAds.headlines?.length > 0 ? (
                         <div className="border bg-gray-50 border-gray-200 rounded-[28px] p-1.5 space-y-1">
                           {recentAds.headlines.map((text, index) => (
                             <div key={index} className="rounded-lg p-2.5">
@@ -1457,7 +1455,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     </TabsContent>
 
                     <TabsContent value="descriptions" className="space-y-2">
-                      {recentAds.descriptions?.length > 0 ? (
+                      {copyLoading.descriptions && recentAds.descriptions.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                          <RotateLoader size={6} margin={-16} color="#adadad" />
+                          <span className="text-sm text-gray-600">Loading descriptions...</span>
+                        </div>
+                      ) : recentAds.descriptions?.length > 0 ? (
                         <div className="border bg-gray-50 border-gray-200 rounded-[28px] p-1.5 space-y-1">
                           {recentAds.descriptions.map((text, index) => (
                             <div key={index} className="rounded-lg p-2.5">
@@ -1494,9 +1497,9 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                         type="button"
                         className="h-12 w-full rounded-2xl bg-zinc-700 py-3 text-white hover:bg-black"
                         onClick={handleLoadMore}
-                        disabled={isFetchingCopy || isLoadingMore}
+                        disabled={copyLoading[activeImportTab] || isLoadingMore}
                       >
-                        {isFetchingCopy || isLoadingMore ? (
+                        {isLoadingMore ? (
                           <>
                             <Loader className="w-4 h-4 animate-spin mr-2" />
                             Loading More Copy...
@@ -1507,8 +1510,6 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       </Button>
                     </div>
                   </Tabs>
-
-                )}
               </div>
             </div>
           </div>
