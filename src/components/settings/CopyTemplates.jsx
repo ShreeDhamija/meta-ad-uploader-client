@@ -19,7 +19,7 @@ import {
 import { toast } from "sonner"
 import Papa from "papaparse";
 import { useAuth } from "@/lib/AuthContext"
-import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload, ChevronsUpDown, ArrowUpDown, Check, Info } from 'lucide-react';
+import { CirclePlus, CircleCheck, Trash2, Download, X, Loader, Upload, ChevronsUpDown, ArrowUpDown, Check, Info, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate, deleteCopyTemplates } from "@/lib/deleteCopyTemplate"
@@ -46,6 +46,10 @@ const COPY_IMPORT_TYPES = {
   headlines: { excludeKey: "excludeHeadlines" },
   descriptions: { excludeKey: "excludeDescriptions" },
 };
+const emptyRecentCopy = () => ({ primaryTexts: [], headlines: [], descriptions: [] });
+const emptyCopyCursors = () => ({ primaryTexts: null, headlines: null, descriptions: null });
+const emptyCopyLoaded = () => ({ primaryTexts: false, headlines: false, descriptions: false });
+const getRecentCopyCacheKey = (adAccountId) => `copyTemplates_recentCopy:${adAccountId}`;
 
 
 
@@ -268,35 +272,25 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
 
   const [showImportPopup, setShowImportPopup] = useState(false)
-  const [recentAds, setRecentAds] = useState({
-    primaryTexts: [],
-    headlines: [],
-    descriptions: []
-  })
+  const [recentAds, setRecentAds] = useState(emptyRecentCopy)
   const [activeImportTab, setActiveImportTab] = useState("primaryTexts")
   const [copyLoading, setCopyLoading] = useState({
     primaryTexts: false,
     headlines: false,
     descriptions: false
   })
-  const [previouslyFetched, setPreviouslyFetched] = useState({
-    primaryTexts: [],
-    headlines: [],
-    descriptions: []
-  });
+  const [copyLoaded, setCopyLoaded] = useState(emptyCopyLoaded)
+  const [previouslyFetched, setPreviouslyFetched] = useState(emptyRecentCopy);
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [paginationCursor, setPaginationCursor] = useState({
-    primaryTexts: null,
-    headlines: null,
-    descriptions: null
-  });
+  const [paginationCursor, setPaginationCursor] = useState(emptyCopyCursors);
 
 
   const fetchCopyType = useCallback(async (copyType, { replace = false, after = null, exclude = [], showErrorToast = true } = {}) => {
     if (!selectedAdAccount) return [];
 
     const config = COPY_IMPORT_TYPES[copyType];
+    const cacheKey = getRecentCopyCacheKey(selectedAdAccount);
     setCopyLoading(prev => ({ ...prev, [copyType]: true }));
 
     try {
@@ -316,6 +310,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       const data = await response.json();
       const items = data[copyType] || [];
+      const nextCursor = data.nextCursor || null;
 
       setRecentAds(prev => ({
         ...prev,
@@ -329,8 +324,35 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
 
       setPaginationCursor(prev => ({
         ...prev,
-        [copyType]: data.nextCursor || null
+        [copyType]: nextCursor
       }));
+      setCopyLoaded(prev => ({ ...prev, [copyType]: true }));
+
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "{}");
+        const cachedRecentAds = cached.recentAds || emptyRecentCopy();
+        const cachedPreviouslyFetched = cached.previouslyFetched || emptyRecentCopy();
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          recentAds: {
+            ...cachedRecentAds,
+            [copyType]: replace ? items : [...(cachedRecentAds[copyType] || []), ...items]
+          },
+          previouslyFetched: {
+            ...cachedPreviouslyFetched,
+            [copyType]: replace ? items : [...(cachedPreviouslyFetched[copyType] || []), ...items]
+          },
+          paginationCursor: {
+            ...(cached.paginationCursor || emptyCopyCursors()),
+            [copyType]: nextCursor
+          },
+          copyLoaded: {
+            ...(cached.copyLoaded || emptyCopyLoaded()),
+            [copyType]: true
+          }
+        }));
+      } catch (cacheErr) {
+        console.warn("Failed to cache recent copy:", cacheErr);
+      }
 
       return items;
     } catch (err) {
@@ -338,24 +360,72 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
       if (showErrorToast) {
         toast.error("Failed to load recent ad copy");
       }
+      setCopyLoaded(prev => ({ ...prev, [copyType]: true }));
       return [];
     } finally {
       setCopyLoading(prev => ({ ...prev, [copyType]: false }));
     }
   }, [selectedAdAccount]);
 
-  useEffect(() => {
-    if (!showImportPopup || !selectedAdAccount) return;
+  const loadRecentCopy = useCallback(async ({ forceRefresh = false } = {}) => {
+    if (!selectedAdAccount) return;
 
     setActiveImportTab("primaryTexts");
-    setRecentAds({ primaryTexts: [], headlines: [], descriptions: [] });
-    setPreviouslyFetched({ primaryTexts: [], headlines: [], descriptions: [] });
-    setPaginationCursor({ primaryTexts: null, headlines: null, descriptions: null });
+    const cacheKey = getRecentCopyCacheKey(selectedAdAccount);
+
+    if (!forceRefresh) {
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
+        if (cached?.recentAds) {
+          const cachedLoaded = { ...emptyCopyLoaded(), ...(cached.copyLoaded || {}) };
+          setRecentAds({ ...emptyRecentCopy(), ...cached.recentAds });
+          setPreviouslyFetched({ ...emptyRecentCopy(), ...(cached.previouslyFetched || cached.recentAds) });
+          setPaginationCursor({ ...emptyCopyCursors(), ...(cached.paginationCursor || {}) });
+          setCopyLoaded(cachedLoaded);
+          if (cachedLoaded.primaryTexts && cachedLoaded.headlines && cachedLoaded.descriptions) {
+            return;
+          }
+          if (!cachedLoaded.primaryTexts) {
+            fetchCopyType("primaryTexts", { replace: true });
+          }
+          if (!cachedLoaded.headlines) {
+            fetchCopyType("headlines", { replace: true, showErrorToast: false })
+              .finally(() => {
+                if (!cachedLoaded.descriptions) {
+                  fetchCopyType("descriptions", { replace: true, showErrorToast: false });
+                }
+              });
+          } else if (!cachedLoaded.descriptions) {
+            fetchCopyType("descriptions", { replace: true, showErrorToast: false });
+          }
+          return;
+        }
+      } catch (cacheErr) {
+        console.warn("Failed to read recent copy cache:", cacheErr);
+      }
+    }
+
+    sessionStorage.removeItem(cacheKey);
+    setRecentAds(emptyRecentCopy());
+    setPreviouslyFetched(emptyRecentCopy());
+    setPaginationCursor(emptyCopyCursors());
+    setCopyLoaded(emptyCopyLoaded());
 
     fetchCopyType("primaryTexts", { replace: true });
-    fetchCopyType("headlines", { replace: true, showErrorToast: false });
-    fetchCopyType("descriptions", { replace: true, showErrorToast: false });
-  }, [showImportPopup, selectedAdAccount, fetchCopyType]);
+    fetchCopyType("headlines", { replace: true, showErrorToast: false })
+      .finally(() => {
+        fetchCopyType("descriptions", { replace: true, showErrorToast: false });
+      });
+  }, [fetchCopyType, selectedAdAccount]);
+
+  useEffect(() => {
+    if (!showImportPopup || !selectedAdAccount) return;
+    loadRecentCopy();
+  }, [showImportPopup, selectedAdAccount, loadRecentCopy]);
+
+  const handleRefreshRecentCopy = useCallback(() => {
+    loadRecentCopy({ forceRefresh: true });
+  }, [loadRecentCopy]);
 
 
   useEffect(() => {
@@ -1365,6 +1435,17 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                       </TabsList>
                       <Button
                         type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="rounded-2xl hover:bg-gray-100 shrink-0"
+                        onClick={handleRefreshRecentCopy}
+                        disabled={Object.values(copyLoading).some(Boolean)}
+                      >
+                        <RefreshCw className={`w-4 h-4 ${Object.values(copyLoading).some(Boolean) ? "animate-spin" : ""}`} />
+                        <span className="sr-only">Refresh recent copy</span>
+                      </Button>
+                      <Button
+                        type="button"
                         className="bg-red-600 hover:bg-red-700 !shadow-none rounded-2xl shrink-0"
                         onClick={() => setShowImportPopup(false)}
                       >
@@ -1375,7 +1456,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     </div>
 
                     <TabsContent value="primaryTexts" className="space-y-2">
-                      {copyLoading.primaryTexts && recentAds.primaryTexts.length === 0 ? (
+                      {(!copyLoaded.primaryTexts || copyLoading.primaryTexts) && recentAds.primaryTexts.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 space-y-4">
                           <RotateLoader size={6} margin={-16} color="#adadad" />
                           <span className="text-sm text-gray-600">Loading primary texts...</span>
@@ -1415,7 +1496,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     </TabsContent>
 
                     <TabsContent value="headlines" className="space-y-2">
-                      {copyLoading.headlines && recentAds.headlines.length === 0 ? (
+                      {(!copyLoaded.headlines || copyLoading.headlines) && recentAds.headlines.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 space-y-4">
                           <RotateLoader size={6} margin={-16} color="#adadad" />
                           <span className="text-sm text-gray-600">Loading headlines...</span>
@@ -1455,7 +1536,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                     </TabsContent>
 
                     <TabsContent value="descriptions" className="space-y-2">
-                      {copyLoading.descriptions && recentAds.descriptions.length === 0 ? (
+                      {(!copyLoaded.descriptions || copyLoading.descriptions) && recentAds.descriptions.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-10 space-y-4">
                           <RotateLoader size={6} margin={-16} color="#adadad" />
                           <span className="text-sm text-gray-600">Loading descriptions...</span>
