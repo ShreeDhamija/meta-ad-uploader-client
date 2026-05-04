@@ -4,11 +4,12 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 const TIKTOK_PINK = '#FE2C55'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
 export default function TikTokCallback() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { refreshTikTokUser } = useTikTokAuth()
+  const { refreshTikTokUser, setTikTokSession } = useTikTokAuth()
   const [status, setStatus] = useState('processing')
   const [error, setError] = useState(null)
 
@@ -20,10 +21,11 @@ export default function TikTokCallback() {
     const params = new URLSearchParams(location.search)
     const connected = params.get('connected')
     const errorMsg = params.get('error')
+    const exchangeToken = params.get('t')
 
     console.log('  Param [connected]  :', connected)
     console.log('  Param [error]      :', errorMsg)
-    console.log('  document.cookie    :', document.cookie || 'EMPTY')
+    console.log('  Param [t] token    :', exchangeToken ? exchangeToken.substring(0, 8) + '...' : 'NONE')
     console.log('==========================================\n')
 
     if (errorMsg) {
@@ -36,25 +38,51 @@ export default function TikTokCallback() {
     }
 
     if (connected === 'true') {
-      console.log('✅ [TikTokCallback] connected=true — calling refreshTikTokUser()...')
       setStatus('success')
       toast.success('Successfully connected to TikTok Ads!')
 
-      // Refresh the auth context to get the new user data
-      refreshTikTokUser().then(() => {
-        console.log('✅ [TikTokCallback] refreshTikTokUser() completed — navigating to /tiktok-ads')
-        setTimeout(() => navigate('/tiktok-ads'), 1500)
-      }).catch((err) => {
-        console.error('❌ [TikTokCallback] refreshTikTokUser() threw:', err)
-      })
+      if (exchangeToken) {
+        // ✅ PRIMARY PATH: exchange the one-time token for user data + session
+        console.log('🔄 [TikTokCallback] Calling /auth/exchange with token...')
+        const exchangeUrl = `${API_BASE_URL}/api/tiktok/auth/exchange?t=${exchangeToken}`
+        console.log('   Exchange URL:', exchangeUrl)
+
+        fetch(exchangeUrl, { credentials: 'include' })
+          .then(async (res) => {
+            const body = await res.text()
+            console.log('  Exchange HTTP status:', res.status)
+            console.log('  Exchange response   :', body)
+            const data = JSON.parse(body)
+            if (data.connected && data.user) {
+              console.log('✅ [TikTokCallback] Exchange success! User:', data.user.name)
+              setTikTokSession(data.user, data.advertisers || [])
+              setTimeout(() => navigate('/tiktok-ads'), 1500)
+            } else {
+              console.warn('⚠️ [TikTokCallback] Exchange returned connected=false:', data)
+              // Fallback: try refreshTikTokUser
+              return refreshTikTokUser().then(() => setTimeout(() => navigate('/tiktok-ads'), 1500))
+            }
+          })
+          .catch((err) => {
+            console.error('❌ [TikTokCallback] Exchange fetch failed:', err)
+            // Fallback: try refreshTikTokUser
+            refreshTikTokUser().then(() => setTimeout(() => navigate('/tiktok-ads'), 1500))
+          })
+      } else {
+        // Fallback: no token, try the session cookie path
+        console.log('⚠️ [TikTokCallback] No exchange token — falling back to refreshTikTokUser()')
+        refreshTikTokUser().then(() => {
+          setTimeout(() => navigate('/tiktok-ads'), 1500)
+        })
+      }
     } else {
-      console.warn('⚠️ [TikTokCallback] No connected=true and no error param. Full search:', location.search)
+      console.warn('⚠️ [TikTokCallback] No connected=true and no error. search:', location.search)
       setStatus('error')
       const defaultError = 'Authentication was not successful'
       setError(defaultError)
       toast.error(defaultError)
     }
-  }, [location, navigate, refreshTikTokUser])
+  }, [location, navigate, refreshTikTokUser, setTikTokSession])
 
   return (
     <div

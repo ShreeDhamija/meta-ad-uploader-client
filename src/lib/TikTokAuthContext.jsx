@@ -15,6 +15,15 @@ export function TikTokAuthProvider({ children }) {
   const [tiktokAdvertisers, setTikTokAdvertisers] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
+  // Called directly by TikTokCallback after the exchange endpoint succeeds
+  const setTikTokSession = (user, advertisers = []) => {
+    console.log('✅ [TikTokAuthContext] setTikTokSession called with user:', user?.name)
+    setIsTikTokLoggedIn(true)
+    setTikTokUser(user)
+    setTikTokAdvertisers(advertisers)
+    setIsLoading(false)
+  }
+
   const refreshTikTokUser = async () => {
     const endpoint = `${API_BASE_URL}/api/tiktok/auth/me`
     try {
@@ -111,6 +120,7 @@ export function TikTokAuthProvider({ children }) {
         tiktokUser,
         tiktokAdvertisers,
         refreshTikTokUser,
+        setTikTokSession,
         logoutTikTok,
         isLoading,
       }}
