@@ -386,19 +386,21 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
           if (cachedLoaded.primaryTexts && cachedLoaded.headlines && cachedLoaded.descriptions) {
             return;
           }
+          const pendingFetches = [];
           if (!cachedLoaded.primaryTexts) {
-            fetchCopyType("primaryTexts", { replace: true });
+            pendingFetches.push(fetchCopyType("primaryTexts", { replace: true }));
           }
           if (!cachedLoaded.headlines) {
-            fetchCopyType("headlines", { replace: true, showErrorToast: false })
+            pendingFetches.push(fetchCopyType("headlines", { replace: true, showErrorToast: false })
               .finally(() => {
                 if (!cachedLoaded.descriptions) {
-                  fetchCopyType("descriptions", { replace: true, showErrorToast: false });
+                  return fetchCopyType("descriptions", { replace: true, showErrorToast: false });
                 }
-              });
+              }));
           } else if (!cachedLoaded.descriptions) {
-            fetchCopyType("descriptions", { replace: true, showErrorToast: false });
+            pendingFetches.push(fetchCopyType("descriptions", { replace: true, showErrorToast: false }));
           }
+          await Promise.allSettled(pendingFetches);
           return;
         }
       } catch (cacheErr) {
@@ -412,11 +414,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     setPaginationCursor(emptyCopyCursors());
     setCopyLoaded(emptyCopyLoaded());
 
-    fetchCopyType("primaryTexts", { replace: true });
-    fetchCopyType("headlines", { replace: true, showErrorToast: false })
+    const primaryFetch = fetchCopyType("primaryTexts", { replace: true });
+    const headlineAndDescriptionFetch = fetchCopyType("headlines", { replace: true, showErrorToast: false })
       .finally(() => {
-        fetchCopyType("descriptions", { replace: true, showErrorToast: false });
+        return fetchCopyType("descriptions", { replace: true, showErrorToast: false });
       });
+    await Promise.allSettled([primaryFetch, headlineAndDescriptionFetch]);
   }, [fetchCopyType, selectedAdAccount]);
 
   useEffect(() => {
