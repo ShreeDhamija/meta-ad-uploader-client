@@ -3,6 +3,10 @@ import { toast } from 'sonner'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
+// 🔍 Log environment on load so we know which API URL is being used
+console.log('🌐 [TikTokAuthContext] Loaded. API_BASE_URL =', API_BASE_URL)
+console.log('🌐 [TikTokAuthContext] VITE_API_URL env =', import.meta.env.VITE_API_URL || 'NOT SET')
+
 const TikTokAuthContext = createContext(null)
 
 export function TikTokAuthProvider({ children }) {
@@ -12,32 +16,59 @@ export function TikTokAuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true)
 
   const refreshTikTokUser = async () => {
+    const endpoint = `${API_BASE_URL}/api/tiktok/auth/me`
     try {
-      console.log("🔍 [TikTok Auth] Checking authentication status...");
-      const res = await fetch(`${API_BASE_URL}/api/tiktok/auth/me`, {
-        credentials: 'include',
-      })
+      console.log('\n🔍====== [TikTok Auth] refreshTikTokUser ======')
+      console.log('  Fetching URL      :', endpoint)
+      console.log('  credentials       : include')
+      console.log('  document.cookie   :', document.cookie || 'EMPTY (httpOnly cookies not visible here)')
+
+      const res = await fetch(endpoint, { credentials: 'include' })
+
+      console.log('  HTTP Status       :', res.status, res.statusText)
+      console.log('  Response Headers  :')
+      res.headers.forEach((value, key) => console.log(`    ${key}: ${value}`))
+
+      const rawText = await res.text()
+      console.log('  Raw Response Body :', rawText)
+
+      let data
+      try {
+        data = JSON.parse(rawText)
+      } catch (parseErr) {
+        console.error('❌ [TikTok Auth] Failed to parse JSON response:', parseErr)
+        setIsTikTokLoggedIn(false)
+        setTikTokUser(null)
+        setTikTokAdvertisers([])
+        return
+      }
+
+      console.log('  Parsed data.connected :', data.connected)
+      console.log('  Parsed data.user      :', JSON.stringify(data.user || null))
+      console.log('  Parsed data.error     :', data.error || 'none')
+      console.log('  Advertiser count      :', data.advertisers?.length ?? 0)
+      console.log('==============================\n')
+
       if (res.ok) {
-        const data = await res.json()
         if (data.connected && data.user) {
-          console.log("✅ [TikTok Auth] User connected:", data.user.name);
+          console.log('✅ [TikTok Auth] User IS connected:', data.user.name)
           setIsTikTokLoggedIn(true)
           setTikTokUser(data.user)
           setTikTokAdvertisers(data.advertisers || [])
         } else {
-          console.log("ℹ️ [TikTok Auth] User not connected.");
+          console.warn('⚠️ [TikTok Auth] Response OK but connected=false. Reason:', data.error || 'unknown')
           setIsTikTokLoggedIn(false)
           setTikTokUser(null)
           setTikTokAdvertisers([])
         }
       } else {
-        console.log("ℹ️ [TikTok Auth] Failed to fetch status - Not logged in.");
+        console.warn('⚠️ [TikTok Auth] Non-OK HTTP status:', res.status, '| body:', rawText)
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
         setTikTokAdvertisers([])
       }
     } catch (err) {
-      console.error('❌ [TikTok Auth] Error fetching status:', err)
+      console.error('❌ [TikTok Auth] Network/fetch error calling', endpoint, err)
       setIsTikTokLoggedIn(false)
       setTikTokUser(null)
       setTikTokAdvertisers([])

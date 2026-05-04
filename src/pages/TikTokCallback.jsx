@@ -13,12 +13,22 @@ export default function TikTokCallback() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    console.log('\n🟡====== [TikTokCallback] Page Loaded ======')
+    console.log('  Full search string :', location.search)
+    console.log('  Full href          :', window.location.href)
+
     const params = new URLSearchParams(location.search)
     const connected = params.get('connected')
     const errorMsg = params.get('error')
 
+    console.log('  Param [connected]  :', connected)
+    console.log('  Param [error]      :', errorMsg)
+    console.log('  document.cookie    :', document.cookie || 'EMPTY')
+    console.log('==========================================\n')
+
     if (errorMsg) {
       const decodedError = decodeURIComponent(errorMsg)
+      console.error('❌ [TikTokCallback] Error param received:', decodedError)
       setStatus('error')
       setError(decodedError)
       toast.error(`TikTok Connection Failed: ${decodedError}`)
@@ -26,14 +36,19 @@ export default function TikTokCallback() {
     }
 
     if (connected === 'true') {
+      console.log('✅ [TikTokCallback] connected=true — calling refreshTikTokUser()...')
       setStatus('success')
       toast.success('Successfully connected to TikTok Ads!')
-      
+
       // Refresh the auth context to get the new user data
       refreshTikTokUser().then(() => {
+        console.log('✅ [TikTokCallback] refreshTikTokUser() completed — navigating to /tiktok-ads')
         setTimeout(() => navigate('/tiktok-ads'), 1500)
+      }).catch((err) => {
+        console.error('❌ [TikTokCallback] refreshTikTokUser() threw:', err)
       })
     } else {
+      console.warn('⚠️ [TikTokCallback] No connected=true and no error param. Full search:', location.search)
       setStatus('error')
       const defaultError = 'Authentication was not successful'
       setError(defaultError)
