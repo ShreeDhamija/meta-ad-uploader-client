@@ -2870,17 +2870,15 @@ export default function AdCreationForm({
     setIsCarouselAd(adType === 'carousel');
   }, [adType, setIsCarouselAd]);
 
-  // Reset adType to 'regular' if flexible is selected but campaignObjective doesn't support it
-  useEffect(() => {
-    if (adType === 'flexible') {
-      const supportsFlexible = campaignObjective.length > 0 &&
-        campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj));
+  const campaignSupportsFlexibleAds = campaignObjective.length > 0 &&
+    campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj));
 
-      if (!supportsFlexible) {
-        setAdType('regular');
-      }
+  // Reset adType to 'regular' if flexible is selected but the campaign doesn't support it
+  useEffect(() => {
+    if (adType === 'flexible' && !campaignSupportsFlexibleAds) {
+      setAdType('regular');
     }
-  }, [campaignObjective, adType, setAdType]);
+  }, [campaignSupportsFlexibleAds, adType, setAdType]);
 
 
   // Replace the existing function with this
@@ -6368,12 +6366,12 @@ export default function AdCreationForm({
                     <span className={activeVariantId !== 'default' ? 'cursor-not-allowed' : ''}>
                       <Select
                         value={
-                          adType === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))
+                          adType === 'flexible' && !campaignSupportsFlexibleAds
                             ? 'regular'
                             : adType
                         }
                         onValueChange={(value) => {
-                          if (value === 'flexible' && !campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj))) {
+                          if (value === 'flexible' && !campaignSupportsFlexibleAds) {
                             setAdType('regular');
                             return;
                           }
@@ -6424,15 +6422,38 @@ export default function AdCreationForm({
                             Carousel
                           </SelectItem>
 
-                          {campaignObjective.length > 0 && campaignObjective.every(obj => ["OUTCOME_SALES", "OUTCOME_APP_PROMOTION"].includes(obj)) && (
-                            <SelectItem
-                              value="flexible"
-                              className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
-                            >
-                              Flexible
+                          <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <SelectItem
+                                  value="flexible"
+                                  onPointerDown={(event) => {
+                                    if (!campaignSupportsFlexibleAds) {
+                                      event.preventDefault();
+                                    }
+                                  }}
+                                  onSelect={(event) => {
+                                    if (!campaignSupportsFlexibleAds) {
+                                      event.preventDefault();
+                                    }
+                                  }}
+                                  aria-disabled={!campaignSupportsFlexibleAds}
+                                  className={cn(
+                                    "rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5",
+                                    !campaignSupportsFlexibleAds && "cursor-not-allowed opacity-50"
+                                  )}
+                                >
+                                  Flexible
 
-                            </SelectItem>
-                          )}
+                                </SelectItem>
+                              </TooltipTrigger>
+                              {!campaignSupportsFlexibleAds && (
+                                <TooltipContent side="right" className="max-w-xs text-xs">
+                                  Campaign doesnt support flex ads
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
                         </SelectContent>
                       </Select>
                     </span>
