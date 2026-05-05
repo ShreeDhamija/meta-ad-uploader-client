@@ -218,13 +218,26 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         method: 'POST',
         body: formData,
       })
-      const uploadData = await uploadRes.json()
+
+      // Read raw text FIRST so a non-JSON response never silently swallows the error
+      const uploadRawText = await uploadRes.text()
       console.group('📬 [TikTok Form] upload-video response')
       console.log('  HTTP Status        :', uploadRes.status, uploadRes.statusText)
-      console.log('  Data               :', uploadData)
+      console.log('  Content-Type       :', uploadRes.headers.get('content-type'))
+      console.log('  Raw Body           :', uploadRawText)
       console.groupEnd()
+
+      let uploadData = {}
+      try {
+        uploadData = JSON.parse(uploadRawText)
+        console.log('  Parsed uploadData  :', uploadData)
+      } catch (parseErr) {
+        console.error('❌ [TikTok Form] upload-video response is NOT valid JSON:', parseErr.message)
+        throw new Error(`Server returned non-JSON response (${uploadRes.status}): ${uploadRawText.slice(0, 200)}`)
+      }
+
       if (!uploadRes.ok || !uploadData.success) {
-        throw new Error(uploadData.error || 'Video upload failed')
+        throw new Error(uploadData.error || uploadData.message || `Upload failed with status ${uploadRes.status}`)
       }
       setUploadProgress(100)
       setIsUploading(false)
