@@ -164,6 +164,14 @@ export function TikTokAuthProvider({ children }) {
     if (storedUid) extraHeaders['x-tiktok-user-id'] = storedUid
     if (storedToken) extraHeaders['x-tiktok-token'] = storedToken
     if (storedAdvertiserIds) extraHeaders['x-tiktok-advertiser-ids'] = storedAdvertiserIds
+
+    console.log(
+      `🔑 [tiktokFetch] ${(options.method || 'GET').toUpperCase()} ${url}` +
+      ` | uid=${storedUid ? '✅' : '❌ MISSING'}` +
+      ` | token=${storedToken ? '✅' : '❌ MISSING'}` +
+      ` | advIds=${storedAdvertiserIds || '❌ MISSING'}`
+    )
+
     return fetch(url, {
       credentials: 'include',
       ...options,

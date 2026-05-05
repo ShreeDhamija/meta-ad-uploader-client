@@ -40,11 +40,17 @@ export default function TikTokAds() {
     }
   }, [isTikTokLoggedIn, authLoading, navigate])
 
-  // Auto-select first advertiser
+  // Auto-select first advertiser + log state
   useEffect(() => {
+    console.group('🎯 [TikTokAds] Advertiser state changed')
+    console.log('  tiktokAdvertisers  :', tiktokAdvertisers?.length, 'items', tiktokAdvertisers)
+    console.log('  selectedAdvertiser :', selectedAdvertiser || 'NONE')
+    console.log('  localStorage adIds :', localStorage.getItem('tiktok_advertiser_ids'))
+    console.groupEnd()
     if (tiktokAdvertisers.length > 0 && !selectedAdvertiser) {
-      const firstId = tiktokAdvertisers[0].advertiser_id || tiktokAdvertisers[0].id;
-      setSelectedAdvertiser(firstId);
+      const firstId = tiktokAdvertisers[0].advertiser_id || tiktokAdvertisers[0].id
+      console.log('✅ [TikTokAds] Auto-selecting first advertiser:', firstId)
+      setSelectedAdvertiser(firstId)
     }
   }, [tiktokAdvertisers, selectedAdvertiser])
 
@@ -53,13 +59,30 @@ export default function TikTokAds() {
     if (!selectedAdvertiser || activeTab !== 'ads') return
     setLoadingAds(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '20' })
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-ads?${params}`)
-      .then(r => r.json())
+    const url = `${API_BASE_URL}/api/tiktok/fetch-ads?${params}`
+    console.group(`📡 [TikTokAds] Fetching existing ads`)
+    console.log('  URL                :', url)
+    console.log('  advertiserId       :', selectedAdvertiser)
+    console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
+    console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
+    console.groupEnd()
+    tiktokFetch(url)
+      .then(async r => {
+        const body = await r.text()
+        console.group('📬 [TikTokAds] fetch-ads response')
+        console.log('  HTTP Status        :', r.status, r.statusText)
+        console.log('  Body               :', body)
+        console.groupEnd()
+        let d
+        try { d = JSON.parse(body) } catch { d = {} }
+        return d
+      })
       .then(d => {
+        console.log(`✅ [TikTokAds] Ads loaded: ${d.ads?.length ?? 0} item(s)`, d.ads)
         setExistingAds(d.ads || [])
       })
       .catch((err) => {
-        console.error("❌ [TikTok Ads] Failed to load ads:", err);
+        console.error('❌ [TikTokAds] fetch-ads FAILED:', err)
         toast.error('Failed to load ads')
       })
       .finally(() => setLoadingAds(false))

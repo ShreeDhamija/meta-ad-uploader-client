@@ -44,7 +44,20 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
 
   // Auth-aware fetch helper — auto-injects x-tiktok-user-id + x-tiktok-token headers
-  const { tiktokFetch } = useTikTokAuth()
+  const { tiktokFetch, tiktokUser } = useTikTokAuth()
+
+  // Log component mount state for debugging
+  useEffect(() => {
+    console.group('🎯 [TikTokAdCreationForm] Mounted')
+    console.log('  advertiserId prop  :', advertiserId || 'NONE')
+    console.log('  advertisers prop   :', advertisers?.length, 'items', advertisers)
+    console.log('  tiktokUser         :', tiktokUser)
+    console.log('  localStorage uid   :', localStorage.getItem('tiktok_uid'))
+    console.log('  localStorage token :', localStorage.getItem('tiktok_token') ? localStorage.getItem('tiktok_token').slice(0,12)+'...' : 'MISSING')
+    console.log('  localStorage adIds :', localStorage.getItem('tiktok_advertiser_ids'))
+    console.log('  API_BASE_URL       :', API_BASE_URL)
+    console.groupEnd()
+  }, [])
 
   // State
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
@@ -81,40 +94,81 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
 
   // Fetch campaigns when advertiser changes
   useEffect(() => {
-    if (!selectedAdvertiser) { 
-      setCampaigns([]); 
-      setSelectedCampaign(''); 
-      return 
+    if (!selectedAdvertiser) {
+      console.log('⚠️ [TikTok Form] No advertiser selected — skipping campaign fetch')
+      setCampaigns([])
+      setSelectedCampaign('')
+      return
     }
     setLoadingCampaigns(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
-      .then(r => r.json())
-      .then(d => { 
-        setCampaigns(d.campaigns || []); 
-        setSelectedCampaign(''); 
-        setAdGroups([]) 
+    const url = `${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`
+    console.group(`📡 [TikTok Form] Fetching campaigns for advertiser: ${selectedAdvertiser}`)
+    console.log('  URL                :', url)
+    console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
+    console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
+    console.log('  x-tiktok-adv-ids   :', localStorage.getItem('tiktok_advertiser_ids') || 'MISSING')
+    console.groupEnd()
+    tiktokFetch(url)
+      .then(async r => {
+        const body = await r.text()
+        console.group(`📬 [TikTok Form] fetch-campaigns response`)
+        console.log('  HTTP Status        :', r.status, r.statusText)
+        console.log('  Body               :', body)
+        console.groupEnd()
+        let d
+        try { d = JSON.parse(body) } catch { d = {} }
+        return d
       })
-      .catch(() => toast.error('Failed to load campaigns'))
+      .then(d => {
+        console.log(`✅ [TikTok Form] Campaigns loaded: ${d.campaigns?.length ?? 0} item(s)`, d.campaigns)
+        setCampaigns(d.campaigns || [])
+        setSelectedCampaign('')
+        setAdGroups([])
+      })
+      .catch(err => {
+        console.error('❌ [TikTok Form] fetch-campaigns FAILED:', err)
+        toast.error('Failed to load campaigns')
+      })
       .finally(() => setLoadingCampaigns(false))
   }, [selectedAdvertiser])
 
   // Fetch ad groups when campaign changes
   useEffect(() => {
-    if (!selectedCampaign || !selectedAdvertiser) { 
-      setAdGroups([]); 
-      setSelectedAdGroup(''); 
-      return 
+    if (!selectedCampaign || !selectedAdvertiser) {
+      console.log('⚠️ [TikTok Form] No campaign or advertiser — skipping ad group fetch')
+      setAdGroups([])
+      setSelectedAdGroup('')
+      return
     }
     setLoadingAdGroups(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, campaignId: selectedCampaign, page: '1', pageSize: '100' })
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`)
-      .then(r => r.json())
-      .then(d => { 
-        setAdGroups(d.adGroups || d.adgroups || []); 
-        setSelectedAdGroup('') 
+    const url = `${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`
+    console.group(`📡 [TikTok Form] Fetching ad groups for campaign: ${selectedCampaign}`)
+    console.log('  URL                :', url)
+    console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
+    console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
+    console.groupEnd()
+    tiktokFetch(url)
+      .then(async r => {
+        const body = await r.text()
+        console.group(`📬 [TikTok Form] fetch-adgroups response`)
+        console.log('  HTTP Status        :', r.status, r.statusText)
+        console.log('  Body               :', body)
+        console.groupEnd()
+        let d
+        try { d = JSON.parse(body) } catch { d = {} }
+        return d
       })
-      .catch(() => toast.error('Failed to load ad groups'))
+      .then(d => {
+        console.log(`✅ [TikTok Form] Ad groups loaded: ${d.adGroups?.length ?? d.adgroups?.length ?? 0} item(s)`, d.adGroups || d.adgroups)
+        setAdGroups(d.adGroups || d.adgroups || [])
+        setSelectedAdGroup('')
+      })
+      .catch(err => {
+        console.error('❌ [TikTok Form] fetch-adgroups FAILED:', err)
+        toast.error('Failed to load ad groups')
+      })
       .finally(() => setLoadingAdGroups(false))
   }, [selectedCampaign, selectedAdvertiser])
 
@@ -128,6 +182,15 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    console.group('🚀 [TikTok Form] handleSubmit triggered')
+    console.log('  selectedAdvertiser :', selectedAdvertiser || 'MISSING')
+    console.log('  selectedCampaign   :', selectedCampaign || 'MISSING')
+    console.log('  selectedAdGroup    :', selectedAdGroup || 'MISSING')
+    console.log('  adName             :', adName.trim() || 'MISSING')
+    console.log('  cta                :', cta)
+    console.log('  videoFile          :', videoFile?.name || 'MISSING')
+    console.groupEnd()
+
     if (!selectedAdvertiser) return toast.error('Please select an advertiser')
     if (!selectedAdGroup) return toast.error('Please select an ad group')
     if (!videoFile) return toast.error('Video is required for TikTok ads')
@@ -143,11 +206,23 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       const formData = new FormData()
       formData.append('videoFile', videoFile)
       const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
-      const uploadRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`, {
+      const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
+      console.group(`📡 [TikTok Form] Uploading video`)
+      console.log('  URL                :', uploadUrl)
+      console.log('  File name          :', videoFile.name)
+      console.log('  File size          :', (videoFile.size / 1024 / 1024).toFixed(2), 'MB')
+      console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
+      console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
+      console.groupEnd()
+      const uploadRes = await tiktokFetch(uploadUrl, {
         method: 'POST',
         body: formData,
       })
       const uploadData = await uploadRes.json()
+      console.group('📬 [TikTok Form] upload-video response')
+      console.log('  HTTP Status        :', uploadRes.status, uploadRes.statusText)
+      console.log('  Data               :', uploadData)
+      console.groupEnd()
       if (!uploadRes.ok || !uploadData.success) {
         throw new Error(uploadData.error || 'Video upload failed')
       }
@@ -157,7 +232,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
 
       // Step 2: Create ads (One for each CTA)
       toast.info(`Creating ${cta.length} ad(s)...`)
-      
       const creatives = cta.map(action => ({
         video_id: uploadData.videoId,
         ad_text: adText,
@@ -165,18 +239,26 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         landing_page_url: landingUrl,
         ad_name: `${adName.trim()} (${action})`
       }))
-
+      const createPayload = {
+        advertiserId: selectedAdvertiser,
+        adgroupId: selectedAdGroup,
+        adName: adName.trim(),
+        creatives
+      }
+      console.group(`📡 [TikTok Form] Creating ${cta.length} ad(s)`)
+      console.log('  URL                :', `${API_BASE_URL}/api/tiktok/create-ad`)
+      console.log('  Payload            :', JSON.stringify(createPayload, null, 2))
+      console.groupEnd()
       const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          advertiserId: selectedAdvertiser,
-          adgroupId: selectedAdGroup,
-          adName: adName.trim(),
-          creatives
-        }),
+        body: JSON.stringify(createPayload),
       })
       const createData = await createRes.json()
+      console.group('📬 [TikTok Form] create-ad response')
+      console.log('  HTTP Status        :', createRes.status, createRes.statusText)
+      console.log('  Data               :', createData)
+      console.groupEnd()
       if (!createRes.ok || !createData.success) {
         throw new Error(createData.error || 'Ad creation failed')
       }
@@ -185,6 +267,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       setAdName(''); setAdText(''); setLandingUrl(''); setCta(['SHOP_NOW'])
       setVideoFile(null); setVideoPreview(null); setUploadProgress(0)
     } catch (err) {
+      console.error('❌ [TikTok Form] handleSubmit error:', err.message)
       toast.error(err.message)
       setIsUploading(false)
     } finally {
