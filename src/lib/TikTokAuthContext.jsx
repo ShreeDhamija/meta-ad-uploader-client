@@ -22,12 +22,18 @@ export function TikTokAuthProvider({ children }) {
     setTikTokUser(user)
     setTikTokAdvertisers(advertisers)
     setIsLoading(false)
-    // Persist tiktokId and token to localStorage so the server can recover the session from Firestore
+    // Persist auth data to localStorage so the server can recover the session from Firestore
     if (user?.tiktokId) {
       try { localStorage.setItem('tiktok_uid', user.tiktokId) } catch (_) {}
     }
     if (accessToken) {
       try { localStorage.setItem('tiktok_token', accessToken) } catch (_) {}
+    }
+    if (advertisers?.length > 0) {
+      try {
+        const ids = advertisers.map(a => a.advertiser_id || a.id).filter(Boolean)
+        if (ids.length) localStorage.setItem('tiktok_advertiser_ids', JSON.stringify(ids))
+      } catch (_) {}
     }
   }
 
@@ -42,6 +48,7 @@ export function TikTokAuthProvider({ children }) {
       // Send stored tiktokId as a hint so the server can recover from Firestore
       const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
       const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
+      const storedAdvertiserIds = (() => { try { return localStorage.getItem('tiktok_advertiser_ids') } catch (_) { return null } })()
       const headers = { 'Content-Type': 'application/json' }
       if (storedUid) {
         headers['x-tiktok-user-id'] = storedUid
@@ -49,6 +56,9 @@ export function TikTokAuthProvider({ children }) {
       }
       if (storedToken) {
         headers['x-tiktok-token'] = storedToken
+      }
+      if (storedAdvertiserIds) {
+        headers['x-tiktok-advertiser-ids'] = storedAdvertiserIds
       }
 
       const res = await fetch(endpoint, { credentials: 'include', headers })
@@ -90,6 +100,12 @@ export function TikTokAuthProvider({ children }) {
           if (data.accessToken) {
             try { localStorage.setItem('tiktok_token', data.accessToken) } catch (_) {}
           }
+          if (data.advertisers?.length > 0) {
+            try {
+              const ids = data.advertisers.map(a => a.advertiser_id || a.id).filter(Boolean)
+              if (ids.length) localStorage.setItem('tiktok_advertiser_ids', JSON.stringify(ids))
+            } catch (_) {}
+          }
         } else {
           console.warn('⚠️ [TikTok Auth] Response OK but connected=false. Reason:', data.error || 'unknown')
           setIsTikTokLoggedIn(false)
@@ -127,6 +143,7 @@ export function TikTokAuthProvider({ children }) {
         setTikTokAdvertisers([])
         try { localStorage.removeItem('tiktok_uid') } catch (_) {}
         try { localStorage.removeItem('tiktok_token') } catch (_) {}
+        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) {}
       } else {
         console.warn("⚠️ [TikTok Auth] Logout failed on server.");
         toast.error('Failed to log out of TikTok')
@@ -142,9 +159,11 @@ export function TikTokAuthProvider({ children }) {
   const tiktokFetch = (url, options = {}) => {
     const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
     const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
+    const storedAdvertiserIds = (() => { try { return localStorage.getItem('tiktok_advertiser_ids') } catch (_) { return null } })()
     const extraHeaders = {}
     if (storedUid) extraHeaders['x-tiktok-user-id'] = storedUid
     if (storedToken) extraHeaders['x-tiktok-token'] = storedToken
+    if (storedAdvertiserIds) extraHeaders['x-tiktok-advertiser-ids'] = storedAdvertiserIds
     return fetch(url, {
       credentials: 'include',
       ...options,
