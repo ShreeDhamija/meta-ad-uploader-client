@@ -76,7 +76,7 @@ export default function TikTokCallback() {
               console.log('✅ [TikTokCallback] Exchange success! User:', data.user.name)
               setStatus('success')
               toast.success('Successfully connected to TikTok Ads!')
-              setTikTokSession(data.user, data.advertisers || [])
+              setTikTokSession(data.user, data.advertisers || [], data.accessToken || null)
               
               // Clean up URL to prevent reuse on refresh
               window.history.replaceState({}, document.title, window.location.pathname)

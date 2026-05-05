@@ -19,6 +19,7 @@ import {
 import { useEffect, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
@@ -41,6 +42,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
+
+  // Auth-aware fetch helper — auto-injects x-tiktok-user-id + x-tiktok-token headers
+  const { tiktokFetch } = useTikTokAuth()
 
   // State
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
@@ -84,7 +88,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
     }
     setLoadingCampaigns(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
-    fetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`, { credentials: 'include' })
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
       .then(r => r.json())
       .then(d => { 
         setCampaigns(d.campaigns || []); 
@@ -104,7 +108,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
     }
     setLoadingAdGroups(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, campaignId: selectedCampaign, page: '1', pageSize: '100' })
-    fetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`, { credentials: 'include' })
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`)
       .then(r => r.json())
       .then(d => { 
         setAdGroups(d.adGroups || d.adgroups || []); 
@@ -139,9 +143,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       const formData = new FormData()
       formData.append('videoFile', videoFile)
       const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
-      const uploadRes = await fetch(`${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`, {
+      const uploadRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`, {
         method: 'POST',
-        credentials: 'include',
         body: formData,
       })
       const uploadData = await uploadRes.json()
@@ -163,9 +166,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         ad_name: `${adName.trim()} (${action})`
       }))
 
-      const createRes = await fetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
+      const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           advertiserId: selectedAdvertiser,

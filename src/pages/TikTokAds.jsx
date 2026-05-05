@@ -15,7 +15,7 @@ const TIKTOK_CYAN = '#25F4EE'
 
 export default function TikTokAds() {
   const navigate = useNavigate()
-  const { isTikTokLoggedIn, tiktokUser, tiktokAdvertisers, refreshTikTokUser, logoutTikTok, isLoading: authLoading } = useTikTokAuth()
+  const { isTikTokLoggedIn, tiktokUser, tiktokAdvertisers, refreshTikTokUser, logoutTikTok, isLoading: authLoading, tiktokFetch } = useTikTokAuth()
   const { showMessenger, hideMessenger } = useIntercom()
   
   const [selectedAdvertiser, setSelectedAdvertiser] = useState('')
@@ -53,7 +53,7 @@ export default function TikTokAds() {
     if (!selectedAdvertiser || activeTab !== 'ads') return
     setLoadingAds(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '20' })
-    fetch(`${API_BASE_URL}/api/tiktok/fetch-ads?${params}`, { credentials: 'include' })
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-ads?${params}`)
       .then(r => r.json())
       .then(d => {
         setExistingAds(d.ads || [])

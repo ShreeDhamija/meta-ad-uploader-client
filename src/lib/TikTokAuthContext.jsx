@@ -16,15 +16,18 @@ export function TikTokAuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true)
 
   // Called directly by TikTokCallback after the exchange endpoint succeeds
-  const setTikTokSession = (user, advertisers = []) => {
+  const setTikTokSession = (user, advertisers = [], accessToken = null) => {
     console.log('✅ [TikTokAuthContext] setTikTokSession called with user:', user?.name)
     setIsTikTokLoggedIn(true)
     setTikTokUser(user)
     setTikTokAdvertisers(advertisers)
     setIsLoading(false)
-    // Persist tiktokId to localStorage so the server can recover the session from Firestore
+    // Persist tiktokId and token to localStorage so the server can recover the session from Firestore
     if (user?.tiktokId) {
       try { localStorage.setItem('tiktok_uid', user.tiktokId) } catch (_) {}
+    }
+    if (accessToken) {
+      try { localStorage.setItem('tiktok_token', accessToken) } catch (_) {}
     }
   }
 
@@ -38,10 +41,14 @@ export function TikTokAuthProvider({ children }) {
 
       // Send stored tiktokId as a hint so the server can recover from Firestore
       const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
+      const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
       const headers = { 'Content-Type': 'application/json' }
       if (storedUid) {
         headers['x-tiktok-user-id'] = storedUid
         console.log('  Sending x-tiktok-user-id hint:', storedUid)
+      }
+      if (storedToken) {
+        headers['x-tiktok-token'] = storedToken
       }
 
       const res = await fetch(endpoint, { credentials: 'include', headers })
@@ -80,6 +87,9 @@ export function TikTokAuthProvider({ children }) {
           if (data.user?.tiktokId) {
             try { localStorage.setItem('tiktok_uid', data.user.tiktokId) } catch (_) {}
           }
+          if (data.accessToken) {
+            try { localStorage.setItem('tiktok_token', data.accessToken) } catch (_) {}
+          }
         } else {
           console.warn('⚠️ [TikTok Auth] Response OK but connected=false. Reason:', data.error || 'unknown')
           setIsTikTokLoggedIn(false)
@@ -116,6 +126,7 @@ export function TikTokAuthProvider({ children }) {
         setTikTokUser(null)
         setTikTokAdvertisers([])
         try { localStorage.removeItem('tiktok_uid') } catch (_) {}
+        try { localStorage.removeItem('tiktok_token') } catch (_) {}
       } else {
         console.warn("⚠️ [TikTok Auth] Logout failed on server.");
         toast.error('Failed to log out of TikTok')
@@ -124,6 +135,24 @@ export function TikTokAuthProvider({ children }) {
       console.error("❌ [TikTok Auth] Logout error:", error)
       toast.error('TikTok logout error: ' + error.message)
     }
+  }
+
+  // ── tiktokFetch: a drop-in replacement for fetch() that auto-injects TikTok auth headers.
+  // Use this for all /api/tiktok/* requests from anywhere in the app.
+  const tiktokFetch = (url, options = {}) => {
+    const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
+    const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
+    const extraHeaders = {}
+    if (storedUid) extraHeaders['x-tiktok-user-id'] = storedUid
+    if (storedToken) extraHeaders['x-tiktok-token'] = storedToken
+    return fetch(url, {
+      credentials: 'include',
+      ...options,
+      headers: {
+        ...extraHeaders,
+        ...(options.headers || {}),
+      },
+    })
   }
 
   useEffect(() => {
@@ -140,6 +169,7 @@ export function TikTokAuthProvider({ children }) {
         setTikTokSession,
         logoutTikTok,
         isLoading,
+        tiktokFetch,
       }}
     >
       {children}
