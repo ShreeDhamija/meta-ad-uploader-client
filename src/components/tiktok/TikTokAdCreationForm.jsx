@@ -359,6 +359,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
           </div>
 
           <div className="space-y-2">
+            <div className="flex items-center justify-between">
               <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Post As (Identity)
               </Label>
