@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { cn } from "@/lib/utils"
 import {
   FileText,
@@ -19,7 +20,6 @@ import {
 import { useEffect, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
-import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
@@ -76,6 +76,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadingCampaigns, setLoadingCampaigns] = useState(false)
   const [loadingAdGroups, setLoadingAdGroups] = useState(false)
+  const [identities, setIdentities] = useState([])
+  const [selectedIdentity, setSelectedIdentity] = useState('')
+  const [loadingIdentities, setLoadingIdentities] = useState(false)
   
   const fileRef = useRef()
 
@@ -131,6 +134,28 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         toast.error('Failed to load campaigns')
       })
       .finally(() => setLoadingCampaigns(false))
+
+    // Fetch identities
+    setLoadingIdentities(true)
+    const identityUrl = `${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`
+    tiktokFetch(identityUrl)
+      .then(r => r.json())
+      .then(d => {
+        const list = d.identities || []
+        console.log(`✅ [TikTok Form] Identities loaded: ${list.length}`, list)
+        setIdentities(list)
+        if (list.length > 0) {
+          // Prefer TT_USER or BC_AUTH_TT
+          const best = list.find(i => i.identity_type === 'TT_USER') || 
+                       list.find(i => i.identity_type === 'BC_AUTH_TT') || 
+                       list[0]
+          setSelectedIdentity(best.identity_id)
+        } else {
+          setSelectedIdentity('')
+        }
+      })
+      .catch(err => console.error('❌ [TikTok Form] Failed to fetch identities:', err))
+      .finally(() => setLoadingIdentities(false))
   }, [selectedAdvertiser])
 
   // Fetch ad groups when campaign changes
@@ -193,6 +218,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
 
     if (!selectedAdvertiser) return toast.error('Please select an advertiser')
     if (!selectedAdGroup) return toast.error('Please select an ad group')
+    if (!selectedIdentity) return toast.error('Please select a TikTok Identity/Profile')
     if (!videoFile) return toast.error('Video is required for TikTok ads')
     if (!adName.trim()) return toast.error('Ad name is required')
     if (cta.length === 0) return toast.error('Please select at least one Call to Action')
@@ -255,6 +281,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       const createPayload = {
         advertiserId: selectedAdvertiser,
         adgroupId: selectedAdGroup,
+        identityId: selectedIdentity,
         adName: adName.trim(),
         creatives
       }
@@ -323,6 +350,43 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Post As (Identity)
+              </Label>
+              {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+            </div>
+            <Select 
+              value={selectedIdentity} 
+              onValueChange={setSelectedIdentity}
+              disabled={!selectedAdvertiser || loadingIdentities || identities.length === 0}
+            >
+              <SelectTrigger className={formFieldChrome}>
+                <SelectValue placeholder={identities.length === 0 ? "No identities found" : "Select TikTok identity"} />
+              </SelectTrigger>
+              <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
+                {identities.map(i => (
+                  <SelectItem 
+                    key={i.identity_id} 
+                    value={i.identity_id}
+                    className="cursor-pointer hover:bg-gray-50 rounded-lg m-1"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">{i.display_name || i.identity_id}</span>
+                      <span className="text-[10px] text-gray-400 uppercase tracking-tighter">{i.identity_type}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {identities.length === 0 && !loadingIdentities && selectedAdvertiser && (
+              <p className="text-[10px] text-amber-600 mt-1">
+                ⚠️ No linked TikTok accounts or identities found. Ads require a profile to post as.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
