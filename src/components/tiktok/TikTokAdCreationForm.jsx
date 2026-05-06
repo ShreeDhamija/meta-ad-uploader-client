@@ -144,14 +144,16 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         const list = d.identities || []
         console.log(`✅ [TikTok Form] Identities loaded: ${list.length}`, list)
         setIdentities(list)
+        
+        // Auto-selection logic
         if (list.length > 0) {
-          // Prefer TT_USER or BC_AUTH_TT
           const best = list.find(i => i.identity_type === 'TT_USER') || 
                        list.find(i => i.identity_type === 'BC_AUTH_TT') || 
                        list[0]
           setSelectedIdentity(best.identity_id)
         } else {
-          setSelectedIdentity('')
+          // If no linked identities, default to Custom Identity
+          setSelectedIdentity('CUSTOMIZED_USER')
         }
       })
       .catch(err => console.error('❌ [TikTok Form] Failed to fetch identities:', err))
@@ -281,7 +283,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       const createPayload = {
         advertiserId: selectedAdvertiser,
         adgroupId: selectedAdGroup,
-        identityId: selectedIdentity,
+        identityId: selectedIdentity === 'CUSTOMIZED_USER' ? undefined : selectedIdentity,
+        identityType: selectedIdentity === 'CUSTOMIZED_USER' ? 'CUSTOMIZED_USER' : undefined,
         adName: adName.trim(),
         creatives
       }
@@ -362,12 +365,19 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
             <Select 
               value={selectedIdentity} 
               onValueChange={setSelectedIdentity}
-              disabled={!selectedAdvertiser || loadingIdentities || identities.length === 0}
+              disabled={!selectedAdvertiser || loadingIdentities}
             >
               <SelectTrigger className={formFieldChrome}>
-                <SelectValue placeholder={identities.length === 0 ? "No identities found" : "Select TikTok identity"} />
+                <SelectValue placeholder="Select TikTok identity" />
               </SelectTrigger>
               <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
+                <SelectItem value="CUSTOMIZED_USER" className="cursor-pointer hover:bg-gray-50 rounded-lg m-1">
+                  <div className="flex flex-col">
+                    <span className="font-medium italic">Custom Identity (No Link Required)</span>
+                    <span className="text-[10px] text-gray-400 uppercase tracking-tighter">Uses Ad Name as Profile Name</span>
+                  </div>
+                </SelectItem>
+                
                 {identities.map(i => (
                   <SelectItem 
                     key={i.identity_id} 
@@ -383,8 +393,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
               </SelectContent>
             </Select>
             {identities.length === 0 && !loadingIdentities && selectedAdvertiser && (
-              <p className="text-[10px] text-amber-600 mt-1">
-                ⚠️ No linked TikTok accounts or identities found. Ads require a profile to post as.
+              <p className="text-[10px] text-emerald-600 mt-1">
+                💡 No linked accounts found. "Custom Identity" will be used.
               </p>
             )}
           </div>
