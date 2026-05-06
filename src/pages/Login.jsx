@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { useIntercom } from "@/lib/useIntercom"
 import Doodle from "../assets/onboarding/doodle.webp?url"
 import MrAvatar from "../assets/onboarding/mr.webp?url"
+import Rocket from "../assets/rocket2.webp?url"
 import Check from "../assets/icons/check.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
@@ -33,7 +34,7 @@ const STEPS = ["role", "source", "fb"]
 
 function ProgressBar({ activeIndex }) {
     return (
-        <div className="flex items-center w-full px-1">
+        <div className="flex items-center w-full">
             {STEPS.map((_, i) => {
                 const isDone = i < activeIndex
                 const isCurrent = i === activeIndex
@@ -47,17 +48,22 @@ function ProgressBar({ activeIndex }) {
                                     </svg>
                                 </div>
                             ) : isCurrent ? (
-                                <div className="w-5 h-5 rounded-full border-2 border-[#F90E6C] flex items-center justify-center">
+                                <div className="w-5 h-5 rounded-full bg-[#F90E6C] flex items-center justify-center">
                                     <div className="w-2 h-2 rounded-full bg-[#FFBBD6]" />
                                 </div>
                             ) : (
-                                <div className="w-5 h-5 rounded-full border-2 border-[#DADADA]" />
+                                <div className="w-5 h-5 rounded-full bg-[#DADADA]" />
                             )}
                         </div>
                         {i < STEPS.length - 1 && (
-                            <div
-                                className={`flex-1 h-[2px] mx-1 ${i < activeIndex ? 'bg-[#F90E6C]' : 'bg-[#DADADA]'}`}
-                            />
+                            <div className="flex-1 h-1 bg-[#DADADA] relative overflow-hidden">
+                                <motion.div
+                                    initial={false}
+                                    animate={{ width: i < activeIndex ? '100%' : '0%' }}
+                                    transition={{ duration: 0.35, ease: 'easeInOut' }}
+                                    className="absolute inset-y-0 left-0 bg-[#F90E6C]"
+                                />
+                            </div>
                         )}
                     </div>
                 )
@@ -100,9 +106,17 @@ function RadioList({ options, value, onChange }) {
 function TestimonialPanel() {
     return (
         <div className="hidden md:flex relative w-1/2 h-screen bg-[#F4ECDC] overflow-hidden items-center justify-center">
-            <div className="max-w-md px-8">
-                <div className="text-[#F90E6C] text-5xl font-serif leading-none mb-6">“</div>
-                <p className="text-zinc-900 font-semibold text-lg leading-relaxed mb-6">
+            <div className="max-w-md px-8 relative z-10">
+                <div
+                    className="leading-none mb-4"
+                    style={{ color: '#CB9A68', fontSize: '100px', fontFamily: 'Alcyone, serif' }}
+                >
+                    “
+                </div>
+                <p
+                    className="text-zinc-900 mb-6"
+                    style={{ fontFamily: 'Alcyone, serif', fontSize: '24px', fontWeight: 700, lineHeight: 1.35 }}
+                >
                     I love Blip! Before I would spend way too much time launching ads in platform which was always an incredibly frustrating experience. Blip makes it super easy and intuitive to upload ads. I regained a ton of wasted time.
                 </p>
                 <div className="flex items-center gap-3">
@@ -116,7 +130,8 @@ function TestimonialPanel() {
             <img
                 src={Doodle}
                 alt=""
-                className="absolute bottom-0 right-0 w-[420px] h-auto pointer-events-none"
+                className="absolute bottom-0 right-0 w-[840px] h-auto pointer-events-none origin-bottom-right"
+                style={{ transform: 'rotate(-30deg)' }}
             />
         </div>
     )
@@ -251,14 +266,25 @@ export default function Login() {
 
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-zinc-800">Step 2.</label>
-                                <Button
+                                <button
                                     onClick={startSignupFlow}
                                     disabled={!isValidEmail}
-                                    className="w-full bg-zinc-900 hover:bg-black text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full flex items-center justify-center gap-2 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                                    style={{
+                                        padding: '16px 46px',
+                                        fontSize: '18px',
+                                        lineHeight: 1,
+                                        borderRadius: '221px',
+                                        border: '2px solid #3f3e3e',
+                                        background: 'linear-gradient(0deg, #414141 0%, #000 77.88%)',
+                                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.25)',
+                                        height: '56px',
+                                        maxHeight: '56px',
+                                    }}
                                 >
-                                    <span role="img" aria-hidden>🚀</span>
+                                    <img src={Rocket} alt="" className="w-6 h-6" />
                                     Start Launching Ads
-                                </Button>
+                                </button>
                             </div>
                         </div>
                     ) : (
@@ -371,8 +397,13 @@ export default function Login() {
                             className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
                         >
                             <div
-                                className="pointer-events-auto bg-white rounded-2xl shadow-xl flex flex-col"
-                                style={{ width: 405, height: 425 }}
+                                className="pointer-events-auto bg-white shadow-xl flex flex-col"
+                                style={{
+                                    width: 405,
+                                    height: 500,
+                                    borderRadius: 40,
+                                    border: '3px solid rgba(0,0,0,0.1)',
+                                }}
                             >
                                 <div className="px-6 pt-6">
                                     <ProgressBar activeIndex={popupActiveIndex} />
