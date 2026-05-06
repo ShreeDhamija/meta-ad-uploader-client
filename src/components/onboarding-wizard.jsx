@@ -11,12 +11,14 @@ import {
 } from "@/components/ui/select"
 import Home from "@/assets/Home.webp"
 import Rocket from "@/assets/rocket.webp"
+import HelloIcon from "@/assets/onboarding/hello.webp"
 import { ONBOARDING_CARDS } from "@/lib/onboardingCards"
 
 const CURSOR_KEY = "onboardingCursor"
 
 function ProgressDots({ steps, activeIndex }) {
     if (!steps || steps.length <= 1) return null
+    const lastIndex = steps.length - 1
     return (
         <div className="w-full">
             <div className="flex items-center w-full">
@@ -25,28 +27,28 @@ function ProgressDots({ steps, activeIndex }) {
                     const isCurrent = i === activeIndex
                     return (
                         <div key={i} className="flex items-center flex-1 last:flex-none">
-                            <div className="relative flex items-center justify-center w-4 h-4 shrink-0">
+                            <div className="relative flex items-center justify-center w-5 h-5 shrink-0">
                                 {isDone ? (
-                                    <div className="w-4 h-4 rounded-full bg-[#6FB7FF] flex items-center justify-center">
-                                        <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
+                                    <div className="w-5 h-5 rounded-full bg-[#46B8FF] flex items-center justify-center">
+                                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
                                             <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </div>
                                 ) : isCurrent ? (
-                                    <div className="w-4 h-4 rounded-full bg-[#6FB7FF] flex items-center justify-center">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                    <div className="w-5 h-5 rounded-full bg-[#46B8FF] flex items-center justify-center">
+                                        <div className="w-2 h-2 rounded-full bg-[#95D6FF]" />
                                     </div>
                                 ) : (
-                                    <div className="w-4 h-4 rounded-full bg-[#DADADA]" />
+                                    <div className="w-5 h-5 rounded-full bg-[#DADADA]" />
                                 )}
                             </div>
-                            {i < steps.length - 1 && (
-                                <div className="flex-1 h-[3px] bg-[#DADADA] relative overflow-hidden mx-1">
+                            {i < lastIndex && (
+                                <div className="flex-1 h-1 bg-[#DADADA] relative overflow-hidden">
                                     <motion.div
                                         initial={false}
                                         animate={{ width: i < activeIndex ? "100%" : "0%" }}
                                         transition={{ duration: 0.35, ease: "easeInOut" }}
-                                        className="absolute inset-y-0 left-0 bg-[#6FB7FF]"
+                                        className="absolute inset-y-0 left-0 bg-[#46B8FF]"
                                     />
                                 </div>
                             )}
@@ -54,19 +56,20 @@ function ProgressDots({ steps, activeIndex }) {
                     )
                 })}
             </div>
-            <div className="flex w-full mt-2">
-                {steps.map((step, i) => (
-                    <div
-                        key={step.id}
-                        className={`flex-1 last:flex-none text-[11px] text-center ${i === activeIndex
-                                ? "font-semibold text-[#1F2937]"
-                                : "text-[#9CA3AF]"
-                            }`}
-                        style={{ minWidth: 0 }}
-                    >
-                        {i === activeIndex ? step.title : ""}
-                    </div>
-                ))}
+            <div className="relative w-full h-5 mt-2">
+                {steps.map((step, i) => {
+                    const left = lastIndex === 0 ? 50 : (i / lastIndex) * 100
+                    return (
+                        <div
+                            key={step.id}
+                            className={`absolute top-0 text-[11px] whitespace-nowrap ${i === activeIndex ? "font-semibold text-black" : "text-[#9CA3AF]"
+                                }`}
+                            style={{ left: `${left}%`, transform: "translateX(-50%)" }}
+                        >
+                            {step.title}
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )
@@ -84,22 +87,22 @@ export default function OnboardingWizard({
 }) {
     // Phases: "cards" (feature carousel), "choice" (new-user terminal), "import" (new-user import step)
     const initialIndex = useMemo(() => {
-        if (!isNewUser) return 0
         const saved = parseInt(localStorage.getItem(CURSOR_KEY) || "0", 10)
         if (Number.isNaN(saved)) return 0
         return Math.min(Math.max(saved, 0), cards.length)
-    }, [isNewUser, cards.length])
+    }, [cards.length])
 
-    const [phase, setPhase] = useState(() => (initialIndex >= cards.length ? "choice" : "cards"))
+    const [phase, setPhase] = useState(() =>
+        isNewUser && initialIndex >= cards.length ? "choice" : "cards"
+    )
     const [cardIndex, setCardIndex] = useState(() => Math.min(initialIndex, Math.max(cards.length - 1, 0)))
     const [selectedAdAccount, setSelectedAdAccount] = useState("")
     const [isImporting, setIsImporting] = useState(false)
 
     useEffect(() => {
-        if (!isNewUser) return
         const cursor = phase === "cards" ? cardIndex : cards.length
         localStorage.setItem(CURSOR_KEY, String(cursor))
-    }, [isNewUser, phase, cardIndex, cards.length])
+    }, [phase, cardIndex, cards.length])
 
     const finishWithIds = () => {
         localStorage.removeItem(CURSOR_KEY)
@@ -181,20 +184,9 @@ export default function OnboardingWizard({
             >
                 {phase === "cards" && (
                     <div className="flex flex-col px-7 pt-7 pb-6 animate-fadeSwap">
-                        <div className="flex items-start justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <span className="text-2xl">{isNewUser ? "👋" : "✨"}</span>
-                                <h2 className="text-[22px] font-bold text-[#111827]">{headerText}</h2>
-                            </div>
-                            <button
-                                onClick={() => {
-                                    // "Index" jumps the dots into title-only legend mode by going back to start
-                                    setCardIndex(0)
-                                }}
-                                className="text-[12px] font-medium text-white bg-black rounded-full px-3 py-1"
-                            >
-                                Index
-                            </button>
+                        <div className="flex items-center gap-2 mb-2">
+                            <img src={HelloIcon} alt="" className="w-7 h-7 object-contain" />
+                            <h2 className="text-[22px] font-bold text-[#111827]">{headerText}</h2>
                         </div>
                         <p className="text-[13px] text-[#4B5563] mb-4 leading-snug">{subText}</p>
 
@@ -203,7 +195,7 @@ export default function OnboardingWizard({
                         <h3 className="mt-4 text-[18px] font-bold text-[#111827]">{activeCard.heading}</h3>
                         <p className="mt-1 text-[13px] text-[#4B5563] leading-snug">{activeCard.body}</p>
 
-                        <div className="mt-4 rounded-[16px] border-2 border-black/80 overflow-hidden bg-white">
+                        <div className="mt-4">
                             <img
                                 src={activeCard.image}
                                 alt={activeCard.title}
@@ -211,13 +203,15 @@ export default function OnboardingWizard({
                             />
                         </div>
 
-                        <div className="mt-5 flex items-center justify-between">
-                            <button
-                                onClick={handleSkip}
-                                className="text-[14px] font-medium text-[#374151] hover:text-black"
-                            >
-                                Skip Onboarding
-                            </button>
+                        <div className={`mt-5 flex items-center ${cardIndex === cards.length - 1 ? "justify-end" : "justify-between"}`}>
+                            {cardIndex !== cards.length - 1 && (
+                                <button
+                                    onClick={handleSkip}
+                                    className="text-[14px] font-medium text-[#374151] hover:text-black"
+                                >
+                                    Skip Onboarding
+                                </button>
+                            )}
                             <Button
                                 onClick={handleNext}
                                 className="rounded-full bg-black hover:bg-black/85 text-white text-[14px] font-semibold px-6 py-5"

@@ -1,61 +1,5 @@
-// import { useEffect, useState } from "react";
-// const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-
-// export default function useGlobalSettings() {
-//     const [loading, setLoading] = useState(true);
-//     const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
-//     const [hasSeenSettingsOnboarding, setHasSeenSettingsOnboarding] = useState(false);
-//     const [selectedAdAccountIds, setSelectedAdAccountIds] = useState([])
-
-//     const fetchSettings = async () => {
-//         try {
-//             const res = await fetch(`${API_BASE_URL}/settings/global`, {
-//                 credentials: "include",
-//             });
-//             const data = await res.json();
-
-
-
-//             setHasSeenOnboarding(data?.settings?.hasSeenOnboarding || false);
-//             setHasSeenSettingsOnboarding(data?.settings?.hasSeenSettingsOnboarding || false);
-//             setSelectedAdAccountIds(data?.settings?.selectedAdAccountIds || [])
-
-//         } catch (err) {
-//             console.error("Failed to fetch global settings:", err);
-//             setHasSeenOnboarding(false);
-//             setSelectedAdAccountIds([]);
-//             setHasSeenSettingsOnboarding(false);
-//         } finally {
-//             setLoading(false);
-//         }
-//     };
-
-//     useEffect(() => {
-//         fetchSettings();
-
-//         // Listen for updates and refetch
-//         const handleUpdate = () => fetchSettings();
-//         window.addEventListener('globalSettingsUpdated', handleUpdate);
-
-//         return () => window.removeEventListener('globalSettingsUpdated', handleUpdate);
-//     }, []);
-
-
-
-
-//     return {
-//         loading,
-//         hasSeenOnboarding,
-//         hasSeenSettingsOnboarding,
-//         setHasSeenSettingsOnboarding,
-//         selectedAdAccountIds, // Changed from selectedAdAccountId
-
-
-//     };
-// }
-
 import { useEffect, useMemo, useState } from "react";
-import { LEGACY_FLAG_TO_CARD_ID } from "./onboardingCards";
+import { LEGACY_FLAG_TO_CARD_ID, ONBOARDING_CARDS, WIZARD_LAUNCH_DATE } from "./onboardingCards";
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
 export default function useGlobalSettings() {
@@ -118,16 +62,26 @@ export default function useGlobalSettings() {
         return () => window.removeEventListener('globalSettingsUpdated', handleUpdate);
     }, []);
 
-    // Merges new-style seenOnboardingCards with legacy per-feature flags so
-    // existing users who already saw a feature popup don't see it again.
+    // Merges new-style seenOnboardingCards with legacy gates so existing
+    // users only see cards added after WIZARD_LAUNCH_DATE.
     const effectiveSeenOnboardingIds = useMemo(() => {
         const set = new Set(seenOnboardingCards);
         const legacy = { hasSeenPowerupPopup, hasSeenAnalyticsHomePopup };
         Object.entries(LEGACY_FLAG_TO_CARD_ID).forEach(([flag, id]) => {
             if (legacy[flag]) set.add(id);
         });
+        if (hasSeenOnboarding) {
+            ONBOARDING_CARDS.forEach((card) => {
+                if (!card.addedAt || card.addedAt > WIZARD_LAUNCH_DATE) return;
+                const legacyFlag = Object.keys(LEGACY_FLAG_TO_CARD_ID).find(
+                    (flag) => LEGACY_FLAG_TO_CARD_ID[flag] === card.id
+                );
+                if (legacyFlag && !legacy[legacyFlag]) return;
+                set.add(card.id);
+            });
+        }
         return Array.from(set);
-    }, [seenOnboardingCards, hasSeenPowerupPopup, hasSeenAnalyticsHomePopup]);
+    }, [seenOnboardingCards, hasSeenPowerupPopup, hasSeenAnalyticsHomePopup, hasSeenOnboarding]);
 
     return {
         loading,
