@@ -342,13 +342,17 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 <SelectValue placeholder="Select advertiser account" />
               </SelectTrigger>
               <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
-                {advertisers?.map(a => (
+                {advertisers?.map(adv => (
                   <SelectItem 
                     key={a.advertiser_id || a.id} 
-                    value={a.advertiser_id || a.id}
+                    key={adv.advertiser_id || adv.id} 
+                    value={adv.advertiser_id || adv.id}
                     className="cursor-pointer hover:bg-gray-50 rounded-lg m-1"
                   >
-                    {a.advertiser_name || a.name}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{adv.advertiser_name || adv.name}</span>
+                      <span className="text-[10px] text-gray-400 font-mono uppercase tracking-tighter">ID: {adv.advertiser_id || adv.id}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
