@@ -7,9 +7,8 @@ import Header from "../components/header"
 import AdAccountSettings from "../components/ad-account-settings"
 import AdCreationForm from "../components/ad-creation-form"
 import MediaPreview from "../components/media-preview"
-import OnboardingPopup from "../components/onboarding-popup"
-import AnalyticsHomePopup from "../components/AnalyticsHomePopup"
-import PowerupPopup from "../components/PowerupPopup"
+import OnboardingWizard from "../components/onboarding-wizard"
+import { ONBOARDING_CARDS } from "@/lib/onboardingCards"
 
 import { useAuth } from "../lib/AuthContext"
 import { useAppData } from "@/lib/AppContext"
@@ -23,35 +22,7 @@ import DesktopIcon from '@/assets/Desktop.webp';
 import TrialExpiredPopup from '../components/TrialExpiredPopup';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const HOME_CACHE_KEY = 'home_adAccountSettings_cache';
-const ANALYTICS_LAUNCH_AT = new Date("2026-04-09T12:00:00+05:30");
-const POWERUP_LAUNCH_AT = new Date("2026-04-20T12:20:00+05:30");
-const IS_STAGING = import.meta.env.VITE_APP_ENV === "staging";
-const ANALYTICS_HOME_POPUP_ENABLED = IS_STAGING;
-const POWERUP_HOME_POPUP_ENABLED = true;
 const MEDIA_PREVIEW_LAUNCH_DURATION_MS = 560;
-
-const parseUserCreatedAt = (value) => {
-    if (!value) return null;
-
-    if (value instanceof Date) {
-        return Number.isNaN(value.getTime()) ? null : value;
-    }
-
-    if (typeof value === "string" || typeof value === "number") {
-        const parsed = new Date(value);
-        return Number.isNaN(parsed.getTime()) ? null : parsed;
-    }
-
-    const seconds = value?._seconds ?? value?.seconds;
-    const nanoseconds = value?._nanoseconds ?? value?.nanoseconds ?? 0;
-
-    if (typeof seconds === "number") {
-        const parsed = new Date(seconds * 1000 + Math.floor(nanoseconds / 1000000));
-        return Number.isNaN(parsed.getTime()) ? null : parsed;
-    }
-
-    return null;
-};
 
 // Check if user has active access
 
@@ -129,26 +100,27 @@ const cloneSnapshotValue = (value) => {
 const snapshotValuesEqual = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 
 export default function Home() {
-    const { isLoggedIn, userName, handleLogout, authLoading, userCreatedAt } = useAuth()
+    const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
     const { showMessenger, hideMessenger } = useIntercom();
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = useState(false)
 
     // Onboarding
-    const [showOnboardingPopup, setShowOnboardingPopup] = useState(false)
-    const [showPowerupPopup, setShowPowerupPopup] = useState(false)
-    const [showAnalyticsHomePopup, setShowAnalyticsHomePopup] = useState(false)
+    const [showOnboardingWizard, setShowOnboardingWizard] = useState(false)
     const {
         hasSeenOnboarding,
         setHasSeenOnboarding,
         hasSeenSettingsOnboarding,
-        hasSeenPowerupPopup,
-        setHasSeenPowerupPopup,
-        hasSeenAnalyticsHomePopup,
-        setHasSeenAnalyticsHomePopup,
+        seenOnboardingCards,
+        setSeenOnboardingCards,
+        effectiveSeenOnboardingIds,
         loading,
         selectedAdAccountIds
     } = useGlobalSettings();
+    const unseenOnboardingCards = ONBOARDING_CARDS.filter(
+        (c) => !effectiveSeenOnboardingIds.includes(c.id)
+    )
+    const isNewOnboardingUser = !hasSeenOnboarding
     const {
         subscriptionData,
         isOnTrial,
@@ -321,46 +293,10 @@ export default function Home() {
 
     useEffect(() => {
         if (!isLoggedIn || loading) return
-        if (!hasSeenOnboarding) {
-            setShowOnboardingPopup(true)
+        if (!hasSeenOnboarding || unseenOnboardingCards.length > 0) {
+            setShowOnboardingWizard(true)
         }
-    }, [isLoggedIn, loading, hasSeenOnboarding])
-
-    useEffect(() => {
-        if (!isLoggedIn || loading || showOnboardingPopup || showAnalyticsHomePopup || showPowerupPopup) return
-
-        const parsedCreatedAt = parseUserCreatedAt(userCreatedAt)
-        const isValidCreatedAt = parsedCreatedAt && !Number.isNaN(parsedCreatedAt.getTime())
-        if (!isValidCreatedAt) return
-
-        const isEligibleForAnalyticsHomePopup =
-            ANALYTICS_HOME_POPUP_ENABLED &&
-            parsedCreatedAt < ANALYTICS_LAUNCH_AT &&
-            !hasSeenAnalyticsHomePopup
-
-        if (isEligibleForAnalyticsHomePopup) {
-            setShowAnalyticsHomePopup(true)
-            return
-        }
-
-        const isEligibleForPowerupHomePopup =
-            POWERUP_HOME_POPUP_ENABLED &&
-            parsedCreatedAt < POWERUP_LAUNCH_AT &&
-            !hasSeenPowerupPopup
-
-        if (isEligibleForPowerupHomePopup) {
-            setShowPowerupPopup(true)
-        }
-    }, [
-        isLoggedIn,
-        loading,
-        showOnboardingPopup,
-        showAnalyticsHomePopup,
-        showPowerupPopup,
-        hasSeenAnalyticsHomePopup,
-        hasSeenPowerupPopup,
-        userCreatedAt,
-    ])
+    }, [isLoggedIn, loading, hasSeenOnboarding, unseenOnboardingCards.length])
 
     useEffect(() => {
         if (loading || subscriptionLoading) return;
@@ -549,67 +485,28 @@ export default function Home() {
 
 
 
-    const handleCloseOnboarding = () => {
-        setShowOnboardingPopup(false) // closes instantly
-
-        fetch(`${API_BASE_URL}/settings/save`, {
-            method: "POST",
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                globalSettings: { hasSeenOnboarding: true },
-            }),
-        }).then(() => {
-            setHasSeenOnboarding(true)
-        }).catch((err) => {
-            console.error("Failed to save onboarding flag:", err)
-        })
-    }
-
-    async function markPowerupPopupSeen() {
-        const previousValue = hasSeenPowerupPopup
-        setHasSeenPowerupPopup(true)
+    const handleWizardFinish = async ({ seenIds, fullyCompleted }) => {
+        const mergedSeen = Array.from(new Set([...(seenOnboardingCards || []), ...seenIds]))
+        const previousSeen = seenOnboardingCards
+        const previousHasSeen = hasSeenOnboarding
+        setSeenOnboardingCards(mergedSeen)
+        if (fullyCompleted && !hasSeenOnboarding) setHasSeenOnboarding(true)
+        setShowOnboardingWizard(false)
 
         try {
-            await saveSettings({
-                globalSettings: { hasSeenPowerupPopup: true },
-            })
+            const globalSettings = { seenOnboardingCards: mergedSeen }
+            if (fullyCompleted && !previousHasSeen) globalSettings.hasSeenOnboarding = true
+            await saveSettings({ globalSettings })
             window.dispatchEvent(new Event('globalSettingsUpdated'))
         } catch (err) {
-            setHasSeenPowerupPopup(previousValue)
-            console.error("Failed to save powerup popup flag:", err)
+            setSeenOnboardingCards(previousSeen)
+            if (fullyCompleted && !previousHasSeen) setHasSeenOnboarding(previousHasSeen)
+            console.error("Failed to save onboarding progress:", err)
         }
     }
 
-    const handleClosePowerupPopup = async () => {
-        setShowPowerupPopup(false)
-        await markPowerupPopupSeen()
-    }
-
-    const markAnalyticsHomePopupSeen = async () => {
-        const previousValue = hasSeenAnalyticsHomePopup
-        setHasSeenAnalyticsHomePopup(true)
-
-        try {
-            await saveSettings({
-                globalSettings: { hasSeenAnalyticsHomePopup: true },
-            })
-            window.dispatchEvent(new Event('globalSettingsUpdated'))
-        } catch (err) {
-            setHasSeenAnalyticsHomePopup(previousValue)
-            console.error("Failed to save analytics home popup flag:", err)
-        }
-    }
-
-    const handleCloseAnalyticsHomePopup = async () => {
-        setShowAnalyticsHomePopup(false)
-        await markAnalyticsHomePopupSeen()
-    }
-
-    const handleCheckOutAnalytics = () => {
-        setShowAnalyticsHomePopup(false)
-        navigate("/analytics")
-        markAnalyticsHomePopupSeen()
+    const handleWizardClose = () => {
+        setShowOnboardingWizard(false)
     }
     const onItemToggle = (item) => {
         setSelectedItems((prev) =>
@@ -1559,8 +1456,6 @@ export default function Home() {
                                 setGroupVariantMap={setGroupVariantMap}
                                 postVariantMap={postVariantMap}
                                 setPostVariantMap={setPostVariantMap}
-                                hasSeenPowerupPopup={hasSeenPowerupPopup}
-                                setShowPowerupPopup={setShowPowerupPopup}
                                 isLaunchingMedia={isLaunchingMediaPreview}
                             />
                         </ErrorBoundary>
@@ -1569,47 +1464,17 @@ export default function Home() {
                 </div>
             </div>
 
-            {showOnboardingPopup && (
-                <OnboardingPopup
+            {showOnboardingWizard && (isNewOnboardingUser || unseenOnboardingCards.length > 0) && (
+                <OnboardingWizard
+                    isNewUser={isNewOnboardingUser}
                     userName={userName}
-                    hasSeenSettingsOnboarding={hasSeenSettingsOnboarding} // Add this prop
-                    onClose={handleCloseOnboarding}
-                    adAccounts={adAccounts} // your ad accounts array
+                    cards={isNewOnboardingUser ? ONBOARDING_CARDS : unseenOnboardingCards}
+                    adAccounts={adAccounts}
                     onImport={handleOnboardingImport}
-                    hasAnySettings={hasAnyAdAccountSettings}  // PASS THIS
-                    onGoToSettings={() => {
-                        try {
-                            // Navigate FIRST, before unmounting the component                                
-                            navigate("/settings")
-
-                            // Then update state and save settings
-                            setHasSeenOnboarding(true)
-                            setShowOnboardingPopup(false)
-
-                            // Save settings after navigation
-                            fetch(`${API_BASE_URL}/settings/save`, {
-                                method: "POST",
-                                credentials: "include",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ globalSettings: { hasSeenOnboarding: true } }),
-                            }).catch(error => console.error("Settings save error:", error))
-
-                        } catch (error) {
-                            console.error("Error in onGoToSettings:", error)
-                        }
-                    }}
+                    onGoToSettings={() => navigate("/settings")}
+                    onFinish={handleWizardFinish}
+                    onClose={handleWizardClose}
                 />
-            )}
-
-            {showAnalyticsHomePopup && (
-                <AnalyticsHomePopup
-                    onClose={handleCloseAnalyticsHomePopup}
-                    onCheckOutAnalytics={handleCheckOutAnalytics}
-                />
-            )}
-
-            {showPowerupPopup && (
-                <PowerupPopup onClose={handleClosePowerupPopup} />
             )}
 
             {showTrialExpiredPopup && (

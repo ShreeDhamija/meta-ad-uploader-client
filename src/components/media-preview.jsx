@@ -427,8 +427,6 @@ export default function MediaPreview({
   setGroupVariantMap,
   postVariantMap,
   setPostVariantMap,
-  hasSeenPowerupPopup,
-  setShowPowerupPopup,
   isLaunchingMedia = false
 }) {
   // const [selectedFiles, setSelectedFiles] = useState(new Set());
@@ -644,9 +642,6 @@ export default function MediaPreview({
             size="sm"
             onClick={() => {
               if (variants.length === 1) {
-                if (!hasSeenPowerupPopup) {
-                  setShowPowerupPopup(true);
-                }
                 handleAddVariant();
               } else {
                 setShowDisableVariantsDialog(true);
