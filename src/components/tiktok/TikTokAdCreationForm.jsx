@@ -359,11 +359,38 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
               <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Post As (Identity)
               </Label>
-              {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+              <div className="flex items-center gap-2">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-6 w-6 text-gray-400 hover:text-tiktok-pink"
+                  onClick={() => {
+                    if (!selectedAdvertiser) return toast.error("Select an advertiser first");
+                    toast.promise(
+                      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`)
+                        .then(r => r.json())
+                        .then(d => {
+                          if (d.error) throw new Error(d.error);
+                          const count = d.identities?.length || 0;
+                          if (count === 0) return "TikTok API returned 0 identities for this advertiser.";
+                          return `Found ${count} identities! Check the dropdown.`;
+                        }),
+                      {
+                        loading: 'Checking TikTok API...',
+                        success: (msg) => msg,
+                        error: (err) => `Debug Error: ${err.message}`
+                      }
+                    );
+                  }}
+                >
+                  <RefreshCcw className={cn("w-3 h-3", loadingIdentities && "animate-spin")} />
+                </Button>
+                {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+              </div>
             </div>
             <Select 
               value={selectedIdentity} 
