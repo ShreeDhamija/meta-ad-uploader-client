@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import { useIntercom } from "@/lib/useIntercom"
 import Doodle from "../assets/onboarding/doodle.webp?url"
 import MrAvatar from "../assets/onboarding/mr.webp?url"
@@ -106,15 +107,15 @@ function RadioList({ options, value, onChange }) {
 function TestimonialPanel() {
     return (
         <div className="hidden md:flex relative w-1/2 h-screen bg-[#F4ECDC] overflow-hidden items-center justify-center">
-            <div className="max-w-md px-8 relative z-10">
+            <div className="max-w-lg px-8 relative z-10">
                 <div
-                    className="leading-none mb-4"
+                    className="leading-none mb-2"
                     style={{ color: '#CB9A68', fontSize: '100px', fontFamily: 'Alcyone, serif' }}
                 >
                     “
                 </div>
                 <p
-                    className="text-zinc-900 mb-6"
+                    className="text-[#320000] mb-6"
                     style={{ fontFamily: 'Alcyone, serif', fontSize: '24px', fontWeight: 700, lineHeight: 1.35 }}
                 >
                     I love Blip! Before I would spend way too much time launching ads in platform which was always an incredibly frustrating experience. Blip makes it super easy and intuitive to upload ads. I regained a ton of wasted time.
@@ -130,8 +131,8 @@ function TestimonialPanel() {
             <img
                 src={Doodle}
                 alt=""
-                className="absolute bottom-0 right-0 w-[840px] h-auto pointer-events-none origin-bottom-right"
-                style={{ transform: 'rotate(-30deg)' }}
+                className="absolute bottom-0 right-[-200px] w-[840px] h-auto pointer-events-none origin-bottom-right"
+                style={{ transform: 'rotate(-15deg)' }}
             />
         </div>
     )
@@ -266,25 +267,38 @@ export default function Login() {
 
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-zinc-800">Step 2.</label>
-                                <button
-                                    onClick={startSignupFlow}
-                                    disabled={!isValidEmail}
-                                    className="w-full flex items-center justify-center gap-2 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                                    style={{
-                                        padding: '16px 46px',
-                                        fontSize: '18px',
-                                        lineHeight: 1,
-                                        borderRadius: '221px',
-                                        border: '2px solid #3f3e3e',
-                                        background: 'linear-gradient(0deg, #414141 0%, #000 77.88%)',
-                                        boxShadow: '0 2px 10px 0 rgba(0,0,0,0.25)',
-                                        height: '56px',
-                                        maxHeight: '56px',
-                                    }}
-                                >
-                                    <img src={Rocket} alt="" className="w-6 h-6" />
-                                    Start Launching Ads
-                                </button>
+                                <TooltipProvider delayDuration={100}>
+                                    <Tooltip open={isValidEmail ? false : undefined}>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={() => isValidEmail && startSignupFlow()}
+                                                className="w-full flex items-center justify-center gap-2 text-white cursor-pointer"
+                                                style={{
+                                                    padding: '16px 46px',
+                                                    fontSize: '18px',
+                                                    lineHeight: 1,
+                                                    borderRadius: '20px',
+                                                    border: '2px solid #3f3e3e',
+                                                    background: 'linear-gradient(0deg, #414141 0%, #000 77.88%)',
+                                                    boxShadow: '0 2px 10px 0 rgba(0,0,0,0.25)',
+                                                    height: '56px',
+                                                    maxHeight: '56px',
+                                                    letterSpacing: '0.2px',
+                                                    // fontFamily: 'Alcyone, serif',
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                <img src={Rocket} alt="" className="size-8" />
+                                                Start Launching Ads
+                                            </button>
+                                        </TooltipTrigger>
+                                        {!isValidEmail && (
+                                            <TooltipContent side="top">
+                                                Please fill in your work email to continue
+                                            </TooltipContent>
+                                        )}
+                                    </Tooltip>
+                                </TooltipProvider>
                             </div>
                         </div>
                     ) : (
@@ -364,9 +378,9 @@ export default function Login() {
                         </p>
                     )}
 
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-zinc-500 max-w-[350px]">
                         By clicking continue, you agree to our{" "}
-                        <a href="https://app.withblip.com/terms-of-service" className="underline">Terms of Service</a> and{" "}
+                        <a href="https://app.withblip.com/terms-of-service" className="underline">Terms of Service</a> &{" "}
                         <a href="https://app.withblip.com/privacy-policy" className="underline">Privacy Policy</a>.
                     </p>
                 </div>
@@ -402,7 +416,7 @@ export default function Login() {
                                     width: 405,
                                     height: 500,
                                     borderRadius: 40,
-                                    border: '3px solid rgba(0,0,0,0.1)',
+                                    border: '1px solid rgba(0,0,0,0.1)',
                                 }}
                             >
                                 <div className="px-6 pt-6">
@@ -415,7 +429,7 @@ export default function Login() {
                                         alt="Blip"
                                         className="w-9 h-9 rounded-md mb-3"
                                     />
-                                    <AnimatePresence mode="wait">
+                                    <AnimatePresence mode="wait" initial={false}>
                                         {popupStep === 'role' && (
                                             <motion.div
                                                 key="role"
@@ -490,8 +504,8 @@ export default function Login() {
                                         <button
                                             onClick={handleNext}
                                             disabled={popupStep === 'role' ? !jobRole : !signupSource}
-                                            className="bg-[#F90E6C] hover:bg-[#d80c5e] text-white text-sm rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                            style={{ width: 100, height: 30 }}
+                                            className="bg-[#F90E6C] text-white text-sm rounded-full cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                            style={{ width: 150, height: 40 }}
                                         >
                                             Next →
                                         </button>
