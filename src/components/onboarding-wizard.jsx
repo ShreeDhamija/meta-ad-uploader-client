@@ -56,17 +56,21 @@ function ProgressDots({ steps, activeIndex }) {
                     )
                 })}
             </div>
-            <div className="relative w-full h-5 mt-2">
+            <div className="flex items-start w-full mt-2 h-5">
                 {steps.map((step, i) => {
-                    const left = lastIndex === 0 ? 50 : (i / lastIndex) * 100
+                    const isLast = i === lastIndex
                     return (
                         <div
                             key={step.id}
-                            className={`absolute top-0 text-[11px] whitespace-nowrap ${i === activeIndex ? "font-semibold text-black" : "text-[#9CA3AF]"
-                                }`}
-                            style={{ left: `${left}%`, transform: "translateX(-50%)" }}
+                            className={`relative ${isLast ? "w-5 flex-none" : "flex-1"}`}
                         >
-                            {step.title}
+                            <div
+                                className={`absolute top-0 text-[11px] whitespace-nowrap ${i === activeIndex ? "font-semibold text-black" : "text-[#9CA3AF]"
+                                    }`}
+                                style={{ left: "10px", transform: "translateX(-50%)" }}
+                            >
+                                {step.title}
+                            </div>
                         </div>
                     )
                 })}
@@ -179,7 +183,7 @@ export default function OnboardingWizard({
         >
             <div
                 className="relative bg-[#FAF9F7] rounded-[24px] shadow-2xl overflow-hidden"
-                style={{ width: 535, maxHeight: 610 }}
+                style={{ width: 620, maxHeight: 610 }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {phase === "cards" && (
