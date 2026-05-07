@@ -1237,10 +1237,12 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
               )}
             </div>
 
-            <Trash2
-              className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
-              onClick={() => handleRemove(i, setPrimaryTexts, primaryTexts)}
-            />
+            {primaryTexts.length > 1 && (
+              <Trash2
+                className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
+                onClick={() => handleRemove(i, setPrimaryTexts, primaryTexts)}
+              />
+            )}
           </div>
         ))}
         {primaryTexts.length < 5 && (
@@ -1352,7 +1354,7 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
         <Button
           className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
           onClick={handleSaveTemplate}
-          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || hasDuplicates || !(primaryTexts.some(hasFilledTextValue) || headlines.some(hasFilledTextValue))}
+          disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || hasDuplicates || !primaryTexts.some(hasFilledTextValue)}
         >
           {nameAlreadyExists
             ? "This template name already exists"
