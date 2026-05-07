@@ -9,7 +9,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import Home from "@/assets/Home.webp"
+import Home from "@/assets/Pro.webp"
 import SettingsImage from "@/assets/settings.png"
 import Rocket2 from "@/assets/rocket2.webp"
 import HelloIcon from "@/assets/onboarding/hello.webp"
@@ -161,11 +161,10 @@ export default function OnboardingWizard({
 
     const handleBackdropClick = (e) => {
         if (e.target !== e.currentTarget) return
-        if (isNewUser) {
-            // New users: only allow dismissal on terminal screens.
-            if (phase !== "cards") onClose()
-            return
-        }
+        // New users: never dismiss via backdrop. Closing without finishing the
+        // flow doesn't mark onboarding complete, so it would just reappear on
+        // reload — force them through the choice/import terminal step instead.
+        if (isNewUser) return
         // Existing users: any dismissal acks the cards so they don't reappear.
         finishWithIds()
     }
@@ -240,9 +239,9 @@ export default function OnboardingWizard({
 
                 {phase === "choice" && (
                     <div className="px-8 py-10 text-center animate-fadeSwap">
-                        <img src={Rocket2} alt="" className="w-12 h-12 object-contain mx-auto mb-4" />
+                        {/* <img src={Rocket2} alt="" className="w-12 h-12 object-contain mx-auto mb-4" /> */}
                         <h2 className="text-xl font-semibold text-[#415363] mb-1">
-                            Jump straight into launching ads or set up your ad templates
+                            Jump straight into launching ads <br></br>or set up your ad templates
                         </h2>
                         <div className="flex justify-center gap-6">
                             <button
@@ -283,7 +282,7 @@ export default function OnboardingWizard({
                             className="w-20 mx-auto mb-4"
                         />
                         <h2 className="text-xl font-semibold text-[#415363] mb-6">
-                            Lets import data from your most recent ad so you can quickly test an ad launch!
+                            Lets import data from your most recent ad<br></br> so you can quickly test an ad launch!
                         </h2>
                         <Select value={selectedAdAccount} onValueChange={setSelectedAdAccount}>
                             <SelectTrigger className="w-full px-4 py-3 mb-6 rounded-2xl border border-gray-300 bg-white text-gray-700 focus:outline-none focus:border-[#F72585]">
