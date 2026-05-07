@@ -21,7 +21,7 @@ function ProgressDots({ steps, activeIndex }) {
     if (!steps || steps.length <= 1) return null
     const lastIndex = steps.length - 1
     return (
-        <div className="w-full">
+        <div className="w-full px-8">
             <div className="flex items-center w-full">
                 {steps.map((_, i) => {
                     const isDone = i < activeIndex
@@ -131,7 +131,8 @@ export default function OnboardingWizard({
             setPhase("choice")
             return
         }
-        onClose()
+        // Existing user: explicit "skip" = ack everything so it doesn't reappear.
+        finishWithIds()
     }
 
     const handleChooseHome = () => {
@@ -159,17 +160,28 @@ export default function OnboardingWizard({
 
     const handleBackdropClick = (e) => {
         if (e.target !== e.currentTarget) return
-        // Allow closing only on the new-user terminal screens or for existing users
-        if (!isNewUser || phase !== "cards") onClose()
+        if (isNewUser) {
+            // New users: only allow dismissal on terminal screens.
+            if (phase !== "cards") onClose()
+            return
+        }
+        // Existing users: any dismissal acks the cards so they don't reappear.
+        finishWithIds()
     }
 
     const activeCard = cards[Math.min(cardIndex, cards.length - 1)]
-    const headerText = isNewUser ? `Hey ${userName || "there"}` : activeCard.heading
+    const isSingleCard = cards.length === 1
+    const headerIcon = isNewUser ? HelloIcon : ZapIcon
+    const headerText = isNewUser
+        ? `Hey ${userName || "there"}`
+        : isSingleCard
+            ? activeCard.heading
+            : `Hey ${userName || "there"}`
     const subText = isNewUser
         ? "Do you want a very quick tour of our best features or want to skip onboarding to explore yourself?"
-        : activeCard.body
-    const headerIcon = isNewUser ? HelloIcon : ZapIcon
-    const isSingleCard = cards.length === 1
+        : isSingleCard
+            ? activeCard.body
+            : "Check out what's new since you were last here."
 
     return (
         <div
@@ -191,7 +203,7 @@ export default function OnboardingWizard({
 
                         <ProgressDots steps={cards} activeIndex={cardIndex} />
 
-                        {isNewUser && (
+                        {!isSingleCard && (
                             <>
                                 <h3 className="mt-4 text-[18px] font-bold text-[#111827]">{activeCard.heading}</h3>
                                 <p className="mt-1 text-[13px] text-[#4B5563] leading-snug">{activeCard.body}</p>
@@ -212,7 +224,7 @@ export default function OnboardingWizard({
                                     onClick={handleSkip}
                                     className="text-[14px] font-medium text-[#374151] hover:text-black"
                                 >
-                                    Skip Onboarding
+                                    {isNewUser ? "Skip Onboarding" : "Skip"}
                                 </button>
                             )}
                             <Button
