@@ -16,7 +16,7 @@ export const ONBOARDING_CARDS = [
         title: "Post ID",
         image: Powerup1,
         heading: "Post ID Scaling",
-        body: "Scale winning organic or paid posts by their Post ID across ad sets without losing social proof.",
+        body: "Scale winning ads by their Post ID across ad sets without losing social proof.",
         addedAt: "2026-05-06",
         existingUsersOnly: false,
     },

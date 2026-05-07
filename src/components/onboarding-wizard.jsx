@@ -21,7 +21,7 @@ function ProgressDots({ steps, activeIndex }) {
     if (!steps || steps.length <= 1) return null
     const lastIndex = steps.length - 1
     return (
-        <div className="w-full px-8">
+        <div className="w-full px-8 pl-2">
             <div className="flex items-center w-full">
                 {steps.map((_, i) => {
                     const isDone = i < activeIndex
@@ -178,7 +178,7 @@ export default function OnboardingWizard({
             ? activeCard.heading
             : `Hey ${userName || "there"}`
     const subText = isNewUser
-        ? "Do you want a very quick tour of our best features or want to skip onboarding to explore yourself?"
+        ? "Lets give you a really quick tour of how to get the most out of Blip!"
         : isSingleCard
             ? activeCard.body
             : "Check out what's new since you were last here."
@@ -190,7 +190,7 @@ export default function OnboardingWizard({
         >
             <div
                 className="relative bg-[#FAF9F7] rounded-[24px] shadow-2xl overflow-hidden"
-                style={{ width: 620, maxHeight: 610 }}
+                style={{ width: 620, maxHeight: 640 }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {phase === "cards" && (
@@ -214,7 +214,7 @@ export default function OnboardingWizard({
                             <img
                                 src={activeCard.image}
                                 alt={activeCard.title}
-                                className="w-full h-[260px] object-cover"
+                                className="w-full h-[290px] object-cover"
                             />
                         </div>
 
@@ -222,14 +222,14 @@ export default function OnboardingWizard({
                             {cardIndex !== cards.length - 1 && (
                                 <button
                                     onClick={handleSkip}
-                                    className="text-[14px] font-medium text-[#374151] hover:text-black"
+                                    className="text-[14px] font-medium text-[#374151] hover:text-black w-full"
                                 >
                                     {isNewUser ? "Skip Onboarding" : "Skip"}
                                 </button>
                             )}
                             <Button
                                 onClick={handleNext}
-                                className={`rounded-full bg-black hover:bg-black/85 text-white text-[14px] font-semibold py-5 ${isSingleCard ? "w-full" : "px-6"}`}
+                                className={`rounded-full bg-black hover:bg-black/85 text-white text-[14px] font-semibold py-5 w-full ${isSingleCard ? "w-full" : "px-6"}`}
                             >
                                 {cardIndex === cards.length - 1 && !isNewUser ? "Got it" : "Next →"}
                             </Button>
