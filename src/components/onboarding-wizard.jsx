@@ -12,6 +12,7 @@ import {
 import Home from "@/assets/Home.webp"
 import Rocket from "@/assets/rocket.webp"
 import HelloIcon from "@/assets/onboarding/hello.webp"
+import ZapIcon from "@/assets/Zap.webp"
 import { ONBOARDING_CARDS } from "@/lib/onboardingCards"
 
 const CURSOR_KEY = "onboardingCursor"
@@ -162,19 +163,13 @@ export default function OnboardingWizard({
         if (!isNewUser || phase !== "cards") onClose()
     }
 
-    const headerText = isNewUser
-        ? `Hey ${userName || "there"}`
-        : cards.length === 1
-            ? "New Feature"
-            : "What's New"
-
+    const activeCard = cards[Math.min(cardIndex, cards.length - 1)]
+    const headerText = isNewUser ? `Hey ${userName || "there"}` : activeCard.heading
     const subText = isNewUser
         ? "Do you want a very quick tour of our best features or want to skip onboarding to explore yourself?"
-        : cards.length === 1
-            ? "Check out what's new since you were last here."
-            : "Here's what's new since you were last here."
-
-    const activeCard = cards[Math.min(cardIndex, cards.length - 1)]
+        : activeCard.body
+    const headerIcon = isNewUser ? HelloIcon : ZapIcon
+    const isSingleCard = cards.length === 1
 
     return (
         <div
@@ -189,17 +184,21 @@ export default function OnboardingWizard({
                 {phase === "cards" && (
                     <div className="flex flex-col px-7 pt-7 pb-6 animate-fadeSwap">
                         <div className="flex items-center gap-2 mb-2">
-                            <img src={HelloIcon} alt="" className="w-7 h-7 object-contain" />
+                            <img src={headerIcon} alt="" className="w-7 h-7 object-contain" />
                             <h2 className="text-[22px] font-bold text-[#111827]">{headerText}</h2>
                         </div>
-                        <p className="text-[13px] text-[#4B5563] mb-4 leading-snug">{subText}</p>
+                        <p className={`text-[13px] text-[#4B5563] leading-snug ${isSingleCard ? "mb-3" : "mb-4"}`}>{subText}</p>
 
                         <ProgressDots steps={cards} activeIndex={cardIndex} />
 
-                        <h3 className="mt-4 text-[18px] font-bold text-[#111827]">{activeCard.heading}</h3>
-                        <p className="mt-1 text-[13px] text-[#4B5563] leading-snug">{activeCard.body}</p>
+                        {isNewUser && (
+                            <>
+                                <h3 className="mt-4 text-[18px] font-bold text-[#111827]">{activeCard.heading}</h3>
+                                <p className="mt-1 text-[13px] text-[#4B5563] leading-snug">{activeCard.body}</p>
+                            </>
+                        )}
 
-                        <div className="mt-4">
+                        <div className={isSingleCard ? "mt-1" : "mt-4"}>
                             <img
                                 src={activeCard.image}
                                 alt={activeCard.title}
@@ -218,7 +217,7 @@ export default function OnboardingWizard({
                             )}
                             <Button
                                 onClick={handleNext}
-                                className="rounded-full bg-black hover:bg-black/85 text-white text-[14px] font-semibold px-6 py-5"
+                                className={`rounded-full bg-black hover:bg-black/85 text-white text-[14px] font-semibold py-5 ${isSingleCard ? "w-full" : "px-6"}`}
                             >
                                 {cardIndex === cards.length - 1 && !isNewUser ? "Got it" : "Next →"}
                             </Button>

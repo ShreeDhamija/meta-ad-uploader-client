@@ -18,6 +18,7 @@ export const ONBOARDING_CARDS = [
         heading: "Post ID Scaling",
         body: "Scale winning organic or paid posts by their Post ID across ad sets without losing social proof.",
         addedAt: "2026-05-06",
+        existingUsersOnly: false,
     },
     {
         id: "igScaling",
@@ -26,6 +27,7 @@ export const ONBOARDING_CARDS = [
         heading: "Instagram Scaling",
         body: "You can upload all your media once and choose to split the media into different ad sets with different ad naming, copy and every other field available.",
         addedAt: "2026-05-06",
+        existingUsersOnly: false,
     },
     {
         id: "splitAdData",
@@ -34,6 +36,7 @@ export const ONBOARDING_CARDS = [
         heading: "Split Ad Data Across Media Files",
         body: "Upload all your media once and split it into different ad sets with different ad naming, copy and every other field available.",
         addedAt: "2026-05-06",
+        existingUsersOnly: false,
     },
     {
         id: "aiGrouping",
@@ -42,6 +45,7 @@ export const ONBOARDING_CARDS = [
         heading: "AI Auto Grouping",
         body: "Group related creatives automatically. We detect variants of the same concept and pair them so your ads stay tidy.",
         addedAt: "2026-05-06",
+        existingUsersOnly: false,
     },
     {
         id: "jobQueueing",
@@ -49,7 +53,8 @@ export const ONBOARDING_CARDS = [
         image: Powerup1,
         heading: "Job Queueing",
         body: "Queue as many ad launches as you want without waiting for any single job to finish.",
-        addedAt: "2026-05-06",
+        addedAt: "2026-05-08",
+        existingUsersOnly: false,
     },
     {
         id: "analytics",
@@ -58,6 +63,7 @@ export const ONBOARDING_CARDS = [
         heading: "Introducing Analytics",
         body: "We took the playbook behind $3M/month in ad spend and put it in your hands. Review recommendations and apply them in one click.",
         addedAt: "2026-05-08",
+        existingUsersOnly: false,
     },
 ]
 

@@ -117,10 +117,11 @@ export default function Home() {
         loading,
         selectedAdAccountIds
     } = useGlobalSettings();
+    const isNewOnboardingUser = !hasSeenOnboarding
+    const newUserCards = ONBOARDING_CARDS.filter((c) => !c.existingUsersOnly)
     const unseenOnboardingCards = ONBOARDING_CARDS.filter(
         (c) => !effectiveSeenOnboardingIds.includes(c.id)
     )
-    const isNewOnboardingUser = !hasSeenOnboarding
     const {
         subscriptionData,
         isOnTrial,
@@ -486,7 +487,13 @@ export default function Home() {
 
 
     const handleWizardFinish = async ({ seenIds, fullyCompleted }) => {
-        const mergedSeen = Array.from(new Set([...(seenOnboardingCards || []), ...seenIds]))
+        // On new-user completion, mark every card as seen (including
+        // existingUsersOnly cards that weren't shown) so they don't surface
+        // later when this user becomes "existing".
+        const idsToPersist = fullyCompleted && !hasSeenOnboarding
+            ? ONBOARDING_CARDS.map((c) => c.id)
+            : seenIds
+        const mergedSeen = Array.from(new Set([...(seenOnboardingCards || []), ...idsToPersist]))
         const previousSeen = seenOnboardingCards
         const previousHasSeen = hasSeenOnboarding
         setSeenOnboardingCards(mergedSeen)
@@ -1468,7 +1475,7 @@ export default function Home() {
                 <OnboardingWizard
                     isNewUser={isNewOnboardingUser}
                     userName={userName}
-                    cards={isNewOnboardingUser ? ONBOARDING_CARDS : unseenOnboardingCards}
+                    cards={isNewOnboardingUser ? newUserCards : unseenOnboardingCards}
                     adAccounts={adAccounts}
                     onImport={handleOnboardingImport}
                     onGoToSettings={() => navigate("/settings")}
