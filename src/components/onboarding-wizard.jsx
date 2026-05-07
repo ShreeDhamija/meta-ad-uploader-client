@@ -214,7 +214,7 @@ export default function OnboardingWizard({
                             <img
                                 src={activeCard.image}
                                 alt={activeCard.title}
-                                className="w-full h-[290px] object-cover"
+                                className="w-full h-[290px] object-cover border-2 border-black rounded-[20px] shadow-xs"
                             />
                         </div>
 
@@ -241,11 +241,8 @@ export default function OnboardingWizard({
                     <div className="px-8 py-10 text-center animate-fadeSwap">
                         <div className="text-4xl mb-4">👋</div>
                         <h2 className="text-2xl font-semibold text-[#415363] mb-1">
-                            Welcome to Blip{userName ? `, ${userName}` : ""}!
-                        </h2>
-                        <p className="text-gray-500 mb-10 text-sm">
                             Jump straight into launching ads or set up your ad templates
-                        </p>
+                        </h2>
                         <div className="flex justify-center gap-6">
                             <button
                                 onClick={handleChooseHome}

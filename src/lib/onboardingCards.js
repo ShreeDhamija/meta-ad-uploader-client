@@ -1,5 +1,8 @@
-import Powerup1 from "@/assets/Poweurp1.webp"
-import AnalyticsPopup from "@/assets/AnalyticsPopup.webp"
+import PostIDImage from "@/assets/onboarding/PostID.webp"
+import InstagramImage from "@/assets/onboarding/Instagram.webp"
+import SplitAdDataImage from "@/assets/onboarding/SplitAdData.webp"
+import AIGroupingImage from "@/assets/onboarding/AIGrouping.webp"
+import JobQueueingImage from "@/assets/onboarding/JobQueueing.webp"
 
 // Cards added on/before this date are treated as already-seen for users who
 // completed legacy onboarding (hasSeenOnboarding=true). Only future cards
@@ -14,7 +17,7 @@ export const ONBOARDING_CARDS = [
     {
         id: "postId",
         title: "Post ID",
-        image: Powerup1,
+        image: PostIDImage,
         heading: "Post ID Scaling",
         body: "Scale winning ads by their Post ID across ad sets without losing social proof.",
         addedAt: "2026-05-06",
@@ -23,48 +26,48 @@ export const ONBOARDING_CARDS = [
     {
         id: "igScaling",
         title: "Instagram Scaling",
-        image: Powerup1,
+        image: InstagramImage,
         heading: "Instagram Scaling",
-        body: "You can upload all your media once and choose to split the media into different ad sets with different ad naming, copy and every other field available.",
+        body: "Promote Organic Instagram Posts and Reels easily.",
         addedAt: "2026-05-08",
         existingUsersOnly: false,
     },
     {
         id: "splitAdData",
         title: "Split Ad Data",
-        image: Powerup1,
+        image: SplitAdDataImage,
         heading: "Split Ad Data Across Media Files",
-        body: "Upload all your media once and split it into different ad sets with different ad naming, copy and every other field available.",
+        body: "Upload all your media once and split it into different ad sets with different ad naming, copy & other fields.",
         addedAt: "2026-05-08",
         existingUsersOnly: false,
     },
     {
         id: "aiGrouping",
         title: "AI Grouping",
-        image: Powerup1,
+        image: AIGroupingImage,
         heading: "AI Auto Grouping",
-        body: "Group related creatives automatically. We detect variants of the same concept and pair them so your ads stay tidy.",
+        body: "Automatically group statics of different aspect ratio that belong to the same ad",
         addedAt: "2026-05-08",
         existingUsersOnly: false,
     },
     {
         id: "jobQueueing",
         title: "Job Queueing",
-        image: Powerup1,
+        image: JobQueueingImage,
         heading: "Job Queueing",
         body: "Queue as many ad launches as you want without waiting for any single job to finish.",
         addedAt: "2026-05-08",
         existingUsersOnly: false,
     },
-    {
-        id: "analytics",
-        title: "Analytics",
-        image: AnalyticsPopup,
-        heading: "Introducing Analytics",
-        body: "We took the playbook behind $3M/month in ad spend and put it in your hands. Review recommendations and apply them in one click.",
-        addedAt: "2026-05-08",
-        existingUsersOnly: false,
-    },
+    // {
+    //     id: "analytics",
+    //     title: "Analytics",
+    //     image: AnalyticsPopup,
+    //     heading: "Introducing Analytics",
+    //     body: "We took the playbook behind $3M/month in ad spend and put it in your hands. Review recommendations and apply them in one click.",
+    //     addedAt: "2026-05-08",
+    //     existingUsersOnly: false,
+    // },
 ]
 
 export const ONBOARDING_CARD_IDS = ONBOARDING_CARDS.map((c) => c.id)
