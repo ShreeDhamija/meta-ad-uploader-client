@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { motion } from "framer-motion"
 import { Loader } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -18,11 +18,41 @@ import { ONBOARDING_CARDS } from "@/lib/onboardingCards"
 
 const CURSOR_KEY = "onboardingCursor"
 
+// Minimum padding (px) reserved on each side of the dot row.
+const PROGRESS_DOTS_MIN_PADDING = 8
+// Buffer (px) so labels don't visually butt against the popup edge.
+const PROGRESS_DOTS_LABEL_BUFFER = 8
+// Half of dot width — labels are centered at this offset from each slot's left.
+const PROGRESS_DOTS_DOT_OFFSET = 10
+
 function ProgressDots({ steps, activeIndex }) {
+    const labelRefs = useRef([])
+    const [overflowPadding, setOverflowPadding] = useState({ left: 0, right: 0 })
+    const lastIndex = steps ? steps.length - 1 : 0
+
+    useLayoutEffect(() => {
+        if (!steps || steps.length <= 1) return
+        const firstEl = labelRefs.current[0]
+        const lastEl = labelRefs.current[lastIndex]
+        if (!firstEl || !lastEl) return
+        // Each label is centered at PROGRESS_DOTS_DOT_OFFSET from its slot's
+        // left edge. Half of the label extends to the left of that point;
+        // ensure the wrapper has enough padding on each side that this
+        // overflow stays inside the popup.
+        const requiredLeft = Math.max(0, firstEl.offsetWidth / 2 - PROGRESS_DOTS_DOT_OFFSET + PROGRESS_DOTS_LABEL_BUFFER)
+        const requiredRight = Math.max(0, lastEl.offsetWidth / 2 - PROGRESS_DOTS_DOT_OFFSET + PROGRESS_DOTS_LABEL_BUFFER)
+        setOverflowPadding({
+            left: Math.max(PROGRESS_DOTS_MIN_PADDING, requiredLeft),
+            right: Math.max(PROGRESS_DOTS_MIN_PADDING, requiredRight),
+        })
+    }, [steps, activeIndex, lastIndex])
+
     if (!steps || steps.length <= 1) return null
-    const lastIndex = steps.length - 1
     return (
-        <div className="w-full px-8 pl-2">
+        <div
+            className="w-full"
+            style={{ paddingLeft: overflowPadding.left, paddingRight: overflowPadding.right }}
+        >
             <div className="flex items-center w-full">
                 {steps.map((_, i) => {
                     const isDone = i < activeIndex
@@ -67,9 +97,10 @@ function ProgressDots({ steps, activeIndex }) {
                             className={`relative ${isLast ? "w-5 flex-none" : "flex-1"}`}
                         >
                             <div
+                                ref={(el) => { labelRefs.current[i] = el }}
                                 className={`absolute top-0 text-[11px] whitespace-nowrap ${i === activeIndex ? "font-semibold text-black" : "text-[#9CA3AF]"
                                     }`}
-                                style={{ left: "10px", transform: "translateX(-50%)" }}
+                                style={{ left: `${PROGRESS_DOTS_DOT_OFFSET}px`, transform: "translateX(-50%)" }}
                             >
                                 {step.title}
                             </div>
@@ -190,7 +221,7 @@ export default function OnboardingWizard({
         >
             <div
                 className="relative bg-[#FAF9F7] rounded-[24px] shadow-2xl overflow-hidden"
-                style={{ width: 620, maxHeight: 640 }}
+                style={{ minWidth: 620, maxHeight: 640 }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {phase === "cards" && (
