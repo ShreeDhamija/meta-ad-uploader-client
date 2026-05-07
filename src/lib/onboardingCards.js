@@ -26,7 +26,7 @@ export const ONBOARDING_CARDS = [
         image: Powerup1,
         heading: "Instagram Scaling",
         body: "You can upload all your media once and choose to split the media into different ad sets with different ad naming, copy and every other field available.",
-        addedAt: "2026-05-06",
+        addedAt: "2026-05-08",
         existingUsersOnly: false,
     },
     {
@@ -35,7 +35,7 @@ export const ONBOARDING_CARDS = [
         image: Powerup1,
         heading: "Split Ad Data Across Media Files",
         body: "Upload all your media once and split it into different ad sets with different ad naming, copy and every other field available.",
-        addedAt: "2026-05-06",
+        addedAt: "2026-05-08",
         existingUsersOnly: false,
     },
     {
@@ -44,7 +44,7 @@ export const ONBOARDING_CARDS = [
         image: Powerup1,
         heading: "AI Auto Grouping",
         body: "Group related creatives automatically. We detect variants of the same concept and pair them so your ads stay tidy.",
-        addedAt: "2026-05-06",
+        addedAt: "2026-05-08",
         existingUsersOnly: false,
     },
     {
