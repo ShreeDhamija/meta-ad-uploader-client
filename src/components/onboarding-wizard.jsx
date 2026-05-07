@@ -10,7 +10,8 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import Home from "@/assets/Home.webp"
-import Rocket from "@/assets/rocket.webp"
+import SettingsImage from "@/assets/settings.png"
+import Rocket2 from "@/assets/rocket2.webp"
 import HelloIcon from "@/assets/onboarding/hello.webp"
 import ZapIcon from "@/assets/Zap.webp"
 import { ONBOARDING_CARDS } from "@/lib/onboardingCards"
@@ -239,8 +240,8 @@ export default function OnboardingWizard({
 
                 {phase === "choice" && (
                     <div className="px-8 py-10 text-center animate-fadeSwap">
-                        <div className="text-4xl mb-4">👋</div>
-                        <h2 className="text-2xl font-semibold text-[#415363] mb-1">
+                        <img src={Rocket2} alt="" className="w-12 h-12 object-contain mx-auto mb-4" />
+                        <h2 className="text-xl font-semibold text-[#415363] mb-1">
                             Jump straight into launching ads or set up your ad templates
                         </h2>
                         <div className="flex justify-center gap-6">
@@ -254,7 +255,7 @@ export default function OnboardingWizard({
                                     className="w-[100px] h-[100px] object-contain transition-transform duration-200 group-hover:scale-105 mb-3"
                                 />
                                 <div className="bg-gradient-to-b from-[#FFC979] to-[#FFA500] text-white text-sm font-medium rounded-full px-4 py-2.5 w-[180px] flex items-center justify-center">
-                                    Go to Home
+                                    Launch Ads
                                 </div>
                             </button>
                             <button
@@ -262,7 +263,7 @@ export default function OnboardingWizard({
                                 className="group flex flex-col items-center space-y-3 focus:outline-none"
                             >
                                 <img
-                                    src={Rocket}
+                                    src={SettingsImage}
                                     alt="Settings"
                                     className="w-[100px] h-[100px] object-contain transition-transform duration-200 group-hover:scale-105 mb-3"
                                 />

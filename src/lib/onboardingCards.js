@@ -37,7 +37,7 @@ export const ONBOARDING_CARDS = [
         title: "Split Ad Data",
         image: SplitAdDataImage,
         heading: "Split Ad Data Across Media Files",
-        body: "Upload all your media once and split it into different ad sets with different ad naming, copy & other fields.",
+        body: "Upload all your media once & split it into different ad sets with different naming, copy & other fields.",
         addedAt: "2026-05-08",
         existingUsersOnly: false,
     },
