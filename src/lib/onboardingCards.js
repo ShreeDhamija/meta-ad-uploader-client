@@ -57,7 +57,7 @@ export const ONBOARDING_CARDS = [
         image: AnalyticsPopup,
         heading: "Introducing Analytics",
         body: "We took the playbook behind $3M/month in ad spend and put it in your hands. Review recommendations and apply them in one click.",
-        addedAt: "2026-05-06",
+        addedAt: "2026-05-08",
     },
 ]
 
