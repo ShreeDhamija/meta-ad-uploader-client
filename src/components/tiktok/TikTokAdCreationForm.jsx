@@ -38,15 +38,12 @@ const CTA_OPTIONS = [
 ]
 
 export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
-  // Constants from Meta Form for exact visual match
-  const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow";
-  const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`;
-  const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0";
+  const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
+  const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
+  const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
 
-  // Auth-aware fetch helper — auto-injects x-tiktok-user-id + x-tiktok-token headers
   const { tiktokFetch, tiktokUser } = useTikTokAuth()
 
-  // Log component mount state for debugging
   useEffect(() => {
     console.group('🎯 [TikTokAdCreationForm] Mounted')
     console.log('  advertiserId prop  :', advertiserId || 'NONE')
@@ -59,7 +56,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
     console.groupEnd()
   }, [])
 
-  // State
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
   const [campaigns, setCampaigns] = useState([])
   const [adGroups, setAdGroups] = useState([])
@@ -79,23 +75,21 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const [identities, setIdentities] = useState([])
   const [selectedIdentity, setSelectedIdentity] = useState('')
   const [loadingIdentities, setLoadingIdentities] = useState(false)
-  
+
   const fileRef = useRef()
 
   const toggleCta = (value) => {
-    setCta(prev => 
-      prev.includes(value) 
+    setCta(prev =>
+      prev.includes(value)
         ? (prev.length > 1 ? prev.filter(v => v !== value) : prev)
         : [...prev, value]
     )
   }
 
-  // Sync advertiser prop
   useEffect(() => {
     if (advertiserId) setSelectedAdvertiser(advertiserId)
   }, [advertiserId])
 
-  // Fetch campaigns when advertiser changes
   useEffect(() => {
     if (!selectedAdvertiser) {
       console.log('⚠️ [TikTok Form] No advertiser selected — skipping campaign fetch')
@@ -135,7 +129,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       })
       .finally(() => setLoadingCampaigns(false))
 
-    // Fetch identities
     setLoadingIdentities(true)
     const identityUrl = `${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`
     tiktokFetch(identityUrl)
@@ -144,15 +137,12 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         const list = d.identities || []
         console.log(`✅ [TikTok Form] Identities loaded: ${list.length}`, list)
         setIdentities(list)
-        
-        // Auto-selection logic
         if (list.length > 0) {
-          const best = list.find(i => i.identity_type === 'TT_USER') || 
-                       list.find(i => i.identity_type === 'BC_AUTH_TT') || 
+          const best = list.find(i => i.identity_type === 'TT_USER') ||
+                       list.find(i => i.identity_type === 'BC_AUTH_TT') ||
                        list[0]
           setSelectedIdentity(best.identity_id)
         } else {
-          // If no linked identities, default to Custom Identity
           setSelectedIdentity('CUSTOMIZED_USER')
         }
       })
@@ -160,7 +150,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       .finally(() => setLoadingIdentities(false))
   }, [selectedAdvertiser])
 
-  // Fetch ad groups when campaign changes
   useEffect(() => {
     if (!selectedCampaign || !selectedAdvertiser) {
       console.log('⚠️ [TikTok Form] No campaign or advertiser — skipping ad group fetch')
@@ -229,7 +218,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
     setIsUploading(true)
 
     try {
-      // Step 1: Upload video
       toast.info('Uploading video...')
       const formData = new FormData()
       formData.append('videoFile', videoFile)
@@ -247,7 +235,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         body: formData,
       })
 
-      // Read raw text FIRST so a non-JSON response never silently swallows the error
       const uploadRawText = await uploadRes.text()
       console.group('📬 [TikTok Form] upload-video response')
       console.log('  HTTP Status        :', uploadRes.status, uploadRes.statusText)
@@ -271,7 +258,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       setIsUploading(false)
       toast.success('Video uploaded!')
 
-      // Step 2: Create ads (One for each CTA)
       toast.info(`Creating ${cta.length} ad(s)...`)
       const creatives = cta.map(action => ({
         video_id: uploadData.videoId,
@@ -306,7 +292,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         throw new Error(createData.error || 'Ad creation failed')
       }
       toast.success(`🎉 ${cta.length} TikTok ad(s) created successfully!`)
-      // Reset form
       setAdName(''); setAdText(''); setLandingUrl(''); setCta(['SHOP_NOW'])
       setVideoFile(null); setVideoPreview(null); setUploadProgress(0)
     } catch (err) {
@@ -320,6 +305,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+
       {/* Identity Section */}
       <Card className="border-gray-200 shadow-sm rounded-2xl overflow-hidden">
         <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
@@ -329,12 +315,14 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
+
+          {/* Advertiser Account */}
           <div className="space-y-2">
             <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
               Advertiser Account
             </Label>
-            <Select 
-              value={selectedAdvertiser} 
+            <Select
+              value={selectedAdvertiser}
               onValueChange={setSelectedAdvertiser}
               disabled={!advertisers || advertisers.length === 0}
             >
@@ -343,8 +331,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
               </SelectTrigger>
               <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
                 {advertisers?.map(adv => (
-                  <SelectItem 
-                    key={adv.advertiser_id || adv.id} 
+                  <SelectItem
+                    key={adv.advertiser_id || adv.id}
                     value={adv.advertiser_id || adv.id}
                     className="cursor-pointer hover:bg-gray-50 rounded-lg m-1"
                   >
@@ -358,42 +346,42 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
             </Select>
           </div>
 
+          {/* Post As (Identity) */}
           <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Post As (Identity)
-              </Label>
-              <div className="flex items-center gap-2">
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-6 w-6 text-gray-400 hover:text-tiktok-pink"
-                  onClick={() => {
-                    if (!selectedAdvertiser) return toast.error("Select an advertiser first");
-                    toast.promise(
-                      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`)
-                        .then(r => r.json())
-                        .then(d => {
-                          if (d.error) throw new Error(d.error);
-                          const count = d.identities?.length || 0;
-                          if (count === 0) return "TikTok API returned 0 identities for this advertiser.";
-                          return `Found ${count} identities! Check the dropdown.`;
-                        }),
-                      {
-                        loading: 'Checking TikTok API...',
-                        success: (msg) => msg,
-                        error: (err) => `Debug Error: ${err.message}`
-                      }
-                    );
-                  }}
-                >
-                  <RefreshCcw className={cn("w-3 h-3", loadingIdentities && "animate-spin")} />
-                </Button>
-                {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-              </div>
+            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Post As (Identity)
+            </Label>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-gray-400 hover:text-tiktok-pink"
+                onClick={() => {
+                  if (!selectedAdvertiser) return toast.error("Select an advertiser first")
+                  toast.promise(
+                    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`)
+                      .then(r => r.json())
+                      .then(d => {
+                        if (d.error) throw new Error(d.error)
+                        const count = d.identities?.length || 0
+                        if (count === 0) return "TikTok API returned 0 identities for this advertiser."
+                        return `Found ${count} identities! Check the dropdown.`
+                      }),
+                    {
+                      loading: 'Checking TikTok API...',
+                      success: (msg) => msg,
+                      error: (err) => `Debug Error: ${err.message}`
+                    }
+                  )
+                }}
+              >
+                <RefreshCcw className={cn("w-3 h-3", loadingIdentities && "animate-spin")} />
+              </Button>
+              {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
             </div>
-            <Select 
-              value={selectedIdentity} 
+            <Select
+              value={selectedIdentity}
               onValueChange={setSelectedIdentity}
               disabled={!selectedAdvertiser || loadingIdentities}
             >
@@ -407,10 +395,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                     <span className="text-[10px] text-gray-400 uppercase tracking-tighter">Uses Ad Name as Profile Name</span>
                   </div>
                 </SelectItem>
-                
                 {identities.map(i => (
-                  <SelectItem 
-                    key={i.identity_id} 
+                  <SelectItem
+                    key={i.identity_id}
                     value={i.identity_id}
                     className="cursor-pointer hover:bg-gray-50 rounded-lg m-1"
                   >
@@ -428,6 +415,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
               </p>
             )}
           </div>
+
         </CardContent>
       </Card>
 
@@ -441,6 +429,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         </CardHeader>
         <CardContent className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* Campaign */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -448,8 +438,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 </Label>
                 {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
               </div>
-              <Select 
-                value={selectedCampaign} 
+              <Select
+                value={selectedCampaign}
                 onValueChange={setSelectedCampaign}
                 disabled={!selectedAdvertiser || loadingCampaigns}
               >
@@ -466,6 +456,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
               </Select>
             </div>
 
+            {/* Ad Group */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -473,8 +464,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 </Label>
                 {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
               </div>
-              <Select 
-                value={selectedAdGroup} 
+              <Select
+                value={selectedAdGroup}
                 onValueChange={setSelectedAdGroup}
                 disabled={!selectedCampaign || loadingAdGroups}
               >
@@ -490,6 +481,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 </SelectContent>
               </Select>
             </div>
+
           </div>
         </CardContent>
       </Card>
@@ -527,6 +519,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
+
           {/* Video Upload */}
           <div className="space-y-3">
             <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -546,7 +539,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 className="hidden"
                 onChange={handleVideoSelect}
               />
-              
               <div className="flex flex-col items-center gap-3">
                 {videoPreview ? (
                   <div className="relative group">
@@ -567,7 +559,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                   </>
                 )}
               </div>
-
               {isUploading && (
                 <div className="mt-4 max-w-xs mx-auto">
                   <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
@@ -596,14 +587,12 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
               minRows={3}
               maxRows={10}
               className={formTextareaChrome}
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#e5e7eb transparent'
-              }}
+              style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
             />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
             {/* CTA Multi-select */}
             <div className="space-y-3">
               <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
@@ -629,7 +618,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
               </div>
             </div>
 
-            {/* URL */}
+            {/* Landing URL */}
             <div className="space-y-2">
               <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
                 <LinkIcon className="w-3 h-3" />
@@ -643,6 +632,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 className={formInputChrome}
               />
             </div>
+
           </div>
         </CardContent>
       </Card>
@@ -654,8 +644,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
           disabled={isSubmitting}
           className={cn(
             "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg",
-            isSubmitting 
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+            isSubmitting
+              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
               : "bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99]"
           )}
         >
@@ -672,6 +662,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
           Your ad will be live after TikTok's review process
         </p>
       </div>
+
     </form>
   )
 }
