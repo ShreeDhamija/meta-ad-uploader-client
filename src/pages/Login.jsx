@@ -345,7 +345,7 @@ export default function Login() {
 
                             <Button
                                 onClick={handleLoginFacebook}
-                                className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[44px]"
+                                className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 h-[44px]"
                             >
                                 <img
                                     src="https://api.withblip.com/facebooklogo.png"
@@ -474,10 +474,13 @@ export default function Login() {
                                             >
                                                 <div className="font-bold text-zinc-900">This one's important!</div>
                                                 <p className="text-sm text-zinc-700 mt-2">
-                                                    Facebook will prompt you to grant permissions to Blip, allowing safe access to your data.
+                                                    1. Facebook will ask you to grant Blip a few permissions so it can access your data safely.
                                                 </p>
                                                 <p className="text-sm text-zinc-700 mt-3">
-                                                    Be sure to approve all pages and business managers you want Blip to use, or they won't appear in the app.
+                                                    2. Make sure to approve all the pages and business managers you'd like to use in Blip — otherwise they won't show up in the app!
+                                                </p>
+                                                <p className="text-sm text-zinc-700 mt-3">
+                                                    3. You can always add or remove pages and ad accounts later as well.
                                                 </p>
                                                 {initError && (
                                                     <p className="text-xs text-red-500 mt-2">{initError}</p>
@@ -492,7 +495,7 @@ export default function Login() {
                                         <Button
                                             onClick={handleSignupFacebookLogin}
                                             disabled={isInitializing}
-                                            className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-xl shadow-md flex items-center justify-center gap-2 h-[44px] disabled:opacity-60"
+                                            className="w-full bg-[#1877F2] hover:bg-[#0866FF] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 h-[44px] disabled:opacity-60"
                                         >
                                             <img
                                                 src="https://api.withblip.com/facebooklogo.png"
