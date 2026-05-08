@@ -49,7 +49,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
 
-  const { tiktokFetch, tiktokUser } = useTikTokAuth()
+  const { tiktokFetch, tiktokUser, isLoading: authLoading, refreshTikTokUser } = useTikTokAuth()
 
   useEffect(() => {
     console.group('🎯 [TikTokAdCreationForm] Mounted')
