@@ -102,12 +102,12 @@ export default function TikTokAds() {
   if (!isTikTokLoggedIn) return null
 
   return (
-    <div className="min-h-screen px-4 md:px-12 lg:px-24">
+    <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
       <Toaster richColors position="bottom-left" closeButton />
       
       <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
 
-      <main className="max-w-[1720px] mx-auto pt-4 pb-20">
+      <main className="pt-4 pb-20">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
           <div>
@@ -144,9 +144,9 @@ export default function TikTokAds() {
         </div>
 
         {/* Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="flex flex-col lg:flex-row gap-6 min-w-0">
           {/* Left Column: Form or List */}
-          <div className="lg:col-span-8">
+          <div className="flex-1 lg:flex-[55] min-w-0 space-y-6">
             {activeTab === 'create' ? (
               <TikTokAdCreationForm advertiserId={selectedAdvertiser} advertisers={tiktokAdvertisers} />
             ) : (
@@ -206,7 +206,7 @@ export default function TikTokAds() {
           </div>
 
           {/* Right Column: Info/Meta-style Sidebar */}
-          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-4">
+          <div className="flex-1 lg:flex-[45] min-w-0 space-y-6">
             <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
               <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Quick Tips</h3>
               <div className="space-y-4">

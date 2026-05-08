@@ -11,7 +11,6 @@ import {
   FileText,
   Link as LinkIcon,
   Loader,
-  PlayCircle,
   RefreshCcw,
   Upload,
   Users,
@@ -20,6 +19,14 @@ import {
 import { useEffect, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
+
+import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
+import CogIcon from '@/assets/icons/cog.svg?react'
+import CTAIcon from '@/assets/icons/cta.svg?react'
+import CampaignIcon from '@/assets/icons/folder.svg?react'
+import AdSetIcon from '@/assets/icons/grid.svg?react'
+import PlusIcon from '@/assets/icons/plus.svg?react'
+import TemplateIcon from '@/assets/icons/template.svg?react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
@@ -306,21 +313,37 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
 
-      {/* Identity Section */}
-      <Card className="border-gray-200 shadow-sm rounded-2xl overflow-hidden">
-        <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Users className="w-4 h-4 text-gray-500" />
-            Identity
+      {/* Identity Section - Now matching Meta AdAccountSettings style */}
+      <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
+        <CardHeader className="py-4">
+          <CardTitle className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-base font-bold">
+              <CogIcon className="w-5 h-5" />
+              Ad Account Configuration
+            </div>
           </CardTitle>
+          <p className="text-xs text-gray-500 mt-1 font-medium">Select your advertiser account and identity</p>
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
+        <CardContent className="p-6 space-y-6">
 
           {/* Advertiser Account */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Advertiser Account
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <AdAccountIcon className="w-4 h-4" />
+                Advertiser Account
+              </Label>
+              <RefreshCcw 
+                className={cn("h-4 w-4 text-gray-500 cursor-pointer hover:text-gray-700 transition-colors", authLoading && "animate-spin")} 
+                onClick={() => {
+                  toast.promise(refreshTikTokUser(), {
+                    loading: 'Refreshing accounts...',
+                    success: 'Accounts refreshed!',
+                    error: 'Refresh failed'
+                  })
+                }}
+              />
+            </div>
             <Select
               value={selectedAdvertiser}
               onValueChange={setSelectedAdvertiser}
@@ -348,38 +371,10 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
 
           {/* Post As (Identity) */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Users className="w-4 h-4" />
               Post As (Identity)
             </Label>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-gray-400 hover:text-tiktok-pink"
-                onClick={() => {
-                  if (!selectedAdvertiser) return toast.error("Select an advertiser first")
-                  toast.promise(
-                    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`)
-                      .then(r => r.json())
-                      .then(d => {
-                        if (d.error) throw new Error(d.error)
-                        const count = d.identities?.length || 0
-                        if (count === 0) return "TikTok API returned 0 identities for this advertiser."
-                        return `Found ${count} identities! Check the dropdown.`
-                      }),
-                    {
-                      loading: 'Checking TikTok API...',
-                      success: (msg) => msg,
-                      error: (err) => `Debug Error: ${err.message}`
-                    }
-                  )
-                }}
-              >
-                <RefreshCcw className={cn("w-3 h-3", loadingIdentities && "animate-spin")} />
-              </Button>
-              {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-            </div>
             <Select
               value={selectedIdentity}
               onValueChange={setSelectedIdentity}
@@ -410,8 +405,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
               </SelectContent>
             </Select>
             {identities.length === 0 && !loadingIdentities && selectedAdvertiser && (
-              <p className="text-[10px] text-emerald-600 mt-1">
-                💡 No linked accounts found. "Custom Identity" will be used.
+              <p className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1">
+                <PlusIcon className="w-3 h-3" />
+                No linked accounts found. "Custom Identity" will be used.
               </p>
             )}
           </div>
@@ -420,10 +416,10 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       </Card>
 
       {/* Placement Section */}
-      <Card className="border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+      <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
         <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <PlayCircle className="w-4 h-4 text-gray-500" />
+            <CampaignIcon className="w-4 h-4 text-gray-500" />
             Placement
           </CardTitle>
         </CardHeader>
@@ -433,7 +429,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
             {/* Campaign */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                  <CampaignIcon className="w-3.5 h-3.5" />
                   Campaign
                 </Label>
                 {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
@@ -459,7 +456,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
             {/* Ad Group */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                  <AdSetIcon className="w-3.5 h-3.5" />
                   Ad Group
                 </Label>
                 {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
@@ -486,32 +484,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         </CardContent>
       </Card>
 
-      {/* Ad Details Section */}
-      <Card className="border-gray-200 shadow-sm rounded-2xl overflow-hidden">
-        <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <FileText className="w-4 h-4 text-gray-500" />
-            Ad Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Ad Name
-            </Label>
-            <Input
-              type="text"
-              placeholder="Enter your ad name"
-              value={adName}
-              onChange={e => setAdName(e.target.value)}
-              className={formInputChrome}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Creative Section */}
-      <Card className="border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+      <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
         <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Video className="w-4 h-4 text-gray-500" />
@@ -528,7 +502,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
             <div
               onClick={() => fileRef.current?.click()}
               className={cn(
-                "group cursor-pointer border-2 border-dashed rounded-2xl p-8 text-center transition-all",
+                "group cursor-pointer border-2 border-dashed rounded-3xl p-8 text-center transition-all",
                 videoFile ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
               )}
             >
@@ -542,8 +516,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
               <div className="flex flex-col items-center gap-3">
                 {videoPreview ? (
                   <div className="relative group">
-                    <video src={videoPreview} className="mx-auto max-h-48 rounded-xl shadow-md border border-white" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                    <video src={videoPreview} className="mx-auto max-h-48 rounded-2xl shadow-md border border-white" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
                       <RefreshCcw className="w-8 h-8 text-white" />
                     </div>
                   </div>
@@ -575,20 +549,37 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
             </div>
           </div>
 
-          {/* Ad Text */}
-          <div className="space-y-2">
-            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Ad Copy / Caption
-            </Label>
-            <TextareaAutosize
-              value={adText}
-              onChange={e => setAdText(e.target.value)}
-              placeholder="What's your ad about? 🔥"
-              minRows={3}
-              maxRows={10}
-              className={formTextareaChrome}
-              style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-            />
+          {/* Ad Details: Name + Text */}
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Ad Name
+              </Label>
+              <Input
+                type="text"
+                placeholder="Enter your ad name"
+                value={adName}
+                onChange={e => setAdName(e.target.value)}
+                className={formInputChrome}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <TemplateIcon className="w-4 h-4" />
+                Ad Copy / Caption
+              </Label>
+              <TextareaAutosize
+                value={adText}
+                onChange={e => setAdText(e.target.value)}
+                placeholder="What's your ad about? 🔥"
+                minRows={3}
+                maxRows={10}
+                className={formTextareaChrome}
+                style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -596,25 +587,29 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
             {/* CTA Multi-select */}
             <div className="space-y-3">
               <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <CTAIcon className="w-4 h-4" />
                 Call to Action
                 <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase">Multi-select</span>
               </Label>
               <div className="flex flex-wrap gap-2">
-                {CTA_OPTIONS.map(o => (
-                  <button
-                    key={o.value}
-                    type="button"
-                    onClick={() => toggleCta(o.value)}
-                    className={cn(
-                      "px-4 py-2.5 rounded-xl text-xs font-bold transition-all border shadow-sm",
-                      cta.includes(o.value)
-                        ? "bg-black text-white border-black scale-[1.02]"
-                        : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:scale-95"
-                    )}
-                  >
-                    {o.label}
-                  </button>
-                ))}
+                {CTA_OPTIONS.map(opt => {
+                  const isSelected = cta.includes(opt.value)
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => toggleCta(opt.value)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border",
+                        isSelected
+                          ? "bg-black text-white border-black shadow-sm"
+                          : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
