@@ -24,10 +24,11 @@ const ROLE_OPTIONS = [
 
 const SOURCE_OPTIONS = [
     "Google",
-    "ChatGPT",
-    "Twitter/ X",
+    "ChatGPT / LLM",
+    "Twitter / X",
     "Reddit",
-    "Referred",
+    "Referral",
+    "Joining a Team",
     "Other",
 ]
 
