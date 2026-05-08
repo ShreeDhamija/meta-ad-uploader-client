@@ -28,8 +28,8 @@ export const ONBOARDING_CARDS = [
         title: "Instagram Scaling",
         image: InstagramImage,
         heading: "Instagram Scaling",
-        body: "Promote Organic Instagram Posts and Reels easily.",
-        addedAt: "2026-05-08",
+        body: "Promote Organic Instagram Posts, Reels and tagged collab posts easily.",
+        addedAt: "2026-05-06",
         existingUsersOnly: false,
     },
     {
@@ -38,7 +38,7 @@ export const ONBOARDING_CARDS = [
         image: SplitAdDataImage,
         heading: "Split Ad Data Across Media Files",
         body: "Upload all your media once & split it into different ad sets with different naming, copy & other fields.",
-        addedAt: "2026-05-08",
+        addedAt: "2026-05-06",
         existingUsersOnly: false,
     },
     {
@@ -47,7 +47,7 @@ export const ONBOARDING_CARDS = [
         image: AIGroupingImage,
         heading: "AI Auto Grouping",
         body: "Automatically group statics of different aspect ratio that belong to the same ad",
-        addedAt: "2026-05-08",
+        addedAt: "2026-05-06",
         existingUsersOnly: false,
     },
     {
@@ -56,7 +56,7 @@ export const ONBOARDING_CARDS = [
         image: JobQueueingImage,
         heading: "Job Queueing",
         body: "Queue as many ad launches as you want without waiting for any single job to finish.",
-        addedAt: "2026-05-08",
+        addedAt: "2026-05-06",
         existingUsersOnly: false,
     },
     // {

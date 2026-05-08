@@ -230,14 +230,14 @@ export default function OnboardingWizard({
                             <img src={headerIcon} alt="" className="w-7 h-7 object-contain" />
                             <h2 className="text-[22px] font-bold text-[#111827]">{headerText}</h2>
                         </div>
-                        <p className={`text-[13px] text-[#4B5563] leading-snug max-w-[420px] ${isSingleCard ? "mb-3" : "mb-4"}`}>{subText}</p>
+                        <p className={`text-[13px] text-[#4B5563] leading-snug max-w-[440px] ${isSingleCard ? "mb-3" : "mb-4"}`}>{subText}</p>
 
                         <ProgressDots steps={cards} activeIndex={cardIndex} />
 
                         {!isSingleCard && (
                             <>
                                 <h3 className="mt-4 text-[18px] font-bold text-[#111827]">{activeCard.heading}</h3>
-                                <p className="mt-1 text-[13px] text-[#4B5563] leading-snug max-w-[420px]">{activeCard.body}</p>
+                                <p className="mt-1 text-[13px] text-[#4B5563] leading-snug max-w-[440px]">{activeCard.body}</p>
                             </>
                         )}
 
