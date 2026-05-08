@@ -266,8 +266,8 @@ export default function Login() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-zinc-800 mb-1">Step 2.</label>
+                            <div className="space-y-3">
+                                <label className="text-sm font-semibold text-zinc-800 mb-2">Step 2.</label>
                                 <TooltipProvider delayDuration={100}>
                                     <Tooltip open={isValidEmail ? false : undefined}>
                                         <TooltipTrigger asChild>
