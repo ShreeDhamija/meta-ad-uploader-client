@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
 import { useIntercom } from '@/lib/useIntercom'
 import { cn } from '@/lib/utils'
-import { CheckCircle2, List, Loader2, PlusCircle } from 'lucide-react'
+import { CheckCircle2, Loader2, PlusCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
@@ -108,41 +108,6 @@ export default function TikTokAds() {
       <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
 
       <main className="pt-4 pb-20">
-        {/* Page Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-              TikTok Ads Manager
-              <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider">Beta</span>
-            </h1>
-            <p className="text-gray-500 mt-1 font-medium">
-              Create and manage your TikTok campaigns with ease.
-            </p>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm">
-            {[
-              { id: 'create', label: 'Create Ad', icon: <PlusCircle className="w-4 h-4" /> },
-              { id: 'ads', label: 'Existing Ads', icon: <List className="w-4 h-4" /> },
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
-                  activeTab === tab.id 
-                    ? "bg-black text-white shadow-md" 
-                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                )}
-              >
-                {tab.icon}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Content Area */}
         <div className="flex flex-col lg:flex-row gap-6 min-w-0">
           {/* Left Column: Form or List */}

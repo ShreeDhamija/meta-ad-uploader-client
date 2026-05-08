@@ -16,9 +16,14 @@ import {
   Users,
   Video
 } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
+import { readCache, writeCache } from "@/lib/dataCache"
+
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Check, ChevronsUpDown } from "lucide-react"
 
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
 import CogIcon from '@/assets/icons/cog.svg?react'
@@ -104,29 +109,36 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       setSelectedCampaign('')
       return
     }
+
+    // Check Cache First
+    const cacheKey = `tiktok_campaigns_${selectedAdvertiser}`
+    const cached = readCache(cacheKey)
+    if (cached) {
+      console.log('📦 [TikTok Form] Using cached campaigns', cached.length)
+      setCampaigns(cached)
+      setSelectedCampaign('')
+      setAdGroups([])
+      return
+    }
+
     setLoadingCampaigns(true)
     const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
     const url = `${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`
     console.group(`📡 [TikTok Form] Fetching campaigns for advertiser: ${selectedAdvertiser}`)
     console.log('  URL                :', url)
-    console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
-    console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
-    console.log('  x-tiktok-adv-ids   :', localStorage.getItem('tiktok_advertiser_ids') || 'MISSING')
     console.groupEnd()
     tiktokFetch(url)
       .then(async r => {
         const body = await r.text()
-        console.group(`📬 [TikTok Form] fetch-campaigns response`)
-        console.log('  HTTP Status        :', r.status, r.statusText)
-        console.log('  Body               :', body)
-        console.groupEnd()
         let d
         try { d = JSON.parse(body) } catch { d = {} }
         return d
       })
       .then(d => {
-        console.log(`✅ [TikTok Form] Campaigns loaded: ${d.campaigns?.length ?? 0} item(s)`, d.campaigns)
-        setCampaigns(d.campaigns || [])
+        const list = d.campaigns || []
+        console.log(`✅ [TikTok Form] Campaigns loaded: ${list.length} item(s)`)
+        setCampaigns(list)
+        writeCache(cacheKey, list) // Write to Cache
         setSelectedCampaign('')
         setAdGroups([])
       })
@@ -158,34 +170,33 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   }, [selectedAdvertiser])
 
   useEffect(() => {
-    if (!selectedCampaign || !selectedAdvertiser) {
-      console.log('⚠️ [TikTok Form] No campaign or advertiser — skipping ad group fetch')
+    if (!selectedCampaign) {
       setAdGroups([])
       setSelectedAdGroup('')
       return
     }
+
+    // Check Cache
+    const cacheKey = `tiktok_adgroups_${selectedCampaign}`
+    const cached = readCache(cacheKey)
+    if (cached) {
+      console.log('📦 [TikTok Form] Using cached adgroups', cached.length)
+      setAdGroups(cached)
+      setSelectedAdGroup('')
+      return
+    }
+
     setLoadingAdGroups(true)
-    const params = new URLSearchParams({ advertiserId: selectedAdvertiser, campaignId: selectedCampaign, page: '1', pageSize: '100' })
-    const url = `${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`
-    console.group(`📡 [TikTok Form] Fetching ad groups for campaign: ${selectedCampaign}`)
-    console.log('  URL                :', url)
-    console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
-    console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
+    const url = `${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${selectedCampaign}`
+    console.group(`📡 [TikTok Form] Fetching adgroups for campaign: ${selectedCampaign}`)
     console.groupEnd()
     tiktokFetch(url)
-      .then(async r => {
-        const body = await r.text()
-        console.group(`📬 [TikTok Form] fetch-adgroups response`)
-        console.log('  HTTP Status        :', r.status, r.statusText)
-        console.log('  Body               :', body)
-        console.groupEnd()
-        let d
-        try { d = JSON.parse(body) } catch { d = {} }
-        return d
-      })
+      .then(r => r.json())
       .then(d => {
-        console.log(`✅ [TikTok Form] Ad groups loaded: ${d.adGroups?.length ?? d.adgroups?.length ?? 0} item(s)`, d.adGroups || d.adgroups)
-        setAdGroups(d.adGroups || d.adgroups || [])
+        const list = d.adGroups || d.adgroups || []
+        console.log(`✅ [TikTok Form] Ad Groups loaded: ${list.length}`)
+        setAdGroups(list)
+        writeCache(cacheKey, list) // Write to Cache
         setSelectedAdGroup('')
       })
       .catch(err => {
@@ -317,7 +328,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
         <CardHeader className="py-4">
           <CardTitle className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-base font-bold">
+            <div className="flex items-center gap-2 text-base font-semibold tracking-tight">
               <CogIcon className="w-5 h-5" />
               Ad Account Configuration
             </div>
@@ -418,7 +429,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       {/* Placement Section */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
         <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
             <CampaignIcon className="w-4 h-4 text-gray-500" />
             Placement
           </CardTitle>
@@ -487,7 +498,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
       {/* Creative Section */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
         <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+          <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
             <Video className="w-4 h-4 text-gray-500" />
             Creative
           </CardTitle>
@@ -584,33 +595,58 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-            {/* CTA Multi-select */}
+            {/* CTA Multi-select Dropdown */}
             <div className="space-y-3">
               <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
                 <CTAIcon className="w-4 h-4" />
                 Call to Action
-                <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase">Multi-select</span>
+                <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-tight">Multi-select</span>
               </Label>
-              <div className="flex flex-wrap gap-2">
-                {CTA_OPTIONS.map(opt => {
-                  const isSelected = cta.includes(opt.value)
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => toggleCta(opt.value)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border",
-                        isSelected
-                          ? "bg-black text-white border-black shadow-sm"
-                          : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:text-gray-700"
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-between font-normal",
+                      formFieldChrome,
+                      cta.length === 0 && "text-muted-foreground"
+                    )}
+                  >
+                    <span className="truncate">
+                      {cta.length > 0 
+                        ? `${cta.length} selected (${cta.map(v => CTA_OPTIONS.find(o => o.value === v)?.label).join(', ')})`
+                        : "Select CTA options"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0 bg-white rounded-2xl shadow-xl border-gray-200" align="start">
+                  <Command className="rounded-2xl">
+                    <CommandInput placeholder="Search CTAs..." className="h-9" />
+                    <CommandEmpty>No CTA found.</CommandEmpty>
+                    <CommandList className="max-h-[300px] overflow-y-auto">
+                      <CommandGroup>
+                        {CTA_OPTIONS.map((opt) => (
+                          <CommandItem
+                            key={opt.value}
+                            value={opt.value}
+                            onSelect={() => toggleCta(opt.value)}
+                            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-xl m-1"
+                          >
+                            <div className={cn(
+                              "flex h-4 w-4 items-center justify-center rounded border border-gray-300 transition-all",
+                              cta.includes(opt.value) ? "bg-black border-black text-white" : "bg-transparent"
+                            )}>
+                              {cta.includes(opt.value) && <Check className="h-3 w-3" />}
+                            </div>
+                            <span className="text-sm font-medium">{opt.label}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Landing URL */}
