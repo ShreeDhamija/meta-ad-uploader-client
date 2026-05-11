@@ -156,7 +156,8 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
   assignedVariantId,
   variants,
   onAssignVariant,
-  onAddVariant
+  onAddVariant,
+  isRemoving
 }) {
   const {
     attributes,
@@ -196,7 +197,7 @@ const SortableMediaItem = React.memo(function SortableMediaItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`relative group ${isSelectable ? 'cursor-pointer' : ''}`}
+      className={`relative group ${isSelectable ? 'cursor-pointer' : ''} ${isRemoving ? 'media-preview-remove-item' : ''}`}
       onClick={isSelectable ? () => onSelect(fileId) : undefined}
     >
       {/* Selection background for placement customization - only show when NOT grouped */}
@@ -433,6 +434,7 @@ export default function MediaPreview({
   const [isAIGrouping, setIsAIGrouping] = useState(false);
   const [isFlexAutoGrouping, setIsFlexAutoGrouping] = useState(false);
   const [showDisableVariantsDialog, setShowDisableVariantsDialog] = useState(false);
+  const [removingMediaIds, setRemovingMediaIds] = useState(new Set());
 
   const sensors = useSensors(useSensor(PointerSensor));
   const hideUngroupedVariantDropdowns = isCarouselAd || enablePlacementCustomization;
@@ -677,37 +679,54 @@ export default function MediaPreview({
   // Event handlers with useCallback
   const removeFile = useCallback((file) => {
     const fileId = getFileId(file);
+    const removeDelay = 180;
 
-    // Remove from selection
-    setSelectedFiles(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(fileId);
-      return newSet;
+    setRemovingMediaIds(prev => {
+      if (prev.has(fileId)) return prev;
+      const next = new Set(prev);
+      next.add(fileId);
+      return next;
     });
 
-    // Remove from groups
-    setFileGroups(prev => prev
-      .map(group => ({
-        ...group,
-        fileIds: getGroupFileIds(group).filter(id => id !== fileId)
-      }))
-      .filter(group => group.fileIds.length > 0)
-    );
+    window.setTimeout(() => {
 
-    // Remove from appropriate state
-    if (file.isMetaLibrary) {
-      setImportedFiles(prev => prev.filter(f =>
-        file.type === 'image' ? f.hash !== file.hash : f.id !== file.id
-      ));
-    } else if (file.isDropbox) {
-      setDropboxFiles(prev => prev.filter(f => f.dropboxId !== file.dropboxId));
-    } else if (file.isFrameio) {
-      setFrameioFiles(prev => prev.filter(f => f.frameioId !== file.frameioId));
-    } else if (file.isDrive) {
-      setDriveFiles(prev => prev.filter(f => f.id !== file.id));
-    } else {
-      setFiles(prev => prev.filter(f => (f.uniqueId || f.name) !== (file.uniqueId || file.name)));
-    }
+      // Remove from selection
+      setSelectedFiles(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fileId);
+        return newSet;
+      });
+
+      // Remove from groups
+      setFileGroups(prev => prev
+        .map(group => ({
+          ...group,
+          fileIds: getGroupFileIds(group).filter(id => id !== fileId)
+        }))
+        .filter(group => group.fileIds.length > 0)
+      );
+
+      // Remove from appropriate state
+      if (file.isMetaLibrary) {
+        setImportedFiles(prev => prev.filter(f =>
+          file.type === 'image' ? f.hash !== file.hash : f.id !== file.id
+        ));
+      } else if (file.isDropbox) {
+        setDropboxFiles(prev => prev.filter(f => f.dropboxId !== file.dropboxId));
+      } else if (file.isFrameio) {
+        setFrameioFiles(prev => prev.filter(f => f.frameioId !== file.frameioId));
+      } else if (file.isDrive) {
+        setDriveFiles(prev => prev.filter(f => f.id !== file.id));
+      } else {
+        setFiles(prev => prev.filter(f => (f.uniqueId || f.name) !== (file.uniqueId || file.name)));
+      }
+
+      setRemovingMediaIds(prev => {
+        const next = new Set(prev);
+        next.delete(fileId);
+        return next;
+      });
+    }, removeDelay);
   }, [setSelectedFiles, setFileGroups, setDropboxFiles, setFrameioFiles, setDriveFiles, setFiles, setImportedFiles]);
 
 
@@ -1195,9 +1214,24 @@ export default function MediaPreview({
               pointer-events: none;
             }
 
+            @keyframes mediaPreviewRemove {
+              to {
+                opacity: 0;
+                transform: translate3d(0, 6px, 0) scale(0.8);
+              }
+            }
+
+            .media-preview-remove-item {
+              animation: mediaPreviewRemove 180ms ease-out forwards;
+              will-change: transform, opacity;
+              transform-origin: center;
+              pointer-events: none;
+            }
+
             @media (prefers-reduced-motion: reduce) {
-              .media-preview-launch-item {
-                animation-duration: 180ms;
+              .media-preview-launch-item,
+              .media-preview-remove-item {
+                animation-duration: 120ms;
               }
             }
           `}</style>
@@ -1474,6 +1508,7 @@ export default function MediaPreview({
                                           assignedVariantId={groupVariantMap[group.id] || 'default'}
                                           variants={variants}
                                           onAssignVariant={() => { }}
+                                          isRemoving={removingMediaIds.has(fileId)}
                                         />
                                       );
                                     })}
@@ -1509,6 +1544,7 @@ export default function MediaPreview({
                                     assignedVariantId={groupVariantMap[group.id] || 'default'}
                                     variants={variants}
                                     onAssignVariant={() => { }}
+                                    isRemoving={removingMediaIds.has(fileId)}
                                   />
                                 ) : null;
                               })}
@@ -1548,6 +1584,7 @@ export default function MediaPreview({
                               variants={variants}
                               onAssignVariant={(variantId) => assignFileToVariant(fileId, variantId)}
                               onAddVariant={handleAddVariant}
+                              isRemoving={removingMediaIds.has(fileId)}
                             />
                           </div>
                         );
