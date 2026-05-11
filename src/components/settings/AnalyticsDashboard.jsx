@@ -1301,26 +1301,17 @@ export default function AnalyticsDashboard() {
                                                 Optimization Focus
                                             </h3>
                                             <div className="space-y-4 pl-6">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-sm text-gray-700">
-                                                            {tempAnalyticsMode === 'roas'
-                                                                ? 'Optimizing for Return on Ad Spend'
-                                                                : 'Optimizing for Cost Per Action'}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={cn("text-xs font-medium", tempAnalyticsMode === 'cpa' ? "text-green-600" : "text-gray-400")}>CPA</span>
-                                                        <Switch
-                                                            checked={tempAnalyticsMode === 'roas'}
-                                                            onCheckedChange={(checked) => {
-                                                                const next = checked ? 'roas' : 'cpa'
-                                                                setTempAnalyticsMode(next)
-                                                            }}
-                                                            className="data-[state=unchecked]:bg-green-500"
-                                                        />
-                                                        <span className={cn("text-xs font-medium", tempAnalyticsMode === 'roas' ? "text-blue-600" : "text-gray-400")}>ROAS</span>
-                                                    </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className={cn("text-xs font-medium", tempAnalyticsMode === 'cpa' ? "text-green-600" : "text-gray-400")}>CPA</span>
+                                                    <Switch
+                                                        checked={tempAnalyticsMode === 'roas'}
+                                                        onCheckedChange={(checked) => {
+                                                            const next = checked ? 'roas' : 'cpa'
+                                                            setTempAnalyticsMode(next)
+                                                        }}
+                                                        className="data-[state=unchecked]:bg-green-500"
+                                                    />
+                                                    <span className={cn("text-xs font-medium", tempAnalyticsMode === 'roas' ? "text-blue-600" : "text-gray-400")}>ROAS</span>
                                                 </div>
 
                                                 {tempAnalyticsMode === 'cpa' && (
@@ -1378,13 +1369,15 @@ export default function AnalyticsDashboard() {
 
                                         {/* ── Target KPI (conditional) ── */}
                                         <div className="space-y-4">
-                                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                                <Target className="w-4 h-4 text-blue-500" />
-                                                Target KPI
-                                            </h3>
-                                            <p className="text-xs text-gray-500 pl-6">
-                                                Sets a benchmark for recommendations. If your target is stricter than the account average, recommendations will use the target instead.
-                                            </p>
+                                            <div className="space-y-2">
+                                                <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                    <Target className="w-4 h-4 text-blue-500" />
+                                                    Target KPI
+                                                </h3>
+                                                <p className="text-xs text-gray-500 pl-6">
+                                                    Sets a benchmark for recommendations. If your target is stricter than the account average, recommendations will use the target instead.
+                                                </p>
+                                            </div>
                                             <div className="space-y-4 pl-6">
                                                 {tempAnalyticsMode === 'cpa' ? (
                                                     <div className="space-y-2">
@@ -1417,26 +1410,28 @@ export default function AnalyticsDashboard() {
 
                                         {/* ── Anomaly Thresholds ── */}
                                         <div className="space-y-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                                    <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                                    Anomaly Thresholds
-                                                </h3>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setShowSettingsDialog(false)
-                                                        setShowSlackDialog(true)
-                                                    }}
-                                                    className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#611f69] px-3 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#4A154B]"
-                                                >
-                                                    <img src={slackWhite} alt="Slack" className="h-3.5 w-3.5" />
-                                                    {slackConnected ? 'Disable Slack Alerts' : 'Get Slack Alerts'}
-                                                </button>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                                                        Anomaly Thresholds
+                                                    </h3>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setShowSettingsDialog(false)
+                                                            setShowSlackDialog(true)
+                                                        }}
+                                                        className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#611f69] px-3 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#4A154B]"
+                                                    >
+                                                        <img src={slackWhite} alt="Slack" className="h-3.5 w-3.5" />
+                                                        {slackConnected ? 'Disable Slack Alerts' : 'Get Slack Alerts'}
+                                                    </button>
+                                                </div>
+                                                <p className="text-xs text-gray-500 pl-6">
+                                                    Flags unusual CPA spikes or spend pacing against recent account baselines.
+                                                </p>
                                             </div>
-                                            <p className="text-xs text-gray-500 pl-6">
-                                                Flags unusual CPA spikes or spend pacing against recent account baselines.
-                                            </p>
 
                                             <div className="space-y-4 pl-6">
                                                 <div className="space-y-2">
@@ -1449,8 +1444,10 @@ export default function AnalyticsDashboard() {
                                                             onBlur={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: parseInt(e.target.value) || 50 }))}
                                                             className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                         />
-                                                        <span className="text-sm text-gray-500">
-                                                            Alert when CPA increases by more than this % vs 7-day average
+                                                        <span className="text-sm text-gray-500 leading-snug">
+                                                            Get alerts in Slack when CPA increases by more than
+                                                            <br />
+                                                            this % vs 7-day average
                                                         </span>
                                                     </div>
                                                 </div>
@@ -1465,8 +1462,10 @@ export default function AnalyticsDashboard() {
                                                             onBlur={(e) => setTempThresholds(prev => ({ ...prev, overspend: parseInt(e.target.value) || 150 }))}
                                                             className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                         />
-                                                        <span className="text-sm text-gray-500">
-                                                            Alert when daily spend exceeds this % of budget (ABO only)
+                                                        <span className="text-sm text-gray-500 leading-snug">
+                                                            Get alerts in Slack when daily spend exceeds this
+                                                            <br />
+                                                            % of budget (ABO only)
                                                         </span>
                                                     </div>
                                                 </div>
