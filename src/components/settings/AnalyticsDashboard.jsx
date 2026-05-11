@@ -1318,7 +1318,7 @@ export default function AnalyticsDashboard() {
 
                                                 {tempAnalyticsMode === 'cpa' && (
                                                     <div className="space-y-2">
-                                                        <p className="text-sm text-gray-600">Conversion Event</p>
+                                                        <p className="text-sm font-medium text-gray-600">Conversion Event</p>
                                                         {conversionEventsLoading ? (
                                                             <div className="flex items-center gap-2 py-2">
                                                                 <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
@@ -1377,7 +1377,7 @@ export default function AnalyticsDashboard() {
                                                     Target KPI
                                                 </h3>
                                                 <p className="text-xs text-gray-500 pl-6">
-                                                    Sets a benchmark for recommendations. If your target is stricter than the account average, recommendations will use the target instead.
+                                                    Sets a benchmark for recommendations. If your target is stricter than <br></br>the account average, recommendations will use the target instead.
                                                 </p>
                                             </div>
                                             <div className="space-y-4 pl-6">
@@ -1434,7 +1434,7 @@ export default function AnalyticsDashboard() {
 
                                             <div className="space-y-4 pl-6">
                                                 <div className="space-y-2">
-                                                    <p className="text-sm font-medium text-gray-700">CPA Spike Threshold (%)</p>
+                                                    <p className="text-sm font-medium text-gray-600">CPA Spike Threshold (%)</p>
                                                     <div className="flex items-center gap-3">
                                                         <input
                                                             type="number"
@@ -1450,7 +1450,7 @@ export default function AnalyticsDashboard() {
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    <p className="text-sm font-medium text-gray-700">Overspend Threshold (%)</p>
+                                                    <p className="text-sm font-medium text-gray-600">Overspend Threshold (%)</p>
                                                     <div className="flex items-center gap-3">
                                                         <input
                                                             type="number"
