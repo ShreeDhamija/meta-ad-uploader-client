@@ -1,6 +1,8 @@
 import Header from '@/components/header'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
+import TikTokCampaignDuplicator from '@/components/tiktok/TikTokCampaignDuplicator'
 import { Button } from '@/components/ui/button'
+
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
 import { useIntercom } from '@/lib/useIntercom'
 import { cn } from '@/lib/utils'
@@ -19,7 +21,8 @@ export default function TikTokAds() {
   const { showMessenger, hideMessenger } = useIntercom()
   
   const [selectedAdvertiser, setSelectedAdvertiser] = useState('')
-  const [activeTab, setActiveTab] = useState('create') // 'create' | 'ads'
+  const [activeTab, setActiveTab] = useState('create') // 'create' | 'ads' | 'duplicate'
+
   const [existingAds, setExistingAds] = useState([])
   const [loadingAds, setLoadingAds] = useState(false)
 
@@ -108,14 +111,49 @@ export default function TikTokAds() {
       <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
 
       <main className="pt-4 pb-20">
+        {/* Tab Navigation */}
+        <div className="flex items-center gap-2 mb-8 bg-gray-100/50 p-1.5 rounded-2xl w-fit">
+          <button
+            onClick={() => setActiveTab('create')}
+            className={cn(
+              "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
+              activeTab === 'create' ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
+            )}
+          >
+            Create Ad
+          </button>
+          <button
+            onClick={() => setActiveTab('duplicate')}
+            className={cn(
+              "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
+              activeTab === 'duplicate' ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
+            )}
+          >
+            Duplicate Campaign
+          </button>
+          <button
+            onClick={() => setActiveTab('ads')}
+            className={cn(
+              "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
+              activeTab === 'ads' ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
+            )}
+          >
+            Manage Ads
+          </button>
+        </div>
+
         {/* Content Area */}
+
         <div className="flex flex-col lg:flex-row gap-6 min-w-0">
           {/* Left Column: Form or List */}
           <div className="flex-1 lg:flex-[55] min-w-0 space-y-6">
             {activeTab === 'create' ? (
               <TikTokAdCreationForm advertiserId={selectedAdvertiser} advertisers={tiktokAdvertisers} />
+            ) : activeTab === 'duplicate' ? (
+              <TikTokCampaignDuplicator advertiserId={selectedAdvertiser} />
             ) : (
               <div className="space-y-4">
+
                 {loadingAds ? (
                   <div className="bg-white rounded-3xl p-12 flex flex-col items-center justify-center border border-gray-200 shadow-sm">
                     <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
