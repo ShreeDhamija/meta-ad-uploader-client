@@ -397,6 +397,81 @@ const normalizeFileGroups = (groups = []) => groups.map((group) => (
     : { ...group, id: group.id || uuidv4(), fileIds: [...(group.fileIds || [])] }
 ));
 
+const getDisplayFileName = (file) => (
+  file?.name ||
+  file?.originalName ||
+  file?.originalname ||
+  file?.title ||
+  "Unnamed file"
+);
+
+const buildMediaFileEntries = ({
+  files = [],
+  driveFiles = [],
+  dropboxFiles = [],
+  frameioFiles = [],
+  importedFiles = [],
+}) => [
+  ...files.map((file) => ({
+    id: file.uniqueId || file.name,
+    name: getDisplayFileName(file),
+  })),
+  ...driveFiles.map((file) => ({
+    id: file.id,
+    name: getDisplayFileName(file),
+  })),
+  ...(dropboxFiles || []).map((file) => ({
+    id: file.dropboxId,
+    name: getDisplayFileName(file),
+  })),
+  ...(frameioFiles || []).map((file) => ({
+    id: file.frameioId,
+    name: getDisplayFileName(file),
+  })),
+  ...(importedFiles || []).map((file) => ({
+    id: file.type === 'image' ? file.hash : file.id,
+    name: getDisplayFileName(file),
+  })),
+].filter((file) => file.id && file.name);
+
+const findDuplicateFileNameWarnings = (groups, fileEntriesById) => {
+  const warnings = [];
+
+  groups.forEach((groupFileIds, groupIndex) => {
+    const filesByName = new Map();
+
+    groupFileIds.forEach((fileId) => {
+      const file = fileEntriesById.get(String(fileId));
+      if (!file) return;
+
+      const normalizedName = file.name.trim().toLowerCase();
+      if (!normalizedName) return;
+
+      const existing = filesByName.get(normalizedName);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        filesByName.set(normalizedName, {
+          count: 1,
+          fileName: file.name,
+        });
+      }
+    });
+
+    filesByName.forEach(({ count, fileName }, normalizedName) => {
+      if (count < 2) return;
+
+      warnings.push({
+        key: `${groupIndex + 1}-${normalizedName}`,
+        groupNumber: groupIndex + 1,
+        fileName,
+      });
+    });
+  });
+
+  return warnings;
+};
+
 function VariantDot({ variantId, variants }) {
   const idx = variants.findIndex((variant) => variant.id === variantId);
   const color = VARIANT_COLORS[Math.max(0, idx) % VARIANT_COLORS.length];
@@ -3386,6 +3461,39 @@ export default function AdCreationForm({
     duplicateIndices.descriptions.size > 0,
     [duplicateIndices]
   );
+
+  const duplicateFileNameWarnings = useMemo(() => {
+    const mediaFileEntries = buildMediaFileEntries({
+      files,
+      driveFiles,
+      dropboxFiles,
+      frameioFiles,
+      importedFiles,
+    });
+    if (mediaFileEntries.length < 2) return [];
+
+    const fileEntriesById = new Map(
+      mediaFileEntries.map((file) => [String(file.id), file])
+    );
+
+    const groupsToCheck =
+      (isCarouselAd || adType === 'flexible') && fileGroupsAsArrays.length === 0
+        ? [mediaFileEntries.map((file) => file.id)]
+        : fileGroupsAsArrays;
+
+    if (groupsToCheck.length === 0) return [];
+
+    return findDuplicateFileNameWarnings(groupsToCheck, fileEntriesById);
+  }, [
+    adType,
+    driveFiles,
+    dropboxFiles,
+    fileGroupsAsArrays,
+    files,
+    frameioFiles,
+    importedFiles,
+    isCarouselAd,
+  ]);
 
 
   const handleCreateAd = async (jobData) => {
@@ -8208,6 +8316,15 @@ export default function AdCreationForm({
                 {populatedVariantSummaries.map((variant) => `${variant.name} (${variant.count})`).join(' · ')}
               </div>
             )}
+
+            {duplicateFileNameWarnings.map((warning) => (
+              <div key={warning.key} className="flex items-start gap-1 p-2 bg-orange-50 border border-orange-200 rounded-xl mt-2">
+                <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
+                <span className="text-xs text-orange-700">
+                  Group {warning.groupNumber} has 2 files which share the same name {warning.fileName}. This can lead to errors when processing the file by Meta. Consider renaming one of them.
+                </span>
+              </div>
+            ))}
 
             {!isCarouselAd && hasDuplicates && (
               <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
