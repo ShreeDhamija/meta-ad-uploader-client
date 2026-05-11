@@ -1416,7 +1416,7 @@ export default function AnalyticsDashboard() {
                                         <div className="border-t border-gray-200" />
 
                                         {/* ── Anomaly Thresholds ── */}
-                                        <div className="space-y-2.5">
+                                        <div className="space-y-4">
                                             <div className="flex items-center justify-between gap-3">
                                                 <h3 className="font-medium text-gray-900 flex items-center gap-2">
                                                     <AlertTriangle className="w-4 h-4 text-orange-500" />

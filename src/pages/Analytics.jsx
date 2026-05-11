@@ -26,18 +26,18 @@ export default function Analytics() {
         extendTrial
     } = useSubscription()
 
-    useEffect(() => {
-        const userHasActiveAccess = hasActiveAccess()
+    // useEffect(() => {
+    //     const userHasActiveAccess = hasActiveAccess()
 
-        if (
-            !subscriptionLoading &&
-            isTrialExpired() &&
-            !userHasActiveAccess &&
-            !hasDismissedTrialPopup
-        ) {
-            setShowTrialExpiredPopup(true)
-        }
-    }, [subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
+    //     if (
+    //         !subscriptionLoading &&
+    //         isTrialExpired() &&
+    //         !userHasActiveAccess &&
+    //         !hasDismissedTrialPopup
+    //     ) {
+    //         setShowTrialExpiredPopup(true)
+    //     }
+    // }, [subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
@@ -75,11 +75,11 @@ export default function Analytics() {
         }
     }
 
-    if (authLoading) return null
-    if (!isLoggedIn) return <Navigate to="/login" />
+    // if (authLoading) return null
+    // if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
-        <div className="min-h-screen w-full bg-[#f6f6f6]">
+        <div className="min-h-screen w-full">
             <div className="mobile-message fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-[100] lg:hidden">
                 <div className="text-center max-w-md">
                     <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />

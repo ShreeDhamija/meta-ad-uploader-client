@@ -141,7 +141,7 @@ export default function SlackAlertsDialog({
                         {/* Slash command info boxes — always visible */}
                         <div className="space-y-2.5">
                             <div>
-                                <p className="text-[11px] font-semibold text-gray-400 tracking-wide">Slash Commands</p>
+                                <p className="text-sm font-semibold text-gray-600 tracking-wide">Slash Commands</p>
                                 {!slackConnected && (
                                     <p className="mt-1 text-xs text-gray-500">
                                         Connect the app to Slack to run these commands.
