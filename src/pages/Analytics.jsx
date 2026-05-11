@@ -26,18 +26,18 @@ export default function Analytics() {
         extendTrial
     } = useSubscription()
 
-    // useEffect(() => {
-    //     const userHasActiveAccess = hasActiveAccess()
+    useEffect(() => {
+        const userHasActiveAccess = hasActiveAccess()
 
-    //     if (
-    //         !subscriptionLoading &&
-    //         isTrialExpired() &&
-    //         !userHasActiveAccess &&
-    //         !hasDismissedTrialPopup
-    //     ) {
-    //         setShowTrialExpiredPopup(true)
-    //     }
-    // }, [subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
+        if (
+            !subscriptionLoading &&
+            isTrialExpired() &&
+            !userHasActiveAccess &&
+            !hasDismissedTrialPopup
+        ) {
+            setShowTrialExpiredPopup(true)
+        }
+    }, [subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
@@ -75,8 +75,8 @@ export default function Analytics() {
         }
     }
 
-    // if (authLoading) return null
-    // if (!isLoggedIn) return <Navigate to="/login" />
+    if (authLoading) return null
+    if (!isLoggedIn) return <Navigate to="/login" />
 
     return (
         <div className="min-h-screen w-full">

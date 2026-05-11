@@ -918,7 +918,7 @@ export default function AnalyticsDashboard() {
                                     onValueChange={setSearchValue}
                                     className="bg-transparent"
                                     wrapperClassName="bg-gray-50 border-gray-200 rounded-[20px]"
-	                                />
+                                />
                                 <ScrollArea
                                     className="rounded-xl [&_[data-orientation=vertical]]:!w-1.5 [&_[data-orientation=vertical]]:!p-0"
                                     style={{ height: adAccountDropdownHeight }}
@@ -956,8 +956,8 @@ export default function AnalyticsDashboard() {
                                         </CommandGroup>
                                     </CommandList>
                                 </ScrollArea>
-	                            </Command>
-	                        </PopoverContent>
+                            </Command>
+                        </PopoverContent>
                     </Popover>
                 </div>
 
@@ -1255,13 +1255,13 @@ export default function AnalyticsDashboard() {
                         onClick={() => setShowSettingsDialog(false)}
                     />
 
-	                    <div
-	                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-	                        onClick={() => setShowSettingsDialog(false)}
-	                    >
-	                        <div
-	                            className="bg-white rounded-[28px] shadow-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col overflow-hidden"
-	                            onClick={(e) => e.stopPropagation()}
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        onClick={() => setShowSettingsDialog(false)}
+                    >
+                        <div
+                            className="bg-white rounded-[28px] shadow-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
                         >
                             {/* Scrollable area */}
                             <div className="p-8 pb-6 space-y-6 flex-1 overflow-y-auto min-h-0">
@@ -1296,11 +1296,11 @@ export default function AnalyticsDashboard() {
 
                                         {/* ── Optimization Focus ── */}
                                         <div className="space-y-4">
-                                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                                <Activity className="w-4 h-4 text-purple-500" />
-                                                Optimization Focus
-                                            </h3>
-                                            <div className="space-y-4 pl-6">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                    <Activity className="w-4 h-4 text-purple-500" />
+                                                    Optimization Focus
+                                                </h3>
                                                 <div className="flex items-center gap-2">
                                                     <span className={cn("text-xs font-medium", tempAnalyticsMode === 'cpa' ? "text-green-600" : "text-gray-400")}>CPA</span>
                                                     <Switch
@@ -1313,6 +1313,8 @@ export default function AnalyticsDashboard() {
                                                     />
                                                     <span className={cn("text-xs font-medium", tempAnalyticsMode === 'roas' ? "text-blue-600" : "text-gray-400")}>ROAS</span>
                                                 </div>
+                                            </div>
+                                            <div className="space-y-4 pl-6">
 
                                                 {tempAnalyticsMode === 'cpa' && (
                                                     <div className="space-y-2">
@@ -1428,9 +1430,6 @@ export default function AnalyticsDashboard() {
                                                         {slackConnected ? 'Disable Slack Alerts' : 'Get Slack Alerts'}
                                                     </button>
                                                 </div>
-                                                <p className="text-xs text-gray-500 pl-6">
-                                                    Flags unusual CPA spikes or spend pacing against recent account baselines.
-                                                </p>
                                             </div>
 
                                             <div className="space-y-4 pl-6">
@@ -1445,9 +1444,7 @@ export default function AnalyticsDashboard() {
                                                             className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                         />
                                                         <span className="text-sm text-gray-500 leading-snug">
-                                                            Get alerts in Slack when CPA increases by more than
-                                                            <br />
-                                                            this % vs 7-day average
+                                                            Get alerts in Slack when CPA increases<br></br> by more than this % vs 7-day average
                                                         </span>
                                                     </div>
                                                 </div>
@@ -1463,8 +1460,7 @@ export default function AnalyticsDashboard() {
                                                             className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                         />
                                                         <span className="text-sm text-gray-500 leading-snug">
-                                                            Get alerts in Slack when daily spend exceeds this
-                                                            <br />
+                                                            Get alerts in Slack when daily spend <br></br>exceeds this
                                                             % of budget (ABO only)
                                                         </span>
                                                     </div>
