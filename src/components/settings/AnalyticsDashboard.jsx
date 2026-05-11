@@ -1434,7 +1434,7 @@ export default function AnalyticsDashboard() {
 
                                             <div className="space-y-4 pl-6">
                                                 <div className="space-y-2">
-                                                    <p className="text-sm text-gray-600">CPA Spike Threshold (%)</p>
+                                                    <p className="text-sm font-medium text-gray-700">CPA Spike Threshold (%)</p>
                                                     <div className="flex items-center gap-3">
                                                         <input
                                                             type="number"
@@ -1443,14 +1443,14 @@ export default function AnalyticsDashboard() {
                                                             onBlur={(e) => setTempThresholds(prev => ({ ...prev, cpaSpike: parseInt(e.target.value) || 50 }))}
                                                             className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                         />
-                                                        <span className="text-sm text-gray-500 leading-snug">
+                                                        <span className="text-xs text-gray-500 leading-snug">
                                                             Get alerts in Slack when CPA increases<br></br> by more than this % vs 7-day average
                                                         </span>
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    <p className="text-sm text-gray-600">Overspend Threshold (%)</p>
+                                                    <p className="text-sm font-medium text-gray-700">Overspend Threshold (%)</p>
                                                     <div className="flex items-center gap-3">
                                                         <input
                                                             type="number"
@@ -1459,7 +1459,7 @@ export default function AnalyticsDashboard() {
                                                             onBlur={(e) => setTempThresholds(prev => ({ ...prev, overspend: parseInt(e.target.value) || 150 }))}
                                                             className="w-24 px-3 py-2.5 border border-gray-300 rounded-2xl bg-white text-sm shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                                         />
-                                                        <span className="text-sm text-gray-500 leading-snug">
+                                                        <span className="text-xs text-gray-500 leading-snug">
                                                             Get alerts in Slack when daily spend <br></br>exceeds this
                                                             % of budget (ABO only)
                                                         </span>
