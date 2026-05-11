@@ -570,6 +570,14 @@ const S3_REGION_BUCKETS = {
 };
 let _fastestRegionPromise = null;
 function detectFastestS3Region() {
+  // DEBUG: ?s3region=eu-west-1 (or ap-southeast-1 / ap-southeast-2 / us-east-1) forces a region.
+  // Useful for verifying regional buckets work without VPN. Remove or ignore for production traffic.
+  if (typeof window !== 'undefined') {
+    const forced = new URLSearchParams(window.location.search).get('s3region');
+    if (forced && S3_REGION_BUCKETS[forced]) {
+      return Promise.resolve(forced);
+    }
+  }
   if (_fastestRegionPromise) return _fastestRegionPromise;
   _fastestRegionPromise = (async () => {
     const results = await Promise.all(
@@ -585,7 +593,6 @@ function detectFastestS3Region() {
       })
     );
     results.sort((a, b) => a.latency - b.latency);
-    console.log('🌍 S3 region latencies:', results);
     return results[0].latency === Infinity ? 'us-east-1' : results[0].region;
   })();
   return _fastestRegionPromise;
