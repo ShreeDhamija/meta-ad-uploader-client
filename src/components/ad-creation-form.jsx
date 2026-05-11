@@ -558,6 +558,38 @@ const ErrorFileName = ({ name }) => {
   );
 };
 
+// --- S3 region detection ---
+// Probes each regional bucket once per session via the S3 Transfer Acceleration
+// endpoint and caches the fastest. `no-cors` HEAD requests measure round-trip
+// without needing CORS config; opaque responses are fine — we only need timing.
+const S3_REGION_BUCKETS = {
+  'us-east-1':      'withblip',
+  'eu-west-1':      'withblip-eu',
+  'ap-southeast-1': 'withblip-as',
+  'ap-southeast-2': 'withblip-au',
+};
+let _fastestRegionPromise = null;
+function detectFastestS3Region() {
+  if (_fastestRegionPromise) return _fastestRegionPromise;
+  _fastestRegionPromise = (async () => {
+    const results = await Promise.all(
+      Object.entries(S3_REGION_BUCKETS).map(async ([region, bucket]) => {
+        const url = `https://${bucket}.s3-accelerate.amazonaws.com/?probe=${Date.now()}`;
+        const start = performance.now();
+        try {
+          await fetch(url, { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
+          return { region, latency: performance.now() - start };
+        } catch {
+          return { region, latency: Infinity };
+        }
+      })
+    );
+    results.sort((a, b) => a.latency - b.latency);
+    console.log('🌍 S3 region latencies:', results);
+    return results[0].latency === Infinity ? 'us-east-1' : results[0].region;
+  })();
+  return _fastestRegionPromise;
+}
 
 export default function AdCreationForm({
   isLoading,
@@ -1415,6 +1447,9 @@ export default function AdCreationForm({
 
     let lastError = null;
 
+    // Detect fastest region once per session; cached after first call.
+    const region = await detectFastestS3Region();
+
     // Retry loop for the entire upload process
     for (let uploadAttempt = 1; uploadAttempt <= maxUploadRetries; uploadAttempt++) {
       let uploadId = null;
@@ -1423,7 +1458,8 @@ export default function AdCreationForm({
       try {
         const startPayload = {
           fileName: file.name,
-          fileType: file.type
+          fileType: file.type,
+          region
         };
 
         const startResponse = await axios.post(
@@ -1443,7 +1479,8 @@ export default function AdCreationForm({
         const urlsPayload = {
           key: s3Key,
           uploadId: uploadId,
-          parts: totalChunks
+          parts: totalChunks,
+          region
         };
 
         const urlsResponse = await axios.post(
@@ -1503,7 +1540,8 @@ export default function AdCreationForm({
         const completePayload = {
           key: s3Key,
           uploadId: uploadId,
-          parts: completedParts
+          parts: completedParts,
+          region
         };
 
         let completeResponse;
@@ -1546,7 +1584,7 @@ export default function AdCreationForm({
 
               await axios.post(
                 `${API_BASE_URL}/auth/s3/abort-upload`,
-                { key: s3Key, uploadId: uploadId },
+                { key: s3Key, uploadId: uploadId, region },
                 { withCredentials: true }
               );
 
@@ -1568,7 +1606,7 @@ export default function AdCreationForm({
           try {
             await axios.post(
               `${API_BASE_URL}/auth/s3/abort-upload`,
-              { key: s3Key, uploadId: uploadId },
+              { key: s3Key, uploadId: uploadId, region },
               { withCredentials: true }
             );
 
