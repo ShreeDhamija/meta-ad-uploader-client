@@ -1416,13 +1416,26 @@ export default function AnalyticsDashboard() {
                                         <div className="border-t border-gray-200" />
 
                                         {/* ── Anomaly Thresholds ── */}
-                                        <div className="space-y-4">
-                                            <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                                                <AlertTriangle className="w-4 h-4 text-orange-500" />
-                                                Anomaly Thresholds
-                                            </h3>
+                                        <div className="space-y-2.5">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <h3 className="font-medium text-gray-900 flex items-center gap-2">
+                                                    <AlertTriangle className="w-4 h-4 text-orange-500" />
+                                                    Anomaly Thresholds
+                                                </h3>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setShowSettingsDialog(false)
+                                                        setShowSlackDialog(true)
+                                                    }}
+                                                    className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#611f69] px-3 text-xs font-medium text-white shadow-xs transition-colors hover:bg-[#4A154B]"
+                                                >
+                                                    <img src={slackWhite} alt="Slack" className="h-3.5 w-3.5" />
+                                                    {slackConnected ? 'Disable Slack Alerts' : 'Get Slack Alerts'}
+                                                </button>
+                                            </div>
                                             <p className="text-xs text-gray-500 pl-6">
-                                                Anomaly detection compares current CPA and spend pacing against recent account baselines, then flags unusual spikes early so you can review them before they compound.
+                                                Flags unusual CPA spikes or spend pacing against recent account baselines.
                                             </p>
 
                                             <div className="space-y-4 pl-6">

@@ -40,19 +40,27 @@ export default function SlackAlertsDialog({
 
     return (
         <>
-            {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black/50 z-50"
-                style={{ top: -25, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                className="fixed bg-black/50 z-50"
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100vw",
+                    height: "100dvh",
+                }}
                 onClick={onClose}
             />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                onClick={onClose}
+            >
                 <div
-                    className="bg-white rounded-[28px] shadow-2xl w-full max-w-[480px] flex flex-col overflow-hidden"
+                    className="bg-white rounded-[28px] shadow-2xl w-full max-w-[480px] max-h-[90vh] flex flex-col overflow-hidden"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Content */}
-                    <div className="p-8 pb-6 space-y-6">
+                    <div className="p-8 pb-6 space-y-6 flex-1 overflow-y-auto min-h-0">
                         {/* Header */}
                         <div className="flex items-start justify-between">
                             <div className="space-y-1">
@@ -115,9 +123,9 @@ export default function SlackAlertsDialog({
                                 {/* Toggle: Anomaly alerts */}
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm text-gray-700">Anomaly alerts</p>
+                                        <p className="text-sm text-gray-700">Anomaly Alerts</p>
                                         <p className="text-xs text-gray-500">
-                                            Get notified when CPA spikes or overspend is detected
+                                            Get Notified in <span className="font-semibold text-gray-700">{slackChannelName || 'your channel'}</span> when CPA spikes or overspend is detected.
                                         </p>
                                     </div>
                                     <Switch
@@ -128,9 +136,18 @@ export default function SlackAlertsDialog({
                             </div>
                         )}
 
+                        <div className="border-t border-gray-100" />
+
                         {/* Slash command info boxes — always visible */}
                         <div className="space-y-2.5">
-                            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Slash Commands</p>
+                            <div>
+                                <p className="text-[11px] font-semibold text-gray-400 tracking-wide">Slash Commands</p>
+                                {!slackConnected && (
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Connect the app to Slack to run these commands.
+                                    </p>
+                                )}
+                            </div>
 
                             <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-start gap-3">
                                 <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">

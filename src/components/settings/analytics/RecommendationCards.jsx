@@ -428,7 +428,7 @@ export default function RecommendationCards({
                     {loading ? (
                         <Card className="rounded-2xl">
                             <CardContent className="py-10">
-                                <HelixLoader color="#3b82f6" size="36" label="Generating recommendations..." />
+                                <HelixLoader color="#3b82f6" size="36" label="Generating recommendations can take about 10 seconds..." />
                             </CardContent>
                         </Card>
                     ) : (
@@ -600,14 +600,14 @@ export default function RecommendationCards({
                                                                         )}
                                                                     </Button>
                                                                 )}
-                                                            <Button
-                                                                variant="ghost" size="sm"
-                                                                onClick={() => handleDismiss(rec)}
-                                                                className="h-8 w-8 p-0 text-gray-400 hover:bg-transparent hover:text-red-600 focus-visible:bg-transparent focus-visible:text-red-600"
-                                                                title="Dismiss"
-                                                            >
-                                                                <XCircle className="w-4 h-4" />
-                                                            </Button>
+                                                                <Button
+                                                                    variant="ghost" size="sm"
+                                                                    onClick={() => handleDismiss(rec)}
+                                                                    className="h-8 w-8 p-0 text-gray-400 hover:bg-transparent hover:text-red-600 focus-visible:bg-transparent focus-visible:text-red-600"
+                                                                    title="Dismiss"
+                                                                >
+                                                                    <XCircle className="w-4 h-4" />
+                                                                </Button>
                                                             </div>
                                                         </div>
                                                     </CardContent>
