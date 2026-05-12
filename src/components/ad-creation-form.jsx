@@ -24,6 +24,7 @@ import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, Refre
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
+import { useIntercom } from "@/lib/useIntercom"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 import ScheduleDateTimePicker from "@/components/ui/ScheduleDateTimePicker"
 import ShopDestinationSelector from "@/components/shop-destination-selector"
@@ -759,6 +760,7 @@ export default function AdCreationForm({
 
   const [pageSearchValue, setPageSearchValue] = useState("")
   const { isLoggedIn } = useAuth()
+  const { showMessenger } = useIntercom()
   const [openInstagram, setOpenInstagram] = useState(false)
   const [instagramSearchValue, setInstagramSearchValue] = useState("")
   const [publishPending, setPublishPending] = useState(false);
@@ -787,6 +789,19 @@ export default function AdCreationForm({
   const [isCancelling, setIsCancelling] = useState(false);
 
   const [preserveMedia, setPreserveMedia] = useState(false);
+  const renderErrorSupportLink = () => (
+    <p className="mt-2 text-xs font-medium text-red-800">
+      Confused by the error?{" "}
+      <button
+        type="button"
+        onClick={showMessenger}
+        className="underline underline-offset-2 hover:text-red-900"
+      >
+        Chat with us
+      </button>{" "}
+      for support
+    </p>
+  );
 
   // Upload sources config — which upload options to display
   const {
@@ -2005,6 +2020,7 @@ export default function AdCreationForm({
           message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
           completedAt: Date.now(),
           status: 'error',
+          errorMessages: metaData.errorMessages,
           formData: currentJob.formData,
         };
         addCompletedJob(failedJob);
@@ -6268,6 +6284,8 @@ export default function AdCreationForm({
                               Reload page to try again.
                             </span>
                           )}
+
+                          {(job.status === 'error' || job.status === 'partial-success') && !job.errorMessages?.length && renderErrorSupportLink()}
                         </div>
 
                         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
@@ -6319,7 +6337,7 @@ export default function AdCreationForm({
                       </div>
 
                       {/* Error details (moved outside the flex row) */}
-                      {(job.status === 'partial-success' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
+                      {(job.status === 'partial-success' || job.status === 'error' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
                         <div className="mt-2 ml-9">
                           <details className="text-xs">
                             <summary className="cursor-pointer text-[#FF0000] font-medium">
@@ -6357,6 +6375,7 @@ export default function AdCreationForm({
                               })()}
                             </div>
                           </details>
+                          {(job.status === 'partial-success' || job.status === 'error') && renderErrorSupportLink()}
                         </div>
                       )}
                     </div>
