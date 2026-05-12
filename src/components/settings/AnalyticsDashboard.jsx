@@ -28,6 +28,7 @@ import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
 import AdAccountDiagnostic from "./analytics/AdAccountDiagnostic"
+import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
 import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
 import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
 import {
@@ -126,6 +127,7 @@ export default function AnalyticsDashboard() {
 
     const [auditOpen, setAuditOpen] = useState(false)
     const [diagnosticOpen, setDiagnosticOpen] = useState(false)
+    const [chartsRefreshKey, setChartsRefreshKey] = useState(0)
     // Per-account response caches (session-scoped, cleared on tab close)
     const recsCacheRef = useRef({})       // { [accountId]: responsePayload }
     const poorAdsCacheRef = useRef({})    // { [accountId]: responsePayload }
@@ -746,6 +748,7 @@ export default function AnalyticsDashboard() {
         clearWeeklyInsightsCache(selectedAdAccount)
         loadDailyInsights({ force: true })
         fetchWeeklyInsights({ force: true })
+        setChartsRefreshKey(Date.now())
     }, [selectedAdAccount, adAccountSettingsLoading, clearDailyInsightsCache, clearWeeklyInsightsCache, loadDailyInsights, fetchWeeklyInsights])
 
     const handleSaveSettings = async () => {
@@ -1075,6 +1078,21 @@ export default function AnalyticsDashboard() {
                                 >
                                     <RefreshCw className={cn("w-3.5 h-3.5", (dailyLoading || weeklyLoading) && "animate-spin")} />
                                 </Button>
+                            </div>
+                        </div>
+
+                        {/* ── Horizontal dashed separator between chart rows ── */}
+                        <div className="hidden lg:block border-t border-dashed border-gray-300 mx-4" />
+
+                        {/* ── Row 2: full-width for now; when a 4th chart is added,
+                            switch its wrapper to lg:col-span-1 and add the new
+                            chart as a sibling for a 2×2 grid. ── */}
+                        <div className="grid grid-cols-1 lg:relative lg:grid-cols-2 lg:pt-4">
+                            <div className="lg:col-span-2">
+                                <WeeklyPlacementChart
+                                    adAccountId={selectedAdAccount}
+                                    refreshKey={chartsRefreshKey}
+                                />
                             </div>
                         </div>
 
