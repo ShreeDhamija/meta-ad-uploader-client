@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
     AlertTriangle, Loader2, ChevronsUpDown, RefreshCw,
-    Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown
+    Target, Settings2, Activity, Zap, CheckCircle2, BarChart3, FileBarChart2, FileText, ChevronDown, Stethoscope
 } from "lucide-react"
 import { toast } from "sonner"
 import { useAppData } from "@/lib/AppContext"
@@ -27,6 +27,7 @@ import RecommendationCards from "./analytics/RecommendationCards"
 import AnalyticsOnboarding from "./analytics/AnalyticsOnboarding"
 import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
+import AdAccountDiagnostic from "./analytics/AdAccountDiagnostic"
 import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
 import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
 import {
@@ -124,6 +125,7 @@ export default function AnalyticsDashboard() {
 
 
     const [auditOpen, setAuditOpen] = useState(false)
+    const [diagnosticOpen, setDiagnosticOpen] = useState(false)
     // Per-account response caches (session-scoped, cleared on tab close)
     const recsCacheRef = useRef({})       // { [accountId]: responsePayload }
     const poorAdsCacheRef = useRef({})    // { [accountId]: responsePayload }
@@ -992,6 +994,13 @@ export default function AnalyticsDashboard() {
                                 Audit Account
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                                onClick={() => setDiagnosticOpen(true)}
+                                className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
+                            >
+                                <Stethoscope className="w-4 h-4 text-gray-500" />
+                                Diagnostic Report
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                                 onClick={() => setShowSummaryDialog(true)}
                                 className="cursor-pointer rounded-xl px-3 py-2 text-sm focus:bg-gray-100"
                             >
@@ -1224,6 +1233,14 @@ export default function AnalyticsDashboard() {
                 conversionEvent={adAccountSettings?.conversionEvent}
                 targetCPA={adAccountSettings?.targetCPA}
                 targetROAS={adAccountSettings?.targetROAS}
+            />
+            <AdAccountDiagnostic
+                open={diagnosticOpen}
+                onOpenChange={setDiagnosticOpen}
+                adAccountId={selectedAdAccount}
+                adAccountName={selectedAdAccountName}
+                kpiType={metricMode === 'roas' ? 'roas' : 'cpa'}
+                conversionEvent={adAccountSettings?.conversionEvent}
             />
             <SlackAlertsDialog
                 open={showSlackDialog}
