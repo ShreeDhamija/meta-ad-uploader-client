@@ -1502,9 +1502,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   const buttonEl = (
                                     <Button
                                       type="button"
-                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${disabled
+                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${exists
                                         ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
-                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : blockedByFull
+                                          ? 'bg-blue-200 text-blue-700 cursor-not-allowed !shadow-none hover:bg-blue-200 disabled:opacity-100'
+                                          : 'bg-blue-600 text-white hover:bg-blue-700'
                                         }`}
                                       onClick={disabled ? undefined : createPrimaryTextImportHandler(text)}
                                       disabled={disabled}
@@ -1561,9 +1563,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   const buttonEl = (
                                     <Button
                                       type="button"
-                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${disabled
+                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${exists
                                         ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
-                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : blockedByFull
+                                          ? 'bg-blue-200 text-blue-700 cursor-not-allowed !shadow-none hover:bg-blue-200 disabled:opacity-100'
+                                          : 'bg-blue-600 text-white hover:bg-blue-700'
                                         }`}
                                       onClick={disabled ? undefined : createHeadlineImportHandler(text)}
                                       disabled={disabled}
@@ -1620,9 +1624,11 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                   const buttonEl = (
                                     <Button
                                       type="button"
-                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${disabled
+                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${exists
                                         ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
-                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : blockedByFull
+                                          ? 'bg-blue-200 text-blue-700 cursor-not-allowed !shadow-none hover:bg-blue-200 disabled:opacity-100'
+                                          : 'bg-blue-600 text-white hover:bg-blue-700'
                                         }`}
                                       onClick={disabled ? undefined : createDescriptionImportHandler(text)}
                                       disabled={disabled}
