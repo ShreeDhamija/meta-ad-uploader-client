@@ -236,7 +236,7 @@ function SummarySection({ report, kpiType, kpiTarget }) {
     // Copy utilization
     if (copyUtilization) {
         insights.push({
-            label: "Copy Slots",
+            label: "Copy Utilization",
             statement: `${copyUtilization.maximizingCount}/${copyUtilization.totalCount} top ads are maximizing copy variants.${copyUtilization.totalCount - copyUtilization.maximizingCount > 0 ? ` ${copyUtilization.totalCount - copyUtilization.maximizingCount} ads have room to improve.` : ""}`,
             status: copyUtilization.maximizingCount >= copyUtilization.totalCount * 0.8 ? "good" : "warn",
         })

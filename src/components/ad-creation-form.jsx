@@ -795,7 +795,7 @@ export default function AdCreationForm({
       <button
         type="button"
         onClick={showMessenger}
-        className="underline underline-offset-2 hover:text-red-900"
+        className="cursor-pointer underline underline-offset-2 hover:text-red-900"
       >
         Chat with us
       </button>{" "}
@@ -2020,7 +2020,6 @@ export default function AdCreationForm({
           message: `Job Failed: ${trackedMessage || 'An unknown error occurred.'}`,
           completedAt: Date.now(),
           status: 'error',
-          errorMessages: metaData.errorMessages,
           formData: currentJob.formData,
         };
         addCompletedJob(failedJob);
@@ -6337,7 +6336,7 @@ export default function AdCreationForm({
                       </div>
 
                       {/* Error details (moved outside the flex row) */}
-                      {(job.status === 'partial-success' || job.status === 'error' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
+                      {(job.status === 'partial-success' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
                         <div className="mt-2 ml-9">
                           <details className="text-xs">
                             <summary className="cursor-pointer text-[#FF0000] font-medium">
