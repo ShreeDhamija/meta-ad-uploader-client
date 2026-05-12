@@ -182,6 +182,19 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
     templates[editingTemplate] || {}, [templates, editingTemplate]
   )
 
+  const primaryTextsFull = useMemo(
+    () => primaryTexts.filter((t) => t.trim() !== "").length >= 5,
+    [primaryTexts]
+  )
+  const headlinesFull = useMemo(
+    () => headlines.filter((t) => t.trim() !== "").length >= 5,
+    [headlines]
+  )
+  const descriptionsFull = useMemo(
+    () => descriptions.filter((t) => t !== "").length >= 5,
+    [descriptions]
+  )
+
   const hasFilledTextValue = useCallback((text) => text.trim() !== "", [])
   const hasFilledDescriptionValue = useCallback((text) => text !== "", [])
   const filterFilledTexts = useCallback((items) => items.filter(hasFilledTextValue), [hasFilledTextValue])
@@ -1482,18 +1495,37 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 <div className="text-xs font-medium text-gray-500">
                                   Primary Text {index + 1}
                                 </div>
-                                <Button
-                                  type="button"
-                                  className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, primaryTexts)
-                                    ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
-                                  onClick={textExistsInTemplate(text, primaryTexts) ? undefined : createPrimaryTextImportHandler(text)}
-                                  disabled={textExistsInTemplate(text, primaryTexts)}
-                                >
-                                  {/* <Download className="w-3 h-3" /> */}
-                                  {textExistsInTemplate(text, primaryTexts) ? 'Exists' : 'Import'}
-                                </Button>
+                                {(() => {
+                                  const exists = textExistsInTemplate(text, primaryTexts);
+                                  const blockedByFull = !exists && primaryTextsFull;
+                                  const disabled = exists || blockedByFull;
+                                  const buttonEl = (
+                                    <Button
+                                      type="button"
+                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${disabled
+                                        ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                      onClick={disabled ? undefined : createPrimaryTextImportHandler(text)}
+                                      disabled={disabled}
+                                    >
+                                      {exists ? 'Exists' : 'Import'}
+                                    </Button>
+                                  );
+                                  if (!blockedByFull) return buttonEl;
+                                  return (
+                                    <TooltipProvider delayDuration={0}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span tabIndex={0}>{buttonEl}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="text-xs max-w-[260px]">
+                                          You have maximum number of primary texts in this template already. Please delete one to import more.
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })()}
                               </div>
                               <div className="rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-xs whitespace-pre-line">
                                 {text}
@@ -1522,18 +1554,37 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 <div className="text-xs font-medium text-gray-500">
                                   Headline {index + 1}
                                 </div>
-                                <Button
-                                  type="button"
-                                  className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, headlines)
-                                    ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
-                                  onClick={textExistsInTemplate(text, headlines) ? undefined : createHeadlineImportHandler(text)}
-                                  disabled={textExistsInTemplate(text, headlines)}
-                                >
-                                  {/* <Download className="w-3 h-3" /> */}
-                                  {textExistsInTemplate(text, headlines) ? 'Exists' : 'Import'}
-                                </Button>
+                                {(() => {
+                                  const exists = textExistsInTemplate(text, headlines);
+                                  const blockedByFull = !exists && headlinesFull;
+                                  const disabled = exists || blockedByFull;
+                                  const buttonEl = (
+                                    <Button
+                                      type="button"
+                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${disabled
+                                        ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                      onClick={disabled ? undefined : createHeadlineImportHandler(text)}
+                                      disabled={disabled}
+                                    >
+                                      {exists ? 'Exists' : 'Import'}
+                                    </Button>
+                                  );
+                                  if (!blockedByFull) return buttonEl;
+                                  return (
+                                    <TooltipProvider delayDuration={0}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span tabIndex={0}>{buttonEl}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="text-xs max-w-[260px]">
+                                          You have maximum number of headlines in this template already. Please delete one to import more.
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })()}
                               </div>
                               <div className="rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-xs whitespace-pre-line">
                                 {text}
@@ -1562,17 +1613,37 @@ export default function CopyTemplates({ selectedAdAccount, adSettings, setAdSett
                                 <div className="text-xs font-medium text-gray-500">
                                   Description {index + 1}
                                 </div>
-                                <Button
-                                  type="button"
-                                  className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${textExistsInTemplate(text, descriptions)
-                                    ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
-                                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }`}
-                                  onClick={textExistsInTemplate(text, descriptions) ? undefined : createDescriptionImportHandler(text)}
-                                  disabled={textExistsInTemplate(text, descriptions)}
-                                >
-                                  {textExistsInTemplate(text, descriptions) ? 'Exists' : 'Import'}
-                                </Button>
+                                {(() => {
+                                  const exists = textExistsInTemplate(text, descriptions);
+                                  const blockedByFull = !exists && descriptionsFull;
+                                  const disabled = exists || blockedByFull;
+                                  const buttonEl = (
+                                    <Button
+                                      type="button"
+                                      className={`flex h-7 items-center text-xs rounded-xl px-4 py-0.5 shrink-0 ${disabled
+                                        ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                                        }`}
+                                      onClick={disabled ? undefined : createDescriptionImportHandler(text)}
+                                      disabled={disabled}
+                                    >
+                                      {exists ? 'Exists' : 'Import'}
+                                    </Button>
+                                  );
+                                  if (!blockedByFull) return buttonEl;
+                                  return (
+                                    <TooltipProvider delayDuration={0}>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span tabIndex={0}>{buttonEl}</span>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="left" className="text-xs max-w-[260px]">
+                                          You have maximum number of descriptions in this template already. Please delete one to import more.
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  );
+                                })()}
                               </div>
                               <div className="rounded-2xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-xs whitespace-pre-line">
                                 {text}

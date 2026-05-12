@@ -509,12 +509,12 @@ function formatPerfPeriodLabel(dateStr, breakdown = "daily") {
 function PerfMetricSelector({ value, onChange, exclude }) {
     return (
         <Select value={value} onValueChange={onChange}>
-            <SelectTrigger className="h-7 text-[11px] rounded-md px-2 py-1 text-gray-700 bg-white border-gray-200 focus:ring-1 focus:ring-blue-500 w-auto gap-1.5">
+            <SelectTrigger className="h-7 text-[11px] rounded-lg px-2 py-1 text-gray-700 bg-white border-gray-200 shadow-none focus:ring-1 focus:ring-blue-500 w-auto gap-1.5">
                 <SelectValue />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="rounded-2xl bg-white shadow-none">
                 {PERF_METRIC_OPTIONS.filter(m => m.key === value || m.key !== exclude).map(m => (
-                    <SelectItem key={m.key} value={m.key} className="text-[11px]">
+                    <SelectItem key={m.key} value={m.key} className="text-[11px] rounded-md">
                         {m.label}
                     </SelectItem>
                 ))}
