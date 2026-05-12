@@ -10,6 +10,7 @@ import {
     CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
 } from "recharts"
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
@@ -507,15 +508,18 @@ function formatPerfPeriodLabel(dateStr, breakdown = "daily") {
 
 function PerfMetricSelector({ value, onChange, exclude }) {
     return (
-        <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="text-[11px] border border-gray-200 rounded-md px-2 py-1 text-gray-700 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
-        >
-            {PERF_METRIC_OPTIONS.filter(m => m.key === value || m.key !== exclude).map(m => (
-                <option key={m.key} value={m.key}>{m.label}</option>
-            ))}
-        </select>
+        <Select value={value} onValueChange={onChange}>
+            <SelectTrigger className="h-7 text-[11px] rounded-md px-2 py-1 text-gray-700 bg-white border-gray-200 focus:ring-1 focus:ring-blue-500 w-auto gap-1.5">
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+                {PERF_METRIC_OPTIONS.filter(m => m.key === value || m.key !== exclude).map(m => (
+                    <SelectItem key={m.key} value={m.key} className="text-[11px]">
+                        {m.label}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
     )
 }
 
