@@ -167,7 +167,7 @@ function DonutRing({ value, total, color = BLUE, size = 100 }) {
 function SummarySection({ report, kpiType, kpiTarget }) {
     if (!report) return null
 
-    const { traffic, funnel, monthlySpend, audience, learning, copyUtilization } = report
+    const { traffic, funnel, monthlySpend, audience, learning, copyUtilization, cpaTrend } = report
     const kpiLabel = kpiType === "roas" ? "ROAS" : "CPA"
 
     const insights = []
@@ -223,13 +223,14 @@ function SummarySection({ report, kpiType, kpiTarget }) {
         })
     }
 
-    // Frequency / fatigue
-    if (funnel && funnel.avgFrequency != null) {
-        const ok = funnel.avgFrequency < 2.0
+    // CPA trend (last 7d vs prior 7d)
+    if (cpaTrend && cpaTrend.recentCpa != null && cpaTrend.priorCpa != null) {
+        const delta = cpaTrend.deltaPct
+        const absDelta = Math.abs(delta)
         insights.push({
-            label: "Ad Fatigue",
-            statement: `Weekly frequency at ${funnel.avgFrequency.toFixed(2)}${ok ? " — no signs of fatigue." : ". Approaching fatigue threshold — refresh creative."}`,
-            status: ok ? "good" : "warn",
+            label: "CPA Trend",
+            statement: `Cost per acquisition is ${delta > 0 ? "up" : "down"} ${absDelta.toFixed(0)}% over the last 7 days vs prior 7 days ($${cpaTrend.priorCpa.toFixed(0)} → $${cpaTrend.recentCpa.toFixed(0)}).`,
+            status: absDelta < 5 ? "good" : delta > 0 ? "warn" : "good",
         })
     }
 
