@@ -1091,6 +1091,7 @@ export default function AnalyticsDashboard() {
                             <div className="lg:col-span-2">
                                 <WeeklyPlacementChart
                                     adAccountId={selectedAdAccount}
+                                    dateRange={analyticsDateRange}
                                     refreshKey={chartsRefreshKey}
                                 />
                             </div>

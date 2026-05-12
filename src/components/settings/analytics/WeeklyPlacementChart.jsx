@@ -72,7 +72,7 @@ function CustomTooltip({ active, payload, label, viewMode, hiddenSeries }) {
     )
 }
 
-export default function WeeklyPlacementChart({ adAccountId, refreshKey }) {
+export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKey }) {
     const [data, setData] = useState(null)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -92,6 +92,10 @@ export default function WeeklyPlacementChart({ adAccountId, refreshKey }) {
         setIsLoading(true)
         setError(null)
         const params = new URLSearchParams({ adAccountId, breakdown })
+        if (dateRange?.since && dateRange?.until) {
+            params.set("since", dateRange.since)
+            params.set("until", dateRange.until)
+        }
         if (refreshKey) params.set("rk", String(refreshKey))
         fetch(`${API_BASE_URL}/api/analytics/weekly-placement-breakdown?${params}`, {
             credentials: "include",
@@ -105,7 +109,7 @@ export default function WeeklyPlacementChart({ adAccountId, refreshKey }) {
             .catch(err => { if (!cancelled) setError(err.message || "Error") })
             .finally(() => { if (!cancelled) setIsLoading(false) })
         return () => { cancelled = true }
-    }, [adAccountId, breakdown, refreshKey])
+    }, [adAccountId, breakdown, refreshKey, dateRange?.since, dateRange?.until])
 
     const series = data?.placements || []
 
@@ -136,7 +140,7 @@ export default function WeeklyPlacementChart({ adAccountId, refreshKey }) {
         <div className="p-4">
             <div className="mb-[22px] flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900">3-Month Breakdown</p>
+                    <p className="text-sm font-medium text-gray-900">Spend Breakdown</p>
                     <p className="text-xs text-gray-400">{dimensionConfig.subtitle}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
@@ -230,7 +234,7 @@ export default function WeeklyPlacementChart({ adAccountId, refreshKey }) {
 
                     {series.length > 0 && (
                         <div className="mt-3">
-                            <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-1">
+                            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1.5 px-1 w-full">
                                 {series.map((name, i) => {
                                     const isHidden = hiddenSeries.has(name)
                                     return (
