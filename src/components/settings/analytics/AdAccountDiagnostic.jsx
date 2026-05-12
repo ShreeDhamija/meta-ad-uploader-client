@@ -1,16 +1,15 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
-import {
-    Activity, BarChart3, AlertTriangle, History, HeartPulse, Stethoscope,
-} from "lucide-react"
+import { Activity, Stethoscope } from "lucide-react"
 import {
     ComposedChart, Bar, Line, XAxis, YAxis,
-    CartesianGrid, Tooltip, ResponsiveContainer, Cell,
+    CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
 } from "recharts"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
@@ -33,16 +32,24 @@ const GRID_STROKE = "#f0f0f0"
 const AXIS_TICK = { fontSize: 10, fill: "#9ca3af" }
 const AXIS_LINE = { stroke: "#e5e7eb" }
 
-// ── Sidebar config ───────────────────────────────────────────────────────────
-const SIDEBAR_SECTIONS = [
-    { id: "summary", label: "Summary", Icon: Activity },
-    { id: "trend", label: "Spend & KPI", Icon: BarChart3 },
-    { id: "anomaly", label: "Anomaly", Icon: AlertTriangle },
-    { id: "changes", label: "Changes", Icon: History },
-    { id: "health", label: "Event Health", Icon: HeartPulse },
-]
-
 // ── Formatters ───────────────────────────────────────────────────────────────
+function formatEventName(actionType) {
+    if (!actionType) return "Auto-detected event"
+    if (actionType.startsWith("offsite_conversion.fb_pixel_custom.")) {
+        return actionType.slice("offsite_conversion.fb_pixel_custom.".length)
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase())
+    }
+    if (actionType === "offsite_conversion.fb_pixel_custom") return "Custom Event"
+    if (actionType.startsWith("offsite_conversion.custom.")) return "Custom Conversion"
+    if (actionType.startsWith("offsite_conversion.fb_pixel_")) {
+        return actionType.slice("offsite_conversion.fb_pixel_".length)
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase())
+    }
+    return actionType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+}
+
 function fmtCurrency(v) {
     if (v === null || v === undefined) return "—"
     if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(2)}M`
@@ -163,7 +170,10 @@ function SummarySection({ report }) {
     if (anomalyPeriod && previousPeriod && anomalyPeriod.avgKpi != null && previousPeriod.avgKpi != null) {
         const delta = ((anomalyPeriod.avgKpi - previousPeriod.avgKpi) / previousPeriod.avgKpi) * 100
         const worse = mode === "cpr" ? delta > 0 : delta < 0
-        headline = `${kpiLabel} ${worse ? "worsened" : "improved"} from ${fmtKpi(previousPeriod.avgKpi, mode)} to ${fmtKpi(anomalyPeriod.avgKpi, mode)} over a ${anomalyPeriod.days}-day stretch (${delta > 0 ? "+" : ""}${delta.toFixed(0)}%).`
+        const stretch = anomalyPeriod.days === 1
+            ? `on ${fmtDateShort(anomalyPeriod.startDate)}`
+            : `over ${fmtDateShort(anomalyPeriod.startDate)} — ${fmtDateShort(anomalyPeriod.endDate)} (${anomalyPeriod.days} days)`
+        headline = `${kpiLabel} ${worse ? "worsened" : "improved"} from ${fmtKpi(previousPeriod.avgKpi, mode)} to ${fmtKpi(anomalyPeriod.avgKpi, mode)} ${stretch} (${delta > 0 ? "+" : ""}${delta.toFixed(0)}%).`
     } else if (!anomalyPeriod) {
         headline = `No anomaly detected in the trailing 14 days. ${kpiLabel} held within baseline range.`
     }
@@ -246,7 +256,7 @@ function TrendSection({ dailyData, anomalyPeriod, mode, kpiLabel }) {
                         <XAxis dataKey="date" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} interval="preserveStartEnd" />
                         <YAxis yAxisId="kpi" orientation="left" tick={AXIS_TICK} tickLine={false} axisLine={false} width={48} tickFormatter={kpiAxisFmt} />
                         <YAxis yAxisId="spend" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} width={48} tickFormatter={fmtSpendShort} />
-                        <Tooltip
+                        <RechartsTooltip
                             formatter={(value, name) => {
                                 if (value == null) return ["N/A", name]
                                 if (name === "Spend") return [fmtSpendShort(Number(value)), "Spend"]
@@ -312,7 +322,7 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
             />
             <div className="grid grid-cols-2 gap-3 mb-5">
                 <div className="rounded-2xl border border-red-200 p-4" style={{ background: RED_BG }}>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-red-600 mb-2">Anomaly Period ({anomalyPeriod.days}d)</p>
+                    <p className="text-[10px] font-bold text-red-600 mb-2">Anomaly period ({anomalyPeriod.days}d)</p>
                     <div className="flex items-baseline gap-6">
                         <div>
                             <p className="text-[10px] text-red-500">{kpiLabel}</p>
@@ -325,7 +335,7 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
                     </div>
                 </div>
                 <div className="rounded-2xl border border-green-200 p-4" style={{ background: GREEN_BG }}>
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-green-600 mb-2">Comparison Period ({previousPeriod.days}d)</p>
+                    <p className="text-[10px] font-bold text-green-600 mb-2">Comparison period ({previousPeriod.days}d)</p>
                     <div className="flex items-baseline gap-6">
                         <div>
                             <p className="text-[10px] text-green-600">{kpiLabel}</p>
@@ -351,11 +361,11 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
                             <tr>
                                 <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Level</th>
                                 <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Name</th>
-                                <th className="text-right px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Anomaly Spend</th>
-                                <th className="text-right px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Prev Spend</th>
-                                <th className="text-right px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Δ Spend</th>
-                                <th className="text-right px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Prev {kpiLabel}</th>
-                                <th className="text-right px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Anomaly {kpiLabel}</th>
+                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Anomaly Spend</th>
+                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Prev Spend</th>
+                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Spend Change %</th>
+                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Prev {kpiLabel}</th>
+                                <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400">Anomaly {kpiLabel}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -377,18 +387,30 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
                                         </span>
                                     </td>
                                     <td className="px-3.5 py-2.5 max-w-[260px]">
-                                        <p className="text-gray-800 font-medium truncate" title={c.name}>{c.name}</p>
-                                        {c.parent && <p className="text-[10px] text-gray-400 truncate" title={c.parent}>{c.parent}</p>}
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <p className="text-gray-800 font-medium truncate cursor-default">{c.name}</p>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top" className="max-w-[360px] break-words">{c.name}</TooltipContent>
+                                        </Tooltip>
+                                        {c.parent && (
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <p className="text-[10px] text-gray-400 truncate cursor-default">{c.parent}</p>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="bottom" className="max-w-[360px] break-words">{c.parent}</TooltipContent>
+                                            </Tooltip>
+                                        )}
                                     </td>
-                                    <td className="px-3.5 py-2.5 text-right text-gray-600 tabular-nums">{fmtCurrency(c.anomalySpend)}</td>
-                                    <td className="px-3.5 py-2.5 text-right text-gray-600 tabular-nums">{fmtCurrency(c.prevSpend)}</td>
-                                    <td className="px-3.5 py-2.5 text-right tabular-nums">
+                                    <td className="px-3.5 py-2.5 text-left text-gray-600 tabular-nums">{fmtCurrency(c.anomalySpend)}</td>
+                                    <td className="px-3.5 py-2.5 text-left text-gray-600 tabular-nums">{fmtCurrency(c.prevSpend)}</td>
+                                    <td className="px-3.5 py-2.5 text-left tabular-nums">
                                         <span className={c.spendDelta > 0 ? "text-red-600 font-semibold" : "text-green-600 font-semibold"}>
                                             {c.spendDelta > 0 ? "+" : ""}{c.spendDelta.toFixed(0)}%
                                         </span>
                                     </td>
-                                    <td className="px-3.5 py-2.5 text-right text-gray-600 tabular-nums">{fmtKpi(c.prevKpi, mode)}</td>
-                                    <td className="px-3.5 py-2.5 text-right text-gray-600 tabular-nums">{fmtKpi(c.anomalyKpi, mode)}</td>
+                                    <td className="px-3.5 py-2.5 text-left text-gray-600 tabular-nums">{fmtKpi(c.prevKpi, mode)}</td>
+                                    <td className="px-3.5 py-2.5 text-left text-gray-600 tabular-nums">{fmtKpi(c.anomalyKpi, mode)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -453,6 +475,230 @@ function ChangesSection({ changes, anomalyDetected }) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+// PERFORMANCE METRICS CHART (Cost Per Link Click / CR / CPM / CTR with 14d/30d toggle)
+// ═════════════════════════════════════════════════════════════════════════════
+
+const PERF_METRIC_OPTIONS = [
+    { key: "cplc", label: "Cost Per Link Click", format: (v) => `$${v.toFixed(2)}`, color: "#2563eb" },
+    { key: "cr", label: "Conversion Rate", format: (v) => `${v.toFixed(2)}%`, color: "#16a34a" },
+    { key: "cpm", label: "CPM", format: (v) => `$${v.toFixed(2)}`, color: "#9333ea" },
+    { key: "ctr", label: "Click-Through Rate", format: (v) => `${v.toFixed(2)}%`, color: "#ea580c" },
+]
+
+function getPerfMetricConfig(key) {
+    return PERF_METRIC_OPTIONS.find(m => m.key === key) || PERF_METRIC_OPTIONS[0]
+}
+
+function resolvePerfMetric(key, d) {
+    switch (key) {
+        case "cplc": return (d.clicks && d.clicks > 0 && d.spend > 0) ? d.spend / d.clicks : null
+        case "cr": return (d.clicks && d.clicks > 0 && d.conversions) ? (d.conversions / d.clicks) * 100 : null
+        case "cpm": return d.cpm ?? null
+        case "ctr": return d.ctr ?? null
+        default: return null
+    }
+}
+
+function formatPerfPeriodLabel(dateStr, breakdown = "daily") {
+    const date = new Date(dateStr + "T00:00:00")
+    if (breakdown === "monthly") return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" })
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
+
+function PerfMetricSelector({ value, onChange, exclude }) {
+    return (
+        <select
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="text-[11px] border border-gray-200 rounded-md px-2 py-1 text-gray-700 bg-white focus:ring-1 focus:ring-blue-500 focus:outline-none"
+        >
+            {PERF_METRIC_OPTIONS.filter(m => m.key === value || m.key !== exclude).map(m => (
+                <option key={m.key} value={m.key}>{m.label}</option>
+            ))}
+        </select>
+    )
+}
+
+function PerformanceMetricsChart({
+    adAccountId,
+    kpiType = "cpa",
+    conversionEvent,
+    refreshKey,
+    since,
+    until,
+    breakdown = "daily",
+}) {
+    const controlled = !!(since && until)
+    const [days, setDays] = useState(14)
+    const [summary, setSummary] = useState(null)
+    const [isLoading, setIsLoading] = useState(false)
+    const [error, setError] = useState(null)
+    const [leftMetric, setLeftMetric] = useState("cplc")
+    const [rightMetric, setRightMetric] = useState("cr")
+
+    useEffect(() => {
+        if (!adAccountId) { setSummary(null); return }
+        let cancelled = false
+        setIsLoading(true)
+        setError(null)
+
+        const params = new URLSearchParams({ adAccountId, kpiType })
+        if (conversionEvent) params.set("conversionEvent", conversionEvent)
+        if (controlled) {
+            params.set("since", since)
+            params.set("until", until)
+        } else {
+            params.set("days", String(days))
+        }
+        if (breakdown !== "daily") params.set("breakdown", breakdown)
+        if (refreshKey) params.set("rk", String(refreshKey))
+
+        async function load() {
+            try {
+                const res = await fetch(`${API_BASE_URL}/api/analytics/account-daily-summary?${params}`, {
+                    credentials: "include",
+                    cache: "no-store",
+                })
+                if (!res.ok) {
+                    let errMsg = "Failed to load"
+                    try { const err = await res.json(); errMsg = err.error || errMsg } catch { /* */ }
+                    throw new Error(errMsg)
+                }
+                const data = await res.json()
+                if (!cancelled) setSummary(data)
+            } catch (err) {
+                if (!cancelled) setError(err.message || "Error")
+            } finally {
+                if (!cancelled) setIsLoading(false)
+            }
+        }
+        load()
+        return () => { cancelled = true }
+    }, [adAccountId, kpiType, conversionEvent, days, since, until, controlled, breakdown, refreshKey])
+
+    const leftCfg = getPerfMetricConfig(leftMetric)
+    const rightCfg = getPerfMetricConfig(rightMetric)
+
+    const chartData = (summary?.dailyData || []).map(d => ({
+        date: formatPerfPeriodLabel(d.date, breakdown),
+        left: resolvePerfMetric(leftMetric, d),
+        right: resolvePerfMetric(rightMetric, d),
+    }))
+
+    if (!adAccountId) return null
+
+    return (
+        <div id="diagnostic-performance" className="bg-white rounded-3xl border-[0.5px] border-gray-100 shadow-xs p-6">
+            <div className="flex items-start justify-between mb-5 gap-3">
+                <div className="min-w-0">
+                    <h3 className="text-[15px] font-semibold text-gray-900 leading-tight">Performance Metrics</h3>
+                    <div className="flex items-center gap-2 mt-2">
+                        <PerfMetricSelector value={leftMetric} onChange={setLeftMetric} exclude={rightMetric} />
+                        <span className="text-[10px] text-gray-400">vs</span>
+                        <PerfMetricSelector value={rightMetric} onChange={setRightMetric} exclude={leftMetric} />
+                    </div>
+                </div>
+                {!controlled && (
+                    <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-0.5 flex-shrink-0">
+                        {[14, 30].map(d => (
+                            <button
+                                key={d}
+                                onClick={() => setDays(d)}
+                                className={cn(
+                                    "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all",
+                                    days === d
+                                        ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                        : "text-gray-500 hover:text-gray-700",
+                                )}
+                            >
+                                {d} Days
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3" style={{ height: 280 }}>
+                {isLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600" />
+                    </div>
+                ) : error ? (
+                    <div className="flex items-center justify-center h-full text-red-500 text-sm">{error}</div>
+                ) : chartData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-gray-500 text-sm">No data available</div>
+                ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
+                            <XAxis
+                                dataKey="date"
+                                tick={AXIS_TICK}
+                                axisLine={AXIS_LINE}
+                                tickLine={false}
+                                interval="preserveStartEnd"
+                            />
+                            <YAxis
+                                yAxisId="left"
+                                orientation="left"
+                                tick={{ fontSize: 10, fill: leftCfg.color }}
+                                tickLine={false}
+                                axisLine={false}
+                                width={52}
+                                tickFormatter={(v) => leftCfg.format(v)}
+                            />
+                            <YAxis
+                                yAxisId="right"
+                                orientation="right"
+                                tick={{ fontSize: 10, fill: rightCfg.color }}
+                                tickLine={false}
+                                axisLine={false}
+                                width={52}
+                                tickFormatter={(v) => rightCfg.format(v)}
+                            />
+                            <RechartsTooltip
+                                formatter={(value, name) => {
+                                    if (value == null) return ["N/A", name]
+                                    const cfg = name === "left" ? leftCfg : rightCfg
+                                    return [cfg.format(Number(value)), cfg.label]
+                                }}
+                                contentStyle={{
+                                    borderRadius: "14px",
+                                    border: "1px solid #e5e7eb",
+                                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                                    fontSize: "12px",
+                                    padding: "8px 12px",
+                                }}
+                            />
+                            <Line
+                                yAxisId="left"
+                                type="monotone"
+                                dataKey="left"
+                                name="left"
+                                stroke={leftCfg.color}
+                                strokeWidth={2}
+                                dot={{ r: 2.5, strokeWidth: 0, fill: leftCfg.color }}
+                                connectNulls={false}
+                            />
+                            <Line
+                                yAxisId="right"
+                                type="monotone"
+                                dataKey="right"
+                                name="right"
+                                stroke={rightCfg.color}
+                                strokeWidth={2}
+                                dot={{ r: 2.5, strokeWidth: 0, fill: rightCfg.color }}
+                                connectNulls={false}
+                            />
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                )}
+            </div>
+        </div>
+    )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 // SECTION 4: EVENT HEALTH
 // ═════════════════════════════════════════════════════════════════════════════
 
@@ -509,43 +755,13 @@ export default function AdAccountDiagnostic({
     const [report, setReport] = useState(null)
     const [isGenerating, setIsGenerating] = useState(false)
     const [error, setError] = useState(null)
-    const [activeSection, setActiveSection] = useState("summary")
-    const contentRef = useRef(null)
+    const [refreshKey, setRefreshKey] = useState(0)
 
     useEffect(() => {
         if (open && adAccountId && !report && !isGenerating) generateReport()
-        if (!open) { setReport(null); setError(null); setActiveSection("summary") }
+        if (!open) { setReport(null); setError(null) }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, adAccountId])
-
-    // Scroll spy
-    useEffect(() => {
-        const container = contentRef.current
-        if (!container || !report) return
-        const ids = SIDEBAR_SECTIONS.map(s => s.id)
-        const handleScroll = () => {
-            const { scrollTop, scrollHeight, clientHeight } = container
-            const atBottom = scrollHeight - scrollTop - clientHeight < 40
-            if (atBottom) {
-                for (let i = ids.length - 1; i >= 0; i--) {
-                    if (document.getElementById(`diagnostic-${ids[i]}`)) { setActiveSection(ids[i]); return }
-                }
-            }
-            let current = "summary"
-            for (const id of ids) {
-                const el = document.getElementById(`diagnostic-${id}`)
-                if (el && el.getBoundingClientRect().top < 220) current = id
-            }
-            setActiveSection(current)
-        }
-        container.addEventListener("scroll", handleScroll, { passive: true })
-        return () => container.removeEventListener("scroll", handleScroll)
-    }, [report])
-
-    const scrollTo = (id) => {
-        const el = document.getElementById(`diagnostic-${id}`)
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
-    }
 
     const generateReport = async () => {
         setIsGenerating(true); setError(null); setReport(null)
@@ -560,6 +776,7 @@ export default function AdAccountDiagnostic({
             }
             const data = await res.json()
             setReport(data)
+            setRefreshKey(Date.now())
         } catch (e) { setError("Network error — please try again.") }
         finally { setIsGenerating(false) }
     }
@@ -603,7 +820,7 @@ export default function AdAccountDiagnostic({
                                         >
                                             {report.kpiLabel}
                                             {report.mode === "cpr" && report.conversionEvent
-                                                ? ` · ${String(report.conversionEvent).replace(/^offsite_conversion\.fb_pixel_/, "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}`
+                                                ? ` · ${formatEventName(report.conversionEvent)}`
                                                 : ""}
                                         </span>
                                     )}
@@ -628,40 +845,9 @@ export default function AdAccountDiagnostic({
                         </div>
                     </div>
 
-                    {/* Body: Sidebar + Scrollable Content */}
-                    <div className="flex-1 flex overflow-hidden min-h-0">
-                        {report && !isGenerating && (
-                            <nav className="w-[180px] flex-shrink-0 border-r border-gray-100 p-2.5 overflow-y-auto bg-[#fafafa]">
-                                {SIDEBAR_SECTIONS.map(({ id, label, Icon }) => {
-                                    const isActive = activeSection === id
-                                    return (
-                                        <button
-                                            key={id}
-                                            onClick={() => scrollTo(id)}
-                                            className={cn(
-                                                "w-full text-left flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium transition-all duration-150 mb-0.5",
-                                                isActive
-                                                    ? "bg-gray-100 text-gray-900"
-                                                    : "text-gray-500 hover:bg-gray-100/60 hover:text-gray-700",
-                                            )}
-                                        >
-                                            <span className={cn(
-                                                "w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
-                                                isActive ? "bg-white shadow-xs border border-gray-200" : "bg-gray-100/60",
-                                            )}>
-                                                <Icon className="w-3.5 h-3.5 text-gray-500 opacity-80" />
-                                            </span>
-                                            <span className="flex-1 truncate">{label}</span>
-                                            {isActive && (
-                                                <span className="w-[3px] h-[18px] rounded-full flex-shrink-0" style={{ background: "linear-gradient(180deg, #1a1a1a, #9ca3af)" }} />
-                                            )}
-                                        </button>
-                                    )
-                                })}
-                            </nav>
-                        )}
-
-                        <div ref={contentRef} className="flex-1 overflow-y-auto p-5 custom-scrollbar" style={{ background: "#f8f9fb" }}>
+                    {/* Body: single scrollable column (no sidebar) */}
+                    <TooltipProvider delayDuration={0}>
+                        <div className="flex-1 overflow-y-auto p-5 custom-scrollbar min-h-0" style={{ background: "#f8f9fb" }}>
                             {isGenerating && (
                                 <div className="flex flex-col items-center justify-center py-24 text-sm text-gray-500">
                                     <div className="mb-3"><Helix size="44" speed="2.5" color={BLUE} /></div>
@@ -679,6 +865,12 @@ export default function AdAccountDiagnostic({
                                 <div className="space-y-4" style={{ animation: "diagnosticFadeIn 0.4s ease" }}>
                                     <SummarySection report={report} />
                                     <TrendSection dailyData={report.dailyData} anomalyPeriod={report.anomalyPeriod} mode={report.mode} kpiLabel={report.kpiLabel} />
+                                    <PerformanceMetricsChart
+                                        adAccountId={adAccountId}
+                                        kpiType={kpiType}
+                                        conversionEvent={report.conversionEvent || conversionEvent}
+                                        refreshKey={refreshKey}
+                                    />
                                     <AnomalySection
                                         anomalyPeriod={report.anomalyPeriod}
                                         previousPeriod={report.previousPeriod}
@@ -691,7 +883,7 @@ export default function AdAccountDiagnostic({
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </TooltipProvider>
                 </div>
             </div>
 
