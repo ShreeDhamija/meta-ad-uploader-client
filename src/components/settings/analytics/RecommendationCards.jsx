@@ -24,6 +24,8 @@ import pauseIcon from "@/assets/icons/analytics/recommendations/pause.svg"
 import consolidateIcon from "@/assets/icons/analytics/recommendations/Consolidate.svg"
 import trendAlertIcon from "@/assets/icons/analytics/recommendations/trend_alert.svg"
 import scaleWinnerIcon from "@/assets/icons/analytics/recommendations/Scale_Winner.svg"
+import fatigueIcon from "@/assets/icons/analytics/recommendations/Fatigue.svg"
+import spendShiftIcon from "@/assets/icons/analytics/recommendations/Spend_Shift.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
@@ -89,6 +91,12 @@ const TYPE_CONFIG = {
         metaText: 'text-orange-900', subtleText: 'text-orange-700', badgeLabelBg: 'bg-orange-100 text-orange-900 border-orange-200',
         iconSrc: consolidateIcon, label: 'Consolidate',
     },
+    creative_fatigue: {
+        color: 'orange', bgClass: 'border-orange-400 bg-orange-50/80', badgeBg: 'bg-orange-100 text-orange-800 border-orange-200',
+        btnClass: 'bg-orange-600 hover:bg-orange-700', titleText: 'text-orange-900', bodyText: 'text-orange-900/70',
+        metaText: 'text-orange-900', subtleText: 'text-orange-700', badgeLabelBg: 'bg-orange-100 text-orange-900 border-orange-200',
+        iconSrc: fatigueIcon, label: 'Creative Fatigue',
+    },
     trend_alert: {
         color: 'amber',
         bgClass: 'border-amber-400 bg-amber-50/80',
@@ -102,6 +110,25 @@ const TYPE_CONFIG = {
         iconSrc: trendAlertIcon,
         label: 'Alert',
     },
+    spend_shift: {
+        color: 'amber',
+        bgClass: 'border-amber-400 bg-amber-50/80',
+        badgeBg: 'bg-amber-100 text-amber-700 border-amber-200',
+        titleText: 'text-amber-900',
+        bodyText: 'text-amber-900',
+        metaText: 'text-amber-800',
+        subtleText: 'text-amber-700',
+        badgeLabelBg: 'bg-amber-100 text-amber-900 border-amber-200',
+        btnClass: '',
+        iconSrc: spendShiftIcon,
+        label: 'Spend Shift',
+    },
+}
+
+const SEVERITY_PILL = {
+    low: 'bg-amber-100 text-amber-900 border-amber-200',
+    medium: 'bg-orange-100 text-orange-900 border-orange-200',
+    high: 'bg-red-100 text-red-900 border-red-200',
 }
 
 /**
@@ -150,6 +177,7 @@ export default function RecommendationCards({
     const [editedBudgets, setEditedBudgets] = useState({})
     const [confirmDialog, setConfirmDialog] = useState(null) // { rec, action } or { type: 'single'|'bulk', ad?, count? }
     const [scaleWinnersExpanded, setScaleWinnersExpanded] = useState(false)
+    const [fatigueExpanded, setFatigueExpanded] = useState(false)
 
     // ── Poor Performing Ads State ───────────────────────
     const [selected, setSelected] = useState(new Set())
@@ -161,6 +189,7 @@ export default function RecommendationCards({
         setEditedBudgets({})
         setConfirmDialog(null)
         setScaleWinnersExpanded(false)
+        setFatigueExpanded(false)
         setSelected(new Set())
         setPausingId(null)
         setPausedIds(new Set())
@@ -221,7 +250,7 @@ export default function RecommendationCards({
         const key = recKey(rec)
 
         // Safety: don't send API calls for non-actionable recs
-        if (rec.level === 'account' || rec.type === 'consolidate' || rec.type === 'trend_alert') {
+        if (rec.level === 'account' || rec.type === 'consolidate' || rec.type === 'trend_alert' || rec.type === 'creative_fatigue' || rec.type === 'spend_shift') {
             return
         }
 
@@ -463,13 +492,15 @@ export default function RecommendationCards({
                                 <div className="space-y-3">
                                     {(() => {
                                         const scaleWinners = recs.filter(r => r.type === 'scale_winner')
-                                        const otherRecs = recs.filter(r => r.type !== 'scale_winner')
+                                        const fatigueRecs = recs.filter(r => r.type === 'creative_fatigue')
+                                        const otherRecs = recs.filter(r => r.type !== 'scale_winner' && r.type !== 'creative_fatigue')
                                         const groupWinners = scaleWinners.length >= 5
+                                        const groupFatigue = fatigueRecs.length > 3
 
                                         const renderRecCard = (rec, { neutralStyle = false } = {}) => {
                                             const key = recKey(rec)
                                             const baseCfg = TYPE_CONFIG[rec.type] || TYPE_CONFIG.reduce
-                                            const cfg = (neutralStyle && rec.type === 'scale_winner') ? {
+                                            const cfg = (neutralStyle && (rec.type === 'scale_winner' || rec.type === 'creative_fatigue')) ? {
                                                 ...baseCfg,
                                                 bgClass: 'border-gray-200 bg-white',
                                                 badgeBg: 'bg-gray-100 text-gray-600 border-gray-200',
@@ -505,6 +536,11 @@ export default function RecommendationCards({
                                                                                 Scale Winner
                                                                             </Badge>
                                                                         )}
+                                                                        {rec.type === 'creative_fatigue' && !neutralStyle && (
+                                                                            <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap mb-1 !shadow-none", cfg.badgeLabelBg)}>
+                                                                                Creative Fatigue
+                                                                            </Badge>
+                                                                        )}
                                                                         {rec.type === 'trend_alert' && rec.alertKind && (
                                                                             <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap mb-1 !shadow-none", cfg.badgeLabelBg)}>
                                                                                 {rec.alertKind === 'rising_frequency' ? 'Rising Frequency' :
@@ -514,11 +550,27 @@ export default function RecommendationCards({
                                                                                                 'Trend Alert'}
                                                                             </Badge>
                                                                         )}
+                                                                        {rec.type === 'spend_shift' && (
+                                                                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                                                                <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap !shadow-none", cfg.badgeLabelBg)}>
+                                                                                    {rec.segmentType === 'age' ? 'Age Range' : 'Placement'} Spend Shift
+                                                                                </Badge>
+                                                                                {rec.severity && (
+                                                                                    <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap !shadow-none capitalize", SEVERITY_PILL[rec.severity] || SEVERITY_PILL.low)}>
+                                                                                        {rec.severity} Severity
+                                                                                    </Badge>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
                                                                         <div className="flex items-center gap-2 min-w-0">
                                                                             <p className={cn("font-bold text-sm break-words line-clamp-2 min-w-0", cfg.titleText)}>
-                                                                                {rec.type === 'scale_winner' ? rec.adName : (rec.adsetName || rec.campaignName)}
+                                                                                {(rec.type === 'scale_winner' || rec.type === 'creative_fatigue')
+                                                                                    ? rec.adName
+                                                                                    : rec.type === 'spend_shift'
+                                                                                        ? rec.segmentName
+                                                                                        : (rec.adsetName || rec.campaignName)}
                                                                             </p>
-                                                                            {rec.type !== 'scale_winner' && (
+                                                                            {rec.type !== 'scale_winner' && rec.type !== 'creative_fatigue' && rec.type !== 'spend_shift' && (
                                                                                 <Badge variant="outline" className={cn("text-[11px] px-2.5 py-0.5 rounded-full flex-shrink-0", cfg.badgeLabelBg)}>
                                                                                     {rec.type === 'trend_alert' ? 'alert' : rec.level}
                                                                                 </Badge>
@@ -534,7 +586,7 @@ export default function RecommendationCards({
                                                                         <p className={cn("text-xs font-semibold mt-1.5", cfg.metaText)}>Campaign: {rec.campaignName}</p>
                                                                     )}
 
-                                                                    {rec.type !== 'pause' && rec.type !== 'scale_winner' && rec.type !== 'trend_alert' && suggestedBudget && (
+                                                                    {rec.type !== 'pause' && rec.type !== 'scale_winner' && rec.type !== 'trend_alert' && rec.type !== 'creative_fatigue' && rec.type !== 'spend_shift' && suggestedBudget && (
                                                                         <div className="flex items-center gap-3 mt-3">
                                                                             <span className={cn("text-xs", cfg.titleText)}>
                                                                                 Current: <span className="font-medium">${(rec.dailyBudget || rec.lifetimeBudget).toFixed(2)}/day</span>
@@ -573,9 +625,9 @@ export default function RecommendationCards({
                                                             </div>
 
                                                             <div className="flex items-center gap-2 flex-shrink-0">
-                                                                {(rec.type === 'trend_alert' || rec.type === 'consolidate') ? (
+                                                                {(rec.type === 'trend_alert' || rec.type === 'consolidate' || rec.type === 'spend_shift') ? (
                                                                     null
-                                                                ) : rec.type === 'scale_winner' ? (
+                                                                ) : (rec.type === 'scale_winner' || rec.type === 'creative_fatigue') ? (
                                                                     <Button
                                                                         size="sm"
                                                                         onClick={() => openAdInAdsManager({ adId: rec.adId, adsetId: rec.adsetId })}
@@ -664,6 +716,54 @@ export default function RecommendationCards({
 
                                                 {/* Individual scale winners when fewer than 5 */}
                                                 {!groupWinners && scaleWinners.map(rec => renderRecCard(rec))}
+
+                                                {/* Grouped Creative Fatigue collapsible card */}
+                                                {groupFatigue && fatigueRecs.length > 0 && (
+                                                    <Card className="rounded-2xl border-orange-200 bg-orange-50/30">
+                                                        <CardContent className="p-0">
+                                                            <button
+                                                                onClick={() => setFatigueExpanded(prev => !prev)}
+                                                                className="w-full p-4 flex items-center justify-between gap-3"
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <img
+                                                                        src={fatigueIcon}
+                                                                        alt=""
+                                                                        aria-hidden="true"
+                                                                        className="h-[38px] w-[38px] flex-shrink-0"
+                                                                        style={{ filter: "drop-shadow(0px 1px 5px rgba(0, 0, 0, 0.15))" }}
+                                                                    />
+                                                                    <div className="text-left">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <Badge className="text-[10px] px-2 py-0.5 rounded-full bg-orange-600 text-white border-orange-600 whitespace-nowrap">
+                                                                                Creative Fatigue
+                                                                            </Badge>
+                                                                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-full bg-orange-100 text-orange-700 border-orange-200">
+                                                                                {fatigueRecs.length} ads
+                                                                            </Badge>
+                                                                        </div>
+                                                                        <p className="text-sm text-orange-700 mt-1 font-medium">
+                                                                            {fatigueRecs.length} top-spending ads showing creative fatigue — refresh them
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <ChevronDown className={cn(
+                                                                    "w-5 h-5 text-orange-500 transition-transform flex-shrink-0",
+                                                                    fatigueExpanded && "rotate-180"
+                                                                )} />
+                                                            </button>
+
+                                                            {fatigueExpanded && (
+                                                                <div className="px-4 pb-4 space-y-2 border-t border-orange-100 pt-3">
+                                                                    {fatigueRecs.map(rec => renderRecCard(rec, { neutralStyle: true }))}
+                                                                </div>
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
+                                                )}
+
+                                                {/* Individual fatigue cards when 3 or fewer */}
+                                                {!groupFatigue && fatigueRecs.map(rec => renderRecCard(rec))}
 
                                                 {/* All other recommendation cards */}
                                                 {otherRecs.map(rec => renderRecCard(rec))}
