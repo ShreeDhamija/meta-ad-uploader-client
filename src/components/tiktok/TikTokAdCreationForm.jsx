@@ -404,12 +404,12 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          advertiserId: selectedAdvertiser,
-          campaignId,
-          newCampaignName: campaign.campaign_name,
-          adgroupSuffix: '',
-          adSuffix: '',
-          includeAds: duplicateIncludeAds,
+          advertiser_id: selectedAdvertiser,
+          source_campaign_id: campaignId,
+          new_campaign_name: campaign.campaign_name,
+          adgroup_name_suffix: '',
+          ad_name_suffix: '',
+          duplicate_ads: duplicateIncludeAds,
         }),
       });
       const data = await res.json();
