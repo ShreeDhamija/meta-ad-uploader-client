@@ -53,7 +53,7 @@ const RETARGETING_COLOR = PINK
 const FONT = "'Inter Tight', system-ui, sans-serif"
 
 const GRID_STROKE = "#EEF0F4"
-const AXIS_TICK = { fontSize: 10, fill: MUTED_2, fontFamily: FONT, letterSpacing: 0.4 }
+const AXIS_TICK = { fontSize: 10, fill: MUTED_2, fontFamily: FONT }
 const AXIS_LINE = { stroke: LINE }
 const TOOLTIP_STYLE = {
     borderRadius: "12px",
@@ -91,14 +91,13 @@ function fmtNum(v, decimals = 2) {
 // REUSABLE PRIMITIVES
 // ═════════════════════════════════════════════════════════════════════════════
 
-// Tiny mono-feeling uppercase label (Inter Tight uppercase with tracking)
+// Small supporting label.
 function UpperLabel({ children, className, style }) {
     return (
         <p
-            className={cn("font-semibold uppercase", className)}
+            className={cn("font-semibold", className)}
             style={{
                 fontSize: 10.5,
-                letterSpacing: "0.10em",
                 color: MUTED,
                 margin: 0,
                 ...style,
@@ -136,7 +135,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
             >
                 {value}
                 {unit && (
-                    <span style={{ fontSize: 22, fontWeight: 700, opacity: 0.55, marginLeft: 2 }}>
+                    <span style={{ fontSize: 40, fontWeight: 700, opacity: 0.55, marginLeft: 2 }}>
                         {unit}
                     </span>
                 )}
@@ -175,8 +174,6 @@ function SectionHeader({ title, sub, tag }) {
                     style={{
                         fontSize: 10,
                         fontWeight: 600,
-                        letterSpacing: "0.10em",
-                        textTransform: "uppercase",
                         color: MUTED,
                     }}
                 >
@@ -269,7 +266,6 @@ function DonutRing({ value, total, color = ORANGE, size = 110, centerText, cente
                     textAnchor="middle"
                     fontFamily={FONT} fontWeight={600}
                     fontSize={size * 0.07} fill={MUTED}
-                    letterSpacing="0.10em"
                 >
                     {centerSub}
                 </text>
@@ -312,11 +308,11 @@ function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neu
                 style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1, color: INK }}
             >
                 {valuePrefix && (
-                    <span style={{ fontSize: 17, fontWeight: 700, opacity: 0.45 }}>{valuePrefix}</span>
+                    <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45 }}>{valuePrefix}</span>
                 )}
                 {value}
                 {valueUnit && (
-                    <span style={{ fontSize: 17, fontWeight: 700, opacity: 0.45, marginLeft: 1 }}>
+                    <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45, marginLeft: 1 }}>
                         {valueUnit}
                     </span>
                 )}
@@ -370,12 +366,13 @@ function SummarySection({ report, kpiType, kpiTarget }) {
         const prev = monthlySpend[monthlySpend.length - 2]
         const deltaNum = prev.spend > 0 ? ((cur.spend - prev.spend) / prev.spend * 100) : null
         if (deltaNum !== null) {
+            const roundedDelta = deltaNum.toFixed(0)
             tiles.push({
                 label: "Spend Trend",
-                value: Math.abs(deltaNum).toFixed(0),
+                value: Math.abs(roundedDelta),
                 valuePrefix: deltaNum > 0 ? "+" : "−",
                 valueUnit: "%",
-                desc: `MoM · ${fmt$(cur.spend)} this month`,
+                desc: `Spend is ${deltaNum > 0 ? "up" : "down"} ${Math.abs(roundedDelta)}% month-over-month at ${fmt$(cur.spend)}.`,
                 status: Math.abs(deltaNum) < 25 ? "good" : "warn",
             })
         }
@@ -385,11 +382,13 @@ function SummarySection({ report, kpiType, kpiTarget }) {
         if (cur.kpi != null) {
             const above = kpiType === "roas" ? cur.kpi < kpiTarget : cur.kpi > kpiTarget
             const gap = Math.abs(cur.kpi - kpiTarget)
+            const fmtGap = kpiType === "roas" ? `${gap.toFixed(2)}×` : `$${gap.toFixed(1)}`
             tiles.push({
                 label: `${kpiLabel} vs Target`,
-                value: kpiType === "roas" ? `${gap.toFixed(2)}×` : gap.toFixed(2),
-                valuePrefix: above ? "+$" : "−$",
-                desc: `Blended ${kpiType === "roas" ? `${cur.kpi.toFixed(2)}×` : `$${cur.kpi.toFixed(1)}`} · ${kpiType === "roas" ? `${kpiTarget}×` : `$${kpiTarget}`} target`,
+                value: cur.kpi.toFixed(kpiType === "roas" ? 2 : 1),
+                valuePrefix: kpiType === "cpa" ? "$" : undefined,
+                valueUnit: kpiType === "roas" ? "×" : undefined,
+                desc: `Blended ${kpiLabel} is ${kpiType === "roas" ? `${cur.kpi.toFixed(2)}×` : `$${cur.kpi.toFixed(1)}`} — ${fmtGap} ${above ? "worse than" : "better than"} your ${kpiType === "roas" ? `${kpiTarget}×` : `$${kpiTarget}`} target.`,
                 status: above ? "warn" : "good",
             })
         }
@@ -458,8 +457,6 @@ function SummarySection({ report, kpiType, kpiTarget }) {
                         style={{
                             fontSize: 10,
                             fontWeight: 700,
-                            letterSpacing: "0.14em",
-                            textTransform: "uppercase",
                             color: "rgba(255,255,255,0.78)",
                             marginBottom: 10,
                         }}
@@ -537,7 +534,7 @@ function TrafficSection({ traffic }) {
                                         formatter={(v) => [tooltipFmt(v), label.split(" (")[0]]}
                                         labelStyle={{ fontWeight: 700, fontSize: 11, marginBottom: 4 }}
                                     />
-                                    <Line type="monotone" dataKey={key} stroke={color} dot={false} strokeWidth={2.25} connectNulls />
+                                    <Line type="monotone" dataKey={key} stroke={color} dot={{ r: 3, strokeWidth: 0, fill: color }} strokeWidth={2.25} connectNulls />
                                     <Line type="monotone" dataKey={key} stroke="none" fill={`url(#grad-${key})`} legendType="none" />
                                 </LineChart>
                             </ResponsiveContainer>
@@ -635,9 +632,9 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
                             className="tabular-nums"
                             style={{ fontSize: 60, fontWeight: 900, letterSpacing: "-0.045em", lineHeight: 1, color: "#fff", marginTop: 6 }}
                         >
-                            <span style={{ fontSize: 30, opacity: 0.55 }}>$</span>
+                            <span style={{ fontSize: 60, opacity: 0.55 }}>$</span>
                             {cur ? (cur.spend / 1000).toFixed(1) : "—"}
-                            <span style={{ fontSize: 30, opacity: 0.55 }}>k</span>
+                            <span style={{ fontSize: 60, opacity: 0.55 }}>k</span>
                         </div>
                         {deltaPct !== null && (
                             <p style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
@@ -656,8 +653,8 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
                         >
                             {cur?.kpi != null
                                 ? (kpiType === "roas"
-                                    ? <>{cur.kpi.toFixed(2)}<span style={{ fontSize: 24, opacity: 0.55 }}>×</span></>
-                                    : <><span style={{ fontSize: 24, opacity: 0.55 }}>$</span>{cur.kpi.toFixed(2)}</>)
+                                    ? <>{cur.kpi.toFixed(2)}<span style={{ fontSize: 40, opacity: 0.55 }}>×</span></>
+                                    : <><span style={{ fontSize: 40, opacity: 0.55 }}>$</span>{cur.kpi.toFixed(2)}</>)
                                 : "—"}
                         </div>
                         {kpiTarget != null && gap !== null && (
@@ -825,9 +822,9 @@ function AudienceSection({ audience }) {
                     <thead style={{ background: PAPER_2 }}>
                         <tr>
                             {["Adset", "Type", "Targeting", "Exclusions"].map((h) => (
-                                <th key={h} className="text-left" style={{ padding: "11px 14px", fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: "0.10em", textTransform: "uppercase", borderBottom: `1px solid ${LINE}` }}>{h}</th>
+                                <th key={h} className="text-left" style={{ padding: "11px 14px", fontSize: 10, fontWeight: 600, color: MUTED, borderBottom: `1px solid ${LINE}` }}>{h}</th>
                             ))}
-                            <th className="text-right" style={{ padding: "11px 14px", fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: "0.10em", textTransform: "uppercase", borderBottom: `1px solid ${LINE}` }}>30d Spend</th>
+                            <th className="text-right" style={{ padding: "11px 14px", fontSize: 10, fontWeight: 600, color: MUTED, borderBottom: `1px solid ${LINE}` }}>30d Spend</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -843,13 +840,12 @@ function AudienceSection({ audience }) {
                                             padding: "2px 8px 3px",
                                             fontSize: 10,
                                             fontWeight: 700,
-                                            letterSpacing: "0.04em",
                                             borderRadius: 6,
                                             background: adset.type === "prospecting" ? ORANGE_SOFT : PINK_SOFT,
                                             color: adset.type === "prospecting" ? ORANGE_DEEP : PINK_DEEP,
                                         }}
                                     >
-                                        {adset.type === "prospecting" ? "PROS" : "RETAS"}
+                                        {adset.type === "prospecting" ? "Pros" : "Retas"}
                                     </span>
                                 </td>
                                 <td style={{ padding: "12px 14px", color: INK_2, fontSize: 12.5, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={adset.targetingSummary}>
@@ -913,7 +909,7 @@ function LearningSection({ learning }) {
                         color={cfg.color}
                         size={130}
                         centerText={pct !== null ? `${(pct * 100).toFixed(0)}%` : "—"}
-                        centerSub="IN LEARNING"
+                        centerSub="In learning"
                     />
                     <span
                         className="inline-flex items-center gap-1.5"
@@ -942,19 +938,19 @@ function LearningSection({ learning }) {
                         style={{ padding: "14px 16px", background: PAPER_2, border: `1px solid ${LINE}`, display: "flex", gap: 10, fontSize: 12, color: INK_2, lineHeight: 1.55 }}
                     >
                         <div style={{ flex: 1 }}>
-                            <b style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: ORANGE_DEEP, marginBottom: 3 }}>
+                            <b style={{ display: "block", fontSize: 10, fontWeight: 700, color: ORANGE_DEEP, marginBottom: 3 }}>
                                 &lt; 20% · Healthy
                             </b>
                             Most budget is running in stable, optimized ad sets.
                         </div>
                         <div style={{ flex: 1 }}>
-                            <b style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: PINK_DEEP, marginBottom: 3 }}>
+                            <b style={{ display: "block", fontSize: 10, fontWeight: 700, color: PINK_DEEP, marginBottom: 3 }}>
                                 20–50% · Monitor
                             </b>
                             Avoid additional structural changes while learning resolves.
                         </div>
                         <div style={{ flex: 1 }}>
-                            <b style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: INK, marginBottom: 3 }}>
+                            <b style={{ display: "block", fontSize: 10, fontWeight: 700, color: INK, marginBottom: 3 }}>
                                 &gt; 50% · Action
                             </b>
                             Consolidate ad sets or pause new launches.
@@ -985,7 +981,7 @@ function CopyUtilizationSection({ copyUtilization }) {
                     color={PINK}
                     size={110}
                     centerText={`${copyUtilization.maximizingCount}/${copyUtilization.totalCount}`}
-                    centerSub="MAXIMIZING"
+                    centerSub="Maximizing"
                 />
                 <div className="flex-1">
                     <p style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em", marginBottom: 6, color: INK }}>
@@ -1042,7 +1038,7 @@ function StyledOpportunitiesContent({ text }) {
                 <div key={bi} style={{ marginTop: bi === 0 ? 0 : 16 }}>
                     {block.heading && (
                         <h4 style={{ display: "flex", alignItems: "baseline", gap: 10, margin: "0 0 8px", fontSize: 13.5, fontWeight: 700, letterSpacing: "-0.01em", color: INK }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: ORANGE, letterSpacing: "0.10em" }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: ORANGE }}>
                                 {String(bi + 1).padStart(2, "0")}
                             </span>
                             {block.heading}
@@ -1273,8 +1269,7 @@ export default function AdAccountAudit({
                                         <div
                                             style={{
                                                 padding: "10px 11px 6px",
-                                                fontSize: 9.5, fontWeight: 600, letterSpacing: "0.12em",
-                                                textTransform: "uppercase", color: MUTED_2,
+                                                fontSize: 9.5, fontWeight: 600, color: MUTED_2,
                                             }}
                                         >
                                             {group}

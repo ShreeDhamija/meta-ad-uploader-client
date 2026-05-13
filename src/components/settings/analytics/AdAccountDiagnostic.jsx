@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
@@ -15,23 +15,53 @@ import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
-// ── Colors (match AdAccountAudit) ────────────────────────────────────────────
-const BLUE = "#2563eb"
-const BLUE_DARK = "#1d4ed8"
-const BLUE_BG = "#eff6ff"
-const RED = "#ef4444"
-const RED_BG = "#fef2f2"
-const RED_BAR = "#fca5a5"
-const GREEN = "#10b981"
-const GREEN_BG = "#ecfdf5"
-const AMBER_BG = "#fffbeb"
-const GRAY = "#9ca3af"
-const NEUTRAL_BAR = "#e5e7eb"
+// ── Palette (aligned with AdAccountAudit) ───────────────────────────────────
+const ORANGE = "#FF4800"
+const ORANGE_DEEP = "#D93B00"
+const ORANGE_LIGHT = "#FFC7A8"
+const ORANGE_SOFT = "#FFE6DA"
+const PINK = "#F00D55"
+const PINK_DEEP = "#C70845"
+const PINK_SOFT = "#FCD9E3"
+
+const INK = "#0F1115"
+const INK_2 = "#2A2E35"
+const MUTED = "#6B7280"
+const MUTED_2 = "#9CA3AF"
+const LINE = "#E7E9EE"
+const LINE_2 = "#D8DCE3"
+const PAPER = "#FFFFFF"
+const PAPER_2 = "#F8F9FB"
+
+const GOOD = "#22c55e"
+const WARN = "#f59e0b"
+const BAD = "#ef4444"
+const GOOD_SOFT = "rgba(34,197,94,0.08)"
+const WARN_SOFT = "rgba(245,158,11,0.10)"
+const BAD_SOFT = "rgba(239,68,68,0.08)"
 
 // ── Shared chart styling ─────────────────────────────────────────────────────
-const GRID_STROKE = "#f0f0f0"
-const AXIS_TICK = { fontSize: 10, fill: "#9ca3af" }
-const AXIS_LINE = { stroke: "#e5e7eb" }
+const FONT = "'Inter Tight', system-ui, sans-serif"
+const GRID_STROKE = "#EEF0F4"
+const AXIS_TICK = { fontSize: 10, fill: MUTED_2, fontFamily: FONT }
+const AXIS_LINE = { stroke: LINE }
+const TOOLTIP_STYLE = {
+    borderRadius: "12px",
+    border: `1px solid ${LINE}`,
+    boxShadow: "none",
+    fontSize: "12px",
+    padding: "8px 12px",
+    fontFamily: FONT,
+}
+
+const SIDEBAR_SECTIONS = [
+    { id: "summary", label: "Summary", group: "Report" },
+    { id: "trend", label: "Trend", group: "Report" },
+    { id: "performance", label: "Performance", group: "Report" },
+    { id: "anomaly", label: "Anomaly", group: "Analysis" },
+    { id: "changes", label: "Changes", group: "Analysis" },
+    { id: "health", label: "Event Health", group: "Checks" },
+]
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 function formatEventName(actionType) {
@@ -72,32 +102,144 @@ function fmtDateShort(d) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// REUSABLE SUBCOMPONENTS (styled to match AdAccountAudit)
+// REUSABLE PRIMITIVES
 // ═════════════════════════════════════════════════════════════════════════════
 
-function SectionHeader({ title, sub }) {
+function SmallLabel({ children, className, style }) {
     return (
-        <div className="mb-5">
-            <h3 className="text-[15px] font-semibold text-gray-900 leading-tight">{title}</h3>
-            {sub && <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{sub}</p>}
+        <p
+            className={cn("font-semibold", className)}
+            style={{ fontSize: 10.5, color: MUTED, margin: 0, ...style }}
+        >
+            {children}
+        </p>
+    )
+}
+
+function SectionHeader({ title, sub, tag }) {
+    return (
+        <div className="flex items-start justify-between mb-5">
+            <div>
+                <h3 style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.015em", margin: 0, color: INK }}>
+                    {title}
+                </h3>
+                {sub && (
+                    <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 0", maxWidth: 560 }}>
+                        {sub}
+                    </p>
+                )}
+            </div>
+            {tag && (
+                <div className="flex items-center gap-1.5" style={{ fontSize: 10, fontWeight: 600, color: MUTED }}>
+                    <span style={{ width: 6, height: 6, borderRadius: 999, background: ORANGE }} />
+                    {tag}
+                </div>
+            )}
         </div>
     )
 }
 
-function SectionCard({ children, id }) {
+function SectionCard({ children, id, dark }) {
     return (
-        <div id={`diagnostic-${id}`} className="bg-white rounded-3xl border-[0.5px] border-gray-100 shadow-xs p-6">
+        <div
+            id={`diagnostic-${id}`}
+            className="rounded-3xl"
+            style={{
+                background: dark ? INK : PAPER,
+                border: `1px solid ${dark ? INK : LINE}`,
+                padding: "22px 24px 24px",
+                color: dark ? "#fff" : INK,
+                fontFamily: FONT,
+            }}
+        >
             {children}
         </div>
     )
 }
 
-function MetricCard({ label, value, sub, color }) {
+function MetricCard({ label, value, unit, sub, dark }) {
     return (
-        <div className="bg-white rounded-3xl p-4 flex flex-col gap-1 border-[0.5px] border-gray-100 shadow-xs">
-            <p className="text-[10px] font-semibold text-gray-400">{label}</p>
-            <p className="text-2xl font-bold tabular-nums" style={{ color: color || "#111827" }}>{value}</p>
-            {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
+        <div
+            className="rounded-2xl flex flex-col gap-1.5 p-4"
+            style={{
+                background: dark ? INK : PAPER,
+                border: `1px solid ${dark ? INK : LINE}`,
+                color: dark ? "#fff" : INK,
+            }}
+        >
+            <SmallLabel style={{ color: dark ? "rgba(255,255,255,0.55)" : MUTED }}>{label}</SmallLabel>
+            <p
+                className="tabular-nums"
+                style={{
+                    fontSize: 40,
+                    fontWeight: 900,
+                    letterSpacing: "-0.04em",
+                    lineHeight: 1,
+                    margin: 0,
+                    color: dark ? "#fff" : INK,
+                }}
+            >
+                {value}
+                {unit && <span style={{ fontSize: 40, fontWeight: 700, opacity: 0.55, marginLeft: 2 }}>{unit}</span>}
+            </p>
+            {sub && (
+                <p style={{ fontSize: 11.5, color: dark ? "rgba(255,255,255,0.6)" : MUTED, margin: 0 }}>
+                    {sub}
+                </p>
+            )}
+        </div>
+    )
+}
+
+function InsightTile({ label, value, valuePrefix, valueUnit, desc, status = "neutral" }) {
+    const colors = {
+        good: { dot: GOOD, ring: "rgba(34,197,94,0.18)" },
+        warn: { dot: WARN, ring: "rgba(245,158,11,0.20)" },
+        bad: { dot: BAD, ring: "rgba(239,68,68,0.18)" },
+        neutral: { dot: MUTED_2, ring: "rgba(156,163,175,0.20)" },
+    }[status]
+
+    return (
+        <div className="relative rounded-2xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 16px 15px" }}>
+            <span
+                className="absolute"
+                style={{
+                    top: 14,
+                    right: 14,
+                    width: 9,
+                    height: 9,
+                    borderRadius: 999,
+                    background: colors.dot,
+                    boxShadow: `0 0 0 4px ${colors.ring}`,
+                }}
+            />
+            <SmallLabel style={{ fontSize: 9.5, marginBottom: 6, paddingRight: 20 }}>{label}</SmallLabel>
+            <div
+                className="tabular-nums"
+                style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1, color: INK }}
+            >
+                {valuePrefix && <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45 }}>{valuePrefix}</span>}
+                {value}
+                {valueUnit && <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45, marginLeft: 1 }}>{valueUnit}</span>}
+            </div>
+            {desc && <p style={{ fontSize: 11.5, color: MUTED, margin: "6px 0 0", lineHeight: 1.4 }}>{desc}</p>}
+        </div>
+    )
+}
+
+function ChartTooltipContent({ active, payload, label, formatters }) {
+    if (!active || !payload?.length) return null
+    return (
+        <div style={{ background: PAPER, borderRadius: 12, border: `1px solid ${LINE}`, padding: "8px 12px", fontSize: 12, minWidth: 140, fontFamily: FONT }}>
+            <p style={{ fontWeight: 700, color: INK_2, margin: "0 0 6px", fontSize: 11 }}>{label}</p>
+            {payload.map((entry) => (
+                <div key={entry.name} className="flex justify-between gap-4">
+                    <span style={{ color: entry.color, fontWeight: 500 }}>{entry.name}</span>
+                    <span className="tabular-nums" style={{ color: INK, fontWeight: 700 }}>
+                        {formatters?.[entry.name] ? formatters[entry.name](entry.value) : entry.value}
+                    </span>
+                </div>
+            ))}
         </div>
     )
 }
@@ -109,7 +251,7 @@ function MetricCard({ label, value, sub, color }) {
 function SummarySection({ report }) {
     const { mode, kpiLabel, anomalyPeriod, previousPeriod, culprits, changes, eventHealth, dateRange } = report
 
-    const insights = []
+    const tiles = []
 
     if (anomalyPeriod && previousPeriod) {
         const anomalyKpi = anomalyPeriod.avgKpi
@@ -119,32 +261,38 @@ function SummarySection({ report }) {
             delta = ((anomalyKpi - prevKpi) / prevKpi) * 100
         }
         const worse = mode === "cpr" ? (delta > 0) : (delta < 0)
-        insights.push({
+        tiles.push({
             label: "Anomaly Detected",
-            statement: `${anomalyPeriod.days}-day period (${fmtDateShort(anomalyPeriod.startDate)}–${fmtDateShort(anomalyPeriod.endDate)}) with ${kpiLabel} ${fmtKpi(anomalyKpi, mode)} vs prior ${fmtKpi(prevKpi, mode)}${delta != null ? ` (${delta > 0 ? "+" : ""}${delta.toFixed(0)}%)` : ""}.`,
+            value: anomalyKpi != null ? anomalyKpi.toFixed(mode === "cpr" ? 2 : 2) : "—",
+            valuePrefix: mode === "cpr" && anomalyKpi != null ? "$" : undefined,
+            valueUnit: mode !== "cpr" && anomalyKpi != null ? "×" : undefined,
+            desc: `${anomalyPeriod.days}-day period (${fmtDateShort(anomalyPeriod.startDate)}–${fmtDateShort(anomalyPeriod.endDate)}) vs prior ${fmtKpi(prevKpi, mode)}${delta != null ? ` (${delta > 0 ? "+" : ""}${delta.toFixed(0)}%)` : ""}.`,
             status: worse ? "warn" : "good",
         })
     } else {
-        insights.push({
+        tiles.push({
             label: "Anomaly Detected",
-            statement: `No sustained period of elevated ${kpiLabel} found in the trailing 14 days relative to baseline.`,
+            value: "0",
+            desc: `No sustained period of elevated ${kpiLabel} found in the trailing 14 days relative to baseline.`,
             status: "good",
         })
     }
 
     if (anomalyPeriod) {
-        insights.push({
+        tiles.push({
             label: "Contributing Factors",
-            statement: culprits?.length
+            value: culprits?.length || 0,
+            desc: culprits?.length
                 ? `${culprits.length} ${culprits.length === 1 ? "entity" : "entities"} had meaningful spend swings (>25% of anomaly spend, >15% delta).`
                 : "No individual campaign, adset, or ad explains the anomaly on its own.",
             status: culprits?.length ? "warn" : "neutral",
         })
     }
 
-    insights.push({
+    tiles.push({
         label: "Recent Changes",
-        statement: changes?.length
+        value: changes?.length || 0,
+        desc: changes?.length
             ? `${changes.length} significant ${changes.length === 1 ? "change" : "changes"} detected near the evaluation window.`
             : "No significant budget or targeting changes detected.",
         status: changes?.length ? "neutral" : "good",
@@ -152,18 +300,12 @@ function SummarySection({ report }) {
 
     if (eventHealth) {
         const statusMap = { healthy: "good", warning: "warn", stale: "bad" }
-        insights.push({
+        tiles.push({
             label: "Event Health",
-            statement: `${eventHealth.eventName} — last fired ${eventHealth.lastFiredAgo || "unknown"}.`,
+            value: eventHealth.status === "healthy" ? "Healthy" : eventHealth.status === "warning" ? "Warn" : eventHealth.status === "stale" ? "Stale" : "—",
+            desc: `${eventHealth.eventName} — last fired ${eventHealth.lastFiredAgo || "unknown"}.`,
             status: statusMap[eventHealth.status] || "neutral",
         })
-    }
-
-    const dotColors = {
-        good: { dot: "#22c55e", ring: "#dcfce7" },
-        warn: { dot: "#f59e0b", ring: "#fef3c7" },
-        bad: { dot: "#ef4444", ring: "#fef2f2" },
-        neutral: { dot: "#9ca3af", ring: "#f3f4f6" },
     }
 
     // Headline
@@ -181,11 +323,18 @@ function SummarySection({ report }) {
 
     return (
         <SectionCard id="summary">
-            <SectionHeader title="Diagnostic Summary" sub="Trailing 14 days · automated anomaly detection on account-level performance" />
+            <SectionHeader
+                title="Diagnostic Summary"
+                sub="Trailing 14 days · automated anomaly detection on account-level performance."
+                tag="01 · Overview"
+            />
 
-            <div className="rounded-2xl border p-4 mb-5 bg-blue-500">
+            <div className="rounded-2xl mb-4" style={{ background: ORANGE, color: "#fff", padding: "22px 26px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.78)", marginBottom: 10 }}>
+                    Top-line
+                </div>
                 <p
-                    className="text-[13px] font-medium leading-relaxed text-white"
+                    style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: "#fff", maxWidth: 800, margin: 0 }}
                     dangerouslySetInnerHTML={{
                         __html: headline
                             .replace(/\$[\d,.]+k?/g, "<strong>$&</strong>")
@@ -195,18 +344,7 @@ function SummarySection({ report }) {
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
-                {insights.map(ins => {
-                    const d = dotColors[ins.status] || dotColors.neutral
-                    return (
-                        <div key={ins.label} className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_0_0_1px_rgba(0,0,0,0.015)] p-3 flex gap-2.5 items-start">
-                            <div className="w-2 h-2 rounded-full mt-[5px] flex-shrink-0 shadow-[0_0_0_3px_var(--ring)]" style={{ background: d.dot, "--ring": d.ring }} />
-                            <div>
-                                <p className="text-[10px] font-bold text-gray-400 mb-0.5">{ins.label}</p>
-                                <p className="text-[12px] text-gray-600 leading-relaxed">{ins.statement}</p>
-                            </div>
-                        </div>
-                    )
-                })}
+                {tiles.map(tile => <InsightTile key={tile.label} {...tile} />)}
             </div>
         </SectionCard>
     )
@@ -237,43 +375,35 @@ function TrendSection({ dailyData, anomalyPeriod, mode, kpiLabel }) {
         <SectionCard id="trend">
             <SectionHeader
                 title={`Account Spend & ${kpiLabel} — Trailing 14 Days`}
-                sub={`Daily spend (bars) and ${kpiLabel} (line)${anomalyPeriod ? " · Anomaly period highlighted in red" : ""}`}
+                sub={`Daily spend (bars) and ${kpiLabel} (line)${anomalyPeriod ? " · Anomaly period highlighted in pink" : ""}.`}
+                tag="02 · Trend"
             />
-            <div className="grid grid-cols-3 gap-3 mb-5">
-                <MetricCard label="Total Spend (14d)" value={fmtCurrency(totalSpend)} color={BLUE} />
-                <MetricCard label={`Avg ${kpiLabel} (14d)`} value={fmtKpi(avgKpi, mode)} color={mode === "cpr" ? "#111827" : GREEN} />
+            <div className="grid grid-cols-3 gap-3 mb-4">
+                <MetricCard label="Total Spend · 14d" value={fmtCurrency(totalSpend)} />
+                <MetricCard label={`Avg ${kpiLabel} · 14d`} value={fmtKpi(avgKpi, mode)} />
                 <MetricCard
                     label="Anomaly Days"
                     value={anomalyPeriod ? `${anomalyPeriod.days}` : "0"}
                     sub={anomalyPeriod ? `${fmtDateShort(anomalyPeriod.startDate)}–${fmtDateShort(anomalyPeriod.endDate)}` : "no anomaly"}
-                    color={anomalyPeriod ? RED : GRAY}
                 />
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3" style={{ height: 280 }}>
+            <div className="rounded-2xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 12px 8px", height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
+                        <CartesianGrid strokeDasharray="2 4" stroke={GRID_STROKE} vertical={false} />
                         <XAxis dataKey="date" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} interval="preserveStartEnd" />
                         <YAxis yAxisId="kpi" orientation="left" tick={AXIS_TICK} tickLine={false} axisLine={false} width={48} tickFormatter={kpiAxisFmt} />
                         <YAxis yAxisId="spend" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} width={48} tickFormatter={fmtSpendShort} />
                         <RechartsTooltip
-                            formatter={(value, name) => {
-                                if (value == null) return ["N/A", name]
-                                if (name === "Spend") return [fmtSpendShort(Number(value)), "Spend"]
-                                return [mode === "cpr" ? `$${Number(value).toFixed(2)}` : `${Number(value).toFixed(2)}×`, kpiLabel]
-                            }}
-                            contentStyle={{
-                                borderRadius: "14px",
-                                border: "1px solid #e5e7eb",
-                                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                                fontSize: "12px",
-                                padding: "8px 12px",
-                            }}
+                            content={<ChartTooltipContent formatters={{
+                                Spend: (v) => fmtSpendShort(Number(v)),
+                                [kpiLabel]: (v) => mode === "cpr" ? `$${Number(v).toFixed(2)}` : `${Number(v).toFixed(2)}×`,
+                            }} />}
                         />
                         <Bar yAxisId="spend" dataKey="spend" name="Spend" radius={[3, 3, 0, 0]} maxBarSize={22}>
                             {chartData.map((entry, i) => (
-                                <Cell key={i} fill={entry.isAnomaly ? RED_BAR : NEUTRAL_BAR} />
+                                <Cell key={i} fill={entry.isAnomaly ? PINK : ORANGE_LIGHT} />
                             ))}
                         </Bar>
                         <Line
@@ -281,14 +411,14 @@ function TrendSection({ dailyData, anomalyPeriod, mode, kpiLabel }) {
                             type="monotone"
                             dataKey="kpi"
                             name={kpiLabel}
-                            stroke={BLUE}
-                            strokeWidth={2}
+                            stroke={PINK}
+                            strokeWidth={2.5}
                             connectNulls={false}
                             dot={(props) => {
                                 const { cx, cy, index } = props
                                 if (cx == null || cy == null) return null
                                 const isAnomaly = chartData[index]?.isAnomaly
-                                return <circle key={index} cx={cx} cy={cy} r={3} fill={isAnomaly ? RED : BLUE} strokeWidth={0} />
+                                return <circle key={index} cx={cx} cy={cy} r={3} fill={isAnomaly ? PINK : ORANGE} strokeWidth={0} />
                             }}
                             activeDot={{ r: 4, strokeWidth: 0 }}
                         />
