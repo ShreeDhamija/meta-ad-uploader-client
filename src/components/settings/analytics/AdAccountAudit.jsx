@@ -4,12 +4,9 @@ import { useState, useEffect, useRef } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
+import { FileBarChart2 } from "lucide-react"
 import {
-    FileBarChart2, TrendingUp, Filter, DollarSign,
-    Users, GraduationCap, FileText, Sparkles, LayoutDashboard,
-} from "lucide-react"
-import {
-    ComposedChart, BarChart as ReBarChart, LineChart, Bar, Line, XAxis, YAxis,
+    ComposedChart, LineChart, Bar, Line, XAxis, YAxis,
     CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
 } from "recharts"
 import { cn } from "@/lib/utils"
@@ -23,52 +20,60 @@ import MonthlySpend from "@/assets/icons/analytics/MonthlySpend.svg"
 import Traffic from "@/assets/icons/analytics/Traffic.svg"
 import FunnelHealth from "@/assets/icons/analytics/FunnelHealth.svg"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
-// ── Colors (all blues — zero purple) ─────────────────────────────────────────
-const BLUE = "#2563eb"
-const BLUE_LIGHT = "#3b82f6"
-const BLUE_DARK = "#1d4ed8"
-const BLUE_BG = "#eff6ff"
-const BLUE_BORDER = "#dbeafe"
-const GREEN = "#10b981"
-const CYAN = "#0891b2"
-const AMBER = "#f59e0b"
-const GRAY = "#6b7280"
+// ── Palette (orange + pink — zero blue/green/yellow) ─────────────────────────
+const ORANGE = "#FF4800"
+const ORANGE_DEEP = "#D93B00"
+const ORANGE_LIGHT = "#FFC7A8"
+const ORANGE_MID = "#FF9C73"
+const ORANGE_SOFT = "#FFE6DA"
+const PINK = "#F00D55"
+const PINK_DEEP = "#C70845"
+const PINK_SOFT = "#FCD9E3"
 
-// Chart colors (mapped from old indigo/purple → blue)
-const CPC_COLOR = BLUE
-const CTR_COLOR = GREEN
-const CPM_COLOR = GRAY
-const FREQ_COLOR = BLUE
-const FTIR_COLOR = CYAN
-const SPEND_COLOR = BLUE
-const KPI_COLOR = AMBER
-const PROSPECTING_COLOR = BLUE
-const RETARGETING_COLOR = AMBER
+const INK = "#0F1115"
+const INK_2 = "#2A2E35"
+const MUTED = "#6B7280"
+const MUTED_2 = "#9CA3AF"
+const LINE = "#E7E9EE"
+const LINE_2 = "#D8DCE3"
+const PAPER = "#FFFFFF"
+const PAPER_2 = "#F8F9FB"
 
-// ── Shared chart styling ─────────────────────────────────────────────────────
-const GRID_STROKE = "#f0f0f0"
-const AXIS_TICK = { fontSize: 10, fill: '#9ca3af' }
-const AXIS_LINE = { stroke: '#e5e7eb' }
+// Chart roles
+const CPC_COLOR = ORANGE
+const CTR_COLOR = PINK
+const CPM_COLOR = ORANGE
+const FREQ_COLOR = ORANGE
+const FTIR_COLOR = PINK
+const PROSPECTING_COLOR = ORANGE
+const RETARGETING_COLOR = PINK
+
+const FONT = "'Inter Tight', system-ui, sans-serif"
+
+const GRID_STROKE = "#EEF0F4"
+const AXIS_TICK = { fontSize: 10, fill: MUTED_2, fontFamily: FONT, letterSpacing: 0.4 }
+const AXIS_LINE = { stroke: LINE }
 const TOOLTIP_STYLE = {
-    borderRadius: '14px',
-    border: '1px solid #e5e7eb',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-    fontSize: '12px',
-    padding: '8px 12px',
+    borderRadius: "12px",
+    border: `1px solid ${LINE}`,
+    boxShadow: "none",
+    fontSize: "12px",
+    padding: "8px 12px",
+    fontFamily: FONT,
 }
 
 // ── Sidebar config ───────────────────────────────────────────────────────────
 const SIDEBAR_SECTIONS = [
-    { id: "summary", label: "Summary", icon: Summary },
-    { id: "traffic", label: "Traffic", icon: Traffic },
-    { id: "funnel", label: "Funnel Health", icon: FunnelHealth },
-    { id: "spend", label: "Monthly Spend", icon: MonthlySpend },
-    { id: "audience", label: "Audience", icon: Audience },
-    { id: "learning", label: "Learning Phase", icon: LearningPhase },
-    { id: "copy", label: "Copy Util.", icon: CopyUtil },
-    { id: "opportunities", label: "Opportunities", icon: Opportunities },
+    { id: "summary", label: "Summary", icon: Summary, group: "Report" },
+    { id: "traffic", label: "Traffic", icon: Traffic, group: "Report" },
+    { id: "funnel", label: "Funnel Health", icon: FunnelHealth, group: "Report" },
+    { id: "spend", label: "Monthly Spend", icon: MonthlySpend, group: "Report" },
+    { id: "audience", label: "Audience", icon: Audience, group: "Strategy" },
+    { id: "learning", label: "Learning Phase", icon: LearningPhase, group: "Strategy" },
+    { id: "copy", label: "Copy Util.", icon: CopyUtil, group: "Strategy" },
+    { id: "opportunities", label: "Opportunities", icon: Opportunities, group: "AI" },
 ]
 
 // ── Formatters ───────────────────────────────────────────────────────────────
@@ -77,44 +82,126 @@ function fmt$(v, decimals = 0) {
     if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`
     return `$${v.toFixed(decimals)}`
 }
-function fmtPct(v, decimals = 1) {
-    if (v === null || v === undefined) return "\u2014"
-    return `${(v * 100).toFixed(decimals)}%`
-}
 function fmtNum(v, decimals = 2) {
     if (v === null || v === undefined) return "\u2014"
     return v.toFixed(decimals)
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// REUSABLE SUBCOMPONENTS
+// REUSABLE PRIMITIVES
 // ═════════════════════════════════════════════════════════════════════════════
 
-function MetricCard({ label, value, sub, color }) {
+// Tiny mono-feeling uppercase label (Inter Tight uppercase with tracking)
+function UpperLabel({ children, className, style }) {
     return (
-        <div className="bg-white rounded-3xl p-4 flex flex-col gap-1 border-[0.5px] border-gray-100 shadow-xs">
-            <p className="text-[10px] font-semibold text-gray-400">{label}</p>
-            <p className="text-2xl font-bold tabular-nums" style={{ color: color || "#111827" }}>{value}</p>
-            {sub && <p className="text-[10px] text-gray-400">{sub}</p>}
+        <p
+            className={cn("font-semibold uppercase", className)}
+            style={{
+                fontSize: 10.5,
+                letterSpacing: "0.10em",
+                color: MUTED,
+                margin: 0,
+                ...style,
+            }}
+        >
+            {children}
+        </p>
+    )
+}
+
+// White metric card with oversized single-color number
+function MetricCard({ label, value, unit, sub, dark }) {
+    return (
+        <div
+            className="rounded-2xl flex flex-col gap-1.5 p-4"
+            style={{
+                background: dark ? INK : PAPER,
+                border: `1px solid ${dark ? INK : LINE}`,
+                color: dark ? "#fff" : INK,
+            }}
+        >
+            <UpperLabel style={{ color: dark ? "rgba(255,255,255,0.55)" : MUTED }}>
+                {label}
+            </UpperLabel>
+            <p
+                className="tabular-nums"
+                style={{
+                    fontSize: 40,
+                    fontWeight: 900,
+                    letterSpacing: "-0.04em",
+                    lineHeight: 1,
+                    margin: 0,
+                    color: dark ? "#fff" : INK,
+                }}
+            >
+                {value}
+                {unit && (
+                    <span style={{ fontSize: 22, fontWeight: 700, opacity: 0.55, marginLeft: 2 }}>
+                        {unit}
+                    </span>
+                )}
+            </p>
+            {sub && (
+                <p
+                    style={{
+                        fontSize: 11.5,
+                        color: dark ? "rgba(255,255,255,0.6)" : MUTED,
+                        margin: 0,
+                    }}
+                >
+                    {sub}
+                </p>
+            )}
         </div>
     )
 }
 
-function SectionHeader({ title, sub }) {
+function SectionHeader({ title, sub, tag }) {
     return (
-        <div className="mb-5">
-            <h3 className="text-[15px] font-semibold text-gray-900 leading-tight">{title}</h3>
-            {sub && <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">{sub}</p>}
+        <div className="flex items-start justify-between mb-5">
+            <div>
+                <h3 style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.015em", margin: 0, color: INK }}>
+                    {title}
+                </h3>
+                {sub && (
+                    <p style={{ fontSize: 11.5, color: MUTED, margin: "4px 0 0", maxWidth: 520 }}>
+                        {sub}
+                    </p>
+                )}
+            </div>
+            {tag && (
+                <div
+                    className="flex items-center gap-1.5"
+                    style={{
+                        fontSize: 10,
+                        fontWeight: 600,
+                        letterSpacing: "0.10em",
+                        textTransform: "uppercase",
+                        color: MUTED,
+                    }}
+                >
+                    <span
+                        style={{ width: 6, height: 6, borderRadius: 999, background: ORANGE }}
+                    />
+                    {tag}
+                </div>
+            )}
         </div>
     )
 }
 
-// V2-style section card: white, rounded-2xl, subtle ring shadow
-function SectionCard({ children, id }) {
+function SectionCard({ children, id, dark }) {
     return (
         <div
             id={`audit-${id}`}
-            className="bg-white rounded-3xl border-[0.5px] border-gray-100 shadow-xs p-6"
+            className="rounded-3xl"
+            style={{
+                background: dark ? INK : PAPER,
+                border: `1px solid ${dark ? INK : LINE}`,
+                padding: "22px 24px 24px",
+                color: dark ? "#fff" : INK,
+                fontFamily: FONT,
+            }}
         >
             {children}
         </div>
@@ -124,12 +211,22 @@ function SectionCard({ children, id }) {
 function ChartTooltipContent({ active, payload, label, formatters }) {
     if (!active || !payload?.length) return null
     return (
-        <div className="bg-white rounded-xl border border-gray-100 px-3 py-2.5 text-xs min-w-[140px] shadow-lg">
-            <p className="font-semibold text-gray-600 mb-1.5">{label}</p>
+        <div
+            style={{
+                background: PAPER,
+                borderRadius: 12,
+                border: `1px solid ${LINE}`,
+                padding: "8px 12px",
+                fontSize: 12,
+                minWidth: 140,
+                fontFamily: FONT,
+            }}
+        >
+            <p style={{ fontWeight: 700, color: INK_2, margin: "0 0 6px", fontSize: 11 }}>{label}</p>
             {payload.map((entry) => (
                 <div key={entry.name} className="flex justify-between gap-4">
-                    <span style={{ color: entry.color }}>{entry.name}</span>
-                    <span className="text-gray-800 font-medium tabular-nums">
+                    <span style={{ color: entry.color, fontWeight: 500 }}>{entry.name}</span>
+                    <span className="tabular-nums" style={{ color: INK, fontWeight: 700 }}>
                         {formatters?.[entry.name] ? formatters[entry.name](entry.value) : entry.value}
                     </span>
                 </div>
@@ -138,186 +235,252 @@ function ChartTooltipContent({ active, payload, label, formatters }) {
     )
 }
 
-// ── Donut ring (for learning + audience) ─────────────────────────────────────
-function DonutRing({ value, total, color = BLUE, size = 100 }) {
+// Donut ring (learning + copy)
+function DonutRing({ value, total, color = ORANGE, size = 110, centerText, centerSub }) {
     const pct = total > 0 ? value / total : 0
-    const r = (size - 12) / 2
+    const r = (size - size * 0.10) / 2
+    const sw = size * 0.10
     const circ = 2 * Math.PI * r
-    const offset = circ * (1 - pct)
+    const dash = circ * pct
     return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="block">
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f3f4f6" strokeWidth={9} />
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(15,17,21,0.08)" strokeWidth={sw} />
             <circle
-                cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={9}
-                strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+                cx={size / 2} cy={size / 2} r={r}
+                fill="none" stroke={color} strokeWidth={sw}
+                strokeLinecap="round"
+                strokeDasharray={`${dash} ${circ - dash}`}
+                strokeDashoffset={circ * 0.25}
                 transform={`rotate(-90 ${size / 2} ${size / 2})`}
-                style={{ transition: "stroke-dashoffset 1s cubic-bezier(0.34,1.56,0.64,1)" }}
+                style={{ transition: "stroke-dasharray 1s cubic-bezier(0.34,1.56,0.64,1)" }}
             />
-            <text x={size / 2} y={size / 2 + 5} textAnchor="middle" fontSize="18" fontWeight="700" fill="#1a1a1a">
-                {(pct * 100).toFixed(0)}%
+            <text
+                x={size / 2} y={size / 2 + size * 0.06}
+                textAnchor="middle"
+                fontFamily={FONT} fontWeight={900}
+                fontSize={size * 0.24} fill={INK}
+                letterSpacing="-0.04em"
+            >
+                {centerText ?? `${(pct * 100).toFixed(0)}%`}
             </text>
+            {centerSub && (
+                <text
+                    x={size / 2} y={size / 2 + size * 0.20}
+                    textAnchor="middle"
+                    fontFamily={FONT} fontWeight={600}
+                    fontSize={size * 0.07} fill={MUTED}
+                    letterSpacing="0.10em"
+                >
+                    {centerSub}
+                </text>
+            )}
         </svg>
     )
 }
 
-// ═════════════════════════════════════════════════════════════════════════════  
+// Signal-dot insight tile (white bg, ink text)
+function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neutral" }) {
+    const colors = {
+        good: { dot: "#22c55e", ring: "rgba(34,197,94,0.18)" },
+        warn: { dot: "#f59e0b", ring: "rgba(245,158,11,0.20)" },
+        bad: { dot: "#ef4444", ring: "rgba(239,68,68,0.18)" },
+        neutral: { dot: "#9ca3af", ring: "rgba(156,163,175,0.20)" },
+    }[status]
+    return (
+        <div
+            className="relative rounded-2xl"
+            style={{
+                background: PAPER,
+                border: `1px solid ${LINE}`,
+                padding: "14px 16px 15px",
+            }}
+        >
+            <span
+                className="absolute"
+                style={{
+                    top: 14, right: 14,
+                    width: 9, height: 9, borderRadius: 999,
+                    background: colors.dot,
+                    boxShadow: `0 0 0 4px ${colors.ring}`,
+                }}
+            />
+            <UpperLabel style={{ fontSize: 9.5, color: MUTED, marginBottom: 6, paddingRight: 20 }}>
+                {label}
+            </UpperLabel>
+            <div
+                className="tabular-nums"
+                style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1, color: INK }}
+            >
+                {valuePrefix && (
+                    <span style={{ fontSize: 17, fontWeight: 700, opacity: 0.45 }}>{valuePrefix}</span>
+                )}
+                {value}
+                {valueUnit && (
+                    <span style={{ fontSize: 17, fontWeight: 700, opacity: 0.45, marginLeft: 1 }}>
+                        {valueUnit}
+                    </span>
+                )}
+            </div>
+            {desc && (
+                <p style={{ fontSize: 11.5, color: MUTED, margin: "6px 0 0", lineHeight: 1.4 }}>
+                    {desc}
+                </p>
+            )}
+        </div>
+    )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 // SECTION 0: EXECUTIVE SUMMARY
 // ═════════════════════════════════════════════════════════════════════════════
 
 function SummarySection({ report, kpiType, kpiTarget }) {
     if (!report) return null
-
-    const { traffic, funnel, monthlySpend, audience, learning, copyUtilization, cpaTrend } = report
+    const { monthlySpend, audience, learning, copyUtilization, cpaTrend } = report
     const kpiLabel = kpiType === "roas" ? "ROAS" : "CPA"
 
-    const insights = []
-
-    // Spend trend
+    // Build top-line statement
+    let headlineParts = []
     if (monthlySpend?.length >= 2) {
         const cur = monthlySpend[monthlySpend.length - 1]
         const prev = monthlySpend[monthlySpend.length - 2]
-        const delta = prev.spend > 0 ? ((cur.spend - prev.spend) / prev.spend * 100).toFixed(0) : null
-        if (delta !== null) {
-            insights.push({
+        const delta = prev.spend > 0 ? ((cur.spend - prev.spend) / prev.spend * 100).toFixed(0) : "0"
+        headlineParts.push(`You spent <b>${fmt$(cur.spend)}</b> this month <b>(${delta > 0 ? "+" : ""}${delta}% MoM)</b>`)
+        if (cur.kpi != null) {
+            headlineParts.push(`with a blended ${kpiLabel} of <b>${kpiType === "roas" ? `${cur.kpi.toFixed(2)}×` : `$${cur.kpi.toFixed(1)}`}</b>.`)
+        } else {
+            headlineParts.push(".")
+        }
+        if (kpiTarget && cur.kpi != null) {
+            const above = kpiType === "roas" ? cur.kpi < kpiTarget : cur.kpi > kpiTarget
+            const gap = Math.abs(cur.kpi - kpiTarget)
+            const fmtGap = kpiType === "roas" ? `${gap.toFixed(2)}×` : `$${gap.toFixed(1)}`
+            headlineParts.push(above
+                ? `That's <b>${fmtGap} above target</b> — focus on consolidating learning-stuck ad sets and scaling top prospecting cohorts.`
+                : `That's <b>${fmtGap} better than target</b> — consider scaling top audiences.`)
+        }
+    }
+    const headline = headlineParts.join(" ")
+
+    // Build insight tiles (only from data clearly present)
+    const tiles = []
+
+    if (monthlySpend?.length >= 2) {
+        const cur = monthlySpend[monthlySpend.length - 1]
+        const prev = monthlySpend[monthlySpend.length - 2]
+        const deltaNum = prev.spend > 0 ? ((cur.spend - prev.spend) / prev.spend * 100) : null
+        if (deltaNum !== null) {
+            tiles.push({
                 label: "Spend Trend",
-                statement: `Spend is ${delta > 0 ? "up" : "down"} ${Math.abs(delta)}% month-over-month at ${fmt$(cur.spend)}.`,
-                status: Math.abs(delta) < 25 ? "neutral" : delta > 0 ? "good" : "warn",
+                value: Math.abs(deltaNum).toFixed(0),
+                valuePrefix: deltaNum > 0 ? "+" : "−",
+                valueUnit: "%",
+                desc: `MoM · ${fmt$(cur.spend)} this month`,
+                status: Math.abs(deltaNum) < 25 ? "good" : "warn",
             })
         }
     }
-
-    // KPI vs target
     if (monthlySpend?.length >= 1 && kpiTarget) {
         const cur = monthlySpend[monthlySpend.length - 1]
         if (cur.kpi != null) {
             const above = kpiType === "roas" ? cur.kpi < kpiTarget : cur.kpi > kpiTarget
             const gap = Math.abs(cur.kpi - kpiTarget)
-            const fmtGap = kpiType === "roas" ? `${gap.toFixed(2)}×` : `$${gap.toFixed(1)}`
-            insights.push({
+            tiles.push({
                 label: `${kpiLabel} vs Target`,
-                statement: `Blended ${kpiLabel} is ${kpiType === "roas" ? `${cur.kpi.toFixed(2)}×` : `$${cur.kpi.toFixed(1)}`} — ${fmtGap} ${above ? "worse than" : "better than"} your ${kpiType === "roas" ? `${kpiTarget}×` : `$${kpiTarget}`} target.`,
+                value: kpiType === "roas" ? `${gap.toFixed(2)}×` : gap.toFixed(2),
+                valuePrefix: above ? "+$" : "−$",
+                desc: `Blended ${kpiType === "roas" ? `${cur.kpi.toFixed(2)}×` : `$${cur.kpi.toFixed(1)}`} · ${kpiType === "roas" ? `${kpiTarget}×` : `$${kpiTarget}`} target`,
                 status: above ? "warn" : "good",
             })
         }
     }
-
-    // Learning phase
-    if (learning) {
-        const pct = learning.learningSpendPct
-        if (pct !== null) {
-            insights.push({
-                label: "Learning Phase",
-                statement: `${(pct * 100).toFixed(0)}% of budget is in learning${pct < 0.2 ? " — within healthy range." : ". Consider consolidating ad sets."}`,
-                status: pct < 0.2 ? "good" : pct < 0.5 ? "warn" : "bad",
-            })
-        }
+    if (cpaTrend && cpaTrend.recentCpa != null && cpaTrend.priorCpa != null) {
+        const delta = cpaTrend.deltaPct
+        tiles.push({
+            label: "CPA Trend",
+            value: Math.abs(delta).toFixed(0),
+            valuePrefix: delta > 0 ? "+" : "−",
+            valueUnit: "%",
+            desc: `Last 7d vs prior 7d · $${cpaTrend.priorCpa.toFixed(0)} → $${cpaTrend.recentCpa.toFixed(0)}`,
+            status: Math.abs(delta) < 5 ? "good" : delta > 0 ? "warn" : "good",
+        })
     }
-
-    // Audience split
+    if (learning && learning.learningSpendPct != null) {
+        const pct = learning.learningSpendPct
+        tiles.push({
+            label: "Learning Phase",
+            value: (pct * 100).toFixed(0),
+            valueUnit: "%",
+            desc: "of 7d budget in learning",
+            status: pct < 0.2 ? "good" : pct < 0.5 ? "warn" : "bad",
+        })
+    }
     if (audience && audience.totalSpend30d > 0) {
-        const prospPct = ((audience.prospectingSpend / audience.totalSpend30d) * 100).toFixed(0)
-        insights.push({
+        const prospPct = Math.round((audience.prospectingSpend / audience.totalSpend30d) * 100)
+        tiles.push({
             label: "Audience Split",
-            statement: `${prospPct}% prospecting / ${100 - prospPct}% retargeting allocation.`,
+            value: prospPct,
+            valueUnit: `/${100 - prospPct}`,
+            desc: "Prospecting / Retargeting",
             status: prospPct >= 55 && prospPct <= 85 ? "good" : "neutral",
         })
     }
-
-    // CPA trend (last 7d vs prior 7d)
-    if (cpaTrend && cpaTrend.recentCpa != null && cpaTrend.priorCpa != null) {
-        const delta = cpaTrend.deltaPct
-        const absDelta = Math.abs(delta)
-        insights.push({
-            label: "CPA Trend",
-            statement: `Cost per acquisition is ${delta > 0 ? "up" : "down"} ${absDelta.toFixed(0)}% over the last 7 days vs prior 7 days ($${cpaTrend.priorCpa.toFixed(0)} → $${cpaTrend.recentCpa.toFixed(0)}).`,
-            status: absDelta < 5 ? "good" : delta > 0 ? "warn" : "good",
-        })
-    }
-
-    // Copy utilization
     if (copyUtilization) {
-        insights.push({
+        tiles.push({
             label: "Copy Utilization",
-            statement: `${copyUtilization.maximizingCount}/${copyUtilization.totalCount} top ads are maximizing copy variants.${copyUtilization.totalCount - copyUtilization.maximizingCount > 0 ? ` ${copyUtilization.totalCount - copyUtilization.maximizingCount} ads have room to improve.` : ""}`,
+            value: copyUtilization.maximizingCount,
+            valueUnit: `/${copyUtilization.totalCount}`,
+            desc: "top ads maximizing variants",
             status: copyUtilization.maximizingCount >= copyUtilization.totalCount * 0.8 ? "good" : "warn",
         })
     }
 
-    // Traffic CPC direction
-    if (traffic?.daily?.length >= 14) {
-        const recent = traffic.daily.slice(-7)
-        const prior = traffic.daily.slice(-14, -7)
-        const avgRecent = recent.reduce((s, d) => s + (d.costPerClick || 0), 0) / recent.length
-        const avgPrior = prior.reduce((s, d) => s + (d.costPerClick || 0), 0) / prior.length
-        if (avgPrior > 0) {
-            const delta = ((avgRecent - avgPrior) / avgPrior * 100).toFixed(0)
-            insights.push({
-                label: "CPC Trend",
-                statement: `Cost per click is ${delta > 0 ? "up" : "down"} ${Math.abs(delta)}% over the last 7 days vs prior 7 days.`,
-                status: delta <= 0 ? "good" : "warn",
-            })
-        }
-    }
-
-    const dotColors = {
-        good: { dot: "#22c55e", ring: "#dcfce7" },
-        warn: { dot: "#f59e0b", ring: "#fef3c7" },
-        bad: { dot: "#ef4444", ring: "#fef2f2" },
-        neutral: { dot: "#9ca3af", ring: "#f3f4f6" },
-    }
-
-    // Build top-line statement
-    let headline = ""
-    if (monthlySpend?.length >= 2) {
-        const cur = monthlySpend[monthlySpend.length - 1]
-        const prev = monthlySpend[monthlySpend.length - 2]
-        const delta = prev.spend > 0 ? ((cur.spend - prev.spend) / prev.spend * 100).toFixed(0) : "0"
-        headline = `You spent ${fmt$(cur.spend)} this month (${delta > 0 ? "+" : ""}${delta}% MoM)`
-        if (cur.kpi != null) {
-            headline += ` with a blended ${kpiLabel} of ${kpiType === "roas" ? `${cur.kpi.toFixed(2)}×` : `$${cur.kpi.toFixed(1)}`}`
-        }
-        if (kpiTarget) {
-            const above = kpiType === "roas" ? cur.kpi < kpiTarget : cur.kpi > kpiTarget
-            const gap = Math.abs((cur.kpi || 0) - kpiTarget)
-            const fmtGap = kpiType === "roas" ? `${gap.toFixed(2)}×` : `$${gap.toFixed(1)}`
-            headline += above
-                ? `. That's ${fmtGap} above target — focus on consolidating underperformers.`
-                : `. That's ${fmtGap} better than target — consider scaling top audiences.`
-        } else {
-            headline += "."
-        }
-    }
-
     return (
         <SectionCard id="summary">
-            <SectionHeader title="Account Summary" sub="Key signals for your Meta ad account this period" />
+            <SectionHeader
+                title="Account Summary"
+                sub="Key signals for your Meta ad account this period."
+                tag="01 · Overview"
+            />
 
+            {/* Orange Top-Line */}
             {headline && (
-                <div className="rounded-2xl border p-4 mb-5 bg-blue-500">
-                    <p className="text-[13px] font-medium leading-relaxed text-white"
-                        dangerouslySetInnerHTML={{ __html: headline.replace(/\$[\d,.]+k?/g, '<strong>$&</strong>').replace(/\d+(\.\d+)?[×%]/g, '<strong>$&</strong>') }}
+                <div
+                    className="rounded-2xl"
+                    style={{
+                        background: ORANGE,
+                        color: "#fff",
+                        padding: "22px 26px",
+                        marginBottom: 14,
+                    }}
+                >
+                    <div
+                        style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            letterSpacing: "0.14em",
+                            textTransform: "uppercase",
+                            color: "rgba(255,255,255,0.78)",
+                            marginBottom: 10,
+                        }}
+                    >
+                        Top-line
+                    </div>
+                    <div
+                        style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: "#fff", maxWidth: 760 }}
+                        dangerouslySetInnerHTML={{ __html: headline }}
                     />
                 </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2.5">
-                {insights.map(ins => {
-                    const d = dotColors[ins.status] || dotColors.neutral
-                    return (
-                        <div key={ins.label} className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_0_0_1px_rgba(0,0,0,0.015)] p-3 flex gap-2.5 items-start">
-                            <div className="w-2 h-2 rounded-full mt-[5px] flex-shrink-0 shadow-[0_0_0_3px_var(--ring)]" style={{ background: d.dot, "--ring": d.ring }} />
-                            <div>
-                                <p className="text-[10px] font-bold text-gray-400 mb-0.5">{ins.label}</p>
-                                <p className="text-[12px] text-gray-600 leading-relaxed">{ins.statement}</p>
-                            </div>
-                        </div>
-                    )
-                })}
+            <div className="grid grid-cols-3 gap-2.5">
+                {tiles.map((t) => (
+                    <InsightTile key={t.label} {...t} />
+                ))}
             </div>
         </SectionCard>
     )
 }
-
 
 // ═════════════════════════════════════════════════════════════════════════════
 // SECTION 1: TRAFFIC
@@ -325,34 +488,57 @@ function SummarySection({ report, kpiType, kpiTarget }) {
 
 function TrafficSection({ traffic }) {
     const dateLabel = (d) => d.slice(5).replace("-", "/")
+    const lineDefs = [
+        { key: "costPerClick", label: "Cost Per Click (CPC)", color: CPC_COLOR, tooltipFmt: (v) => `$${(v ?? 0).toFixed(2)}`, yFmt: (v) => `$${v.toFixed(0)}` },
+        { key: "ctr", label: "Link CTR", color: CTR_COLOR, tooltipFmt: (v) => `${(v ?? 0).toFixed(2)}%`, yFmt: (v) => `${v.toFixed(1)}%` },
+        { key: "cpm", label: "Cost Per 1,000 Impressions (CPM)", color: CPM_COLOR, tooltipFmt: (v) => `$${(v ?? 0).toFixed(2)}`, yFmt: (v) => `$${v.toFixed(0)}` },
+    ]
+
     return (
         <SectionCard id="traffic">
-            <SectionHeader title="Traffic Overview" sub="Trailing 30 days · Cost Per Link Click, Link CTR, and CPM" />
-            <div className="grid grid-cols-3 gap-3 mb-5">
-                <MetricCard label="Avg Cost Per Link Click" value={fmt$(traffic.avgCostPerClick, 2)} color={CPC_COLOR} />
-                <MetricCard label="Avg Link CTR" value={traffic.avgCtr !== null ? `${traffic.avgCtr.toFixed(2)}%` : "\u2014"} color={CTR_COLOR} />
-                <MetricCard label="Avg CPM" value={fmt$(traffic.avgCpm, 0)} color={CPM_COLOR} />
+            <SectionHeader
+                title="Traffic Overview"
+                sub="Trailing 30 days · Cost Per Link Click, Link CTR, and CPM."
+                tag="02 · Traffic"
+            />
+
+            <div className="grid grid-cols-3 gap-3 mb-4">
+                <MetricCard label="Avg Cost / Link Click" value={fmt$(traffic.avgCostPerClick, 2)} />
+                <MetricCard label="Avg Link CTR" value={traffic.avgCtr !== null ? `${traffic.avgCtr.toFixed(2)}` : "\u2014"} unit="%" />
+                <MetricCard label="Avg CPM" value={fmt$(traffic.avgCpm, 0)} />
             </div>
-            <div className="grid grid-cols-3 gap-4">
-                {[
-                    { key: "costPerClick", label: "Cost Per Click (CPC)", color: CPC_COLOR, fmt: (v) => `$${(v ?? 0).toFixed(2)}`, yFmt: (v) => `$${v.toFixed(0)}` },
-                    { key: "ctr", label: "Link Click-Through Rate (CTR)", color: CTR_COLOR, fmt: (v) => `${(v ?? 0).toFixed(2)}%`, yFmt: (v) => `${v.toFixed(1)}%` },
-                    { key: "cpm", label: "Cost Per 1,000 Impressions (CPM)", color: CPM_COLOR, fmt: (v) => `$${(v ?? 0).toFixed(2)}`, yFmt: (v) => `$${v.toFixed(0)}` },
-                ].map(({ key, label, color, fmt: tooltipFmt, yFmt }) => (
-                    <div key={key} className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3">
-                        <p className="text-[10px] font-semibold text-gray-400 mb-2">{label}</p>
+
+            <div className="grid grid-cols-3 gap-3">
+                {lineDefs.map(({ key, label, color, tooltipFmt, yFmt }) => (
+                    <div
+                        key={key}
+                        className="rounded-2xl"
+                        style={{
+                            background: PAPER,
+                            border: `1px solid ${ORANGE}`,
+                            padding: "14px 12px 8px",
+                        }}
+                    >
+                        <UpperLabel style={{ marginBottom: 8, paddingLeft: 4 }}>{label}</UpperLabel>
                         <div style={{ height: 150 }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={traffic.daily} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+                                    <defs>
+                                        <linearGradient id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor={color} stopOpacity={0.28} />
+                                            <stop offset="100%" stopColor={color} stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="2 4" stroke={GRID_STROKE} vertical={false} />
                                     <XAxis dataKey="date" tick={AXIS_TICK} tickFormatter={dateLabel} interval="preserveStartEnd" axisLine={AXIS_LINE} tickLine={false} />
                                     <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={yFmt} width={36} />
                                     <Tooltip
                                         contentStyle={TOOLTIP_STYLE}
                                         formatter={(v) => [tooltipFmt(v), label.split(" (")[0]]}
-                                        labelStyle={{ fontWeight: 600, marginBottom: 4 }}
+                                        labelStyle={{ fontWeight: 700, fontSize: 11, marginBottom: 4 }}
                                     />
-                                    <Line type="natural" dataKey={key} stroke={color} dot={false} strokeWidth={2} connectNulls />
+                                    <Line type="monotone" dataKey={key} stroke={color} dot={false} strokeWidth={2.25} connectNulls />
+                                    <Line type="monotone" dataKey={key} stroke="none" fill={`url(#grad-${key})`} legendType="none" />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>
@@ -373,24 +559,42 @@ function FunnelSection({ funnel }) {
         Frequency: w.frequency,
         "FTIR %": w.ftir !== null ? w.ftir * 100 : null,
     }))
+
     return (
         <SectionCard id="funnel">
-            <SectionHeader title="Funnel Health" sub="Trailing 3 months · weekly averages · Frequency and First-Time Impression Rate" />
-            <div className="grid grid-cols-2 gap-3 mb-5">
-                <MetricCard label="Avg Weekly Frequency" value={fmtNum(funnel.avgFrequency)} sub="impressions per unique user" color={FREQ_COLOR} />
-                <MetricCard label="Avg First-Time Impression Rate" value={fmtPct(funnel.avgFtir)} sub="reach ÷ impressions · higher is healthier" color={FTIR_COLOR} />
+            <SectionHeader
+                title="Funnel Health"
+                sub="Trailing 3 months · weekly averages · Frequency and First-Time Impression Rate."
+                tag="03 · Funnel"
+            />
+            <div className="grid grid-cols-2 gap-3 mb-4">
+                <MetricCard label="Avg Weekly Frequency" value={fmtNum(funnel.avgFrequency)} sub="impressions per unique user" />
+                <MetricCard label="Avg First-Time Impression Rate" value={funnel.avgFtir !== null ? (funnel.avgFtir * 100).toFixed(0) : "\u2014"} unit="%" sub="reach ÷ impressions · higher is healthier" />
             </div>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3" style={{ height: 240 }}>
+            <div className="rounded-2xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 12px 8px", height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} />
+                    <ComposedChart data={chartData} margin={{ top: 12, right: 24, left: 0, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id="grad-freq" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={FREQ_COLOR} stopOpacity={0.22} />
+                                <stop offset="100%" stopColor={FREQ_COLOR} stopOpacity={0} />
+                            </linearGradient>
+                            <linearGradient id="grad-ftir" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={FTIR_COLOR} stopOpacity={0.22} />
+                                <stop offset="100%" stopColor={FTIR_COLOR} stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="2 4" stroke={GRID_STROKE} vertical={false} />
                         <XAxis dataKey="week" tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
                         <YAxis yAxisId="freq" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => v.toFixed(1)} width={36} />
                         <YAxis yAxisId="ftir" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => `${v.toFixed(0)}%`} width={44} />
                         <Tooltip content={<ChartTooltipContent formatters={{ Frequency: (v) => v.toFixed(2), "FTIR %": (v) => `${v.toFixed(1)}%` }} />} />
-                        <Legend wrapperStyle={{ fontSize: '11px' }} />
-                        <Line yAxisId="freq" type="natural" dataKey="Frequency" stroke={FREQ_COLOR} strokeWidth={2} dot={{ r: 3, strokeWidth: 0, fill: FREQ_COLOR }} />
-                        <Line yAxisId="ftir" type="natural" dataKey="FTIR %" stroke={FTIR_COLOR} strokeWidth={2} dot={{ r: 3, strokeWidth: 0, fill: FTIR_COLOR }} />
+                        <Legend
+                            wrapperStyle={{ fontSize: 11, fontFamily: FONT, paddingTop: 4 }}
+                            iconType="circle"
+                        />
+                        <Line yAxisId="freq" type="monotone" dataKey="Frequency" stroke={FREQ_COLOR} strokeWidth={2.5} dot={{ r: 3, strokeWidth: 0, fill: FREQ_COLOR }} fill="url(#grad-freq)" />
+                        <Line yAxisId="ftir" type="monotone" dataKey="FTIR %" stroke={FTIR_COLOR} strokeWidth={2.5} dot={{ r: 3, strokeWidth: 0, fill: FTIR_COLOR }} fill="url(#grad-ftir)" />
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
@@ -402,29 +606,105 @@ function FunnelSection({ funnel }) {
 // SECTION 3: MONTHLY SPEND
 // ═════════════════════════════════════════════════════════════════════════════
 
-function MonthlySpendSection({ monthlySpend, kpiType }) {
+function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
     const kpiLabel = kpiType === "roas" ? "ROAS" : "CPA"
     const kpiFmt = (v) => kpiType === "roas" ? `${v.toFixed(2)}×` : `$${v.toFixed(0)}`
+
+    const cur = monthlySpend?.[monthlySpend.length - 1]
+    const prev = monthlySpend?.[monthlySpend.length - 2]
+    const deltaPct = (cur && prev && prev.spend > 0) ? Math.round((cur.spend - prev.spend) / prev.spend * 100) : null
+    const overTarget = (kpiTarget != null && cur?.kpi != null)
+        ? (kpiType === "roas" ? cur.kpi < kpiTarget : cur.kpi > kpiTarget)
+        : null
+    const gap = (kpiTarget != null && cur?.kpi != null) ? Math.abs(cur.kpi - kpiTarget) : null
+
     return (
-        <SectionCard id="spend">
-            <SectionHeader title="Monthly Ad Spend" sub={`Last 6 months · total account spend and blended ${kpiLabel} by calendar month`} />
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3" style={{ height: 260 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={monthlySpend} margin={{ top: 4, right: 48, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
-                        <XAxis dataKey="month" tick={{ ...AXIS_TICK, fontSize: 11 }} axisLine={AXIS_LINE} tickLine={false} />
-                        <YAxis yAxisId="spend" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} width={48} />
-                        <YAxis yAxisId="kpi" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={kpiFmt} width={44} />
-                        <Tooltip content={<ChartTooltipContent formatters={{ Spend: (v) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, [kpiLabel]: kpiFmt }} />} />
-                        <Legend wrapperStyle={{ fontSize: '11px' }} />
-                        <Bar yAxisId="spend" dataKey="spend" name="Spend" fill={SPEND_COLOR} radius={[6, 6, 0, 0]}>
-                            {monthlySpend.map((_, i) => (
-                                <Cell key={i} fill={i === monthlySpend.length - 1 ? BLUE_LIGHT : `${BLUE}88`} />
-                            ))}
-                        </Bar>
-                        <Line yAxisId="kpi" type="natural" dataKey="kpi" name={kpiLabel} stroke={KPI_COLOR} dot={{ r: 3, strokeWidth: 0, fill: KPI_COLOR }} strokeWidth={2} connectNulls />
-                    </ComposedChart>
-                </ResponsiveContainer>
+        <SectionCard id="spend" dark>
+            <SectionHeader
+                title={<span style={{ color: "#fff" }}>Monthly Ad Spend</span>}
+                sub={`Last 6 months · total account spend and blended ${kpiLabel} by calendar month.`}
+                tag="04 · Spend"
+            />
+
+            <div className="grid gap-5" style={{ gridTemplateColumns: "300px 1fr", alignItems: "start" }}>
+                {/* Left: stacked KPI display */}
+                <div className="flex flex-col gap-3">
+                    <div>
+                        <UpperLabel style={{ color: "rgba(255,255,255,0.5)" }}>Spend This Month</UpperLabel>
+                        <div
+                            className="tabular-nums"
+                            style={{ fontSize: 60, fontWeight: 900, letterSpacing: "-0.045em", lineHeight: 1, color: "#fff", marginTop: 6 }}
+                        >
+                            <span style={{ fontSize: 30, opacity: 0.55 }}>$</span>
+                            {cur ? (cur.spend / 1000).toFixed(1) : "—"}
+                            <span style={{ fontSize: 30, opacity: 0.55 }}>k</span>
+                        </div>
+                        {deltaPct !== null && (
+                            <p style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
+                                <b style={{ color: ORANGE }}>{deltaPct > 0 ? "+" : ""}{deltaPct}%</b> MoM
+                            </p>
+                        )}
+                    </div>
+
+                    <div style={{ height: 1, background: "rgba(255,255,255,0.12)", margin: "4px 0" }} />
+
+                    <div>
+                        <UpperLabel style={{ color: "rgba(255,255,255,0.5)" }}>Blended {kpiLabel}</UpperLabel>
+                        <div
+                            className="tabular-nums"
+                            style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1, color: "#fff", marginTop: 6 }}
+                        >
+                            {cur?.kpi != null
+                                ? (kpiType === "roas"
+                                    ? <>{cur.kpi.toFixed(2)}<span style={{ fontSize: 24, opacity: 0.55 }}>×</span></>
+                                    : <><span style={{ fontSize: 24, opacity: 0.55 }}>$</span>{cur.kpi.toFixed(2)}</>)
+                                : "—"}
+                        </div>
+                        {kpiTarget != null && gap !== null && (
+                            <p style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
+                                Target {kpiType === "roas" ? `${kpiTarget}×` : `$${kpiTarget}`} ·{" "}
+                                <b style={{ color: overTarget ? PINK : ORANGE }}>
+                                    {overTarget ? "+" : "−"}{kpiType === "roas" ? `${gap.toFixed(2)}×` : `$${gap.toFixed(2)}`} {overTarget ? "over" : "under"}
+                                </b>
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right: chart */}
+                <div className="rounded-2xl" style={{ background: INK, border: `1px solid rgba(255,255,255,0.06)`, padding: "14px 12px 8px", height: 280 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <ComposedChart data={monthlySpend} margin={{ top: 18, right: 36, left: 0, bottom: 0 }}>
+                            <defs>
+                                <linearGradient id="grad-bar" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={ORANGE} stopOpacity={1} />
+                                    <stop offset="100%" stopColor={ORANGE_LIGHT} stopOpacity={1} />
+                                </linearGradient>
+                                <linearGradient id="grad-bar-current" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor={ORANGE} stopOpacity={1} />
+                                    <stop offset="100%" stopColor={ORANGE_MID} stopOpacity={1} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.10)" vertical={false} />
+                            <XAxis dataKey="month" tick={{ ...AXIS_TICK, fill: "rgba(255,255,255,0.6)", fontSize: 11 }} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} tickLine={false} />
+                            <YAxis yAxisId="spend" tick={{ ...AXIS_TICK, fill: "rgba(255,255,255,0.5)" }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} width={48} />
+                            <YAxis yAxisId="kpi" orientation="right" tick={{ ...AXIS_TICK, fill: "rgba(255,255,255,0.5)" }} tickLine={false} axisLine={false} tickFormatter={kpiFmt} width={44} />
+                            <Tooltip
+                                content={<ChartTooltipContent formatters={{
+                                    Spend: (v) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
+                                    [kpiLabel]: kpiFmt
+                                }} />}
+                            />
+                            <Legend wrapperStyle={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontFamily: FONT }} iconType="circle" />
+                            <Bar yAxisId="spend" dataKey="spend" name="Spend" radius={[8, 8, 0, 0]}>
+                                {monthlySpend.map((_, i) => (
+                                    <Cell key={i} fill={i === monthlySpend.length - 1 ? "url(#grad-bar-current)" : "url(#grad-bar)"} />
+                                ))}
+                            </Bar>
+                            <Line yAxisId="kpi" type="monotone" dataKey="kpi" name={kpiLabel} stroke={PINK} dot={{ r: 3, strokeWidth: 2, fill: INK, stroke: PINK }} strokeWidth={2.5} connectNulls />
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
         </SectionCard>
     )
@@ -442,106 +722,157 @@ function AudienceSection({ audience }) {
     const visible = showAll ? filtered : filtered.slice(0, 8)
     const total = audience.totalSpend30d
 
-    const spendPct = (v) => total > 0 ? `${((v / total) * 100).toFixed(0)}%` : "\u2014"
-
-    const splitData = [
-        { name: "Prospecting", spend: audience.prospectingSpend, fill: PROSPECTING_COLOR },
-        { name: "Retargeting", spend: audience.retargetingSpend, fill: RETARGETING_COLOR },
-    ]
+    const prospPct = total > 0 ? Math.round((audience.prospectingSpend / total) * 100) : 0
+    const retasPct = 100 - prospPct
 
     return (
         <SectionCard id="audience">
-            <SectionHeader title="Audience Strategy" sub="Adsets with delivery in last 30 days (including paused) · prospecting vs retargeting classification" />
+            <SectionHeader
+                title="Audience Strategy"
+                sub="Adsets with delivery in last 30 days (including paused) · prospecting vs retargeting classification."
+                tag="05 · Audience"
+            />
 
-            <div className="grid grid-cols-3 gap-3 mb-5">
-                <MetricCard label="Prospecting Spend (30d)" value={fmt$(audience.prospectingSpend)} sub={`${spendPct(audience.prospectingSpend)} of total`} color={PROSPECTING_COLOR} />
-                <MetricCard label="Retargeting Spend (30d)" value={fmt$(audience.retargetingSpend)} sub={`${spendPct(audience.retargetingSpend)} of total`} color={RETARGETING_COLOR} />
-                <MetricCard label="Total Account Spend (30d)" value={fmt$(audience.totalSpend30d)} />
+            <div className="grid grid-cols-3 gap-3 mb-4">
+                <MetricCard
+                    label="Prospecting Spend · 30d"
+                    value={fmt$(audience.prospectingSpend)}
+                    sub={`${prospPct}% of total`}
+                />
+                <MetricCard
+                    label="Retargeting Spend · 30d"
+                    value={fmt$(audience.retargetingSpend)}
+                    sub={`${retasPct}% of total`}
+                />
+                <MetricCard
+                    label="Total Account Spend · 30d"
+                    value={fmt$(audience.totalSpend30d)}
+                    sub={`${audience.adsets.length} active adsets`}
+                />
             </div>
 
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)] p-3 mb-5" style={{ height: 90 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                    <ReBarChart layout="vertical" data={splitData} margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
-                        <XAxis type="number" tick={AXIS_TICK} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} axisLine={AXIS_LINE} tickLine={false} />
-                        <YAxis type="category" dataKey="name" tick={{ ...AXIS_TICK, fontSize: 11 }} width={80} tickLine={false} axisLine={false} />
-                        <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [`$${(v || 0).toLocaleString()}`, ""]} cursor={{ fill: "#f9fafb" }} />
-                        <Bar dataKey="spend" radius={[0, 6, 6, 0]}>
-                            {splitData.map((entry, i) => (<Cell key={i} fill={entry.fill} />))}
-                        </Bar>
-                    </ReBarChart>
-                </ResponsiveContainer>
+            {/* Split bar — flat colors */}
+            <div
+                className="rounded-2xl mb-4"
+                style={{ height: 56, background: PAPER, border: `1px solid ${LINE}`, overflow: "hidden", display: "flex" }}
+            >
+                <div
+                    style={{ flex: prospPct, background: PROSPECTING_COLOR, color: "#fff", display: "flex", alignItems: "center", padding: "0 16px", fontWeight: 700, fontSize: 13.5 }}
+                >
+                    Prospecting <span style={{ fontSize: 11, opacity: 0.85, marginLeft: 8, fontWeight: 500 }}>{fmt$(audience.prospectingSpend)} · {prospPct}%</span>
+                </div>
+                <div
+                    style={{ flex: retasPct, background: RETARGETING_COLOR, color: "#fff", display: "flex", alignItems: "center", padding: "0 16px", fontWeight: 700, fontSize: 13.5 }}
+                >
+                    Retargeting <span style={{ fontSize: 11, opacity: 0.85, marginLeft: 8, fontWeight: 500 }}>{fmt$(audience.retargetingSpend)} · {retasPct}%</span>
+                </div>
             </div>
 
             {audience.topExclusions?.length > 0 && (
                 <div className="mb-4">
-                    <p className="text-[10px] font-semibold text-gray-400 mb-2">Most-Used Exclusion Audiences</p>
+                    <UpperLabel style={{ marginBottom: 8 }}>Most-Used Exclusion Audiences</UpperLabel>
                     <div className="flex flex-wrap gap-1.5">
                         {audience.topExclusions.map((exc) => (
-                            <span key={exc.name} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-600 text-[11px] rounded-full border border-gray-100">
-                                {exc.name} <span className="text-gray-400">×{exc.count}</span>
+                            <span
+                                key={exc.name}
+                                className="inline-flex items-baseline gap-1.5"
+                                style={{ padding: "5px 10px 6px", borderRadius: 999, background: PAPER, border: `1px solid ${LINE}`, fontSize: 11.5, color: INK_2 }}
+                            >
+                                {exc.name}
+                                <span style={{ fontSize: 10.5, fontWeight: 700, color: ORANGE }}>×{exc.count}</span>
                             </span>
                         ))}
                     </div>
                 </div>
             )}
 
-            {/* Filter toggle — V2 style matching parent CPA/ROAS toggle */}
+            {/* Filter */}
             <div className="flex items-center gap-2 mb-3">
-                <div className="inline-flex p-0.5 bg-gray-100 rounded-2xl border border-gray-200/60">
-                    {["all", "prospecting", "retargeting"].map((t) => (
-                        <button key={t} onClick={() => setFilter(t)}
-                            className={cn(
-                                "px-3.5 py-1.5 text-xs font-medium rounded-xl transition-all duration-200",
-                                filter === t
-                                    ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
-                                    : "text-gray-500 hover:text-gray-700"
-                            )}>
-                            {t.charAt(0).toUpperCase() + t.slice(1)}
-                            {t !== "all" && <span className="ml-1 text-gray-400">({audience.adsets.filter(a => a.type === t).length})</span>}
-                        </button>
-                    ))}
+                <div className="inline-flex" style={{ padding: 3, background: PAPER_2, border: `1px solid ${LINE}`, borderRadius: 12 }}>
+                    {["all", "prospecting", "retargeting"].map((t) => {
+                        const isActive = filter === t
+                        return (
+                            <button
+                                key={t}
+                                onClick={() => setFilter(t)}
+                                style={{
+                                    padding: "6px 14px",
+                                    borderRadius: 9,
+                                    fontSize: 11.5,
+                                    fontWeight: isActive ? 600 : 500,
+                                    color: isActive ? "#fff" : MUTED,
+                                    background: isActive ? INK : "transparent",
+                                    border: 0,
+                                    cursor: "pointer",
+                                    fontFamily: FONT,
+                                }}
+                            >
+                                {t.charAt(0).toUpperCase() + t.slice(1)}
+                                {t !== "all" && (
+                                    <span style={{ fontSize: 10, opacity: 0.6, marginLeft: 4, fontWeight: 500 }}>
+                                        ({audience.adsets.filter(a => a.type === t).length})
+                                    </span>
+                                )}
+                            </button>
+                        )
+                    })}
                 </div>
-                <span className="ml-auto text-[10px] text-gray-400">{filtered.length} adsets</span>
+                <UpperLabel style={{ marginLeft: "auto" }}>{filtered.length} adsets</UpperLabel>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+            <div className="overflow-x-auto rounded-2xl" style={{ border: `1px solid ${LINE}` }}>
                 <table className="min-w-full text-sm">
-                    <thead className="bg-gray-50/70">
+                    <thead style={{ background: PAPER_2 }}>
                         <tr>
-                            <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400 ">Adset</th>
-                            <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400 ">Type</th>
-                            <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400  min-w-[200px]">Targeting</th>
-                            <th className="text-left px-3.5 py-2.5 text-[10px] font-semibold text-gray-400 ">Exclusions</th>
-                            <th className="text-right px-3.5 py-2.5 text-[10px] font-semibold text-gray-400 ">30d Spend</th>
+                            {["Adset", "Type", "Targeting", "Exclusions"].map((h) => (
+                                <th key={h} className="text-left" style={{ padding: "11px 14px", fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: "0.10em", textTransform: "uppercase", borderBottom: `1px solid ${LINE}` }}>{h}</th>
+                            ))}
+                            <th className="text-right" style={{ padding: "11px 14px", fontSize: 10, fontWeight: 600, color: MUTED, letterSpacing: "0.10em", textTransform: "uppercase", borderBottom: `1px solid ${LINE}` }}>30d Spend</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {visible.map((adset) => (
-                            <tr key={adset.id} className="hover:bg-gray-50/50 transition-colors">
-                                <td className="px-3.5 py-2.5 text-gray-800 max-w-[180px] truncate font-medium" title={adset.name}>{adset.name}</td>
-                                <td className="px-3.5 py-2.5">
-                                    <span className={cn("inline-block px-2.5 py-0.5 text-[10px] rounded-full font-semibold",
-                                        adset.type === "prospecting" ? "text-blue-700" : "text-amber-700"
-                                    )} style={{ background: adset.type === "prospecting" ? BLUE_BG : "#fffbeb" }}>
-                                        {adset.type === "prospecting" ? "Pros." : "Retas."}
+                    <tbody>
+                        {visible.map((adset, idx) => (
+                            <tr key={adset.id} style={{ borderTop: idx === 0 ? 0 : `1px solid ${LINE}` }}>
+                                <td className="font-medium" style={{ padding: "12px 14px", color: INK, fontSize: 12.5, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={adset.name}>
+                                    {adset.name}
+                                </td>
+                                <td style={{ padding: "12px 14px" }}>
+                                    <span
+                                        style={{
+                                            display: "inline-block",
+                                            padding: "2px 8px 3px",
+                                            fontSize: 10,
+                                            fontWeight: 700,
+                                            letterSpacing: "0.04em",
+                                            borderRadius: 6,
+                                            background: adset.type === "prospecting" ? ORANGE_SOFT : PINK_SOFT,
+                                            color: adset.type === "prospecting" ? ORANGE_DEEP : PINK_DEEP,
+                                        }}
+                                    >
+                                        {adset.type === "prospecting" ? "PROS" : "RETAS"}
                                     </span>
                                 </td>
-                                <td className="px-3.5 py-2.5 text-gray-500 text-xs max-w-[220px] truncate" title={adset.targetingSummary}>{adset.targetingSummary}</td>
-                                <td className="px-3.5 py-2.5 text-gray-500 text-xs max-w-[180px]">
-                                    <td className="px-3.5 py-2.5 text-gray-500 text-xs max-w-[180px] truncate" title={adset.exclusions.length ? adset.exclusions.join(", ") : ""}>
-                                        {adset.exclusions.length
-                                            ? adset.exclusions.slice(0, 2).join(", ") + (adset.exclusions.length > 2 ? "…" : "")
-                                            : <span className="text-gray-300">—</span>}
-                                    </td>
+                                <td style={{ padding: "12px 14px", color: INK_2, fontSize: 12.5, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={adset.targetingSummary}>
+                                    {adset.targetingSummary}
                                 </td>
-                                <td className="px-3.5 py-2.5 text-right font-semibold text-gray-800 tabular-nums">{fmt$(adset.spend30d)}</td>
+                                <td style={{ padding: "12px 14px", color: INK_2, fontSize: 12.5, maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={adset.exclusions.join(", ")}>
+                                    {adset.exclusions.length
+                                        ? adset.exclusions.slice(0, 2).join(", ") + (adset.exclusions.length > 2 ? "…" : "")
+                                        : <span style={{ color: MUTED_2 }}>—</span>}
+                                </td>
+                                <td className="tabular-nums" style={{ padding: "12px 14px", textAlign: "right", fontWeight: 700, color: INK, fontSize: 12.5 }}>
+                                    {fmt$(adset.spend30d)}
+                                </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
             </div>
             {filtered.length > 8 && (
-                <button onClick={() => setShowAll(v => !v)} className={cn("mt-2 text-xs font-medium hover:underline", `text-[${BLUE}]`)}>
+                <button
+                    onClick={() => setShowAll(v => !v)}
+                    style={{ marginTop: 8, fontSize: 12, fontWeight: 600, color: ORANGE, background: "transparent", border: 0, cursor: "pointer", padding: 0 }}
+                >
                     {showAll ? "Show less" : `Show all ${filtered.length} adsets`}
                 </button>
             )}
@@ -555,38 +886,79 @@ function AudienceSection({ audience }) {
 
 function LearningSection({ learning }) {
     const pct = learning.learningSpendPct
-    const pctDisplay = pct !== null ? `${(pct * 100).toFixed(1)}%` : "\u2014"
     let status = "good"
     if (pct !== null) {
         if (pct >= 0.5) status = "bad"
         else if (pct >= 0.2) status = "warn"
     }
     const cfg = {
-        good: { label: "Healthy", bg: "bg-green-50", text: "text-green-700", border: "border-green-200", numColor: "#059669", dotColor: "#22c55e", ringColor: "#dcfce7" },
-        warn: { label: "Monitor", bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200", numColor: "#d97706", dotColor: "#f59e0b", ringColor: "#fef3c7" },
-        bad: { label: "Action needed", bg: "bg-red-50", text: "text-red-700", border: "border-red-200", numColor: "#dc2626", dotColor: "#ef4444", ringColor: "#fef2f2" },
+        good: { label: "Healthy", color: ORANGE, ring: "rgba(255,72,0,0.06)", border: "rgba(255,72,0,0.30)", textC: ORANGE_DEEP, dotC: ORANGE },
+        warn: { label: "Monitor", color: PINK, ring: "rgba(240,13,85,0.06)", border: "rgba(240,13,85,0.30)", textC: PINK_DEEP, dotC: PINK },
+        bad: { label: "Action needed", color: PINK, ring: "rgba(240,13,85,0.08)", border: "rgba(240,13,85,0.40)", textC: PINK_DEEP, dotC: PINK },
     }[status]
 
     return (
         <SectionCard id="learning">
-            <SectionHeader title="% of Budget in Learning Phase" sub="Last 7 days · ad sets in Learning or Learning Limited (including paused)" />
+            <SectionHeader
+                title="% of Budget in Learning Phase"
+                sub="Last 7 days · ad sets in Learning or Learning Limited (including paused)."
+                tag="06 · Learning"
+            />
+
             <div className="flex items-start gap-6">
-                <div className="flex-shrink-0 flex flex-col items-center gap-2">
-                    <DonutRing value={learning.learningSpend} total={learning.totalSpend} color={cfg.numColor} size={110} />
-                    <span className={cn("inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold", cfg.bg, cfg.text, `border ${cfg.border}`)}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.dotColor }} />
+                <div className="flex-shrink-0 flex flex-col items-center gap-2.5">
+                    <DonutRing
+                        value={learning.learningSpend}
+                        total={learning.totalSpend}
+                        color={cfg.color}
+                        size={130}
+                        centerText={pct !== null ? `${(pct * 100).toFixed(0)}%` : "—"}
+                        centerSub="IN LEARNING"
+                    />
+                    <span
+                        className="inline-flex items-center gap-1.5"
+                        style={{
+                            padding: "5px 11px 6px",
+                            borderRadius: 999,
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            background: cfg.ring,
+                            border: `1px solid ${cfg.border}`,
+                            color: cfg.textC,
+                        }}
+                    >
+                        <span style={{ width: 7, height: 7, borderRadius: 999, background: cfg.dotC }} />
                         {cfg.label}
                     </span>
                 </div>
+
                 <div className="flex-1 space-y-3 pt-1">
                     <div className="grid grid-cols-2 gap-3">
-                        <MetricCard label="Learning Spend (7d)" value={fmt$(learning.learningSpend)} sub="spend from Learning / Learning Limited ad sets" />
-                        <MetricCard label="Total Spend (7d)" value={fmt$(learning.totalSpend)} sub="all ad sets" />
+                        <MetricCard label="Learning Spend · 7d" value={fmt$(learning.learningSpend)} sub="from Learning / Learning Limited ad sets" />
+                        <MetricCard label="Total Spend · 7d" value={fmt$(learning.totalSpend)} sub="all ad sets" />
                     </div>
-                    <div className="text-xs text-gray-500 bg-gray-50 rounded-2xl p-3.5 space-y-1 border border-gray-100">
-                        <p><span className="font-semibold text-green-700">{"< 20%"}</span> — Healthy. Most budget is running in stable, optimized ad sets.</p>
-                        <p><span className="font-semibold text-amber-700">20–50%</span> — Monitor. A significant portion of budget is in learning; avoid additional structural changes.</p>
-                        <p><span className="font-semibold text-red-700">{"> 50%"}</span> — Action needed. Consolidate ad sets or pause new launches until learning completes.</p>
+                    <div
+                        className="rounded-2xl"
+                        style={{ padding: "14px 16px", background: PAPER_2, border: `1px solid ${LINE}`, display: "flex", gap: 10, fontSize: 12, color: INK_2, lineHeight: 1.55 }}
+                    >
+                        <div style={{ flex: 1 }}>
+                            <b style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: ORANGE_DEEP, marginBottom: 3 }}>
+                                &lt; 20% · Healthy
+                            </b>
+                            Most budget is running in stable, optimized ad sets.
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <b style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: PINK_DEEP, marginBottom: 3 }}>
+                                20–50% · Monitor
+                            </b>
+                            Avoid additional structural changes while learning resolves.
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <b style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: INK, marginBottom: 3 }}>
+                                &gt; 50% · Action
+                            </b>
+                            Consolidate ad sets or pause new launches.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -599,30 +971,32 @@ function LearningSection({ learning }) {
 // ═════════════════════════════════════════════════════════════════════════════
 
 function CopyUtilizationSection({ copyUtilization }) {
-    const isGood = copyUtilization.status === "maximizing"
-    const color = isGood ? "#059669" : AMBER
-    const r = 32, circ = 2 * Math.PI * r
-    const offset = circ * (1 - copyUtilization.maximizingCount / copyUtilization.totalCount)
-
     return (
         <SectionCard id="copy">
-            <SectionHeader title="Copy Utilization" sub="Top 10 ads by 30-day spend · primary text and headline field usage" />
-            <div className="flex items-center gap-5 mb-4">
-                <svg width={80} height={80} viewBox="0 0 80 80" className="flex-shrink-0">
-                    <circle cx={40} cy={40} r={r} fill="none" stroke="#f3f4f6" strokeWidth={7} />
-                    <circle cx={40} cy={40} r={r} fill="none" stroke={color} strokeWidth={7}
-                        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
-                        transform="rotate(-90 40 40)" style={{ transition: "stroke-dashoffset 0.8s ease" }} />
-                    <text x={40} y={43} textAnchor="middle" fontSize="15" fontWeight="700" fill="#1a1a1a">
-                        {copyUtilization.maximizingCount}/{copyUtilization.totalCount}
-                    </text>
-                </svg>
-                <div className="flex-1 pt-1">
-                    <p className={cn("text-sm font-semibold mb-1", isGood ? "text-green-700" : "text-amber-700")}>
-                        {isGood ? "✓ " : "⚠ "}{copyUtilization.statusText}
+            <SectionHeader
+                title="Copy Utilization"
+                sub="Top 10 ads by 30-day spend · primary text and headline field usage."
+                tag="07 · Copy"
+            />
+            <div className="flex items-center gap-6">
+                <DonutRing
+                    value={copyUtilization.maximizingCount}
+                    total={copyUtilization.totalCount}
+                    color={PINK}
+                    size={110}
+                    centerText={`${copyUtilization.maximizingCount}/${copyUtilization.totalCount}`}
+                    centerSub="MAXIMIZING"
+                />
+                <div className="flex-1">
+                    <p style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em", marginBottom: 6, color: INK }}>
+                        {copyUtilization.maximizingCount} of {copyUtilization.totalCount} ads are maximizing copy variants
                     </p>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                        Ads using all 5 primary text variants and 5 headline variants allow Meta's algorithm to test more combinations, improving delivery efficiency and reducing cost over time.
+                    <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55, color: MUTED }}>
+                        Ads using all 5 primary text variants and 5 headline variants allow Meta&apos;s algorithm to test
+                        more combinations, improving delivery efficiency and reducing cost over time.
+                        {copyUtilization.totalCount - copyUtilization.maximizingCount > 0 && (
+                            <> {copyUtilization.totalCount - copyUtilization.maximizingCount} ads have unused fields — consider duplicating top performers with fresh copy.</>
+                        )}
                     </p>
                 </div>
             </div>
@@ -635,7 +1009,7 @@ function CopyUtilizationSection({ copyUtilization }) {
 // ═════════════════════════════════════════════════════════════════════════════
 
 function StyledOpportunitiesContent({ text }) {
-    if (!text) return <p className="text-sm text-gray-400 italic">No opportunities generated yet.</p>
+    if (!text) return <p style={{ fontSize: 13, color: MUTED_2, fontStyle: "italic" }}>No opportunities generated yet.</p>
 
     const lines = text.split("\n")
     const blocks = []
@@ -653,57 +1027,35 @@ function StyledOpportunitiesContent({ text }) {
     for (const raw of lines) {
         const line = raw.trim()
         if (!line) continue
-
-        // Detect **Heading** lines
         const headingMatch = line.match(/^\*\*(.+?)\*\*$/)
-        if (headingMatch) {
-            flush()
-            currentHeading = headingMatch[1]
-            continue
-        }
-
-        // Detect bullet lines (• or - or * prefixed)
-        const bulletMatch = line.match(/^[•\-\*]\s*(.+)/)
-        if (bulletMatch) {
-            currentBullets.push(bulletMatch[1])
-            continue
-        }
-
-        // Fallback: treat as a bullet if under a heading, otherwise as heading
-        if (currentHeading) {
-            currentBullets.push(line)
-        } else {
-            flush()
-            currentHeading = line
-        }
+        if (headingMatch) { flush(); currentHeading = headingMatch[1]; continue }
+        const bulletMatch = line.match(/^[•*-]\s*(.+)/)
+        if (bulletMatch) { currentBullets.push(bulletMatch[1]); continue }
+        if (currentHeading) currentBullets.push(line)
+        else { flush(); currentHeading = line }
     }
     flush()
 
-    // Color the dot differently per section
-    const dotColors = ["#2563eb", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#0891b2"]
-
     return (
-        <div className="space-y-5">
+        <div>
             {blocks.map((block, bi) => (
-                <div key={bi}>
+                <div key={bi} style={{ marginTop: bi === 0 ? 0 : 16 }}>
                     {block.heading && (
-                        <h4 className="text-[13px] font-semibold text-gray-900 mb-2.5 flex items-center gap-2">
-                            <span
-                                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                                style={{ background: dotColors[bi % dotColors.length] }}
-                            />
+                        <h4 style={{ display: "flex", alignItems: "baseline", gap: 10, margin: "0 0 8px", fontSize: 13.5, fontWeight: 700, letterSpacing: "-0.01em", color: INK }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: ORANGE, letterSpacing: "0.10em" }}>
+                                {String(bi + 1).padStart(2, "0")}
+                            </span>
                             {block.heading}
                         </h4>
                     )}
                     {block.bullets.length > 0 && (
-                        <ul className="space-y-2 pl-3.5">
+                        <ul style={{ margin: 0, padding: "0 0 0 14px", listStyle: "none", borderLeft: `1px solid ${LINE}`, marginLeft: 5 }}>
                             {block.bullets.map((b, i) => (
-                                <li key={i} className="flex items-start gap-2.5 text-[12.5px] text-gray-600 leading-relaxed">
+                                <li key={i} style={{ fontSize: 12.5, lineHeight: 1.55, color: INK_2, marginBottom: 6, position: "relative" }}>
                                     <span
-                                        className="w-[5px] h-[5px] rounded-full mt-[7px] flex-shrink-0 opacity-40"
-                                        style={{ background: dotColors[bi % dotColors.length] }}
+                                        style={{ position: "absolute", left: -19, top: 8, width: 7, height: 1, background: LINE_2 }}
                                     />
-                                    <span>{b}</span>
+                                    {b}
                                 </li>
                             ))}
                         </ul>
@@ -714,38 +1066,39 @@ function StyledOpportunitiesContent({ text }) {
     )
 }
 
-
 function OpportunitiesSection({ text, isLoading, error }) {
     return (
         <SectionCard id="opportunities">
-            <SectionHeader title="Areas of Opportunity" sub="AI-generated analysis based on account performance data" />
-
+            <SectionHeader
+                title="Areas of Opportunity"
+                sub="AI-generated analysis based on account performance data."
+                tag="08 · AI"
+            />
             {isLoading && (
-                <div className="flex flex-col items-center justify-center py-16">
-                    <div className="mb-3">
-                        <Helix size="40" speed="2.5" color={BLUE} />
-                    </div>
-                    <p className="text-sm font-medium text-gray-600">Generating suggestions…</p>
-                    <p className="text-xs text-gray-400 mt-1">Analyzing your account data with AI</p>
+                <div className="flex flex-col items-center justify-center py-12">
+                    <div style={{ marginBottom: 12 }}><Helix size="40" speed="2.5" color={ORANGE} /></div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: INK_2, margin: 0 }}>Generating suggestions…</p>
+                    <p style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>Analyzing your account data with AI</p>
                 </div>
             )}
-            {error && <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl mb-3 border border-red-100">{error}</p>}
-
+            {error && (
+                <p style={{ fontSize: 13, color: PINK_DEEP, background: PINK_SOFT, padding: "8px 12px", borderRadius: 10, border: `1px solid ${PINK_SOFT}`, marginBottom: 12 }}>
+                    {error}
+                </p>
+            )}
             {!isLoading && text && (
-                <div className="bg-gray-50/60 rounded-2xl border border-gray-100 p-5">
+                <div style={{ background: PAPER_2, border: `1px solid ${LINE}`, borderRadius: 18, padding: "20px 22px" }}>
                     <StyledOpportunitiesContent text={text} />
                 </div>
             )}
-
             {!isLoading && !text && !error && (
-                <p className="text-sm text-gray-400 italic py-8 text-center">
+                <p style={{ fontSize: 13, color: MUTED_2, fontStyle: "italic", textAlign: "center", padding: "32px 0" }}>
                     Opportunities will appear here after the report loads…
                 </p>
             )}
         </SectionCard>
     )
 }
-
 
 // ═════════════════════════════════════════════════════════════════════════════
 // MAIN EXPORT
@@ -768,10 +1121,12 @@ export default function AdAccountAudit({
 
     useEffect(() => {
         if (open && adAccountId && !report && !isGenerating) generateReport()
-        if (!open) { setReport(null); setError(null); setOpportunitiesText(""); setOppsError(null); setActiveSection("summary") }
+        if (!open) {
+            setReport(null); setError(null); setOpportunitiesText("")
+            setOppsError(null); setActiveSection("summary")
+        }
     }, [open, adAccountId])
 
-    // Scroll spy
     useEffect(() => {
         const container = contentRef.current
         if (!container || !report) return
@@ -779,17 +1134,11 @@ export default function AdAccountAudit({
         const handleScroll = () => {
             const { scrollTop, scrollHeight, clientHeight } = container
             const atBottom = scrollHeight - scrollTop - clientHeight < 40
-
             if (atBottom) {
-                // Pick the last section that actually exists in DOM
                 for (let i = ids.length - 1; i >= 0; i--) {
-                    if (document.getElementById(`audit-${ids[i]}`)) {
-                        setActiveSection(ids[i])
-                        return
-                    }
+                    if (document.getElementById(`audit-${ids[i]}`)) { setActiveSection(ids[i]); return }
                 }
             }
-
             let current = "summary"
             for (const id of ids) {
                 const el = document.getElementById(`audit-${id}`)
@@ -815,7 +1164,7 @@ export default function AdAccountAudit({
             if (!res.ok) { const err = await res.json(); setError(err.error || "Failed to generate report"); return }
             const data = await res.json()
             setReport(data); fetchOpportunities(data)
-        } catch (e) { setError("Network error — please try again.") }
+        } catch { setError("Network error — please try again.") }
         finally { setIsGenerating(false) }
     }
 
@@ -841,34 +1190,33 @@ export default function AdAccountAudit({
 
     if (!open) return null
 
-    // Determine which sidebar sections to show (copy only if data exists)
     const visibleSections = report
         ? SIDEBAR_SECTIONS.filter(s => s.id !== "copy" || report.copyUtilization)
         : SIDEBAR_SECTIONS
 
+    // Group sidebar
+    const groupedSections = visibleSections.reduce((acc, s) => {
+        (acc[s.group] = acc[s.group] || []).push(s); return acc
+    }, {})
+
     return (
         <>
-            {/* Backdrop */}
             <div
-                className="fixed bg-black/50 z-50"
-                style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    width: "100vw",
-                    height: "100dvh",
-                }}
                 onClick={() => onOpenChange(false)}
+                style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100dvh", background: "rgba(15,17,21,0.55)", zIndex: 50 }}
             />
-
-            {/* Modal */}
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ fontFamily: FONT }}>
                 <div
-                    className="bg-white rounded-[24px] shadow-2xl w-full max-w-[1020px] max-h-[92vh] overflow-hidden flex flex-col border border-gray-100"
                     onClick={(e) => e.stopPropagation()}
-                    style={{ animation: "auditSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1)" }}
+                    className="w-full max-w-[1080px] max-h-[92vh] overflow-hidden flex flex-col"
+                    style={{
+                        background: PAPER,
+                        borderRadius: 24,
+                        border: `1px solid ${LINE}`,
+                        animation: "auditSlideUp 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+                    }}
                 >
-                    {/* ── Sticky header ── */}
+                    {/* Sticky header */}
                     <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0 bg-white">
                         <div className="flex items-center gap-3 flex-1 min-w-0 mr-4">
                             <div
@@ -885,10 +1233,11 @@ export default function AdAccountAudit({
                                     {kpiTarget && (
                                         <span
                                             className="ml-2 px-2.5 py-0.5 text-[10px] font-semibold rounded-full"
-                                            style={{ background: BLUE_BG, color: BLUE_DARK }}
+                                            style={{ background: "#eff6ff", color: "#1d4ed8" }}
                                         >
                                             Target {kpiType.toUpperCase()}: {kpiType === "cpa" ? `$${kpiTarget}` : `${kpiTarget}×`}
-                                            {kpiType === "cpa" && conversionEvent ? ` · ${conversionEvent.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}` : ""}                                        </span>
+                                            {kpiType === "cpa" && conversionEvent ? ` · ${conversionEvent.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}` : ""}
+                                        </span>
                                     )}
                                 </p>
                             </div>
@@ -911,68 +1260,92 @@ export default function AdAccountAudit({
                         </div>
                     </div>
 
-                    {/* ── Body: Sidebar + Scrollable Content ── */}
+                    {/* Body */}
                     <div className="flex-1 flex overflow-hidden min-h-0">
 
-                        {/* Sidebar — anchor navigation */}
                         {report && !isGenerating && (
-                            <nav className="w-[180px] flex-shrink-0 border-r border-gray-100 p-2.5 overflow-y-auto bg-[#fafafa]">
-                                {visibleSections.map(({ id, label, icon }) => {
-                                    const isActive = activeSection === id
-                                    return (
-                                        <button
-                                            key={id}
-                                            onClick={() => scrollTo(id)}
-                                            className={cn(
-                                                "w-full text-left flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium transition-all duration-150 mb-0.5",
-                                                isActive
-                                                    ? "bg-gray-100 text-gray-900"
-                                                    : "text-gray-500 hover:bg-gray-100/60 hover:text-gray-700"
-                                            )}
+                            <nav
+                                className="flex-shrink-0 overflow-y-auto"
+                                style={{ width: 200, borderRight: `1px solid ${LINE}`, padding: "14px 10px", background: PAPER }}
+                            >
+                                {Object.entries(groupedSections).map(([group, sections]) => (
+                                    <div key={group}>
+                                        <div
+                                            style={{
+                                                padding: "10px 11px 6px",
+                                                fontSize: 9.5, fontWeight: 600, letterSpacing: "0.12em",
+                                                textTransform: "uppercase", color: MUTED_2,
+                                            }}
                                         >
-                                            <span className={cn(
-                                                "w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all",
-                                                isActive ? "bg-white shadow-xs border border-gray-200" : "bg-gray-100/60"
-                                            )}>
-                                                <img src={icon} alt="" className="w-3.5 h-3.5 opacity-70" />
-                                            </span>
-                                            <span className="flex-1 truncate">{label}</span>
-                                            {isActive && (
-                                                <span className="w-[3px] h-[18px] rounded-full flex-shrink-0" style={{ background: "linear-gradient(180deg, #1a1a1a, #9ca3af)" }} />
-                                            )}
-                                        </button>
-                                    )
-                                })}
+                                            {group}
+                                        </div>
+                                        {sections.map(({ id, label }) => {
+                                            const isActive = activeSection === id
+                                            return (
+                                                <button
+                                                    key={id}
+                                                    onClick={() => scrollTo(id)}
+                                                    className="w-full text-left"
+                                                    style={{
+                                                        display: "flex", alignItems: "center", gap: 10,
+                                                        padding: "9px 11px", borderRadius: 11, marginBottom: 2,
+                                                        fontSize: 12.5, fontWeight: 500,
+                                                        background: isActive ? INK : "transparent",
+                                                        color: isActive ? "#fff" : MUTED,
+                                                        border: isActive ? `1px solid ${INK}` : "1px solid transparent",
+                                                        fontFamily: FONT,
+                                                        cursor: "pointer",
+                                                    }}
+                                                >
+                                                    <span
+                                                        style={{
+                                                            width: 6, height: 6, borderRadius: 999,
+                                                            background: isActive ? ORANGE : LINE_2,
+                                                        }}
+                                                    />
+                                                    <span className="flex-1 truncate">{label}</span>
+                                                </button>
+                                            )
+                                        })}
+                                        <div style={{ height: 1, background: LINE, margin: "10px 6px" }} />
+                                    </div>
+                                ))}
                             </nav>
                         )}
 
-                        {/* Scrollable content area */}
-                        <div ref={contentRef} className="flex-1 overflow-y-auto p-5 custom-scrollbar" style={{ background: "#f8f9fb" }}>
+                        <div
+                            ref={contentRef}
+                            className="flex-1 overflow-y-auto custom-scrollbar"
+                            style={{ padding: 28, background: PAPER_2, fontFamily: FONT }}
+                        >
                             {isGenerating && (
-                                <div className="flex flex-col items-center justify-center py-24 text-sm text-gray-500">
-                                    <div className="mb-3">
-                                        <Helix size="44" speed="2.5" color={BLUE} />
-                                    </div>
-                                    <p className="font-medium text-gray-600">Fetching account data from Meta…</p>
-                                    <p className="text-xs text-gray-400 mt-1">This usually takes 5–15 seconds</p>
+                                <div className="flex flex-col items-center justify-center py-24">
+                                    <div style={{ marginBottom: 12 }}><Helix size="44" speed="2.5" color={ORANGE} /></div>
+                                    <p style={{ fontSize: 13, fontWeight: 600, color: INK_2, margin: 0 }}>Fetching account data from Meta…</p>
+                                    <p style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>This usually takes 5–15 seconds</p>
                                 </div>
                             )}
                             {error && !isGenerating && (
-                                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">
+                                <div style={{ background: PINK_SOFT, border: `1px solid ${PINK_SOFT}`, color: PINK_DEEP, fontSize: 13, borderRadius: 16, padding: "12px 16px" }}>
                                     {error}
-                                    <button onClick={generateReport} className="ml-3 underline text-red-600 hover:text-red-800 font-medium">Retry</button>
+                                    <button
+                                        onClick={generateReport}
+                                        style={{ marginLeft: 12, textDecoration: "underline", color: PINK_DEEP, fontWeight: 600, background: "transparent", border: 0, cursor: "pointer" }}
+                                    >
+                                        Retry
+                                    </button>
                                 </div>
                             )}
                             {report && !isGenerating && (
-                                <div className="space-y-4" style={{ animation: "auditFadeIn 0.4s ease" }}>
+                                <div className="flex flex-col gap-5" style={{ animation: "auditFadeIn 0.4s ease" }}>
                                     <SummarySection report={report} kpiType={report.kpiType || kpiType} kpiTarget={kpiTarget} />
                                     <TrafficSection traffic={report.traffic} />
                                     <FunnelSection funnel={report.funnel} />
-                                    <MonthlySpendSection monthlySpend={report.monthlySpend} kpiType={report.kpiType || kpiType} />
+                                    <MonthlySpendSection monthlySpend={report.monthlySpend} kpiType={report.kpiType || kpiType} kpiTarget={kpiTarget} />
                                     <AudienceSection audience={report.audience} />
                                     <LearningSection learning={report.learning} />
                                     {report.copyUtilization && <CopyUtilizationSection copyUtilization={report.copyUtilization} />}
-                                    <OpportunitiesSection text={opportunitiesText} isLoading={isLoadingOpps} error={oppsError} onChange={setOpportunitiesText} />
+                                    <OpportunitiesSection text={opportunitiesText} isLoading={isLoadingOpps} error={oppsError} />
                                 </div>
                             )}
                         </div>
@@ -980,7 +1353,6 @@ export default function AdAccountAudit({
                 </div>
             </div>
 
-            {/* Keyframe animations */}
             <style>{`
                 @keyframes auditSlideUp {
                     from { opacity: 0; transform: translateY(16px) scale(0.98); }
