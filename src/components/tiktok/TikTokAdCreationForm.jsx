@@ -415,6 +415,14 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
     window.addEventListener('message', handleMessage);
   }, [openDropboxChooser]);
 
+  const handleFrameioClick = useCallback(() => {
+    setFrameioPickerOpen(true);
+  }, []);
+
+  const handleTikTokLibraryClick = useCallback(() => {
+    setTiktokLibraryOpen(true);
+  }, []);
+
   useEffect(() => {
     if (advertiserId) setSelectedAdvertiser(advertiserId)
   }, [advertiserId])
@@ -1147,11 +1155,13 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                         onClick={onClick}
                         className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
                       >
-                        {typeof src.icon === 'string' ? (
-                          <img src={src.icon} alt={src.name} className="h-4 w-4 object-contain" />
-                        ) : (
-                          <src.icon className="h-4 w-4" />
-                        )}
+                        <img
+                          src={typeof src.icon === 'string' ? src.icon : undefined}
+                          alt={src.name}
+                          className="h-4 w-4 object-contain"
+                          style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
+                        />
+                        {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
                         <span className="truncate text-xs font-semibold uppercase tracking-wider">{src.compactLabel}</span>
                       </Button>
                     );
