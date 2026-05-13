@@ -912,23 +912,25 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                         ))}
                       </CommandGroup>
                     </CommandList>
-                    <div className="p-2 border-t border-gray-100 space-y-1.5">
+                    <div className="border-t border-gray-100 mt-1">
                       {selectedCampaign ? (
-                        <>
-                          <div className="flex items-center justify-between px-2 py-1">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Duplicate Selected</span>
-                            <label className="flex items-center gap-1.5 cursor-pointer">
+                        <div className="p-2 space-y-2">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                              Launch New Campaign
+                            </span>
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
                               <span className="text-[10px] text-gray-500 font-medium">Include Ads</span>
                               <div
                                 onClick={(e) => { e.stopPropagation(); setDuplicateIncludeAds(v => !v); }}
                                 className={cn(
-                                  "relative w-8 h-4 rounded-full cursor-pointer transition-colors duration-200",
-                                  duplicateIncludeAds ? "bg-black" : "bg-gray-200"
+                                  "relative w-7 h-3.5 rounded-full cursor-pointer transition-colors duration-200",
+                                  duplicateIncludeAds ? "bg-zinc-800" : "bg-gray-200"
                                 )}
                               >
                                 <div className={cn(
-                                  "absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform duration-200",
-                                  duplicateIncludeAds ? "translate-x-4" : "translate-x-0.5"
+                                  "absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow transition-transform duration-200",
+                                  duplicateIncludeAds ? "translate-x-3.5" : "translate-x-0.5"
                                 )} />
                               </div>
                             </label>
@@ -937,17 +939,23 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                             type="button"
                             disabled={isDuplicating}
                             onClick={() => handleDuplicateCampaign(selectedCampaign)}
-                            className="w-full h-9 rounded-xl bg-zinc-800 hover:bg-black text-white text-xs font-bold disabled:opacity-60"
+                            className="w-full h-8 rounded-xl bg-zinc-800 hover:bg-black text-white text-[11px] font-bold tracking-wide disabled:opacity-50 flex items-center justify-center gap-1.5 px-3"
                           >
                             {isDuplicating ? (
-                              <><Loader className="w-3 h-3 animate-spin mr-1.5" />Duplicating...</>
+                              <><Loader className="w-3 h-3 animate-spin" />Launching...</>
                             ) : (
-                              <>Duplicate &nbsp;<span className="opacity-60 font-normal truncate max-w-[120px]">{campaigns.find(c => c.campaign_id === selectedCampaign)?.campaign_name}</span></>
+                              <>
+                                <PlusIcon className="w-3 h-3" />
+                                <span>Launch</span>
+                                <span className="opacity-50 font-normal truncate max-w-[110px]">
+                                  {campaigns.find(c => c.campaign_id === selectedCampaign)?.campaign_name}
+                                </span>
+                              </>
                             )}
                           </Button>
-                        </>
+                        </div>
                       ) : (
-                        <p className="text-[10px] text-gray-400 text-center py-1 font-medium">Select a campaign to duplicate it</p>
+                        <p className="text-[10px] text-gray-400 text-center py-2 font-medium">Select a campaign to launch a copy</p>
                       )}
                     </div>
                   </Command>
