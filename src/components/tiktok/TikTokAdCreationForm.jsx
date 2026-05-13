@@ -37,10 +37,10 @@ import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
 import CogIcon from '@/assets/icons/cog.svg?react'
 import CTAIcon from '@/assets/icons/cta.svg?react'
 import CampaignIcon from '@/assets/icons/folder.svg?react'
+import FrameIcon from '@/assets/icons/Frame.webp'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
 import PlusIcon from '@/assets/icons/plus.svg?react'
 import TemplateIcon from '@/assets/icons/template.svg?react'
-import FrameIcon from '@/assets/icons/Frame.webp'
 import TikTokIcon from '@/assets/icons/tiktok.svg?react'
 
 
