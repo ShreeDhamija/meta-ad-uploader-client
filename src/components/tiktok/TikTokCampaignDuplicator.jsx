@@ -7,9 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { cn } from "@/lib/utils"
-import { Copy, Loader, RefreshCcw } from "lucide-react"
+import { Check, ChevronsUpDown, Copy, Loader, RefreshCcw } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -21,13 +23,17 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
   const [selectedCampaign, setSelectedCampaign] = useState('')
   
   const [newCampaignName, setNewCampaignName] = useState('')
-  const [adgroupSuffix, setAdgroupSuffix] = useState(' | Copy')
-  const [adSuffix, setAdSuffix] = useState(' | Copy')
+  const [adgroupSuffix, setAdgroupSuffix] = useState('')
+  const [adSuffix, setAdSuffix] = useState('')
   const [duplicateAds, setDuplicateAds] = useState(true)
   const [status, setStatus] = useState('DISABLE')
   
   const [isDuplicating, setIsDuplicating] = useState(false)
   const [duplicationResult, setDuplicationResult] = useState(null)
+
+  // Dropdown states
+  const [openCampaign, setOpenCampaign] = useState(false)
+  const [campaignSearch, setCampaignSearch] = useState('')
 
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
@@ -64,7 +70,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
     if (selectedCampaign) {
       const campaign = campaigns.find(c => c.campaign_id === selectedCampaign)
       if (campaign) {
-        setNewCampaignName(`${campaign.campaign_name} | Copy`)
+        setNewCampaignName(`${campaign.campaign_name}`)
       }
     } else {
       setNewCampaignName('')
@@ -136,25 +142,67 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                   onClick={fetchCampaigns}
                 />
               </div>
-              <Select
-                value={selectedCampaign}
-                onValueChange={setSelectedCampaign}
-                disabled={!advertiserId || loadingCampaigns}
-              >
-                <SelectTrigger className={formFieldChrome}>
-                  <SelectValue placeholder="Select campaign to duplicate" />
-                </SelectTrigger>
-                <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
-                  {campaigns.map(c => (
-                    <SelectItem key={c.campaign_id} value={c.campaign_id} className="cursor-pointer hover:bg-gray-50 rounded-lg m-1">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{c.campaign_name}</span>
-                        <span className="text-[10px] text-gray-400 font-mono">ID: {c.campaign_id}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    disabled={!advertiserId || loadingCampaigns}
+                    className={cn(
+                      "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
+                      !selectedCampaign && "text-gray-500"
+                    )}
+                  >
+                    <div className="truncate text-left">
+                      {selectedCampaign
+                        ? campaigns.find(c => c.campaign_id === selectedCampaign)?.campaign_name || selectedCampaign
+                        : "Select campaign to duplicate"}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="p-0 bg-white shadow-lg rounded-2xl" 
+                  align="start"
+                  style={{ width: 'var(--radix-popover-trigger-width)' }}
+                >
+                  <Command>
+                    <CommandInput 
+                      placeholder="Search campaigns..." 
+                      value={campaignSearch}
+                      onValueChange={setCampaignSearch}
+                      className="bg-transparent border-none focus:ring-0"
+                    />
+                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                      <CommandEmpty>No campaign found.</CommandEmpty>
+                      <CommandGroup>
+                        {campaigns.filter(c => 
+                          (c.campaign_name || '').toLowerCase().includes(campaignSearch.toLowerCase())
+                        ).map(c => (
+                          <CommandItem
+                            key={c.campaign_id}
+                            value={c.campaign_id}
+                            onSelect={() => {
+                              setSelectedCampaign(c.campaign_id)
+                              setOpenCampaign(false)
+                            }}
+                            className={cn(
+                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                              selectedCampaign === c.campaign_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                            )}
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium">{c.campaign_name}</span>
+                              <span className="text-[10px] text-gray-400 font-mono">ID: {c.campaign_id}</span>
+                            </div>
+                            {selectedCampaign === c.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -178,7 +226,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                   Ad Group Name Suffix
                 </Label>
                 <Input
-                  placeholder="e.g. | Copy"
+                  placeholder="e.g. | Copy (Leave empty for same name)"
                   value={adgroupSuffix}
                   onChange={e => setAdgroupSuffix(e.target.value)}
                   className={formInputChrome}
@@ -189,7 +237,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                   Ad Name Suffix
                 </Label>
                 <Input
-                  placeholder="e.g. | Copy"
+                  placeholder="e.g. | Copy (Leave empty for same name)"
                   value={adSuffix}
                   onChange={e => setAdSuffix(e.target.value)}
                   className={formInputChrome}

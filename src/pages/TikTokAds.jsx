@@ -1,30 +1,23 @@
-import Header from '@/components/header'
+import Header from '@/components/Header'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
 import TikTokCampaignDuplicator from '@/components/tiktok/TikTokCampaignDuplicator'
-import { Button } from '@/components/ui/button'
-
+import { useIntercom } from '@/hooks/useIntercom'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
-import { useIntercom } from '@/lib/useIntercom'
 import { cn } from '@/lib/utils'
-import { CheckCircle2, Loader2, PlusCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { CheckCircle2, Loader2 } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
+import { Button } from '@/components/ui/button'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
-const TIKTOK_PINK = '#FE2C55'
-const TIKTOK_CYAN = '#25F4EE'
 
 export default function TikTokAds() {
   const navigate = useNavigate()
-  const { isTikTokLoggedIn, tiktokUser, tiktokAdvertisers, refreshTikTokUser, logoutTikTok, isLoading: authLoading, tiktokFetch } = useTikTokAuth()
+  const { isTikTokLoggedIn, tiktokUser, tiktokAdvertisers, refreshTikTokUser, logoutTikTok, isLoading: authLoading } = useTikTokAuth()
   const { showMessenger, hideMessenger } = useIntercom()
   
   const [selectedAdvertiser, setSelectedAdvertiser] = useState('')
-  const [activeTab, setActiveTab] = useState('create') // 'create' | 'ads' | 'duplicate'
-
-  const [existingAds, setExistingAds] = useState([])
-  const [loadingAds, setLoadingAds] = useState(false)
 
   // Handle OAuth callback
   useEffect(() => {
@@ -43,53 +36,13 @@ export default function TikTokAds() {
     }
   }, [isTikTokLoggedIn, authLoading, navigate])
 
-  // Auto-select first advertiser + log state
+  // Auto-select first advertiser
   useEffect(() => {
-    console.group('🎯 [TikTokAds] Advertiser state changed')
-    console.log('  tiktokAdvertisers  :', tiktokAdvertisers?.length, 'items', tiktokAdvertisers)
-    console.log('  selectedAdvertiser :', selectedAdvertiser || 'NONE')
-    console.log('  localStorage adIds :', localStorage.getItem('tiktok_advertiser_ids'))
-    console.groupEnd()
     if (tiktokAdvertisers.length > 0 && !selectedAdvertiser) {
       const firstId = tiktokAdvertisers[0].advertiser_id || tiktokAdvertisers[0].id
-      console.log('✅ [TikTokAds] Auto-selecting first advertiser:', firstId)
       setSelectedAdvertiser(firstId)
     }
   }, [tiktokAdvertisers, selectedAdvertiser])
-
-  // Fetch existing ads
-  useEffect(() => {
-    if (!selectedAdvertiser || activeTab !== 'ads') return
-    setLoadingAds(true)
-    const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '20' })
-    const url = `${API_BASE_URL}/api/tiktok/fetch-ads?${params}`
-    console.group(`📡 [TikTokAds] Fetching existing ads`)
-    console.log('  URL                :', url)
-    console.log('  advertiserId       :', selectedAdvertiser)
-    console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
-    console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
-    console.groupEnd()
-    tiktokFetch(url)
-      .then(async r => {
-        const body = await r.text()
-        console.group('📬 [TikTokAds] fetch-ads response')
-        console.log('  HTTP Status        :', r.status, r.statusText)
-        console.log('  Body               :', body)
-        console.groupEnd()
-        let d
-        try { d = JSON.parse(body) } catch { d = {} }
-        return d
-      })
-      .then(d => {
-        console.log(`✅ [TikTokAds] Ads loaded: ${d.ads?.length ?? 0} item(s)`, d.ads)
-        setExistingAds(d.ads || [])
-      })
-      .catch((err) => {
-        console.error('❌ [TikTokAds] fetch-ads FAILED:', err)
-        toast.error('Failed to load ads')
-      })
-      .finally(() => setLoadingAds(false))
-  }, [selectedAdvertiser, activeTab])
 
   if (authLoading) {
     return (
@@ -111,101 +64,18 @@ export default function TikTokAds() {
       <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
 
       <main className="pt-4 pb-20">
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-2 mb-8 bg-gray-100/50 p-1.5 rounded-2xl w-fit">
-          <button
-            onClick={() => setActiveTab('create')}
-            className={cn(
-              "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
-              activeTab === 'create' ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            Create Ad
-          </button>
-          <button
-            onClick={() => setActiveTab('duplicate')}
-            className={cn(
-              "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
-              activeTab === 'duplicate' ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            Duplicate Campaign
-          </button>
-          <button
-            onClick={() => setActiveTab('ads')}
-            className={cn(
-              "px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all",
-              activeTab === 'ads' ? "bg-white text-black shadow-sm" : "text-gray-400 hover:text-gray-600"
-            )}
-          >
-            Manage Ads
-          </button>
-        </div>
-
-        {/* Content Area */}
-
         <div className="flex flex-col lg:flex-row gap-6 min-w-0">
-          {/* Left Column: Form or List */}
+          {/* Left Column: Form and Duplicator */}
           <div className="flex-1 lg:flex-[55] min-w-0 space-y-6">
-            {activeTab === 'create' ? (
-              <TikTokAdCreationForm advertiserId={selectedAdvertiser} advertisers={tiktokAdvertisers} />
-            ) : activeTab === 'duplicate' ? (
+            <TikTokAdCreationForm 
+              advertiserId={selectedAdvertiser} 
+              advertisers={tiktokAdvertisers} 
+              onAdvertiserChange={setSelectedAdvertiser}
+            />
+            
+            <div id="tiktok-duplicator-section" className="border-t border-gray-100 pt-6">
               <TikTokCampaignDuplicator advertiserId={selectedAdvertiser} />
-            ) : (
-              <div className="space-y-4">
-
-                {loadingAds ? (
-                  <div className="bg-white rounded-3xl p-12 flex flex-col items-center justify-center border border-gray-200 shadow-sm">
-                    <Loader2 className="w-8 h-8 animate-spin text-gray-300" />
-                    <p className="text-sm text-gray-400 mt-4 font-medium uppercase tracking-widest">Fetching your ads...</p>
-                  </div>
-                ) : existingAds.length === 0 ? (
-                  <div className="bg-white rounded-3xl p-16 flex flex-col items-center justify-center border border-gray-200 shadow-sm text-center">
-                    <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4">
-                      <PlusCircle className="w-8 h-8 text-gray-300" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900">No ads found</h3>
-                    <p className="text-gray-500 max-w-xs mx-auto mt-1">
-                      You haven't created any ads for this advertiser yet. 
-                      Go to the Create Ad tab to get started.
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      className="mt-6 rounded-xl border-gray-200"
-                      onClick={() => setActiveTab('create')}
-                    >
-                      Create Your First Ad
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {existingAds.map(ad => (
-                      <div
-                        key={ad.ad_id}
-                        className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between group"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-bold text-gray-900 truncate pr-4">{ad.ad_name}</p>
-                          <p className="text-xs text-gray-400 mt-1 font-mono uppercase tracking-tighter">ID: {ad.ad_id}</p>
-                        </div>
-                        <div className="flex flex-col items-end gap-2 shrink-0">
-                          <span
-                            className={cn(
-                              "text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-widest",
-                              ad.status === 'ACTIVE' 
-                                ? "bg-emerald-50 text-emerald-600 border border-emerald-100" 
-                                : "bg-gray-50 text-gray-400 border border-gray-100"
-                            )}
-                          >
-                            {ad.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Right Column: Info/Meta-style Sidebar */}

@@ -40,6 +40,8 @@ import CampaignIcon from '@/assets/icons/folder.svg?react'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
 import PlusIcon from '@/assets/icons/plus.svg?react'
 import TemplateIcon from '@/assets/icons/template.svg?react'
+import FrameIcon from '@/assets/icons/Frame.webp'
+import TikTokIcon from '@/assets/icons/tiktok.svg?react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
@@ -68,20 +70,34 @@ const UPLOAD_SOURCE_OPTIONS = [
   {
     id: 'drive',
     name: 'Google Drive',
-    icon: 'https://api.withblip.com/drive_icon.png',
-    fullLabel: 'Upload from Drive',
+    icon: 'https://api.withblip.com/googledrive.png',
+    fullLabel: 'Choose Files from Google Drive',
     compactLabel: 'Google Drive'
   },
   {
     id: 'dropbox',
     name: 'Dropbox',
     icon: DropboxIcon,
-    fullLabel: 'Upload from Dropbox',
+    fullLabel: 'Choose Files from Dropbox',
     compactLabel: 'Dropbox'
+  },
+  {
+    id: 'frameio',
+    name: 'Frame.io',
+    icon: FrameIcon,
+    fullLabel: 'Choose Files from Frame.io',
+    compactLabel: 'Frame.io'
+  },
+  {
+    id: 'tiktok_library',
+    name: 'TikTok Creative Library',
+    icon: TikTokIcon,
+    fullLabel: 'Import from TikTok Library',
+    compactLabel: 'TikTok Library'
   }
 ]
 
-export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
+export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdvertiserChange }) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -112,7 +128,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const [videoFile, setVideoFile] = useState(null)
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
-  const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox'])
+  const [frameioFiles, setFrameioFiles] = useState([])
+  const [tiktokLibraryFiles, setTiktokLibraryFiles] = useState([])
+  const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox', 'frameio', 'tiktok_library'])
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false)
   const [videoPreview, setVideoPreview] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -124,12 +142,27 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const [selectedIdentity, setSelectedIdentity] = useState('')
   const [loadingIdentities, setLoadingIdentities] = useState(false)
 
+  // Popover States
+  const [openAdvertiser, setOpenAdvertiser] = useState(false)
+  const [openCampaign, setOpenCampaign] = useState(false)
+  const [openAdGroup, setOpenAdGroup] = useState(false)
+  const [advertiserSearch, setAdvertiserSearch] = useState('')
+  const [campaignSearch, setCampaignSearch] = useState('')
+  const [adGroupSearch, setAdGroupSearch] = useState('')
+
   // Cloud Picker State
   const [googleAuthStatus, setGoogleAuthStatus] = useState({ checking: true, authenticated: false, accessToken: null })
   const [showFolderInput, setShowFolderInput] = useState(false)
   const [folderLinkValue, setFolderLinkValue] = useState("")
   const [isImportingFolder, setIsImportingFolder] = useState(false)
   const pickerInstanceRef = useRef(null)
+
+  // Frame.io State
+  const [frameioPickerOpen, setFrameioPickerOpen] = useState(false)
+  const [frameioAccessToken, setFrameioAccessToken] = useState(null)
+
+  // TikTok Library State
+  const [tiktokLibraryOpen, setTiktokLibraryOpen] = useState(false)
 
   const fileRef = useRef()
 
@@ -385,6 +418,18 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
     if (advertiserId) setSelectedAdvertiser(advertiserId)
   }, [advertiserId])
 
+  const handleAdvertiserChange = useCallback((value) => {
+    setSelectedAdvertiser(value)
+    if (onAdvertiserChange) {
+      onAdvertiserChange(value)
+    }
+    // Reset selections
+    setSelectedCampaign('')
+    setSelectedAdGroup('')
+    setCampaigns([])
+    setAdGroups([])
+  }, [onAdvertiserChange])
+
   useEffect(() => {
     if (!selectedAdvertiser) {
       console.log('⚠️ [TikTok Form] No advertiser selected — skipping campaign fetch')
@@ -513,7 +558,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
     if (!selectedIdentity) return toast.error('Please select a TikTok Identity/Profile')
     if (!adName.trim()) return toast.error('Ad name is required')
     if (cta.length === 0) return toast.error('Please select at least one Call to Action')
-    const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0
+    const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0 || frameioFiles.length > 0 || tiktokLibraryFiles.length > 0
     if (!videoFile && !isCloudFile) return toast.error("Please select a video")
 
     setIsSubmitting(true)
@@ -521,62 +566,75 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
     setUploadProgress(0)
 
     try {
-      toast.info('Uploading video...')
-      const formData = new FormData()
-      
-      if (videoFile) {
-        formData.append('videoFile', videoFile)
-      } else if (driveFiles.length > 0) {
-        formData.append('driveFile', JSON.stringify(driveFiles[0]))
-      } else if (dropboxFiles.length > 0) {
-        formData.append('dropboxFile', JSON.stringify(dropboxFiles[0]))
-      }
-      
-      const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
-      const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
-      console.group(`📡 [TikTok Form] Uploading video`)
-      console.log('  URL                :', uploadUrl)
-      if (videoFile) {
-        console.log('  File name          :', videoFile.name)
-        console.log('  File size          :', (videoFile.size / 1024 / 1024).toFixed(2), 'MB')
+      let videoId = null;
+
+      if (tiktokLibraryFiles.length > 0) {
+        // Skip upload for items already in TikTok Library
+        videoId = tiktokLibraryFiles[0].videoId;
+        setIsUploading(false);
+        setUploadProgress(100);
       } else {
-        console.log('  Source             :', driveFiles.length > 0 ? 'Google Drive' : 'Dropbox')
-        console.log('  File name          :', driveFiles[0]?.name || dropboxFiles[0]?.name)
-      }
-      console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
-      console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
-      console.groupEnd()
-      const uploadRes = await tiktokFetch(uploadUrl, {
-        method: 'POST',
-        body: formData,
-      })
+        toast.info('Uploading video...')
+        const formData = new FormData()
+        
+        if (videoFile) {
+          formData.append('videoFile', videoFile)
+        } else if (driveFiles.length > 0) {
+          formData.append('driveFile', JSON.stringify(driveFiles[0]))
+        } else if (dropboxFiles.length > 0) {
+          formData.append('dropboxFile', JSON.stringify(dropboxFiles[0]))
+        } else if (frameioFiles.length > 0) {
+          formData.append('frameioFile', JSON.stringify(frameioFiles[0]))
+        }
+        
+        const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
+        const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
+        console.group(`📡 [TikTok Form] Uploading video`)
+        console.log('  URL                :', uploadUrl)
+        if (videoFile) {
+          console.log('  File name          :', videoFile.name)
+          console.log('  File size          :', (videoFile.size / 1024 / 1024).toFixed(2), 'MB')
+        } else {
+          const sourceName = driveFiles.length > 0 ? 'Google Drive' : 
+                             dropboxFiles.length > 0 ? 'Dropbox' : 'Frame.io';
+          console.log('  Source             :', sourceName)
+          console.log('  File name          :', driveFiles[0]?.name || dropboxFiles[0]?.name || frameioFiles[0]?.name)
+        }
+        console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
+        console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
+        console.groupEnd()
+        
+        const uploadRes = await tiktokFetch(uploadUrl, {
+          method: 'POST',
+          body: formData,
+        })
 
-      const uploadRawText = await uploadRes.text()
-      console.group('📬 [TikTok Form] upload-video response')
-      console.log('  HTTP Status        :', uploadRes.status, uploadRes.statusText)
-      console.log('  Content-Type       :', uploadRes.headers.get('content-type'))
-      console.log('  Raw Body           :', uploadRawText)
-      console.groupEnd()
+        const uploadRawText = await uploadRes.text()
+        console.group('📬 [TikTok Form] upload-video response')
+        console.log('  HTTP Status        :', uploadRes.status, uploadRes.statusText)
+        console.log('  Raw Body           :', uploadRawText)
+        console.groupEnd()
 
-      let uploadData = {}
-      try {
-        uploadData = JSON.parse(uploadRawText)
-        console.log('  Parsed uploadData  :', uploadData)
-      } catch (parseErr) {
-        console.error('❌ [TikTok Form] upload-video response is NOT valid JSON:', parseErr.message)
-        throw new Error(`Server returned non-JSON response (${uploadRes.status}): ${uploadRawText.slice(0, 200)}`)
-      }
+        let uploadData = {}
+        try {
+          uploadData = JSON.parse(uploadRawText)
+        } catch (parseErr) {
+          throw new Error(`Server returned non-JSON response (${uploadRes.status}): ${uploadRawText.slice(0, 200)}`)
+        }
 
-      if (!uploadRes.ok || !uploadData.success) {
-        throw new Error(uploadData.error || uploadData.message || `Upload failed with status ${uploadRes.status}`)
+        if (!uploadRes.ok || !uploadData.success) {
+          throw new Error(uploadData.error || uploadData.message || `Upload failed with status ${uploadRes.status}`)
+        }
+        
+        videoId = uploadData.videoId;
+        setUploadProgress(100)
+        setIsUploading(false)
+        toast.success('Video uploaded!')
       }
-      setUploadProgress(100)
-      setIsUploading(false)
-      toast.success('Video uploaded!')
 
       toast.info(`Creating ${cta.length} ad(s)...`)
       const creatives = cta.map(action => ({
-        video_id: uploadData.videoId,
+        video_id: videoId,
         ad_text: adText,
         call_to_action: action,
         landing_page_url: landingUrl,
@@ -653,29 +711,72 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 }}
               />
             </div>
-            <Select
-              value={selectedAdvertiser}
-              onValueChange={setSelectedAdvertiser}
-              disabled={!advertisers || advertisers.length === 0}
-            >
-              <SelectTrigger className={formFieldChrome}>
-                <SelectValue placeholder="Select advertiser account" />
-              </SelectTrigger>
-              <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
-                {advertisers?.map(adv => (
-                  <SelectItem
-                    key={adv.advertiser_id || adv.id}
-                    value={adv.advertiser_id || adv.id}
-                    className="cursor-pointer hover:bg-gray-50 rounded-lg m-1"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{adv.advertiser_name || adv.name}</span>
-                      <span className="text-[10px] text-gray-400 font-mono uppercase tracking-tighter">ID: {adv.advertiser_id || adv.id}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={openAdvertiser} onOpenChange={setOpenAdvertiser}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openAdvertiser}
+                  disabled={!advertisers || advertisers.length === 0}
+                  className={cn(
+                    "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
+                    !selectedAdvertiser && "text-gray-500"
+                  )}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {selectedAdvertiser
+                      ? advertisers.find(adv => (adv.advertiser_id || adv.id) === selectedAdvertiser)?.advertiser_name || selectedAdvertiser
+                      : "Select an Advertiser Account"}
+                  </div>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent 
+                className="p-0 bg-white shadow-lg rounded-2xl" 
+                align="start"
+                style={{ width: 'var(--radix-popover-trigger-width)' }}
+              >
+                <Command>
+                  <CommandInput 
+                    placeholder="Search accounts..." 
+                    value={advertiserSearch}
+                    onValueChange={setAdvertiserSearch}
+                    className="bg-transparent border-none focus:ring-0"
+                  />
+                  <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                    <CommandEmpty>No advertiser found.</CommandEmpty>
+                    <CommandGroup>
+                      {advertisers?.filter(adv => 
+                        (adv.advertiser_name || adv.name || '').toLowerCase().includes(advertiserSearch.toLowerCase()) ||
+                        (adv.advertiser_id || adv.id || '').toLowerCase().includes(advertiserSearch.toLowerCase())
+                      ).map(adv => {
+                        const id = adv.advertiser_id || adv.id
+                        return (
+                          <CommandItem
+                            key={id}
+                            value={id}
+                            onSelect={() => {
+                              handleAdvertiserChange(id)
+                              setOpenAdvertiser(false)
+                            }}
+                            className={cn(
+                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                              selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                            )}
+                          >
+                            <div className="flex flex-col w-full">
+                              <span className="font-medium">{adv.advertiser_name || adv.name}</span>
+                              <span className="text-[10px] text-gray-400 font-mono uppercase tracking-tighter">ID: {id}</span>
+                            </div>
+                            {selectedAdvertiser === id && <Check className="ml-auto h-4 w-4 text-black" />}
+                          </CommandItem>
+                        )
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Post As (Identity) */}
@@ -744,22 +845,77 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 </Label>
                 {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
               </div>
-              <Select
-                value={selectedCampaign}
-                onValueChange={setSelectedCampaign}
-                disabled={!selectedAdvertiser || loadingCampaigns}
-              >
-                <SelectTrigger className={formFieldChrome}>
-                  <SelectValue placeholder="Select campaign" />
-                </SelectTrigger>
-                <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
-                  {campaigns.map(c => (
-                    <SelectItem key={c.campaign_id} value={c.campaign_id} className="cursor-pointer hover:bg-gray-50 rounded-lg m-1">
-                      {c.campaign_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    disabled={!selectedAdvertiser || loadingCampaigns}
+                    className={cn(
+                      "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
+                      !selectedCampaign && "text-gray-500"
+                    )}
+                  >
+                    <div className="truncate">
+                      {selectedCampaign
+                        ? campaigns.find(c => c.campaign_id === selectedCampaign)?.campaign_name || selectedCampaign
+                        : "Select a Campaign"}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="p-0 bg-white shadow-lg rounded-2xl" 
+                  align="start"
+                  style={{ width: 'var(--radix-popover-trigger-width)' }}
+                >
+                  <Command>
+                    <CommandInput 
+                      placeholder="Search campaigns..." 
+                      value={campaignSearch}
+                      onValueChange={setCampaignSearch}
+                      className="bg-transparent border-none focus:ring-0"
+                    />
+                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                      <CommandEmpty>No campaign found.</CommandEmpty>
+                      <CommandGroup>
+                        {campaigns.filter(c => 
+                          (c.campaign_name || '').toLowerCase().includes(campaignSearch.toLowerCase())
+                        ).map(c => (
+                          <CommandItem
+                            key={c.campaign_id}
+                            value={c.campaign_id}
+                            onSelect={() => {
+                              setSelectedCampaign(c.campaign_id)
+                              setOpenCampaign(false)
+                            }}
+                            className={cn(
+                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                              selectedCampaign === c.campaign_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                            )}
+                          >
+                            <span className="truncate">{c.campaign_name}</span>
+                            {selectedCampaign === c.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                    <div className="p-2 border-t border-gray-100">
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setOpenCampaign(false)
+                          document.getElementById('tiktok-duplicator-section')?.scrollIntoView({ behavior: 'smooth' })
+                        }}
+                        className="w-full h-10 rounded-xl bg-zinc-800 hover:bg-black text-white text-xs font-bold"
+                      >
+                        <PlusIcon className="w-3.5 h-3.5 mr-2" />
+                        Launch in a New Campaign
+                      </Button>
+                    </div>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {/* Ad Group */}
@@ -771,22 +927,64 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                 </Label>
                 {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
               </div>
-              <Select
-                value={selectedAdGroup}
-                onValueChange={setSelectedAdGroup}
-                disabled={!selectedCampaign || loadingAdGroups}
-              >
-                <SelectTrigger className={formFieldChrome}>
-                  <SelectValue placeholder="Select ad group" />
-                </SelectTrigger>
-                <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
-                  {adGroups.map(g => (
-                    <SelectItem key={g.adgroup_id} value={g.adgroup_id} className="cursor-pointer hover:bg-gray-50 rounded-lg m-1">
-                      {g.adgroup_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={openAdGroup} onOpenChange={setOpenAdGroup}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    disabled={!selectedCampaign || loadingAdGroups}
+                    className={cn(
+                      "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
+                      !selectedAdGroup && "text-gray-500"
+                    )}
+                  >
+                    <div className="truncate">
+                      {selectedAdGroup
+                        ? adGroups.find(g => g.adgroup_id === selectedAdGroup)?.adgroup_name || selectedAdGroup
+                        : "Select an Ad Group"}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="p-0 bg-white shadow-lg rounded-2xl" 
+                  align="start"
+                  style={{ width: 'var(--radix-popover-trigger-width)' }}
+                >
+                  <Command>
+                    <CommandInput 
+                      placeholder="Search ad groups..." 
+                      value={adGroupSearch}
+                      onValueChange={setAdGroupSearch}
+                      className="bg-transparent border-none focus:ring-0"
+                    />
+                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                      <CommandEmpty>No ad group found.</CommandEmpty>
+                      <CommandGroup>
+                        {adGroups.filter(g => 
+                          (g.adgroup_name || '').toLowerCase().includes(adGroupSearch.toLowerCase())
+                        ).map(g => (
+                          <CommandItem
+                            key={g.adgroup_id}
+                            value={g.adgroup_id}
+                            onSelect={() => {
+                              setSelectedAdGroup(g.adgroup_id)
+                              setOpenAdGroup(false)
+                            }}
+                            className={cn(
+                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                              selectedAdGroup === g.adgroup_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                            )}
+                          >
+                            <span className="truncate">{g.adgroup_name}</span>
+                            {selectedAdGroup === g.adgroup_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
           </div>
@@ -889,7 +1087,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
             )}
 
             {/* Cloud File Preview */}
-            {(driveFiles.length > 0 || dropboxFiles.length > 0) && (
+            {(driveFiles.length > 0 || dropboxFiles.length > 0 || frameioFiles.length > 0 || tiktokLibraryFiles.length > 0) && (
               <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -898,10 +1096,12 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
-                        {driveFiles[0]?.name || dropboxFiles[0]?.name}
+                        {driveFiles[0]?.name || dropboxFiles[0]?.name || frameioFiles[0]?.name || tiktokLibraryFiles[0]?.name}
                       </p>
                       <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">
-                        {driveFiles.length > 0 ? "Google Drive" : "Dropbox"} Selected
+                        {driveFiles.length > 0 ? "Google Drive" : 
+                         dropboxFiles.length > 0 ? "Dropbox" :
+                         frameioFiles.length > 0 ? "Frame.io" : "TikTok Library"} Selected
                       </p>
                     </div>
                   </div>
@@ -912,6 +1112,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
                     onClick={() => {
                       setDriveFiles([]);
                       setDropboxFiles([]);
+                      setFrameioFiles([]);
+                      setTiktokLibraryFiles([]);
                     }}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -926,21 +1128,29 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
               if (rowSources.length === 0) return null;
 
               return (
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {rowSources.map((id) => {
                     const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
                     if (!src) return null;
 
-                    const onClick = id === 'drive' ? handleDriveClick : handleDropboxClick;
+                    let onClick;
+                    if (id === 'drive') onClick = handleDriveClick;
+                    else if (id === 'dropbox') onClick = handleDropboxClick;
+                    else if (id === 'frameio') onClick = handleFrameioClick;
+                    else if (id === 'tiktok_library') onClick = handleTikTokLibraryClick;
 
                     return (
                       <Button
                         key={id}
                         type="button"
                         onClick={onClick}
-                        className="flex-1 bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
+                        className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
                       >
-                        <img src={src.icon} alt={src.name} className="h-4 w-4 object-contain" />
+                        {typeof src.icon === 'string' ? (
+                          <img src={src.icon} alt={src.name} className="h-4 w-4 object-contain" />
+                        ) : (
+                          <src.icon className="h-4 w-4" />
+                        )}
                         <span className="truncate text-xs font-semibold uppercase tracking-wider">{src.compactLabel}</span>
                       </Button>
                     );
@@ -1097,6 +1307,29 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
           Your ad will be live after TikTok's review process
         </p>
       </div>
+
+      <FolderPickerOverlay 
+        show={showFolderInput} 
+        linkValue={folderLinkValue} 
+        setLinkValue={setFolderLinkValue} 
+        onImport={handleImportFromFolder} 
+        onCancel={() => setShowFolderInput(false)}
+        isImporting={isImportingFolder}
+      />
+
+      <FrameioPickerModal
+        open={frameioPickerOpen}
+        onClose={() => setFrameioPickerOpen(false)}
+        onSelect={handleFrameioFilesSelected}
+        accessToken={frameioAccessToken}
+      />
+
+      <TikTokMediaLibraryModal
+        open={tiktokLibraryOpen}
+        onClose={() => setTiktokLibraryOpen(false)}
+        onSelect={handleTikTokLibrarySelected}
+        advertiserId={selectedAdvertiser}
+      />
 
     </form>
   )
