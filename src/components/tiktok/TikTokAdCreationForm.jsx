@@ -125,13 +125,16 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
   const [selectedIdentity, setSelectedIdentity] = useState('')
   const [loadingIdentities, setLoadingIdentities] = useState(false)
 
-  // Popover States
   const [openAdvertiser, setOpenAdvertiser] = useState(false)
   const [openCampaign, setOpenCampaign] = useState(false)
   const [openAdGroup, setOpenAdGroup] = useState(false)
   const [advertiserSearch, setAdvertiserSearch] = useState('')
   const [campaignSearch, setCampaignSearch] = useState('')
   const [adGroupSearch, setAdGroupSearch] = useState('')
+
+  // Inline Campaign Duplication
+  const [isDuplicating, setIsDuplicating] = useState(false)
+  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(true)
 
   // Cloud Picker State
   const [googleAuthStatus, setGoogleAuthStatus] = useState({ checking: true, authenticated: false, accessToken: null })
@@ -390,6 +393,40 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
     };
     window.addEventListener('message', handleMessage);
   }, [openDropboxChooser]);
+
+  const handleDuplicateCampaign = useCallback(async (campaignId) => {
+    if (!campaignId || !selectedAdvertiser) return;
+    const campaign = campaigns.find(c => c.campaign_id === campaignId);
+    if (!campaign) return;
+    setIsDuplicating(true);
+    try {
+      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          advertiserId: selectedAdvertiser,
+          campaignId,
+          newCampaignName: campaign.campaign_name,
+          adgroupSuffix: '',
+          adSuffix: '',
+          includeAds: duplicateIncludeAds,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Duplication failed');
+      toast.success(`✅ "${campaign.campaign_name}" duplicated!`);
+      // Refresh campaign list
+      const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' });
+      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
+        .then(r => r.json())
+        .then(d => setCampaigns(d.campaigns || []))
+        .catch(() => {});
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setIsDuplicating(false);
+    }
+  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, tiktokFetch]);
 
 
   useEffect(() => {
@@ -875,18 +912,43 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                         ))}
                       </CommandGroup>
                     </CommandList>
-                    <div className="p-2 border-t border-gray-100">
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setOpenCampaign(false)
-                          document.getElementById('tiktok-duplicator-section')?.scrollIntoView({ behavior: 'smooth' })
-                        }}
-                        className="w-full h-10 rounded-xl bg-zinc-800 hover:bg-black text-white text-xs font-bold"
-                      >
-                        <PlusIcon className="w-3.5 h-3.5 mr-2" />
-                        Launch in a New Campaign
-                      </Button>
+                    <div className="p-2 border-t border-gray-100 space-y-1.5">
+                      {selectedCampaign ? (
+                        <>
+                          <div className="flex items-center justify-between px-2 py-1">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Duplicate Selected</span>
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <span className="text-[10px] text-gray-500 font-medium">Include Ads</span>
+                              <div
+                                onClick={(e) => { e.stopPropagation(); setDuplicateIncludeAds(v => !v); }}
+                                className={cn(
+                                  "relative w-8 h-4 rounded-full cursor-pointer transition-colors duration-200",
+                                  duplicateIncludeAds ? "bg-black" : "bg-gray-200"
+                                )}
+                              >
+                                <div className={cn(
+                                  "absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform duration-200",
+                                  duplicateIncludeAds ? "translate-x-4" : "translate-x-0.5"
+                                )} />
+                              </div>
+                            </label>
+                          </div>
+                          <Button
+                            type="button"
+                            disabled={isDuplicating}
+                            onClick={() => handleDuplicateCampaign(selectedCampaign)}
+                            className="w-full h-9 rounded-xl bg-zinc-800 hover:bg-black text-white text-xs font-bold disabled:opacity-60"
+                          >
+                            {isDuplicating ? (
+                              <><Loader className="w-3 h-3 animate-spin mr-1.5" />Duplicating...</>
+                            ) : (
+                              <>Duplicate &nbsp;<span className="opacity-60 font-normal truncate max-w-[120px]">{campaigns.find(c => c.campaign_id === selectedCampaign)?.campaign_name}</span></>
+                            )}
+                          </Button>
+                        </>
+                      ) : (
+                        <p className="text-[10px] text-gray-400 text-center py-1 font-medium">Select a campaign to duplicate it</p>
+                      )}
                     </div>
                   </Command>
                 </PopoverContent>

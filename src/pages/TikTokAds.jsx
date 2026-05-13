@@ -1,6 +1,5 @@
 import Header from '@/components/header'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
-import TikTokCampaignDuplicator from '@/components/tiktok/TikTokCampaignDuplicator'
 import { Button } from '@/components/ui/button'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
 import { useIntercom } from '@/lib/useIntercom'
@@ -71,10 +70,6 @@ export default function TikTokAds() {
               advertisers={tiktokAdvertisers} 
               onAdvertiserChange={setSelectedAdvertiser}
             />
-            
-            <div id="tiktok-duplicator-section" className="border-t border-gray-100 pt-6">
-              <TikTokCampaignDuplicator advertiserId={selectedAdvertiser} />
-            </div>
           </div>
 
           {/* Right Column: Info/Meta-style Sidebar */}
