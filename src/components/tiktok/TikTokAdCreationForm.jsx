@@ -37,11 +37,9 @@ import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
 import CogIcon from '@/assets/icons/cog.svg?react'
 import CTAIcon from '@/assets/icons/cta.svg?react'
 import CampaignIcon from '@/assets/icons/folder.svg?react'
-import FrameIcon from '@/assets/icons/Frame.webp'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
 import PlusIcon from '@/assets/icons/plus.svg?react'
 import TemplateIcon from '@/assets/icons/template.svg?react'
-import TikTokIcon from '@/assets/icons/TikTokIcon.png'
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
@@ -82,20 +80,6 @@ const UPLOAD_SOURCE_OPTIONS = [
     fullLabel: 'Choose Files from Dropbox',
     compactLabel: 'Dropbox'
   },
-  {
-    id: 'frameio',
-    name: 'Frame.io',
-    icon: FrameIcon,
-    fullLabel: 'Choose Files from Frame.io',
-    compactLabel: 'Frame.io'
-  },
-  {
-    id: 'tiktok_library',
-    name: 'TikTok Creative Library',
-    icon: TikTokIcon,
-    fullLabel: 'Import from TikTok Library',
-    compactLabel: 'TikTok Library'
-  }
 ]
 
 export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdvertiserChange }) {
@@ -129,9 +113,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
   const [videoFile, setVideoFile] = useState(null)
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
-  const [frameioFiles, setFrameioFiles] = useState([])
-  const [tiktokLibraryFiles, setTiktokLibraryFiles] = useState([])
-  const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox', 'frameio', 'tiktok_library'])
+  const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox'])
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false)
   const [videoPreview, setVideoPreview] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -158,12 +140,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
   const [isImportingFolder, setIsImportingFolder] = useState(false)
   const pickerInstanceRef = useRef(null)
 
-  // Frame.io State
-  const [frameioPickerOpen, setFrameioPickerOpen] = useState(false)
-  const [frameioAccessToken, setFrameioAccessToken] = useState(null)
-
-  // TikTok Library State
-  const [tiktokLibraryOpen, setTiktokLibraryOpen] = useState(false)
 
   const fileRef = useRef()
 
@@ -415,13 +391,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
     window.addEventListener('message', handleMessage);
   }, [openDropboxChooser]);
 
-  const handleFrameioClick = useCallback(() => {
-    setFrameioPickerOpen(true);
-  }, []);
-
-  const handleTikTokLibraryClick = useCallback(() => {
-    setTiktokLibraryOpen(true);
-  }, []);
 
   useEffect(() => {
     if (advertiserId) setSelectedAdvertiser(advertiserId)
@@ -567,7 +536,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
     if (!selectedIdentity) return toast.error('Please select a TikTok Identity/Profile')
     if (!adName.trim()) return toast.error('Ad name is required')
     if (cta.length === 0) return toast.error('Please select at least one Call to Action')
-    const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0 || frameioFiles.length > 0 || tiktokLibraryFiles.length > 0
+    const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0
     if (!videoFile && !isCloudFile) return toast.error("Please select a video")
 
     setIsSubmitting(true)
@@ -592,8 +561,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
           formData.append('driveFile', JSON.stringify(driveFiles[0]))
         } else if (dropboxFiles.length > 0) {
           formData.append('dropboxFile', JSON.stringify(dropboxFiles[0]))
-        } else if (frameioFiles.length > 0) {
-          formData.append('frameioFile', JSON.stringify(frameioFiles[0]))
         }
         
         const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
@@ -604,10 +571,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
           console.log('  File name          :', videoFile.name)
           console.log('  File size          :', (videoFile.size / 1024 / 1024).toFixed(2), 'MB')
         } else {
-          const sourceName = driveFiles.length > 0 ? 'Google Drive' : 
-                             dropboxFiles.length > 0 ? 'Dropbox' : 'Frame.io';
+          const sourceName = driveFiles.length > 0 ? 'Google Drive' : 'Dropbox';
           console.log('  Source             :', sourceName)
-          console.log('  File name          :', driveFiles[0]?.name || dropboxFiles[0]?.name || frameioFiles[0]?.name)
+          console.log('  File name          :', driveFiles[0]?.name || dropboxFiles[0]?.name)
         }
         console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
         console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
@@ -1096,7 +1062,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
             )}
 
             {/* Cloud File Preview */}
-            {(driveFiles.length > 0 || dropboxFiles.length > 0 || frameioFiles.length > 0 || tiktokLibraryFiles.length > 0) && (
+            {(driveFiles.length > 0 || dropboxFiles.length > 0) && (
               <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -1105,12 +1071,10 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
-                        {driveFiles[0]?.name || dropboxFiles[0]?.name || frameioFiles[0]?.name || tiktokLibraryFiles[0]?.name}
+                        {driveFiles[0]?.name || dropboxFiles[0]?.name}
                       </p>
                       <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">
-                        {driveFiles.length > 0 ? "Google Drive" : 
-                         dropboxFiles.length > 0 ? "Dropbox" :
-                         frameioFiles.length > 0 ? "Frame.io" : "TikTok Library"} Selected
+                        {driveFiles.length > 0 ? "Google Drive" : "Dropbox"} Selected
                       </p>
                     </div>
                   </div>
@@ -1121,8 +1085,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                     onClick={() => {
                       setDriveFiles([]);
                       setDropboxFiles([]);
-                      setFrameioFiles([]);
-                      setTiktokLibraryFiles([]);
                     }}
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1145,8 +1107,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                     let onClick;
                     if (id === 'drive') onClick = handleDriveClick;
                     else if (id === 'dropbox') onClick = handleDropboxClick;
-                    else if (id === 'frameio') onClick = handleFrameioClick;
-                    else if (id === 'tiktok_library') onClick = handleTikTokLibraryClick;
 
                     return (
                       <Button
@@ -1326,20 +1286,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
         onImport={handleImportFromFolder} 
         onCancel={() => setShowFolderInput(false)}
         isImporting={isImportingFolder}
-      />
-
-      <FrameioPickerModal
-        open={frameioPickerOpen}
-        onClose={() => setFrameioPickerOpen(false)}
-        onSelect={handleFrameioFilesSelected}
-        accessToken={frameioAccessToken}
-      />
-
-      <TikTokMediaLibraryModal
-        open={tiktokLibraryOpen}
-        onClose={() => setTiktokLibraryOpen(false)}
-        onSelect={handleTikTokLibrarySelected}
-        advertiserId={selectedAdvertiser}
       />
 
     </form>
