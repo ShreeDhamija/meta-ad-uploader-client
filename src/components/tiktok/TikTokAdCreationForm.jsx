@@ -34,7 +34,6 @@ import axios from "axios"
 import DesktopIcon from '@/assets/Desktop.webp'
 import DropboxIcon from '@/assets/Dropbox.png'
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
-import CogIcon from '@/assets/icons/cog.svg?react'
 import CTAIcon from '@/assets/icons/cta.svg?react'
 import CampaignIcon from '@/assets/icons/folder.svg?react'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
@@ -87,6 +86,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
 
+  const renderDiffMark = (fieldKeys) => null; // Placeholder for parity with Meta form
+
   const { tiktokFetch, tiktokUser, isLoading: authLoading, refreshTikTokUser } = useTikTokAuth()
 
   useEffect(() => {
@@ -135,6 +136,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
   // Inline Campaign Duplication
   const [isDuplicating, setIsDuplicating] = useState(false)
   const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(true)
+  const [newCampaignName, setNewCampaignName] = useState('')
 
   // Cloud Picker State
   const [googleAuthStatus, setGoogleAuthStatus] = useState({ checking: true, authenticated: false, accessToken: null })
@@ -395,7 +397,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
   }, [openDropboxChooser]);
 
   const handleDuplicateCampaign = useCallback(async (campaignId) => {
-    if (!campaignId || !selectedAdvertiser) return;
+    if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return;
     const campaign = campaigns.find(c => c.campaign_id === campaignId);
     if (!campaign) return;
     setIsDuplicating(true);
@@ -406,7 +408,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
         body: JSON.stringify({
           advertiser_id: selectedAdvertiser,
           source_campaign_id: campaignId,
-          new_campaign_name: campaign.campaign_name,
+          new_campaign_name: newCampaignName.trim(),
           adgroup_name_suffix: '',
           ad_name_suffix: '',
           duplicate_ads: duplicateIncludeAds,
@@ -414,19 +416,37 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Duplication failed');
-      toast.success(`✅ "${campaign.campaign_name}" duplicated!`);
+      toast.success(`✅ "${newCampaignName.trim()}" created!`);
       // Refresh campaign list
       const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' });
       tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
         .then(r => r.json())
-        .then(d => setCampaigns(d.campaigns || []))
+        .then(d => {
+          setCampaigns(d.campaigns || []);
+          // Potentially select the new campaign
+          if (data.new_campaign_id) {
+            setSelectedCampaign(data.new_campaign_id);
+            setOpenCampaign(false);
+          }
+        })
         .catch(() => {});
     } catch (err) {
       toast.error(err.message);
     } finally {
       setIsDuplicating(false);
     }
-  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, tiktokFetch]);
+  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch]);
+
+  useEffect(() => {
+    if (selectedCampaign) {
+      const camp = campaigns.find(c => c.campaign_id === selectedCampaign);
+      if (camp) {
+        setNewCampaignName((camp.campaign_name || '') + "_copy");
+      }
+    } else {
+      setNewCampaignName('');
+    }
+  }, [selectedCampaign, campaigns]);
 
 
   useEffect(() => {
@@ -693,24 +713,21 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
     <form onSubmit={handleSubmit} className="space-y-6">
 
       {/* Identity Section - Now matching Meta AdAccountSettings style */}
-      <Card className="!bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader className="py-4">
-          <CardTitle className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-base font-semibold tracking-tight">
-              <CogIcon className="w-5 h-5" />
-              Ad Account Configuration
-            </div>
+      <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AdAccountIcon className="w-5 h-5" />
+            Ad Account & Identity
           </CardTitle>
-          <p className="text-xs text-gray-500 mt-1 font-medium">Select your advertiser account and identity</p>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-
           {/* Advertiser Account */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                <AdAccountIcon className="w-4 h-4" />
-                Advertiser Account
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("selectedAdvertiser")}
+                <Users className="w-4 h-4" />
+                TikTok Advertiser
               </Label>
               <RefreshCcw 
                 className={cn("h-4 w-4 text-gray-500 cursor-pointer hover:text-gray-700 transition-colors", authLoading && "animate-spin")} 
@@ -793,7 +810,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
 
           {/* Post As (Identity) */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+            <Label className="flex items-center gap-2">
+              {renderDiffMark("selectedIdentity")}
               <Users className="w-4 h-4" />
               Post As (Identity)
             </Label>
@@ -839,9 +857,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
 
       {/* Placement Section */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
-          <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
-            <CampaignIcon className="w-4 h-4 text-gray-500" />
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CampaignIcon className="w-5 h-5" />
             Placement
           </CardTitle>
         </CardHeader>
@@ -851,8 +869,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
             {/* Campaign */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                  <CampaignIcon className="w-3.5 h-3.5" />
+                <Label className="flex items-center gap-2">
+                  {renderDiffMark("selectedCampaign")}
+                  <CampaignIcon className="w-4 h-4" />
                   Campaign
                 </Label>
                 {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
@@ -914,7 +933,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                     </CommandList>
                     <div className="border-t border-gray-100 mt-1">
                       {selectedCampaign ? (
-                        <div className="p-2 space-y-2">
+                        <div className="p-3 space-y-3">
                           <div className="flex items-center justify-between px-1">
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                               Launch New Campaign
@@ -935,27 +954,36 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                               </div>
                             </label>
                           </div>
+
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] text-gray-400 font-bold uppercase tracking-tight ml-1">Campaign Name</Label>
+                            <Input
+                              placeholder="New Campaign Name"
+                              value={newCampaignName}
+                              onChange={(e) => setNewCampaignName(e.target.value)}
+                              className="h-8 text-[11px] rounded-xl border-gray-200 bg-gray-50 focus:bg-white transition-colors focus:ring-0 focus:border-gray-300"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                          </div>
+
                           <Button
                             type="button"
-                            disabled={isDuplicating}
+                            disabled={isDuplicating || !newCampaignName.trim()}
                             onClick={() => handleDuplicateCampaign(selectedCampaign)}
-                            className="w-full h-8 rounded-xl bg-zinc-800 hover:bg-black text-white text-[11px] font-bold tracking-wide disabled:opacity-50 flex items-center justify-center gap-1.5 px-3"
+                            className="w-full h-9 rounded-xl bg-zinc-800 hover:bg-black text-white text-[11px] font-bold tracking-wide disabled:opacity-50 flex items-center justify-center gap-1.5 px-3 shadow-sm transition-all active:scale-[0.98]"
                           >
                             {isDuplicating ? (
                               <><Loader className="w-3 h-3 animate-spin" />Launching...</>
                             ) : (
                               <>
                                 <PlusIcon className="w-3 h-3" />
-                                <span>Launch</span>
-                                <span className="opacity-50 font-normal truncate max-w-[110px]">
-                                  {campaigns.find(c => c.campaign_id === selectedCampaign)?.campaign_name}
-                                </span>
+                                <span>Launch Campaign</span>
                               </>
                             )}
                           </Button>
                         </div>
                       ) : (
-                        <p className="text-[10px] text-gray-400 text-center py-2 font-medium">Select a campaign to launch a copy</p>
+                        <p className="text-[10px] text-gray-400 text-center py-4 font-medium uppercase tracking-widest">Select a campaign to launch a copy</p>
                       )}
                     </div>
                   </Command>
@@ -966,8 +994,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
             {/* Ad Group */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                  <AdSetIcon className="w-3.5 h-3.5" />
+                <Label className="flex items-center gap-2">
+                  {renderDiffMark("selectedAdGroup")}
+                  <AdSetIcon className="w-4 h-4" />
                   Ad Group
                 </Label>
                 {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
@@ -1038,9 +1067,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
 
       {/* Creative Section */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader className="bg-gray-50/50 border-b border-gray-100 py-4">
-          <CardTitle className="text-sm font-semibold tracking-tight flex items-center gap-2">
-            <Video className="w-4 h-4 text-gray-500" />
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Video className="w-5 h-5" />
             Creative
           </CardTitle>
         </CardHeader>
@@ -1049,7 +1078,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
           {/* Video Upload */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("videoFile")}
                 Video (.mp4, .mov)
               </Label>
               <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
@@ -1143,7 +1173,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                       <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
                         {driveFiles[0]?.name || dropboxFiles[0]?.name}
                       </p>
-                      <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">
+                      <p className="text-[10px] text-emerald-600 font-bold">
                         {driveFiles.length > 0 ? "Google Drive" : "Dropbox"} Selected
                       </p>
                     </div>
@@ -1192,7 +1222,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                           style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
                         />
                         {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
-                        <span className="truncate text-xs font-semibold uppercase tracking-wider">{src.compactLabel}</span>
+                        <span className="truncate text-xs font-semibold">{src.compactLabel}</span>
                       </Button>
                     );
                   })}
@@ -1208,7 +1238,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                     style={{ width: `${uploadProgress}%` }}
                   />
                 </div>
-                <p className="text-[10px] font-medium text-emerald-600 mt-1 uppercase tracking-widest">
+                <p className="text-[10px] font-medium text-emerald-600 mt-1">
                   Uploading {uploadProgress}%
                 </p>
               </div>
@@ -1218,7 +1248,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
           {/* Ad Details: Name + Text */}
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("adName")}
                 <FileText className="w-4 h-4" />
                 Ad Name
               </Label>
@@ -1232,7 +1263,8 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("adText")}
                 <TemplateIcon className="w-4 h-4" />
                 Ad Copy / Caption
               </Label>
@@ -1252,10 +1284,11 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
 
             {/* CTA Multi-select Dropdown */}
             <div className="space-y-3">
-              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("cta")}
                 <CTAIcon className="w-4 h-4" />
                 Call to Action
-                <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase tracking-tight">Multi-select</span>
+                <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold">Multi-select</span>
               </Label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -1306,8 +1339,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
 
             {/* Landing URL */}
             <div className="space-y-2">
-              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                <LinkIcon className="w-3 h-3" />
+              <Label className="flex items-center gap-1.5">
+                {renderDiffMark("landingUrl")}
+                <LinkIcon className="w-4 h-4" />
                 Landing Page URL
               </Label>
               <Input
@@ -1344,7 +1378,7 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
             'Create TikTok Ad'
           )}
         </Button>
-        <p className="text-center text-[11px] text-gray-400 mt-3 font-medium uppercase tracking-widest">
+        <p className="text-center text-[11px] text-gray-400 mt-3 font-medium">
           Your ad will be live after TikTok's review process
         </p>
       </div>
@@ -1394,7 +1428,7 @@ function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel
               {isImporting ? <Loader className="w-4 h-4 animate-spin" /> : "Go"}
             </Button>
           </div>
-          <p className="text-[10px] text-gray-400 text-center uppercase tracking-widest font-bold">
+          <p className="text-[10px] text-gray-400 text-center font-bold">
             Or browse in the picker window
           </p>
         </div>
