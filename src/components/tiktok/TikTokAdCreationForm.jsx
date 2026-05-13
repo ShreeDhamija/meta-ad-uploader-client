@@ -5,26 +5,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { readCache, writeCache } from "@/lib/dataCache"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { cn } from "@/lib/utils"
 import {
+  Check,
+  ChevronsUpDown,
+  CloudUpload,
   FileText,
   Link as LinkIcon,
   Loader,
   RefreshCcw,
+  Trash2,
   Upload,
   Users,
-  Video
+  Video,
+  X
 } from "lucide-react"
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
-import { readCache, writeCache } from "@/lib/dataCache"
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import axios from "axios"
 
+import DesktopIcon from '@/assets/Desktop.webp'
+import DropboxIcon from '@/assets/Dropbox.png'
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
 import CogIcon from '@/assets/icons/cog.svg?react'
 import CTAIcon from '@/assets/icons/cta.svg?react'
@@ -47,6 +55,30 @@ const CTA_OPTIONS = [
   { value: 'APPLY_NOW', label: 'Apply Now' },
   { value: 'BOOK_NOW', label: 'Book Now' },
   { value: 'WATCH_NOW', label: 'Watch Now' },
+]
+
+const UPLOAD_SOURCE_OPTIONS = [
+  {
+    id: 'local',
+    name: 'My Computer',
+    icon: DesktopIcon,
+    fullLabel: 'Upload from Computer',
+    compactLabel: 'Computer'
+  },
+  {
+    id: 'drive',
+    name: 'Google Drive',
+    icon: 'https://api.withblip.com/drive_icon.png',
+    fullLabel: 'Upload from Drive',
+    compactLabel: 'Google Drive'
+  },
+  {
+    id: 'dropbox',
+    name: 'Dropbox',
+    icon: DropboxIcon,
+    fullLabel: 'Upload from Dropbox',
+    compactLabel: 'Dropbox'
+  }
 ]
 
 export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
@@ -78,6 +110,10 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const [cta, setCta] = useState(['SHOP_NOW'])
   const [landingUrl, setLandingUrl] = useState('')
   const [videoFile, setVideoFile] = useState(null)
+  const [driveFiles, setDriveFiles] = useState([])
+  const [dropboxFiles, setDropboxFiles] = useState([])
+  const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox'])
+  const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false)
   const [videoPreview, setVideoPreview] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
@@ -88,6 +124,13 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
   const [selectedIdentity, setSelectedIdentity] = useState('')
   const [loadingIdentities, setLoadingIdentities] = useState(false)
 
+  // Cloud Picker State
+  const [googleAuthStatus, setGoogleAuthStatus] = useState({ checking: true, authenticated: false, accessToken: null })
+  const [showFolderInput, setShowFolderInput] = useState(false)
+  const [folderLinkValue, setFolderLinkValue] = useState("")
+  const [isImportingFolder, setIsImportingFolder] = useState(false)
+  const pickerInstanceRef = useRef(null)
+
   const fileRef = useRef()
 
   const toggleCta = (value) => {
@@ -97,6 +140,246 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         : [...prev, value]
     )
   }
+
+  const getMimeFromName = (name) => {
+    const ext = name.split('.').pop().toLowerCase();
+    const map = {
+      'mp4': 'video/mp4',
+      'mov': 'video/quicktime',
+      'webm': 'video/webm',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif'
+    };
+    return map[ext] || 'application/octet-stream';
+  };
+
+  const isVideoFile = (file) => {
+    const mime = file.mimeType || file.type || getMimeFromName(file.name);
+    return mime.startsWith('video/');
+  };
+
+  const extractFolderId = (url) => {
+    const folderMatch = url.match(/folders\/([a-zA-Z0-9-_]+)/);
+    return folderMatch ? folderMatch[1] : null;
+  };
+
+  const toggleUploadSource = (id) => {
+    setUploadSources(prev => 
+      prev.includes(id) 
+        ? (prev.length > 1 ? prev.filter(s => s !== id) : prev)
+        : [...prev, id]
+    )
+  }
+
+  const handleUploadSourcesOpenChange = (open) => {
+    setUploadSourcesOpen(open)
+  }
+
+  // Google Drive Auth Status
+  useEffect(() => {
+    const checkGoogleAuth = async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true });
+        setGoogleAuthStatus({
+          checking: false,
+          authenticated: response.data.authenticated,
+          accessToken: response.data.accessToken
+        });
+      } catch (error) {
+        setGoogleAuthStatus({ checking: false, authenticated: false, accessToken: null });
+      }
+    };
+    checkGoogleAuth();
+  }, []);
+
+  // Google Picker Logic
+  const createPicker = useCallback((token, initialFolderId = null) => {
+    if (pickerInstanceRef.current) {
+      try { pickerInstanceRef.current.setVisible(false); } catch (e) {}
+    }
+    setShowFolderInput(true);
+    const mimeTypes = ["application/vnd.google-apps.folder", "image/jpeg", "image/png", "image/gif", "video/mp4", "video/webm", "video/quicktime"].join(",");
+    
+    let mainView;
+    if (initialFolderId) {
+      mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false).setParent(initialFolderId);
+    } else {
+      mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false);
+    }
+
+    const pickerBuilder = new google.picker.PickerBuilder()
+      .setOAuthToken(token)
+      .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
+      .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+      .hideTitleBar()
+      .setAppId("102886794705")
+      .setCallback((data) => {
+        if (data.action === "picked") {
+          const selected = data.docs.map(doc => ({
+            id: doc.id,
+            name: doc.name,
+            mimeType: doc.mimeType,
+            size: doc.sizeBytes,
+            accessToken: token,
+            isDrive: true
+          }));
+          // For TikTok, we only support one video at a time for now in the simple form
+          // But we can store them in driveFiles
+          setDriveFiles(selected);
+          if (selected.length > 0) {
+            // Pick the first one as the active video
+            const file = selected[0];
+            setVideoFile(null); // Clear local file
+            setDropboxFiles([]); // Clear dropbox files
+            toast.success(`Selected ${file.name} from Google Drive`);
+          }
+        }
+        if (data.action === "picked" || data.action === "cancel") {
+          setShowFolderInput(false);
+          setFolderLinkValue("");
+          pickerInstanceRef.current = null;
+        }
+      });
+
+    pickerBuilder.addView(mainView);
+    const picker = pickerBuilder.build();
+    pickerInstanceRef.current = picker;
+    picker.setVisible(true);
+  }, []);
+
+  const openPicker = useCallback((token) => {
+    if (!window.google || !window.google.picker) {
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
+      document.body.appendChild(script);
+      window.onApiLoad = () => {
+        window.gapi.load('picker', () => createPicker(token));
+      };
+    } else {
+      createPicker(token);
+    }
+  }, [createPicker]);
+
+  const handleDriveClick = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true });
+      if (res.data.authenticated && res.data.accessToken) {
+        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken: res.data.accessToken });
+        openPicker(res.data.accessToken);
+        return;
+      }
+    } catch (err) {}
+
+    const authWindow = window.open(`${API_BASE_URL}/auth/google?popup=true`, "_blank", "width=1100,height=750");
+    if (!authWindow) return toast.error("Popup blocked. Please allow popups and try again.");
+
+    const listener = (event) => {
+      if (event.origin !== `${API_BASE_URL}`) return;
+      const { type, accessToken } = event.data || {};
+      if (type === "google-auth-success") {
+        window.removeEventListener("message", listener);
+        authWindow.close();
+        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken });
+        openPicker(accessToken);
+      }
+    };
+    window.addEventListener("message", listener);
+  }, [openPicker]);
+
+  const handleImportFromFolder = useCallback(async () => {
+    if (!googleAuthStatus.accessToken) return toast.error('Not authenticated with Google Drive');
+    const link = folderLinkValue || "";
+    const fileMatch = link.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
+    const fileId = fileMatch ? fileMatch[1] : null;
+
+    if (fileId) {
+      try {
+        setIsImportingFolder(true);
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size`, {
+          headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` }
+        });
+        if (!response.ok) throw new Error("File not found or permission denied.");
+        const data = await response.json();
+        const newFile = { id: data.id, name: data.name, mimeType: data.mimeType, size: parseInt(data.size || "0", 10), accessToken: googleAuthStatus.accessToken, isDrive: true };
+        setDriveFiles([newFile]);
+        setVideoFile(null);
+        setDropboxFiles([]);
+        setShowFolderInput(false);
+        setFolderLinkValue("");
+        toast.success(`Imported: ${data.name}`);
+      } catch (error) {
+        toast.error("Failed to import file.");
+      } finally {
+        setIsImportingFolder(false);
+      }
+      return;
+    }
+
+    const folderId = extractFolderId(link);
+    if (!folderId) return toast.error('Invalid Google Drive link');
+    createPicker(googleAuthStatus.accessToken, folderId);
+  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker]);
+
+  // Dropbox Logic
+  useEffect(() => {
+    if (document.getElementById('dropboxjs')) return;
+    const script = document.createElement('script');
+    script.src = 'https://www.dropbox.com/static/api/2/dropins.js';
+    script.id = 'dropboxjs';
+    script.setAttribute('data-app-key', import.meta.env.VITE_DROPBOX_APP_KEY || 'YOUR_DROPBOX_APP_KEY');
+    script.async = true;
+    document.head.appendChild(script);
+  }, []);
+
+  const openDropboxChooser = useCallback((accessToken) => {
+    window.Dropbox.choose({
+      success: (selectedFiles) => {
+        const dropboxFilesData = selectedFiles.map(file => ({
+          dropboxId: file.id,
+          name: file.name,
+          link: file.link,
+          directLink: file.link,
+          size: file.bytes,
+          isDropbox: true,
+          mimeType: getMimeFromName(file.name),
+          accessToken
+        }));
+        setDropboxFiles(dropboxFilesData);
+        if (dropboxFilesData.length > 0) {
+          setVideoFile(null);
+          setDriveFiles([]);
+          toast.success(`Selected ${dropboxFilesData[0].name} from Dropbox`);
+        }
+      },
+      linkType: 'direct',
+      multiselect: false, // For now, keep it simple
+      extensions: ['.mp4', '.mov', '.webm'],
+    });
+  }, []);
+
+  const handleDropboxClick = useCallback(async () => {
+    if (!window.Dropbox) return toast.error("Dropbox is still loading.");
+    try {
+      const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, { credentials: 'include' });
+      const statusData = await statusRes.json();
+      if (statusData.authenticated && statusData.accessToken) {
+        openDropboxChooser(statusData.accessToken);
+        return;
+      }
+    } catch (err) {}
+
+    const authWindow = window.open(`${API_BASE_URL}/auth/dropbox?popup=true`, 'dropbox-auth', "width=600,height=700");
+    const handleMessage = (event) => {
+      if (event.origin !== API_BASE_URL) return;
+      if (event.data?.type === 'dropbox-auth-success') {
+        window.removeEventListener('message', handleMessage);
+        openDropboxChooser(event.data.accessToken);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+  }, [openDropboxChooser]);
 
   useEffect(() => {
     if (advertiserId) setSelectedAdvertiser(advertiserId)
@@ -228,23 +511,38 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
     if (!selectedAdvertiser) return toast.error('Please select an advertiser')
     if (!selectedAdGroup) return toast.error('Please select an ad group')
     if (!selectedIdentity) return toast.error('Please select a TikTok Identity/Profile')
-    if (!videoFile) return toast.error('Video is required for TikTok ads')
     if (!adName.trim()) return toast.error('Ad name is required')
     if (cta.length === 0) return toast.error('Please select at least one Call to Action')
+    const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0
+    if (!videoFile && !isCloudFile) return toast.error("Please select a video")
 
     setIsSubmitting(true)
     setIsUploading(true)
+    setUploadProgress(0)
 
     try {
       toast.info('Uploading video...')
       const formData = new FormData()
-      formData.append('videoFile', videoFile)
+      
+      if (videoFile) {
+        formData.append('videoFile', videoFile)
+      } else if (driveFiles.length > 0) {
+        formData.append('driveFile', JSON.stringify(driveFiles[0]))
+      } else if (dropboxFiles.length > 0) {
+        formData.append('dropboxFile', JSON.stringify(dropboxFiles[0]))
+      }
+      
       const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
       const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
       console.group(`📡 [TikTok Form] Uploading video`)
       console.log('  URL                :', uploadUrl)
-      console.log('  File name          :', videoFile.name)
-      console.log('  File size          :', (videoFile.size / 1024 / 1024).toFixed(2), 'MB')
+      if (videoFile) {
+        console.log('  File name          :', videoFile.name)
+        console.log('  File size          :', (videoFile.size / 1024 / 1024).toFixed(2), 'MB')
+      } else {
+        console.log('  Source             :', driveFiles.length > 0 ? 'Google Drive' : 'Dropbox')
+        console.log('  File name          :', driveFiles[0]?.name || dropboxFiles[0]?.name)
+      }
       console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
       console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
       console.groupEnd()
@@ -506,58 +804,164 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
         <CardContent className="p-6 space-y-6">
 
           {/* Video Upload */}
-          <div className="space-y-3">
-            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Video (.mp4, .mov)
-            </Label>
-            <div
-              onClick={() => fileRef.current?.click()}
-              className={cn(
-                "group cursor-pointer border-2 border-dashed rounded-3xl p-8 text-center transition-all",
-                videoFile ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-              )}
-            >
-              <input
-                ref={fileRef}
-                type="file"
-                accept="video/mp4,video/quicktime"
-                className="hidden"
-                onChange={handleVideoSelect}
-              />
-              <div className="flex flex-col items-center gap-3">
-                {videoPreview ? (
-                  <div className="relative group">
-                    <video src={videoPreview} className="mx-auto max-h-48 rounded-2xl shadow-md border border-white" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
-                      <RefreshCcw className="w-8 h-8 text-white" />
-                    </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Video (.mp4, .mov)
+              </Label>
+              <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className={cn(
+                      "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
+                      formFieldChrome
+                    )}
+                  >
+                    <CloudUpload className="h-4 w-4" />
+                    Manage Sources
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                  <div className="flex flex-col">
+                    {UPLOAD_SOURCE_OPTIONS.map((src) => {
+                      const checked = uploadSources.includes(src.id);
+                      return (
+                        <label
+                          key={src.id}
+                          className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={() => toggleUploadSource(src.id)}
+                          />
+                          <img
+                            src={src.icon}
+                            alt=""
+                            className={'h-4 w-4 object-contain'}
+                          />
+                          <span className="text-sm text-gray-800">{src.name}</span>
+                        </label>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <>
-                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
+              <div
+                onClick={() => fileRef.current?.click()}
+                className={cn(
+                  "group cursor-pointer border-2 border-dashed rounded-3xl p-8 text-center transition-all",
+                  videoFile ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                )}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="video/mp4,video/quicktime"
+                  className="hidden"
+                  onChange={handleVideoSelect}
+                />
+                <div className="flex flex-col items-center gap-3">
+                  {videoPreview ? (
+                    <div className="relative group">
+                      <video src={videoPreview} className="mx-auto max-h-48 rounded-2xl shadow-md border border-white" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
+                        <RefreshCcw className="w-8 h-8 text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Click to upload video</p>
+                        <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Cloud File Preview */}
+            {(driveFiles.length > 0 || dropboxFiles.length > 0) && (
+              <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-white border border-emerald-100 flex items-center justify-center shadow-sm">
+                      <Video className="w-6 h-6 text-emerald-500" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-700">Click to upload video</p>
-                      <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
+                        {driveFiles[0]?.name || dropboxFiles[0]?.name}
+                      </p>
+                      <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">
+                        {driveFiles.length > 0 ? "Google Drive" : "Dropbox"} Selected
+                      </p>
                     </div>
-                  </>
-                )}
-              </div>
-              {isUploading && (
-                <div className="mt-4 max-w-xs mx-auto">
-                  <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
                   </div>
-                  <p className="text-[10px] font-medium text-emerald-600 mt-1 uppercase tracking-widest">
-                    Uploading {uploadProgress}%
-                  </p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500"
+                    onClick={() => {
+                      setDriveFiles([]);
+                      setDropboxFiles([]);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* Cloud Source Buttons */}
+            {(() => {
+              const rowSources = uploadSources.filter((s) => s !== 'local');
+              if (rowSources.length === 0) return null;
+
+              return (
+                <div className="flex gap-2">
+                  {rowSources.map((id) => {
+                    const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
+                    if (!src) return null;
+
+                    const onClick = id === 'drive' ? handleDriveClick : handleDropboxClick;
+
+                    return (
+                      <Button
+                        key={id}
+                        type="button"
+                        onClick={onClick}
+                        className="flex-1 bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
+                      >
+                        <img src={src.icon} alt={src.name} className="h-4 w-4 object-contain" />
+                        <span className="truncate text-xs font-semibold uppercase tracking-wider">{src.compactLabel}</span>
+                      </Button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {isUploading && (
+              <div className="mt-2">
+                <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="text-[10px] font-medium text-emerald-600 mt-1 uppercase tracking-widest">
+                  Uploading {uploadProgress}%
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Ad Details: Name + Text */}
@@ -696,4 +1100,45 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers }) {
 
     </form>
   )
+}
+
+function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel, isImporting }) {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-gray-900 tracking-tight">Quick Import</h3>
+          <Button variant="ghost" size="icon" onClick={onCancel} className="rounded-full">
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500 font-medium leading-relaxed">
+            Paste a Google Drive folder or file link to quickly navigate to it or import it.
+          </p>
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              placeholder="Paste Google Drive link here"
+              value={linkValue}
+              onChange={(e) => setLinkValue(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && onImport()}
+              className="border-gray-200 rounded-2xl focus:ring-black"
+            />
+            <Button 
+              onClick={onImport} 
+              disabled={!linkValue || isImporting}
+              className="bg-black text-white rounded-2xl px-6"
+            >
+              {isImporting ? <Loader className="w-4 h-4 animate-spin" /> : "Go"}
+            </Button>
+          </div>
+          <p className="text-[10px] text-gray-400 text-center uppercase tracking-widest font-bold">
+            Or browse in the picker window
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
