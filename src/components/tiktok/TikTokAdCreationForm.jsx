@@ -41,7 +41,7 @@ import FrameIcon from '@/assets/icons/Frame.webp'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
 import PlusIcon from '@/assets/icons/plus.svg?react'
 import TemplateIcon from '@/assets/icons/template.svg?react'
-import TikTokIcon from '@/assets/icons/tiktok.svg?react'
+
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
