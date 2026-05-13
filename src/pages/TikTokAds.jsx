@@ -2,8 +2,8 @@ import Header from '@/components/header'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
 import TikTokCampaignDuplicator from '@/components/tiktok/TikTokCampaignDuplicator'
 import { Button } from '@/components/ui/button'
-import { useIntercom } from '@/hooks/useIntercom'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
+import { useIntercom } from '@/lib/useIntercom'
 import { CheckCircle2, Loader2 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from 'react-router-dom'
