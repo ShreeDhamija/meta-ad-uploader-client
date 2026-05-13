@@ -550,26 +550,24 @@ export default function RecommendationCards({
                                                                                                 'Trend Alert'}
                                                                             </Badge>
                                                                         )}
-                                                                        {rec.type === 'spend_shift' && (
-                                                                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                                                                <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap !shadow-none", cfg.badgeLabelBg)}>
-                                                                                    {rec.segmentType === 'age' ? 'Age Range' : 'Placement'} Spend Shift
-                                                                                </Badge>
-                                                                                {rec.severity && (
-                                                                                    <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap !shadow-none capitalize", SEVERITY_PILL[rec.severity] || SEVERITY_PILL.low)}>
-                                                                                        {rec.severity} Severity
-                                                                                    </Badge>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
-                                                                        <div className="flex items-center gap-2 min-w-0">
+                                                                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                                                             <p className={cn("font-bold text-sm break-words line-clamp-2 min-w-0", cfg.titleText)}>
                                                                                 {(rec.type === 'scale_winner' || rec.type === 'creative_fatigue')
                                                                                     ? rec.adName
                                                                                     : rec.type === 'spend_shift'
-                                                                                        ? rec.segmentName
+                                                                                        ? `${rec.segmentType === 'age' ? 'Age Range' : 'Placement'} Spend Shift`
                                                                                         : (rec.adsetName || rec.campaignName)}
                                                                             </p>
+                                                                            {rec.type === 'spend_shift' && rec.segmentName && (
+                                                                                <Badge variant="outline" className={cn("text-[11px] px-2.5 py-0.5 rounded-full flex-shrink-0", cfg.badgeLabelBg)}>
+                                                                                    {rec.segmentName}
+                                                                                </Badge>
+                                                                            )}
+                                                                            {rec.type === 'spend_shift' && rec.severity && (
+                                                                                <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap !shadow-none capitalize flex-shrink-0", SEVERITY_PILL[rec.severity] || SEVERITY_PILL.low)}>
+                                                                                    {rec.severity} Severity
+                                                                                </Badge>
+                                                                            )}
                                                                             {rec.type !== 'scale_winner' && rec.type !== 'creative_fatigue' && rec.type !== 'spend_shift' && (
                                                                                 <Badge variant="outline" className={cn("text-[11px] px-2.5 py-0.5 rounded-full flex-shrink-0", cfg.badgeLabelBg)}>
                                                                                     {rec.type === 'trend_alert' ? 'alert' : rec.level}
