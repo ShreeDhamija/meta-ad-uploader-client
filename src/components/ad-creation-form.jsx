@@ -693,6 +693,8 @@ export default function AdCreationForm({
   selectedFiles,
   setSelectedFiles,
   useExistingPosts,
+  usePostID,
+  setUsePostID,
   refetchCopyTemplates,
   preferredTemplateRef,
   onAdSetCountsCreated,
@@ -853,7 +855,6 @@ export default function AdCreationForm({
   const [applyTextToAllCards, setApplyTextToAllCards] = useState(false);
   const [applyHeadlinesToAllCards, setApplyHeadlinesToAllCards] = useState(false);
   const S3_UPLOAD_THRESHOLD = 1 * 1024 * 1024; // 40 MB
-  const [usePostID, setUsePostID] = useState(false);
   const [leadgenForms, setLeadgenForms] = useState([]);
   const [loadingForms, setLoadingForms] = useState(false);
 

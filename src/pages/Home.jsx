@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { toast, Toaster } from "sonner"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import { v4 as uuidv4 } from "uuid";
 
 import Header from "../components/header"
@@ -103,6 +103,7 @@ export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading } = useAuth()
     const { showMessenger, hideMessenger } = useIntercom();
     const navigate = useNavigate()
+    const location = useLocation()
     const [isLoading, setIsLoading] = useState(false)
 
     // Onboarding
@@ -212,6 +213,7 @@ export default function Home() {
     const [isLoadingAdSets, setIsLoadingAdSets] = useState(false);
     const [selectedFiles, setSelectedFiles] = useState(new Set());
     const [useExistingPosts, setUseExistingPosts] = useState(false);
+    const [usePostID, setUsePostID] = useState(false);
     const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([]);
     const [isLaunchingMediaPreview, setIsLaunchingMediaPreview] = useState(false);
     const [selectedForm, setSelectedForm] = useState(null);
@@ -483,6 +485,29 @@ export default function Home() {
         if (!hadPrevious) return;
         setVariants((prev) => prev.map((variant) => ({ ...variant, snapshot: null })));
     }, [selectedAdAccount]);
+
+    // Seed launcher state when arriving from Analytics "Scale Winners" pill.
+    // Switches the selected ad account, opens the existing-posts post-ID flow,
+    // and appends the chosen winners to importedPosts.
+    useEffect(() => {
+        const payload = location.state?.scaleWinners;
+        if (!Array.isArray(payload) || payload.length === 0) return;
+
+        const incomingAdAccount = location.state?.adAccountId;
+        if (incomingAdAccount && incomingAdAccount !== selectedAdAccount) {
+            setSelectedAdAccount(incomingAdAccount);
+        }
+        setUseExistingPosts(true);
+        setUsePostID(true);
+        setImportedPosts((prev) => {
+            const existingIds = new Set(prev.map((p) => p.ad_id || p.id));
+            const additions = payload.filter((p) => !existingIds.has(p.ad_id || p.id));
+            return [...prev, ...additions];
+        });
+
+        // Clear router state so a refresh or re-mount doesn't re-seed.
+        navigate(location.pathname, { replace: true, state: null });
+    }, [location.state]);
 
 
 
@@ -1386,6 +1411,8 @@ export default function Home() {
                             selectedFiles={selectedFiles}
                             setSelectedFiles={setSelectedFiles}
                             useExistingPosts={useExistingPosts}
+                            usePostID={usePostID}
+                            setUsePostID={setUsePostID}
                             refetchCopyTemplates={refetchCopyTemplates}
                             preferredTemplateRef={preferredTemplateRef}
                             onAdSetCountsCreated={handleAdSetAdCountsUpdate}

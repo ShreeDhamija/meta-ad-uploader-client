@@ -4,6 +4,7 @@
 /* eslint-disable react/prop-types */
 
 import { useEffect, useState, useMemo } from "react"
+import { useNavigate } from "react-router-dom"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
@@ -11,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
     Loader2, XCircle, Activity, Pause,
-    CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw,
+    CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw, Rocket, RotateCcw,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -171,6 +172,8 @@ export default function RecommendationCards({
     budgetRefreshing = false,
     budgetRefreshToken = null,
 }) {
+    const navigate = useNavigate()
+
     // ── Budget Recommendations State ────────────────────
     const [applyingId, setApplyingId] = useState(null)
     const [dismissed, setDismissed] = useState(new Set())
@@ -178,6 +181,8 @@ export default function RecommendationCards({
     const [confirmDialog, setConfirmDialog] = useState(null) // { rec, action } or { type: 'single'|'bulk', ad?, count? }
     const [scaleWinnersExpanded, setScaleWinnersExpanded] = useState(false)
     const [fatigueExpanded, setFatigueExpanded] = useState(false)
+    const [selectedScaleWinners, setSelectedScaleWinners] = useState(new Set()) // recKeys
+    const [showDismissed, setShowDismissed] = useState(false)
 
     // ── Poor Performing Ads State ───────────────────────
     const [selected, setSelected] = useState(new Set())
@@ -193,6 +198,8 @@ export default function RecommendationCards({
         setSelected(new Set())
         setPausingId(null)
         setPausedIds(new Set())
+        setSelectedScaleWinners(new Set())
+        setShowDismissed(false)
     }, [adAccountId, section, mode])
 
     useEffect(() => {
@@ -215,6 +222,7 @@ export default function RecommendationCards({
         if (!budgetRefreshToken.startsWith(`${adAccountId}:`)) return
 
         setDismissed(new Set())
+        setSelectedScaleWinners(new Set())
 
         try {
             window.sessionStorage.removeItem(getDismissedStorageKey(adAccountId, mode))
@@ -232,6 +240,29 @@ export default function RecommendationCards({
         if (!data?.recommendations) return []
         return data.recommendations.filter(r => !dismissed.has(recKey(r)))
     }, [data, dismissed])
+
+    const dismissedRecs = useMemo(() => {
+        if (!data?.recommendations) return []
+        return data.recommendations.filter(r => dismissed.has(recKey(r)))
+    }, [data, dismissed])
+
+    const persistDismissed = (nextSet) => {
+        try {
+            window.sessionStorage.setItem(
+                getDismissedStorageKey(adAccountId, mode),
+                JSON.stringify([...nextSet])
+            )
+        } catch { /* keep in-memory fallback */ }
+    }
+
+    const handleRestore = (rec) => {
+        setDismissed(prev => {
+            const next = new Set(prev)
+            next.delete(recKey(rec))
+            persistDismissed(next)
+            return next
+        })
+    }
 
     const handleDismiss = (rec) => {
         setDismissed(prev => {
@@ -303,6 +334,73 @@ export default function RecommendationCards({
         } finally {
             setApplyingId(null)
         }
+    }
+
+    // ── Scale Winners Multi-Select ──────────────────────
+    const scaleWinnerRecs = useMemo(
+        () => recs.filter(r => r.type === 'scale_winner'),
+        [recs]
+    )
+    const selectableWinners = useMemo(
+        () => scaleWinnerRecs.filter(r => r.post_id),
+        [scaleWinnerRecs]
+    )
+
+    const showWinnerCheckboxes = selectedScaleWinners.size > 0 && selectableWinners.length >= 2
+
+    const allWinnersSelected =
+        selectableWinners.length > 0 &&
+        selectableWinners.every(r => selectedScaleWinners.has(recKey(r)))
+    const someWinnersSelected =
+        selectedScaleWinners.size > 0 && !allWinnersSelected
+
+    const toggleWinnerSelection = (rec) => {
+        if (!rec.post_id) return
+        setSelectedScaleWinners(prev => {
+            const next = new Set(prev)
+            const k = recKey(rec)
+            if (next.has(k)) next.delete(k)
+            else next.add(k)
+            return next
+        })
+    }
+
+    const toggleSelectAllWinners = () => {
+        if (allWinnersSelected) {
+            setSelectedScaleWinners(new Set())
+        } else {
+            setSelectedScaleWinners(new Set(selectableWinners.map(r => recKey(r))))
+        }
+    }
+
+    const clearWinnerSelection = () => setSelectedScaleWinners(new Set())
+
+    const launchSelectedWinners = () => {
+        if (selectedScaleWinners.size === 0 || !adAccountId) return
+
+        const launched = selectableWinners.filter(r =>
+            selectedScaleWinners.has(recKey(r))
+        )
+        const payload = launched.map(r => ({
+            id: r.id || r.adId,
+            ad_id: r.ad_id || r.adId,
+            ad_name: r.ad_name || r.adName,
+            post_id: r.post_id,
+            image_url: r.image_url || null,
+        }))
+
+        // Dismiss the chosen winners so they don't reappear next visit;
+        // they remain accessible via the "Show dismissed recommendations" toggle.
+        setDismissed(prev => {
+            const next = new Set([...prev, ...launched.map(r => recKey(r))])
+            persistDismissed(next)
+            return next
+        })
+        setSelectedScaleWinners(new Set())
+
+        navigate('/home', {
+            state: { scaleWinners: payload, adAccountId },
+        })
     }
 
     // ── Poor Performing Ads Logic ───────────────────────
@@ -423,6 +521,229 @@ export default function RecommendationCards({
         window.open(url, "_blank", "noopener,noreferrer")
     }
 
+    const renderRecCard = (rec, { neutralStyle = false, forDismissedList = false } = {}) => {
+        const key = recKey(rec)
+        const baseCfg = TYPE_CONFIG[rec.type] || TYPE_CONFIG.reduce
+        const cfg = (neutralStyle && (rec.type === 'scale_winner' || rec.type === 'creative_fatigue')) ? {
+            ...baseCfg,
+            bgClass: 'border-gray-200 bg-white',
+            badgeBg: 'bg-gray-100 text-gray-600 border-gray-200',
+            titleText: 'text-gray-900',
+            bodyText: 'text-gray-900',
+            metaText: 'text-gray-700',
+            subtleText: 'text-gray-600',
+            badgeLabelBg: 'bg-gray-100 text-gray-900 border-gray-200',
+            btnClass: 'bg-gray-700 hover:bg-gray-800',
+        } : baseCfg
+        const applying = applyingId === key
+
+        const suggestedBudget = rec.budgetChange && (rec.dailyBudget || rec.lifetimeBudget)
+            ? (rec.dailyBudget || rec.lifetimeBudget) * (1 + rec.budgetChange / 100)
+            : null
+
+        const isSelectableWinner = rec.type === 'scale_winner' && !!rec.post_id && !forDismissedList
+        const isSelected = isSelectableWinner && selectedScaleWinners.has(key)
+        const showCardCheckbox = isSelectableWinner && showWinnerCheckboxes
+
+        return (
+            <Card key={key} className={cn(
+                "rounded-3xl",
+                cfg.bgClass,
+                isSelected && "ring-2 ring-blue-500"
+            )}>
+                <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                            {showCardCheckbox && (
+                                <button
+                                    onClick={() => toggleWinnerSelection(rec)}
+                                    className={cn(
+                                        "w-5 h-5 mt-1 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors",
+                                        isSelected
+                                            ? "bg-blue-600 border-blue-600"
+                                            : "border-gray-300 hover:border-gray-400 bg-white"
+                                    )}
+                                    aria-label={isSelected ? "Unselect winner" : "Select winner"}
+                                >
+                                    {isSelected && (
+                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                    )}
+                                </button>
+                            )}
+                            <img
+                                src={cfg.iconSrc}
+                                alt=""
+                                aria-hidden="true"
+                                className="h-[38px] w-[38px] flex-shrink-0"
+                                style={{ filter: "drop-shadow(0px 1px 5px rgba(0, 0, 0, 0.15))" }}
+                            />
+                            <div className="flex-1 min-w-0">
+                                <div className="min-w-0">
+                                    {rec.type === 'scale_winner' && !neutralStyle && (
+                                        <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap mb-1 !shadow-none", cfg.badgeLabelBg)}>
+                                            Scale Winner
+                                        </Badge>
+                                    )}
+                                    {rec.type === 'creative_fatigue' && !neutralStyle && (
+                                        <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap mb-1 !shadow-none", cfg.badgeLabelBg)}>
+                                            Creative Fatigue
+                                        </Badge>
+                                    )}
+                                    {rec.type === 'trend_alert' && rec.alertKind && (
+                                        <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap mb-1 !shadow-none", cfg.badgeLabelBg)}>
+                                            {rec.alertKind === 'rising_frequency' ? 'Rising Frequency' :
+                                                rec.alertKind === 'falling_ctr' ? 'Falling CTR' :
+                                                    rec.alertKind === 'rising_cpm' ? 'Rising CPM' :
+                                                        rec.alertKind === 'falling_cr' ? 'Falling Conversion Rate' :
+                                                            'Trend Alert'}
+                                        </Badge>
+                                    )}
+                                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                        <p className={cn("font-bold text-sm break-words line-clamp-2 min-w-0", cfg.titleText)}>
+                                            {(rec.type === 'scale_winner' || rec.type === 'creative_fatigue')
+                                                ? rec.adName
+                                                : rec.type === 'spend_shift'
+                                                    ? `${rec.segmentType === 'age' ? 'Age Range' : 'Placement'} Spend Shift`
+                                                    : (rec.adsetName || rec.campaignName)}
+                                        </p>
+                                        {rec.type === 'spend_shift' && rec.segmentName && (
+                                            <Badge variant="outline" className={cn("text-[11px] px-2.5 py-0.5 rounded-full flex-shrink-0", cfg.badgeLabelBg)}>
+                                                {rec.segmentName}
+                                            </Badge>
+                                        )}
+                                        {rec.type === 'spend_shift' && rec.severity && (
+                                            <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap !shadow-none capitalize flex-shrink-0", SEVERITY_PILL[rec.severity] || SEVERITY_PILL.low)}>
+                                                {rec.severity} Severity
+                                            </Badge>
+                                        )}
+                                        {rec.type !== 'scale_winner' && rec.type !== 'creative_fatigue' && rec.type !== 'spend_shift' && (
+                                            <Badge variant="outline" className={cn("text-[11px] px-2.5 py-0.5 rounded-full flex-shrink-0", cfg.badgeLabelBg)}>
+                                                {rec.type === 'trend_alert' ? 'alert' : rec.level}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <p className={cn("text-sm mt-1", cfg.bodyText)}>
+                                    <BoldedMessage text={rec.message} emphasisClassName={cfg.titleText} />
+                                </p>
+
+                                {rec.level !== 'campaign' && rec.level !== 'account' && rec.campaignName && (
+                                    <p className={cn("text-xs font-semibold mt-1.5", cfg.metaText)}>Campaign: {rec.campaignName}</p>
+                                )}
+
+                                {rec.type !== 'pause' && rec.type !== 'scale_winner' && rec.type !== 'trend_alert' && rec.type !== 'creative_fatigue' && rec.type !== 'spend_shift' && suggestedBudget && (
+                                    <div className="flex items-center gap-3 mt-3">
+                                        <span className={cn("text-xs", cfg.titleText)}>
+                                            Current: <span className="font-medium">${(rec.dailyBudget || rec.lifetimeBudget).toFixed(2)}/day</span>
+                                        </span>
+                                        <span className={cn("text-xs", cfg.subtleText)}>→</span>
+                                        <div className="flex items-center gap-1">
+                                            <span className={cn("text-xs", cfg.subtleText)}>New:</span>
+                                            <div className="relative">
+                                                <span className={cn("absolute left-2 top-1/2 -translate-y-1/2 text-xs", cfg.subtleText)}>$</span>
+                                                <input
+                                                    type="number"
+                                                    value={editedBudgets[key] ?? suggestedBudget.toFixed(2)}
+                                                    onChange={(e) => setEditedBudgets(prev => ({ ...prev, [key]: e.target.value }))}
+                                                    className={cn(
+                                                        "w-24 pl-5 pr-2 py-2.5 text-xs font-medium border rounded-2xl bg-white shadow focus:outline-none focus:ring-2",
+                                                        rec.type === 'consolidate'
+                                                            ? "border-orange-300 focus:ring-orange-500 text-orange-700"
+                                                            : rec.type === 'reduce'
+                                                                ? "border-yellow-300 focus:ring-yellow-500 text-yellow-800"
+                                                                : "border-green-300 focus:ring-green-500 text-green-700"
+                                                    )}
+                                                />
+                                            </div>
+                                            <span className="text-xs text-gray-500">/day</span>
+                                            {rec.budgetChange && (
+                                                <span className={cn("text-[10px] font-medium",
+                                                    rec.budgetChange > 0 ? "text-green-600" : "text-yellow-700"
+                                                )}>
+                                                    ({rec.budgetChange > 0 ? '+' : ''}{rec.budgetChange}%)
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                            {isSelectableWinner && (
+                                <Button
+                                    size="sm"
+                                    onClick={() => toggleWinnerSelection(rec)}
+                                    className={cn(
+                                        "rounded-xl text-xs",
+                                        isSelected
+                                            ? "bg-blue-700 hover:bg-blue-800 text-white"
+                                            : cfg.btnClass
+                                    )}
+                                >
+                                    {isSelected ? 'Selected' : 'Scale'}
+                                </Button>
+                            )}
+                            {(rec.type === 'trend_alert' || rec.type === 'consolidate' || rec.type === 'spend_shift') ? (
+                                null
+                            ) : (rec.type === 'scale_winner' || rec.type === 'creative_fatigue') ? (
+                                <Button
+                                    size="sm"
+                                    variant={isSelectableWinner ? 'outline' : 'default'}
+                                    onClick={() => openAdInAdsManager({ adId: rec.adId, adsetId: rec.adsetId })}
+                                    className={cn(
+                                        "rounded-xl text-xs",
+                                        !isSelectableWinner && cfg.btnClass
+                                    )}
+                                >
+                                    View Ad
+                                </Button>
+                            ) : (
+                                <Button
+                                    size="sm"
+                                    onClick={() => rec.type === 'pause'
+                                        ? setConfirmDialog({ rec, action: 'pause' })
+                                        : handleApply(rec)
+                                    }
+                                    disabled={applying}
+                                    className={cn("rounded-xl text-xs", cfg.btnClass)}
+                                >
+                                    {applying ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        cfg.label
+                                    )}
+                                </Button>
+                            )}
+                            {forDismissedList ? (
+                                <Button
+                                    variant="ghost" size="sm"
+                                    onClick={() => handleRestore(rec)}
+                                    className="h-8 px-2 text-gray-500 hover:bg-transparent hover:text-blue-600 focus-visible:bg-transparent focus-visible:text-blue-600 text-xs"
+                                    title="Restore"
+                                >
+                                    <RotateCcw className="w-4 h-4" />
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="ghost" size="sm"
+                                    onClick={() => handleDismiss(rec)}
+                                    className="h-8 w-8 p-0 text-gray-400 hover:bg-transparent hover:text-red-600 focus-visible:bg-transparent focus-visible:text-red-600"
+                                    title="Dismiss"
+                                >
+                                    <XCircle className="w-4 h-4" />
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        )
+    }
+
     return (
         <div className="space-y-8">
             {section === "budget" && (
@@ -478,7 +799,7 @@ export default function RecommendationCards({
                             )}
 
                             {/* Recommendation cards (no filter pills) */}
-                            {recs.length === 0 ? (
+                            {recs.length === 0 && dismissedRecs.length === 0 ? (
                                 <Card className="rounded-2xl border-gray-200">
                                     <CardContent className="py-8">
                                         <div className="flex flex-col items-center justify-center gap-2">
@@ -490,180 +811,23 @@ export default function RecommendationCards({
                                 </Card>
                             ) : (
                                 <div className="space-y-3">
-                                    {(() => {
+                                    {recs.length === 0 && (
+                                        <Card className="rounded-2xl border-gray-200">
+                                            <CardContent className="py-8">
+                                                <div className="flex flex-col items-center justify-center gap-2">
+                                                    <Activity className="w-10 h-10 text-gray-300" />
+                                                    <p className="font-medium text-gray-600">No Recommendations</p>
+                                                    <p className="text-sm text-gray-400">Your budgets are performing optimally based on current data</p>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                    {recs.length > 0 && (() => {
                                         const scaleWinners = recs.filter(r => r.type === 'scale_winner')
                                         const fatigueRecs = recs.filter(r => r.type === 'creative_fatigue')
                                         const otherRecs = recs.filter(r => r.type !== 'scale_winner' && r.type !== 'creative_fatigue')
                                         const groupWinners = scaleWinners.length >= 5
                                         const groupFatigue = fatigueRecs.length > 3
-
-                                        const renderRecCard = (rec, { neutralStyle = false } = {}) => {
-                                            const key = recKey(rec)
-                                            const baseCfg = TYPE_CONFIG[rec.type] || TYPE_CONFIG.reduce
-                                            const cfg = (neutralStyle && (rec.type === 'scale_winner' || rec.type === 'creative_fatigue')) ? {
-                                                ...baseCfg,
-                                                bgClass: 'border-gray-200 bg-white',
-                                                badgeBg: 'bg-gray-100 text-gray-600 border-gray-200',
-                                                titleText: 'text-gray-900',
-                                                bodyText: 'text-gray-900',
-                                                metaText: 'text-gray-700',
-                                                subtleText: 'text-gray-600',
-                                                badgeLabelBg: 'bg-gray-100 text-gray-900 border-gray-200',
-                                                btnClass: 'bg-gray-700 hover:bg-gray-800',
-                                            } : baseCfg
-                                            const applying = applyingId === key
-
-                                            const suggestedBudget = rec.budgetChange && (rec.dailyBudget || rec.lifetimeBudget)
-                                                ? (rec.dailyBudget || rec.lifetimeBudget) * (1 + rec.budgetChange / 100)
-                                                : null
-
-                                            return (
-                                                <Card key={key} className={cn("rounded-3xl", cfg.bgClass)}>
-                                                    <CardContent className="p-4">
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div className="flex items-start gap-3 flex-1 min-w-0">
-                                                                <img
-                                                                    src={cfg.iconSrc}
-                                                                    alt=""
-                                                                    aria-hidden="true"
-                                                                    className="h-[38px] w-[38px] flex-shrink-0"
-                                                                    style={{ filter: "drop-shadow(0px 1px 5px rgba(0, 0, 0, 0.15))" }}
-                                                                />
-                                                                <div className="flex-1 min-w-0">
-                                                                    <div className="min-w-0">
-                                                                        {rec.type === 'scale_winner' && !neutralStyle && (
-                                                                            <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap mb-1 !shadow-none", cfg.badgeLabelBg)}>
-                                                                                Scale Winner
-                                                                            </Badge>
-                                                                        )}
-                                                                        {rec.type === 'creative_fatigue' && !neutralStyle && (
-                                                                            <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap mb-1 !shadow-none", cfg.badgeLabelBg)}>
-                                                                                Creative Fatigue
-                                                                            </Badge>
-                                                                        )}
-                                                                        {rec.type === 'trend_alert' && rec.alertKind && (
-                                                                            <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap mb-1 !shadow-none", cfg.badgeLabelBg)}>
-                                                                                {rec.alertKind === 'rising_frequency' ? 'Rising Frequency' :
-                                                                                    rec.alertKind === 'falling_ctr' ? 'Falling CTR' :
-                                                                                        rec.alertKind === 'rising_cpm' ? 'Rising CPM' :
-                                                                                            rec.alertKind === 'falling_cr' ? 'Falling Conversion Rate' :
-                                                                                                'Trend Alert'}
-                                                                            </Badge>
-                                                                        )}
-                                                                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                                                                            <p className={cn("font-bold text-sm break-words line-clamp-2 min-w-0", cfg.titleText)}>
-                                                                                {(rec.type === 'scale_winner' || rec.type === 'creative_fatigue')
-                                                                                    ? rec.adName
-                                                                                    : rec.type === 'spend_shift'
-                                                                                        ? `${rec.segmentType === 'age' ? 'Age Range' : 'Placement'} Spend Shift`
-                                                                                        : (rec.adsetName || rec.campaignName)}
-                                                                            </p>
-                                                                            {rec.type === 'spend_shift' && rec.segmentName && (
-                                                                                <Badge variant="outline" className={cn("text-[11px] px-2.5 py-0.5 rounded-full flex-shrink-0", cfg.badgeLabelBg)}>
-                                                                                    {rec.segmentName}
-                                                                                </Badge>
-                                                                            )}
-                                                                            {rec.type === 'spend_shift' && rec.severity && (
-                                                                                <Badge className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap !shadow-none capitalize flex-shrink-0", SEVERITY_PILL[rec.severity] || SEVERITY_PILL.low)}>
-                                                                                    {rec.severity} Severity
-                                                                                </Badge>
-                                                                            )}
-                                                                            {rec.type !== 'scale_winner' && rec.type !== 'creative_fatigue' && rec.type !== 'spend_shift' && (
-                                                                                <Badge variant="outline" className={cn("text-[11px] px-2.5 py-0.5 rounded-full flex-shrink-0", cfg.badgeLabelBg)}>
-                                                                                    {rec.type === 'trend_alert' ? 'alert' : rec.level}
-                                                                                </Badge>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <p className={cn("text-sm mt-1", cfg.bodyText)}>
-                                                                        <BoldedMessage text={rec.message} emphasisClassName={cfg.titleText} />
-                                                                    </p>
-
-                                                                    {rec.level !== 'campaign' && rec.level !== 'account' && rec.campaignName && (
-                                                                        <p className={cn("text-xs font-semibold mt-1.5", cfg.metaText)}>Campaign: {rec.campaignName}</p>
-                                                                    )}
-
-                                                                    {rec.type !== 'pause' && rec.type !== 'scale_winner' && rec.type !== 'trend_alert' && rec.type !== 'creative_fatigue' && rec.type !== 'spend_shift' && suggestedBudget && (
-                                                                        <div className="flex items-center gap-3 mt-3">
-                                                                            <span className={cn("text-xs", cfg.titleText)}>
-                                                                                Current: <span className="font-medium">${(rec.dailyBudget || rec.lifetimeBudget).toFixed(2)}/day</span>
-                                                                            </span>
-                                                                            <span className={cn("text-xs", cfg.subtleText)}>→</span>
-                                                                            <div className="flex items-center gap-1">
-                                                                                <span className={cn("text-xs", cfg.subtleText)}>New:</span>
-                                                                                <div className="relative">
-                                                                                    <span className={cn("absolute left-2 top-1/2 -translate-y-1/2 text-xs", cfg.subtleText)}>$</span>
-                                                                                    <input
-                                                                                        type="number"
-                                                                                        value={editedBudgets[key] ?? suggestedBudget.toFixed(2)}
-                                                                                        onChange={(e) => setEditedBudgets(prev => ({ ...prev, [key]: e.target.value }))}
-                                                                                        className={cn(
-                                                                                            "w-24 pl-5 pr-2 py-2.5 text-xs font-medium border rounded-2xl bg-white shadow focus:outline-none focus:ring-2",
-                                                                                            rec.type === 'consolidate'
-                                                                                                ? "border-orange-300 focus:ring-orange-500 text-orange-700"
-                                                                                                : rec.type === 'reduce'
-                                                                                                    ? "border-yellow-300 focus:ring-yellow-500 text-yellow-800"
-                                                                                                    : "border-green-300 focus:ring-green-500 text-green-700"
-                                                                                        )}
-                                                                                    />
-                                                                                </div>
-                                                                                <span className="text-xs text-gray-500">/day</span>
-                                                                                {rec.budgetChange && (
-                                                                                    <span className={cn("text-[10px] font-medium",
-                                                                                        rec.budgetChange > 0 ? "text-green-600" : "text-yellow-700"
-                                                                                    )}>
-                                                                                        ({rec.budgetChange > 0 ? '+' : ''}{rec.budgetChange}%)
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                                {(rec.type === 'trend_alert' || rec.type === 'consolidate' || rec.type === 'spend_shift') ? (
-                                                                    null
-                                                                ) : (rec.type === 'scale_winner' || rec.type === 'creative_fatigue') ? (
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={() => openAdInAdsManager({ adId: rec.adId, adsetId: rec.adsetId })}
-                                                                        className={cn("rounded-xl text-xs", cfg.btnClass)}
-                                                                    >
-                                                                        View Ad
-                                                                    </Button>
-                                                                ) : (
-                                                                    <Button
-                                                                        size="sm"
-                                                                        onClick={() => rec.type === 'pause'
-                                                                            ? setConfirmDialog({ rec, action: 'pause' })
-                                                                            : handleApply(rec)
-                                                                        }
-                                                                        disabled={applying}
-                                                                        className={cn("rounded-xl text-xs", cfg.btnClass)}
-                                                                    >
-                                                                        {applying ? (
-                                                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                                                        ) : (
-                                                                            cfg.label
-                                                                        )}
-                                                                    </Button>
-                                                                )}
-                                                                <Button
-                                                                    variant="ghost" size="sm"
-                                                                    onClick={() => handleDismiss(rec)}
-                                                                    className="h-8 w-8 p-0 text-gray-400 hover:bg-transparent hover:text-red-600 focus-visible:bg-transparent focus-visible:text-red-600"
-                                                                    title="Dismiss"
-                                                                >
-                                                                    <XCircle className="w-4 h-4" />
-                                                                </Button>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            )
-                                        }
 
                                         return (
                                             <>
@@ -671,9 +835,17 @@ export default function RecommendationCards({
                                                 {groupWinners && scaleWinners.length > 0 && (
                                                     <Card className="rounded-2xl border-blue-200 bg-blue-50/30">
                                                         <CardContent className="p-0">
-                                                            <button
+                                                            <div
+                                                                role="button"
+                                                                tabIndex={0}
                                                                 onClick={() => setScaleWinnersExpanded(prev => !prev)}
-                                                                className="w-full p-4 flex items-center justify-between gap-3"
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                                        e.preventDefault()
+                                                                        setScaleWinnersExpanded(prev => !prev)
+                                                                    }
+                                                                }}
+                                                                className="w-full p-4 flex items-center justify-between gap-3 cursor-pointer"
                                                             >
                                                                 <div className="flex items-center gap-3">
                                                                     <img
@@ -697,11 +869,51 @@ export default function RecommendationCards({
                                                                         </p>
                                                                     </div>
                                                                 </div>
-                                                                <ChevronDown className={cn(
-                                                                    "w-5 h-5 text-blue-500 transition-transform flex-shrink-0",
-                                                                    scaleWinnersExpanded && "rotate-180"
-                                                                )} />
-                                                            </button>
+                                                                <div className="flex items-center gap-3 flex-shrink-0">
+                                                                    {selectableWinners.length > 0 && (
+                                                                        <>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={(e) => { e.stopPropagation(); toggleSelectAllWinners() }}
+                                                                                className={cn(
+                                                                                    "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors",
+                                                                                    allWinnersSelected
+                                                                                        ? "bg-blue-600 border-blue-600"
+                                                                                        : someWinnersSelected
+                                                                                            ? "bg-blue-200 border-blue-400"
+                                                                                            : "border-blue-300 hover:border-blue-500 bg-white"
+                                                                                )}
+                                                                                aria-label={allWinnersSelected ? "Unselect all winners" : "Select all winners"}
+                                                                                title={allWinnersSelected ? "Unselect all" : "Select all"}
+                                                                            >
+                                                                                {(allWinnersSelected || someWinnersSelected) && (
+                                                                                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                                                        {allWinnersSelected
+                                                                                            ? <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                                            : <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                                                                                        }
+                                                                                    </svg>
+                                                                                )}
+                                                                            </button>
+                                                                            <Button
+                                                                                size="sm"
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation()
+                                                                                    if (allWinnersSelected) launchSelectedWinners()
+                                                                                    else toggleSelectAllWinners()
+                                                                                }}
+                                                                                className="rounded-xl text-xs bg-blue-600 hover:bg-blue-700"
+                                                                            >
+                                                                                {allWinnersSelected ? `Scale ${selectableWinners.length}` : 'Scale Winners'}
+                                                                            </Button>
+                                                                        </>
+                                                                    )}
+                                                                    <ChevronDown className={cn(
+                                                                        "w-5 h-5 text-blue-500 transition-transform",
+                                                                        scaleWinnersExpanded && "rotate-180"
+                                                                    )} />
+                                                                </div>
+                                                            </div>
 
                                                             {scaleWinnersExpanded && (
                                                                 <div className="px-4 pb-4 space-y-2 border-t border-blue-100 pt-3">
@@ -768,6 +980,25 @@ export default function RecommendationCards({
                                             </>
                                         )
                                     })()}
+
+                                    {/* Dismissed recommendations dropdown */}
+                                    {dismissedRecs.length > 0 && (
+                                        <div className="pt-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowDismissed(prev => !prev)}
+                                                className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                                            >
+                                                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", showDismissed && "rotate-180")} />
+                                                Show {dismissedRecs.length} dismissed recommendation{dismissedRecs.length > 1 ? 's' : ''}
+                                            </button>
+                                            {showDismissed && (
+                                                <div className="mt-3 space-y-2 opacity-80">
+                                                    {dismissedRecs.map(rec => renderRecCard(rec, { neutralStyle: true, forDismissedList: true }))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>
@@ -965,6 +1196,36 @@ export default function RecommendationCards({
                             </div>
                         </>
                     )}
+                </div>
+            )}
+
+            {/* Floating pill — appears once a scale winner is selected */}
+            {section === 'budget' && selectedScaleWinners.size > 0 && (
+                <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex items-center gap-2 px-3.5 py-1.5 text-sm">
+                        <Rocket className="w-4 h-4 text-white/80" />
+                        <span className="whitespace-nowrap">
+                            {selectedScaleWinners.size} ad{selectedScaleWinners.size !== 1 ? 's' : ''} selected to scale
+                        </span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1 border-l border-white/30 pl-2">
+                        <button
+                            type="button"
+                            onClick={launchSelectedWinners}
+                            className="rounded-full bg-white text-black hover:bg-white/90 px-3.5 py-2 text-sm font-medium whitespace-nowrap transition"
+                        >
+                            Take to launcher
+                        </button>
+                        <button
+                            type="button"
+                            onClick={clearWinnerSelection}
+                            className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                            title="Clear selection"
+                            aria-label="Clear selection"
+                        >
+                            <XCircle className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
             )}
 
