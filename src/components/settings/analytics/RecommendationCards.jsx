@@ -1202,29 +1202,25 @@ export default function RecommendationCards({
             {/* Floating pill — appears once a scale winner is selected */}
             {section === 'budget' && selectedScaleWinners.size > 0 && (
                 <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <div className="flex items-center gap-2 px-3.5 py-1.5 text-sm">
-                        <span className="whitespace-nowrap">
-                            {selectedScaleWinners.size} ad{selectedScaleWinners.size !== 1 ? 's' : ''} selected to scale
-                        </span>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1 border-l border-white/30 pl-2">
-                        <button
-                            type="button"
-                            onClick={launchSelectedWinners}
-                            className="rounded-full bg-white text-black hover:bg-white/90 px-3.5 py-2 text-sm font-medium whitespace-nowrap transition"
-                        >
-                            Take to launcher
-                        </button>
-                        <button
-                            type="button"
-                            onClick={clearWinnerSelection}
-                            className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                            title="Clear selection"
-                            aria-label="Clear selection"
-                        >
-                            <XCircle className="h-4 w-4" />
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={launchSelectedWinners}
+                        className="rounded-full bg-white text-black hover:bg-white/90 px-3.5 py-2 text-sm font-medium whitespace-nowrap transition"
+                    >
+                        Take to launcher
+                    </button>
+                    <span className="px-2 text-xs text-white/60 whitespace-nowrap">
+                        ({selectedScaleWinners.size} ad{selectedScaleWinners.size !== 1 ? 's' : ''})
+                    </span>
+                    <button
+                        type="button"
+                        onClick={clearWinnerSelection}
+                        className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                        title="Clear selection"
+                        aria-label="Clear selection"
+                    >
+                        <XCircle className="h-4 w-4" />
+                    </button>
                 </div>
             )}
 

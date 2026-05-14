@@ -315,6 +315,23 @@ function PostSelectorInline({
         }
     }, [importedPosts])
 
+    // Hydrate internal selection from parent-provided importedPosts on mount.
+    // Without this, the onImport effect below fires with an empty ref and
+    // wipes any pre-seeded posts (e.g. winners passed in from Analytics).
+    useEffect(() => {
+        if (!importedPosts || importedPosts.length === 0) return
+        const ids = new Set()
+        importedPosts.forEach((p) => {
+            const id = p.id || p.ad_id
+            if (!id) return
+            ids.add(id)
+            importedAdsRef.current.set(id, p)
+        })
+        if (ids.size > 0) setSelectedAdIds(ids)
+        // mount-only — do not re-hydrate on every importedPosts change
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     const handleDatePresetChange = (newPreset) => {
         setDatePreset(newPreset)
         fetchAds(null, newPreset)
