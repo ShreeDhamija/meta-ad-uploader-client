@@ -141,6 +141,8 @@ export function TikTokAuthProvider({ children }) {
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
         setTikTokAdvertisers([])
+        // Navigate to login page after clearing state
+        window.location.href = '/tiktok-login'
         try { localStorage.removeItem('tiktok_uid') } catch (_) {}
         try { localStorage.removeItem('tiktok_token') } catch (_) {}
         try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) {}
