@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
@@ -53,15 +53,6 @@ const TOOLTIP_STYLE = {
     padding: "8px 12px",
     fontFamily: FONT,
 }
-
-const SIDEBAR_SECTIONS = [
-    { id: "summary", label: "Summary", group: "Report" },
-    { id: "trend", label: "Trend", group: "Report" },
-    { id: "performance", label: "Performance", group: "Report" },
-    { id: "anomaly", label: "Anomaly", group: "Analysis" },
-    { id: "changes", label: "Changes", group: "Analysis" },
-    { id: "health", label: "Event Health", group: "Checks" },
-]
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 function formatEventName(actionType) {
@@ -160,7 +151,7 @@ function SectionCard({ children, id, dark }) {
 function MetricCard({ label, value, unit, sub, dark }) {
     return (
         <div
-            className="rounded-2xl flex flex-col gap-1.5 p-4"
+            className="rounded-3xl flex flex-col gap-1.5 p-4"
             style={{
                 background: dark ? INK : PAPER,
                 border: `1px solid ${dark ? INK : LINE}`,
@@ -173,7 +164,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
                 style={{
                     fontSize: 40,
                     fontWeight: 900,
-                    letterSpacing: "-0.04em",
+                    letterSpacing: "-0.015em",
                     lineHeight: 1,
                     margin: 0,
                     color: dark ? "#fff" : INK,
@@ -200,7 +191,7 @@ function InsightTile({ label, value, valuePrefix, valueUnit, desc, status = "neu
     }[status]
 
     return (
-        <div className="relative rounded-2xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 16px 15px" }}>
+        <div className="relative rounded-3xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 16px 15px" }}>
             <span
                 className="absolute"
                 style={{
@@ -216,7 +207,7 @@ function InsightTile({ label, value, valuePrefix, valueUnit, desc, status = "neu
             <SmallLabel style={{ fontSize: 9.5, marginBottom: 6, paddingRight: 20 }}>{label}</SmallLabel>
             <div
                 className="tabular-nums"
-                style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1, color: INK }}
+                style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: INK }}
             >
                 {valuePrefix && <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45 }}>{valuePrefix}</span>}
                 {value}
@@ -329,10 +320,7 @@ function SummarySection({ report }) {
                 tag="01 · Overview"
             />
 
-            <div className="rounded-2xl mb-4" style={{ background: ORANGE, color: "#fff", padding: "22px 26px" }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.78)", marginBottom: 10 }}>
-                    Top-line
-                </div>
+            <div className="rounded-3xl mb-3" style={{ background: ORANGE, color: "#fff", padding: "16px 20px" }}>
                 <p
                     style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: "#fff", maxWidth: 800, margin: 0 }}
                     dangerouslySetInnerHTML={{
@@ -438,7 +426,7 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
         return (
             <SectionCard id="anomaly">
                 <SectionHeader title="Anomaly Detail" sub="Period-over-period comparison and contributing campaigns / adsets / ads." tag="04 · Anomaly" />
-                <div className="rounded-2xl px-4 py-3 text-sm" style={{ background: GOOD_SOFT, border: `1px solid rgba(34,197,94,0.22)`, color: INK_2 }}>
+                <div className="rounded-3xl px-4 py-3 text-sm" style={{ background: GOOD_SOFT, border: `1px solid rgba(34,197,94,0.22)`, color: INK_2 }}>
                     <span className="font-semibold" style={{ color: GOOD }}>No anomaly detected.</span> {kpiLabel} held within baseline range over the trailing 14 days.
                 </div>
             </SectionCard>
@@ -453,29 +441,29 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
                 tag="04 · Anomaly"
             />
             <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="rounded-2xl p-4" style={{ background: PINK_SOFT, border: `1px solid rgba(240,13,85,0.24)` }}>
-                    <SmallLabel style={{ color: PINK_DEEP, marginBottom: 8 }}>Anomaly period ({anomalyPeriod.days}d)</SmallLabel>
-                    <div className="flex items-baseline gap-6">
-                        <div>
-                            <SmallLabel style={{ color: PINK_DEEP }}>{kpiLabel}</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: PINK_DEEP }}>{fmtKpi(anomalyPeriod.avgKpi, mode)}</p>
-                        </div>
-                        <div>
-                            <SmallLabel style={{ color: PINK_DEEP }}>Spend</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: PINK_DEEP }}>{fmtCurrency(anomalyPeriod.spend)}</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="rounded-2xl p-4" style={{ background: ORANGE_SOFT, border: `1px solid rgba(255,72,0,0.24)` }}>
-                    <SmallLabel style={{ color: ORANGE_DEEP, marginBottom: 8 }}>Comparison period ({previousPeriod.days}d)</SmallLabel>
+                <div className="rounded-3xl p-4" style={{ background: ORANGE_SOFT, border: `1px solid rgba(255,72,0,0.24)` }}>
+                    <SmallLabel style={{ color: ORANGE_DEEP, marginBottom: 8 }}>Anomaly period ({anomalyPeriod.days}d)</SmallLabel>
                     <div className="flex items-baseline gap-6">
                         <div>
                             <SmallLabel style={{ color: ORANGE_DEEP }}>{kpiLabel}</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: ORANGE_DEEP }}>{fmtKpi(previousPeriod.avgKpi, mode)}</p>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: ORANGE_DEEP, letterSpacing: "-0.005em" }}>{fmtKpi(anomalyPeriod.avgKpi, mode)}</p>
                         </div>
                         <div>
                             <SmallLabel style={{ color: ORANGE_DEEP }}>Spend</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: ORANGE_DEEP }}>{fmtCurrency(previousPeriod.spend)}</p>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: ORANGE_DEEP, letterSpacing: "-0.005em" }}>{fmtCurrency(anomalyPeriod.spend)}</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="rounded-3xl p-4" style={{ background: GOOD_SOFT, border: `1px solid rgba(34,197,94,0.22)` }}>
+                    <SmallLabel style={{ color: GOOD, marginBottom: 8 }}>Comparison period ({previousPeriod.days}d)</SmallLabel>
+                    <div className="flex items-baseline gap-6">
+                        <div>
+                            <SmallLabel style={{ color: GOOD }}>{kpiLabel}</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD, letterSpacing: "-0.005em" }}>{fmtKpi(previousPeriod.avgKpi, mode)}</p>
+                        </div>
+                        <div>
+                            <SmallLabel style={{ color: GOOD }}>Spend</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD, letterSpacing: "-0.005em" }}>{fmtCurrency(previousPeriod.spend)}</p>
                         </div>
                     </div>
                 </div>
@@ -845,7 +833,7 @@ function EventHealthSection({ eventHealth }) {
     return (
         <SectionCard id="health">
             <SectionHeader title="Event Health" sub="Activity status for the primary conversion event in the evaluation window." tag="06 · Health" />
-            <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: palette.bg, border: `1px solid ${palette.border}` }}>
+            <div className="flex items-start gap-3 p-4 rounded-3xl" style={{ background: palette.bg, border: `1px solid ${palette.border}` }}>
                 <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center" style={{ background: PAPER, color: palette.color, border: `1px solid ${palette.border}` }}>
                     <Stethoscope className="w-5 h-5" />
                 </div>
@@ -880,42 +868,12 @@ export default function AdAccountDiagnostic({
     const [isGenerating, setIsGenerating] = useState(false)
     const [error, setError] = useState(null)
     const [refreshKey, setRefreshKey] = useState(0)
-    const [activeSection, setActiveSection] = useState("summary")
-    const contentRef = useRef(null)
 
     useEffect(() => {
         if (open && adAccountId && !report && !isGenerating) generateReport()
-        if (!open) { setReport(null); setError(null); setActiveSection("summary") }
+        if (!open) { setReport(null); setError(null) }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, adAccountId])
-
-    useEffect(() => {
-        const container = contentRef.current
-        if (!container || !report) return
-        const ids = SIDEBAR_SECTIONS.map(s => s.id)
-        const handleScroll = () => {
-            const { scrollTop, scrollHeight, clientHeight } = container
-            const atBottom = scrollHeight - scrollTop - clientHeight < 40
-            if (atBottom) {
-                for (let i = ids.length - 1; i >= 0; i--) {
-                    if (document.getElementById(`diagnostic-${ids[i]}`)) { setActiveSection(ids[i]); return }
-                }
-            }
-            let current = "summary"
-            for (const id of ids) {
-                const el = document.getElementById(`diagnostic-${id}`)
-                if (el && el.getBoundingClientRect().top < 220) current = id
-            }
-            setActiveSection(current)
-        }
-        container.addEventListener("scroll", handleScroll, { passive: true })
-        return () => container.removeEventListener("scroll", handleScroll)
-    }, [report])
-
-    const scrollTo = (id) => {
-        const el = document.getElementById(`diagnostic-${id}`)
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
-    }
 
     const generateReport = async () => {
         setIsGenerating(true); setError(null); setReport(null)
@@ -939,11 +897,6 @@ export default function AdAccountDiagnostic({
 
     if (!open) return null
 
-    const groupedSections = SIDEBAR_SECTIONS.reduce((acc, s) => {
-        (acc[s.group] = acc[s.group] || []).push(s)
-        return acc
-    }, {})
-
     return (
         <>
             <div
@@ -951,7 +904,11 @@ export default function AdAccountDiagnostic({
                 style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100dvh", background: "rgba(15,17,21,0.55)", zIndex: 50 }}
             />
 
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ fontFamily: FONT }}>
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                style={{ fontFamily: FONT }}
+                onClick={() => onOpenChange(false)}
+            >
                 <div
                     className="w-full max-w-[1080px] max-h-[92vh] overflow-hidden flex flex-col"
                     onClick={(e) => e.stopPropagation()}
@@ -1008,48 +965,7 @@ export default function AdAccountDiagnostic({
 
                     <TooltipProvider delayDuration={0}>
                         <div className="flex-1 flex overflow-hidden min-h-0">
-                            {report && !isGenerating && (
-                                <nav className="flex-shrink-0 overflow-y-auto" style={{ width: 200, borderRight: `1px solid ${LINE}`, padding: "14px 10px", background: PAPER }}>
-                                    {Object.entries(groupedSections).map(([group, sections]) => (
-                                        <div key={group}>
-                                            <div style={{ padding: "10px 11px 6px", fontSize: 9.5, fontWeight: 600, color: MUTED_2 }}>
-                                                {group}
-                                            </div>
-                                            {sections.map(({ id, label }) => {
-                                                const isActive = activeSection === id
-                                                return (
-                                                    <button
-                                                        key={id}
-                                                        onClick={() => scrollTo(id)}
-                                                        className="w-full text-left"
-                                                        style={{
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            gap: 10,
-                                                            padding: "9px 11px",
-                                                            borderRadius: 11,
-                                                            marginBottom: 2,
-                                                            fontSize: 12.5,
-                                                            fontWeight: 500,
-                                                            background: isActive ? INK : "transparent",
-                                                            color: isActive ? "#fff" : MUTED,
-                                                            border: isActive ? `1px solid ${INK}` : "1px solid transparent",
-                                                            fontFamily: FONT,
-                                                            cursor: "pointer",
-                                                        }}
-                                                    >
-                                                        <span style={{ width: 6, height: 6, borderRadius: 999, background: isActive ? ORANGE : LINE_2 }} />
-                                                        <span className="flex-1 truncate">{label}</span>
-                                                    </button>
-                                                )
-                                            })}
-                                            <div style={{ height: 1, background: LINE, margin: "10px 6px" }} />
-                                        </div>
-                                    ))}
-                                </nav>
-                            )}
-
-                            <div ref={contentRef} className="flex-1 overflow-y-auto custom-scrollbar min-h-0" style={{ padding: 28, background: PAPER_2, fontFamily: FONT }}>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0" style={{ padding: 28, background: PAPER_2, fontFamily: FONT }}>
                             {isGenerating && (
                                 <div className="flex flex-col items-center justify-center py-24">
                                     <div style={{ marginBottom: 12 }}><Helix size="44" speed="2.5" color={ORANGE} /></div>

@@ -112,7 +112,7 @@ function UpperLabel({ children, className, style }) {
 function MetricCard({ label, value, unit, sub, dark }) {
     return (
         <div
-            className="rounded-2xl flex flex-col gap-1.5 p-4"
+            className="rounded-3xl flex flex-col gap-1.5 p-4"
             style={{
                 background: dark ? INK : PAPER,
                 border: `1px solid ${dark ? INK : LINE}`,
@@ -127,7 +127,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
                 style={{
                     fontSize: 40,
                     fontWeight: 900,
-                    letterSpacing: "-0.04em",
+                    letterSpacing: "-0.015em",
                     lineHeight: 1,
                     margin: 0,
                     color: dark ? "#fff" : INK,
@@ -256,7 +256,7 @@ function DonutRing({ value, total, color = ORANGE, size = 110, centerText, cente
                 textAnchor="middle"
                 fontFamily={FONT} fontWeight={900}
                 fontSize={size * 0.24} fill={INK}
-                letterSpacing="-0.04em"
+                letterSpacing="-0.01em"
             >
                 {centerText ?? `${(pct * 100).toFixed(0)}%`}
             </text>
@@ -284,7 +284,7 @@ function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neu
     }[status]
     return (
         <div
-            className="relative rounded-2xl"
+            className="relative rounded-3xl"
             style={{
                 background: PAPER,
                 border: `1px solid ${LINE}`,
@@ -305,7 +305,7 @@ function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neu
             </UpperLabel>
             <div
                 className="tabular-nums"
-                style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1, color: INK }}
+                style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: INK }}
             >
                 {valuePrefix && (
                     <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45 }}>{valuePrefix}</span>
@@ -445,24 +445,14 @@ function SummarySection({ report, kpiType, kpiTarget }) {
             {/* Orange Top-Line */}
             {headline && (
                 <div
-                    className="rounded-2xl"
+                    className="rounded-3xl"
                     style={{
                         background: ORANGE,
                         color: "#fff",
-                        padding: "22px 26px",
-                        marginBottom: 14,
+                        padding: "16px 20px",
+                        marginBottom: 12,
                     }}
                 >
-                    <div
-                        style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "rgba(255,255,255,0.78)",
-                            marginBottom: 10,
-                        }}
-                    >
-                        Top-line
-                    </div>
                     <div
                         style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: "#fff", maxWidth: 760 }}
                         dangerouslySetInnerHTML={{ __html: headline }}
@@ -509,7 +499,7 @@ function TrafficSection({ traffic }) {
                 {lineDefs.map(({ key, label, color, tooltipFmt, yFmt }) => (
                     <div
                         key={key}
-                        className="rounded-2xl"
+                        className="rounded-3xl"
                         style={{
                             background: PAPER,
                             border: `1px solid ${ORANGE}`,
@@ -619,7 +609,7 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
         <SectionCard id="spend" dark>
             <SectionHeader
                 title={<span style={{ color: "#fff" }}>Monthly Ad Spend</span>}
-                sub={`Last 6 months · total account spend and blended ${kpiLabel} by calendar month.`}
+                sub={<span style={{ color: "rgba(255,255,255,0.78)" }}>{`Last 6 months · total account spend and blended ${kpiLabel} by calendar month.`}</span>}
                 tag="04 · Spend"
             />
 
@@ -627,10 +617,10 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
                 {/* Left: stacked KPI display */}
                 <div className="flex flex-col gap-3">
                     <div>
-                        <UpperLabel style={{ color: "rgba(255,255,255,0.5)" }}>Spend This Month</UpperLabel>
+                        <UpperLabel style={{ color: "#fff" }}>Spend This Month</UpperLabel>
                         <div
                             className="tabular-nums"
-                            style={{ fontSize: 60, fontWeight: 900, letterSpacing: "-0.045em", lineHeight: 1, color: "#fff", marginTop: 6 }}
+                            style={{ fontSize: 60, fontWeight: 900, letterSpacing: "-0.015em", lineHeight: 1, color: "#fff", marginTop: 6 }}
                         >
                             <span style={{ fontSize: 60, opacity: 0.55 }}>$</span>
                             {cur ? (cur.spend / 1000).toFixed(1) : "—"}
@@ -646,10 +636,10 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
                     <div style={{ height: 1, background: "rgba(255,255,255,0.12)", margin: "4px 0" }} />
 
                     <div>
-                        <UpperLabel style={{ color: "rgba(255,255,255,0.5)" }}>Blended {kpiLabel}</UpperLabel>
+                        <UpperLabel style={{ color: "#fff" }}>Blended {kpiLabel}</UpperLabel>
                         <div
                             className="tabular-nums"
-                            style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1, color: "#fff", marginTop: 6 }}
+                            style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: "#fff", marginTop: 6 }}
                         >
                             {cur?.kpi != null
                                 ? (kpiType === "roas"
@@ -1201,7 +1191,11 @@ export default function AdAccountAudit({
                 onClick={() => onOpenChange(false)}
                 style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100dvh", background: "rgba(15,17,21,0.55)", zIndex: 50 }}
             />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ fontFamily: FONT }}>
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                style={{ fontFamily: FONT }}
+                onClick={() => onOpenChange(false)}
+            >
                 <div
                     onClick={(e) => e.stopPropagation()}
                     className="w-full max-w-[1080px] max-h-[92vh] overflow-hidden flex flex-col"
