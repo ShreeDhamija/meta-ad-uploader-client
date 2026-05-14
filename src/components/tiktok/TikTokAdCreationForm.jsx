@@ -607,7 +607,16 @@ export default function TikTokAdCreationForm({
 
     if (!selectedAdvertiser) return toast.error('Please select an advertiser')
     if (!selectedAdGroup) return toast.error('Please select an ad group')
-    if (!selectedIdentity) return toast.error('Please select a TikTok Identity/Profile')
+    
+    // Strict validation based on Ad Type
+    if (adType === 'SPARK') {
+      if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
+        return toast.error('Spark Ads require a linked TikTok account. Please select one or switch to Normal Ad.')
+      }
+    } else {
+      // For Normal Ads, ensure we are using CUSTOMIZED_USER
+      if (!selectedIdentity) setSelectedIdentity('CUSTOMIZED_USER')
+    }
     if (!adName.trim()) return toast.error('Ad name is required')
     if (cta.length === 0) return toast.error('Please select at least one Call to Action')
     const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0
