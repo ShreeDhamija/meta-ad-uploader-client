@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 import { readCache, writeCache } from "@/lib/dataCache"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { cn } from "@/lib/utils"
@@ -136,9 +136,11 @@ export default function TikTokAdCreationForm({
   const [openAdvertiser, setOpenAdvertiser] = useState(false)
   const [openCampaign, setOpenCampaign] = useState(false)
   const [openAdGroup, setOpenAdGroup] = useState(false)
+  const [openIdentity, setOpenIdentity] = useState(false)
   const [advertiserSearch, setAdvertiserSearch] = useState('')
   const [campaignSearch, setCampaignSearch] = useState('')
   const [adGroupSearch, setAdGroupSearch] = useState('')
+  const [identitySearch, setIdentitySearch] = useState('')
 
   // Inline Campaign Duplication
   const [isDuplicating, setIsDuplicating] = useState(false)
@@ -831,46 +833,159 @@ export default function TikTokAdCreationForm({
 
           {/* Post As (Identity) */}
           <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              {renderDiffMark("selectedIdentity")}
-              <Users className="w-4 h-4" />
-              Post As (Identity)
-            </Label>
-            <Select
-              value={selectedIdentity}
-              onValueChange={setSelectedIdentity}
-              disabled={!selectedAdvertiser || loadingIdentities}
-            >
-              <SelectTrigger className={formFieldChrome}>
-                <SelectValue placeholder="Select TikTok identity" />
-              </SelectTrigger>
-              <SelectContent className="bg-white rounded-xl shadow-lg border-gray-200">
-                <SelectItem value="CUSTOMIZED_USER" className="cursor-pointer hover:bg-gray-50 rounded-lg m-1">
-                  <div className="flex flex-col">
-                    <span className="font-medium italic">Custom Identity (No Link Required)</span>
-                    <span className="text-[10px] text-gray-400 uppercase tracking-tighter">Uses Ad Name as Profile Name</span>
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("selectedIdentity")}
+                <Users className="w-4 h-4" />
+                Post As (Linked Account)
+              </Label>
+              <RefreshCcw
+                className={cn("h-4 w-4 text-gray-500 cursor-pointer hover:text-gray-700 transition-colors", loadingIdentities && "animate-spin")}
+                onClick={() => {
+                  if (!selectedAdvertiser || loadingIdentities) return
+                  setLoadingIdentities(true)
+                  tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`)
+                    .then(r => r.json())
+                    .then(d => {
+                      const list = d.identities || []
+                      setIdentities(list)
+                      if (list.length > 0) {
+                        const best = list.find(i => i.identity_type === 'TT_USER') ||
+                                     list.find(i => i.identity_type === 'BC_AUTH_TT') ||
+                                     list[0]
+                        setSelectedIdentity(best.identity_id)
+                      } else {
+                        setSelectedIdentity('CUSTOMIZED_USER')
+                      }
+                      toast.success('Linked accounts refreshed!')
+                    })
+                    .catch(() => toast.error('Failed to refresh linked accounts'))
+                    .finally(() => setLoadingIdentities(false))
+                }}
+              />
+            </div>
+            <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={openIdentity}
+                  disabled={!selectedAdvertiser || loadingIdentities}
+                  className={cn(
+                    "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white",
+                    !selectedIdentity && "text-gray-500"
+                  )}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    {loadingIdentities ? (
+                      <><Loader className="w-3 h-3 animate-spin text-gray-400" /><span className="text-gray-400 text-sm">Loading accounts...</span></>
+                    ) : selectedIdentity === 'CUSTOMIZED_USER' || !selectedIdentity ? (
+                      <span className="text-sm italic text-gray-500">Custom Identity (No Link Required)</span>
+                    ) : (() => {
+                      const found = identities.find(i => i.identity_id === selectedIdentity)
+                      return found ? (
+                        <div className="flex items-center gap-2 min-w-0">
+                          {found.avatar_url || found.profile_image ? (
+                            <img src={found.avatar_url || found.profile_image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-200" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-200 shrink-0 flex items-center justify-center">
+                              <Users className="w-3 h-3 text-gray-400" />
+                            </div>
+                          )}
+                          <span className="font-medium text-sm truncate">{found.display_name || found.identity_id}</span>
+                          <span className="text-[10px] text-gray-400 uppercase tracking-tighter shrink-0">{found.identity_type}</span>
+                        </div>
+                      ) : <span className="text-sm text-gray-500">{selectedIdentity}</span>
+                    })()}
                   </div>
-                </SelectItem>
-                {identities.map(i => (
-                  <SelectItem
-                    key={i.identity_id}
-                    value={i.identity_id}
-                    className="cursor-pointer hover:bg-gray-50 rounded-lg m-1"
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-medium">{i.display_name || i.identity_id}</span>
-                      <span className="text-[10px] text-gray-400 uppercase tracking-tighter">{i.identity_type}</span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="p-0 bg-white shadow-lg rounded-2xl"
+                align="start"
+                style={{ width: 'var(--radix-popover-trigger-width)' }}
+              >
+                <Command>
+                  <CommandInput
+                    placeholder="Search linked accounts..."
+                    value={identitySearch}
+                    onValueChange={setIdentitySearch}
+                    className="bg-transparent border-none focus:ring-0"
+                  />
+                  <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                    <CommandEmpty>No linked account found.</CommandEmpty>
+                    <CommandGroup>
+                      {/* CUSTOMIZED_USER fallback — always shown at top */}
+                      {('custom identity no link required').includes(identitySearch.toLowerCase()) && (
+                        <CommandItem
+                          key="CUSTOMIZED_USER"
+                          value="CUSTOMIZED_USER"
+                          onSelect={() => { setSelectedIdentity('CUSTOMIZED_USER'); setOpenIdentity(false); setIdentitySearch('') }}
+                          className={cn(
+                            "px-4 py-2.5 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                            selectedIdentity === 'CUSTOMIZED_USER' ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                          )}
+                        >
+                          <div className="flex items-center gap-3 w-full">
+                            <div className="w-7 h-7 rounded-full bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center shrink-0">
+                              <Users className="w-3.5 h-3.5 text-gray-400" />
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-medium text-sm italic">Custom Identity</span>
+                              <span className="text-[10px] text-gray-400 uppercase tracking-tighter">No Linked Account Required</span>
+                            </div>
+                          </div>
+                          {selectedIdentity === 'CUSTOMIZED_USER' && <Check className="ml-auto h-4 w-4 text-black shrink-0" />}
+                        </CommandItem>
+                      )}
+
+                      {/* Real linked accounts */}
+                      {identities
+                        .filter(i =>
+                          (i.display_name || i.identity_id || '').toLowerCase().includes(identitySearch.toLowerCase()) ||
+                          (i.identity_type || '').toLowerCase().includes(identitySearch.toLowerCase())
+                        )
+                        .map(i => (
+                          <CommandItem
+                            key={i.identity_id}
+                            value={i.identity_id}
+                            onSelect={() => { setSelectedIdentity(i.identity_id); setOpenIdentity(false); setIdentitySearch('') }}
+                            className={cn(
+                              "px-4 py-2.5 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                              selectedIdentity === i.identity_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                            )}
+                          >
+                            <div className="flex items-center gap-3 w-full min-w-0">
+                              {i.avatar_url || i.profile_image ? (
+                                <img src={i.avatar_url || i.profile_image} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 border border-gray-200" />
+                              ) : (
+                                <div className="w-7 h-7 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+                                  <Users className="w-3.5 h-3.5 text-gray-400" />
+                                </div>
+                              )}
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-medium text-sm truncate">{i.display_name || i.identity_id}</span>
+                                <span className="text-[10px] text-gray-400 uppercase tracking-tighter">{i.identity_type}</span>
+                              </div>
+                            </div>
+                            {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black shrink-0" />}
+                          </CommandItem>
+                        ))
+                      }
+                    </CommandGroup>
+                  </CommandList>
+                  {identities.length === 0 && !loadingIdentities && selectedAdvertiser && (
+                    <div className="border-t border-gray-100 px-4 py-3">
+                      <p className="text-[10px] text-gray-400 text-center">
+                        No linked TikTok accounts found for this advertiser.
+                        <br />Using <span className="font-semibold">Custom Identity</span> as fallback.
+                      </p>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {identities.length === 0 && !loadingIdentities && selectedAdvertiser && (
-              <p className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1">
-                <PlusIcon className="w-3 h-3" />
-                No linked accounts found. "Custom Identity" will be used.
-              </p>
-            )}
+                  )}
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
         </CardContent>
