@@ -141,6 +141,8 @@ export default function TikTokAdCreationForm({
   const [campaignSearch, setCampaignSearch] = useState('')
   const [adGroupSearch, setAdGroupSearch] = useState('')
   const [identitySearch, setIdentitySearch] = useState('')
+  
+  const [adType, setAdType] = useState('NORMAL') // 'NORMAL' or 'SPARK'
 
   // Inline Campaign Duplication
   const [isDuplicating, setIsDuplicating] = useState(false)
@@ -532,9 +534,15 @@ export default function TikTokAdCreationForm({
           const best = list.find(i => i.identity_type === 'TT_USER') ||
                        list.find(i => i.identity_type === 'BC_AUTH_TT') ||
                        list[0]
-          setSelectedIdentity(best.identity_id)
+          
+          if (adType === 'SPARK') {
+            setSelectedIdentity(best.identity_id)
+          } else {
+            setSelectedIdentity('CUSTOMIZED_USER')
+          }
         } else {
           setSelectedIdentity('CUSTOMIZED_USER')
+          setAdType('NORMAL')
         }
       })
       .catch(err => console.error('❌ [TikTok Form] Failed to fetch identities:', err))
@@ -742,7 +750,42 @@ export default function TikTokAdCreationForm({
             Ad Account & Identity
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-5 pb-5 pt-0 space-y-4">
+        <CardContent className="px-5 pb-5 pt-0 space-y-5">
+          {/* Ad Type Toggle */}
+          <div className="flex items-center justify-center p-1 bg-gray-100/80 rounded-[1.25rem] w-full">
+            <button
+              type="button"
+              onClick={() => {
+                setAdType('NORMAL')
+                setSelectedIdentity('CUSTOMIZED_USER')
+              }}
+              className={cn(
+                "flex-1 py-2 text-[11px] font-bold uppercase tracking-wider rounded-[1rem] transition-all duration-200",
+                adType === 'NORMAL' 
+                  ? "bg-white text-zinc-900 shadow-sm ring-1 ring-black/5" 
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              Normal Ad
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAdType('SPARK')
+                const best = identities.find(i => i.identity_type === 'TT_USER') || identities[0]
+                if (best) setSelectedIdentity(best.identity_id)
+              }}
+              className={cn(
+                "flex-1 py-2 text-[11px] font-bold uppercase tracking-wider rounded-[1rem] transition-all duration-200",
+                adType === 'SPARK' 
+                  ? "bg-white text-zinc-900 shadow-sm ring-1 ring-black/5" 
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              Spark Ad
+            </button>
+          </div>
+
           {/* Advertiser Account */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -870,17 +913,20 @@ export default function TikTokAdCreationForm({
                   variant="outline"
                   role="combobox"
                   aria-expanded={openIdentity}
-                  disabled={!selectedAdvertiser || loadingIdentities}
+                  disabled={!selectedAdvertiser || loadingIdentities || adType === 'NORMAL'}
                   className={cn(
                     "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white",
+                    adType === 'NORMAL' && "bg-gray-50/50 opacity-80 cursor-not-allowed border-dashed",
                     !selectedIdentity && "text-gray-500"
                   )}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    {loadingIdentities ? (
+                    {adType === 'NORMAL' ? (
+                      <span className="text-sm italic text-gray-500">Custom Identity (In-Feed Ad)</span>
+                    ) : loadingIdentities ? (
                       <><Loader className="w-3 h-3 animate-spin text-gray-400" /><span className="text-gray-400 text-sm">Loading accounts...</span></>
                     ) : selectedIdentity === 'CUSTOMIZED_USER' || !selectedIdentity ? (
-                      <span className="text-sm italic text-gray-500">Custom Identity (No Link Required)</span>
+                      <span className="text-sm text-red-500 font-medium">Select a TikTok profile for Spark Ad</span>
                     ) : (() => {
                       const found = identities.find(i => i.identity_id === selectedIdentity)
                       return found ? (
@@ -916,30 +962,6 @@ export default function TikTokAdCreationForm({
                   <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                     <CommandEmpty>No linked account found.</CommandEmpty>
                     <CommandGroup>
-                      {/* CUSTOMIZED_USER fallback — always shown at top */}
-                      {('custom identity no link required').includes(identitySearch.toLowerCase()) && (
-                        <CommandItem
-                          key="CUSTOMIZED_USER"
-                          value="CUSTOMIZED_USER"
-                          onSelect={() => { setSelectedIdentity('CUSTOMIZED_USER'); setOpenIdentity(false); setIdentitySearch('') }}
-                          className={cn(
-                            "px-4 py-2.5 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                            selectedIdentity === 'CUSTOMIZED_USER' ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                          )}
-                        >
-                          <div className="flex items-center gap-3 w-full">
-                            <div className="w-7 h-7 rounded-full bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center shrink-0">
-                              <Users className="w-3.5 h-3.5 text-gray-400" />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="font-medium text-sm italic">Custom Identity</span>
-                              <span className="text-[10px] text-gray-400 uppercase tracking-tighter">No Linked Account Required</span>
-                            </div>
-                          </div>
-                          {selectedIdentity === 'CUSTOMIZED_USER' && <Check className="ml-auto h-4 w-4 text-black shrink-0" />}
-                        </CommandItem>
-                      )}
-
                       {/* Real linked accounts */}
                       {identities
                         .filter(i =>
@@ -975,14 +997,6 @@ export default function TikTokAdCreationForm({
                       }
                     </CommandGroup>
                   </CommandList>
-                  {identities.length === 0 && !loadingIdentities && selectedAdvertiser && (
-                    <div className="border-t border-gray-100 px-4 py-3">
-                      <p className="text-[10px] text-gray-400 text-center">
-                        No linked TikTok accounts found for this advertiser.
-                        <br />Using <span className="font-semibold">Custom Identity</span> as fallback.
-                      </p>
-                    </div>
-                  )}
                 </Command>
               </PopoverContent>
             </Popover>
