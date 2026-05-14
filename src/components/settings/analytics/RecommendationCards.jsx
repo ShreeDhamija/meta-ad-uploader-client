@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
     Loader2, XCircle, Activity, Pause,
-    CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw, Rocket, RotateCcw,
+    CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw, RotateCcw,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -398,7 +398,7 @@ export default function RecommendationCards({
         })
         setSelectedScaleWinners(new Set())
 
-        navigate('/home', {
+        navigate('/', {
             state: { scaleWinners: payload, adAccountId },
         })
     }
@@ -1203,7 +1203,6 @@ export default function RecommendationCards({
             {section === 'budget' && selectedScaleWinners.size > 0 && (
                 <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
                     <div className="flex items-center gap-2 px-3.5 py-1.5 text-sm">
-                        <Rocket className="w-4 h-4 text-white/80" />
                         <span className="whitespace-nowrap">
                             {selectedScaleWinners.size} ad{selectedScaleWinners.size !== 1 ? 's' : ''} selected to scale
                         </span>
