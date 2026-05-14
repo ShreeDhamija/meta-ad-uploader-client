@@ -768,7 +768,9 @@ export default function TikTokAdCreationForm({
                 >
                   <div className="flex items-center gap-2 truncate">
                     {selectedAdvertiser
-                      ? advertisers.find(adv => (adv.advertiser_id || adv.id) === selectedAdvertiser)?.advertiser_name || selectedAdvertiser
+                      ? advertisers.find(adv => String(adv.advertiser_id || adv.id) === String(selectedAdvertiser))?.advertiser_name || 
+                        advertisers.find(adv => String(adv.advertiser_id || adv.id) === String(selectedAdvertiser))?.name || 
+                        selectedAdvertiser
                       : "Select an Advertiser Account"}
                   </div>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -804,13 +806,13 @@ export default function TikTokAdCreationForm({
                             }}
                             className={cn(
                               "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                              selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                              String(selectedAdvertiser) === String(id) ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
                             )}
                           >
                             <div className="flex flex-col w-full">
                               <span className="font-medium">{adv.advertiser_name || adv.name}</span>
                             </div>
-                            {selectedAdvertiser === id && <Check className="ml-auto h-4 w-4 text-black" />}
+                            {String(selectedAdvertiser) === String(id) && <Check className="ml-auto h-4 w-4 text-black" />}
                           </CommandItem>
                         )
                       })}
