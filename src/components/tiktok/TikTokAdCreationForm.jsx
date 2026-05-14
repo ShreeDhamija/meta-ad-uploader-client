@@ -81,7 +81,21 @@ const UPLOAD_SOURCE_OPTIONS = [
   },
 ]
 
-export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdvertiserChange }) {
+export default function TikTokAdCreationForm({ 
+  advertiserId, 
+  advertisers, 
+  onAdvertiserChange,
+  // Lifted State
+  adName, setAdName,
+  adText, setAdText,
+  cta, setCta,
+  landingUrl, setLandingUrl,
+  videoFile, setVideoFile,
+  videoPreview, setVideoPreview,
+  driveFiles, setDriveFiles,
+  dropboxFiles, setDropboxFiles,
+  selectedIdentity, setSelectedIdentity
+}) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -107,23 +121,15 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
   const [adGroups, setAdGroups] = useState([])
   const [selectedCampaign, setSelectedCampaign] = useState('')
   const [selectedAdGroup, setSelectedAdGroup] = useState('')
-  const [adName, setAdName] = useState('')
-  const [adText, setAdText] = useState('')
-  const [cta, setCta] = useState(['SHOP_NOW'])
-  const [landingUrl, setLandingUrl] = useState('')
-  const [videoFile, setVideoFile] = useState(null)
-  const [driveFiles, setDriveFiles] = useState([])
-  const [dropboxFiles, setDropboxFiles] = useState([])
+  // Lifted: adName, adText, cta, landingUrl, videoFile, driveFiles, dropboxFiles, videoPreview, selectedIdentity
   const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox'])
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false)
-  const [videoPreview, setVideoPreview] = useState(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadingCampaigns, setLoadingCampaigns] = useState(false)
   const [loadingAdGroups, setLoadingAdGroups] = useState(false)
   const [identities, setIdentities] = useState([])
-  const [selectedIdentity, setSelectedIdentity] = useState('')
   const [loadingIdentities, setLoadingIdentities] = useState(false)
 
   const [openAdvertiser, setOpenAdvertiser] = useState(false)
@@ -710,17 +716,17 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4">
 
       {/* Identity Section - Now matching Meta AdAccountSettings style */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <AdAccountIcon className="w-5 h-5" />
             Ad Account & Identity
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="px-5 pb-5 pt-0 space-y-4">
           {/* Advertiser Account */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -795,7 +801,6 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                           >
                             <div className="flex flex-col w-full">
                               <span className="font-medium">{adv.advertiser_name || adv.name}</span>
-                              <span className="text-[10px] text-gray-400 font-mono uppercase tracking-tighter">ID: {id}</span>
                             </div>
                             {selectedAdvertiser === id && <Check className="ml-auto h-4 w-4 text-black" />}
                           </CommandItem>
@@ -857,13 +862,13 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
 
       {/* Placement Section */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <CampaignIcon className="w-5 h-5" />
             Placement
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="px-5 pb-5 pt-0 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             {/* Campaign */}
@@ -1067,186 +1072,15 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
 
       {/* Creative Section */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <Video className="w-5 h-5" />
             Creative
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 space-y-6">
-
-          {/* Video Upload */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("videoFile")}
-                Video (.mp4, .mov)
-              </Label>
-              <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className={cn(
-                      "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
-                      formFieldChrome
-                    )}
-                  >
-                    <CloudUpload className="h-4 w-4" />
-                    Manage Sources
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
-                  <div className="flex flex-col">
-                    {UPLOAD_SOURCE_OPTIONS.map((src) => {
-                      const checked = uploadSources.includes(src.id);
-                      return (
-                        <label
-                          key={src.id}
-                          className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
-                        >
-                          <Checkbox
-                            checked={checked}
-                            onCheckedChange={() => toggleUploadSource(src.id)}
-                          />
-                          <img
-                            src={src.icon}
-                            alt=""
-                            className={'h-4 w-4 object-contain'}
-                          />
-                          <span className="text-sm text-gray-800">{src.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
-              <div
-                onClick={() => fileRef.current?.click()}
-                className={cn(
-                  "group cursor-pointer border-2 border-dashed rounded-3xl p-8 text-center transition-all",
-                  videoFile ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                )}
-              >
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="video/mp4,video/quicktime"
-                  className="hidden"
-                  onChange={handleVideoSelect}
-                />
-                <div className="flex flex-col items-center gap-3">
-                  {videoPreview ? (
-                    <div className="relative group">
-                      <video src={videoPreview} className="mx-auto max-h-48 rounded-2xl shadow-md border border-white" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
-                        <RefreshCcw className="w-8 h-8 text-white" />
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Click to upload video</p>
-                        <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Cloud File Preview */}
-            {(driveFiles.length > 0 || dropboxFiles.length > 0) && (
-              <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-white border border-emerald-100 flex items-center justify-center shadow-sm">
-                      <Video className="w-6 h-6 text-emerald-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
-                        {driveFiles[0]?.name || dropboxFiles[0]?.name}
-                      </p>
-                      <p className="text-[10px] text-emerald-600 font-bold">
-                        {driveFiles.length > 0 ? "Google Drive" : "Dropbox"} Selected
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500"
-                    onClick={() => {
-                      setDriveFiles([]);
-                      setDropboxFiles([]);
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {/* Cloud Source Buttons */}
-            {(() => {
-              const rowSources = uploadSources.filter((s) => s !== 'local');
-              if (rowSources.length === 0) return null;
-
-              return (
-                <div className="grid grid-cols-2 gap-2">
-                  {rowSources.map((id) => {
-                    const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
-                    if (!src) return null;
-
-                    let onClick;
-                    if (id === 'drive') onClick = handleDriveClick;
-                    else if (id === 'dropbox') onClick = handleDropboxClick;
-
-                    return (
-                      <Button
-                        key={id}
-                        type="button"
-                        onClick={onClick}
-                        className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
-                      >
-                        <img
-                          src={typeof src.icon === 'string' ? src.icon : undefined}
-                          alt={src.name}
-                          className="h-4 w-4 object-contain"
-                          style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
-                        />
-                        {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
-                        <span className="truncate text-xs font-semibold">{src.compactLabel}</span>
-                      </Button>
-                    );
-                  })}
-                </div>
-              );
-            })()}
-
-            {isUploading && (
-              <div className="mt-2">
-                <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                  <div
-                    className="h-full bg-emerald-500 transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-[10px] font-medium text-emerald-600 mt-1">
-                  Uploading {uploadProgress}%
-                </p>
-              </div>
-            )}
-          </div>
-
+        <CardContent className="px-5 pb-5 pt-0 space-y-4">
           {/* Ad Details: Name + Text */}
-          <div className="space-y-6">
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 {renderDiffMark("adName")}
@@ -1280,10 +1114,9 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* CTA Multi-select Dropdown */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 {renderDiffMark("cta")}
                 <CTAIcon className="w-4 h-4" />
@@ -1352,8 +1185,169 @@ export default function TikTokAdCreationForm({ advertiserId, advertisers, onAdve
                 className={formInputChrome}
               />
             </div>
-
           </div>
+
+          <div className="border-t border-gray-100 pt-6">
+            {/* Video Upload Moved to Bottom */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  {renderDiffMark("videoFile")}
+                  Video (.mp4, .mov)
+                </Label>
+                <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className={cn(
+                        "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
+                        formFieldChrome
+                      )}
+                    >
+                      <CloudUpload className="h-4 w-4" />
+                      Manage Sources
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                    <div className="flex flex-col">
+                      {UPLOAD_SOURCE_OPTIONS.map((src) => {
+                        const checked = uploadSources.includes(src.id);
+                        return (
+                          <label
+                            key={src.id}
+                            className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={() => toggleUploadSource(src.id)}
+                            />
+                            <img
+                              src={src.icon}
+                              alt=""
+                              className={'h-4 w-4 object-contain'}
+                            />
+                            <span className="text-sm text-gray-800">{src.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
+                <div
+                  onClick={() => fileRef.current?.click()}
+                  className={cn(
+                    "group cursor-pointer border-2 border-dashed rounded-3xl p-8 text-center transition-all",
+                    videoFile ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  )}
+                >
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="video/mp4,video/quicktime"
+                    className="hidden"
+                    onChange={handleVideoSelect}
+                  />
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Click to upload video</p>
+                      <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Cloud File Preview */}
+              {(driveFiles.length > 0 || dropboxFiles.length > 0) && (
+                <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-white border border-emerald-100 flex items-center justify-center shadow-sm">
+                        <Video className="w-6 h-6 text-emerald-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
+                          {driveFiles[0]?.name || dropboxFiles[0]?.name}
+                        </p>
+                        <p className="text-[10px] text-emerald-600 font-bold">
+                          {driveFiles.length > 0 ? "Google Drive" : "Dropbox"} Selected
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500"
+                      onClick={() => {
+                        setDriveFiles([]);
+                        setDropboxFiles([]);
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Cloud Source Buttons */}
+              {(() => {
+                const rowSources = uploadSources.filter((s) => s !== 'local');
+                if (rowSources.length === 0) return null;
+
+                return (
+                  <div className="grid grid-cols-2 gap-2">
+                    {rowSources.map((id) => {
+                      const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
+                      if (!src) return null;
+
+                      let onClick;
+                      if (id === 'drive') onClick = handleDriveClick;
+                      else if (id === 'dropbox') onClick = handleDropboxClick;
+
+                      return (
+                        <Button
+                          key={id}
+                          type="button"
+                          onClick={onClick}
+                          className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
+                        >
+                          <img
+                            src={typeof src.icon === 'string' ? src.icon : undefined}
+                            alt={src.name}
+                            className="h-4 w-4 object-contain"
+                            style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
+                          />
+                          {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
+                          <span className="truncate text-xs font-semibold">{src.compactLabel}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
+              {isUploading && (
+                <div className="mt-2">
+                  <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] font-medium text-emerald-600 mt-1">
+                    Uploading {uploadProgress}%
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
         </CardContent>
       </Card>
 

@@ -1,9 +1,9 @@
 import Header from '@/components/header'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
 import { useIntercom } from '@/lib/useIntercom'
-import { CheckCircle2, Loader2 } from "lucide-react"
+import { Loader2, Video } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
@@ -16,6 +16,15 @@ export default function TikTokAds() {
   const { showMessenger, hideMessenger } = useIntercom()
   
   const [selectedAdvertiser, setSelectedAdvertiser] = useState('')
+  const [adName, setAdName] = useState('')
+  const [adText, setAdText] = useState('')
+  const [cta, setCta] = useState(['SHOP_NOW'])
+  const [landingUrl, setLandingUrl] = useState('')
+  const [videoFile, setVideoFile] = useState(null)
+  const [videoPreview, setVideoPreview] = useState(null)
+  const [driveFiles, setDriveFiles] = useState([])
+  const [dropboxFiles, setDropboxFiles] = useState([])
+  const [selectedIdentity, setSelectedIdentity] = useState('')
 
   // Handle OAuth callback
   useEffect(() => {
@@ -69,58 +78,105 @@ export default function TikTokAds() {
               advertiserId={selectedAdvertiser} 
               advertisers={tiktokAdvertisers} 
               onAdvertiserChange={setSelectedAdvertiser}
+              // Lifted State
+              adName={adName} setAdName={setAdName}
+              adText={adText} setAdText={setAdText}
+              cta={cta} setCta={setCta}
+              landingUrl={landingUrl} setLandingUrl={setLandingUrl}
+              videoFile={videoFile} setVideoFile={setVideoFile}
+              videoPreview={videoPreview} setVideoPreview={setVideoPreview}
+              driveFiles={driveFiles} setDriveFiles={setDriveFiles}
+              dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
+              selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
             />
           </div>
 
-          {/* Right Column: Info/Meta-style Sidebar */}
+          {/* Right Column: Media Preview */}
           <div className="flex-1 lg:flex-[45] min-w-0 space-y-6">
-            <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
-              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Quick Tips</h3>
-              <div className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    <span className="font-bold text-gray-900">TikTok Video Ratio:</span> 9:16 (vertical) is highly recommended for Spark Ads and In-Feed Ads.
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-4 h-4 text-purple-500" />
-                  </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    <span className="font-bold text-gray-900">Ad Text:</span> Keep it short and catchy. Most TikTok users scroll quickly!
-                  </p>
-                </div>
-              </div>
+            <div className="sticky top-6">
+              <TikTokMediaPreview 
+                videoFile={videoFile}
+                videoPreview={videoPreview}
+                driveFiles={driveFiles}
+                dropboxFiles={dropboxFiles}
+                adText={adText}
+                cta={cta}
+                identityId={selectedIdentity}
+                advertiserId={selectedAdvertiser}
+              />
             </div>
-
-            {tiktokUser && (
-              <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#FE2C55] to-[#25F4EE] p-0.5">
-                    <div className="w-full h-full bg-white rounded-[14px] flex items-center justify-center text-lg font-black text-black">
-                      {(tiktokUser.display_name || tiktokUser.name || 'T')[0].toUpperCase()}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900">{tiktokUser.display_name || tiktokUser.name}</h3>
-                    <p className="text-xs text-gray-400">Connected to TikTok</p>
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full rounded-xl text-red-500 border-red-50 hover:bg-red-50 hover:text-red-600"
-                  onClick={logoutTikTok}
-                >
-                  Disconnect Account
-                </Button>
-              </div>
-            )}
           </div>
         </div>
       </main>
     </div>
+  )
+}
+
+function TikTokMediaPreview({ videoFile, videoPreview, driveFiles, dropboxFiles, adText, cta, identityId, advertiserId }) {
+  const hasMedia = videoFile || driveFiles.length > 0 || dropboxFiles.length > 0;
+  
+  return (
+    <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden min-h-[500px] flex flex-col">
+      <CardHeader className="border-b border-gray-100 bg-gray-50/50 py-4">
+        <CardTitle className="text-sm font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          Media Preview
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 p-6 flex flex-col items-center justify-center bg-gray-50/30">
+        {!hasMedia ? (
+          <div className="text-center space-y-4 max-w-[280px]">
+            <div className="w-20 h-20 rounded-3xl bg-white shadow-sm border border-gray-100 mx-auto flex items-center justify-center">
+              <Video className="w-8 h-8 text-gray-300" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900 mb-1">No media selected</h4>
+              <p className="text-xs text-gray-500 leading-relaxed font-medium">
+                Upload a video to see how your ad will appear on TikTok.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="w-full max-w-[320px] aspect-[9/16] bg-black rounded-[2.5rem] shadow-2xl border-[8px] border-zinc-900 overflow-hidden relative group">
+            {/* Mock TikTok Interface */}
+            <div className="absolute inset-0 z-10 pointer-events-none p-4 flex flex-col justify-end gap-3 bg-gradient-to-t from-black/60 via-transparent to-transparent">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-400 border border-white/50" />
+                  <div className="h-4 w-24 bg-white/30 rounded-full" />
+                </div>
+                <p className="text-white text-[11px] leading-snug line-clamp-3">
+                  {adText || "Your ad text will appear here..."}
+                </p>
+              </div>
+              <div className="bg-[#FE2C55] py-2.5 rounded-sm text-center">
+                <span className="text-white text-xs font-bold uppercase tracking-wider">
+                  {cta.length > 0 ? cta[0].replace(/_/g, ' ') : "SHOP NOW"}
+                </span>
+              </div>
+            </div>
+
+            {/* Video Content */}
+            {videoPreview ? (
+              <video 
+                src={videoPreview} 
+                className="w-full h-full object-cover" 
+                autoPlay 
+                muted 
+                loop 
+                playsInline
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
+                <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest">
+                  {driveFiles.length > 0 ? "Importing from Drive..." : "Importing from Dropbox..."}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
