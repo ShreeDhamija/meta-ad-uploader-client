@@ -672,24 +672,30 @@ export default function TikTokAdCreationForm({
       }
 
       const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
-      const currentIdentityId = selectedIdentity === 'CUSTOMIZED_USER' ? undefined : selectedIdentity
-      const currentIdentityType = selectedIdentity === 'CUSTOMIZED_USER' ? 'CUSTOMIZED_USER' : selectedIdentityObj?.identity_type
+      const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
+      const currentIdentityId = isCustomized ? undefined : selectedIdentity
+      const currentIdentityType = isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER')
 
       toast.info(`Creating ${cta.length} ad(s)...`)
-      const creatives = cta.map(action => ({
-        video_id: videoId,
-        ad_text: adText,
-        call_to_action: action,
-        landing_page_url: landingUrl,
-        ad_name: `${adName.trim()} (${action})`,
-        identity_id: currentIdentityId,
-        identity_type: currentIdentityType
-      }))
+      const creatives = cta.map(action => {
+        const creative = {
+          video_id: videoId,
+          ad_text: adText,
+          call_to_action: action,
+          landing_page_url: landingUrl,
+          ad_name: `${adName.trim()} (${action})`,
+          identity_type: currentIdentityType,
+        }
+        // Only include identity_id when it's a real value — omitting it for CUSTOMIZED_USER
+        if (currentIdentityId) creative.identity_id = currentIdentityId
+        return creative
+      })
       
       const createPayload = {
         advertiserId: selectedAdvertiser,
         adgroupId: selectedAdGroup,
-        identityId: currentIdentityId,
+        // Only pass top-level identityId when it's a real value (used by backend auto-resolve fallback)
+        ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
         identityType: currentIdentityType,
         adName: adName.trim(),
         creatives
