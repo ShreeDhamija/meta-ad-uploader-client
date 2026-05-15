@@ -11,29 +11,29 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { cn } from "@/lib/utils"
 import {
   Check,
+  ChevronDown,
   ChevronsUpDown,
   CloudUpload,
+  MousePointer2 as CTAIcon,
   FileText,
+  Globe,
   Link as LinkIcon,
   Loader,
   RefreshCcw,
+  Type as TemplateIcon,
   Trash2,
   Upload,
   Users,
   Video,
   X,
-  ChevronDown,
-  Globe,
-  Zap,
-  Type as TemplateIcon,
-  MousePointer2 as CTAIcon
+  Zap
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
 
 import { Checkbox } from "@/components/ui/checkbox"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import axios from "axios"
 
@@ -116,6 +116,29 @@ export default function TikTokAdCreationForm({
   const renderDiffMark = (fieldKeys) => null; // Placeholder for parity with Meta form
 
   const { tiktokFetch, tiktokUser, isLoading: authLoading, refreshTikTokUser } = useTikTokAuth()
+
+  // Smart Ad Naming Logic
+  useEffect(() => {
+    // If user has manually edited the name, don't overwrite it
+    if (isAdNameUserModified) return;
+    
+    // Only proceed if we have a formula set in preferences
+    if (!advertiserPrefs?.adNameFormula || advertiserPrefs.adNameFormula === "manual") return;
+    
+    const campaign = (campaigns || []).find(c => c.campaign_id === selectedCampaign);
+    const adGroup = (adGroups || []).filter(g => g.campaign_id === selectedCampaign).find(g => g.adgroup_id === selectedAdGroup);
+    
+    if (!campaign || !adGroup) return;
+
+    let newName = advertiserPrefs.adNameFormula;
+    newName = newName.replace("{{campaign_name}}", campaign.campaign_name || "");
+    newName = newName.replace("{{adgroup_name}}", adGroup.adgroup_name || "");
+    newName = newName.replace("{{date}}", new Date().toLocaleDateString());
+    
+    if (newName !== adName) {
+      setAdName(newName);
+    }
+  }, [advertiserPrefs, selectedCampaign, selectedAdGroup, campaigns, adGroups, isAdNameUserModified]);
 
   useEffect(() => {
     console.group('🎯 [TikTokAdCreationForm] Mounted')
@@ -1751,6 +1774,27 @@ export default function TikTokAdCreationForm({
 
     </form>
   )
+}
+
+/**
+ * Merges UTM parameters into a URL, handling existing query params.
+ * @param {string} url - Base URL
+ * @param {Array} pairs - Array of {key, value} objects
+ */
+function applyUtmsToUrl(url, pairs = []) {
+  if (!url || pairs.length === 0) return url;
+  try {
+    const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+    pairs.forEach(({ key, value }) => {
+      if (key && value) {
+        urlObj.searchParams.set(key, value);
+      }
+    });
+    return urlObj.toString();
+  } catch (e) {
+    console.error("Invalid URL for UTM application:", url);
+    return url;
+  }
 }
 
 function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel, isImporting }) {

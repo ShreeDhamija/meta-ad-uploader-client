@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty, CommandGroup } from "@/components/ui/command"
 import { Check, ChevronsUpDown } from "lucide-react"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 
 const CTA_OPTIONS = [
     { label: "Shop Now", value: "SHOP_NOW" },
@@ -108,6 +109,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             </div>
         );
     }
+
+    const currentSettings = settings || {};
 
     const currentAdvertiser = advertisers.find(a => (a.advertiser_id || a.id) === selectedAdvertiser);
 
