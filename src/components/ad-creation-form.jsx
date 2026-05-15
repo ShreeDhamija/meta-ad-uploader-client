@@ -9,6 +9,7 @@ import { saveCopyTemplate } from "@/lib/saveCopyTemplate"
 import { deleteCopyTemplate, deleteCopyTemplates } from "@/lib/deleteCopyTemplate"
 import { saveSettings } from "@/lib/saveSettings"
 import useGlobalSettings from "@/lib/useGlobalSettings"
+import { resizeOversizedImages } from "@/lib/resizeOversizedImage"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -3569,7 +3570,8 @@ export default function AdCreationForm({
     };
 
 
-    const {
+    // eslint-disable-next-line prefer-const -- `files` is reassigned below after the resize step
+    let {
       // Form content
       headlines,
       descriptions,
@@ -3655,6 +3657,22 @@ export default function AdCreationForm({
       return
     }
 
+
+    // Resize any local image whose width or height exceeds Meta's 9000px limit
+    // down to half-dimension. Runs sequentially off the main thread (pica uses
+    // its own internal worker pool) to keep peak memory low and the UI responsive.
+    // Note: Drive/Dropbox/Frame.io files are fetched server-side and never enter
+    // the browser, so they require a server-side resize (e.g. sharp) before being
+    // forwarded to the Meta API.
+    if (files.some(f => f && typeof f.type === 'string' && f.type.startsWith('image/'))) {
+      try {
+        files = await resizeOversizedImages(files, null, signal);
+      } catch (err) {
+        if (err?.name === 'AbortError') throw err;
+        console.error('Image resize failed, falling back to originals:', err);
+      }
+      throwIfCancelled();
+    }
 
 
     let aspectRatioMap = {};
