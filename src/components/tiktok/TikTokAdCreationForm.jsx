@@ -23,6 +23,7 @@ import {
   X
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
 
@@ -103,6 +104,14 @@ export default function TikTokAdCreationForm({
   const renderDiffMark = (fieldKeys) => null; // Placeholder for parity with Meta form
 
   const { tiktokFetch, tiktokUser, isLoading: authLoading, refreshTikTokUser } = useTikTokAuth()
+
+  // Video upload hook — provides XHR-backed progress for local file uploads
+  const {
+    uploadVideo: uploadVideoToTikTok,
+    uploadVideoFromUrl,
+    uploading: videoUploading,
+    uploadProgress: videoUploadProgress,
+  } = useTikTokVideoUpload(selectedAdvertiser)
 
   useEffect(() => {
     console.group('🎯 [TikTokAdCreationForm] Mounted')
@@ -630,60 +639,61 @@ export default function TikTokAdCreationForm({
       let videoId = null;
 
       if (tiktokLibraryFiles.length > 0) {
-        // Skip upload for items already in TikTok Library
+        // ── LIBRARY RE-USE: skip upload for videos already in TikTok library ──
         videoId = tiktokLibraryFiles[0].videoId;
         setIsUploading(false);
         setUploadProgress(100);
-      } else {
+      } else if (videoFile) {
+        // ── LOCAL FILE: use the hook so we get XHR upload-progress ──
+        console.group('📡 [TikTok Form] Uploading local video via hook')
+        console.log('  File name  :', videoFile.name)
+        console.log('  File size  :', (videoFile.size / 1024 / 1024).toFixed(2), 'MB')
+        console.groupEnd()
+
+        // The hook manages its own uploading/uploadProgress state;
+        // those states drive the progress bar below via videoUploading/videoUploadProgress.
         toast.info('Uploading video...')
+        const uploadResult = await uploadVideoToTikTok(videoFile)
+        if (!uploadResult?.videoId) {
+          throw new Error('Video upload failed — no video ID returned')
+        }
+        videoId = uploadResult.videoId;
+        setIsUploading(false);
+        setUploadProgress(100);
+      } else {
+        // ── CLOUD SOURCE (Drive / Dropbox): send JSON reference via tiktokFetch ──
         const formData = new FormData()
-        
-        if (videoFile) {
-          formData.append('videoFile', videoFile)
-        } else if (driveFiles.length > 0) {
+        if (driveFiles.length > 0) {
           formData.append('driveFile', JSON.stringify(driveFiles[0]))
         } else if (dropboxFiles.length > 0) {
           formData.append('dropboxFile', JSON.stringify(dropboxFiles[0]))
         }
-        
+
         const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
         const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
-        console.group(`📡 [TikTok Form] Uploading video`)
-        console.log('  URL                :', uploadUrl)
-        if (videoFile) {
-          console.log('  File name          :', videoFile.name)
-          console.log('  File size          :', (videoFile.size / 1024 / 1024).toFixed(2), 'MB')
-        } else {
-          const sourceName = driveFiles.length > 0 ? 'Google Drive' : 'Dropbox';
-          console.log('  Source             :', sourceName)
-          console.log('  File name          :', driveFiles[0]?.name || dropboxFiles[0]?.name)
-        }
-        console.log('  x-tiktok-user-id   :', localStorage.getItem('tiktok_uid') || 'MISSING')
-        console.log('  x-tiktok-token     :', localStorage.getItem('tiktok_token') ? '✅ present' : '❌ MISSING')
+        const sourceName = driveFiles.length > 0 ? 'Google Drive' : 'Dropbox'
+        console.group('📡 [TikTok Form] Uploading cloud video')
+        console.log('  Source     :', sourceName)
+        console.log('  File name  :', driveFiles[0]?.name || dropboxFiles[0]?.name)
         console.groupEnd()
-        
-        const uploadRes = await tiktokFetch(uploadUrl, {
-          method: 'POST',
-          body: formData,
-        })
 
+        toast.info(`Downloading from ${sourceName} and uploading...`)
+        const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData })
         const uploadRawText = await uploadRes.text()
         console.group('📬 [TikTok Form] upload-video response')
-        console.log('  HTTP Status        :', uploadRes.status, uploadRes.statusText)
-        console.log('  Raw Body           :', uploadRawText)
+        console.log('  HTTP Status :', uploadRes.status, uploadRes.statusText)
+        console.log('  Raw Body    :', uploadRawText)
         console.groupEnd()
 
         let uploadData = {}
-        try {
-          uploadData = JSON.parse(uploadRawText)
-        } catch (parseErr) {
+        try { uploadData = JSON.parse(uploadRawText) } catch (parseErr) {
           throw new Error(`Server returned non-JSON response (${uploadRes.status}): ${uploadRawText.slice(0, 200)}`)
         }
 
         if (!uploadRes.ok || !uploadData.success) {
           throw new Error(uploadData.error || uploadData.message || `Upload failed with status ${uploadRes.status}`)
         }
-        
+
         videoId = uploadData.videoId;
         setUploadProgress(100)
         setIsUploading(false)
@@ -1486,16 +1496,17 @@ export default function TikTokAdCreationForm({
                 );
               })()}
 
-              {isUploading && (
+              {/* Progress bar — driven by XHR progress (local files) or fallback state (cloud) */}
+              {(isUploading || videoUploading) && (
                 <div className="mt-2">
                   <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
                     <div
                       className="h-full bg-emerald-500 transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
+                      style={{ width: `${videoUploading ? videoUploadProgress : uploadProgress}%` }}
                     />
                   </div>
                   <p className="text-[10px] font-medium text-emerald-600 mt-1">
-                    Uploading {uploadProgress}%
+                    Uploading {videoUploading ? videoUploadProgress : uploadProgress}%
                   </p>
                 </div>
               )}
@@ -1520,7 +1531,7 @@ export default function TikTokAdCreationForm({
           {isSubmitting ? (
             <div className="flex items-center gap-2">
               <Loader className="w-5 h-5 animate-spin" />
-              {isUploading ? 'Uploading Media...' : 'Creating TikTok Ad...'}
+              {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
             </div>
           ) : (
             'Create TikTok Ad'
