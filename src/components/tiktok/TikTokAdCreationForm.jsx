@@ -17,6 +17,7 @@ import {
   MousePointer2 as CTAIcon,
   FileText,
   Globe,
+  ImagePlus,
   Link as LinkIcon,
   Loader,
   RefreshCcw,
@@ -152,7 +153,11 @@ export default function TikTokAdCreationForm({
   const [loadingAdGroups, setLoadingAdGroups] = useState(false)
   const [identities, setIdentities] = useState([])
   const [loadingIdentities, setLoadingIdentities] = useState(false)
-  const [tiktokLibraryFiles, setTiktokLibraryFiles] = useState([]) 
+  const [tiktokLibraryFiles, setTiktokLibraryFiles] = useState([])
+  const [uploadedImageId, setUploadedImageId] = useState(null)
+  const [uploadedImageUrl, setUploadedImageUrl] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const imageUploadRef = useRef()
 
   const [openAdvertiser, setOpenAdvertiser] = useState(false)
   const [openCampaign, setOpenCampaign] = useState(false)
@@ -669,6 +674,39 @@ export default function TikTokAdCreationForm({
     }
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedAdvertiser) return;
+    setUploadingImage(true);
+    setUploadedImageId(null);
+    setUploadedImageUrl(null);
+    try {
+      const uid = localStorage.getItem('tiktok_uid');
+      const token = localStorage.getItem('tiktok_token');
+      const formData = new FormData();
+      formData.append('image', file);
+      const res = await fetch(`${API_BASE_URL}/api/tiktok/upload-image?advertiserId=${selectedAdvertiser}`, {
+        method: 'POST',
+        headers: {
+          ...(uid && { 'x-tiktok-user-id': uid }),
+          ...(token && { 'x-tiktok-token': token }),
+        },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Image upload failed');
+      setUploadedImageId(data.image_id);
+      setUploadedImageUrl(data.image_url);
+      toast.success(`Image uploaded! ID: ${data.image_id}`);
+    } catch (err) {
+      toast.error(`Image upload failed: ${err.message}`);
+      console.error('[Image Upload]', err);
+    } finally {
+      setUploadingImage(false);
+      if (imageUploadRef.current) imageUploadRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     console.group('🚀 [TikTok Form] handleSubmit triggered')
@@ -1094,6 +1132,59 @@ export default function TikTokAdCreationForm({
                 </Command>
               </PopoverContent>
             </Popover>
+          </div>
+
+
+          {/* Image Upload — Test identity image */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2 text-xs font-bold text-gray-600 uppercase tracking-widest">
+                <ImagePlus className="w-4 h-4" />
+                Upload Image to Creative Library
+              </Label>
+              {uploadedImageId && (
+                <button
+                  type="button"
+                  onClick={() => { setUploadedImageId(null); setUploadedImageUrl(null); }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {uploadedImageId ? (
+              <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-2xl">
+                {uploadedImageUrl && (
+                  <img src={uploadedImageUrl} alt="Uploaded" className="w-10 h-10 rounded-xl object-cover border border-green-300" />
+                )}
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Image Uploaded ✓</span>
+                  <span className="text-xs font-mono text-gray-700 truncate">{uploadedImageId}</span>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => imageUploadRef.current?.click()}
+                disabled={!selectedAdvertiser || uploadingImage}
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 rounded-2xl py-3 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-all duration-150",
+                  (!selectedAdvertiser || uploadingImage) && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                {uploadingImage
+                  ? <><Loader className="w-4 h-4 animate-spin" /> Uploading...</>
+                  : <><Upload className="w-4 h-4" /> Choose image (.png, .jpg)</>}
+              </button>
+            )}
+            <input
+              ref={imageUploadRef}
+              type="file"
+              accept="image/png,image/jpeg,image/jpg,image/gif"
+              className="hidden"
+              onChange={handleImageUpload}
+            />
           </div>
 
         </CardContent>
