@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload"
 import { readCache, writeCache } from "@/lib/dataCache"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { cn } from "@/lib/utils"
@@ -23,7 +24,6 @@ import {
   X
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
 
@@ -105,14 +105,6 @@ export default function TikTokAdCreationForm({
 
   const { tiktokFetch, tiktokUser, isLoading: authLoading, refreshTikTokUser } = useTikTokAuth()
 
-  // Video upload hook — provides XHR-backed progress for local file uploads
-  const {
-    uploadVideo: uploadVideoToTikTok,
-    uploadVideoFromUrl,
-    uploading: videoUploading,
-    uploadProgress: videoUploadProgress,
-  } = useTikTokVideoUpload(selectedAdvertiser)
-
   useEffect(() => {
     console.group('🎯 [TikTokAdCreationForm] Mounted')
     console.log('  advertiserId prop  :', advertiserId || 'NONE')
@@ -126,6 +118,15 @@ export default function TikTokAdCreationForm({
   }, [])
 
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
+
+  // Video upload hook — must be called AFTER selectedAdvertiser is declared to avoid TDZ.
+  // Provides XHR-backed progress tracking for local file uploads.
+  const {
+    uploadVideo: uploadVideoToTikTok,
+    uploadVideoFromUrl,
+    uploading: videoUploading,
+    uploadProgress: videoUploadProgress,
+  } = useTikTokVideoUpload(selectedAdvertiser)
   const [campaigns, setCampaigns] = useState([])
   const [adGroups, setAdGroups] = useState([])
   const [selectedCampaign, setSelectedCampaign] = useState('')
