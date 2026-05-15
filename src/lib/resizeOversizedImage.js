@@ -1,6 +1,6 @@
 import pica from 'pica';
 
-const MAX_DIMENSION = 9000;
+const MAX_DIMENSION = 3999;
 const JPEG_QUALITY = 0.92;
 
 let picaInstance;
