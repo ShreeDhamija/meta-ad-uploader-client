@@ -1,35 +1,35 @@
 "use client"
 
-import { useAuth } from "@/lib/AuthContext"
-import { Navigate, useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { LogOutIcon } from "lucide-react"
-import { Toaster } from "sonner"
-import { useState, useEffect } from "react"
-import { cn } from "@/lib/utils"
-import useGlobalSettings from "@/lib/useGlobalSettings"
+import DesktopIcon from '@/assets/Desktop.webp'
+import Card from '@/assets/icons/card.svg?react'
+import Folder from '@/assets/icons/cog-three.svg?react'
+import TikTokIcon from "@/assets/icons/tiktok.svg?react"
+import UsersIcon from "@/assets/icons/users.svg?react"
+import RocketBtn from '@/assets/rocket2.webp'
+import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
 import AdAccountSettings from "@/components/settings/AdAccountSettings"
 import BillingSettings from "@/components/settings/Billing"
-import useSubscription from "@/lib/useSubscriptionSettings"
-import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
-import AdAccountSelectionPopup from "@/components/AdAccountSelectionPopup"
-import RocketBtn from '@/assets/rocket2.webp';
-import Folder from '@/assets/icons/cog-three.svg?react';
-import Card from '@/assets/icons/card.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
 import TikTokAdvertiserSettings from "@/components/settings/tiktok/TikTokAdvertiserSettings"
+import SettingsOnboardingPopup from "@/components/SettingsOnboardingPopup"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/lib/AuthContext"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
-import { useIntercom } from "@/lib/useIntercom";
-import UsersIcon from "@/assets/icons/users.svg?react";
-import TikTokIcon from "@/assets/icons/tiktok.svg?react";
-import DesktopIcon from '@/assets/Desktop.webp';
+import useGlobalSettings from "@/lib/useGlobalSettings"
+import { useIntercom } from "@/lib/useIntercom"
+import useSubscription from "@/lib/useSubscriptionSettings"
+import { cn } from "@/lib/utils"
+import { LogOutIcon } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Navigate, useNavigate } from "react-router-dom"
+import { Toaster } from "sonner"
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const SETTINGS_TABS = ["adaccount", "tiktok", "billing", "team"]
 
 export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
-    const { tiktokAdvertisers, isTikTokLoggedIn } = useTikTokAuth()
+    const { tiktokAdvertisers, isTikTokLoggedIn, tiktokUser, isLoading: tiktokLoading } = useTikTokAuth()
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
     const navigate = useNavigate()
@@ -120,8 +120,8 @@ export default function Settings() {
         }
     }, [subscriptionData.planType, selectedAdAccountIds])
 
-    if (authLoading) return null
-    if (!isLoggedIn) return <Navigate to="/login" />
+    if (authLoading || tiktokLoading) return null
+    if (!isLoggedIn && !isTikTokLoggedIn) return <Navigate to="/login" />
 
     return (
         <>
@@ -197,11 +197,13 @@ export default function Settings() {
                             <div className="w-full flex items-center bg-neutral-50 border border-neutral-200 shadow-xs rounded-[20px] pl-3 pr-3 py-2 max-lg:justify-center max-lg:p-2">
                                 <div className="flex items-center gap-2 flex-grow max-lg:hidden">
                                     <img
-                                        src={profilePicUrl || "/placeholder.svg"}
+                                        src={profilePicUrl || tiktokUser?.avatar_url || tiktokUser?.profile_image_url || "/placeholder.svg"}
                                         alt="Profile"
                                         className="w-8 h-8 rounded-full object-cover"
                                     />
-                                    <span className="text-sm font-medium text-neutral-800 truncate max-w-[120px]">{userName}</span>
+                                    <span className="text-sm font-medium text-neutral-800 truncate max-w-[120px]">
+                                        {userName || tiktokUser?.display_name || tiktokUser?.name || "User"}
+                                    </span>
                                 </div>
                                 <div className="flex items-center">
                                     <div className="h-6 w-px bg-neutral-300 max-lg:hidden" />

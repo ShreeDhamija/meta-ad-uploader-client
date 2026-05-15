@@ -12,6 +12,7 @@ import AnalyticsHomePopup from "../components/AnalyticsHomePopup"
 import PowerupPopup from "../components/PowerupPopup"
 
 import { useAuth } from "../lib/AuthContext"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { useAppData } from "@/lib/AppContext"
 import useGlobalSettings from "@/lib/useGlobalSettings"
 import useAdAccountSettings from "@/lib/useAdAccountSettings"
@@ -130,6 +131,7 @@ const snapshotValuesEqual = (left, right) => JSON.stringify(left ?? null) === JS
 
 export default function Home() {
     const { isLoggedIn, userName, handleLogout, authLoading, userCreatedAt } = useAuth()
+    const { isTikTokLoggedIn, isLoading: tiktokAuthLoading } = useTikTokAuth()
     const { showMessenger, hideMessenger } = useIntercom();
     const navigate = useNavigate()
     const [isLoading, setIsLoading] = useState(false)
@@ -258,7 +260,7 @@ export default function Home() {
     const [showMobileBanner, setShowMobileBanner] = useState(true);
     const mediaPreviewLaunchTimeoutRef = useRef(null);
 
-    if (authLoading) return null
+    if (authLoading || tiktokAuthLoading) return null
 
     useEffect(() => {
         return () => {
@@ -312,10 +314,14 @@ export default function Home() {
 
 
     useEffect(() => {
-        if (!authLoading && !isLoggedIn) {
-            navigate("/login");
+        if (!authLoading && !tiktokAuthLoading && !isLoggedIn) {
+            if (isTikTokLoggedIn) {
+                navigate("/tiktok-ads");
+            } else {
+                navigate("/login");
+            }
         }
-    }, [authLoading, isLoggedIn]);
+    }, [authLoading, tiktokAuthLoading, isLoggedIn, isTikTokLoggedIn]);
 
 
 
