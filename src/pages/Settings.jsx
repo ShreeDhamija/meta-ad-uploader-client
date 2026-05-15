@@ -17,15 +17,19 @@ import RocketBtn from '@/assets/rocket2.webp';
 import Folder from '@/assets/icons/cog-three.svg?react';
 import Card from '@/assets/icons/card.svg?react';
 import TeamSettings from "@/components/settings/TeamSettings"
+import TikTokAdvertiserSettings from "@/components/settings/tiktok/TikTokAdvertiserSettings"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { useIntercom } from "@/lib/useIntercom";
 import UsersIcon from "@/assets/icons/users.svg?react";
+import TikTokIcon from "@/assets/icons/tiktok.svg?react";
 import DesktopIcon from '@/assets/Desktop.webp';
 import "../settings.css"
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
-const SETTINGS_TABS = ["adaccount", "billing", "team"]
+const SETTINGS_TABS = ["adaccount", "tiktok", "billing", "team"]
 
 export default function Settings() {
     const { isLoggedIn, userName, profilePicUrl, handleLogout, authLoading } = useAuth()
+    const { tiktokAdvertisers, isTikTokLoggedIn } = useTikTokAuth()
     const [showSettingsPopup, setShowSettingsPopup] = useState(false)
     const [showAdAccountPopup, setShowAdAccountPopup] = useState(false)
     const navigate = useNavigate()
@@ -42,6 +46,7 @@ export default function Settings() {
 
     const tabIconMap = {
         adaccount: Folder,
+        tiktok: TikTokIcon,
         billing: Card,
         team: UsersIcon,
     }
@@ -50,18 +55,21 @@ export default function Settings() {
 
     const tabDescriptionMap = {
         adaccount: "Configure default settings and values to pre-fill into ads for all your ad accounts.",
+        tiktok: "Configure default settings, UTMs and ad copy for your TikTok advertiser accounts.",
         billing: "Manage your subscription, billing methods, and view invoices.",
         team: "Manage your team, invite members, or join an existing team.",
     }
 
     const tabTitleMap = {
         adaccount: "Ad Account Settings",
+        tiktok: "TikTok Preferences",
         billing: "Billing and Subscription",
         team: "Team Management",
     };
 
     const tabLabelMap = {
         adaccount: "Preferences",
+        tiktok: "TikTok",
         billing: "Billing",
         team: "Team",
     }
@@ -224,6 +232,11 @@ export default function Settings() {
                                             preselectedAdAccount={preselectedAdAccount}
                                             onTriggerAdAccountPopup={() => setShowAdAccountPopup(true)}
                                             subscriptionData={subscriptionData}
+                                        />
+                                    )}
+                                    {activeTab === "tiktok" && (
+                                        <TikTokAdvertiserSettings 
+                                            advertisers={tiktokAdvertisers} 
                                         />
                                     )}
                                     {activeTab === "billing" && <BillingSettings />}

@@ -7,6 +7,7 @@ import { Loader2, Video } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
+import useTikTokAdvertiserSettings from '@/lib/useTikTokAdvertiserSettings'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -25,6 +26,9 @@ export default function TikTokAds() {
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
   const [selectedIdentity, setSelectedIdentity] = useState('')
+  
+  // Load preferences for selected advertiser
+  const { settings: advertiserPrefs, loading: prefsLoading } = useTikTokAdvertiserSettings(selectedAdvertiser)
 
   // Handle OAuth callback
   useEffect(() => {
@@ -50,6 +54,35 @@ export default function TikTokAds() {
       setSelectedAdvertiser(firstId)
     }
   }, [tiktokAdvertisers, selectedAdvertiser])
+
+  // Sync state with preferences when they load
+  useEffect(() => {
+    if (advertiserPrefs) {
+      // 1. Default Identity (only if not already set)
+      if (!selectedIdentity && advertiserPrefs.defaultIdentityId) {
+        setSelectedIdentity(advertiserPrefs.defaultIdentityId);
+      }
+      
+      // 2. Default CTAs
+      if (cta.length === 1 && cta[0] === 'SHOP_NOW' && advertiserPrefs.defaultCTAs?.length > 0) {
+         setCta(advertiserPrefs.defaultCTAs);
+      }
+
+      // 3. Default Landing URL
+      if (!landingUrl && advertiserPrefs.links?.length > 0) {
+        const defaultLink = advertiserPrefs.links.find(l => l.isDefault) || advertiserPrefs.links[0];
+        setLandingUrl(defaultLink.url);
+      }
+
+      // 4. Default Ad Text (from default template)
+      if (!adText && advertiserPrefs.copyTemplates && advertiserPrefs.defaultTemplateName) {
+        const template = advertiserPrefs.copyTemplates[advertiserPrefs.defaultTemplateName];
+        if (template && template.texts?.length > 0) {
+          setAdText(template.texts[0]);
+        }
+      }
+    }
+  }, [advertiserPrefs, selectedAdvertiser]);
 
   if (authLoading) {
     return (
@@ -78,6 +111,7 @@ export default function TikTokAds() {
               advertiserId={selectedAdvertiser} 
               advertisers={tiktokAdvertisers} 
               onAdvertiserChange={setSelectedAdvertiser}
+              advertiserPrefs={advertiserPrefs}
               // Lifted State
               adName={adName} setAdName={setAdName}
               adText={adText} setAdText={setAdText}

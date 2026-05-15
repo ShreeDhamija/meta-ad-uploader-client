@@ -21,25 +21,28 @@ import {
   Upload,
   Users,
   Video,
-  X
+  X,
+  ChevronDown,
+  Globe,
+  Zap,
+  Type as TemplateIcon,
+  MousePointer2 as CTAIcon
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
 
 import { Checkbox } from "@/components/ui/checkbox"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import axios from "axios"
 
 import DesktopIcon from '@/assets/Desktop.webp'
 import DropboxIcon from '@/assets/Dropbox.png'
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
-import CTAIcon from '@/assets/icons/cta.svg?react'
 import CampaignIcon from '@/assets/icons/folder.svg?react'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
 import PlusIcon from '@/assets/icons/plus.svg?react'
-import TemplateIcon from '@/assets/icons/template.svg?react'
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
@@ -95,11 +98,20 @@ export default function TikTokAdCreationForm({
   videoPreview, setVideoPreview,
   driveFiles, setDriveFiles,
   dropboxFiles, setDropboxFiles,
-  selectedIdentity, setSelectedIdentity
+  selectedIdentity, setSelectedIdentity,
+  advertiserPrefs
 }) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+
+  // URL Modes
+  const [urlMode, setUrlMode] = useState('WEBSITE') // WEBSITE or INSTANT_PAGE
+  const [instantPages, setInstantPages] = useState([])
+  const [loadingPages, setLoadingPages] = useState(false)
+  const [openUrlPicker, setOpenUrlPicker] = useState(false)
+  const [openTemplatePicker, setOpenTemplatePicker] = useState(false)
+  const [isAdNameUserModified, setIsAdNameUserModified] = useState(false)
 
   const renderDiffMark = (fieldKeys) => null; // Placeholder for parity with Meta form
 
@@ -131,7 +143,6 @@ export default function TikTokAdCreationForm({
   const [adGroups, setAdGroups] = useState([])
   const [selectedCampaign, setSelectedCampaign] = useState('')
   const [selectedAdGroup, setSelectedAdGroup] = useState('')
-  // Lifted: adName, adText, cta, landingUrl, videoFile, driveFiles, dropboxFiles, videoPreview, selectedIdentity
   const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox'])
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
@@ -141,7 +152,7 @@ export default function TikTokAdCreationForm({
   const [loadingAdGroups, setLoadingAdGroups] = useState(false)
   const [identities, setIdentities] = useState([])
   const [loadingIdentities, setLoadingIdentities] = useState(false)
-  const [tiktokLibraryFiles, setTiktokLibraryFiles] = useState([]) // Initialize to empty array
+  const [tiktokLibraryFiles, setTiktokLibraryFiles] = useState([]) 
 
   const [openAdvertiser, setOpenAdvertiser] = useState(false)
   const [openCampaign, setOpenCampaign] = useState(false)
@@ -168,6 +179,47 @@ export default function TikTokAdCreationForm({
 
 
   const fileRef = useRef()
+
+  // Auto-resolve Ad Name based on Formula
+  useEffect(() => {
+      if (!advertiserPrefs || isAdNameUserModified) return;
+      
+      const formula = advertiserPrefs.adNameFormula?.rawInput;
+      if (!formula || formula.length === 0) return;
+
+      const campaign = campaigns.find(c => c.campaign_id === selectedCampaign);
+      const adGroup = adGroups.find(g => g.adgroup_id === selectedAdGroup);
+      
+      let generated = formula.map(part => {
+          if (part.type === 'text') return part.value;
+          if (part.id === 'campaign.name') return campaign?.campaign_name || '[Campaign Name]';
+          if (part.id === 'ad_group.name') return adGroup?.adgroup_name || '[Ad Group Name]';
+          if (part.id === 'date') return new Date().toLocaleDateString();
+          return '';
+      }).join('');
+
+      if (generated && generated !== adName) {
+          setAdName(generated);
+      }
+  }, [advertiserPrefs, selectedCampaign, selectedAdGroup, campaigns, adGroups, isAdNameUserModified]);
+
+  // Fetch Instant Pages
+  useEffect(() => {
+      if (!selectedAdvertiser) return;
+      setLoadingPages(true);
+      const uid = localStorage.getItem('tiktok_uid');
+      const token = localStorage.getItem('tiktok_token');
+      fetch(`${API_BASE_URL}/api/tiktok/fetch-pages?advertiserId=${selectedAdvertiser}`, {
+          headers: {
+              ...(uid && { 'x-tiktok-user-id': uid }),
+              ...(token && { 'x-tiktok-token': token }),
+          }
+      })
+      .then(r => r.json())
+      .then(d => setInstantPages(d.pages || []))
+      .catch(e => console.error('Failed to fetch instant pages:', e))
+      .finally(() => setLoadingPages(false));
+  }, [selectedAdvertiser]);
 
   const toggleCta = (value) => {
     setCta(prev =>
@@ -261,11 +313,8 @@ export default function TikTokAdCreationForm({
             accessToken: token,
             isDrive: true
           }));
-          // For TikTok, we only support one video at a time for now in the simple form
-          // But we can store them in driveFiles
           setDriveFiles(selected);
           if (selected.length > 0) {
-            // Pick the first one as the active video
             const file = selected[0];
             setVideoFile(null); // Clear local file
             setDropboxFiles([]); // Clear dropbox files
@@ -604,6 +653,22 @@ export default function TikTokAdCreationForm({
     setUploadProgress(0)
   }
 
+  const applyUtmsToUrl = (url, pairs = []) => {
+    if (!url || !pairs || pairs.length === 0) return url;
+    try {
+      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
+      pairs.forEach(({ key, value }) => {
+        if (key && value && !urlObj.searchParams.has(key)) {
+          urlObj.searchParams.set(key, value);
+        }
+      });
+      return urlObj.toString();
+    } catch (e) {
+      console.error('Failed to apply UTMs:', e);
+      return url;
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     console.group('🚀 [TikTok Form] handleSubmit triggered')
@@ -708,13 +773,22 @@ export default function TikTokAdCreationForm({
 
       toast.info(`Creating ${cta.length} ad(s)...`)
       const creatives = cta.map(action => {
+        const finalUrl = urlMode === 'WEBSITE' 
+          ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
+          : landingUrl;
+
         const creative = {
           video_id: videoId,
           ad_text: adText,
           call_to_action: action,
-          landing_page_url: landingUrl,
           ad_name: `${adName.trim()} (${action})`,
           identity_type: currentIdentityType,
+          // Support for both Website and Instant Page
+          landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+          ...(urlMode === 'WEBSITE' 
+            ? { landing_page_url: finalUrl } 
+            : { page_id: landingUrl }
+          )
         }
         // Only include identity_id when it's a real value — omitting it for CUSTOMIZED_USER
         if (currentIdentityId) creative.identity_id = currentIdentityId
@@ -1256,17 +1330,56 @@ export default function TikTokAdCreationForm({
                 type="text"
                 placeholder="Enter your ad name"
                 value={adName}
-                onChange={e => setAdName(e.target.value)}
+                onChange={e => {
+                  setAdName(e.target.value);
+                  setIsAdNameUserModified(true);
+                }}
                 className={formInputChrome}
               />
             </div>
 
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("adText")}
-                <TemplateIcon className="w-4 h-4" />
-                Ad Copy / Caption
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  {renderDiffMark("adText")}
+                  <TemplateIcon className="w-4 h-4" />
+                  Ad Copy / Caption
+                </Label>
+                {advertiserPrefs?.copyTemplates && Object.keys(advertiserPrefs.copyTemplates).length > 0 && (
+                  <Popover open={openTemplatePicker} onOpenChange={setOpenTemplatePicker}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold text-blue-600 hover:text-blue-700 p-0">
+                        {openTemplatePicker ? "Close Picker" : "Use Template"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
+                      <Command>
+                        <CommandInput placeholder="Search templates..." className="h-8" />
+                        <CommandList>
+                          <CommandEmpty>No templates found.</CommandEmpty>
+                          <CommandGroup heading="Ad Text Templates">
+                            {Object.entries(advertiserPrefs.copyTemplates).map(([name, data]) => (
+                              <CommandItem 
+                                key={name} 
+                                onSelect={() => {
+                                  if (data.texts?.length > 0) setAdText(data.texts[0]);
+                                  setOpenTemplatePicker(false);
+                                }}
+                                className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold">{name}</span>
+                                  <span className="text-[10px] text-gray-500 line-clamp-1">{data.texts?.[0]}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
               <TextareaAutosize
                 value={adText}
                 onChange={e => setAdText(e.target.value)}
@@ -1337,18 +1450,102 @@ export default function TikTokAdCreationForm({
 
             {/* Landing URL */}
             <div className="space-y-2">
-              <Label className="flex items-center gap-1.5">
-                {renderDiffMark("landingUrl")}
-                <LinkIcon className="w-4 h-4" />
-                Landing Page URL
-              </Label>
-              <Input
-                type="url"
-                placeholder="https://myshop.com/product"
-                value={landingUrl}
-                onChange={e => setLandingUrl(e.target.value)}
-                className={formInputChrome}
-              />
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5">
+                  {renderDiffMark("landingUrl")}
+                  <LinkIcon className="w-4 h-4" />
+                  Landing Page URL
+                </Label>
+                <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
+                  <button 
+                    type="button"
+                    onClick={() => setUrlMode('WEBSITE')}
+                    className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
+                  >
+                    Website
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setUrlMode('INSTANT_PAGE')}
+                    className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
+                  >
+                    Instant Page
+                  </button>
+                </div>
+              </div>
+              
+              <div className="relative group">
+                <Input
+                  type="url"
+                  placeholder={urlMode === 'WEBSITE' ? "https://myshop.com/product" : "Select an Instant Page"}
+                  value={landingUrl}
+                  onChange={e => setLandingUrl(e.target.value)}
+                  className={cn(formInputChrome, "pr-10")}
+                />
+                <Popover open={openUrlPicker} onOpenChange={setOpenUrlPicker}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
+                    <Command>
+                      <CommandInput placeholder="Search links..." className="h-8" />
+                      <CommandList className="max-h-[300px]">
+                        <CommandEmpty>No results found.</CommandEmpty>
+                        {urlMode === 'WEBSITE' ? (
+                          <CommandGroup heading="Saved Links (Preferences)">
+                            {advertiserPrefs?.links?.map(l => (
+                              <CommandItem 
+                                key={l.url} 
+                                onSelect={() => { setLandingUrl(l.url); setOpenUrlPicker(false); }}
+                                className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                              >
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                  <Globe className="w-3 h-3 text-gray-400 shrink-0" />
+                                  <span className="text-xs truncate">{l.url}</span>
+                                  {l.isDefault && <span className="ml-auto text-[8px] font-bold bg-blue-50 text-blue-500 px-1 py-0.5 rounded">Default</span>}
+                                </div>
+                              </CommandItem>
+                            ))}
+                            {(!advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
+                              <div className="p-4 text-center">
+                                <p className="text-[10px] text-gray-400 font-medium italic">No saved links in settings</p>
+                              </div>
+                            )}
+                          </CommandGroup>
+                        ) : (
+                          <CommandGroup heading="Instant Pages (TikTok)">
+                            {loadingPages ? (
+                                <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
+                            ) : instantPages.length > 0 ? (
+                              instantPages.map(p => (
+                                <CommandItem 
+                                  key={p.page_id} 
+                                  onSelect={() => { setLandingUrl(p.page_id); setOpenUrlPicker(false); }}
+                                  className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2 overflow-hidden">
+                                    <Zap className="w-3 h-3 text-emerald-400 shrink-0" />
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="text-xs font-bold truncate">{p.page_name}</span>
+                                      <span className="text-[10px] text-gray-400 truncate">{p.page_id}</span>
+                                    </div>
+                                  </div>
+                                </CommandItem>
+                              ))
+                            ) : (
+                              <div className="p-4 text-center">
+                                <p className="text-[10px] text-gray-400 font-medium italic">No instant pages found</p>
+                              </div>
+                            )}
+                          </CommandGroup>
+                        )}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
 
