@@ -1,17 +1,18 @@
-import { useState, useEffect, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import TikTokIcon from "@/assets/icons/tiktok.svg?react"
 import { Button } from "@/components/ui/button"
-import { Loader2, Save, Users, Target, Layout, Box, HelpCircle } from "lucide-react"
-import { toast } from "sonner"
-import { saveTikTokSettings } from "@/lib/saveTikTokSettings"
-import useTikTokAdvertiserSettings from "@/lib/useTikTokAdvertiserSettings"
-import TikTokLinkParameters from "./TikTokLinkParameters"
-import TikTokCopyTemplates from "./TikTokCopyTemplates"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Label } from "@/components/ui/label"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
-import { Command, CommandInput, CommandList, CommandItem, CommandEmpty, CommandGroup } from "@/components/ui/command"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { saveTikTokSettings } from "@/lib/saveTikTokSettings"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import useTikTokAdvertiserSettings from "@/lib/useTikTokAdvertiserSettings"
+import { cn } from "@/lib/utils"
+import { Box, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Save, Target, Users } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
+import TikTokCopyTemplates from "./TikTokCopyTemplates"
+import TikTokLinkParameters from "./TikTokLinkParameters"
 
 const CTA_OPTIONS = [
     { label: "Shop Now", value: "SHOP_NOW" },
@@ -55,17 +56,28 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     }, [advertisers, selectedAdvertiser]);
 
     // Fetch identities when advertiser changes
-    useEffect(() => {
+    const fetchIdentities = useCallback(() => {
         if (!selectedAdvertiser) return;
         setLoadingIdentities(true);
         fetch(`${import.meta.env.VITE_API_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`, {
             headers: tiktokHeaders()
         })
         .then(r => r.json())
-        .then(d => setIdentities(d.identities || []))
+        .then(d => {
+            const list = d.identities || [];
+            // Add fallback for customized user if not present
+            if (!list.find(i => i.identity_id === 'CUSTOMIZED_USER')) {
+                list.push({ identity_id: 'CUSTOMIZED_USER', display_name: 'Customized User', identity_type: 'CUSTOMIZED_USER' });
+            }
+            setIdentities(list);
+        })
         .catch(e => console.error(e))
         .finally(() => setLoadingIdentities(false));
     }, [selectedAdvertiser, tiktokHeaders]);
+
+    useEffect(() => {
+        fetchIdentities();
+    }, [fetchIdentities]);
 
     const handleSave = async (updatedSettings = settings) => {
         if (!selectedAdvertiser) return;
@@ -183,58 +195,111 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="p-6 space-y-6">
-                            {/* Default Identity */}
-                            <div className="space-y-2">
-                                <Label className="text-xs font-bold text-gray-700">Default Identity (Spark Ads)</Label>
-                                <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full h-12 rounded-2xl border-gray-200 justify-between px-4">
-                                            {loadingIdentities ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                            ) : currentSettings.defaultIdentityId ? (
-                                                <div className="flex items-center gap-2">
-                                                    {(() => {
-                                                        const found = identities.find(i => i.identity_id === currentSettings.defaultIdentityId);
-                                                        return found ? (
-                                                            <>
-                                                                {found.avatar_url && <img src={found.avatar_url} className="w-5 h-5 rounded-full border border-gray-100" />}
-                                                                <span className="text-sm font-medium">{found.display_name || found.identity_id}</span>
-                                                            </>
-                                                        ) : <span className="text-sm">{currentSettings.defaultIdentityId}</span>
-                                                    })()}
-                                                </div>
-                                            ) : "No default selected"}
-                                            <ChevronsUpDown className="w-4 h-4 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100">
-                                        <Command>
-                                            <CommandInput placeholder="Search accounts..." />
-                                            <CommandList>
-                                                <CommandEmpty>No accounts found.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {identities.map(i => (
-                                                        <CommandItem 
-                                                            key={i.identity_id} 
+                            {/* Default Identity - Redesigned to match Meta PageSelectors */}
+                            <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <TikTokIcon
+                                            className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60"
+                                        />
+                                        <label className="text-sm text-zinc-950 block font-medium">
+                                            Default Linked TikTok Account
+                                        </label>
+                                    </div>
+                                    <RefreshCcw
+                                        className={cn(
+                                            "h-4 w-4 cursor-pointer transition-all duration-200",
+                                            loadingIdentities
+                                                ? "text-gray-300 animate-spin"
+                                                : "text-gray-500 hover:text-gray-700"
+                                        )}
+                                        onClick={fetchIdentities}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">TikTok Identity</label>
+                                    <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                disabled={loadingIdentities}
+                                                className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-6"
+                                            >
+                                                {loadingIdentities ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <Loader className="h-4 w-4 animate-spin" />
+                                                        <span className="text-sm font-medium text-gray-500">Loading identities...</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        {(() => {
+                                                            const found = identities.find(i => i.identity_id === currentSettings.defaultIdentityId);
+                                                            if (!found && currentSettings.defaultIdentityId) {
+                                                                return <span className="text-sm font-medium">{currentSettings.defaultIdentityId}</span>;
+                                                            }
+                                                            return (
+                                                                <>
+                                                                    {(found?.avatar_url || found?.identity_type === 'CUSTOMIZED_USER') && (
+                                                                        <img 
+                                                                            src={found?.avatar_url || "https://api.withblip.com/backup_page_image.png"} 
+                                                                            alt="Identity" 
+                                                                            className="w-6 h-6 rounded-full object-cover border border-gray-200" 
+                                                                        />
+                                                                    )}
+                                                                    <span className="text-sm font-medium text-gray-900">
+                                                                        {found?.display_name || "Select TikTok Identity"}
+                                                                    </span>
+                                                                </>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                )}
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent 
+                                            className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
+                                            align="start"
+                                            style={{
+                                                minWidth: "var(--radix-popover-trigger-width)",
+                                                width: "auto",
+                                            }}
+                                        >
+                                            <Command filter={() => 1} loop={false}>
+                                                <CommandInput 
+                                                    placeholder="Search identities..." 
+                                                    wrapperClassName="bg-gray-50 border-gray-100"
+                                                />
+                                                <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                                                    <CommandEmpty className="p-4 text-center text-xs text-gray-500">No identities found.</CommandEmpty>
+                                                    {identities.map((i) => (
+                                                        <CommandItem
+                                                            key={i.identity_id}
+                                                            value={i.identity_id}
                                                             onSelect={() => {
                                                                 setSettings({ ...currentSettings, defaultIdentityId: i.identity_id });
                                                                 setOpenIdentity(false);
                                                             }}
-                                                            className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                                            className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
                                                         >
-                                                            {i.avatar_url && <img src={i.avatar_url} className="w-6 h-6 rounded-full" />}
+                                                            <img 
+                                                                src={i.avatar_url || "https://api.withblip.com/backup_page_image.png"} 
+                                                                alt={i.display_name} 
+                                                                className="w-7 h-7 rounded-full object-cover" 
+                                                            />
                                                             <div className="flex flex-col">
-                                                                <span className="text-xs font-medium">{i.display_name}</span>
-                                                                <span className="text-[8px] uppercase tracking-widest text-gray-400">{i.identity_type}</span>
+                                                                <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
+                                                                <span className="text-[9px] uppercase tracking-widest text-gray-400 font-bold">{i.identity_type}</span>
                                                             </div>
-                                                            {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-3 h-3 text-black" />}
+                                                            {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black" />}
                                                         </CommandItem>
                                                     ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
                             </div>
 
                             {/* Default CTAs */}
