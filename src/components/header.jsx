@@ -1,17 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { LogOutIcon, Settings, Clock, Bell } from "lucide-react"
+import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
 import ZapIcon from "@/assets/icons/Zap.svg?react"
 import ChatIcon from "@/assets/icons/chat.svg?react"
-import AnalyticsIcon from "@/assets/icons/Analytics.svg?react"
 import RocketBtn from "@/assets/rocket2.webp"
-import { useAuth } from "@/lib/AuthContext"
-import { useTikTokAuth } from "@/lib/TikTokAuthContext"
-import { useLocation, useNavigate } from "react-router-dom"
-import useSubscription from "@/lib/useSubscriptionSettings"
-import useNotifications from "@/lib/useNotifications"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +13,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAuth } from "@/lib/AuthContext"
+import { useTikTokAuth } from "@/lib/TikTokAuthContext"
+import useNotifications from "@/lib/useNotifications"
+import useSubscription from "@/lib/useSubscriptionSettings"
+import { Bell, Clock, LogOutIcon, Settings } from "lucide-react"
+import { useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
@@ -197,7 +197,10 @@ export default function Header({ showMessenger, hideMessenger }) {
         )}
 
         <button
-          onClick={() => navigate("/settings")}
+          onClick={() => {
+            const tab = location.pathname.includes('tiktok') ? 'tiktok' : 'adaccount';
+            navigate(`/settings?tab=${tab}`);
+          }}
           title="Settings"
           className="hidden md:flex items-center gap-1.5 rounded-full transition bg-transparent hover:bg-gray-100 focus:bg-transparent active:bg-transparent !focus:outline-none !focus:ring-0 !active:ring-0 px-4 py-2"
           style={{
