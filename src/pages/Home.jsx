@@ -314,7 +314,7 @@ export default function Home() {
     useEffect(() => {
         if (subscriptionLoading) return;
         if (launchPausedDefaultAppliedRef.current) return;
-        if (subscriptionData.teamId === 'team_1777190523537_hmh1srk8j') {
+        if (subscriptionData.teamId === 'team_1779097238802_0p8jy2tcn') {
             setLaunchPaused(true);
         }
         launchPausedDefaultAppliedRef.current = true;
