@@ -49,9 +49,7 @@ export default function useSubscription() {
             if (now > cancelDate) return false;
         }
 
-        // if (subscriptionData.teamId && !subscriptionData.isTeamOwner) {
-        //     return true;
-        // }
+
 
 
         // Existing logic
@@ -69,6 +67,10 @@ export default function useSubscription() {
 
     const isPaidSubscriber = () => {
         return subscriptionData.subscriptionStatus === 'active';
+    };
+
+    const isPastDue = () => {
+        return subscriptionData.subscriptionStatus === 'past_due';
     };
 
 
@@ -104,6 +106,7 @@ export default function useSubscription() {
         isOnTrial,
         isTrialExpired,
         isPaidSubscriber,
+        isPastDue,
         extendTrial,      // add
         canExtendTrial
     };

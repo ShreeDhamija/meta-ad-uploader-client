@@ -23,7 +23,8 @@ export default function Analytics() {
         hasActiveAccess,
         loading: subscriptionLoading,
         canExtendTrial,
-        extendTrial
+        extendTrial,
+        isPastDue
     } = useSubscription()
 
     useEffect(() => {
@@ -31,13 +32,31 @@ export default function Analytics() {
 
         if (
             !subscriptionLoading &&
-            isTrialExpired() &&
+            (isTrialExpired() || isPastDue()) &&
             !userHasActiveAccess &&
             !hasDismissedTrialPopup
         ) {
             setShowTrialExpiredPopup(true)
         }
-    }, [subscriptionLoading, isTrialExpired, hasActiveAccess, hasDismissedTrialPopup])
+    }, [subscriptionLoading, isTrialExpired, isPastDue, hasActiveAccess, hasDismissedTrialPopup])
+
+    const handleUpdatePayment = async () => {
+        try {
+            const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
+            const res = await fetch(`${API_BASE_URL}/api/stripe/update-payment-method`, {
+                method: 'POST',
+                credentials: 'include',
+            })
+            if (!res.ok) {
+                toast.error("Couldn't open payment update page")
+                return
+            }
+            const { url } = await res.json()
+            window.location.href = url
+        } catch {
+            toast.error("Couldn't open payment update page")
+        }
+    }
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search)
@@ -131,6 +150,8 @@ export default function Analytics() {
                     onExtendTrial={handleExtendTrial}
                     isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
                     isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                    isPastDue={isPastDue()}
+                    onUpdatePayment={handleUpdatePayment}
                 />
             )}
 

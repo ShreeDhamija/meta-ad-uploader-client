@@ -129,6 +129,7 @@ export default function Home() {
         isTrialExpired,
         hasActiveAccess,
         isPaidSubscriber,
+        isPastDue,
         loading: subscriptionLoading,
         canExtendTrial,
         extendTrial
@@ -1190,6 +1191,23 @@ export default function Home() {
         }
     };
 
+    const handleUpdatePayment = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/stripe/update-payment-method`, {
+                method: 'POST',
+                credentials: 'include',
+            });
+            if (!res.ok) {
+                toast.error("Couldn't open payment update page");
+                return;
+            }
+            const { url } = await res.json();
+            window.location.href = url;
+        } catch {
+            toast.error("Couldn't open payment update page");
+        }
+    };
+
     const handleAdSetAdCountsUpdate = useCallback((countsByAdSet) => {
         if (!countsByAdSet || Object.keys(countsByAdSet).length === 0) {
             return;
@@ -1538,6 +1556,8 @@ export default function Home() {
                     onExtendTrial={handleExtendTrial}
                     isTeamOwner={!!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
                     isTeamMember={!subscriptionData.isTeamOwner && !!subscriptionData.teamId}
+                    isPastDue={isPastDue()}
+                    onUpdatePayment={handleUpdatePayment}
                 />
             )}
 
