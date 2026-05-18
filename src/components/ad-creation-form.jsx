@@ -886,28 +886,6 @@ export default function AdCreationForm({
   const [importedPostNameCascade, setImportedPostNameCascade] = useState(null);
 
   const getImportedPostKey = (post) => post?.ad_id || post?.post_id || post?.id || '';
-  const resolveImportedPostAdName = (post) => {
-    if (!post) return '';
-    const override = importedPostAdNames[getImportedPostKey(post)];
-    if (override !== undefined) return override;
-    if (importedPostNameCascade != null) return importedPostNameCascade;
-    return post.ad_name || '';
-  };
-  const handleImportedPostAdNameChange = (post, index, value) => {
-    if (index === 0) {
-      setImportedPostNameCascade(value);
-      setImportedPostAdNames((prev) => {
-        const key = getImportedPostKey(post);
-        if (prev[key] === undefined) return prev;
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    } else {
-      const key = getImportedPostKey(post);
-      setImportedPostAdNames((prev) => ({ ...prev, [key]: value }));
-    }
-  };
 
   useEffect(() => {
     if (importedPosts.length === 0) {
@@ -4927,12 +4905,16 @@ export default function AdCreationForm({
       if (importedPosts && importedPosts.length > 0) {
         // For each adset, create ads from each imported post
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+        const postFormula = jobData.formData.adNameFormulaV2;
         const jobImportedPostAdNames = jobData.formData.importedPostAdNames || {};
         const jobImportedPostNameCascade = jobData.formData.importedPostNameCascade;
-        const resolvePostAdNameForJob = (post) => {
+        const resolvePostAdNameForJob = (post, postIndex) => {
           const key = post?.ad_id || post?.post_id || post?.id || '';
           if (jobImportedPostAdNames[key] !== undefined) return jobImportedPostAdNames[key];
           if (jobImportedPostNameCascade != null) return jobImportedPostNameCascade;
+          if (postFormula?.rawInput) {
+            return computeAdNameFromFormula({ name: post.ad_name }, postIndex, link[0], postFormula, null);
+          }
           return post?.ad_name || '';
         };
 
@@ -4940,7 +4922,7 @@ export default function AdCreationForm({
           importedPosts.forEach((post, postIndex) => {
             const formData = new FormData();
             // Basic fields
-            formData.append("adName", resolvePostAdNameForJob(post));
+            formData.append("adName", resolvePostAdNameForJob(post, postIndex));
             formData.append("adAccountId", selectedAdAccount);
             formData.append("adSetId", adSetId);
             formData.append("pageId", pageId);
@@ -6722,6 +6704,48 @@ export default function AdCreationForm({
           <div className="space-y-10 overflow-hidden">
             {useExistingPosts ? (
               <div className="relative space-y-6">
+                <div id="adName" className="space-y-1">
+                  <Label htmlFor="adName" className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      {renderDiffMark("adNameFormulaV2")}
+                      <LabelIcon className="w-4 h-4" />
+                      Ad Name
+                    </div>
+                    {selectedAdAccount && !adAccountSettings?.adNameFormulaV2?.rawInput && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+                        className="text-xs gap-1 px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
+                      >
+                        <CogIcon className="w-3 h-3 text-white" />
+                        Set Up Ad Name Formula
+                      </Button>
+                    )}
+                  </Label>
+
+                  <ReorderAdNameParts
+                    formulaInput={adNameFormulaV2?.rawInput || ""}
+                    onFormulaChange={(newRawInput) => {
+                      setAdNameFormulaV2({ rawInput: newRawInput });
+                    }}
+                    variant="home"
+                    customVariables={adAccountSettings.customVariables || []}
+                  />
+                  <div className="mt-1">
+                    <Label className="text-xs text-gray-500">
+                      Ad Name Preview: {
+                        importedPosts.length > 0
+                          ? (adNameFormulaV2?.rawInput
+                            ? computeAdNameFromFormula({ name: importedPosts[0].ad_name }, 0, link[0], null, null)
+                            : importedPosts[0].ad_name)
+                          : "Import a post to see example"
+                      }
+                    </Label>
+                  </div>
+                </div>
+
                 <PostSelectorInline
                   adAccountId={selectedAdAccount}
                   onImport={setImportedPosts}
@@ -6735,11 +6759,41 @@ export default function AdCreationForm({
                 {importedPosts.length > 0 && (() => {
                   const safeIndex = Math.min(activeImportedPostIndex, importedPosts.length - 1);
                   const activePost = importedPosts[safeIndex];
+                  const activeKey = getImportedPostKey(activePost);
+                  const override = importedPostAdNames[activeKey];
+                  const formulaName = adNameFormulaV2?.rawInput
+                    ? computeAdNameFromFormula({ name: activePost.ad_name }, safeIndex, link[0], null, null)
+                    : (activePost.ad_name || '');
+                  const inputValue = override !== undefined
+                    ? override
+                    : (importedPostNameCascade != null ? importedPostNameCascade : formulaName);
+                  const handleChange = (value) => {
+                    if (safeIndex === 0) {
+                      setImportedPostNameCascade(value === '' ? null : value);
+                      if (importedPostAdNames[activeKey] !== undefined) {
+                        setImportedPostAdNames((prev) => {
+                          const next = { ...prev };
+                          delete next[activeKey];
+                          return next;
+                        });
+                      }
+                    } else {
+                      setImportedPostAdNames((prev) => {
+                        if (value === '') {
+                          if (prev[activeKey] === undefined) return prev;
+                          const next = { ...prev };
+                          delete next[activeKey];
+                          return next;
+                        }
+                        return { ...prev, [activeKey]: value };
+                      });
+                    }
+                  };
                   return (
-                    <div id="adName" className="space-y-2">
+                    <div className="space-y-2">
                       <Label htmlFor="importedPostAdName" className="flex items-center gap-2">
                         <LabelIcon className="w-4 h-4" />
-                        <span>Ad Name</span>
+                        <span>Ad Name Per Post</span>
                         {importedPosts.length > 1 && (
                           <div className="flex items-center gap-1 ml-auto">
                             <span className="text-xs text-gray-600">
@@ -6772,14 +6826,16 @@ export default function AdCreationForm({
                       </Label>
                       <Input
                         id="importedPostAdName"
-                        value={resolveImportedPostAdName(activePost)}
-                        onChange={(e) => handleImportedPostAdNameChange(activePost, safeIndex, e.target.value)}
-                        placeholder={activePost?.ad_name || 'Ad name'}
+                        value={inputValue}
+                        onChange={(e) => handleChange(e.target.value)}
+                        placeholder={formulaName}
                         className={formInputChrome}
                       />
-                      {importedPosts.length > 1 && safeIndex === 0 && (
+                      {importedPosts.length > 1 && (
                         <p className="text-xs text-gray-500">
-                          Editing here updates all imported posts. Switch to another post to override individually.
+                          {safeIndex === 0
+                            ? "Editing here applies to all imported posts that haven't been individually overridden."
+                            : "Editing here only overrides this post. Clear the field to fall back to the formula or first-post value."}
                         </p>
                       )}
                     </div>
