@@ -4905,17 +4905,19 @@ export default function AdCreationForm({
       if (importedPosts && importedPosts.length > 0) {
         // For each adset, create ads from each imported post
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
-        const postFormula = jobData.formData.adNameFormulaV2;
         const jobImportedPostAdNames = jobData.formData.importedPostAdNames || {};
         const jobImportedPostNameCascade = jobData.formData.importedPostNameCascade;
         const resolvePostAdNameForJob = (post, postIndex) => {
           const key = post?.ad_id || post?.post_id || post?.id || '';
-          if (jobImportedPostAdNames[key] !== undefined) return jobImportedPostAdNames[key];
-          if (jobImportedPostNameCascade != null) return jobImportedPostNameCascade;
-          if (postFormula?.rawInput) {
-            return computeAdNameFromFormula({ name: post.ad_name }, postIndex, link[0], postFormula, null);
+          let template;
+          if (jobImportedPostAdNames[key] !== undefined) template = jobImportedPostAdNames[key];
+          else if (jobImportedPostNameCascade != null) template = jobImportedPostNameCascade;
+          else template = post?.ad_name || '';
+
+          if (template && /\{\{[^}]+\}\}/.test(template)) {
+            return computeAdNameFromFormula({ name: post.ad_name }, postIndex, link[0], { rawInput: template }, null);
           }
-          return post?.ad_name || '';
+          return template;
         };
 
         adSetIdsToUse.forEach((adSetId, adSetIndex) => {
@@ -6218,44 +6220,32 @@ export default function AdCreationForm({
     );
   const publishDisabled = hasPublishBlockingIssueBeforePage || isPageMissing;
 
-  const showImportedPostOverride = useExistingPosts && importedPosts.length > 0;
-  const overrideSafeIndex = showImportedPostOverride
+  const showImportedPostMode = useExistingPosts && importedPosts.length > 0;
+  const importedSafeIndex = showImportedPostMode
     ? Math.min(activeImportedPostIndex, importedPosts.length - 1)
     : 0;
-  const overrideActivePost = showImportedPostOverride ? importedPosts[overrideSafeIndex] : null;
-  const overrideActiveKey = overrideActivePost ? getImportedPostKey(overrideActivePost) : '';
-  const overrideValueFromMap = showImportedPostOverride
-    ? importedPostAdNames[overrideActiveKey]
-    : undefined;
-  const overrideFormulaName = overrideActivePost
-    ? (adNameFormulaV2?.rawInput
-      ? computeAdNameFromFormula({ name: overrideActivePost.ad_name }, overrideSafeIndex, link[0], null, null)
-      : (overrideActivePost.ad_name || ''))
+  const importedActivePost = showImportedPostMode ? importedPosts[importedSafeIndex] : null;
+  const importedActiveKey = importedActivePost ? getImportedPostKey(importedActivePost) : '';
+  const importedActiveValue = importedActivePost
+    ? (importedPostAdNames[importedActiveKey] !== undefined
+      ? importedPostAdNames[importedActiveKey]
+      : (importedPostNameCascade != null
+        ? importedPostNameCascade
+        : (importedActivePost.ad_name || '')))
     : '';
-  const overrideInputValue = overrideValueFromMap !== undefined
-    ? overrideValueFromMap
-    : (importedPostNameCascade != null ? importedPostNameCascade : overrideFormulaName);
   const handleImportedPostNameChange = (value) => {
-    if (!overrideActivePost) return;
-    if (overrideSafeIndex === 0) {
-      setImportedPostNameCascade(value === '' ? null : value);
-      if (importedPostAdNames[overrideActiveKey] !== undefined) {
+    if (!importedActivePost) return;
+    if (importedSafeIndex === 0) {
+      setImportedPostNameCascade(value);
+      if (importedPostAdNames[importedActiveKey] !== undefined) {
         setImportedPostAdNames((prev) => {
           const next = { ...prev };
-          delete next[overrideActiveKey];
+          delete next[importedActiveKey];
           return next;
         });
       }
     } else {
-      setImportedPostAdNames((prev) => {
-        if (value === '') {
-          if (prev[overrideActiveKey] === undefined) return prev;
-          const next = { ...prev };
-          delete next[overrideActiveKey];
-          return next;
-        }
-        return { ...prev, [overrideActiveKey]: value };
-      });
+      setImportedPostAdNames((prev) => ({ ...prev, [importedActiveKey]: value }));
     }
   };
 
@@ -6282,60 +6272,21 @@ export default function AdCreationForm({
       </Label>
 
       <ReorderAdNameParts
-        formulaInput={adNameFormulaV2?.rawInput || ""}
-        onFormulaChange={(newRawInput) => {
-          setAdNameFormulaV2({ rawInput: newRawInput });
-        }}
+        formulaInput={showImportedPostMode ? importedActiveValue : (adNameFormulaV2?.rawInput || "")}
+        onFormulaChange={showImportedPostMode
+          ? handleImportedPostNameChange
+          : ((newRawInput) => setAdNameFormulaV2({ rawInput: newRawInput }))}
         variant="home"
         customVariables={adAccountSettings.customVariables || []}
+        postSwitcher={showImportedPostMode ? {
+          currentIndex: importedSafeIndex,
+          total: importedPosts.length,
+          onPrev: () => setActiveImportedPostIndex((prev) => Math.max(0, prev - 1)),
+          onNext: () => setActiveImportedPostIndex((prev) => Math.min(importedPosts.length - 1, prev + 1)),
+        } : null}
       />
 
-      {showImportedPostOverride ? (
-        <div className="mt-2 space-y-1">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="importedPostAdName" className="text-xs text-gray-500">
-              Per-post ad name
-              {overrideSafeIndex === 0 && importedPosts.length > 1 && " (edits cascade to other posts)"}
-            </Label>
-            {importedPosts.length > 1 && (
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-gray-600">
-                  {overrideSafeIndex + 1}/{importedPosts.length}
-                </span>
-                <button
-                  type="button"
-                  disabled={overrideSafeIndex === 0}
-                  onClick={() => setActiveImportedPostIndex((prev) => Math.max(0, prev - 1))}
-                  className={`p-0.5 rounded transition-colors ${overrideSafeIndex === 0
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  disabled={overrideSafeIndex === importedPosts.length - 1}
-                  onClick={() => setActiveImportedPostIndex((prev) => Math.min(importedPosts.length - 1, prev + 1))}
-                  className={`p-0.5 rounded transition-colors ${overrideSafeIndex === importedPosts.length - 1
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                    }`}
-                >
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
-          <Input
-            id="importedPostAdName"
-            value={overrideInputValue}
-            onChange={(e) => handleImportedPostNameChange(e.target.value)}
-            placeholder={overrideFormulaName}
-            className={formInputChrome}
-          />
-        </div>
-      ) : (
+      {!showImportedPostMode && (
         <div className="mt-1">
           <Label className="text-xs text-gray-500">
             Ad Name Preview: {

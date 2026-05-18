@@ -27,7 +27,7 @@ import {
   DialogOverlay,
 } from "@/components/ui/dialog"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Info, Plus, X, Settings2, AlertTriangle } from "lucide-react"
+import { Info, Plus, X, Settings2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -266,6 +266,7 @@ export default function ReorderAdNameParts({
   customVariables = [],
   onCustomVariablesChange,
   hideInfoTooltip = false,   // ← add this
+  postSwitcher = null,
 
 }) {
   const [inputValue, setInputValue] = useState(formulaInput)
@@ -717,6 +718,36 @@ export default function ReorderAdNameParts({
         </Label>
 
         <div className="flex items-center gap-1.5">
+          {postSwitcher && postSwitcher.total > 1 && (
+            <div className="flex items-center gap-1 mr-1">
+              <span className="text-xs text-gray-600">
+                {postSwitcher.currentIndex + 1}/{postSwitcher.total}
+              </span>
+              <button
+                type="button"
+                disabled={postSwitcher.currentIndex === 0}
+                onClick={postSwitcher.onPrev}
+                className={`p-0.5 rounded transition-colors ${postSwitcher.currentIndex === 0
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={postSwitcher.currentIndex === postSwitcher.total - 1}
+                onClick={postSwitcher.onNext}
+                className={`p-0.5 rounded transition-colors ${postSwitcher.currentIndex === postSwitcher.total - 1
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                  }`}
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Setup custom variables button — settings variant only */}
           {variant === "default" && (
             <Button
