@@ -1,5 +1,5 @@
 import React from 'react';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, CreditCard } from 'lucide-react';
 import Rocket2 from '@/assets/rocket2.webp';
 import { useState } from "react"
 
@@ -90,8 +90,9 @@ const TrialExpiredPopup = ({
                         <button
                             onClick={handleUpdatePayment}
                             disabled={updatingPayment}
-                            className="w-[300px] bg-[#F72585] text-white font-bold py-4 px-8 rounded-3xl text-xl disabled:opacity-60"
+                            className="w-[300px] bg-[#F72585] text-white font-bold py-4 px-8 rounded-3xl text-xl disabled:opacity-60 flex items-center justify-center gap-2"
                         >
+                            <CreditCard size={20} />
                             {updatingPayment ? 'Opening...' : 'Update Payment Details'}
                         </button>
                     </div>

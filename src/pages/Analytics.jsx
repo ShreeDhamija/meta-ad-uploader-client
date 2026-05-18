@@ -52,7 +52,7 @@ export default function Analytics() {
                 return
             }
             const { url } = await res.json()
-            window.location.href = url
+            window.open(url, '_blank')
         } catch {
             toast.error("Couldn't open payment update page")
         }

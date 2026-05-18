@@ -15,7 +15,7 @@ import BillingSwitchIcon from "@/assets/icons/Billing/Switch.svg?react"
 import BillingCancelIcon from "@/assets/icons/Billing/Cancel.svg?react"
 import BillingInvoiceIcon from "@/assets/icons/Billing/Frame.svg?react"
 import MailIcon from "@/assets/icons/mail.svg?react"
-import { Copy } from "lucide-react"
+import { Copy, CreditCard } from "lucide-react"
 import {
     Dialog,
     DialogContent,
@@ -217,7 +217,7 @@ export default function BillingSettings() {
             })
             if (response.ok) {
                 const { url } = await response.json()
-                window.location.href = url
+                window.open(url, "_blank")
             } else {
                 const error = await response.json()
                 toast.error(error.message || "Failed to open payment update")
@@ -451,6 +451,7 @@ export default function BillingSettings() {
                                 disabled={updatingPayment}
                                 className="h-[52px] w-full rounded-[20px] bg-[#F00D55] text-white shadow-none hover:bg-[#F00D55] hover:text-white"
                             >
+                                <CreditCard className="h-5 w-5" />
                                 {updatingPayment ? "Opening..." : "Update Payment Details"}
                             </Button>
                             <Button
@@ -576,6 +577,7 @@ export default function BillingSettings() {
                                 disabled={updatingPayment}
                                 className="h-[52px] w-full rounded-[20px] bg-blue-600 text-white shadow-none hover:bg-blue-700 hover:text-white"
                             >
+                                <CreditCard className="h-5 w-5" />
                                 {updatingPayment ? "Opening..." : "Update Payment Details"}
                             </Button>
                             {!hasScheduledCancellation && (
