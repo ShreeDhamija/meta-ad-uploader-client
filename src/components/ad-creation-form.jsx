@@ -883,14 +883,12 @@ export default function AdCreationForm({
 
   const [activeImportedPostIndex, setActiveImportedPostIndex] = useState(0);
   const [importedPostAdNames, setImportedPostAdNames] = useState({});
-  const [importedPostNameCascade, setImportedPostNameCascade] = useState(null);
 
   const getImportedPostKey = (post) => post?.ad_id || post?.post_id || post?.id || '';
 
   useEffect(() => {
     if (importedPosts.length === 0) {
       if (Object.keys(importedPostAdNames).length > 0) setImportedPostAdNames({});
-      if (importedPostNameCascade !== null) setImportedPostNameCascade(null);
       if (activeImportedPostIndex !== 0) setActiveImportedPostIndex(0);
     } else if (activeImportedPostIndex >= importedPosts.length) {
       setActiveImportedPostIndex(0);
@@ -1257,7 +1255,6 @@ export default function AdCreationForm({
       thumbnail,
       importedPosts: [...variantImportedPosts],
       importedPostAdNames: { ...importedPostAdNames },
-      importedPostNameCascade,
       importedFiles: [...variantImportedFiles],
       selectedIgOrganicPosts: [...variantIgOrganicPosts],
       selectedAdSets: [...(variantState.selectedAdSets || [])],
@@ -1319,7 +1316,6 @@ export default function AdCreationForm({
     importedFiles,
     importedPosts,
     importedPostAdNames,
-    importedPostNameCascade,
     isCarouselAd,
     postVariantMap,
     selectedIgOrganicPosts,
@@ -4906,13 +4902,11 @@ export default function AdCreationForm({
         // For each adset, create ads from each imported post
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
         const jobImportedPostAdNames = jobData.formData.importedPostAdNames || {};
-        const jobImportedPostNameCascade = jobData.formData.importedPostNameCascade;
         const resolvePostAdNameForJob = (post, postIndex) => {
           const key = post?.ad_id || post?.post_id || post?.id || '';
-          let template;
-          if (jobImportedPostAdNames[key] !== undefined) template = jobImportedPostAdNames[key];
-          else if (jobImportedPostNameCascade != null) template = jobImportedPostNameCascade;
-          else template = post?.ad_name || '';
+          const template = jobImportedPostAdNames[key] !== undefined
+            ? jobImportedPostAdNames[key]
+            : (post?.ad_name || '');
 
           if (template && /\{\{[^}]+\}\}/.test(template)) {
             return computeAdNameFromFormula({ name: post.ad_name }, postIndex, link[0], { rawInput: template }, null);
@@ -6229,24 +6223,11 @@ export default function AdCreationForm({
   const importedActiveValue = importedActivePost
     ? (importedPostAdNames[importedActiveKey] !== undefined
       ? importedPostAdNames[importedActiveKey]
-      : (importedPostNameCascade != null
-        ? importedPostNameCascade
-        : (importedActivePost.ad_name || '')))
+      : (importedActivePost.ad_name || ''))
     : '';
   const handleImportedPostNameChange = (value) => {
     if (!importedActivePost) return;
-    if (importedSafeIndex === 0) {
-      setImportedPostNameCascade(value);
-      if (importedPostAdNames[importedActiveKey] !== undefined) {
-        setImportedPostAdNames((prev) => {
-          const next = { ...prev };
-          delete next[importedActiveKey];
-          return next;
-        });
-      }
-    } else {
-      setImportedPostAdNames((prev) => ({ ...prev, [importedActiveKey]: value }));
-    }
+    setImportedPostAdNames((prev) => ({ ...prev, [importedActiveKey]: value }));
   };
 
   const adNameSection = (
@@ -6277,7 +6258,10 @@ export default function AdCreationForm({
           ? handleImportedPostNameChange
           : ((newRawInput) => setAdNameFormulaV2({ rawInput: newRawInput }))}
         variant="home"
-        customVariables={adAccountSettings.customVariables || []}
+        customVariables={showImportedPostMode ? [] : (adAccountSettings.customVariables || [])}
+        allowedVariableIds={showImportedPostMode
+          ? ['dateDefault', 'dateMonthName', 'dateCustom', 'iteration']
+          : null}
         postSwitcher={showImportedPostMode ? {
           currentIndex: importedSafeIndex,
           total: importedPosts.length,

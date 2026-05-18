@@ -267,8 +267,14 @@ export default function ReorderAdNameParts({
   onCustomVariablesChange,
   hideInfoTooltip = false,   // ← add this
   postSwitcher = null,
+  allowedVariableIds = null,
 
 }) {
+  const visibleVariables = useMemo(() => (
+    allowedVariableIds
+      ? AVAILABLE_VARIABLES.filter((v) => allowedVariableIds.includes(v.id))
+      : AVAILABLE_VARIABLES
+  ), [allowedVariableIds])
   const [inputValue, setInputValue] = useState(formulaInput)
 
   // Slash (/) dropdown — built-in variables
@@ -715,6 +721,12 @@ export default function ReorderAdNameParts({
             </>
           )}
           {" "}You can also save custom text.
+          {postSwitcher && (
+            <>
+              <br />
+              By default each post keeps its original ad name — edit here to change it per ad.
+            </>
+          )}
         </Label>
 
         <div className="flex items-center gap-1.5">
@@ -850,7 +862,7 @@ export default function ReorderAdNameParts({
             >
               <CommandList className="outline-none focus:outline-none focus-visible:outline-none">
                 <CommandGroup heading="Pick Variable">
-                  {AVAILABLE_VARIABLES.map((variable) => (
+                  {visibleVariables.map((variable) => (
                     <CommandItem
                       key={variable.id}
                       onSelect={() => handleVariableSelect(variable)}
