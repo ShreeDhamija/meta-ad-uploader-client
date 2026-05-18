@@ -197,6 +197,7 @@ export default function Home() {
     const [dropboxFiles, setDropboxFiles] = useState([]);
     const [frameioFiles, setFrameioFiles] = useState([]);
     const [launchPaused, setLaunchPaused] = useState(false); // <-- New state
+    const launchPausedDefaultAppliedRef = useRef(false);
     const [isCarouselAd, setIsCarouselAd] = useState(false);
     const [adType, setAdType] = useState('regular'); // 'regular' | 'carousel' | 'flexible'
     const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false);
@@ -309,6 +310,15 @@ export default function Home() {
             setShowAdAccountPopup(true)
         }
     }, [subscriptionData.planType, selectedAdAccountIds])
+
+    useEffect(() => {
+        if (subscriptionLoading) return;
+        if (launchPausedDefaultAppliedRef.current) return;
+        if (subscriptionData.teamId === 'team_1777190523537_hmh1srk8j') {
+            setLaunchPaused(true);
+        }
+        launchPausedDefaultAppliedRef.current = true;
+    }, [subscriptionLoading, subscriptionData.teamId])
 
     useEffect(() => {
 
