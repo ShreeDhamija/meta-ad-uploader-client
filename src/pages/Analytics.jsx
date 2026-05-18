@@ -43,7 +43,7 @@ export default function Analytics() {
     const handleUpdatePayment = async () => {
         try {
             const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
-            const res = await fetch(`${API_BASE_URL}/api/stripe/update-payment-method`, {
+            const res = await fetch(`${API_BASE_URL}/api/stripe/customer-portal`, {
                 method: 'POST',
                 credentials: 'include',
             })

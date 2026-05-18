@@ -211,7 +211,7 @@ export default function BillingSettings() {
     const handleUpdatePayment = async () => {
         setUpdatingPayment(true)
         try {
-            const response = await fetch(`${API_BASE_URL}/api/stripe/update-payment-method`, {
+            const response = await fetch(`${API_BASE_URL}/api/stripe/customer-portal`, {
                 method: "POST",
                 credentials: "include",
             })
@@ -570,6 +570,13 @@ export default function BillingSettings() {
                             >
                                 <BillingInvoiceIcon className="h-5 w-5" />
                                 {portalLoading ? "Opening Invoices..." : "View Invoices"}
+                            </Button>
+                            <Button
+                                onClick={handleUpdatePayment}
+                                disabled={updatingPayment}
+                                className="h-[52px] w-full rounded-[20px] bg-blue-600 text-white shadow-none hover:bg-blue-700 hover:text-white"
+                            >
+                                {updatingPayment ? "Opening..." : "Update Payment Details"}
                             </Button>
                             {!hasScheduledCancellation && (
                                 <>

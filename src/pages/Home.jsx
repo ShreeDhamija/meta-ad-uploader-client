@@ -1193,7 +1193,7 @@ export default function Home() {
 
     const handleUpdatePayment = async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/api/stripe/update-payment-method`, {
+            const res = await fetch(`${API_BASE_URL}/api/stripe/customer-portal`, {
                 method: 'POST',
                 credentials: 'include',
             });
