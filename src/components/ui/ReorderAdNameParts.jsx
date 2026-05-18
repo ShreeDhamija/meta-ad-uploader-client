@@ -724,7 +724,7 @@ export default function ReorderAdNameParts({
           {postSwitcher && (
             <>
               <br />
-              By default each post keeps its original ad name — edit here to change it per ad.
+              By default each duplicated ad keeps its original name — edit here to change it per ad.
             </>
           )}
         </Label>
