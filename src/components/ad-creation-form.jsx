@@ -6218,6 +6218,137 @@ export default function AdCreationForm({
     );
   const publishDisabled = hasPublishBlockingIssueBeforePage || isPageMissing;
 
+  const showImportedPostOverride = useExistingPosts && importedPosts.length > 0;
+  const overrideSafeIndex = showImportedPostOverride
+    ? Math.min(activeImportedPostIndex, importedPosts.length - 1)
+    : 0;
+  const overrideActivePost = showImportedPostOverride ? importedPosts[overrideSafeIndex] : null;
+  const overrideActiveKey = overrideActivePost ? getImportedPostKey(overrideActivePost) : '';
+  const overrideValueFromMap = showImportedPostOverride
+    ? importedPostAdNames[overrideActiveKey]
+    : undefined;
+  const overrideFormulaName = overrideActivePost
+    ? (adNameFormulaV2?.rawInput
+      ? computeAdNameFromFormula({ name: overrideActivePost.ad_name }, overrideSafeIndex, link[0], null, null)
+      : (overrideActivePost.ad_name || ''))
+    : '';
+  const overrideInputValue = overrideValueFromMap !== undefined
+    ? overrideValueFromMap
+    : (importedPostNameCascade != null ? importedPostNameCascade : overrideFormulaName);
+  const handleImportedPostNameChange = (value) => {
+    if (!overrideActivePost) return;
+    if (overrideSafeIndex === 0) {
+      setImportedPostNameCascade(value === '' ? null : value);
+      if (importedPostAdNames[overrideActiveKey] !== undefined) {
+        setImportedPostAdNames((prev) => {
+          const next = { ...prev };
+          delete next[overrideActiveKey];
+          return next;
+        });
+      }
+    } else {
+      setImportedPostAdNames((prev) => {
+        if (value === '') {
+          if (prev[overrideActiveKey] === undefined) return prev;
+          const next = { ...prev };
+          delete next[overrideActiveKey];
+          return next;
+        }
+        return { ...prev, [overrideActiveKey]: value };
+      });
+    }
+  };
+
+  const adNameSection = (
+    <div id="adName" className="space-y-1">
+      <Label htmlFor="adName" className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2">
+          {renderDiffMark("adNameFormulaV2")}
+          <LabelIcon className="w-4 h-4" />
+          Ad Name
+        </div>
+        {selectedAdAccount && !adAccountSettings?.adNameFormulaV2?.rawInput && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
+            className="text-xs gap-1 px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
+          >
+            <CogIcon className="w-3 h-3 text-white" />
+            Set Up Ad Name Formula
+          </Button>
+        )}
+      </Label>
+
+      <ReorderAdNameParts
+        formulaInput={adNameFormulaV2?.rawInput || ""}
+        onFormulaChange={(newRawInput) => {
+          setAdNameFormulaV2({ rawInput: newRawInput });
+        }}
+        variant="home"
+        customVariables={adAccountSettings.customVariables || []}
+      />
+
+      {showImportedPostOverride ? (
+        <div className="mt-2 space-y-1">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="importedPostAdName" className="text-xs text-gray-500">
+              Per-post ad name
+              {overrideSafeIndex === 0 && importedPosts.length > 1 && " (edits cascade to other posts)"}
+            </Label>
+            {importedPosts.length > 1 && (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-600">
+                  {overrideSafeIndex + 1}/{importedPosts.length}
+                </span>
+                <button
+                  type="button"
+                  disabled={overrideSafeIndex === 0}
+                  onClick={() => setActiveImportedPostIndex((prev) => Math.max(0, prev - 1))}
+                  className={`p-0.5 rounded transition-colors ${overrideSafeIndex === 0
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  disabled={overrideSafeIndex === importedPosts.length - 1}
+                  onClick={() => setActiveImportedPostIndex((prev) => Math.min(importedPosts.length - 1, prev + 1))}
+                  className={`p-0.5 rounded transition-colors ${overrideSafeIndex === importedPosts.length - 1
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+          <Input
+            id="importedPostAdName"
+            value={overrideInputValue}
+            onChange={(e) => handleImportedPostNameChange(e.target.value)}
+            placeholder={overrideFormulaName}
+            className={formInputChrome}
+          />
+        </div>
+      ) : (
+        <div className="mt-1">
+          <Label className="text-xs text-gray-500">
+            Ad Name Preview: {
+              (files.length > 0 || driveFiles.length > 0 || dropboxFiles.length > 0 || frameioFiles.length > 0 || importedFiles.length > 0 || importedPosts.length > 0 || selectedIgOrganicPosts.length > 0)
+                ? computeAdNameFromFormula(files[0] || driveFiles[0] || frameioFiles[0], 0, link[0], null, adType)
+                : "Upload a file to see example"
+            }
+          </Label>
+        </div>
+      )}
+    </div>
+  );
+
 
   return (
     <Card className=" !bg-white border border-gray-300 max-w-[calc(100vw-1rem)] shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl">
@@ -6704,48 +6835,7 @@ export default function AdCreationForm({
           <div className="space-y-10 overflow-hidden">
             {useExistingPosts ? (
               <div className="relative space-y-6">
-                <div id="adName" className="space-y-1">
-                  <Label htmlFor="adName" className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      {renderDiffMark("adNameFormulaV2")}
-                      <LabelIcon className="w-4 h-4" />
-                      Ad Name
-                    </div>
-                    {selectedAdAccount && !adAccountSettings?.adNameFormulaV2?.rawInput && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                        className="text-xs gap-1 px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
-                      >
-                        <CogIcon className="w-3 h-3 text-white" />
-                        Set Up Ad Name Formula
-                      </Button>
-                    )}
-                  </Label>
-
-                  <ReorderAdNameParts
-                    formulaInput={adNameFormulaV2?.rawInput || ""}
-                    onFormulaChange={(newRawInput) => {
-                      setAdNameFormulaV2({ rawInput: newRawInput });
-                    }}
-                    variant="home"
-                    customVariables={adAccountSettings.customVariables || []}
-                  />
-                  <div className="mt-1">
-                    <Label className="text-xs text-gray-500">
-                      Ad Name Preview: {
-                        importedPosts.length > 0
-                          ? (adNameFormulaV2?.rawInput
-                            ? computeAdNameFromFormula({ name: importedPosts[0].ad_name }, 0, link[0], null, null)
-                            : importedPosts[0].ad_name)
-                          : "Import a post to see example"
-                      }
-                    </Label>
-                  </div>
-                </div>
-
+                {adNameSection}
                 <PostSelectorInline
                   adAccountId={selectedAdAccount}
                   onImport={setImportedPosts}
@@ -6756,91 +6846,6 @@ export default function AdCreationForm({
                   importedPosts={importedPosts}  // add this
 
                 />
-                {importedPosts.length > 0 && (() => {
-                  const safeIndex = Math.min(activeImportedPostIndex, importedPosts.length - 1);
-                  const activePost = importedPosts[safeIndex];
-                  const activeKey = getImportedPostKey(activePost);
-                  const override = importedPostAdNames[activeKey];
-                  const formulaName = adNameFormulaV2?.rawInput
-                    ? computeAdNameFromFormula({ name: activePost.ad_name }, safeIndex, link[0], null, null)
-                    : (activePost.ad_name || '');
-                  const inputValue = override !== undefined
-                    ? override
-                    : (importedPostNameCascade != null ? importedPostNameCascade : formulaName);
-                  const handleChange = (value) => {
-                    if (safeIndex === 0) {
-                      setImportedPostNameCascade(value === '' ? null : value);
-                      if (importedPostAdNames[activeKey] !== undefined) {
-                        setImportedPostAdNames((prev) => {
-                          const next = { ...prev };
-                          delete next[activeKey];
-                          return next;
-                        });
-                      }
-                    } else {
-                      setImportedPostAdNames((prev) => {
-                        if (value === '') {
-                          if (prev[activeKey] === undefined) return prev;
-                          const next = { ...prev };
-                          delete next[activeKey];
-                          return next;
-                        }
-                        return { ...prev, [activeKey]: value };
-                      });
-                    }
-                  };
-                  return (
-                    <div className="space-y-2">
-                      <Label htmlFor="importedPostAdName" className="flex items-center gap-2">
-                        <LabelIcon className="w-4 h-4" />
-                        <span>Ad Name Per Post</span>
-                        {importedPosts.length > 1 && (
-                          <div className="flex items-center gap-1 ml-auto">
-                            <span className="text-xs text-gray-600">
-                              {safeIndex + 1}/{importedPosts.length}
-                            </span>
-                            <button
-                              type="button"
-                              disabled={safeIndex === 0}
-                              onClick={() => setActiveImportedPostIndex((prev) => Math.max(0, prev - 1))}
-                              className={`p-0.5 rounded transition-colors ${safeIndex === 0
-                                ? 'text-gray-300 cursor-not-allowed'
-                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                                }`}
-                            >
-                              <ChevronLeft className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              disabled={safeIndex === importedPosts.length - 1}
-                              onClick={() => setActiveImportedPostIndex((prev) => Math.min(importedPosts.length - 1, prev + 1))}
-                              className={`p-0.5 rounded transition-colors ${safeIndex === importedPosts.length - 1
-                                ? 'text-gray-300 cursor-not-allowed'
-                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                                }`}
-                            >
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </Label>
-                      <Input
-                        id="importedPostAdName"
-                        value={inputValue}
-                        onChange={(e) => handleChange(e.target.value)}
-                        placeholder={formulaName}
-                        className={formInputChrome}
-                      />
-                      {importedPosts.length > 1 && (
-                        <p className="text-xs text-gray-500">
-                          {safeIndex === 0
-                            ? "Editing here applies to all imported posts that haven't been individually overridden."
-                            : "Editing here only overrides this post. Clear the field to fall back to the formula or first-post value."}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })()}
               </div>
 
             ) : (
@@ -7260,46 +7265,7 @@ export default function AdCreationForm({
 
                 </div>
 
-                <div id="adName" className="space-y-1">
-                  <Label htmlFor="adName" className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      {renderDiffMark("adNameFormulaV2")}
-                      <LabelIcon className="w-4 h-4" />
-                      Ad Name
-                    </div>
-                    {selectedAdAccount && !adAccountSettings?.adNameFormulaV2?.rawInput && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/settings?tab=adaccount&adAccount=${selectedAdAccount}`)}
-                        className="text-xs gap-1 px-3 pl-2 border-gray-300 rounded-2xl py-4.5 bg-zinc-800 text-white shadow hover:text-white hover:bg-zinc-900"
-                      >
-                        <CogIcon className="w-3 h-3 text-white" />
-                        Set Up Ad Name Formula
-                      </Button>
-                    )}
-                  </Label>
-
-                  <ReorderAdNameParts
-                    formulaInput={adNameFormulaV2?.rawInput || ""}
-                    onFormulaChange={(newRawInput) => {
-                      setAdNameFormulaV2({ rawInput: newRawInput });
-                    }}
-                    variant="home"
-                    customVariables={adAccountSettings.customVariables || []}
-
-                  />
-                  <div className="mt-1">
-                    <Label className="text-xs text-gray-500">
-                      Ad Name Preview: {
-                        (files.length > 0 || driveFiles.length > 0 || dropboxFiles.length > 0 || frameioFiles.length > 0 || importedFiles.length > 0 || importedPosts.length > 0 || selectedIgOrganicPosts.length > 0)
-                          ? computeAdNameFromFormula(files[0] || driveFiles[0] || frameioFiles[0], 0, link[0], null, adType)
-                          : "Upload a file to see example"
-                      }
-                    </Label>
-                  </div>
-                </div>
+                {adNameSection}
 
 
 
