@@ -881,6 +881,44 @@ export default function AdCreationForm({
 
   const [activeIgCaptionIndex, setActiveIgCaptionIndex] = useState(0);
 
+  const [activeImportedPostIndex, setActiveImportedPostIndex] = useState(0);
+  const [importedPostAdNames, setImportedPostAdNames] = useState({});
+  const [importedPostNameCascade, setImportedPostNameCascade] = useState(null);
+
+  const getImportedPostKey = (post) => post?.ad_id || post?.post_id || post?.id || '';
+  const resolveImportedPostAdName = (post) => {
+    if (!post) return '';
+    const override = importedPostAdNames[getImportedPostKey(post)];
+    if (override !== undefined) return override;
+    if (importedPostNameCascade != null) return importedPostNameCascade;
+    return post.ad_name || '';
+  };
+  const handleImportedPostAdNameChange = (post, index, value) => {
+    if (index === 0) {
+      setImportedPostNameCascade(value);
+      setImportedPostAdNames((prev) => {
+        const key = getImportedPostKey(post);
+        if (prev[key] === undefined) return prev;
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    } else {
+      const key = getImportedPostKey(post);
+      setImportedPostAdNames((prev) => ({ ...prev, [key]: value }));
+    }
+  };
+
+  useEffect(() => {
+    if (importedPosts.length === 0) {
+      if (Object.keys(importedPostAdNames).length > 0) setImportedPostAdNames({});
+      if (importedPostNameCascade !== null) setImportedPostNameCascade(null);
+      if (activeImportedPostIndex !== 0) setActiveImportedPostIndex(0);
+    } else if (activeImportedPostIndex >= importedPosts.length) {
+      setActiveImportedPostIndex(0);
+    }
+  }, [importedPosts.length]);
+
 
 
 
@@ -1240,6 +1278,8 @@ export default function AdCreationForm({
       videoThumbs: { ...videoThumbs },
       thumbnail,
       importedPosts: [...variantImportedPosts],
+      importedPostAdNames: { ...importedPostAdNames },
+      importedPostNameCascade,
       importedFiles: [...variantImportedFiles],
       selectedIgOrganicPosts: [...variantIgOrganicPosts],
       selectedAdSets: [...(variantState.selectedAdSets || [])],
@@ -1300,6 +1340,8 @@ export default function AdCreationForm({
     groupVariantMap,
     importedFiles,
     importedPosts,
+    importedPostAdNames,
+    importedPostNameCascade,
     isCarouselAd,
     postVariantMap,
     selectedIgOrganicPosts,
@@ -4885,12 +4927,20 @@ export default function AdCreationForm({
       if (importedPosts && importedPosts.length > 0) {
         // For each adset, create ads from each imported post
         const adSetIdsToUse = [...dynamicAdSetIds, ...nonDynamicAdSetIds];
+        const jobImportedPostAdNames = jobData.formData.importedPostAdNames || {};
+        const jobImportedPostNameCascade = jobData.formData.importedPostNameCascade;
+        const resolvePostAdNameForJob = (post) => {
+          const key = post?.ad_id || post?.post_id || post?.id || '';
+          if (jobImportedPostAdNames[key] !== undefined) return jobImportedPostAdNames[key];
+          if (jobImportedPostNameCascade != null) return jobImportedPostNameCascade;
+          return post?.ad_name || '';
+        };
 
         adSetIdsToUse.forEach((adSetId, adSetIndex) => {
           importedPosts.forEach((post, postIndex) => {
             const formData = new FormData();
             // Basic fields
-            formData.append("adName", post.ad_name);
+            formData.append("adName", resolvePostAdNameForJob(post));
             formData.append("adAccountId", selectedAdAccount);
             formData.append("adSetId", adSetId);
             formData.append("pageId", pageId);
@@ -6671,7 +6721,7 @@ export default function AdCreationForm({
           className="space-y-6">
           <div className="space-y-10 overflow-hidden">
             {useExistingPosts ? (
-              <div className="relative">
+              <div className="relative space-y-6">
                 <PostSelectorInline
                   adAccountId={selectedAdAccount}
                   onImport={setImportedPosts}
@@ -6682,6 +6732,59 @@ export default function AdCreationForm({
                   importedPosts={importedPosts}  // add this
 
                 />
+                {importedPosts.length > 0 && (() => {
+                  const safeIndex = Math.min(activeImportedPostIndex, importedPosts.length - 1);
+                  const activePost = importedPosts[safeIndex];
+                  return (
+                    <div id="adName" className="space-y-2">
+                      <Label htmlFor="importedPostAdName" className="flex items-center gap-2">
+                        <LabelIcon className="w-4 h-4" />
+                        <span>Ad Name</span>
+                        {importedPosts.length > 1 && (
+                          <div className="flex items-center gap-1 ml-auto">
+                            <span className="text-xs text-gray-600">
+                              {safeIndex + 1}/{importedPosts.length}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={safeIndex === 0}
+                              onClick={() => setActiveImportedPostIndex((prev) => Math.max(0, prev - 1))}
+                              className={`p-0.5 rounded transition-colors ${safeIndex === 0
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                }`}
+                            >
+                              <ChevronLeft className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={safeIndex === importedPosts.length - 1}
+                              onClick={() => setActiveImportedPostIndex((prev) => Math.min(importedPosts.length - 1, prev + 1))}
+                              className={`p-0.5 rounded transition-colors ${safeIndex === importedPosts.length - 1
+                                ? 'text-gray-300 cursor-not-allowed'
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                }`}
+                            >
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </Label>
+                      <Input
+                        id="importedPostAdName"
+                        value={resolveImportedPostAdName(activePost)}
+                        onChange={(e) => handleImportedPostAdNameChange(activePost, safeIndex, e.target.value)}
+                        placeholder={activePost?.ad_name || 'Ad name'}
+                        className={formInputChrome}
+                      />
+                      {importedPosts.length > 1 && safeIndex === 0 && (
+                        <p className="text-xs text-gray-500">
+                          Editing here updates all imported posts. Switch to another post to override individually.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
             ) : (
