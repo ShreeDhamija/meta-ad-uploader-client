@@ -1,34 +1,119 @@
 import Header from '@/components/header'
+import MediaPreview from '@/components/media-preview'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
 import { useIntercom } from '@/lib/useIntercom'
-import { Loader2, Video } from "lucide-react"
-import { useEffect, useState } from "react"
+import useTikTokAdvertiserSettings from '@/lib/useTikTokAdvertiserSettings'
+import { Loader2 } from "lucide-react"
+import React, { useCallback, useEffect, useState } from "react"
 import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
-import useTikTokAdvertiserSettings from '@/lib/useTikTokAdvertiserSettings'
+import { v4 as uuidv4 } from "uuid"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
+// Error boundary to catch component preview failures and prevent crashes
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught by preview boundary:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 text-center border border-dashed border-red-200 rounded-3xl bg-red-50/50">
+          <p className="text-red-600 mb-2 font-bold text-sm">Something went wrong with the preview</p>
+          <button
+            onClick={() => this.setState({ hasError: false })}
+            className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-xs font-semibold shadow-sm transition-all"
+          >
+            Try Again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function TikTokAds() {
   const navigate = useNavigate()
-  const { isTikTokLoggedIn, tiktokUser, tiktokAdvertisers, refreshTikTokUser, logoutTikTok, isLoading: authLoading } = useTikTokAuth()
+  const { isTikTokLoggedIn, tiktokAdvertisers, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
   const { showMessenger, hideMessenger } = useIntercom()
   
   const [selectedAdvertiser, setSelectedAdvertiser] = useState('')
   const [adName, setAdName] = useState('')
   const [adText, setAdText] = useState('')
-  const [cta, setCta] = useState(['SHOP_NOW'])
+  const [cta, setCta] = useState('SHOP_NOW') // Now a single string default value
   const [landingUrl, setLandingUrl] = useState('')
   const [videoFile, setVideoFile] = useState(null)
   const [videoPreview, setVideoPreview] = useState(null)
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
   const [selectedIdentity, setSelectedIdentity] = useState('')
-  
+  const [urlMode, setUrlMode] = useState('WEBSITE')
+  const [adType, setAdType] = useState('NORMAL')
+
+  // Lifted form fetching states (to snapshot campaign & ad group selections)
+  const [campaigns, setCampaigns] = useState([])
+  const [adGroups, setAdGroups] = useState([])
+  const [selectedCampaign, setSelectedCampaign] = useState('')
+  const [selectedAdGroup, setSelectedAdGroup] = useState('')
+  const [identities, setIdentities] = useState([])
+
+  // Mocked state arrays & variables for MediaPreview integration compatibility
+  const [files, setFiles] = useState([])
+  const [importedPosts, setImportedPosts] = useState([])
+  const [frameioFiles, setFrameioFiles] = useState([])
+  const [importedFiles, setImportedFiles] = useState([])
+  const [videoThumbs, setVideoThumbs] = useState({})
+  const [isCarouselAd, setIsCarouselAd] = useState(false)
+  const [enablePlacementCustomization, setEnablePlacementCustomization] = useState(false)
+  const [fileGroups, setFileGroups] = useState([])
+  const [selectedAdSets, setSelectedAdSets] = useState([])
+  const [adSets, setAdSets] = useState([])
+  const [duplicateAdSet, setDuplicateAdSet] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState(new Set())
+  const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([])
+  const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false)
+  const [showPowerupPopup, setShowPowerupPopup] = useState(false)
+
+  // Variant States
+  const [variants, setVariants] = useState([{ id: "default", name: "Default", snapshot: null }])
+  const [activeVariantId, setActiveVariantId] = useState("default")
+  const [fileVariantMap, setFileVariantMap] = useState({})
+  const [groupVariantMap, setGroupVariantMap] = useState({})
+  const [postVariantMap, setPostVariantMap] = useState({})
+
   // Load preferences for selected advertiser
-  const { settings: advertiserPrefs, loading: prefsLoading } = useTikTokAdvertiserSettings(selectedAdvertiser)
+  const { settings: advertiserPrefs } = useTikTokAdvertiserSettings(selectedAdvertiser)
+
+  // Sync files with videoFile/videoPreview for backend submissions and video uploading hooks
+  useEffect(() => {
+    if (files && files.length > 0) {
+      const file = files[0]
+      setVideoFile(file)
+      if (file instanceof File) {
+        const previewUrl = URL.createObjectURL(file)
+        setVideoPreview(previewUrl)
+        return () => URL.revokeObjectURL(previewUrl)
+      } else if (file.url) {
+        setVideoPreview(file.url)
+      } else if (file.preview) {
+        setVideoPreview(file.preview)
+      }
+    } else {
+      setVideoFile(null)
+      setVideoPreview(null)
+    }
+  }, [files])
 
   // Handle OAuth callback
   useEffect(() => {
@@ -47,7 +132,7 @@ export default function TikTokAds() {
     }
   }, [isTikTokLoggedIn, authLoading, navigate])
 
-  // Auto-select first advertiser
+  // Auto-select first advertiser account
   useEffect(() => {
     if (tiktokAdvertisers.length > 0 && !selectedAdvertiser) {
       const firstId = tiktokAdvertisers[0].advertiser_id || tiktokAdvertisers[0].id
@@ -63,9 +148,9 @@ export default function TikTokAds() {
         setSelectedIdentity(advertiserPrefs.defaultIdentityId);
       }
       
-      // 2. Default CTAs
-      if (cta.length === 1 && cta[0] === 'SHOP_NOW' && advertiserPrefs.defaultCTAs?.length > 0) {
-         setCta(advertiserPrefs.defaultCTAs);
+      // 2. Default CTA (string conversion)
+      if (cta === 'SHOP_NOW' && advertiserPrefs.defaultCTAs?.length > 0) {
+         setCta(advertiserPrefs.defaultCTAs[0]);
       }
 
       // 3. Default Landing URL
@@ -83,6 +168,263 @@ export default function TikTokAds() {
       }
     }
   }, [advertiserPrefs, selectedAdvertiser]);
+
+  // Variant helper methods matching Home.jsx pattern
+  const cloneSnapshotValue = (value) => {
+    if (Array.isArray(value)) return [...value];
+    if (value && typeof value === "object") {
+      return JSON.parse(JSON.stringify(value));
+    }
+    return value;
+  };
+
+  const snapshotValuesEqual = (left, right) => JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+
+  const captureCurrentSnapshot = useCallback(() => ({
+    adName,
+    adText,
+    cta,
+    landingUrl,
+    selectedIdentity,
+    urlMode,
+    selectedCampaign,
+    selectedAdGroup,
+  }), [
+    adName,
+    adText,
+    cta,
+    landingUrl,
+    selectedIdentity,
+    urlMode,
+    selectedCampaign,
+    selectedAdGroup,
+  ]);
+
+  const hydrateFromSnapshot = useCallback((snapshot) => {
+    if (!snapshot) return;
+    setAdName(snapshot.adName || "");
+    setAdText(snapshot.adText || "");
+    setCta(snapshot.cta || "SHOP_NOW");
+    setLandingUrl(snapshot.landingUrl || "");
+    setSelectedIdentity(snapshot.selectedIdentity || "");
+    setUrlMode(snapshot.urlMode || "WEBSITE");
+    setSelectedCampaign(snapshot.selectedCampaign || "");
+    setSelectedAdGroup(snapshot.selectedAdGroup || "");
+  }, []);
+
+  const switchVariant = useCallback((targetId) => {
+    if (targetId === activeVariantId) return;
+
+    const targetVariant = variants.find((variant) => variant.id === targetId);
+    if (!targetVariant) return;
+
+    const currentSnapshot = captureCurrentSnapshot();
+
+    setVariants((prev) => prev.map((variant) => {
+      if (variant.id === activeVariantId) {
+        return { ...variant, snapshot: currentSnapshot };
+      }
+      if (variant.id === targetId) {
+        return { ...variant, snapshot: null };
+      }
+      return variant;
+    }));
+
+    hydrateFromSnapshot(targetVariant.snapshot);
+    setActiveVariantId(targetId);
+    setSelectedFiles(new Set());
+  }, [activeVariantId, captureCurrentSnapshot, hydrateFromSnapshot, variants]);
+
+  const getVariantSnapshot = useCallback((variantId) => {
+    if (variantId === activeVariantId) {
+      return captureCurrentSnapshot();
+    }
+    return variants.find((variant) => variant.id === variantId)?.snapshot || null;
+  }, [activeVariantId, captureCurrentSnapshot, variants]);
+
+  const isFormFieldModified = useCallback((fieldKeys) => {
+    if (activeVariantId === "default") return false;
+
+    const activeSnapshot = getVariantSnapshot(activeVariantId);
+    const defaultSnapshot = getVariantSnapshot("default");
+    if (!activeSnapshot || !defaultSnapshot) return false;
+
+    const keys = Array.isArray(fieldKeys) ? fieldKeys : [fieldKeys];
+    return keys.some((key) => !snapshotValuesEqual(activeSnapshot[key], defaultSnapshot[key]));
+  }, [activeVariantId, getVariantSnapshot]);
+
+  const handleAddVariant = useCallback(() => {
+    const usedLetters = new Set(
+      variants
+        .filter((variant) => variant.id !== "default")
+        .map((variant) => variant.name.replace(/^(Form|Variant)\s+/, ""))
+    );
+    const nextLetter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").find((letter) => !usedLetters.has(letter));
+
+    if (!nextLetter) {
+      toast.error("Maximum 26 Variants");
+      return;
+    }
+
+    const currentSnapshot = captureCurrentSnapshot();
+    const defaultSnapshot = cloneSnapshotValue(getVariantSnapshot("default")) || cloneSnapshotValue(currentSnapshot);
+    const newVariantId = uuidv4();
+
+    setVariants((prev) => [
+      ...prev.map((variant) => (
+        variant.id === activeVariantId
+          ? { ...variant, snapshot: currentSnapshot }
+          : variant
+      )),
+      { id: newVariantId, name: `Variant ${nextLetter}`, snapshot: defaultSnapshot }
+    ]);
+    setSelectedFiles(new Set());
+  }, [activeVariantId, captureCurrentSnapshot, getVariantSnapshot, variants]);
+
+  const handleDeleteVariant = useCallback((variantId) => {
+    if (variantId === "default") return;
+
+    const defaultVariant = variants.find((variant) => variant.id === "default");
+    const wasActive = variantId === activeVariantId;
+    const reassignedCount =
+      Object.values(fileVariantMap).filter((value) => value === variantId).length +
+      Object.values(groupVariantMap).filter((value) => value === variantId).length +
+      Object.values(postVariantMap).filter((value) => value === variantId).length;
+
+    setFileVariantMap((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (next[key] === variantId) delete next[key];
+      });
+      return next;
+    });
+
+    setGroupVariantMap((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (next[key] === variantId) delete next[key];
+      });
+      return next;
+    });
+
+    setPostVariantMap((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        if (next[key] === variantId) delete next[key];
+      });
+      return next;
+    });
+
+    setVariants((prev) => prev.filter((variant) => variant.id !== variantId));
+
+    if (wasActive) {
+      hydrateFromSnapshot(defaultVariant?.snapshot);
+      setActiveVariantId("default");
+      setVariants((prev) => prev.map((variant) => (
+        variant.id === "default" ? { ...variant, snapshot: null } : variant
+      )));
+    }
+
+    toast.success(
+      reassignedCount > 0
+        ? `Variant deleted. ${reassignedCount} assignment${reassignedCount === 1 ? "" : "s"} moved to Default.`
+        : "Variant deleted."
+    );
+  }, [activeVariantId, fileVariantMap, groupVariantMap, postVariantMap, hydrateFromSnapshot, variants]);
+
+  const handleDeleteAllVariants = useCallback(() => {
+    if (variants.length <= 1) return;
+
+    const defaultVariant = variants.find((variant) => variant.id === "default");
+    const defaultSnapshot = activeVariantId === "default"
+      ? captureCurrentSnapshot()
+      : defaultVariant?.snapshot;
+    const clearedAssignments = Object.keys(fileVariantMap).length + Object.keys(groupVariantMap).length + Object.keys(postVariantMap).length;
+
+    setFileVariantMap({});
+    setGroupVariantMap({});
+    setPostVariantMap({});
+    setVariants([{ id: "default", name: "Default", snapshot: null }]);
+    setSelectedFiles(new Set());
+
+    if (activeVariantId !== "default" && defaultSnapshot) {
+      hydrateFromSnapshot(defaultSnapshot);
+    }
+
+    setActiveVariantId("default");
+
+    toast.success(
+      clearedAssignments > 0
+        ? `All variants deleted. ${clearedAssignments} assignment${clearedAssignments === 1 ? "" : "s"} moved to Default.`
+        : "All variants deleted."
+    );
+  }, [
+    activeVariantId,
+    captureCurrentSnapshot,
+    fileVariantMap,
+    groupVariantMap,
+    postVariantMap,
+    hydrateFromSnapshot,
+    variants,
+  ]);
+
+  // Sync variant cleanups when variants list changes
+  useEffect(() => {
+    const activeVariantIds = new Set(variants.map((v) => v.id))
+    setFileVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!activeVariantIds.has(next[key])) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+    setGroupVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!activeVariantIds.has(next[key])) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+    setPostVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!activeVariantIds.has(next[key])) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [variants])
+
+  // Clean file variant map if files are deleted
+  useEffect(() => {
+    const validFileIds = new Set([
+      ...files.map((file) => file.isDrive ? file.id : file.uniqueId || file.name),
+      ...driveFiles.map((file) => file.id),
+      ...dropboxFiles.map((file) => file.dropboxId),
+    ])
+    setFileVariantMap((prev) => {
+      const next = { ...prev }
+      let changed = false
+      Object.keys(next).forEach((key) => {
+        if (!validFileIds.has(key)) {
+          delete next[key]
+          changed = true
+        }
+      })
+      return changed ? next : prev
+    })
+  }, [files, driveFiles, dropboxFiles])
 
   if (authLoading) {
     return (
@@ -105,14 +447,15 @@ export default function TikTokAds() {
 
       <main className="pt-4 pb-20">
         <div className="flex flex-col lg:flex-row gap-6 min-w-0">
-          {/* Left Column: Form and Duplicator */}
+          {/* Left Column: Form and Duplicator (55% width) */}
           <div className="flex-1 lg:flex-[55] min-w-0 space-y-6">
             <TikTokAdCreationForm 
               advertiserId={selectedAdvertiser} 
               advertisers={tiktokAdvertisers} 
               onAdvertiserChange={setSelectedAdvertiser}
               advertiserPrefs={advertiserPrefs}
-              // Lifted State
+              
+              // Lifted Form State
               adName={adName} setAdName={setAdName}
               adText={adText} setAdText={setAdText}
               cta={cta} setCta={setCta}
@@ -122,95 +465,86 @@ export default function TikTokAds() {
               driveFiles={driveFiles} setDriveFiles={setDriveFiles}
               dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
               selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
+              urlMode={urlMode} setUrlMode={setUrlMode}
+              adType={adType} setAdType={setAdType}
+
+              // Form Fetching States
+              campaigns={campaigns} setCampaigns={setCampaigns}
+              adGroups={adGroups} setAdGroups={setAdGroups}
+              selectedCampaign={selectedCampaign} setSelectedCampaign={setSelectedCampaign}
+              selectedAdGroup={selectedAdGroup} setSelectedAdGroup={setSelectedAdGroup}
+              identities={identities} setIdentities={setIdentities}
+              files={files} setFiles={setFiles}
+
+              // Variants Props
+              variants={variants}
+              setVariants={setVariants}
+              activeVariantId={activeVariantId}
+              setActiveVariantId={setActiveVariantId}
+              switchVariant={switchVariant}
+              handleAddVariant={handleAddVariant}
+              handleDeleteVariant={handleDeleteVariant}
+              handleDeleteAllVariants={handleDeleteAllVariants}
+              isFormFieldModified={isFormFieldModified}
+              fileVariantMap={fileVariantMap}
+              setFileVariantMap={setFileVariantMap}
+              groupVariantMap={groupVariantMap}
+              setGroupVariantMap={setGroupVariantMap}
+              postVariantMap={postVariantMap}
+              setPostVariantMap={setPostVariantMap}
             />
           </div>
 
-          {/* Right Column: Media Preview */}
-          <div className="flex-1 lg:flex-[45] min-w-0 space-y-6">
+          {/* Right Column: Media Preview (45% width) */}
+          <div className="flex-1 lg:flex-[45] min-w-0">
             <div className="sticky top-6">
-              <TikTokMediaPreview 
-                videoFile={videoFile}
-                videoPreview={videoPreview}
-                driveFiles={driveFiles}
-                dropboxFiles={dropboxFiles}
-                adText={adText}
-                cta={cta}
-                identityId={selectedIdentity}
-                advertiserId={selectedAdvertiser}
-              />
+              <ErrorBoundary>
+                <MediaPreview
+                  files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
+                  setFiles={setFiles}
+                  importedPosts={importedPosts}
+                  setImportedPosts={setImportedPosts}
+                  driveFiles={driveFiles}
+                  setDriveFiles={setDriveFiles}
+                  dropboxFiles={dropboxFiles}
+                  setDropboxFiles={setDropboxFiles}
+                  frameioFiles={frameioFiles}
+                  setFrameioFiles={setFrameioFiles}
+                  importedFiles={importedFiles}
+                  setImportedFiles={setImportedFiles}
+                  videoThumbs={videoThumbs}
+                  isCarouselAd={isCarouselAd}
+                  adType={adType} // Pass adType to MediaPreview ('NORMAL' or 'SPARK')
+                  enablePlacementCustomization={enablePlacementCustomization}
+                  setEnablePlacementCustomization={setEnablePlacementCustomization}
+                  fileGroups={fileGroups}
+                  setFileGroups={setFileGroups}
+                  selectedAdSets={selectedAdSets}
+                  adSets={adSets}
+                  duplicateAdSet={duplicateAdSet}
+                  selectedFiles={selectedFiles}
+                  setSelectedFiles={setSelectedFiles}
+                  selectedIgOrganicPosts={selectedIgOrganicPosts}
+                  setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
+                  variants={variants}
+                  activeVariantId={activeVariantId}
+                  handleAddVariant={handleAddVariant}
+                  handleDeleteAllVariants={handleDeleteAllVariants}
+                  fileVariantMap={fileVariantMap}
+                  setFileVariantMap={setFileVariantMap}
+                  groupVariantMap={groupVariantMap}
+                  setGroupVariantMap={setGroupVariantMap}
+                  postVariantMap={postVariantMap}
+                  setPostVariantMap={setPostVariantMap}
+                  hasSeenPowerupPopup={hasSeenPowerupPopup}
+                  setShowPowerupPopup={setShowPowerupPopup}
+                  isLaunchingMedia={false}
+                />
+              </ErrorBoundary>
             </div>
           </div>
         </div>
       </main>
     </div>
-  )
-}
-
-function TikTokMediaPreview({ videoFile, videoPreview, driveFiles, dropboxFiles, adText, cta, identityId, advertiserId }) {
-  const hasMedia = videoFile || driveFiles.length > 0 || dropboxFiles.length > 0;
-  
-  return (
-    <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden min-h-[500px] flex flex-col">
-      <CardHeader className="border-b border-gray-100 bg-gray-50/50 py-4">
-        <CardTitle className="text-sm font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          Media Preview
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 p-6 flex flex-col items-center justify-center bg-gray-50/30">
-        {!hasMedia ? (
-          <div className="text-center space-y-4 max-w-[280px]">
-            <div className="w-20 h-20 rounded-3xl bg-white shadow-sm border border-gray-100 mx-auto flex items-center justify-center">
-              <Video className="w-8 h-8 text-gray-300" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-gray-900 mb-1">No media selected</h4>
-              <p className="text-xs text-gray-500 leading-relaxed font-medium">
-                Upload a video to see how your ad will appear on TikTok.
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="w-full max-w-[320px] aspect-[9/16] bg-black rounded-[2.5rem] shadow-2xl border-[8px] border-zinc-900 overflow-hidden relative group">
-            {/* Mock TikTok Interface */}
-            <div className="absolute inset-0 z-10 pointer-events-none p-4 flex flex-col justify-end gap-3 bg-gradient-to-t from-black/60 via-transparent to-transparent">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-gray-400 border border-white/50" />
-                  <div className="h-4 w-24 bg-white/30 rounded-full" />
-                </div>
-                <p className="text-white text-[11px] leading-snug line-clamp-3">
-                  {adText || "Your ad text will appear here..."}
-                </p>
-              </div>
-              <div className="bg-[#FE2C55] py-2.5 rounded-sm text-center">
-                <span className="text-white text-xs font-bold uppercase tracking-wider">
-                  {cta.length > 0 ? cta[0].replace(/_/g, ' ') : "SHOP NOW"}
-                </span>
-              </div>
-            </div>
-
-            {/* Video Content */}
-            {videoPreview ? (
-              <video 
-                src={videoPreview} 
-                className="w-full h-full object-cover" 
-                autoPlay 
-                muted 
-                loop 
-                playsInline
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-                <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
-                <p className="text-[10px] text-white/50 font-bold uppercase tracking-widest">
-                  {driveFiles.length > 0 ? "Importing from Drive..." : "Importing from Dropbox..."}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
   )
 }

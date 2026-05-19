@@ -17,7 +17,6 @@ import {
   MousePointer2 as CTAIcon,
   FileText,
   Globe,
-  ImagePlus,
   Link as LinkIcon,
   Loader,
   RefreshCcw,
@@ -27,7 +26,9 @@ import {
   Users,
   Video,
   X,
-  Zap
+  Zap,
+  Plus,
+  Trash
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
@@ -36,6 +37,8 @@ import { toast } from "sonner"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import axios from "axios"
 
 import DesktopIcon from '@/assets/Desktop.webp'
@@ -44,10 +47,19 @@ import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
 import CampaignIcon from '@/assets/icons/folder.svg?react'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
 import PlusIcon from '@/assets/icons/plus.svg?react'
-
+import CogIcon from '@/assets/icons/cog.svg?react'
+import LabelIcon from '@/assets/icons/label.svg?react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
+
+const VARIANT_COLORS = ['#6b7280', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899']
+
+function VariantDot({ variantId, variants }) {
+  const idx = variants.findIndex((v) => v.id === variantId)
+  const color = VARIANT_COLORS[Math.max(0, idx) % VARIANT_COLORS.length]
+  return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
+}
 
 const CTA_OPTIONS = [
   { value: 'SHOP_NOW', label: 'Shop Now' },
@@ -90,7 +102,8 @@ export default function TikTokAdCreationForm({
   advertiserId, 
   advertisers, 
   onAdvertiserChange,
-  // Lifted State
+  
+  // Lifted Form State
   adName, setAdName,
   adText, setAdText,
   cta, setCta,
@@ -100,142 +113,346 @@ export default function TikTokAdCreationForm({
   driveFiles, setDriveFiles,
   dropboxFiles, setDropboxFiles,
   selectedIdentity, setSelectedIdentity,
+  urlMode, setUrlMode,
+  adType, setAdType,
+
+  // Form Fetching States
+  campaigns, setCampaigns,
+  adGroups, setAdGroups,
+  selectedCampaign, setSelectedCampaign,
+  selectedAdGroup, setSelectedAdGroup,
+  identities, setIdentities,
+  files, setFiles,
+
+  // Variants Props
+  variants,
+  setVariants,
+  activeVariantId,
+  setActiveVariantId,
+  switchVariant,
+  handleAddVariant,
+  handleDeleteVariant,
+  handleDeleteAllVariants,
+  isFormFieldModified,
+  fileVariantMap,
+  setFileVariantMap,
+  groupVariantMap,
+  setGroupVariantMap,
+  postVariantMap,
+  setPostVariantMap,
   advertiserPrefs
 }) {
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
 
-  // URL Modes
-  const [urlMode, setUrlMode] = useState('WEBSITE') // WEBSITE or INSTANT_PAGE
-  const [instantPages, setInstantPages] = useState([])
-  const [loadingPages, setLoadingPages] = useState(false)
-  const [openUrlPicker, setOpenUrlPicker] = useState(false)
-  const [openTemplatePicker, setOpenTemplatePicker] = useState(false)
-  const [isAdNameUserModified, setIsAdNameUserModified] = useState(false)
+  const renderDiffMark = (fieldKeys) => {
+    if (isFormFieldModified && isFormFieldModified(fieldKeys)) {
+      return (
+        <span className="w-1.5 h-1.5 rounded-full bg-orange-500 inline-block shrink-0" style={{ transform: 'translateY(-1px)' }} />
+      )
+    }
+    return null
+  }
 
-  const renderDiffMark = (fieldKeys) => null; // Placeholder for parity with Meta form
-
-  const { tiktokFetch, tiktokUser, isLoading: authLoading, refreshTikTokUser } = useTikTokAuth()
-
-  useEffect(() => {
-    console.group('🎯 [TikTokAdCreationForm] Mounted')
-    console.log('  advertiserId prop  :', advertiserId || 'NONE')
-    console.log('  advertisers prop   :', advertisers?.length, 'items', advertisers)
-    console.log('  tiktokUser         :', tiktokUser)
-    console.log('  localStorage uid   :', localStorage.getItem('tiktok_uid'))
-    console.log('  localStorage token :', localStorage.getItem('tiktok_token') ? localStorage.getItem('tiktok_token').slice(0,12)+'...' : 'MISSING')
-    console.log('  localStorage adIds :', localStorage.getItem('tiktok_advertiser_ids'))
-    console.log('  API_BASE_URL       :', API_BASE_URL)
-    console.groupEnd()
-  }, [])
+  const { tiktokFetch, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
 
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
 
-  // Video upload hook — must be called AFTER selectedAdvertiser is declared to avoid TDZ.
-  // Provides XHR-backed progress tracking for local file uploads.
+  useEffect(() => {
+    if (advertiserId) setSelectedAdvertiser(advertiserId)
+  }, [advertiserId])
+
+  // Video upload hook
   const {
     uploadVideo: uploadVideoToTikTok,
-    uploadVideoFromUrl,
     uploading: videoUploading,
     uploadProgress: videoUploadProgress,
   } = useTikTokVideoUpload(selectedAdvertiser)
-  const [campaigns, setCampaigns] = useState([])
-  const [adGroups, setAdGroups] = useState([])
-  const [selectedCampaign, setSelectedCampaign] = useState('')
-  const [selectedAdGroup, setSelectedAdGroup] = useState('')
-  const [uploadSources, setUploadSources] = useState(['local', 'drive', 'dropbox'])
-  const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [isUploading, setIsUploading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [loadingCampaigns, setLoadingCampaigns] = useState(false)
-  const [loadingAdGroups, setLoadingAdGroups] = useState(false)
-  const [identities, setIdentities] = useState([])
-  const [loadingIdentities, setLoadingIdentities] = useState(false)
-  const [tiktokLibraryFiles, setTiktokLibraryFiles] = useState([])
-  const [uploadedImageId, setUploadedImageId] = useState(null)
-  const [uploadedImageUrl, setUploadedImageUrl] = useState(null)
-  const [uploadingImage, setUploadingImage] = useState(false)
-  const imageUploadRef = useRef()
 
+  // Local state for combobox visibility
   const [openAdvertiser, setOpenAdvertiser] = useState(false)
   const [openCampaign, setOpenCampaign] = useState(false)
   const [openAdGroup, setOpenAdGroup] = useState(false)
   const [openIdentity, setOpenIdentity] = useState(false)
+  const [openCta, setOpenCta] = useState(false)
+  const [openUrlPicker, setOpenUrlPicker] = useState(false)
+  const [openTemplatePicker, setOpenTemplatePicker] = useState(false)
+
+  // Duplication local states
+  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(false)
+  const [newCampaignName, setNewCampaignName] = useState('')
+  const [isDuplicating, setIsDuplicating] = useState(false)
+
+  // Search input local states
   const [advertiserSearch, setAdvertiserSearch] = useState('')
   const [campaignSearch, setCampaignSearch] = useState('')
   const [adGroupSearch, setAdGroupSearch] = useState('')
-  const [identitySearch, setIdentitySearch] = useState('')
-  
-  const [adType, setAdType] = useState('NORMAL') // 'NORMAL' or 'SPARK'
 
-  // Inline Campaign Duplication
-  const [isDuplicating, setIsDuplicating] = useState(false)
-  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(true)
-  const [newCampaignName, setNewCampaignName] = useState('')
+  // Library / Upload status local states
+  const [tiktokLibraryFiles] = useState([]) // Keep library files array empty to default upload paths
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
 
-  // Cloud Picker State
+  // Google/Dropbox state variables
   const [googleAuthStatus, setGoogleAuthStatus] = useState({ checking: true, authenticated: false, accessToken: null })
+  const [uploadSources, setUploadSources] = useState(['local'])
+  const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false)
   const [showFolderInput, setShowFolderInput] = useState(false)
   const [folderLinkValue, setFolderLinkValue] = useState("")
   const [isImportingFolder, setIsImportingFolder] = useState(false)
-  const pickerInstanceRef = useRef(null)
 
+  const [loadingCampaigns, setLoadingCampaigns] = useState(false)
+  const [loadingAdGroups, setLoadingAdGroups] = useState(false)
+  const [loadingIdentities, setLoadingIdentities] = useState(false)
+  const [instantPages, setInstantPages] = useState([])
+  const [loadingPages, setLoadingPages] = useState(false)
+  const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false)
 
   const fileRef = useRef()
+  const pickerInstanceRef = useRef(null)
 
-  // Auto-resolve Ad Name based on Formula
-  useEffect(() => {
-      if (!advertiserPrefs || isAdNameUserModified) return;
-      
-      const formula = advertiserPrefs.adNameFormula?.rawInput;
-      if (!formula || formula.length === 0) return;
-
-      const campaign = campaigns.find(c => c.campaign_id === selectedCampaign);
-      const adGroup = adGroups.find(g => g.adgroup_id === selectedAdGroup);
-      
-      let generated = formula.map(part => {
-          if (part.type === 'text') return part.value;
-          if (part.id === 'campaign.name') return campaign?.campaign_name || '[Campaign Name]';
-          if (part.id === 'ad_group.name') return adGroup?.adgroup_name || '[Ad Group Name]';
-          if (part.id === 'date') return new Date().toLocaleDateString();
-          return '';
-      }).join('');
-
-      if (generated && generated !== adName) {
-          setAdName(generated);
-      }
-  }, [advertiserPrefs, selectedCampaign, selectedAdGroup, campaigns, adGroups, isAdNameUserModified]);
-
-  // Fetch Instant Pages
-  useEffect(() => {
-      if (!selectedAdvertiser) return;
-      setLoadingPages(true);
-      const uid = localStorage.getItem('tiktok_uid');
-      const token = localStorage.getItem('tiktok_token');
-      fetch(`${API_BASE_URL}/api/tiktok/fetch-pages?advertiserId=${selectedAdvertiser}`, {
-          headers: {
-              ...(uid && { 'x-tiktok-user-id': uid }),
-              ...(token && { 'x-tiktok-token': token }),
-          }
-      })
-      .then(r => r.json())
-      .then(d => setInstantPages(d.pages || []))
-      .catch(e => console.error('Failed to fetch instant pages:', e))
-      .finally(() => setLoadingPages(false));
-  }, [selectedAdvertiser]);
-
-  const toggleCta = (value) => {
-    setCta(prev =>
-      prev.includes(value)
-        ? (prev.length > 1 ? prev.filter(v => v !== value) : prev)
-        : [...prev, value]
-    )
+  const countFilesForVariant = (variantId) => {
+    let count = 0
+    Object.values(fileVariantMap).forEach((val) => {
+      if (val === variantId) count++
+    })
+    Object.values(groupVariantMap).forEach((val) => {
+      if (val === variantId) count++
+    })
+    Object.values(postVariantMap).forEach((val) => {
+      if (val === variantId) count++
+    })
+    return count
   }
 
+  // Handle advertiser account change
+  const handleAdvertiserChange = useCallback((value) => {
+    setSelectedAdvertiser(value)
+    if (onAdvertiserChange) {
+      onAdvertiserChange(value)
+    }
+    setSelectedCampaign('')
+    setSelectedAdGroup('')
+    setCampaigns([])
+    setAdGroups([])
+  }, [onAdvertiserChange, setCampaigns, setAdGroups, setSelectedCampaign, setSelectedAdGroup])
+
+  // Fetch Campaigns & Identities on Advertiser change
+  useEffect(() => {
+    if (!selectedAdvertiser) {
+      setCampaigns([])
+      setSelectedCampaign('')
+      return
+    }
+
+    const cacheKey = `tiktok_campaigns_${selectedAdvertiser}`
+    const cached = readCache(cacheKey)
+    if (cached) {
+      setCampaigns(cached)
+      setSelectedCampaign('')
+      setAdGroups([])
+    } else {
+      setLoadingCampaigns(true)
+      const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
+      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
+        .then(r => r.json())
+        .then(d => {
+          const list = d.campaigns || []
+          setCampaigns(list)
+          writeCache(cacheKey, list)
+          setSelectedCampaign('')
+          setAdGroups([])
+        })
+        .catch(() => toast.error('Failed to load campaigns'))
+        .finally(() => setLoadingCampaigns(false))
+    }
+
+    setLoadingIdentities(true)
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`)
+      .then(r => r.json())
+      .then(d => {
+        const list = d.identities || []
+        setIdentities(list)
+        if (list.length > 0) {
+          const best = list.find(i => i.identity_type === 'TT_USER') ||
+                       list.find(i => i.identity_type === 'BC_AUTH_TT') ||
+                       list[0]
+           if (adType === 'SPARK') {
+             setSelectedIdentity(best.identity_id)
+           } else {
+             setSelectedIdentity('CUSTOMIZED_USER')
+           }
+        } else {
+          setSelectedIdentity('CUSTOMIZED_USER')
+          setAdType('NORMAL')
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingIdentities(false))
+  }, [selectedAdvertiser, adType, setCampaigns, setSelectedCampaign, setAdGroups, setIdentities, setSelectedIdentity, setAdType, tiktokFetch])
+
+  // Fetch Ad Groups on Campaign change
+  useEffect(() => {
+    if (!selectedCampaign) {
+      setAdGroups([])
+      setSelectedAdGroup('')
+      return
+    }
+
+    const cacheKey = `tiktok_adgroups_${selectedCampaign}`
+    const cached = readCache(cacheKey)
+    if (cached) {
+      setAdGroups(cached)
+      setSelectedAdGroup('')
+    } else {
+      setLoadingAdGroups(true)
+      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${selectedCampaign}`)
+        .then(r => r.json())
+        .then(d => {
+          const list = d.adGroups || d.adgroups || []
+          setAdGroups(list)
+          writeCache(cacheKey, list)
+          setSelectedAdGroup('')
+        })
+        .catch(() => toast.error('Failed to load ad groups'))
+        .finally(() => setLoadingAdGroups(false))
+    }
+  }, [selectedCampaign, selectedAdvertiser, setAdGroups, setSelectedAdGroup, tiktokFetch])
+
+  // Fetch Instant Pages on Advertiser change
+  useEffect(() => {
+    if (!selectedAdvertiser) return
+    setLoadingPages(true)
+    const uid = localStorage.getItem('tiktok_uid')
+    const token = localStorage.getItem('tiktok_token')
+    fetch(`${API_BASE_URL}/api/tiktok/fetch-pages?advertiserId=${selectedAdvertiser}`, {
+      headers: {
+        ...(uid && { 'x-tiktok-user-id': uid }),
+        ...(token && { 'x-tiktok-token': token }),
+      }
+    })
+    .then(r => r.json())
+    .then(d => setInstantPages(d.pages || []))
+    .catch(() => {})
+    .finally(() => setLoadingPages(false))
+  }, [selectedAdvertiser])
+
+  // Setup Campaign Duplication name automatic suffixing
+  useEffect(() => {
+    if (selectedCampaign) {
+      const camp = campaigns.find(c => c.campaign_id === selectedCampaign)
+      if (camp) {
+        setNewCampaignName((camp.campaign_name || '') + "_copy")
+      }
+    } else {
+      setNewCampaignName('')
+    }
+  }, [selectedCampaign, campaigns])
+
+  // Force refreshes
+  const forceRefreshCampaigns = (e) => {
+    e.stopPropagation()
+    if (!selectedAdvertiser) return
+    setLoadingCampaigns(true)
+    const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
+      .then(r => r.json())
+      .then(d => {
+        const list = d.campaigns || []
+        setCampaigns(list)
+        writeCache(`tiktok_campaigns_${selectedAdvertiser}`, list)
+        toast.success('Campaigns refreshed!')
+      })
+      .catch(() => toast.error('Failed to refresh campaigns'))
+      .finally(() => setLoadingCampaigns(false))
+  }
+
+  const forceRefreshAdGroups = (e) => {
+    e.stopPropagation()
+    if (!selectedCampaign) return
+    setLoadingAdGroups(true)
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${selectedCampaign}`)
+      .then(r => r.json())
+      .then(d => {
+        const list = d.adGroups || d.adgroups || []
+        setAdGroups(list)
+        writeCache(`tiktok_adgroups_${selectedCampaign}`, list)
+        toast.success('Ad Groups refreshed!')
+      })
+      .catch(() => toast.error('Failed to refresh ad groups'))
+      .finally(() => setLoadingAdGroups(false))
+  }
+
+  const forceRefreshIdentities = (e) => {
+    e.stopPropagation()
+    if (!selectedAdvertiser || loadingIdentities) return
+    setLoadingIdentities(true)
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`)
+      .then(r => r.json())
+      .then(d => {
+        const list = d.identities || []
+        setIdentities(list)
+        if (list.length > 0) {
+          const best = list.find(i => i.identity_type === 'TT_USER') ||
+                       list.find(i => i.identity_type === 'BC_AUTH_TT') ||
+                       list[0]
+          setSelectedIdentity(best.identity_id)
+        } else {
+          setSelectedIdentity('CUSTOMIZED_USER')
+        }
+        toast.success('Identities refreshed!')
+      })
+      .catch(() => toast.error('Failed to refresh identities'))
+      .finally(() => setLoadingIdentities(false))
+  }
+
+  // Handle Campaign Duplication request
+  const handleDuplicateCampaign = useCallback(async (campaignId) => {
+    if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return
+    const campaign = campaigns.find(c => c.campaign_id === campaignId)
+    if (!campaign) return
+    setIsDuplicating(true)
+    try {
+      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          advertiser_id: selectedAdvertiser,
+          source_campaign_id: campaignId,
+          new_campaign_name: newCampaignName.trim(),
+          adgroup_name_suffix: '',
+          ad_name_suffix: '',
+          duplicate_ads: duplicateIncludeAds,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Duplication failed')
+      toast.success(`🎉 "${newCampaignName.trim()}" created!`)
+      
+      const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
+      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
+        .then(r => r.json())
+        .then(d => {
+          const list = d.campaigns || []
+          setCampaigns(list)
+          writeCache(`tiktok_campaigns_${selectedAdvertiser}`, list)
+          if (data.new_campaign_id) {
+            setSelectedCampaign(data.new_campaign_id)
+            setOpenCampaign(false)
+          }
+        })
+        .catch(() => {})
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setIsDuplicating(false)
+    }
+  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign])
+
   const getMimeFromName = (name) => {
-    const ext = name.split('.').pop().toLowerCase();
+    const ext = name.split('.').pop().toLowerCase()
     const map = {
       'mp4': 'video/mp4',
       'mov': 'video/quicktime',
@@ -244,19 +461,37 @@ export default function TikTokAdCreationForm({
       'jpeg': 'image/jpeg',
       'png': 'image/png',
       'gif': 'image/gif'
-    };
-    return map[ext] || 'application/octet-stream';
-  };
+    }
+    return map[ext] || 'application/octet-stream'
+  }
 
-  const isVideoFile = (file) => {
-    const mime = file.mimeType || file.type || getMimeFromName(file.name);
-    return mime.startsWith('video/');
-  };
+  const handleVideoSelect = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    if (setFiles) {
+      setFiles([file])
+    } else {
+      setVideoFile(file)
+      setVideoPreview(URL.createObjectURL(file))
+    }
+    setUploadProgress(0)
+  }
 
-  const extractFolderId = (url) => {
-    const folderMatch = url.match(/folders\/([a-zA-Z0-9-_]+)/);
-    return folderMatch ? folderMatch[1] : null;
-  };
+  const applyUtmsToUrl = (url, pairs = []) => {
+    if (!url || !pairs || pairs.length === 0) return url
+    try {
+      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`)
+      pairs.forEach(({ key, value }) => {
+        if (key && value && !urlObj.searchParams.has(key)) {
+          urlObj.searchParams.set(key, value)
+        }
+      })
+      return urlObj.toString()
+    } catch (e) {
+      console.error('Failed to apply UTMs:', e)
+      return url
+    }
+  }
 
   const toggleUploadSource = (id) => {
     setUploadSources(prev => 
@@ -274,32 +509,32 @@ export default function TikTokAdCreationForm({
   useEffect(() => {
     const checkGoogleAuth = async () => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true });
+        const response = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true })
         setGoogleAuthStatus({
           checking: false,
           authenticated: response.data.authenticated,
           accessToken: response.data.accessToken
-        });
+        })
       } catch (error) {
-        setGoogleAuthStatus({ checking: false, authenticated: false, accessToken: null });
+        setGoogleAuthStatus({ checking: false, authenticated: false, accessToken: null })
       }
-    };
-    checkGoogleAuth();
-  }, []);
+    }
+    checkGoogleAuth()
+  }, [])
 
   // Google Picker Logic
   const createPicker = useCallback((token, initialFolderId = null) => {
     if (pickerInstanceRef.current) {
       try { pickerInstanceRef.current.setVisible(false); } catch (e) {}
     }
-    setShowFolderInput(true);
-    const mimeTypes = ["application/vnd.google-apps.folder", "image/jpeg", "image/png", "image/gif", "video/mp4", "video/webm", "video/quicktime"].join(",");
+    setShowFolderInput(true)
+    const mimeTypes = ["application/vnd.google-apps.folder", "image/jpeg", "image/png", "image/gif", "video/mp4", "video/webm", "video/quicktime"].join(",")
     
-    let mainView;
+    let mainView
     if (initialFolderId) {
-      mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false).setParent(initialFolderId);
+      mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false).setParent(initialFolderId)
     } else {
-      mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false);
+      mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false)
     }
 
     const pickerBuilder = new google.picker.PickerBuilder()
@@ -317,111 +552,111 @@ export default function TikTokAdCreationForm({
             size: doc.sizeBytes,
             accessToken: token,
             isDrive: true
-          }));
-          setDriveFiles(selected);
+          }))
+          setDriveFiles(selected)
           if (selected.length > 0) {
-            const file = selected[0];
-            setVideoFile(null); // Clear local file
-            setDropboxFiles([]); // Clear dropbox files
-            toast.success(`Selected ${file.name} from Google Drive`);
+            const file = selected[0]
+            setVideoFile(null)
+            setDropboxFiles([])
+            toast.success(`Selected ${file.name} from Google Drive`)
           }
         }
         if (data.action === "picked" || data.action === "cancel") {
-          setShowFolderInput(false);
-          setFolderLinkValue("");
-          pickerInstanceRef.current = null;
+          setShowFolderInput(false)
+          setFolderLinkValue("")
+          pickerInstanceRef.current = null
         }
-      });
+      })
 
-    pickerBuilder.addView(mainView);
-    const picker = pickerBuilder.build();
-    pickerInstanceRef.current = picker;
-    picker.setVisible(true);
-  }, []);
+    pickerBuilder.addView(mainView)
+    const picker = pickerBuilder.build()
+    pickerInstanceRef.current = picker
+    picker.setVisible(true)
+  }, [setDriveFiles, setVideoFile, setDropboxFiles])
 
   const openPicker = useCallback((token) => {
     if (!window.google || !window.google.picker) {
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad';
-      document.body.appendChild(script);
+      const script = document.createElement('script')
+      script.src = 'https://apis.google.com/js/api.js?onload=onApiLoad'
+      document.body.appendChild(script)
       window.onApiLoad = () => {
-        window.gapi.load('picker', () => createPicker(token));
-      };
+        window.gapi.load('picker', () => createPicker(token))
+      }
     } else {
-      createPicker(token);
+      createPicker(token)
     }
-  }, [createPicker]);
+  }, [createPicker])
 
   const handleDriveClick = useCallback(async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true });
+      const res = await axios.get(`${API_BASE_URL}/auth/google/status`, { withCredentials: true })
       if (res.data.authenticated && res.data.accessToken) {
-        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken: res.data.accessToken });
-        openPicker(res.data.accessToken);
-        return;
+        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken: res.data.accessToken })
+        openPicker(res.data.accessToken)
+        return
       }
     } catch (err) {}
 
-    const authWindow = window.open(`${API_BASE_URL}/auth/google?popup=true`, "_blank", "width=1100,height=750");
-    if (!authWindow) return toast.error("Popup blocked. Please allow popups and try again.");
+    const authWindow = window.open(`${API_BASE_URL}/auth/google?popup=true`, "_blank", "width=1100,height=750")
+    if (!authWindow) return toast.error("Popup blocked. Please allow popups and try again.")
 
     const listener = (event) => {
-      if (event.origin !== `${API_BASE_URL}`) return;
-      const { type, accessToken } = event.data || {};
+      if (event.origin !== `${API_BASE_URL}`) return
+      const { type, accessToken } = event.data || {}
       if (type === "google-auth-success") {
-        window.removeEventListener("message", listener);
-        authWindow.close();
-        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken });
-        openPicker(accessToken);
+        window.removeEventListener("message", listener)
+        authWindow.close()
+        setGoogleAuthStatus({ authenticated: true, checking: false, accessToken })
+        openPicker(accessToken)
       }
-    };
-    window.addEventListener("message", listener);
-  }, [openPicker]);
+    }
+    window.addEventListener("message", listener)
+  }, [openPicker])
 
   const handleImportFromFolder = useCallback(async () => {
-    if (!googleAuthStatus.accessToken) return toast.error('Not authenticated with Google Drive');
-    const link = folderLinkValue || "";
-    const fileMatch = link.match(/\/file\/d\/([a-zA-Z0-9-_]+)/);
-    const fileId = fileMatch ? fileMatch[1] : null;
+    if (!googleAuthStatus.accessToken) return toast.error('Not authenticated with Google Drive')
+    const link = folderLinkValue || ""
+    const fileMatch = link.match(/\/file\/d\/([a-zA-Z0-9-_]+)/)
+    const fileId = fileMatch ? fileMatch[1] : null
 
     if (fileId) {
       try {
-        setIsImportingFolder(true);
+        setIsImportingFolder(true)
         const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size`, {
           headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` }
-        });
-        if (!response.ok) throw new Error("File not found or permission denied.");
-        const data = await response.json();
-        const newFile = { id: data.id, name: data.name, mimeType: data.mimeType, size: parseInt(data.size || "0", 10), accessToken: googleAuthStatus.accessToken, isDrive: true };
-        setDriveFiles([newFile]);
-        setVideoFile(null);
-        setDropboxFiles([]);
-        setShowFolderInput(false);
-        setFolderLinkValue("");
-        toast.success(`Imported: ${data.name}`);
+        })
+        if (!response.ok) throw new Error("File not found or permission denied.")
+        const data = await response.json()
+        const newFile = { id: data.id, name: data.name, mimeType: data.mimeType, size: parseInt(data.size || "0", 10), accessToken: googleAuthStatus.accessToken, isDrive: true }
+        setDriveFiles([newFile])
+        setVideoFile(null)
+        setDropboxFiles([])
+        setShowFolderInput(false)
+        setFolderLinkValue("")
+        toast.success(`Imported: ${data.name}`)
       } catch (error) {
-        toast.error("Failed to import file.");
+        toast.error("Failed to import file.")
       } finally {
-        setIsImportingFolder(false);
+        setIsImportingFolder(false)
       }
-      return;
+      return
     }
 
-    const folderId = extractFolderId(link);
-    if (!folderId) return toast.error('Invalid Google Drive link');
-    createPicker(googleAuthStatus.accessToken, folderId);
-  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker]);
+    const folderId = link.match(/folders\/([a-zA-Z0-9-_]+)/) ? link.match(/folders\/([a-zA-Z0-9-_]+)/)[1] : null
+    if (!folderId) return toast.error('Invalid Google Drive link')
+    createPicker(googleAuthStatus.accessToken, folderId)
+  }, [folderLinkValue, googleAuthStatus.accessToken, createPicker, setDriveFiles, setVideoFile, setDropboxFiles])
 
   // Dropbox Logic
   useEffect(() => {
-    if (document.getElementById('dropboxjs')) return;
-    const script = document.createElement('script');
-    script.src = 'https://www.dropbox.com/static/api/2/dropins.js';
-    script.id = 'dropboxjs';
-    script.setAttribute('data-app-key', import.meta.env.VITE_DROPBOX_APP_KEY || 'YOUR_DROPBOX_APP_KEY');
-    script.async = true;
-    document.head.appendChild(script);
-  }, []);
+    if (document.getElementById('dropboxjs')) return
+    const script = document.createElement('script')
+    script.src = 'https://www.dropbox.com/static/api/2/dropins.js'
+    script.id = 'dropboxjs'
+    script.setAttribute('data-app-key', import.meta.env.VITE_DROPBOX_APP_KEY || 'YOUR_DROPBOX_APP_KEY')
+    script.async = true
+    document.head.appendChild(script)
+  }, [])
 
   const openDropboxChooser = useCallback((accessToken) => {
     window.Dropbox.choose({
@@ -435,303 +670,58 @@ export default function TikTokAdCreationForm({
           isDropbox: true,
           mimeType: getMimeFromName(file.name),
           accessToken
-        }));
-        setDropboxFiles(dropboxFilesData);
+        }))
+        setDropboxFiles(dropboxFilesData)
         if (dropboxFilesData.length > 0) {
-          setVideoFile(null);
-          setDriveFiles([]);
-          toast.success(`Selected ${dropboxFilesData[0].name} from Dropbox`);
+          setVideoFile(null)
+          setDriveFiles([])
+          toast.success(`Selected ${dropboxFilesData[0].name} from Dropbox`)
         }
       },
       linkType: 'direct',
-      multiselect: false, // For now, keep it simple
+      multiselect: false,
       extensions: ['.mp4', '.mov', '.webm'],
-    });
-  }, []);
+    })
+  }, [setDropboxFiles, setVideoFile, setDriveFiles])
 
   const handleDropboxClick = useCallback(async () => {
-    if (!window.Dropbox) return toast.error("Dropbox is still loading.");
+    if (!window.Dropbox) return toast.error("Dropbox is still loading.")
     try {
-      const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, { credentials: 'include' });
-      const statusData = await statusRes.json();
+      const statusRes = await fetch(`${API_BASE_URL}/auth/dropbox/status`, { credentials: 'include' })
+      const statusData = await statusRes.json()
       if (statusData.authenticated && statusData.accessToken) {
-        openDropboxChooser(statusData.accessToken);
-        return;
+        openDropboxChooser(statusData.accessToken)
+        return
       }
     } catch (err) {}
 
-    const authWindow = window.open(`${API_BASE_URL}/auth/dropbox?popup=true`, 'dropbox-auth', "width=600,height=700");
+    const authWindow = window.open(`${API_BASE_URL}/auth/dropbox?popup=true`, 'dropbox-auth', "width=600,height=700")
     const handleMessage = (event) => {
-      if (event.origin !== API_BASE_URL) return;
+      if (event.origin !== API_BASE_URL) return
       if (event.data?.type === 'dropbox-auth-success') {
-        window.removeEventListener('message', handleMessage);
-        openDropboxChooser(event.data.accessToken);
+        window.removeEventListener('message', handleMessage)
+        openDropboxChooser(event.data.accessToken)
       }
-    };
-    window.addEventListener('message', handleMessage);
-  }, [openDropboxChooser]);
-
-  const handleDuplicateCampaign = useCallback(async (campaignId) => {
-    if (!campaignId || !selectedAdvertiser || !newCampaignName.trim()) return;
-    const campaign = campaigns.find(c => c.campaign_id === campaignId);
-    if (!campaign) return;
-    setIsDuplicating(true);
-    try {
-      const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          advertiser_id: selectedAdvertiser,
-          source_campaign_id: campaignId,
-          new_campaign_name: newCampaignName.trim(),
-          adgroup_name_suffix: '',
-          ad_name_suffix: '',
-          duplicate_ads: duplicateIncludeAds,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Duplication failed');
-      toast.success(`✅ "${newCampaignName.trim()}" created!`);
-      // Refresh campaign list
-      const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' });
-      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
-        .then(r => r.json())
-        .then(d => {
-          setCampaigns(d.campaigns || []);
-          // Potentially select the new campaign
-          if (data.new_campaign_id) {
-            setSelectedCampaign(data.new_campaign_id);
-            setOpenCampaign(false);
-          }
-        })
-        .catch(() => {});
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setIsDuplicating(false);
     }
-  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch]);
+    window.addEventListener('message', handleMessage)
+  }, [openDropboxChooser])
 
-  useEffect(() => {
-    if (selectedCampaign) {
-      const camp = campaigns.find(c => c.campaign_id === selectedCampaign);
-      if (camp) {
-        setNewCampaignName((camp.campaign_name || '') + "_copy");
-      }
-    } else {
-      setNewCampaignName('');
-    }
-  }, [selectedCampaign, campaigns]);
-
-
-  useEffect(() => {
-    if (advertiserId) setSelectedAdvertiser(advertiserId)
-  }, [advertiserId])
-
-  const handleAdvertiserChange = useCallback((value) => {
-    setSelectedAdvertiser(value)
-    if (onAdvertiserChange) {
-      onAdvertiserChange(value)
-    }
-    // Reset selections
-    setSelectedCampaign('')
-    setSelectedAdGroup('')
-    setCampaigns([])
-    setAdGroups([])
-  }, [onAdvertiserChange])
-
-  useEffect(() => {
-    if (!selectedAdvertiser) {
-      console.log('⚠️ [TikTok Form] No advertiser selected — skipping campaign fetch')
-      setCampaigns([])
-      setSelectedCampaign('')
-      return
-    }
-
-    // Check Cache First
-    const cacheKey = `tiktok_campaigns_${selectedAdvertiser}`
-    const cached = readCache(cacheKey)
-    if (cached) {
-      console.log('📦 [TikTok Form] Using cached campaigns', cached.length)
-      setCampaigns(cached)
-      setSelectedCampaign('')
-      setAdGroups([])
-      return
-    }
-
-    setLoadingCampaigns(true)
-    const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
-    const url = `${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`
-    console.group(`📡 [TikTok Form] Fetching campaigns for advertiser: ${selectedAdvertiser}`)
-    console.log('  URL                :', url)
-    console.groupEnd()
-    tiktokFetch(url)
-      .then(async r => {
-        const body = await r.text()
-        let d
-        try { d = JSON.parse(body) } catch { d = {} }
-        return d
-      })
-      .then(d => {
-        const list = d.campaigns || []
-        console.log(`✅ [TikTok Form] Campaigns loaded: ${list.length} item(s)`)
-        setCampaigns(list)
-        writeCache(cacheKey, list) // Write to Cache
-        setSelectedCampaign('')
-        setAdGroups([])
-      })
-      .catch(err => {
-        console.error('❌ [TikTok Form] fetch-campaigns FAILED:', err)
-        toast.error('Failed to load campaigns')
-      })
-      .finally(() => setLoadingCampaigns(false))
-
-    setLoadingIdentities(true)
-    const identityUrl = `${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`
-    tiktokFetch(identityUrl)
-      .then(r => r.json())
-      .then(d => {
-        const list = d.identities || []
-        console.log(`✅ [TikTok Form] Identities loaded: ${list.length}`, list)
-        setIdentities(list)
-        if (list.length > 0) {
-          const best = list.find(i => i.identity_type === 'TT_USER') ||
-                       list.find(i => i.identity_type === 'BC_AUTH_TT') ||
-                       list[0]
-          
-          if (adType === 'SPARK') {
-            setSelectedIdentity(best.identity_id)
-          } else {
-            setSelectedIdentity('CUSTOMIZED_USER')
-          }
-        } else {
-          setSelectedIdentity('CUSTOMIZED_USER')
-          setAdType('NORMAL')
-        }
-      })
-      .catch(err => console.error('❌ [TikTok Form] Failed to fetch identities:', err))
-      .finally(() => setLoadingIdentities(false))
-  }, [selectedAdvertiser])
-
-  useEffect(() => {
-    if (!selectedCampaign) {
-      setAdGroups([])
-      setSelectedAdGroup('')
-      return
-    }
-
-    // Check Cache
-    const cacheKey = `tiktok_adgroups_${selectedCampaign}`
-    const cached = readCache(cacheKey)
-    if (cached) {
-      console.log('📦 [TikTok Form] Using cached adgroups', cached.length)
-      setAdGroups(cached)
-      setSelectedAdGroup('')
-      return
-    }
-
-    setLoadingAdGroups(true)
-    const url = `${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${selectedCampaign}`
-    console.group(`📡 [TikTok Form] Fetching adgroups for campaign: ${selectedCampaign}`)
-    console.groupEnd()
-    tiktokFetch(url)
-      .then(r => r.json())
-      .then(d => {
-        const list = d.adGroups || d.adgroups || []
-        console.log(`✅ [TikTok Form] Ad Groups loaded: ${list.length}`)
-        setAdGroups(list)
-        writeCache(cacheKey, list) // Write to Cache
-        setSelectedAdGroup('')
-      })
-      .catch(err => {
-        console.error('❌ [TikTok Form] fetch-adgroups FAILED:', err)
-        toast.error('Failed to load ad groups')
-      })
-      .finally(() => setLoadingAdGroups(false))
-  }, [selectedCampaign, selectedAdvertiser])
-
-  const handleVideoSelect = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setVideoFile(file)
-    setVideoPreview(URL.createObjectURL(file))
-    setUploadProgress(0)
-  }
-
-  const applyUtmsToUrl = (url, pairs = []) => {
-    if (!url || !pairs || pairs.length === 0) return url;
-    try {
-      const urlObj = new URL(url.startsWith('http') ? url : `https://${url}`);
-      pairs.forEach(({ key, value }) => {
-        if (key && value && !urlObj.searchParams.has(key)) {
-          urlObj.searchParams.set(key, value);
-        }
-      });
-      return urlObj.toString();
-    } catch (e) {
-      console.error('Failed to apply UTMs:', e);
-      return url;
-    }
-  };
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedAdvertiser) return;
-    setUploadingImage(true);
-    setUploadedImageId(null);
-    setUploadedImageUrl(null);
-    try {
-      const uid = localStorage.getItem('tiktok_uid');
-      const token = localStorage.getItem('tiktok_token');
-      const formData = new FormData();
-      formData.append('image', file);
-      const res = await fetch(`${API_BASE_URL}/api/tiktok/upload-image?advertiserId=${selectedAdvertiser}`, {
-        method: 'POST',
-        headers: {
-          ...(uid && { 'x-tiktok-user-id': uid }),
-          ...(token && { 'x-tiktok-token': token }),
-        },
-        body: formData,
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Image upload failed');
-      setUploadedImageId(data.image_id);
-      setUploadedImageUrl(data.image_url);
-      toast.success(`Image uploaded! ID: ${data.image_id}`);
-    } catch (err) {
-      toast.error(`Image upload failed: ${err.message}`);
-      console.error('[Image Upload]', err);
-    } finally {
-      setUploadingImage(false);
-      if (imageUploadRef.current) imageUploadRef.current.value = '';
-    }
-  };
-
+  // Submit form handler
   const handleSubmit = async (e) => {
     e.preventDefault()
-    console.group('🚀 [TikTok Form] handleSubmit triggered')
-    console.log('  selectedAdvertiser :', selectedAdvertiser || 'MISSING')
-    console.log('  selectedCampaign   :', selectedCampaign || 'MISSING')
-    console.log('  selectedAdGroup    :', selectedAdGroup || 'MISSING')
-    console.log('  adName             :', adName.trim() || 'MISSING')
-    console.log('  cta                :', cta)
-    console.log('  videoFile          :', videoFile?.name || 'MISSING')
-    console.groupEnd()
-
     if (!selectedAdvertiser) return toast.error('Please select an advertiser')
     if (!selectedAdGroup) return toast.error('Please select an ad group')
     
-    // Strict validation based on Ad Type
     if (adType === 'SPARK') {
       if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
         return toast.error('Spark Ads require a linked TikTok account. Please select one or switch to Normal Ad.')
       }
     } else {
-      // For Normal Ads, ensure we are using CUSTOMIZED_USER
       if (!selectedIdentity) setSelectedIdentity('CUSTOMIZED_USER')
     }
+
     if (!adName.trim()) return toast.error('Ad name is required')
-    if (cta.length === 0) return toast.error('Please select at least one Call to Action')
+    if (!cta) return toast.error('Please select a Call to Action')
     const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0
     if (!videoFile && !isCloudFile) return toast.error("Please select a video")
 
@@ -740,32 +730,22 @@ export default function TikTokAdCreationForm({
     setUploadProgress(0)
 
     try {
-      let videoId = null;
+      let videoId = null
 
       if (tiktokLibraryFiles.length > 0) {
-        // ── LIBRARY RE-USE: skip upload for videos already in TikTok library ──
-        videoId = tiktokLibraryFiles[0].videoId;
-        setIsUploading(false);
-        setUploadProgress(100);
+        videoId = tiktokLibraryFiles[0].videoId
+        setIsUploading(false)
+        setUploadProgress(100)
       } else if (videoFile) {
-        // ── LOCAL FILE: use the hook so we get XHR upload-progress ──
-        console.group('📡 [TikTok Form] Uploading local video via hook')
-        console.log('  File name  :', videoFile.name)
-        console.log('  File size  :', (videoFile.size / 1024 / 1024).toFixed(2), 'MB')
-        console.groupEnd()
-
-        // The hook manages its own uploading/uploadProgress state;
-        // those states drive the progress bar below via videoUploading/videoUploadProgress.
         toast.info('Uploading video...')
         const uploadResult = await uploadVideoToTikTok(videoFile)
         if (!uploadResult?.videoId) {
           throw new Error('Video upload failed — no video ID returned')
         }
-        videoId = uploadResult.videoId;
-        setIsUploading(false);
-        setUploadProgress(100);
+        videoId = uploadResult.videoId
+        setIsUploading(false)
+        setUploadProgress(100)
       } else {
-        // ── CLOUD SOURCE (Drive / Dropbox): send JSON reference via tiktokFetch ──
         const formData = new FormData()
         if (driveFiles.length > 0) {
           formData.append('driveFile', JSON.stringify(driveFiles[0]))
@@ -776,18 +756,10 @@ export default function TikTokAdCreationForm({
         const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
         const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
         const sourceName = driveFiles.length > 0 ? 'Google Drive' : 'Dropbox'
-        console.group('📡 [TikTok Form] Uploading cloud video')
-        console.log('  Source     :', sourceName)
-        console.log('  File name  :', driveFiles[0]?.name || dropboxFiles[0]?.name)
-        console.groupEnd()
 
         toast.info(`Downloading from ${sourceName} and uploading...`)
         const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData })
         const uploadRawText = await uploadRes.text()
-        console.group('📬 [TikTok Form] upload-video response')
-        console.log('  HTTP Status :', uploadRes.status, uploadRes.statusText)
-        console.log('  Raw Body    :', uploadRawText)
-        console.groupEnd()
 
         let uploadData = {}
         try { uploadData = JSON.parse(uploadRawText) } catch (parseErr) {
@@ -798,7 +770,7 @@ export default function TikTokAdCreationForm({
           throw new Error(uploadData.error || uploadData.message || `Upload failed with status ${uploadRes.status}`)
         }
 
-        videoId = uploadData.videoId;
+        videoId = uploadData.videoId
         setUploadProgress(100)
         setIsUploading(false)
         toast.success('Video uploaded!')
@@ -809,61 +781,58 @@ export default function TikTokAdCreationForm({
       const currentIdentityId = isCustomized ? undefined : selectedIdentity
       const currentIdentityType = isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER')
 
-      toast.info(`Creating ${cta.length} ad(s)...`)
-      const creatives = cta.map(action => {
-        const finalUrl = urlMode === 'WEBSITE' 
-          ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
-          : landingUrl;
-
-        const creative = {
-          video_id: videoId,
-          ad_text: adText,
-          call_to_action: action,
-          ad_name: `${adName.trim()} (${action})`,
-          identity_type: currentIdentityType,
-          // Support for both Website and Instant Page
-          landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-          ...(urlMode === 'WEBSITE' 
-            ? { landing_page_url: finalUrl } 
-            : { page_id: landingUrl }
-          )
-        }
-        // Only include identity_id when it's a real value — omitting it for CUSTOMIZED_USER
-        if (currentIdentityId) creative.identity_id = currentIdentityId
-        return creative
-      })
+      toast.info(`Creating TikTok ad...`)
       
+      const finalUrl = urlMode === 'WEBSITE' 
+        ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
+        : landingUrl
+
+      const creative = {
+        video_id: videoId,
+        ad_text: adText,
+        call_to_action: cta,
+        ad_name: `${adName.trim()}`,
+        identity_type: currentIdentityType,
+        landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+        ...(urlMode === 'WEBSITE' 
+          ? { landing_page_url: finalUrl } 
+          : { page_id: landingUrl }
+        )
+      }
+      if (currentIdentityId) creative.identity_id = currentIdentityId
+
       const createPayload = {
         advertiserId: selectedAdvertiser,
         adgroupId: selectedAdGroup,
-        // Only pass top-level identityId when it's a real value (used by backend auto-resolve fallback)
         ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
         identityType: currentIdentityType,
         adName: adName.trim(),
-        creatives
+        creatives: [creative]
       }
-      console.group(`📡 [TikTok Form] Creating ${cta.length} ad(s)`)
-      console.log('  URL                :', `${API_BASE_URL}/api/tiktok/create-ad`)
-      console.log('  Payload            :', JSON.stringify(createPayload, null, 2))
-      console.groupEnd()
+
       const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createPayload),
       })
       const createData = await createRes.json()
-      console.group('📬 [TikTok Form] create-ad response')
-      console.log('  HTTP Status        :', createRes.status, createRes.statusText)
-      console.log('  Data               :', createData)
-      console.groupEnd()
       if (!createRes.ok || !createData.success) {
         throw new Error(createData.error || 'Ad creation failed')
       }
-      toast.success(`🎉 ${cta.length} TikTok ad(s) created successfully!`)
-      setAdName(''); setAdText(''); setLandingUrl(''); setCta(['SHOP_NOW'])
-      setVideoFile(null); setVideoPreview(null); setUploadProgress(0)
+      toast.success(`🎉 TikTok ad created successfully!`)
+      
+      // Reset form fields
+      setAdName('')
+      setAdText('')
+      setLandingUrl('')
+      setCta('SHOP_NOW')
+      setVideoFile(null)
+      setVideoPreview(null)
+      if (setFiles) setFiles([])
+      setDriveFiles([])
+      setDropboxFiles([])
+      setUploadProgress(0)
     } catch (err) {
-      console.error('❌ [TikTok Form] handleSubmit error:', err.message)
       toast.error(err.message)
       setIsUploading(false)
     } finally {
@@ -871,114 +840,62 @@ export default function TikTokAdCreationForm({
     }
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+  const shouldScrollVariantPicker = variants.length > 3
 
-      {/* Identity Section - Now matching Meta AdAccountSettings style */}
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+
+      {/* Card 1: Ads Account and Configuration */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <AdAccountIcon className="w-5 h-5" />
-            Ad Account & Identity
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50 py-4.5 px-6">
+          <CardTitle className="text-sm font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
+            <CogIcon className="w-5 h-5 text-gray-500" />
+            Ads Account And Configuration
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-5 pb-5 pt-0 space-y-5">
-          {/* Ad Type Toggle */}
-          <div className="flex items-center justify-center p-1 bg-gray-100/80 rounded-[1.25rem] w-full">
-            <button
-              type="button"
-              onClick={() => {
-                setAdType('NORMAL')
-                setSelectedIdentity('CUSTOMIZED_USER')
-              }}
-              className={cn(
-                "flex-1 py-2 text-[11px] font-bold uppercase tracking-wider rounded-[1rem] transition-all duration-200",
-                adType === 'NORMAL' 
-                  ? "bg-white text-zinc-900 shadow-sm ring-1 ring-black/5" 
-                  : "text-gray-500 hover:text-gray-700"
-              )}
-            >
-              Normal Ad
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAdType('SPARK')
-                const best = identities.find(i => i.identity_type === 'TT_USER') || identities[0]
-                if (best) setSelectedIdentity(best.identity_id)
-              }}
-              className={cn(
-                "flex-1 py-2 text-[11px] font-bold uppercase tracking-wider rounded-[1rem] transition-all duration-200",
-                adType === 'SPARK' 
-                  ? "bg-white text-zinc-900 shadow-sm ring-1 ring-black/5" 
-                  : "text-gray-500 hover:text-gray-700"
-              )}
-            >
-              Spark Ad
-            </button>
-          </div>
-
-          {/* Advertiser Account */}
+        <CardContent className="p-6 space-y-6">
+          
+          {/* 1. Advertiser Account Combobox */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
                 {renderDiffMark("selectedAdvertiser")}
-                <Users className="w-4 h-4" />
-                TikTok Advertiser
+                <AdAccountIcon className="w-4 h-4 text-gray-500" />
+                Advertiser's Account
               </Label>
-              <RefreshCcw 
-                className={cn("h-4 w-4 text-gray-500 cursor-pointer hover:text-gray-700 transition-colors", authLoading && "animate-spin")} 
-                onClick={() => {
-                  toast.promise(refreshTikTokUser(), {
-                    loading: 'Refreshing accounts...',
-                    success: 'Accounts refreshed!',
-                    error: 'Refresh failed'
-                  })
-                }}
-              />
+              {authLoading && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
             </div>
             <Popover open={openAdvertiser} onOpenChange={setOpenAdvertiser}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-expanded={openAdvertiser}
-                  disabled={!advertisers || advertisers.length === 0}
-                  className={cn(
-                    "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
-                    !selectedAdvertiser && "text-gray-500"
-                  )}
+                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
-                  <div className="flex items-center gap-2 truncate">
+                  <span className="truncate text-sm font-medium">
                     {selectedAdvertiser
-                      ? advertisers.find(adv => String(adv.advertiser_id || adv.id) === String(selectedAdvertiser))?.advertiser_name || 
-                        advertisers.find(adv => String(adv.advertiser_id || adv.id) === String(selectedAdvertiser))?.name || 
-                        selectedAdvertiser
-                      : "Select an Advertiser Account"}
-                  </div>
+                      ? advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser))?.advertiser_name || selectedAdvertiser
+                      : "Select Advertiser's Account"}
+                  </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent 
-                className="p-0 bg-white shadow-lg rounded-2xl" 
-                align="start"
-                style={{ width: 'var(--radix-popover-trigger-width)' }}
-              >
+              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
                   <CommandInput 
-                    placeholder="Search accounts..." 
+                    placeholder="Search Advertiser..." 
                     value={advertiserSearch}
                     onValueChange={setAdvertiserSearch}
-                    className="bg-transparent border-none focus:ring-0"
+                    className="bg-transparent border-none focus:ring-0" 
                   />
+                  <CommandEmpty>No advertiser found.</CommandEmpty>
                   <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
-                    <CommandEmpty>No advertiser found.</CommandEmpty>
                     <CommandGroup>
                       {advertisers?.filter(adv => 
                         (adv.advertiser_name || adv.name || '').toLowerCase().includes(advertiserSearch.toLowerCase()) ||
                         (adv.advertiser_id || adv.id || '').toLowerCase().includes(advertiserSearch.toLowerCase())
-                      ).map(adv => {
-                        const id = adv.advertiser_id || adv.id
+                      ).map((a) => {
+                        const id = a.advertiser_id || a.id
                         return (
                           <CommandItem
                             key={id}
@@ -989,13 +906,11 @@ export default function TikTokAdCreationForm({
                             }}
                             className={cn(
                               "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                              String(selectedAdvertiser) === String(id) ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                              selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
                             )}
                           >
-                            <div className="flex flex-col w-full">
-                              <span className="font-medium">{adv.advertiser_name || adv.name}</span>
-                            </div>
-                            {String(selectedAdvertiser) === String(id) && <Check className="ml-auto h-4 w-4 text-black" />}
+                            <span className="text-sm font-medium">{a.advertiser_name || id}</span>
+                            {selectedAdvertiser === id && <Check className="ml-auto h-4 w-4 text-black" />}
                           </CommandItem>
                         )
                       })}
@@ -1006,127 +921,200 @@ export default function TikTokAdCreationForm({
             </Popover>
           </div>
 
-          {/* Post As (Identity) */}
+          {/* 2. Campaign Combobox with Duplication Form */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
-                {renderDiffMark("selectedIdentity")}
-                <Users className="w-4 h-4" />
-                Post As (Linked Account)
+                {renderDiffMark("selectedCampaign")}
+                <CampaignIcon className="w-4 h-4 text-gray-500" />
+                Select a Campaign
               </Label>
-              <RefreshCcw
-                className={cn("h-4 w-4 text-gray-500 cursor-pointer hover:text-gray-700 transition-colors", loadingIdentities && "animate-spin")}
-                onClick={() => {
-                  if (!selectedAdvertiser || loadingIdentities) return
-                  setLoadingIdentities(true)
-                  tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`)
-                    .then(r => r.json())
-                    .then(d => {
-                      const list = d.identities || []
-                      setIdentities(list)
-                      if (list.length > 0) {
-                        const best = list.find(i => i.identity_type === 'TT_USER') ||
-                                     list.find(i => i.identity_type === 'BC_AUTH_TT') ||
-                                     list[0]
-                        setSelectedIdentity(best.identity_id)
-                      } else {
-                        setSelectedIdentity('CUSTOMIZED_USER')
-                      }
-                      toast.success('Linked accounts refreshed!')
-                    })
-                    .catch(() => toast.error('Failed to refresh linked accounts'))
-                    .finally(() => setLoadingIdentities(false))
-                }}
-              />
+              <div className="flex items-center gap-2">
+                {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                <button
+                  type="button"
+                  onClick={forceRefreshCampaigns}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Refresh campaigns"
+                >
+                  <RefreshCcw className="w-3 h-3" />
+                </button>
+              </div>
             </div>
-            <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
+            <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   role="combobox"
-                  aria-expanded={openIdentity}
-                  disabled={!selectedAdvertiser || loadingIdentities || adType === 'NORMAL'}
-                  className={cn(
-                    "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white",
-                    adType === 'NORMAL' && "bg-gray-50/50 opacity-80 cursor-not-allowed border-dashed",
-                    !selectedIdentity && "text-gray-500"
-                  )}
+                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    {adType === 'NORMAL' ? (
-                      <span className="text-sm italic text-gray-500">Custom Identity (In-Feed Ad)</span>
-                    ) : loadingIdentities ? (
-                      <><Loader className="w-3 h-3 animate-spin text-gray-400" /><span className="text-gray-400 text-sm">Loading accounts...</span></>
-                    ) : selectedIdentity === 'CUSTOMIZED_USER' || !selectedIdentity ? (
-                      <span className="text-sm text-red-500 font-medium">Select a TikTok profile for Spark Ad</span>
-                    ) : (() => {
-                      const found = identities.find(i => i.identity_id === selectedIdentity)
-                      return found ? (
-                        <div className="flex items-center gap-2 min-w-0">
-                          {found.avatar_url || found.profile_image ? (
-                            <img src={found.avatar_url || found.profile_image} alt="" className="w-6 h-6 rounded-full object-cover shrink-0 border border-gray-200" />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-gray-200 shrink-0 flex items-center justify-center">
-                              <Users className="w-3 h-3 text-gray-400" />
-                            </div>
-                          )}
-                          <span className="font-medium text-sm truncate">{found.display_name || found.identity_id}</span>
-                          <span className="text-[10px] text-gray-400 uppercase tracking-tighter shrink-0">{found.identity_type}</span>
-                        </div>
-                      ) : <span className="text-sm text-gray-500">{selectedIdentity}</span>
-                    })()}
-                  </div>
+                  <span className="truncate text-sm font-medium">
+                    {selectedCampaign
+                      ? campaigns.find(c => c.campaign_id === selectedCampaign)?.campaign_name || selectedCampaign
+                      : "Select a Campaign"}
+                  </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent
-                className="p-0 bg-white shadow-lg rounded-2xl"
-                align="start"
-                style={{ width: 'var(--radix-popover-trigger-width)' }}
-              >
+              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
-                  <CommandInput
-                    placeholder="Search linked accounts..."
-                    value={identitySearch}
-                    onValueChange={setIdentitySearch}
-                    className="bg-transparent border-none focus:ring-0"
+                  <CommandInput 
+                    placeholder="Search campaigns..." 
+                    value={campaignSearch}
+                    onValueChange={setCampaignSearch}
+                    className="bg-transparent border-none focus:ring-0" 
                   />
-                  <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
-                    <CommandEmpty>No linked account found.</CommandEmpty>
+                  <CommandEmpty>No campaign found.</CommandEmpty>
+                  <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                     <CommandGroup>
-                      {/* Real linked accounts */}
-                      {identities
-                        .filter(i =>
-                          (i.display_name || i.identity_id || '').toLowerCase().includes(identitySearch.toLowerCase()) ||
-                          (i.identity_type || '').toLowerCase().includes(identitySearch.toLowerCase())
-                        )
-                        .map(i => (
-                          <CommandItem
-                            key={i.identity_id}
-                            value={i.identity_id}
-                            onSelect={() => { setSelectedIdentity(i.identity_id); setOpenIdentity(false); setIdentitySearch('') }}
-                            className={cn(
-                              "px-4 py-2.5 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                              selectedIdentity === i.identity_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                            )}
-                          >
-                            <div className="flex items-center gap-3 w-full min-w-0">
-                              {i.avatar_url || i.profile_image ? (
-                                <img src={i.avatar_url || i.profile_image} alt="" className="w-7 h-7 rounded-full object-cover shrink-0 border border-gray-200" />
-                              ) : (
-                                <div className="w-7 h-7 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
-                                  <Users className="w-3.5 h-3.5 text-gray-400" />
-                                </div>
+                      {campaigns.filter(c => 
+                        (c.campaign_name || '').toLowerCase().includes(campaignSearch.toLowerCase())
+                      ).map((c) => (
+                        <CommandItem
+                          key={c.campaign_id}
+                          value={c.campaign_id}
+                          onSelect={() => {
+                            setSelectedCampaign(c.campaign_id)
+                            setOpenCampaign(false)
+                          }}
+                          className={cn(
+                            "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                            selectedCampaign === c.campaign_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                          )}
+                        >
+                          <span className="text-sm font-medium truncate">{c.campaign_name}</span>
+                          {selectedCampaign === c.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                  
+                  {/* Campaign Duplication Block */}
+                  <div className="border-t border-gray-100 mt-1 bg-gray-50/50 rounded-b-2xl">
+                    {selectedCampaign ? (
+                      <div className="p-3 space-y-3">
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            Launch New Campaign
+                          </span>
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <span className="text-[10px] text-gray-500 font-medium">Include Ads</span>
+                            <div
+                              onClick={(e) => { e.stopPropagation(); setDuplicateIncludeAds(v => !v); }}
+                              className={cn(
+                                "relative w-7 h-3.5 rounded-full cursor-pointer transition-colors duration-200",
+                                duplicateIncludeAds ? "bg-zinc-800" : "bg-gray-200"
                               )}
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-medium text-sm truncate">{i.display_name || i.identity_id}</span>
-                                <span className="text-[10px] text-gray-400 uppercase tracking-tighter">{i.identity_type}</span>
-                              </div>
+                            >
+                              <div className={cn(
+                                "absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow transition-transform duration-200",
+                                duplicateIncludeAds ? "translate-x-3.5" : "translate-x-0.5"
+                              )} />
                             </div>
-                            {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black shrink-0" />}
-                          </CommandItem>
-                        ))
-                      }
+                          </label>
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-[9px] text-gray-400 font-bold uppercase tracking-tight ml-1">Campaign Name</Label>
+                          <Input
+                            placeholder="New Campaign Name"
+                            value={newCampaignName}
+                            onChange={(e) => setNewCampaignName(e.target.value)}
+                            className="h-8 text-[11px] rounded-xl border-gray-200 bg-gray-50 focus:bg-white transition-colors focus:ring-0 focus:border-gray-300"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </div>
+
+                        <Button
+                          type="button"
+                          disabled={isDuplicating || !newCampaignName.trim()}
+                          onClick={() => handleDuplicateCampaign(selectedCampaign)}
+                          className="w-full h-9 rounded-xl bg-zinc-800 hover:bg-black text-white text-[11px] font-bold tracking-wide disabled:opacity-50 flex items-center justify-center gap-1.5 px-3 shadow-sm transition-all active:scale-[0.98]"
+                        >
+                          {isDuplicating ? (
+                            <><Loader className="w-3 h-3 animate-spin" />Launching...</>
+                          ) : (
+                            <>
+                              <PlusIcon className="w-3 h-3" />
+                              <span>Launch Campaign</span>
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-gray-400 text-center py-4 font-medium uppercase tracking-widest">Select a campaign to launch a copy</p>
+                    )}
+                  </div>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* 3. Ad Group Combobox */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("selectedAdGroup")}
+                <AdSetIcon className="w-4 h-4 text-gray-500" />
+                Select an Ad Group
+              </Label>
+              <div className="flex items-center gap-2">
+                {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                <button
+                  type="button"
+                  onClick={forceRefreshAdGroups}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Refresh ad groups"
+                >
+                  <RefreshCcw className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+            <Popover open={openAdGroup} onOpenChange={setOpenAdGroup}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                >
+                  <span className="truncate text-sm font-medium">
+                    {selectedAdGroup
+                      ? adGroups.find(ag => ag.adgroup_id === selectedAdGroup)?.adgroup_name || selectedAdGroup
+                      : "Select an Ad Group"}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                <Command>
+                  <CommandInput 
+                    placeholder="Search ad groups..." 
+                    value={adGroupSearch}
+                    onValueChange={setAdGroupSearch}
+                    className="bg-transparent border-none focus:ring-0" 
+                  />
+                  <CommandEmpty>No ad group found.</CommandEmpty>
+                  <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                    <CommandGroup>
+                      {adGroups.filter(ag =>
+                        (ag.adgroup_name || '').toLowerCase().includes(adGroupSearch.toLowerCase())
+                      ).map((ag) => (
+                        <CommandItem
+                          key={ag.adgroup_id}
+                          value={ag.adgroup_id}
+                          onSelect={() => {
+                            setSelectedAdGroup(ag.adgroup_id)
+                            setOpenAdGroup(false)
+                          }}
+                          className={cn(
+                            "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                            selectedAdGroup === ag.adgroup_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                          )}
+                        >
+                          <span className="text-sm font-medium truncate">{ag.adgroup_name}</span>
+                          {selectedAdGroup === ag.adgroup_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                        </CommandItem>
+                      ))}
                     </CommandGroup>
                   </CommandList>
                 </Command>
@@ -1134,334 +1122,256 @@ export default function TikTokAdCreationForm({
             </Popover>
           </div>
 
+        </CardContent>
+      </Card>
 
-          {/* Image Upload — Test identity image */}
+      {/* Card 2: Select Ad Preferences */}
+      <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50 py-4.5 px-6">
+          <CardTitle className="text-sm font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
+            <LabelIcon className="w-5 h-5 text-gray-500" />
+            Select Ad Preferences
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+
+          {/* 1. Identity Type Toggle */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2 text-xs font-bold text-gray-600 uppercase tracking-widest">
-                <ImagePlus className="w-4 h-4" />
-                Upload Image to Creative Library
-              </Label>
-              {uploadedImageId && (
-                <button
-                  type="button"
-                  onClick={() => { setUploadedImageId(null); setUploadedImageUrl(null); }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-            {uploadedImageId ? (
-              <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-2xl">
-                {uploadedImageUrl && (
-                  <img src={uploadedImageUrl} alt="Uploaded" className="w-10 h-10 rounded-xl object-cover border border-green-300" />
-                )}
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Image Uploaded ✓</span>
-                  <span className="text-xs font-mono text-gray-700 truncate">{uploadedImageId}</span>
-                </div>
-              </div>
-            ) : (
+            <Label className="flex items-center gap-2">
+              {renderDiffMark("adType")}
+              <Zap className="w-4 h-4 text-gray-500 animate-pulse" />
+              Identity Type
+            </Label>
+            <div className="flex items-center justify-center p-1 bg-gray-100/80 rounded-[1.25rem] w-full">
               <button
                 type="button"
-                onClick={() => imageUploadRef.current?.click()}
-                disabled={!selectedAdvertiser || uploadingImage}
+                onClick={() => {
+                  setAdType('NORMAL')
+                  setSelectedIdentity('CUSTOMIZED_USER')
+                }}
                 className={cn(
-                  "w-full flex items-center justify-center gap-2 border border-dashed border-gray-300 rounded-2xl py-3 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 hover:bg-gray-50 transition-all duration-150",
-                  (!selectedAdvertiser || uploadingImage) && "opacity-50 cursor-not-allowed"
+                  "flex-1 py-2 text-[11px] font-bold uppercase tracking-wider rounded-[1rem] transition-all duration-200",
+                  adType === 'NORMAL' 
+                    ? "bg-white text-zinc-900 shadow-sm ring-1 ring-black/5" 
+                    : "text-gray-500 hover:text-gray-700"
                 )}
               >
-                {uploadingImage
-                  ? <><Loader className="w-4 h-4 animate-spin" /> Uploading...</>
-                  : <><Upload className="w-4 h-4" /> Choose image (.png, .jpg)</>}
+                Normal Ad
               </button>
-            )}
-            <input
-              ref={imageUploadRef}
-              type="file"
-              accept="image/png,image/jpeg,image/jpg,image/gif"
-              className="hidden"
-              onChange={handleImageUpload}
-            />
-          </div>
-
-        </CardContent>
-      </Card>
-
-      {/* Placement Section */}
-      <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <CampaignIcon className="w-5 h-5" />
-            Placement
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-5 pb-5 pt-0 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            {/* Campaign */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  {renderDiffMark("selectedCampaign")}
-                  <CampaignIcon className="w-4 h-4" />
-                  Campaign
-                </Label>
-                {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-              </div>
-              <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    disabled={!selectedAdvertiser || loadingCampaigns}
-                    className={cn(
-                      "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
-                      !selectedCampaign && "text-gray-500"
-                    )}
-                  >
-                    <div className="truncate">
-                      {selectedCampaign
-                        ? campaigns.find(c => c.campaign_id === selectedCampaign)?.campaign_name || selectedCampaign
-                        : "Select a Campaign"}
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent 
-                  className="p-0 bg-white shadow-lg rounded-2xl" 
-                  align="start"
-                  style={{ width: 'var(--radix-popover-trigger-width)' }}
-                >
-                  <Command>
-                    <CommandInput 
-                      placeholder="Search campaigns..." 
-                      value={campaignSearch}
-                      onValueChange={setCampaignSearch}
-                      className="bg-transparent border-none focus:ring-0"
-                    />
-                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
-                      <CommandEmpty>No campaign found.</CommandEmpty>
-                      <CommandGroup>
-                        {campaigns.filter(c => 
-                          (c.campaign_name || '').toLowerCase().includes(campaignSearch.toLowerCase())
-                        ).map(c => (
-                          <CommandItem
-                            key={c.campaign_id}
-                            value={c.campaign_id}
-                            onSelect={() => {
-                              setSelectedCampaign(c.campaign_id)
-                              setOpenCampaign(false)
-                            }}
-                            className={cn(
-                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                              selectedCampaign === c.campaign_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                            )}
-                          >
-                            <span className="truncate">{c.campaign_name}</span>
-                            {selectedCampaign === c.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                    <div className="border-t border-gray-100 mt-1">
-                      {selectedCampaign ? (
-                        <div className="p-3 space-y-3">
-                          <div className="flex items-center justify-between px-1">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                              Launch New Campaign
-                            </span>
-                            <label className="flex items-center gap-2 cursor-pointer select-none">
-                              <span className="text-[10px] text-gray-500 font-medium">Include Ads</span>
-                              <div
-                                onClick={(e) => { e.stopPropagation(); setDuplicateIncludeAds(v => !v); }}
-                                className={cn(
-                                  "relative w-7 h-3.5 rounded-full cursor-pointer transition-colors duration-200",
-                                  duplicateIncludeAds ? "bg-zinc-800" : "bg-gray-200"
-                                )}
-                              >
-                                <div className={cn(
-                                  "absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow transition-transform duration-200",
-                                  duplicateIncludeAds ? "translate-x-3.5" : "translate-x-0.5"
-                                )} />
-                              </div>
-                            </label>
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] text-gray-400 font-bold uppercase tracking-tight ml-1">Campaign Name</Label>
-                            <Input
-                              placeholder="New Campaign Name"
-                              value={newCampaignName}
-                              onChange={(e) => setNewCampaignName(e.target.value)}
-                              className="h-8 text-[11px] rounded-xl border-gray-200 bg-gray-50 focus:bg-white transition-colors focus:ring-0 focus:border-gray-300"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          </div>
-
-                          <Button
-                            type="button"
-                            disabled={isDuplicating || !newCampaignName.trim()}
-                            onClick={() => handleDuplicateCampaign(selectedCampaign)}
-                            className="w-full h-9 rounded-xl bg-zinc-800 hover:bg-black text-white text-[11px] font-bold tracking-wide disabled:opacity-50 flex items-center justify-center gap-1.5 px-3 shadow-sm transition-all active:scale-[0.98]"
-                          >
-                            {isDuplicating ? (
-                              <><Loader className="w-3 h-3 animate-spin" />Launching...</>
-                            ) : (
-                              <>
-                                <PlusIcon className="w-3 h-3" />
-                                <span>Launch Campaign</span>
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      ) : (
-                        <p className="text-[10px] text-gray-400 text-center py-4 font-medium uppercase tracking-widest">Select a campaign to launch a copy</p>
-                      )}
-                    </div>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Ad Group */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  {renderDiffMark("selectedAdGroup")}
-                  <AdSetIcon className="w-4 h-4" />
-                  Ad Group
-                </Label>
-                {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-              </div>
-              <Popover open={openAdGroup} onOpenChange={setOpenAdGroup}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    disabled={!selectedCampaign || loadingAdGroups}
-                    className={cn(
-                      "w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white",
-                      !selectedAdGroup && "text-gray-500"
-                    )}
-                  >
-                    <div className="truncate">
-                      {selectedAdGroup
-                        ? adGroups.find(g => g.adgroup_id === selectedAdGroup)?.adgroup_name || selectedAdGroup
-                        : "Select an Ad Group"}
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent 
-                  className="p-0 bg-white shadow-lg rounded-2xl" 
-                  align="start"
-                  style={{ width: 'var(--radix-popover-trigger-width)' }}
-                >
-                  <Command>
-                    <CommandInput 
-                      placeholder="Search ad groups..." 
-                      value={adGroupSearch}
-                      onValueChange={setAdGroupSearch}
-                      className="bg-transparent border-none focus:ring-0"
-                    />
-                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
-                      <CommandEmpty>No ad group found.</CommandEmpty>
-                      <CommandGroup>
-                        {adGroups.filter(g => 
-                          (g.adgroup_name || '').toLowerCase().includes(adGroupSearch.toLowerCase())
-                        ).map(g => (
-                          <CommandItem
-                            key={g.adgroup_id}
-                            value={g.adgroup_id}
-                            onSelect={() => {
-                              setSelectedAdGroup(g.adgroup_id)
-                              setOpenAdGroup(false)
-                            }}
-                            className={cn(
-                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                              selectedAdGroup === g.adgroup_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                            )}
-                          >
-                            <span className="truncate">{g.adgroup_name}</span>
-                            {selectedAdGroup === g.adgroup_id && <Check className="ml-auto h-4 w-4 text-black" />}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Creative Section */}
-      <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Video className="w-5 h-5" />
-            Creative
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-5 pb-5 pt-0 space-y-4">
-          {/* Ad Details: Name + Text */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("adName")}
-                <FileText className="w-4 h-4" />
-                Ad Name
-              </Label>
-              <Input
-                type="text"
-                placeholder="Enter your ad name"
-                value={adName}
-                onChange={e => {
-                  setAdName(e.target.value);
-                  setIsAdNameUserModified(true);
+              <button
+                type="button"
+                onClick={() => {
+                  setAdType('SPARK')
+                  const firstSpark = identities.find(i => i.identity_type === 'TT_USER' || i.identity_type === 'BC_AUTH_TT')
+                  if (firstSpark) {
+                    setSelectedIdentity(firstSpark.identity_id)
+                  } else if (identities.length > 0) {
+                    setSelectedIdentity(identities[0].identity_id)
+                  }
                 }}
-                className={formInputChrome}
-              />
+                className={cn(
+                  "flex-1 py-2 text-[11px] font-bold uppercase tracking-wider rounded-[1rem] transition-all duration-200",
+                  adType === 'SPARK' 
+                    ? "bg-white text-zinc-900 shadow-sm ring-1 ring-black/5" 
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                Spark Ad
+              </button>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
+          {/* 2. Post As (Linked Account) */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("selectedIdentity")}
+                <Users className="w-4 h-4 text-gray-500" />
+                Post As (Linked Account)
+              </Label>
+              <div className="flex items-center gap-2">
+                {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                <button
+                  type="button"
+                  onClick={forceRefreshIdentities}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Refresh identities"
+                  disabled={!selectedAdvertiser || loadingIdentities}
+                >
+                  <RefreshCcw className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+            <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  disabled={!selectedAdvertiser || loadingIdentities || adType === 'NORMAL'}
+                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                >
+                  <span className="truncate text-sm font-medium">
+                    {adType === 'NORMAL'
+                      ? "Custom Identity (In-Feed Ad)"
+                      : selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
+                        ? identities.find(i => i.identity_id === selectedIdentity)?.display_name || selectedIdentity
+                        : "Select a Linked Account"}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                <Command>
+                  <CommandInput placeholder="Search linked accounts..." className="bg-transparent border-none focus:ring-0" />
+                  <CommandEmpty>No linked accounts found.</CommandEmpty>
+                  <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                    <CommandGroup>
+                      {identities.map((i) => (
+                        <CommandItem
+                          key={i.identity_id}
+                          value={i.identity_id}
+                          onSelect={() => {
+                            setSelectedIdentity(i.identity_id)
+                            setOpenIdentity(false)
+                          }}
+                          className={cn(
+                            "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                            selectedIdentity === i.identity_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                          )}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">{i.display_name}</span>
+                            <span className="text-[10px] text-gray-400 uppercase tracking-tight">{i.identity_type}</span>
+                          </div>
+                          {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Conditional rendering depending on Spark Ad type */}
+          {adType === 'NORMAL' && (
+            <>
+              {/* 3. Ad Name */}
+              <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  {renderDiffMark("adText")}
-                  <TemplateIcon className="w-4 h-4" />
-                  Ad Copy / Caption
+                  {renderDiffMark("adName")}
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  Ad Name
                 </Label>
-                {advertiserPrefs?.copyTemplates && Object.keys(advertiserPrefs.copyTemplates).length > 0 && (
-                  <Popover open={openTemplatePicker} onOpenChange={setOpenTemplatePicker}>
+                <Input
+                  type="text"
+                  placeholder="e.g. Black Friday Launch Ad"
+                  value={adName}
+                  onChange={e => setAdName(e.target.value)}
+                  className={formInputChrome}
+                />
+              </div>
+
+              {/* 4. Ad Copy / Caption with template picker */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    {renderDiffMark("adText")}
+                    <TemplateIcon className="w-4 h-4 text-gray-500" />
+                    Ad Copy / Caption
+                  </Label>
+                  {advertiserPrefs?.copyTemplates && Object.keys(advertiserPrefs.copyTemplates).length > 0 && (
+                    <Popover open={openTemplatePicker} onOpenChange={setOpenTemplatePicker}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold text-blue-600 hover:text-blue-700 p-0">
+                          {openTemplatePicker ? "Close Picker" : "Use Template"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-64 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
+                        <Command>
+                          <CommandInput placeholder="Search templates..." className="h-8" />
+                          <CommandList>
+                            <CommandEmpty>No templates found.</CommandEmpty>
+                            <CommandGroup heading="Ad Text Templates">
+                              {Object.entries(advertiserPrefs.copyTemplates).map(([name, data]) => (
+                                <CommandItem 
+                                  key={name} 
+                                  onSelect={() => {
+                                    if (data.texts?.length > 0) setAdText(data.texts[0])
+                                    setOpenTemplatePicker(false)
+                                  }}
+                                  className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-bold">{name}</span>
+                                    <span className="text-[10px] text-gray-500 line-clamp-1">{data.texts?.[0]}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+                <TextareaAutosize
+                  value={adText}
+                  onChange={e => setAdText(e.target.value)}
+                  placeholder="Write a catchy caption... ✍️"
+                  minRows={3}
+                  maxRows={8}
+                  className={formTextareaChrome}
+                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+                />
+              </div>
+
+              {/* 5. Call to Action & Landing Page URL Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                {/* Call to Action Single Selector */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    {renderDiffMark("cta")}
+                    <CTAIcon className="w-4 h-4 text-gray-500" />
+                    Call to Action
+                  </Label>
+                  <Popover open={openCta} onOpenChange={setOpenCta}>
                     <PopoverTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold text-blue-600 hover:text-blue-700 p-0">
-                        {openTemplatePicker ? "Close Picker" : "Use Template"}
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                      >
+                        <span className="truncate text-sm font-medium">
+                          {cta
+                            ? CTA_OPTIONS.find(o => o.value === cta)?.label || cta
+                            : "Select a Call to Action"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-64 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
+                    <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                       <Command>
-                        <CommandInput placeholder="Search templates..." className="h-8" />
-                        <CommandList>
-                          <CommandEmpty>No templates found.</CommandEmpty>
-                          <CommandGroup heading="Ad Text Templates">
-                            {Object.entries(advertiserPrefs.copyTemplates).map(([name, data]) => (
-                              <CommandItem 
-                                key={name} 
+                        <CommandInput placeholder="Search CTAs..." className="bg-transparent border-none focus:ring-0" />
+                        <CommandEmpty>No CTA found.</CommandEmpty>
+                        <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
+                          <CommandGroup>
+                            {CTA_OPTIONS.map((opt) => (
+                              <CommandItem
+                                key={opt.value}
+                                value={opt.value}
                                 onSelect={() => {
-                                  if (data.texts?.length > 0) setAdText(data.texts[0]);
-                                  setOpenTemplatePicker(false);
+                                  setCta(opt.value)
+                                  setOpenCta(false)
                                 }}
-                                className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                className={cn(
+                                  "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                  cta === opt.value ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                                )}
                               >
-                                <div className="flex flex-col">
-                                  <span className="text-xs font-bold">{name}</span>
-                                  <span className="text-[10px] text-gray-500 line-clamp-1">{data.texts?.[0]}</span>
-                                </div>
+                                <span className="text-sm font-medium">{opt.label}</span>
+                                {cta === opt.value && <Check className="ml-auto h-4 w-4 text-black" />}
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -1469,179 +1379,113 @@ export default function TikTokAdCreationForm({
                       </Command>
                     </PopoverContent>
                   </Popover>
-                )}
-              </div>
-              <TextareaAutosize
-                value={adText}
-                onChange={e => setAdText(e.target.value)}
-                placeholder="What's your ad about? 🔥"
-                minRows={3}
-                maxRows={10}
-                className={formTextareaChrome}
-                style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-              />
-            </div>
-          </div>
+                </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* CTA Multi-select Dropdown */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("cta")}
-                <CTAIcon className="w-4 h-4" />
-                Call to Action
-                <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded font-bold">Multi-select</span>
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-between font-normal",
-                      formFieldChrome,
-                      cta.length === 0 && "text-muted-foreground"
-                    )}
-                  >
-                    <span className="truncate">
-                      {cta.length > 0 
-                        ? `${cta.length} selected (${cta.map(v => CTA_OPTIONS.find(o => o.value === v)?.label).join(', ')})`
-                        : "Select CTA options"}
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0 bg-white rounded-2xl shadow-xl border-gray-200" align="start">
-                  <Command className="rounded-2xl">
-                    <CommandInput placeholder="Search CTAs..." className="h-9" />
-                    <CommandEmpty>No CTA found.</CommandEmpty>
-                    <CommandList className="max-h-[300px] overflow-y-auto">
-                      <CommandGroup>
-                        {CTA_OPTIONS.map((opt) => (
-                          <CommandItem
-                            key={opt.value}
-                            value={opt.value}
-                            onSelect={() => toggleCta(opt.value)}
-                            className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 rounded-xl m-1"
-                          >
-                            <div className={cn(
-                              "flex h-4 w-4 items-center justify-center rounded border border-gray-300 transition-all",
-                              cta.includes(opt.value) ? "bg-black border-black text-white" : "bg-transparent"
-                            )}>
-                              {cta.includes(opt.value) && <Check className="h-3 w-3" />}
-                            </div>
-                            <span className="text-sm font-medium">{opt.label}</span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Landing URL */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-1.5">
-                  {renderDiffMark("landingUrl")}
-                  <LinkIcon className="w-4 h-4" />
-                  Landing Page URL
-                </Label>
-                <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
-                  <button 
-                    type="button"
-                    onClick={() => setUrlMode('WEBSITE')}
-                    className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
-                  >
-                    Website
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={() => setUrlMode('INSTANT_PAGE')}
-                    className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
-                  >
-                    Instant Page
-                  </button>
+                {/* Landing URL Selector */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-1.5">
+                      {renderDiffMark("landingUrl")}
+                      <LinkIcon className="w-4 h-4 text-gray-500" />
+                      Landing Page URL
+                    </Label>
+                    <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
+                      <button 
+                        type="button"
+                        onClick={() => setUrlMode('WEBSITE')}
+                        className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
+                      >
+                        Website
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setUrlMode('INSTANT_PAGE')}
+                        className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
+                      >
+                        Instant Page
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="relative group">
+                    <Input
+                      type="text"
+                      placeholder={urlMode === 'WEBSITE' ? "https://myshop.com/product" : "Select an Instant Page"}
+                      value={landingUrl}
+                      onChange={e => setLandingUrl(e.target.value)}
+                      className={cn(formInputChrome, "pr-10")}
+                    />
+                    <Popover open={openUrlPicker} onOpenChange={setOpenUrlPicker}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
+                        <Command>
+                          <CommandInput placeholder="Search links..." className="h-8" />
+                          <CommandList className="max-h-[300px]">
+                            <CommandEmpty>No results found.</CommandEmpty>
+                            {urlMode === 'WEBSITE' ? (
+                              <CommandGroup heading="Saved Links (Preferences)">
+                                {advertiserPrefs?.links?.map(l => (
+                                  <CommandItem 
+                                    key={l.url} 
+                                    onSelect={() => { setLandingUrl(l.url); setOpenUrlPicker(false); }}
+                                    className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                  >
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                      <Globe className="w-3 h-3 text-gray-400 shrink-0" />
+                                      <span className="text-xs truncate">{l.url}</span>
+                                      {l.isDefault && <span className="ml-auto text-[8px] font-bold bg-blue-50 text-blue-500 px-1 py-0.5 rounded">Default</span>}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                                {(!advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
+                                  <div className="p-4 text-center">
+                                    <p className="text-[10px] text-gray-400 font-medium italic">No saved links in settings</p>
+                                  </div>
+                                )}
+                              </CommandGroup>
+                            ) : (
+                              <CommandGroup heading="Instant Pages (TikTok)">
+                                {loadingPages ? (
+                                    <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
+                                ) : instantPages.length > 0 ? (
+                                  instantPages.map(p => (
+                                    <CommandItem 
+                                      key={p.page_id} 
+                                      onSelect={() => { setLandingUrl(p.page_id); setOpenUrlPicker(false); }}
+                                      className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                    >
+                                      <div className="flex items-center gap-2 overflow-hidden">
+                                        <Zap className="w-3 h-3 text-emerald-400 shrink-0" />
+                                        <div className="flex flex-col min-w-0">
+                                          <span className="text-xs font-bold truncate">{p.page_name}</span>
+                                          <span className="text-[10px] text-gray-400 truncate">{p.page_id}</span>
+                                        </div>
+                                      </div>
+                                    </CommandItem>
+                                  ))
+                                ) : (
+                                  <div className="p-4 text-center">
+                                    <p className="text-[10px] text-gray-400 font-medium italic">No instant pages found</p>
+                                  </div>
+                                )}
+                              </CommandGroup>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
               </div>
-              
-              <div className="relative group">
-                <Input
-                  type="url"
-                  placeholder={urlMode === 'WEBSITE' ? "https://myshop.com/product" : "Select an Instant Page"}
-                  value={landingUrl}
-                  onChange={e => setLandingUrl(e.target.value)}
-                  className={cn(formInputChrome, "pr-10")}
-                />
-                <Popover open={openUrlPicker} onOpenChange={setOpenUrlPicker}>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
-                      <ChevronDown className="w-4 h-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
-                    <Command>
-                      <CommandInput placeholder="Search links..." className="h-8" />
-                      <CommandList className="max-h-[300px]">
-                        <CommandEmpty>No results found.</CommandEmpty>
-                        {urlMode === 'WEBSITE' ? (
-                          <CommandGroup heading="Saved Links (Preferences)">
-                            {advertiserPrefs?.links?.map(l => (
-                              <CommandItem 
-                                key={l.url} 
-                                onSelect={() => { setLandingUrl(l.url); setOpenUrlPicker(false); }}
-                                className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                              >
-                                <div className="flex items-center gap-2 overflow-hidden">
-                                  <Globe className="w-3 h-3 text-gray-400 shrink-0" />
-                                  <span className="text-xs truncate">{l.url}</span>
-                                  {l.isDefault && <span className="ml-auto text-[8px] font-bold bg-blue-50 text-blue-500 px-1 py-0.5 rounded">Default</span>}
-                                </div>
-                              </CommandItem>
-                            ))}
-                            {(!advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
-                              <div className="p-4 text-center">
-                                <p className="text-[10px] text-gray-400 font-medium italic">No saved links in settings</p>
-                              </div>
-                            )}
-                          </CommandGroup>
-                        ) : (
-                          <CommandGroup heading="Instant Pages (TikTok)">
-                            {loadingPages ? (
-                                <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
-                            ) : instantPages.length > 0 ? (
-                              instantPages.map(p => (
-                                <CommandItem 
-                                  key={p.page_id} 
-                                  onSelect={() => { setLandingUrl(p.page_id); setOpenUrlPicker(false); }}
-                                  className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                                >
-                                  <div className="flex items-center gap-2 overflow-hidden">
-                                    <Zap className="w-3 h-3 text-emerald-400 shrink-0" />
-                                    <div className="flex flex-col min-w-0">
-                                      <span className="text-xs font-bold truncate">{p.page_name}</span>
-                                      <span className="text-[10px] text-gray-400 truncate">{p.page_id}</span>
-                                    </div>
-                                  </div>
-                                </CommandItem>
-                              ))
-                            ) : (
-                              <div className="p-4 text-center">
-                                <p className="text-[10px] text-gray-400 font-medium italic">No instant pages found</p>
-                              </div>
-                            )}
-                          </CommandGroup>
-                        )}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
 
+          {/* 6. Media Section (Always visible under preferences) */}
           <div className="border-t border-gray-100 pt-6">
-            {/* Video Upload Moved to Bottom */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
@@ -1665,7 +1509,7 @@ export default function TikTokAdCreationForm({
                   <PopoverContent align="end" className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
                     <div className="flex flex-col">
                       {UPLOAD_SOURCE_OPTIONS.map((src) => {
-                        const checked = uploadSources.includes(src.id);
+                        const checked = uploadSources.includes(src.id)
                         return (
                           <label
                             key={src.id}
@@ -1682,7 +1526,7 @@ export default function TikTokAdCreationForm({
                             />
                             <span className="text-sm text-gray-800">{src.name}</span>
                           </label>
-                        );
+                        )
                       })}
                     </div>
                   </PopoverContent>
@@ -1738,8 +1582,8 @@ export default function TikTokAdCreationForm({
                       size="icon"
                       className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500"
                       onClick={() => {
-                        setDriveFiles([]);
-                        setDropboxFiles([]);
+                        setDriveFiles([])
+                        setDropboxFiles([])
                       }}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1750,18 +1594,18 @@ export default function TikTokAdCreationForm({
 
               {/* Cloud Source Buttons */}
               {(() => {
-                const rowSources = uploadSources.filter((s) => s !== 'local');
-                if (rowSources.length === 0) return null;
+                const rowSources = uploadSources.filter((s) => s !== 'local')
+                if (rowSources.length === 0) return null
 
                 return (
                   <div className="grid grid-cols-2 gap-2">
                     {rowSources.map((id) => {
-                      const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id);
-                      if (!src) return null;
+                      const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
+                      if (!src) return null
 
-                      let onClick;
-                      if (id === 'drive') onClick = handleDriveClick;
-                      else if (id === 'dropbox') onClick = handleDropboxClick;
+                      let onClick
+                      if (id === 'drive') onClick = handleDriveClick
+                      else if (id === 'dropbox') onClick = handleDropboxClick
 
                       return (
                         <Button
@@ -1779,13 +1623,13 @@ export default function TikTokAdCreationForm({
                           {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
                           <span className="truncate text-xs font-semibold">{src.compactLabel}</span>
                         </Button>
-                      );
+                      )
                     })}
                   </div>
-                );
+                )
               })()}
 
-              {/* Progress bar — driven by XHR progress (local files) or fallback state (cloud) */}
+              {/* Progress bar */}
               {(isUploading || videoUploading) && (
                 <div className="mt-2">
                   <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
@@ -1811,14 +1655,12 @@ export default function TikTokAdCreationForm({
           type="submit"
           disabled={isSubmitting}
           className={cn(
-            "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg",
-            isSubmitting
-              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : "bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99]"
+            "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50",
+            isSubmitting && "opacity-50 cursor-not-allowed"
           )}
         >
           {isSubmitting ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <Loader className="w-5 h-5 animate-spin" />
               {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
             </div>
@@ -1840,12 +1682,125 @@ export default function TikTokAdCreationForm({
         isImporting={isImportingFolder}
       />
 
+      {/* FLOATING VARIANT PICKER BAR AT BOTTOM */}
+      {variants.length > 1 && (
+        <TooltipProvider delayDuration={0}>
+          <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <ScrollArea
+              type="always"
+              className={cn(
+                "rounded-full",
+                shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2"
+              )}
+            >
+              <div className="flex w-max items-center gap-1 pr-1">
+                {variants.map((variant) => {
+                  const isActive = variant.id === activeVariantId
+                  const assignedCount = countFilesForVariant(variant.id)
+
+                  return (
+                    <div key={variant.id} className="group flex shrink-0 items-center">
+                      <button
+                        type="button"
+                        onClick={() => switchVariant(variant.id)}
+                        className={cn(
+                          "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
+                          isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                        )}
+                      >
+                        <VariantDot variantId={variant.id} variants={variants} />
+                        <span className="whitespace-nowrap">{variant.name}</span>
+                        <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
+                          · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
+                        </span>
+                      </button>
+                      {variant.id !== 'default' && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteVariant(variant.id)}
+                          className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
+                          title="Delete variant"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </ScrollArea>
+            <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleAddVariant}
+                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Add variant</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteAllVariantsDialog(true)}
+                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                  >
+                    <Trash className="h-4 w-4" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Delete all variants</TooltipContent>
+              </Tooltip>
+            </div>
+          </div>
+        </TooltipProvider>
+      )}
+
+      {showDeleteAllVariantsDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setShowDeleteAllVariantsDialog(false)}
+          />
+          <div
+            className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl"
+            style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Delete all variants?</h3>
+              <p className="text-sm text-gray-500">
+                This will remove every variant and move all assignments back to Default.
+              </p>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="w-full rounded-xl"
+                onClick={() => {
+                  setShowDeleteAllVariantsDialog(false)
+                  handleDeleteAllVariants()
+                }}
+              >
+                Delete All Variants
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </form>
   )
 }
 
 function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel, isImporting }) {
-  if (!show) return null;
+  if (!show) return null
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
       <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
@@ -1882,5 +1837,5 @@ function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel
         </div>
       </div>
     </div>
-  );
+  )
 }
