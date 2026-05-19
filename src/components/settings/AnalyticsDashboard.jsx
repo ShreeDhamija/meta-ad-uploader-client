@@ -38,8 +38,9 @@ import {
     getAnalyticsDateRangeCacheKey,
     DEFAULT_ANALYTICS_GRANULARITY,
     resolveAllowedGranularity,
+    ANALYTICS_GRANULARITIES,
+    isGranularityAllowed,
 } from "./analytics/dateRangeUtils"
-import GranularityToggle from "./analytics/GranularityToggle"
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -1045,16 +1046,46 @@ export default function AnalyticsDashboard() {
                 <Card className="rounded-3xl border-gray-200 overflow-visible">
                     <CardContent className="p-0">
                         <div className="flex justify-end items-center gap-2 px-4 pt-4 lg:hidden flex-wrap">
-                            <GranularityToggle
-                                value={analyticsGranularity}
-                                onChange={setAnalyticsGranularity}
-                                dateRange={analyticsDateRange}
-                            />
                             <AnalyticsDateRangePicker
                                 value={analyticsDateRange}
                                 onChange={setAnalyticsDateRange}
                                 compact
                             />
+                            <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-0.5">
+                                <span className="text-[11px] font-medium text-gray-500">Breakdown:</span>
+                                <div className="flex items-center gap-0.5">
+                                    {ANALYTICS_GRANULARITIES.map((opt) => {
+                                        const allowed = isGranularityAllowed(opt.key, analyticsDateRange)
+                                        const isActive = analyticsGranularity === opt.key
+                                        return (
+                                            <button
+                                                key={opt.key}
+                                                type="button"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => allowed && setAnalyticsGranularity(opt.key)}
+                                                disabled={!allowed}
+                                                title={
+                                                    allowed
+                                                        ? opt.label
+                                                        : opt.key === "daily"
+                                                            ? "Daily is only available for date ranges up to 90 days"
+                                                            : "Monthly needs a date range of at least 60 days"
+                                                }
+                                                className={cn(
+                                                    "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all",
+                                                    isActive
+                                                        ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                                        : allowed
+                                                            ? "text-gray-500 hover:text-gray-700"
+                                                            : "text-gray-300 cursor-not-allowed",
+                                                )}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -1067,7 +1098,7 @@ export default function AnalyticsDashboard() {
                             </Button>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4">
+                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
                             <div>
                                 <KPIChart
                                     data={dailyInsights}
@@ -1085,17 +1116,46 @@ export default function AnalyticsDashboard() {
                             </div>
                             <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
                             <div className="absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 lg:flex">
-                                <GranularityToggle
-                                    value={analyticsGranularity}
-                                    onChange={setAnalyticsGranularity}
-                                    dateRange={analyticsDateRange}
-                                    className="bg-white"
-                                />
                                 <AnalyticsDateRangePicker
                                     value={analyticsDateRange}
                                     onChange={setAnalyticsDateRange}
                                     compact
                                 />
+                                <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-0.5">
+                                    <span className="text-[11px] font-medium text-gray-500">Breakdown:</span>
+                                    <div className="flex items-center gap-0.5">
+                                        {ANALYTICS_GRANULARITIES.map((opt) => {
+                                            const allowed = isGranularityAllowed(opt.key, analyticsDateRange)
+                                            const isActive = analyticsGranularity === opt.key
+                                            return (
+                                                <button
+                                                    key={opt.key}
+                                                    type="button"
+                                                    onClick={() => allowed && setAnalyticsGranularity(opt.key)}
+                                                    disabled={!allowed}
+                                                    data-keep-shadow={isActive ? "true" : undefined}
+                                                    title={
+                                                        allowed
+                                                            ? opt.label
+                                                            : opt.key === "daily"
+                                                                ? "Daily is only available for date ranges up to 90 days"
+                                                                : "Monthly needs a date range of at least 60 days"
+                                                    }
+                                                    className={cn(
+                                                        "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all",
+                                                        isActive
+                                                            ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                                            : allowed
+                                                                ? "text-gray-500 hover:text-gray-700"
+                                                                : "text-gray-300 cursor-not-allowed",
+                                                    )}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -1113,7 +1173,7 @@ export default function AnalyticsDashboard() {
                         <div className="hidden lg:block border-t border-dashed border-gray-300 mx-4" />
 
                         {/* ── Row 2: 2×2 grid completes with Spend Breakdown + Funnel Health ── */}
-                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4">
+                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
                             <div>
                                 <WeeklyPlacementChart
                                     adAccountId={selectedAdAccount}
