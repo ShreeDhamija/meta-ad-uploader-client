@@ -30,6 +30,9 @@ import AdAccountAudit from "./analytics/AdAccountAudit"
 import AdAccountDiagnostic from "./analytics/AdAccountDiagnostic"
 import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
 import FunnelHealthChart from "./analytics/FunnelHealthChart"
+// FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19)
+import PeriodMetricsSummary from "./analytics/PeriodMetricsSummary"
+// FEATURE END: PERIOD METRICS SUMMARY
 import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
 import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
 import {
@@ -134,6 +137,17 @@ export default function AnalyticsDashboard() {
     const [weeklyInsights, setWeeklyInsights] = useState(null)
     const [weeklyLoading, setWeeklyLoading] = useState(false)
     const [savingSettings, setSavingSettings] = useState(false)
+
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19) — state
+    // ──────────────────────────────────────────────────────────────────────
+    const [periodSummary, setPeriodSummary] = useState(null)
+    const [periodSummaryLoading, setPeriodSummaryLoading] = useState(false)
+    const periodSummaryCacheRef = useRef({})
+    const periodSummaryAbortRef = useRef(null)
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE END: PERIOD METRICS SUMMARY — state
+    // ──────────────────────────────────────────────────────────────────────
 
 
 
@@ -593,6 +607,86 @@ export default function AnalyticsDashboard() {
         getWeeklyInsightsCacheKey,
     ])
 
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19) — fetcher
+    // ──────────────────────────────────────────────────────────────────────
+    const getPeriodSummaryCacheKey = useCallback((accountId, dateRange, conversionEvent, mode) => {
+        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}::${mode || "cpr"}`
+    }, [])
+
+    const clearPeriodSummaryCache = useCallback((accountId = null) => {
+        if (!accountId) {
+            periodSummaryCacheRef.current = {}
+            return
+        }
+        const prefix = `${accountId}::`
+        Object.keys(periodSummaryCacheRef.current).forEach((key) => {
+            if (key.startsWith(prefix)) delete periodSummaryCacheRef.current[key]
+        })
+    }, [])
+
+    const loadPeriodSummary = useCallback(async ({
+        accountId = selectedAdAccount,
+        dateRange = analyticsDateRange,
+        conversionEvent = adAccountSettings?.conversionEvent || null,
+        mode = metricMode,
+        force = false,
+    } = {}) => {
+        if (!accountId) return
+
+        if (periodSummaryAbortRef.current) {
+            periodSummaryAbortRef.current.abort()
+            periodSummaryAbortRef.current = null
+        }
+
+        const cacheKey = getPeriodSummaryCacheKey(accountId, dateRange, conversionEvent, mode)
+        const cachedPayload = periodSummaryCacheRef.current[cacheKey]
+        if (!force && cachedPayload) {
+            setPeriodSummary(cachedPayload)
+            setPeriodSummaryLoading(false)
+            return
+        }
+
+        const controller = new AbortController()
+        periodSummaryAbortRef.current = controller
+        setPeriodSummary(null)
+        setPeriodSummaryLoading(true)
+
+        try {
+            const params = new URLSearchParams()
+            params.set("adAccountId", accountId)
+            if (dateRange?.since) params.set("since", dateRange.since)
+            if (dateRange?.until) params.set("until", dateRange.until)
+            if (conversionEvent) params.set("conversionEvent", conversionEvent)
+            const res = await fetch(`${API_BASE_URL}/api/analytics/period-summary?${params}`, {
+                credentials: 'include',
+                signal: controller.signal,
+            })
+            const json = await res.json()
+            if (!res.ok) throw new Error(json.error || 'Failed to fetch period summary')
+            if (controller.signal.aborted || periodSummaryAbortRef.current !== controller) return
+            periodSummaryCacheRef.current[cacheKey] = json
+            setPeriodSummary(json)
+        } catch (err) {
+            if (err.name === 'AbortError') return
+            console.error('Period summary error:', err)
+        } finally {
+            if (periodSummaryAbortRef.current === controller) {
+                periodSummaryAbortRef.current = null
+                setPeriodSummaryLoading(false)
+            }
+        }
+    }, [
+        selectedAdAccount,
+        analyticsDateRange,
+        adAccountSettings?.conversionEvent,
+        metricMode,
+        getPeriodSummaryCacheKey,
+    ])
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE END: PERIOD METRICS SUMMARY — fetcher
+    // ──────────────────────────────────────────────────────────────────────
+
     // ── Data fetching triggers ──────────────────────────────
     useEffect(() => {
         if (adAccountsLoading || !adAccounts?.length) return
@@ -701,6 +795,39 @@ export default function AnalyticsDashboard() {
         }
     }, [])
 
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19) — effect
+    // ──────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!selectedAdAccount) {
+            if (periodSummaryAbortRef.current) {
+                periodSummaryAbortRef.current.abort()
+                periodSummaryAbortRef.current = null
+            }
+            setPeriodSummary(null)
+            setPeriodSummaryLoading(false)
+            return
+        }
+        if (adAccountSettingsLoading || pendingDailySettingsRef.current === selectedAdAccount) return
+        loadPeriodSummary()
+    }, [
+        selectedAdAccount,
+        analyticsDateRange,
+        adAccountSettingsLoading,
+        adAccountSettings?.conversionEvent,
+        metricMode,
+        loadPeriodSummary,
+    ])
+
+    useEffect(() => {
+        return () => {
+            if (periodSummaryAbortRef.current) periodSummaryAbortRef.current.abort()
+        }
+    }, [])
+    // ──────────────────────────────────────────────────────────────────────
+    // FEATURE END: PERIOD METRICS SUMMARY — effect
+    // ──────────────────────────────────────────────────────────────────────
+
 
 
     const handleAdAccountSelect = (accountId) => {
@@ -736,6 +863,17 @@ export default function AnalyticsDashboard() {
         setWeeklyInsights(cachedWeekly ?? null)
         setDailyLoading(!cachedDaily)
         setWeeklyLoading(!cachedWeekly)
+
+        // FEATURE START: PERIOD METRICS SUMMARY — restore from cache on account switch
+        if (periodSummaryAbortRef.current) {
+            periodSummaryAbortRef.current.abort()
+            periodSummaryAbortRef.current = null
+        }
+        const summaryKey = getPeriodSummaryCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent, metricMode)
+        const cachedSummary = periodSummaryCacheRef.current[summaryKey]
+        setPeriodSummary(cachedSummary ?? null)
+        setPeriodSummaryLoading(!cachedSummary)
+        // FEATURE END: PERIOD METRICS SUMMARY
     }
 
     const handleRefreshBudgetRecommendations = useCallback(() => {
@@ -764,8 +902,12 @@ export default function AnalyticsDashboard() {
         clearWeeklyInsightsCache(selectedAdAccount)
         loadDailyInsights({ force: true })
         fetchWeeklyInsights({ force: true })
+        // FEATURE START: PERIOD METRICS SUMMARY — also refresh on chart refresh
+        clearPeriodSummaryCache(selectedAdAccount)
+        loadPeriodSummary({ force: true })
+        // FEATURE END: PERIOD METRICS SUMMARY
         setChartsRefreshKey(Date.now())
-    }, [selectedAdAccount, adAccountSettingsLoading, clearDailyInsightsCache, clearWeeklyInsightsCache, loadDailyInsights, fetchWeeklyInsights])
+    }, [selectedAdAccount, adAccountSettingsLoading, clearDailyInsightsCache, clearWeeklyInsightsCache, loadDailyInsights, fetchWeeklyInsights, clearPeriodSummaryCache, loadPeriodSummary])
 
     const handleSaveSettings = async () => {
         setSavingSettings(true)
@@ -1097,6 +1239,14 @@ export default function AnalyticsDashboard() {
                                 <RefreshCw className={cn("w-3.5 h-3.5", (dailyLoading || weeklyLoading) && "animate-spin")} />
                             </Button>
                         </div>
+
+                        {/* FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19) */}
+                        <PeriodMetricsSummary
+                            data={periodSummary}
+                            loading={periodSummaryLoading}
+                            mode={metricMode}
+                        />
+                        {/* FEATURE END: PERIOD METRICS SUMMARY */}
 
                         <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
                             <div>
