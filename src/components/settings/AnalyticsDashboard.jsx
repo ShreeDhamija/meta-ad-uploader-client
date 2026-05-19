@@ -1186,7 +1186,63 @@ export default function AnalyticsDashboard() {
             {/* ── Charts Row  */}
             {selectedAdAccount && (
                 <Card className="rounded-3xl border-gray-200 overflow-visible">
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 lg:relative">
+                        {/* Desktop: floating date + breakdown + refresh, anchored to top edge of the Card
+                            (was previously anchored to the chart grid; moved to CardContent so the
+                            PERIOD METRICS SUMMARY tiles above the charts don't get overlaid). */}
+                        <div className="absolute left-1/2 top-0 z-30 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 lg:flex">
+                            <AnalyticsDateRangePicker
+                                value={analyticsDateRange}
+                                onChange={setAnalyticsDateRange}
+                                compact
+                            />
+                            <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-0.5">
+                                <span className="text-[11px] font-medium text-gray-500">Breakdown:</span>
+                                <div className="flex items-center gap-0.5">
+                                    {ANALYTICS_GRANULARITIES.map((opt) => {
+                                        const allowed = isGranularityAllowed(opt.key, analyticsDateRange)
+                                        const isActive = analyticsGranularity === opt.key
+                                        return (
+                                            <button
+                                                key={opt.key}
+                                                type="button"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => allowed && setAnalyticsGranularity(opt.key)}
+                                                disabled={!allowed}
+                                                title={
+                                                    allowed
+                                                        ? opt.label
+                                                        : opt.key === "daily"
+                                                            ? "Daily is only available for date ranges up to 90 days"
+                                                            : "Monthly needs a date range of at least 60 days"
+                                                }
+                                                className={cn(
+                                                    "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all",
+                                                    isActive
+                                                        ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
+                                                        : allowed
+                                                            ? "text-gray-500 hover:text-gray-700"
+                                                            : "text-gray-300 cursor-not-allowed",
+                                                )}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleRefreshCharts}
+                                disabled={dailyLoading || weeklyLoading}
+                                className="rounded-xl h-9 w-9 p-0 bg-white"
+                                title="Refresh charts"
+                            >
+                                <RefreshCw className={cn("w-3.5 h-3.5", (dailyLoading || weeklyLoading) && "animate-spin")} />
+                            </Button>
+                        </div>
+
                         <div className="flex justify-end items-center gap-2 px-4 pt-4 lg:hidden flex-wrap">
                             <AnalyticsDateRangePicker
                                 value={analyticsDateRange}
@@ -1265,58 +1321,6 @@ export default function AnalyticsDashboard() {
                                 />
                             </div>
                             <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
-                            <div className="absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 lg:flex">
-                                <AnalyticsDateRangePicker
-                                    value={analyticsDateRange}
-                                    onChange={setAnalyticsDateRange}
-                                    compact
-                                />
-                                <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-0.5">
-                                    <span className="text-[11px] font-medium text-gray-500">Breakdown:</span>
-                                    <div className="flex items-center gap-0.5">
-                                        {ANALYTICS_GRANULARITIES.map((opt) => {
-                                            const allowed = isGranularityAllowed(opt.key, analyticsDateRange)
-                                            const isActive = analyticsGranularity === opt.key
-                                            return (
-                                                <button
-                                                    key={opt.key}
-                                                    type="button"
-                                                    onClick={() => allowed && setAnalyticsGranularity(opt.key)}
-                                                    disabled={!allowed}
-                                                    data-keep-shadow={isActive ? "true" : undefined}
-                                                    title={
-                                                        allowed
-                                                            ? opt.label
-                                                            : opt.key === "daily"
-                                                                ? "Daily is only available for date ranges up to 90 days"
-                                                                : "Monthly needs a date range of at least 60 days"
-                                                    }
-                                                    className={cn(
-                                                        "px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all",
-                                                        isActive
-                                                            ? "bg-white text-gray-900 shadow-xs ring-1 ring-black/5"
-                                                            : allowed
-                                                                ? "text-gray-500 hover:text-gray-700"
-                                                                : "text-gray-300 cursor-not-allowed",
-                                                    )}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleRefreshCharts}
-                                    disabled={dailyLoading || weeklyLoading}
-                                    className="rounded-xl h-9 w-9 p-0 bg-white"
-                                    title="Refresh charts"
-                                >
-                                    <RefreshCw className={cn("w-3.5 h-3.5", (dailyLoading || weeklyLoading) && "animate-spin")} />
-                                </Button>
-                            </div>
                         </div>
 
                         {/* ── Horizontal dashed separator between chart rows ── */}
