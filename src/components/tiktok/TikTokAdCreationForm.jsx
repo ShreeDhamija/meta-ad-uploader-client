@@ -19,22 +19,23 @@ import {
   Globe,
   Link as LinkIcon,
   Loader,
+  Plus,
   RefreshCcw,
   Type as TemplateIcon,
+  Trash,
   Trash2,
   Upload,
   Users,
   Video,
   X,
-  Zap,
-  Plus,
-  Trash
+  Zap
 } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
 
 import { Checkbox } from "@/components/ui/checkbox"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -44,11 +45,11 @@ import axios from "axios"
 import DesktopIcon from '@/assets/Desktop.webp'
 import DropboxIcon from '@/assets/Dropbox.png'
 import AdAccountIcon from '@/assets/icons/adaccount.svg?react'
+import CogIcon from '@/assets/icons/cog.svg?react'
+import ConfigIcon from '@/assets/icons/cog.svg?react'
 import CampaignIcon from '@/assets/icons/folder.svg?react'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
 import PlusIcon from '@/assets/icons/plus.svg?react'
-import CogIcon from '@/assets/icons/cog.svg?react'
-import LabelIcon from '@/assets/icons/label.svg?react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
@@ -98,11 +99,11 @@ const UPLOAD_SOURCE_OPTIONS = [
   },
 ]
 
-export default function TikTokAdCreationForm({ 
-  advertiserId, 
-  advertisers, 
+export default function TikTokAdCreationForm({
+  advertiserId,
+  advertisers,
   onAdvertiserChange,
-  
+
   // Lifted Form State
   adName, setAdName,
   adText, setAdText,
@@ -277,19 +278,19 @@ export default function TikTokAdCreationForm({
         setIdentities(list)
         if (list.length > 0) {
           const best = list.find(i => i.identity_type === 'TT_USER') ||
-                       list.find(i => i.identity_type === 'BC_AUTH_TT') ||
-                       list[0]
-           if (adType === 'SPARK') {
-             setSelectedIdentity(best.identity_id)
-           } else {
-             setSelectedIdentity('CUSTOMIZED_USER')
-           }
+            list.find(i => i.identity_type === 'BC_AUTH_TT') ||
+            list[0]
+          if (adType === 'SPARK') {
+            setSelectedIdentity(best.identity_id)
+          } else {
+            setSelectedIdentity('CUSTOMIZED_USER')
+          }
         } else {
           setSelectedIdentity('CUSTOMIZED_USER')
           setAdType('NORMAL')
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingIdentities(false))
   }, [selectedAdvertiser, adType, setCampaigns, setSelectedCampaign, setAdGroups, setIdentities, setSelectedIdentity, setAdType, tiktokFetch])
 
@@ -333,10 +334,10 @@ export default function TikTokAdCreationForm({
         ...(token && { 'x-tiktok-token': token }),
       }
     })
-    .then(r => r.json())
-    .then(d => setInstantPages(d.pages || []))
-    .catch(() => {})
-    .finally(() => setLoadingPages(false))
+      .then(r => r.json())
+      .then(d => setInstantPages(d.pages || []))
+      .catch(() => { })
+      .finally(() => setLoadingPages(false))
   }, [selectedAdvertiser])
 
   // Setup Campaign Duplication name automatic suffixing
@@ -396,8 +397,8 @@ export default function TikTokAdCreationForm({
         setIdentities(list)
         if (list.length > 0) {
           const best = list.find(i => i.identity_type === 'TT_USER') ||
-                       list.find(i => i.identity_type === 'BC_AUTH_TT') ||
-                       list[0]
+            list.find(i => i.identity_type === 'BC_AUTH_TT') ||
+            list[0]
           setSelectedIdentity(best.identity_id)
         } else {
           setSelectedIdentity('CUSTOMIZED_USER')
@@ -430,7 +431,7 @@ export default function TikTokAdCreationForm({
       const data = await res.json()
       if (!res.ok || !data.success) throw new Error(data.error || 'Duplication failed')
       toast.success(`🎉 "${newCampaignName.trim()}" created!`)
-      
+
       const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
       tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
         .then(r => r.json())
@@ -443,7 +444,7 @@ export default function TikTokAdCreationForm({
             setOpenCampaign(false)
           }
         })
-        .catch(() => {})
+        .catch(() => { })
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -494,8 +495,8 @@ export default function TikTokAdCreationForm({
   }
 
   const toggleUploadSource = (id) => {
-    setUploadSources(prev => 
-      prev.includes(id) 
+    setUploadSources(prev =>
+      prev.includes(id)
         ? (prev.length > 1 ? prev.filter(s => s !== id) : prev)
         : [...prev, id]
     )
@@ -525,11 +526,11 @@ export default function TikTokAdCreationForm({
   // Google Picker Logic
   const createPicker = useCallback((token, initialFolderId = null) => {
     if (pickerInstanceRef.current) {
-      try { pickerInstanceRef.current.setVisible(false); } catch (e) {}
+      try { pickerInstanceRef.current.setVisible(false); } catch (e) { }
     }
     setShowFolderInput(true)
     const mimeTypes = ["application/vnd.google-apps.folder", "image/jpeg", "image/png", "image/gif", "video/mp4", "video/webm", "video/quicktime"].join(",")
-    
+
     let mainView
     if (initialFolderId) {
       mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false).setParent(initialFolderId)
@@ -595,7 +596,7 @@ export default function TikTokAdCreationForm({
         openPicker(res.data.accessToken)
         return
       }
-    } catch (err) {}
+    } catch (err) { }
 
     const authWindow = window.open(`${API_BASE_URL}/auth/google?popup=true`, "_blank", "width=1100,height=750")
     if (!authWindow) return toast.error("Popup blocked. Please allow popups and try again.")
@@ -693,7 +694,7 @@ export default function TikTokAdCreationForm({
         openDropboxChooser(statusData.accessToken)
         return
       }
-    } catch (err) {}
+    } catch (err) { }
 
     const authWindow = window.open(`${API_BASE_URL}/auth/dropbox?popup=true`, 'dropbox-auth', "width=600,height=700")
     const handleMessage = (event) => {
@@ -711,7 +712,7 @@ export default function TikTokAdCreationForm({
     e.preventDefault()
     if (!selectedAdvertiser) return toast.error('Please select an advertiser')
     if (!selectedAdGroup) return toast.error('Please select an ad group')
-    
+
     if (adType === 'SPARK') {
       if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
         return toast.error('Spark Ads require a linked TikTok account. Please select one or switch to Normal Ad.')
@@ -782,8 +783,8 @@ export default function TikTokAdCreationForm({
       const currentIdentityType = isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER')
 
       toast.info(`Creating TikTok ad...`)
-      
-      const finalUrl = urlMode === 'WEBSITE' 
+
+      const finalUrl = urlMode === 'WEBSITE'
         ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
         : landingUrl
 
@@ -794,8 +795,8 @@ export default function TikTokAdCreationForm({
         ad_name: `${adName.trim()}`,
         identity_type: currentIdentityType,
         landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-        ...(urlMode === 'WEBSITE' 
-          ? { landing_page_url: finalUrl } 
+        ...(urlMode === 'WEBSITE'
+          ? { landing_page_url: finalUrl }
           : { page_id: landingUrl }
         )
       }
@@ -820,7 +821,7 @@ export default function TikTokAdCreationForm({
         throw new Error(createData.error || 'Ad creation failed')
       }
       toast.success(`🎉 TikTok ad created successfully!`)
-      
+
       // Reset form fields
       setAdName('')
       setAdText('')
@@ -847,14 +848,17 @@ export default function TikTokAdCreationForm({
 
       {/* Card 1: Ads Account and Configuration */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader className="border-b border-gray-100 bg-gray-50/50 py-4.5 px-6">
-          <CardTitle className="text-sm font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
-            <CogIcon className="w-5 h-5 text-gray-500" />
-            Ads Account And Configuration
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <CogIcon className="w-5 h-5" />
+              Ad Account Configuration
+            </div>
           </CardTitle>
+          <CardDescription>Select your ad account, campaign and ad set</CardDescription>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-          
+
           {/* 1. Advertiser Account Combobox */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -882,16 +886,16 @@ export default function TikTokAdCreationForm({
               </PopoverTrigger>
               <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
-                  <CommandInput 
-                    placeholder="Search Advertiser..." 
+                  <CommandInput
+                    placeholder="Search Advertiser..."
                     value={advertiserSearch}
                     onValueChange={setAdvertiserSearch}
-                    className="bg-transparent border-none focus:ring-0" 
+                    className="bg-transparent border-none focus:ring-0"
                   />
                   <CommandEmpty>No advertiser found.</CommandEmpty>
                   <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                     <CommandGroup>
-                      {advertisers?.filter(adv => 
+                      {advertisers?.filter(adv =>
                         (adv.advertiser_name || adv.name || '').toLowerCase().includes(advertiserSearch.toLowerCase()) ||
                         (adv.advertiser_id || adv.id || '').toLowerCase().includes(advertiserSearch.toLowerCase())
                       ).map((a) => {
@@ -958,16 +962,16 @@ export default function TikTokAdCreationForm({
               </PopoverTrigger>
               <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
-                  <CommandInput 
-                    placeholder="Search campaigns..." 
+                  <CommandInput
+                    placeholder="Search campaigns..."
                     value={campaignSearch}
                     onValueChange={setCampaignSearch}
-                    className="bg-transparent border-none focus:ring-0" 
+                    className="bg-transparent border-none focus:ring-0"
                   />
                   <CommandEmpty>No campaign found.</CommandEmpty>
                   <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                     <CommandGroup>
-                      {campaigns.filter(c => 
+                      {campaigns.filter(c =>
                         (c.campaign_name || '').toLowerCase().includes(campaignSearch.toLowerCase())
                       ).map((c) => (
                         <CommandItem
@@ -988,7 +992,7 @@ export default function TikTokAdCreationForm({
                       ))}
                     </CommandGroup>
                   </CommandList>
-                  
+
                   {/* Campaign Duplication Block */}
                   <div className="border-t border-gray-100 mt-1 bg-gray-50/50 rounded-b-2xl">
                     {selectedCampaign ? (
@@ -1087,11 +1091,11 @@ export default function TikTokAdCreationForm({
               </PopoverTrigger>
               <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
-                  <CommandInput 
-                    placeholder="Search ad groups..." 
+                  <CommandInput
+                    placeholder="Search ad groups..."
                     value={adGroupSearch}
                     onValueChange={setAdGroupSearch}
-                    className="bg-transparent border-none focus:ring-0" 
+                    className="bg-transparent border-none focus:ring-0"
                   />
                   <CommandEmpty>No ad group found.</CommandEmpty>
                   <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
@@ -1127,59 +1131,70 @@ export default function TikTokAdCreationForm({
 
       {/* Card 2: Select Ad Preferences */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader className="border-b border-gray-100 bg-gray-50/50 py-4.5 px-6">
-          <CardTitle className="text-sm font-bold text-gray-900 uppercase tracking-widest flex items-center gap-2">
-            <LabelIcon className="w-5 h-5 text-gray-500" />
-            Select Ad Preferences
+        <CardHeader>
+          <CardTitle className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 md:gap-2">
+            <div className="flex items-center gap-2">
+              <ConfigIcon className="w-5 h-5 text-gray-500" />
+              Select ad preferences
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <Label htmlFor="ad-type" className="text-sm whitespace-nowrap flex items-center gap-2">
+                {renderDiffMark("adType")}
+                Ad Type:
+              </Label>
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={activeVariantId !== 'default' ? 'cursor-not-allowed' : ''}>
+                      <Select
+                        value={adType}
+                        onValueChange={(value) => {
+                          if (activeVariantId !== 'default') return;
+                          setAdType(value);
+                          if (value === 'NORMAL') {
+                            setSelectedIdentity('CUSTOMIZED_USER');
+                          } else if (value === 'SPARK') {
+                            const firstSpark = identities.find(i => i.identity_type === 'TT_USER' || i.identity_type === 'BC_AUTH_TT');
+                            if (firstSpark) {
+                              setSelectedIdentity(firstSpark.identity_id);
+                            } else if (identities.length > 0) {
+                              setSelectedIdentity(identities[0].identity_id);
+                            }
+                          }
+                        }}
+                        disabled={activeVariantId !== 'default'}
+                      >
+                        <SelectTrigger className={cn("w-[180px] h-10 py-2 font-medium", formFieldChrome)}>
+                          <SelectValue placeholder="Select ad type" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white rounded-xl gap-4">
+                          <SelectItem
+                            value="NORMAL"
+                            className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                          >
+                            Normal Ad
+                          </SelectItem>
+                          <SelectItem
+                            value="SPARK"
+                            className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                          >
+                            Spark Ad
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </span>
+                  </TooltipTrigger>
+                  {activeVariantId !== 'default' && (
+                    <TooltipContent side="bottom" className="max-w-xs text-xs">
+                      Ad type is only changeable in the Default variant. Changing it there will apply to all variants.
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-
-          {/* 1. Identity Type Toggle */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              {renderDiffMark("adType")}
-              <Zap className="w-4 h-4 text-gray-500 animate-pulse" />
-              Identity Type
-            </Label>
-            <div className="flex items-center justify-center p-1 bg-gray-100/80 rounded-[1.25rem] w-full">
-              <button
-                type="button"
-                onClick={() => {
-                  setAdType('NORMAL')
-                  setSelectedIdentity('CUSTOMIZED_USER')
-                }}
-                className={cn(
-                  "flex-1 py-2 text-[11px] font-bold uppercase tracking-wider rounded-[1rem] transition-all duration-200",
-                  adType === 'NORMAL' 
-                    ? "bg-white text-zinc-900 shadow-sm ring-1 ring-black/5" 
-                    : "text-gray-500 hover:text-gray-700"
-                )}
-              >
-                Normal Ad
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAdType('SPARK')
-                  const firstSpark = identities.find(i => i.identity_type === 'TT_USER' || i.identity_type === 'BC_AUTH_TT')
-                  if (firstSpark) {
-                    setSelectedIdentity(firstSpark.identity_id)
-                  } else if (identities.length > 0) {
-                    setSelectedIdentity(identities[0].identity_id)
-                  }
-                }}
-                className={cn(
-                  "flex-1 py-2 text-[11px] font-bold uppercase tracking-wider rounded-[1rem] transition-all duration-200",
-                  adType === 'SPARK' 
-                    ? "bg-white text-zinc-900 shadow-sm ring-1 ring-black/5" 
-                    : "text-gray-500 hover:text-gray-700"
-                )}
-              >
-                Spark Ad
-              </button>
-            </div>
-          </div>
 
           {/* 2. Post As (Linked Account) */}
           <div className="space-y-2">
@@ -1294,8 +1309,8 @@ export default function TikTokAdCreationForm({
                             <CommandEmpty>No templates found.</CommandEmpty>
                             <CommandGroup heading="Ad Text Templates">
                               {Object.entries(advertiserPrefs.copyTemplates).map(([name, data]) => (
-                                <CommandItem 
-                                  key={name} 
+                                <CommandItem
+                                  key={name}
                                   onSelect={() => {
                                     if (data.texts?.length > 0) setAdText(data.texts[0])
                                     setOpenTemplatePicker(false)
@@ -1326,9 +1341,9 @@ export default function TikTokAdCreationForm({
                 />
               </div>
 
-              {/* 5. Call to Action & Landing Page URL Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
+              {/* 5. Call to Action & Landing Page URL Stacked */}
+              <div className="space-y-6">
+
                 {/* Call to Action Single Selector */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -1390,14 +1405,14 @@ export default function TikTokAdCreationForm({
                       Landing Page URL
                     </Label>
                     <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setUrlMode('WEBSITE')}
                         className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
                       >
                         Website
                       </button>
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setUrlMode('INSTANT_PAGE')}
                         className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
@@ -1406,7 +1421,7 @@ export default function TikTokAdCreationForm({
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="relative group">
                     <Input
                       type="text"
@@ -1429,8 +1444,8 @@ export default function TikTokAdCreationForm({
                             {urlMode === 'WEBSITE' ? (
                               <CommandGroup heading="Saved Links (Preferences)">
                                 {advertiserPrefs?.links?.map(l => (
-                                  <CommandItem 
-                                    key={l.url} 
+                                  <CommandItem
+                                    key={l.url}
                                     onSelect={() => { setLandingUrl(l.url); setOpenUrlPicker(false); }}
                                     className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
                                   >
@@ -1450,11 +1465,11 @@ export default function TikTokAdCreationForm({
                             ) : (
                               <CommandGroup heading="Instant Pages (TikTok)">
                                 {loadingPages ? (
-                                    <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
+                                  <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
                                 ) : instantPages.length > 0 ? (
                                   instantPages.map(p => (
-                                    <CommandItem 
-                                      key={p.page_id} 
+                                    <CommandItem
+                                      key={p.page_id}
                                       onSelect={() => { setLandingUrl(p.page_id); setOpenUrlPicker(false); }}
                                       className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
                                     >
@@ -1673,11 +1688,11 @@ export default function TikTokAdCreationForm({
         </p>
       </div>
 
-      <FolderPickerOverlay 
-        show={showFolderInput} 
-        linkValue={folderLinkValue} 
-        setLinkValue={setFolderLinkValue} 
-        onImport={handleImportFromFolder} 
+      <FolderPickerOverlay
+        show={showFolderInput}
+        linkValue={folderLinkValue}
+        setLinkValue={setFolderLinkValue}
+        onImport={handleImportFromFolder}
         onCancel={() => setShowFolderInput(false)}
         isImporting={isImportingFolder}
       />
@@ -1823,8 +1838,8 @@ function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel
               onKeyDown={(e) => e.key === 'Enter' && onImport()}
               className="border-gray-200 rounded-2xl focus:ring-black"
             />
-            <Button 
-              onClick={onImport} 
+            <Button
+              onClick={onImport}
               disabled={!linkValue || isImporting}
               className="bg-black text-white rounded-2xl px-6"
             >
