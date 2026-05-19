@@ -23,7 +23,7 @@ import { useLocation, useNavigate } from "react-router-dom"
 
 export default function Header({ showMessenger, hideMessenger }) {
   const { isLoggedIn, userName, profilePicUrl, handleLogout } = useAuth()
-  const { isTikTokLoggedIn } = useTikTokAuth()
+  const { isTikTokLoggedIn, logoutTikTok } = useTikTokAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const {
@@ -253,7 +253,14 @@ export default function Header({ showMessenger, hideMessenger }) {
         <div className="h-8 w-px bg-gray-300  " />
 
         <button
-          onClick={handleLogout}
+          onClick={async () => {
+            if (location.pathname.includes('tiktok')) {
+              await logoutTikTok();
+            } else {
+              await handleLogout();
+              window.location.href = '/';
+            }
+          }}
           title="Logout"
           className="p-1 rounded-full transition !bg-transparent hover:!bg-transparent focus:outline-none focus:ring-0 active:ring-0"
           style={{
