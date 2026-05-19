@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Button } from "@/components/ui/button"
@@ -10,15 +10,7 @@ import {
     CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell,
 } from "recharts"
 import { cn } from "@/lib/utils"
-import Audience from "@/assets/icons/analytics/Audience.svg"
-import LearningPhase from "@/assets/icons/analytics/LearningPhase.svg"
-import Opportunities from "@/assets/icons/analytics/Opportunities.svg"
-import Summary from "@/assets/icons/analytics/Summary.svg"
-import CopyUtil from "@/assets/icons/analytics/CopyUtil.svg"
 import Audit from "@/assets/icons/analytics/Audit.svg"
-import MonthlySpend from "@/assets/icons/analytics/MonthlySpend.svg"
-import Traffic from "@/assets/icons/analytics/Traffic.svg"
-import FunnelHealth from "@/assets/icons/analytics/FunnelHealth.svg"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -64,18 +56,6 @@ const TOOLTIP_STYLE = {
     padding: "8px 12px",
     fontFamily: FONT,
 }
-
-// ── Sidebar config ───────────────────────────────────────────────────────────
-const SIDEBAR_SECTIONS = [
-    { id: "summary", label: "Summary", icon: Summary, group: "Report" },
-    { id: "traffic", label: "Traffic", icon: Traffic, group: "Report" },
-    { id: "funnel", label: "Funnel Health", icon: FunnelHealth, group: "Report" },
-    { id: "spend", label: "Monthly Spend", icon: MonthlySpend, group: "Report" },
-    { id: "audience", label: "Audience", icon: Audience, group: "Strategy" },
-    { id: "learning", label: "Learning Phase", icon: LearningPhase, group: "Strategy" },
-    { id: "copy", label: "Copy Util.", icon: CopyUtil, group: "Strategy" },
-    { id: "opportunities", label: "Opportunities", icon: Opportunities, group: "AI" },
-]
 
 // ── Formatters ───────────────────────────────────────────────────────────────
 function fmt$(v, decimals = 0) {
@@ -129,10 +109,9 @@ function UpperLabel({ children, className, style }) {
 function MetricCard({ label, value, unit, sub, dark }) {
     return (
         <div
-            className="rounded-2xl flex flex-col gap-1.5 p-4"
+            className="flex flex-col gap-1.5 p-4 min-w-0"
             style={{
                 background: dark ? INK : PAPER,
-                border: `1px dotted ${dark ? "rgba(255,255,255,0.34)" : LINE_2}`,
                 color: dark ? "#fff" : INK,
             }}
         >
@@ -168,6 +147,32 @@ function MetricCard({ label, value, unit, sub, dark }) {
                     {sub}
                 </p>
             )}
+        </div>
+    )
+}
+
+function MetricGrid({ children, columns = 3, className, style }) {
+    const items = Array.isArray(children) ? children.filter(Boolean) : [children].filter(Boolean)
+    return (
+        <div
+            className={className}
+            style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                ...style,
+            }}
+        >
+            {items.map((child, idx) => (
+                <div
+                    key={child.key || idx}
+                    style={{
+                        borderLeft: idx % columns === 0 ? 0 : `1px dotted ${LINE_2}`,
+                        borderTop: idx < columns ? 0 : `1px dotted ${LINE_2}`,
+                    }}
+                >
+                    {child}
+                </div>
+            ))}
         </div>
     )
 }
@@ -286,10 +291,9 @@ function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neu
     }[status]
     return (
         <div
-            className="relative rounded-2xl"
+            className="relative"
             style={{
                 background: PAPER,
-                border: `1px dotted ${LINE_2}`,
                 padding: "14px 16px 15px",
             }}
         >
@@ -456,17 +460,17 @@ function SummarySection({ report, kpiType, kpiTarget }) {
                     }}
                 >
                     <div
-                        style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: INK, maxWidth: 760 }}
+                        style={{ fontSize: 14, lineHeight: 1.45, fontWeight: 400, color: INK, maxWidth: 760 }}
                         dangerouslySetInnerHTML={{ __html: headline }}
                     />
                 </div>
             )}
 
-            <div className="grid grid-cols-3 gap-2.5">
+            <MetricGrid columns={3}>
                 {tiles.map((t) => (
                     <InsightTile key={t.label} {...t} />
                 ))}
-            </div>
+            </MetricGrid>
         </SectionCard>
     )
 }
@@ -490,11 +494,11 @@ function TrafficSection({ traffic }) {
                 sub="Trailing 30 days · Cost Per Link Click, Link CTR, and CPM."
             />
 
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <MetricGrid columns={3} className="mb-4">
                 <MetricCard label="Avg Cost / Link Click" value={fmt$(traffic.avgCostPerClick, 2)} />
                 <MetricCard label="Avg Link CTR" value={traffic.avgCtr !== null ? `${traffic.avgCtr.toFixed(2)}` : "\u2014"} unit="%" />
                 <MetricCard label="Avg CPM" value={fmt$(traffic.avgCpm, 0)} />
-            </div>
+            </MetricGrid>
 
             <div className="grid grid-cols-3 gap-3">
                 {lineDefs.map(({ key, label, color, tooltipFmt, yFmt }) => (
@@ -554,10 +558,10 @@ function FunnelSection({ funnel }) {
                 title="Funnel Health"
                 sub="Trailing 3 months · weekly averages · Frequency and First-Time Impression Rate."
             />
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <MetricGrid columns={2} className="mb-4">
                 <MetricCard label="Avg Weekly Frequency" value={fmtNum(funnel.avgFrequency)} sub="impressions per unique user" />
                 <MetricCard label="Avg First-Time Impression Rate" value={funnel.avgFtir !== null ? (funnel.avgFtir * 100).toFixed(0) : "\u2014"} unit="%" sub="reach ÷ impressions · higher is healthier" />
-            </div>
+            </MetricGrid>
             <div className="rounded-2xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 12px 8px", height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData} margin={{ top: 12, right: 24, left: 0, bottom: 0 }}>
@@ -718,7 +722,7 @@ function AudienceSection({ audience }) {
                 sub="Adsets with delivery in last 30 days (including paused) · prospecting vs retargeting classification."
             />
 
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <MetricGrid columns={3} className="mb-4">
                 <MetricCard
                     label="Prospecting Spend · 30d"
                     value={fmt$(audience.prospectingSpend)}
@@ -734,7 +738,7 @@ function AudienceSection({ audience }) {
                     value={fmt$(audience.totalSpend30d)}
                     sub={`${audience.adsets.length} active adsets`}
                 />
-            </div>
+            </MetricGrid>
 
             {/* Split bar — flat colors */}
             <div
@@ -916,10 +920,10 @@ function LearningSection({ learning }) {
                 </div>
 
                 <div className="flex-1 space-y-3 pt-1">
-                    <div className="grid grid-cols-2 gap-3">
+                    <MetricGrid columns={2}>
                         <MetricCard label="Learning Spend · 7d" value={fmt$(learning.learningSpend)} sub="from Learning / Learning Limited ad sets" />
                         <MetricCard label="Total Spend · 7d" value={fmt$(learning.totalSpend)} sub="all ad sets" />
-                    </div>
+                    </MetricGrid>
                     <div
                         className="rounded-2xl"
                         style={{ padding: "14px 16px", background: PAPER_2, border: `1px solid ${LINE}`, display: "flex", gap: 10, fontSize: 12, color: INK_2, lineHeight: 1.55 }}
@@ -1095,8 +1099,6 @@ export default function AdAccountAudit({
     const [opportunitiesText, setOpportunitiesText] = useState("")
     const [isLoadingOpps, setIsLoadingOpps] = useState(false)
     const [oppsError, setOppsError] = useState(null)
-    const [activeSection, setActiveSection] = useState("summary")
-    const contentRef = useRef(null)
 
     const kpiTarget = kpiType === "cpa" ? targetCPA : targetROAS
 
@@ -1104,37 +1106,9 @@ export default function AdAccountAudit({
         if (open && adAccountId && !report && !isGenerating) generateReport()
         if (!open) {
             setReport(null); setError(null); setOpportunitiesText("")
-            setOppsError(null); setActiveSection("summary")
+            setOppsError(null)
         }
     }, [open, adAccountId])
-
-    useEffect(() => {
-        const container = contentRef.current
-        if (!container || !report) return
-        const ids = SIDEBAR_SECTIONS.map(s => s.id)
-        const handleScroll = () => {
-            const { scrollTop, scrollHeight, clientHeight } = container
-            const atBottom = scrollHeight - scrollTop - clientHeight < 40
-            if (atBottom) {
-                for (let i = ids.length - 1; i >= 0; i--) {
-                    if (document.getElementById(`audit-${ids[i]}`)) { setActiveSection(ids[i]); return }
-                }
-            }
-            let current = "summary"
-            for (const id of ids) {
-                const el = document.getElementById(`audit-${id}`)
-                if (el && el.getBoundingClientRect().top < 220) current = id
-            }
-            setActiveSection(current)
-        }
-        container.addEventListener("scroll", handleScroll, { passive: true })
-        return () => container.removeEventListener("scroll", handleScroll)
-    }, [report])
-
-    const scrollTo = (id) => {
-        const el = document.getElementById(`audit-${id}`)
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
-    }
 
     const generateReport = async () => {
         setIsGenerating(true); setError(null); setReport(null); setOpportunitiesText("")
@@ -1170,15 +1144,6 @@ export default function AdAccountAudit({
     const reportDate = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })
 
     if (!open) return null
-
-    const visibleSections = report
-        ? SIDEBAR_SECTIONS.filter(s => s.id !== "copy" || report.copyUtilization)
-        : SIDEBAR_SECTIONS
-
-    // Group sidebar
-    const groupedSections = visibleSections.reduce((acc, s) => {
-        (acc[s.group] = acc[s.group] || []).push(s); return acc
-    }, {})
 
     return (
         <>
@@ -1247,58 +1212,7 @@ export default function AdAccountAudit({
 
                     {/* Body */}
                     <div className="flex-1 flex overflow-hidden min-h-0">
-
-                        {report && !isGenerating && (
-                            <nav
-                                className="flex-shrink-0 overflow-y-auto"
-                                style={{ width: 200, borderRight: `1px solid ${LINE}`, padding: "14px 10px", background: PAPER }}
-                            >
-                                {Object.entries(groupedSections).map(([group, sections]) => (
-                                    <div key={group}>
-                                        <div
-                                            style={{
-                                                padding: "10px 11px 6px",
-                                                fontSize: 9.5, fontWeight: 600, color: MUTED_2,
-                                            }}
-                                        >
-                                            {group}
-                                        </div>
-                                        {sections.map(({ id, label }) => {
-                                            const isActive = activeSection === id
-                                            return (
-                                                <button
-                                                    key={id}
-                                                    onClick={() => scrollTo(id)}
-                                                    className="w-full text-left"
-                                                    style={{
-                                                        display: "flex", alignItems: "center", gap: 10,
-                                                        padding: "9px 11px", borderRadius: 11, marginBottom: 2,
-                                                        fontSize: 12.5, fontWeight: 500,
-                                                        background: isActive ? INK : "transparent",
-                                                        color: isActive ? "#fff" : MUTED,
-                                                        border: isActive ? `1px solid ${INK}` : "1px solid transparent",
-                                                        fontFamily: FONT,
-                                                        cursor: "pointer",
-                                                    }}
-                                                >
-                                                    <span
-                                                        style={{
-                                                            width: 6, height: 6, borderRadius: 999,
-                                                            background: isActive ? ORANGE : LINE_2,
-                                                        }}
-                                                    />
-                                                    <span className="flex-1 truncate">{label}</span>
-                                                </button>
-                                            )
-                                        })}
-                                        <div style={{ height: 1, background: LINE, margin: "10px 6px" }} />
-                                    </div>
-                                ))}
-                            </nav>
-                        )}
-
                         <div
-                            ref={contentRef}
                             className="flex-1 overflow-y-auto custom-scrollbar"
                             style={{ padding: 28, background: PAPER_2, fontFamily: FONT }}
                         >

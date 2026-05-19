@@ -152,10 +152,9 @@ function SectionCard({ children, id, dark }) {
 function MetricCard({ label, value, unit, sub, dark }) {
     return (
         <div
-            className="rounded-2xl flex flex-col gap-1.5 p-4"
+            className="flex flex-col gap-1.5 p-4 min-w-0"
             style={{
                 background: dark ? INK : PAPER,
-                border: `1px dotted ${dark ? "rgba(255,255,255,0.34)" : LINE_2}`,
                 color: dark ? "#fff" : INK,
             }}
         >
@@ -183,6 +182,32 @@ function MetricCard({ label, value, unit, sub, dark }) {
     )
 }
 
+function MetricGrid({ children, columns = 3, className, style }) {
+    const items = Array.isArray(children) ? children.filter(Boolean) : [children].filter(Boolean)
+    return (
+        <div
+            className={className}
+            style={{
+                display: "grid",
+                gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                ...style,
+            }}
+        >
+            {items.map((child, idx) => (
+                <div
+                    key={child.key || idx}
+                    style={{
+                        borderLeft: idx % columns === 0 ? 0 : `1px dotted ${LINE_2}`,
+                        borderTop: idx < columns ? 0 : `1px dotted ${LINE_2}`,
+                    }}
+                >
+                    {child}
+                </div>
+            ))}
+        </div>
+    )
+}
+
 function InsightTile({ label, value, valuePrefix, valueUnit, desc, status = "neutral" }) {
     const colors = {
         good: { dot: GOOD, ring: "rgba(34,197,94,0.18)" },
@@ -192,7 +217,7 @@ function InsightTile({ label, value, valuePrefix, valueUnit, desc, status = "neu
     }[status]
 
     return (
-        <div className="relative rounded-2xl" style={{ background: PAPER, border: `1px dotted ${LINE_2}`, padding: "14px 16px 15px" }}>
+        <div className="relative" style={{ background: PAPER, padding: "14px 16px 15px" }}>
             <span
                 className="absolute"
                 style={{
@@ -322,7 +347,7 @@ function SummarySection({ report }) {
 
             <div className="rounded-3xl mb-3" style={{ background: PAPER, border: `1px solid ${ORANGE}`, color: INK, padding: "16px 20px" }}>
                 <p
-                    style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: INK, maxWidth: 800, margin: 0 }}
+                    style={{ fontSize: 14, lineHeight: 1.45, fontWeight: 400, color: INK, maxWidth: 800, margin: 0 }}
                     dangerouslySetInnerHTML={{
                         __html: headline
                             .replace(/\$[\d,.]+k?/g, "<strong>$&</strong>")
@@ -331,9 +356,9 @@ function SummarySection({ report }) {
                 />
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <MetricGrid columns={2}>
                 {tiles.map(tile => <InsightTile key={tile.label} {...tile} />)}
-            </div>
+            </MetricGrid>
         </SectionCard>
     )
 }
@@ -365,7 +390,7 @@ function TrendSection({ dailyData, anomalyPeriod, mode, kpiLabel }) {
                 title={`Account Spend & ${kpiLabel} — Trailing 14 Days`}
                 sub={`Daily spend (bars) and ${kpiLabel} (line)${anomalyPeriod ? " · Anomaly period highlighted in pink" : ""}.`}
             />
-            <div className="grid grid-cols-3 gap-3 mb-4">
+            <MetricGrid columns={3} className="mb-4">
                 <MetricCard label="Total Spend · 14d" value={fmtCurrency(totalSpend)} />
                 <MetricCard label={`Avg ${kpiLabel} · 14d`} value={fmtKpi(avgKpi, mode)} />
                 <MetricCard
@@ -373,7 +398,7 @@ function TrendSection({ dailyData, anomalyPeriod, mode, kpiLabel }) {
                     value={anomalyPeriod ? `${anomalyPeriod.days}` : "0"}
                     sub={anomalyPeriod ? `${fmtDateShort(anomalyPeriod.startDate)}–${fmtDateShort(anomalyPeriod.endDate)}` : "no anomaly"}
                 />
-            </div>
+            </MetricGrid>
 
             <div className="rounded-2xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 12px 8px", height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -439,29 +464,29 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
                 sub="Compared against the same-length window immediately before the anomaly."
             />
             <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="rounded-2xl p-4" style={{ background: PAPER, border: `1px dotted ${BLUE_BORDER}` }}>
-                    <SmallLabel style={{ color: BLUE, marginBottom: 8 }}>Anomaly period ({anomalyPeriod.days}d)</SmallLabel>
+                <div className="rounded-3xl p-4" style={{ background: ORANGE_SOFT, border: `1px solid rgba(255,72,0,0.24)` }}>
+                    <SmallLabel style={{ color: ORANGE_DEEP, marginBottom: 8 }}>Anomaly period ({anomalyPeriod.days}d)</SmallLabel>
                     <div className="flex items-baseline gap-6">
                         <div>
-                            <SmallLabel style={{ color: MUTED }}>{kpiLabel}</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: INK, letterSpacing: "-0.005em" }}>{fmtKpi(anomalyPeriod.avgKpi, mode)}</p>
+                            <SmallLabel style={{ color: ORANGE_DEEP }}>{kpiLabel}</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: ORANGE_DEEP, letterSpacing: "-0.005em" }}>{fmtKpi(anomalyPeriod.avgKpi, mode)}</p>
                         </div>
                         <div>
-                            <SmallLabel style={{ color: MUTED }}>Spend</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: INK, letterSpacing: "-0.005em" }}>{fmtCurrency(anomalyPeriod.spend)}</p>
+                            <SmallLabel style={{ color: ORANGE_DEEP }}>Spend</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: ORANGE_DEEP, letterSpacing: "-0.005em" }}>{fmtCurrency(anomalyPeriod.spend)}</p>
                         </div>
                     </div>
                 </div>
-                <div className="rounded-2xl p-4" style={{ background: PAPER, border: `1px dotted ${LINE_2}` }}>
-                    <SmallLabel style={{ color: MUTED, marginBottom: 8 }}>Comparison period ({previousPeriod.days}d)</SmallLabel>
+                <div className="rounded-3xl p-4" style={{ background: GOOD_SOFT, border: `1px solid rgba(34,197,94,0.22)` }}>
+                    <SmallLabel style={{ color: GOOD, marginBottom: 8 }}>Comparison period ({previousPeriod.days}d)</SmallLabel>
                     <div className="flex items-baseline gap-6">
                         <div>
-                            <SmallLabel style={{ color: MUTED }}>{kpiLabel}</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: INK, letterSpacing: "-0.005em" }}>{fmtKpi(previousPeriod.avgKpi, mode)}</p>
+                            <SmallLabel style={{ color: GOOD }}>{kpiLabel}</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD, letterSpacing: "-0.005em" }}>{fmtKpi(previousPeriod.avgKpi, mode)}</p>
                         </div>
                         <div>
-                            <SmallLabel style={{ color: MUTED }}>Spend</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: INK, letterSpacing: "-0.005em" }}>{fmtCurrency(previousPeriod.spend)}</p>
+                            <SmallLabel style={{ color: GOOD }}>Spend</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD, letterSpacing: "-0.005em" }}>{fmtCurrency(previousPeriod.spend)}</p>
                         </div>
                     </div>
                 </div>
@@ -832,7 +857,7 @@ function EventHealthSection({ eventHealth }) {
     return (
         <SectionCard id="health">
             <SectionHeader title="Event Health" sub="Activity status for the primary conversion event in the evaluation window." />
-            <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: PAPER, border: `1px dotted ${palette.border}` }}>
+            <div className="flex items-start gap-3 p-4 rounded-3xl" style={{ background: palette.bg, border: `1px solid ${palette.border}` }}>
                 <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center" style={{ background: PAPER, color: palette.color, border: `1px solid ${palette.border}` }}>
                     <Stethoscope className="w-5 h-5" />
                 </div>

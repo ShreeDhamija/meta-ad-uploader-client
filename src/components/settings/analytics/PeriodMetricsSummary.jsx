@@ -13,8 +13,6 @@
 // ════════════════════════════════════════════════════════════════════════════
 
 import { useMemo } from "react"
-import { Helix } from "ldrs/react"
-import "ldrs/react/Helix.css"
 import { ArrowDown, ArrowUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { parseAnalyticsDate } from "./dateRangeUtils"
@@ -105,6 +103,18 @@ function MetricTile({ label, value, delta, lowerIsBetter, previousValue, previou
     )
 }
 
+function MetricTileSkeleton({ label }) {
+    return (
+        <div className="flex flex-col gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-gray-400 font-semibold">{label}</p>
+            <div className="flex items-baseline justify-between gap-2">
+                <span className="h-5 w-16 rounded-md bg-gray-200 animate-pulse" />
+                <span className="h-5 w-12 rounded-full bg-gray-100 animate-pulse flex-shrink-0" />
+            </div>
+        </div>
+    )
+}
+
 export default function PeriodMetricsSummary({ data, loading, mode = "cpr" }) {
     const isRoas = mode === "roas"
 
@@ -179,10 +189,13 @@ export default function PeriodMetricsSummary({ data, loading, mode = "cpr" }) {
     const previousLabel = data?.previousRange ? formatRange(data.previousRange) : null
 
     if (loading && !data) {
+        const loadingLabels = ["Spend", "Conversions", isRoas ? "ROAS" : "CPA", "CPM", "Link CTR", "Cost / Link Click"]
         return (
             <div className="px-4 pt-4 lg:pt-10">
-                <div className="flex items-center justify-center h-[72px] rounded-2xl border border-gray-200 bg-gray-50">
-                    <Helix size="28" speed="2.5" color="#3b82f6" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                    {loadingLabels.map((label) => (
+                        <MetricTileSkeleton key={label} label={label} />
+                    ))}
                 </div>
             </div>
         )
