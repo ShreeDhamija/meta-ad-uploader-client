@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
+import { formatBucketLabel, formatBucketTooltipTitle } from "./dateRangeUtils"
 
 const COLORS = [
     "#3b82f6", "#22c55e", "#f97316", "#a855f7", "#ef4444",
@@ -39,7 +40,7 @@ function formatEventName(actionType) {
     return actionType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-export default function KPIChart({ data, loading, mode }) {
+export default function KPIChart({ data, loading, mode, granularity = 'daily' }) {
     const { chartData, campaigns } = useMemo(() => {
         if (!data?.dailyInsights?.length) return { chartData: [], campaigns: [] }
 
@@ -58,16 +59,16 @@ export default function KPIChart({ data, loading, mode }) {
         const chartData = [...dateMap.entries()]
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([date, values]) => {
-                const d = new Date(date + 'T00:00:00')
                 return {
                     date,
-                    label: `${d.getMonth() + 1}/${d.getDate()}`,
+                    label: formatBucketLabel(date, granularity),
+                    tooltipTitle: formatBucketTooltipTitle(date, granularity),
                     ...values,
                 }
             })
 
         return { chartData, campaigns }
-    }, [data, mode])
+    }, [data, mode, granularity])
 
     const [hiddenCampaigns, setHiddenCampaigns] = useState(new Set())
 
@@ -149,14 +150,15 @@ export default function KPIChart({ data, loading, mode }) {
         ? (v) => v !== null && v !== undefined ? `${v.toFixed(2)}x` : 'N/A'
         : (v) => v !== null && v !== undefined ? `$${Math.round(v).toLocaleString()}` : 'N/A'
 
-    const CustomTooltip = ({ active, payload, label }) => {
+    const CustomTooltip = ({ active, payload }) => {
         if (!active || !payload?.length) return null
         const visiblePayload = payload.filter((item) => item.dataKey !== "__trend")
         if (visiblePayload.length === 0) return null
+        const title = payload[0]?.payload?.tooltipTitle || payload[0]?.payload?.label
 
         return (
             <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs shadow-lg">
-                <p className="mb-2 font-semibold text-gray-900">{label}</p>
+                <p className="mb-2 font-semibold text-gray-900">{title}</p>
                 <div className="space-y-1">
                     {visiblePayload.map((item) => (
                         <p key={item.dataKey} className="flex items-center gap-2 text-gray-600">
@@ -177,7 +179,7 @@ export default function KPIChart({ data, loading, mode }) {
         <div className="p-4">
             <div className="mb-[22px] flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-medium text-gray-900">Daily {metricLabel} by Campaign</p>
+                    <p className="text-sm font-medium text-gray-900">{granularity === 'monthly' ? 'Monthly' : granularity === 'weekly' ? 'Weekly' : 'Daily'} {metricLabel} by Campaign</p>
                     <p className="text-xs text-gray-400">
                         {data?.primaryActionType
                             ? `Event: ${formatEventName(data.primaryActionType)}`

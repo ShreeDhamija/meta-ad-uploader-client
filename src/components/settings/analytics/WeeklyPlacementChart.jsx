@@ -7,6 +7,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
 import { cn } from "@/lib/utils"
+import { formatBucketLabel, formatBucketTooltipTitle } from "./dateRangeUtils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 
@@ -25,12 +26,6 @@ function getDimensionConfig(key) {
     return DIMENSIONS.find(d => d.key === key) || DIMENSIONS[0]
 }
 
-function formatWeek(dateStr) {
-    if (!dateStr) return ""
-    const date = new Date(dateStr + "T00:00:00")
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
-}
-
 function formatSpend(v) {
     if (v == null) return "—"
     if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`
@@ -47,13 +42,14 @@ function truncateName(name, max = 30) {
     return name.length > max ? name.slice(0, max - 1) + "…" : name
 }
 
-function CustomTooltip({ active, payload, label, viewMode, hiddenSeries }) {
+function CustomTooltip({ active, payload, viewMode, hiddenSeries }) {
     if (!active || !payload?.length) return null
     const visible = payload.filter(p => !hiddenSeries.has(p.dataKey))
     if (!visible.length) return null
+    const title = payload[0]?.payload?.tooltipTitle || payload[0]?.payload?.week
     return (
         <div className="rounded-xl border border-gray-200 bg-white p-3 text-xs shadow-lg">
-            <p className="mb-2 font-semibold text-gray-900">Week of {label}</p>
+            <p className="mb-2 font-semibold text-gray-900">{title}</p>
             <div className="space-y-1">
                 {visible.map(item => (
                     <p key={item.dataKey} className="flex items-center gap-2 text-gray-600">
@@ -72,7 +68,7 @@ function CustomTooltip({ active, payload, label, viewMode, hiddenSeries }) {
     )
 }
 
-export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKey }) {
+export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKey, granularity = 'weekly' }) {
     const [data, setData] = useState(null)
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -91,7 +87,7 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
         let cancelled = false
         setIsLoading(true)
         setError(null)
-        const params = new URLSearchParams({ adAccountId, breakdown })
+        const params = new URLSearchParams({ adAccountId, breakdown, granularity })
         if (dateRange?.since && dateRange?.until) {
             params.set("since", dateRange.since)
             params.set("until", dateRange.until)
@@ -109,24 +105,25 @@ export default function WeeklyPlacementChart({ adAccountId, dateRange, refreshKe
             .catch(err => { if (!cancelled) setError(err.message || "Error") })
             .finally(() => { if (!cancelled) setIsLoading(false) })
         return () => { cancelled = true }
-    }, [adAccountId, breakdown, refreshKey, dateRange?.since, dateRange?.until])
+    }, [adAccountId, breakdown, refreshKey, dateRange?.since, dateRange?.until, granularity])
 
     const series = data?.placements || []
 
     const chartData = useMemo(() => {
         return (data?.series || []).map(row => {
-            const weekLabel = formatWeek(row.week)
+            const weekLabel = formatBucketLabel(row.week, granularity)
+            const tooltipTitle = formatBucketTooltipTitle(row.week, granularity)
             if (viewMode === "dollar") {
-                return { ...row, week: weekLabel }
+                return { ...row, week: weekLabel, tooltipTitle }
             }
             const total = series.reduce((sum, p) => sum + (Number(row[p]) || 0), 0)
-            const pctRow = { week: weekLabel }
+            const pctRow = { week: weekLabel, tooltipTitle }
             for (const p of series) {
                 pctRow[p] = total > 0 ? ((Number(row[p]) || 0) / total) * 100 : 0
             }
             return pctRow
         })
-    }, [data, series, viewMode])
+    }, [data, series, viewMode, granularity])
 
     const handleToggleSeries = (key) => {
         setHiddenSeries(prev => {

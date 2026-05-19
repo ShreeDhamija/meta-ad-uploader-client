@@ -1,4 +1,3 @@
-
 "use client"
 
 /* eslint-disable react/prop-types */
@@ -16,54 +15,43 @@ import {
 import { formatBucketLabel, formatBucketTooltipTitle } from "./dateRangeUtils"
 
 const METRIC_OPTIONS = {
-    costPerLinkClick: {
-        label: 'Cost Per Link Click',
-        color: '#3b82f6',
-        tickFormatter: (value) => `$${value.toFixed(2)}`,
-        valueFormatter: (value) => value !== null && value !== undefined ? `$${value.toFixed(2)}` : 'N/A',
-        subtitle: 'Traffic cost per link click',
-        yAxisWidth: 56,
+    frequency: {
+        label: 'Frequency',
+        color: '#a855f7',
+        tickFormatter: (value) => `${value.toFixed(1)}x`,
+        valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}x` : 'N/A',
+        subtitle: 'Avg impressions per person reached',
+        yAxisWidth: 48,
     },
-    cpm: {
-        label: 'CPM',
-        color: '#f97316',
-        tickFormatter: (value) => `$${value.toFixed(2)}`,
-        valueFormatter: (value) => value !== null && value !== undefined ? `$${value.toFixed(2)}` : 'N/A',
-        subtitle: 'Traffic CPM',
-        yAxisWidth: 56,
-    },
-    linkCtr: {
-        label: 'Link Click-Through Rate',
-        color: '#14b8a6',
-        tickFormatter: (value) => `${value.toFixed(1)}%`,
-        valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(2)}%` : 'N/A',
-        subtitle: 'Traffic link CTR',
+    firstTimeImpressionRate: {
+        label: 'First-Time Impression Rate',
+        color: '#0ea5e9',
+        tickFormatter: (value) => `${value.toFixed(0)}%`,
+        valueFormatter: (value) => value !== null && value !== undefined ? `${value.toFixed(1)}%` : 'N/A',
+        subtitle: 'Share of impressions hitting new users',
         yAxisWidth: 52,
     },
 }
 
-const WEEKLY_CHART_SIDE_INSET = 0
+const FUNNEL_CHART_SIDE_INSET = 0
 
-export default function WeeklyChart({ data, loading, className, granularity = 'weekly' }) {
-    const [selectedMetrics, setSelectedMetrics] = useState(["costPerLinkClick", "cpm"])
+export default function FunnelHealthChart({ data, loading, className, granularity = 'weekly' }) {
+    const [selectedMetrics, setSelectedMetrics] = useState(["frequency", "firstTimeImpressionRate"])
 
     const chartData = useMemo(() => {
         if (!data?.weeklyInsights?.length) return []
 
         return data.weeklyInsights.map((w) => {
-            const spend = w.spend ?? 0
             const impressions = w.impressions ?? 0
-            const linkClicks = w.linkClicks ?? 0
+            const reach = w.reach ?? 0
 
             return {
                 label: formatBucketLabel(w.weekStart, granularity),
                 tooltipTitle: formatBucketTooltipTitle(w.weekStart, granularity),
-                costPerLinkClick: w.costPerLinkClick,
-                cpm: impressions > 0 ? (spend / impressions) * 1000 : null,
-                linkCtr: impressions > 0 ? (linkClicks / impressions) * 100 : null,
-                spend,
+                frequency: w.frequency,
+                firstTimeImpressionRate: impressions > 0 ? (reach / impressions) * 100 : null,
                 impressions,
-                linkClicks,
+                reach,
             }
         })
     }, [data, granularity])
@@ -111,9 +99,8 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                         </p>
                     ))}
                     <div className="border-t border-gray-100 mt-1.5 pt-1.5">
-                        <p className="text-gray-600">Spend: <span className="font-medium">${row.spend?.toFixed(2)}</span></p>
                         <p className="text-gray-600">Impressions: <span className="font-medium">{(row.impressions || 0).toLocaleString()}</span></p>
-                        <p className="text-gray-600">Link Clicks: <span className="font-medium">{(row.linkClicks || 0).toLocaleString()}</span></p>
+                        <p className="text-gray-600">Reach: <span className="font-medium">{(row.reach || 0).toLocaleString()}</span></p>
                     </div>
                 </div>
             </div>
@@ -124,7 +111,7 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
         <div className={className ? `p-4 ${className}` : "p-4"}>
             <div className="mb-[22px] flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900">Traffic Metrics</p>
+                    <p className="text-sm font-medium text-gray-900">Funnel Health</p>
                     <p className="text-xs text-gray-400">{subtitle}</p>
                 </div>
             </div>
@@ -135,7 +122,7 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                 </div>
             ) : chartData.length === 0 ? (
                 <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">
-                    No traffic data available
+                    No funnel data available
                 </div>
             ) : (
                 <>
@@ -183,8 +170,8 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                     <div
                         className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
                         style={{
-                            paddingLeft: `${WEEKLY_CHART_SIDE_INSET}px`,
-                            paddingRight: `${WEEKLY_CHART_SIDE_INSET}px`,
+                            paddingLeft: `${FUNNEL_CHART_SIDE_INSET}px`,
+                            paddingRight: `${FUNNEL_CHART_SIDE_INSET}px`,
                         }}
                     >
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -211,7 +198,7 @@ export default function WeeklyChart({ data, loading, className, granularity = 'w
                                     <ChevronDown className="ml-2 h-3.5 w-3.5 text-gray-400" />
                                 </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[220px] rounded-2xl bg-white p-2 shadow-lg">
+                            <DropdownMenuContent align="end" className="w-[260px] rounded-2xl bg-white p-2 shadow-lg">
                                 <DropdownMenuLabel className="px-2 py-1 text-xs font-semibold text-gray-500">
                                     Show on graph
                                 </DropdownMenuLabel>

@@ -29,13 +29,17 @@ import AggregateKPIDialog from "./analytics/AggregateKPIDialog"
 import AdAccountAudit from "./analytics/AdAccountAudit"
 import AdAccountDiagnostic from "./analytics/AdAccountDiagnostic"
 import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
+import FunnelHealthChart from "./analytics/FunnelHealthChart"
 import SlackAlertsDialog from "./analytics/SlackAlertsDialog"
 import AccountSummaryDialog from "./analytics/AccountSummaryDialog"
 import {
     buildAnalyticsDateQueryParams,
     createAnalyticsDateRangeFromPreset,
     getAnalyticsDateRangeCacheKey,
+    DEFAULT_ANALYTICS_GRANULARITY,
+    resolveAllowedGranularity,
 } from "./analytics/dateRangeUtils"
+import GranularityToggle from "./analytics/GranularityToggle"
 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -80,6 +84,13 @@ export default function AnalyticsDashboard() {
     // const [modeAutoDetected, setModeAutoDetected] = useState(false)
     const [activeTab, setActiveTab] = useState("budget")
     const [analyticsDateRange, setAnalyticsDateRange] = useState(() => createAnalyticsDateRangeFromPreset("last_30d"))
+    const [analyticsGranularity, setAnalyticsGranularity] = useState(DEFAULT_ANALYTICS_GRANULARITY)
+
+    // Auto-fall back to weekly if the active granularity becomes invalid for the new range
+    useEffect(() => {
+        const next = resolveAllowedGranularity(analyticsGranularity, analyticsDateRange)
+        if (next !== analyticsGranularity) setAnalyticsGranularity(next)
+    }, [analyticsDateRange, analyticsGranularity])
 
     // ── Aggregate KPI dialog 
     const [showAggregateDialog, setShowAggregateDialog] = useState(false)
@@ -426,12 +437,12 @@ export default function AnalyticsDashboard() {
         return params.toString()
     }, [])
 
-    const getDailyInsightsCacheKey = useCallback((accountId, dateRange, conversionEvent) => {
-        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}`
+    const getDailyInsightsCacheKey = useCallback((accountId, dateRange, conversionEvent, granularity) => {
+        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${conversionEvent || "__auto__"}::${granularity || DEFAULT_ANALYTICS_GRANULARITY}`
     }, [])
 
-    const getWeeklyInsightsCacheKey = useCallback((accountId, dateRange) => {
-        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}`
+    const getWeeklyInsightsCacheKey = useCallback((accountId, dateRange, granularity) => {
+        return `${accountId}::${getAnalyticsDateRangeCacheKey(dateRange)}::${granularity || DEFAULT_ANALYTICS_GRANULARITY}`
     }, [])
 
     const clearDailyInsightsCache = useCallback((accountId = null) => {
@@ -462,6 +473,7 @@ export default function AnalyticsDashboard() {
         accountId = selectedAdAccount,
         dateRange = analyticsDateRange,
         conversionEvent = adAccountSettings?.conversionEvent || null,
+        granularity = analyticsGranularity,
         force = false,
     } = {}) => {
         if (!accountId) return
@@ -471,7 +483,7 @@ export default function AnalyticsDashboard() {
             dailyInsightsAbortRef.current = null
         }
 
-        const cacheKey = getDailyInsightsCacheKey(accountId, dateRange, conversionEvent)
+        const cacheKey = getDailyInsightsCacheKey(accountId, dateRange, conversionEvent, granularity)
         const cachedPayload = dailyInsightsCacheRef.current[cacheKey]
 
         if (!force && cachedPayload) {
@@ -486,7 +498,7 @@ export default function AnalyticsDashboard() {
         setDailyLoading(true)
 
         try {
-            const query = buildAnalyticsQueryString(accountId, dateRange, { conversionEvent })
+            const query = buildAnalyticsQueryString(accountId, dateRange, { conversionEvent, granularity })
             const url = `${API_BASE_URL}/api/analytics/daily-insights?${query}`
 
             const res = await fetch(url, {
@@ -515,6 +527,7 @@ export default function AnalyticsDashboard() {
     }, [
         selectedAdAccount,
         analyticsDateRange,
+        analyticsGranularity,
         adAccountSettings?.conversionEvent,
         buildAnalyticsQueryString,
         getDailyInsightsCacheKey,
@@ -523,6 +536,7 @@ export default function AnalyticsDashboard() {
     const fetchWeeklyInsights = useCallback(async ({
         accountId = selectedAdAccount,
         dateRange = analyticsDateRange,
+        granularity = analyticsGranularity,
         force = false,
     } = {}) => {
         if (!accountId) return
@@ -532,7 +546,7 @@ export default function AnalyticsDashboard() {
             weeklyInsightsAbortRef.current = null
         }
 
-        const cacheKey = getWeeklyInsightsCacheKey(accountId, dateRange)
+        const cacheKey = getWeeklyInsightsCacheKey(accountId, dateRange, granularity)
         const cachedPayload = weeklyInsightsCacheRef.current[cacheKey]
 
         if (!force && cachedPayload) {
@@ -547,7 +561,7 @@ export default function AnalyticsDashboard() {
         setWeeklyInsights(null)
         setWeeklyLoading(true)
         try {
-            const query = buildAnalyticsQueryString(accountId, dateRange)
+            const query = buildAnalyticsQueryString(accountId, dateRange, { granularity })
             const res = await fetch(`${API_BASE_URL}/api/analytics/weekly-insights?${query}`, {
                 credentials: 'include',
                 signal: controller.signal,
@@ -573,6 +587,7 @@ export default function AnalyticsDashboard() {
     }, [
         selectedAdAccount,
         analyticsDateRange,
+        analyticsGranularity,
         buildAnalyticsQueryString,
         getWeeklyInsightsCacheKey,
     ])
@@ -712,8 +727,8 @@ export default function AnalyticsDashboard() {
         setRecsLoading(!recsCache)
         setPoorAdsLoading(!poorCache)
 
-        const dailyKey = getDailyInsightsCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent)
-        const weeklyKey = getWeeklyInsightsCacheKey(accountId, analyticsDateRange)
+        const dailyKey = getDailyInsightsCacheKey(accountId, analyticsDateRange, adAccountSettings?.conversionEvent, analyticsGranularity)
+        const weeklyKey = getWeeklyInsightsCacheKey(accountId, analyticsDateRange, analyticsGranularity)
         const cachedDaily = dailyInsightsCacheRef.current[dailyKey]
         const cachedWeekly = weeklyInsightsCacheRef.current[weeklyKey]
         setDailyInsights(cachedDaily ?? null)
@@ -1029,7 +1044,12 @@ export default function AnalyticsDashboard() {
             {selectedAdAccount && (
                 <Card className="rounded-3xl border-gray-200 overflow-visible">
                     <CardContent className="p-0">
-                        <div className="flex justify-end items-center gap-2 px-4 pt-4 lg:hidden">
+                        <div className="flex justify-end items-center gap-2 px-4 pt-4 lg:hidden flex-wrap">
+                            <GranularityToggle
+                                value={analyticsGranularity}
+                                onChange={setAnalyticsGranularity}
+                                dateRange={analyticsDateRange}
+                            />
                             <AnalyticsDateRangePicker
                                 value={analyticsDateRange}
                                 onChange={setAnalyticsDateRange}
@@ -1053,16 +1073,24 @@ export default function AnalyticsDashboard() {
                                     data={dailyInsights}
                                     loading={dailyLoading}
                                     mode={metricMode}
+                                    granularity={analyticsGranularity}
                                 />
                             </div>
                             <div className="border-t border-gray-200 lg:border-t-0">
                                 <WeeklyChart
                                     data={weeklyInsights}
                                     loading={weeklyLoading}
+                                    granularity={analyticsGranularity}
                                 />
                             </div>
                             <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
                             <div className="absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 lg:flex">
+                                <GranularityToggle
+                                    value={analyticsGranularity}
+                                    onChange={setAnalyticsGranularity}
+                                    dateRange={analyticsDateRange}
+                                    className="bg-white"
+                                />
                                 <AnalyticsDateRangePicker
                                     value={analyticsDateRange}
                                     onChange={setAnalyticsDateRange}
@@ -1084,17 +1112,24 @@ export default function AnalyticsDashboard() {
                         {/* ── Horizontal dashed separator between chart rows ── */}
                         <div className="hidden lg:block border-t border-dashed border-gray-300 mx-4" />
 
-                        {/* ── Row 2: full-width for now; when a 4th chart is added,
-                            switch its wrapper to lg:col-span-1 and add the new
-                            chart as a sibling for a 2×2 grid. ── */}
-                        <div className="grid grid-cols-1 lg:relative lg:grid-cols-2 lg:pt-4">
-                            <div className="lg:col-span-2">
+                        {/* ── Row 2: 2×2 grid completes with Spend Breakdown + Funnel Health ── */}
+                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 lg:pt-4">
+                            <div>
                                 <WeeklyPlacementChart
                                     adAccountId={selectedAdAccount}
                                     dateRange={analyticsDateRange}
+                                    granularity={analyticsGranularity}
                                     refreshKey={chartsRefreshKey}
                                 />
                             </div>
+                            <div className="border-t border-gray-200 lg:border-t-0">
+                                <FunnelHealthChart
+                                    data={weeklyInsights}
+                                    loading={weeklyLoading}
+                                    granularity={analyticsGranularity}
+                                />
+                            </div>
+                            <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
                         </div>
 
                     </CardContent>
