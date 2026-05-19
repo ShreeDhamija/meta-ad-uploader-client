@@ -856,7 +856,7 @@ export default function TikTokAdCreationForm({
           </CardTitle>
           <CardDescription>Select your ad account, campaign and ad set</CardDescription>
         </CardHeader>
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="p-6 pt-0 space-y-6">
 
           {/* 1. Advertiser Account Combobox */}
           <div className="space-y-2">
@@ -1193,7 +1193,7 @@ export default function TikTokAdCreationForm({
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="p-6 pt-0 space-y-6">
 
           {/* 2. Post As (Linked Account) */}
           <div className="space-y-2">
