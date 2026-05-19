@@ -31,6 +31,7 @@ const ORANGE_SOFT = "#FFE6DA"
 const PINK = "#F00D55"
 const PINK_DEEP = "#C70845"
 const PINK_SOFT = "#FCD9E3"
+const BLUE = "#2563EB"
 
 const INK = "#0F1115"
 const INK_2 = "#2A2E35"
@@ -86,6 +87,22 @@ function fmtNum(v, decimals = 2) {
     if (v === null || v === undefined) return "\u2014"
     return v.toFixed(decimals)
 }
+function formatEventName(actionType) {
+    if (!actionType) return "Auto-detected event"
+    if (actionType.startsWith("offsite_conversion.fb_pixel_custom.")) {
+        return actionType.slice("offsite_conversion.fb_pixel_custom.".length)
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase())
+    }
+    if (actionType === "offsite_conversion.fb_pixel_custom") return "Custom Event"
+    if (actionType.startsWith("offsite_conversion.custom.")) return "Custom Conversion"
+    if (actionType.startsWith("offsite_conversion.fb_pixel_")) {
+        return actionType.slice("offsite_conversion.fb_pixel_".length)
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, c => c.toUpperCase())
+    }
+    return actionType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // REUSABLE PRIMITIVES
@@ -112,10 +129,10 @@ function UpperLabel({ children, className, style }) {
 function MetricCard({ label, value, unit, sub, dark }) {
     return (
         <div
-            className="rounded-3xl flex flex-col gap-1.5 p-4"
+            className="rounded-2xl flex flex-col gap-1.5 p-4"
             style={{
                 background: dark ? INK : PAPER,
-                border: `1px solid ${dark ? INK : LINE}`,
+                border: `1px dotted ${dark ? "rgba(255,255,255,0.34)" : LINE_2}`,
                 color: dark ? "#fff" : INK,
             }}
         >
@@ -135,7 +152,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
             >
                 {value}
                 {unit && (
-                    <span style={{ fontSize: 40, fontWeight: 700, opacity: 0.55, marginLeft: 2 }}>
+                    <span style={{ fontSize: 40, fontWeight: 700, color: dark ? "#fff" : INK, marginLeft: 2 }}>
                         {unit}
                     </span>
                 )}
@@ -155,7 +172,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
     )
 }
 
-function SectionHeader({ title, sub, tag }) {
+function SectionHeader({ title, sub }) {
     return (
         <div className="flex items-start justify-between mb-5">
             <div>
@@ -168,21 +185,6 @@ function SectionHeader({ title, sub, tag }) {
                     </p>
                 )}
             </div>
-            {tag && (
-                <div
-                    className="flex items-center gap-1.5"
-                    style={{
-                        fontSize: 10,
-                        fontWeight: 600,
-                        color: MUTED,
-                    }}
-                >
-                    <span
-                        style={{ width: 6, height: 6, borderRadius: 999, background: ORANGE }}
-                    />
-                    {tag}
-                </div>
-            )}
         </div>
     )
 }
@@ -284,10 +286,10 @@ function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neu
     }[status]
     return (
         <div
-            className="relative rounded-3xl"
+            className="relative rounded-2xl"
             style={{
                 background: PAPER,
-                border: `1px solid ${LINE}`,
+                border: `1px dotted ${LINE_2}`,
                 padding: "14px 16px 15px",
             }}
         >
@@ -308,11 +310,11 @@ function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neu
                 style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: INK }}
             >
                 {valuePrefix && (
-                    <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45 }}>{valuePrefix}</span>
+                    <span style={{ fontSize: 30, fontWeight: 700, color: INK }}>{valuePrefix}</span>
                 )}
                 {value}
                 {valueUnit && (
-                    <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45, marginLeft: 1 }}>
+                    <span style={{ fontSize: 30, fontWeight: 700, color: INK, marginLeft: 1 }}>
                         {valueUnit}
                     </span>
                 )}
@@ -439,7 +441,6 @@ function SummarySection({ report, kpiType, kpiTarget }) {
             <SectionHeader
                 title="Account Summary"
                 sub="Key signals for your Meta ad account this period."
-                tag="01 · Overview"
             />
 
             {/* Orange Top-Line */}
@@ -447,14 +448,15 @@ function SummarySection({ report, kpiType, kpiTarget }) {
                 <div
                     className="rounded-3xl"
                     style={{
-                        background: ORANGE,
-                        color: "#fff",
+                        background: PAPER,
+                        border: `1px solid ${ORANGE}`,
+                        color: INK,
                         padding: "16px 20px",
                         marginBottom: 12,
                     }}
                 >
                     <div
-                        style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: "#fff", maxWidth: 760 }}
+                        style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: INK, maxWidth: 760 }}
                         dangerouslySetInnerHTML={{ __html: headline }}
                     />
                 </div>
@@ -486,7 +488,6 @@ function TrafficSection({ traffic }) {
             <SectionHeader
                 title="Traffic Overview"
                 sub="Trailing 30 days · Cost Per Link Click, Link CTR, and CPM."
-                tag="02 · Traffic"
             />
 
             <div className="grid grid-cols-3 gap-3 mb-4">
@@ -552,7 +553,6 @@ function FunnelSection({ funnel }) {
             <SectionHeader
                 title="Funnel Health"
                 sub="Trailing 3 months · weekly averages · Frequency and First-Time Impression Rate."
-                tag="03 · Funnel"
             />
             <div className="grid grid-cols-2 gap-3 mb-4">
                 <MetricCard label="Avg Weekly Frequency" value={fmtNum(funnel.avgFrequency)} sub="impressions per unique user" />
@@ -606,51 +606,50 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
     const gap = (kpiTarget != null && cur?.kpi != null) ? Math.abs(cur.kpi - kpiTarget) : null
 
     return (
-        <SectionCard id="spend" dark>
+        <SectionCard id="spend">
             <SectionHeader
-                title={<span style={{ color: "#fff" }}>Monthly Ad Spend</span>}
-                sub={<span style={{ color: "rgba(255,255,255,0.78)" }}>{`Last 6 months · total account spend and blended ${kpiLabel} by calendar month.`}</span>}
-                tag="04 · Spend"
+                title="Monthly Ad Spend"
+                sub={`Last 6 months · total account spend and blended ${kpiLabel} by calendar month.`}
             />
 
             <div className="grid gap-5" style={{ gridTemplateColumns: "300px 1fr", alignItems: "start" }}>
                 {/* Left: stacked KPI display */}
                 <div className="flex flex-col gap-3">
                     <div>
-                        <UpperLabel style={{ color: "#fff" }}>Spend This Month</UpperLabel>
+                        <UpperLabel style={{ color: MUTED }}>Spend This Month</UpperLabel>
                         <div
                             className="tabular-nums"
-                            style={{ fontSize: 60, fontWeight: 900, letterSpacing: "-0.015em", lineHeight: 1, color: "#fff", marginTop: 6 }}
+                            style={{ fontSize: 60, fontWeight: 900, letterSpacing: "-0.015em", lineHeight: 1, color: INK, marginTop: 6 }}
                         >
-                            <span style={{ fontSize: 60, opacity: 0.55 }}>$</span>
+                            <span style={{ fontSize: 60, color: INK }}>$</span>
                             {cur ? (cur.spend / 1000).toFixed(1) : "—"}
-                            <span style={{ fontSize: 60, opacity: 0.55 }}>k</span>
+                            <span style={{ fontSize: 60, color: INK }}>k</span>
                         </div>
                         {deltaPct !== null && (
-                            <p style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
-                                <b style={{ color: ORANGE }}>{deltaPct > 0 ? "+" : ""}{deltaPct}%</b> MoM
+                            <p style={{ marginTop: 8, fontSize: 12, color: INK_2 }}>
+                                <b style={{ color: INK }}>{deltaPct > 0 ? "+" : ""}{deltaPct}%</b> MoM
                             </p>
                         )}
                     </div>
 
-                    <div style={{ height: 1, background: "rgba(255,255,255,0.12)", margin: "4px 0" }} />
+                    <div style={{ borderTop: `1px dotted ${LINE_2}`, margin: "4px 0" }} />
 
                     <div>
-                        <UpperLabel style={{ color: "#fff" }}>Blended {kpiLabel}</UpperLabel>
+                        <UpperLabel style={{ color: MUTED }}>Blended {kpiLabel}</UpperLabel>
                         <div
                             className="tabular-nums"
-                            style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: "#fff", marginTop: 6 }}
+                            style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: INK, marginTop: 6 }}
                         >
                             {cur?.kpi != null
                                 ? (kpiType === "roas"
-                                    ? <>{cur.kpi.toFixed(2)}<span style={{ fontSize: 40, opacity: 0.55 }}>×</span></>
-                                    : <><span style={{ fontSize: 40, opacity: 0.55 }}>$</span>{cur.kpi.toFixed(2)}</>)
+                                    ? <>{cur.kpi.toFixed(2)}<span style={{ fontSize: 40, color: INK }}>×</span></>
+                                    : <><span style={{ fontSize: 40, color: INK }}>$</span>{cur.kpi.toFixed(2)}</>)
                                 : "—"}
                         </div>
                         {kpiTarget != null && gap !== null && (
-                            <p style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.7)" }}>
+                            <p style={{ marginTop: 8, fontSize: 12, color: INK_2 }}>
                                 Target {kpiType === "roas" ? `${kpiTarget}×` : `$${kpiTarget}`} ·{" "}
-                                <b style={{ color: overTarget ? PINK : ORANGE }}>
+                                <b style={{ color: overTarget ? PINK : BLUE }}>
                                     {overTarget ? "+" : "−"}{kpiType === "roas" ? `${gap.toFixed(2)}×` : `$${gap.toFixed(2)}`} {overTarget ? "over" : "under"}
                                 </b>
                             </p>
@@ -659,7 +658,7 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
                 </div>
 
                 {/* Right: chart */}
-                <div className="rounded-2xl" style={{ background: INK, border: `1px solid rgba(255,255,255,0.06)`, padding: "14px 12px 8px", height: 280 }}>
+                <div className="rounded-2xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 12px 8px", height: 280 }}>
                     <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={monthlySpend} margin={{ top: 18, right: 36, left: 0, bottom: 0 }}>
                             <defs>
@@ -672,23 +671,23 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
                                     <stop offset="100%" stopColor={ORANGE_MID} stopOpacity={1} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="2 4" stroke="rgba(255,255,255,0.10)" vertical={false} />
-                            <XAxis dataKey="month" tick={{ ...AXIS_TICK, fill: "rgba(255,255,255,0.6)", fontSize: 11 }} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} tickLine={false} />
-                            <YAxis yAxisId="spend" tick={{ ...AXIS_TICK, fill: "rgba(255,255,255,0.5)" }} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} width={48} />
-                            <YAxis yAxisId="kpi" orientation="right" tick={{ ...AXIS_TICK, fill: "rgba(255,255,255,0.5)" }} tickLine={false} axisLine={false} tickFormatter={kpiFmt} width={44} />
+                            <CartesianGrid strokeDasharray="2 4" stroke={GRID_STROKE} vertical={false} />
+                            <XAxis dataKey="month" tick={{ ...AXIS_TICK, fontSize: 11 }} axisLine={AXIS_LINE} tickLine={false} />
+                            <YAxis yAxisId="spend" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`} width={48} />
+                            <YAxis yAxisId="kpi" orientation="right" tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={kpiFmt} width={44} />
                             <Tooltip
                                 content={<ChartTooltipContent formatters={{
                                     Spend: (v) => `$${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`,
                                     [kpiLabel]: kpiFmt
                                 }} />}
                             />
-                            <Legend wrapperStyle={{ fontSize: 11, color: "rgba(255,255,255,0.7)", fontFamily: FONT }} iconType="circle" />
+                            <Legend wrapperStyle={{ fontSize: 11, color: INK_2, fontFamily: FONT }} iconType="circle" />
                             <Bar yAxisId="spend" dataKey="spend" name="Spend" radius={[8, 8, 0, 0]}>
                                 {monthlySpend.map((_, i) => (
                                     <Cell key={i} fill={i === monthlySpend.length - 1 ? "url(#grad-bar-current)" : "url(#grad-bar)"} />
                                 ))}
                             </Bar>
-                            <Line yAxisId="kpi" type="monotone" dataKey="kpi" name={kpiLabel} stroke={PINK} dot={{ r: 3, strokeWidth: 2, fill: INK, stroke: PINK }} strokeWidth={2.5} connectNulls />
+                            <Line yAxisId="kpi" type="monotone" dataKey="kpi" name={kpiLabel} stroke={PINK} dot={{ r: 3, strokeWidth: 2, fill: PAPER, stroke: PINK }} strokeWidth={2.5} connectNulls />
                         </ComposedChart>
                     </ResponsiveContainer>
                 </div>
@@ -717,7 +716,6 @@ function AudienceSection({ audience }) {
             <SectionHeader
                 title="Audience Strategy"
                 sub="Adsets with delivery in last 30 days (including paused) · prospecting vs retargeting classification."
-                tag="05 · Audience"
             />
 
             <div className="grid grid-cols-3 gap-3 mb-4">
@@ -888,7 +886,6 @@ function LearningSection({ learning }) {
             <SectionHeader
                 title="% of Budget in Learning Phase"
                 sub="Last 7 days · ad sets in Learning or Learning Limited (including paused)."
-                tag="06 · Learning"
             />
 
             <div className="flex items-start gap-6">
@@ -962,7 +959,6 @@ function CopyUtilizationSection({ copyUtilization }) {
             <SectionHeader
                 title="Copy Utilization"
                 sub="Top 10 ads by 30-day spend · primary text and headline field usage."
-                tag="07 · Copy"
             />
             <div className="flex items-center gap-6">
                 <DonutRing
@@ -1058,11 +1054,10 @@ function OpportunitiesSection({ text, isLoading, error }) {
             <SectionHeader
                 title="Areas of Opportunity"
                 sub="AI-generated analysis based on account performance data."
-                tag="08 · AI"
             />
             {isLoading && (
                 <div className="flex flex-col items-center justify-center py-12">
-                    <div style={{ marginBottom: 12 }}><Helix size="40" speed="2.5" color={ORANGE} /></div>
+                    <div style={{ marginBottom: 12 }}><Helix size="40" speed="2.5" color={BLUE} /></div>
                     <p style={{ fontSize: 13, fontWeight: 600, color: INK_2, margin: 0 }}>Generating suggestions…</p>
                     <p style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>Analyzing your account data with AI</p>
                 </div>
@@ -1226,7 +1221,7 @@ export default function AdAccountAudit({
                                             style={{ background: "#eff6ff", color: "#1d4ed8" }}
                                         >
                                             Target {kpiType.toUpperCase()}: {kpiType === "cpa" ? `$${kpiTarget}` : `${kpiTarget}×`}
-                                            {kpiType === "cpa" && conversionEvent ? ` · ${conversionEvent.replace(/^offsite_conversion\.fb_pixel_/, '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}` : ""}
+                                            {kpiType === "cpa" && conversionEvent ? ` · ${formatEventName(conversionEvent)}` : ""}
                                         </span>
                                     )}
                                 </p>
@@ -1309,7 +1304,7 @@ export default function AdAccountAudit({
                         >
                             {isGenerating && (
                                 <div className="flex flex-col items-center justify-center py-24">
-                                    <div style={{ marginBottom: 12 }}><Helix size="44" speed="2.5" color={ORANGE} /></div>
+                                    <div style={{ marginBottom: 12 }}><Helix size="44" speed="2.5" color={BLUE} /></div>
                                     <p style={{ fontSize: 13, fontWeight: 600, color: INK_2, margin: 0 }}>Fetching account data from Meta…</p>
                                     <p style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>This usually takes 5–15 seconds</p>
                                 </div>

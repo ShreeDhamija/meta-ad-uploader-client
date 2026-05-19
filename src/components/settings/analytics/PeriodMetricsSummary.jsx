@@ -180,7 +180,7 @@ export default function PeriodMetricsSummary({ data, loading, mode = "cpr" }) {
 
     if (loading && !data) {
         return (
-            <div className="px-4 pt-4">
+            <div className="px-4 pt-4 lg:pt-10">
                 <div className="flex items-center justify-center h-[72px] rounded-2xl border border-gray-200 bg-gray-50">
                     <Helix size="28" speed="2.5" color="#3b82f6" />
                 </div>
@@ -191,7 +191,7 @@ export default function PeriodMetricsSummary({ data, loading, mode = "cpr" }) {
     if (!data) return null
 
     return (
-        <div className="px-4 pt-4">
+        <div className="px-4 pt-4 lg:pt-10">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 {tiles.map((t) => (
                     <MetricTile

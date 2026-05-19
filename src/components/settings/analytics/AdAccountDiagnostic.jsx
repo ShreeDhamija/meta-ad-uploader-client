@@ -23,6 +23,9 @@ const ORANGE_SOFT = "#FFE6DA"
 const PINK = "#F00D55"
 const PINK_DEEP = "#C70845"
 const PINK_SOFT = "#FCD9E3"
+const BLUE = "#2563EB"
+const BLUE_SOFT = "#EFF6FF"
+const BLUE_BORDER = "#BFDBFE"
 
 const INK = "#0F1115"
 const INK_2 = "#2A2E35"
@@ -71,6 +74,10 @@ function formatEventName(actionType) {
     }
     return actionType.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
 }
+function formatEventDetail(detail, eventName) {
+    if (!detail || !eventName) return detail
+    return detail.split(eventName).join(formatEventName(eventName))
+}
 
 function fmtCurrency(v) {
     if (v === null || v === undefined) return "—"
@@ -107,7 +114,7 @@ function SmallLabel({ children, className, style }) {
     )
 }
 
-function SectionHeader({ title, sub, tag }) {
+function SectionHeader({ title, sub }) {
     return (
         <div className="flex items-start justify-between mb-5">
             <div>
@@ -120,12 +127,6 @@ function SectionHeader({ title, sub, tag }) {
                     </p>
                 )}
             </div>
-            {tag && (
-                <div className="flex items-center gap-1.5" style={{ fontSize: 10, fontWeight: 600, color: MUTED }}>
-                    <span style={{ width: 6, height: 6, borderRadius: 999, background: ORANGE }} />
-                    {tag}
-                </div>
-            )}
         </div>
     )
 }
@@ -151,10 +152,10 @@ function SectionCard({ children, id, dark }) {
 function MetricCard({ label, value, unit, sub, dark }) {
     return (
         <div
-            className="rounded-3xl flex flex-col gap-1.5 p-4"
+            className="rounded-2xl flex flex-col gap-1.5 p-4"
             style={{
                 background: dark ? INK : PAPER,
-                border: `1px solid ${dark ? INK : LINE}`,
+                border: `1px dotted ${dark ? "rgba(255,255,255,0.34)" : LINE_2}`,
                 color: dark ? "#fff" : INK,
             }}
         >
@@ -171,7 +172,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
                 }}
             >
                 {value}
-                {unit && <span style={{ fontSize: 40, fontWeight: 700, opacity: 0.55, marginLeft: 2 }}>{unit}</span>}
+                {unit && <span style={{ fontSize: 40, fontWeight: 700, color: dark ? "#fff" : INK, marginLeft: 2 }}>{unit}</span>}
             </p>
             {sub && (
                 <p style={{ fontSize: 11.5, color: dark ? "rgba(255,255,255,0.6)" : MUTED, margin: 0 }}>
@@ -191,7 +192,7 @@ function InsightTile({ label, value, valuePrefix, valueUnit, desc, status = "neu
     }[status]
 
     return (
-        <div className="relative rounded-3xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 16px 15px" }}>
+        <div className="relative rounded-2xl" style={{ background: PAPER, border: `1px dotted ${LINE_2}`, padding: "14px 16px 15px" }}>
             <span
                 className="absolute"
                 style={{
@@ -209,9 +210,9 @@ function InsightTile({ label, value, valuePrefix, valueUnit, desc, status = "neu
                 className="tabular-nums"
                 style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: INK }}
             >
-                {valuePrefix && <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45 }}>{valuePrefix}</span>}
+                {valuePrefix && <span style={{ fontSize: 30, fontWeight: 700, color: INK }}>{valuePrefix}</span>}
                 {value}
-                {valueUnit && <span style={{ fontSize: 30, fontWeight: 700, opacity: 0.45, marginLeft: 1 }}>{valueUnit}</span>}
+                {valueUnit && <span style={{ fontSize: 30, fontWeight: 700, color: INK, marginLeft: 1 }}>{valueUnit}</span>}
             </div>
             {desc && <p style={{ fontSize: 11.5, color: MUTED, margin: "6px 0 0", lineHeight: 1.4 }}>{desc}</p>}
         </div>
@@ -294,7 +295,7 @@ function SummarySection({ report }) {
         tiles.push({
             label: "Event Health",
             value: eventHealth.status === "healthy" ? "Healthy" : eventHealth.status === "warning" ? "Warn" : eventHealth.status === "stale" ? "Stale" : "—",
-            desc: `${eventHealth.eventName} — last fired ${eventHealth.lastFiredAgo || "unknown"}.`,
+            desc: `${formatEventName(eventHealth.eventName)} — last fired ${eventHealth.lastFiredAgo || "unknown"}.`,
             status: statusMap[eventHealth.status] || "neutral",
         })
     }
@@ -317,12 +318,11 @@ function SummarySection({ report }) {
             <SectionHeader
                 title="Diagnostic Summary"
                 sub="Trailing 14 days · automated anomaly detection on account-level performance."
-                tag="01 · Overview"
             />
 
-            <div className="rounded-3xl mb-3" style={{ background: ORANGE, color: "#fff", padding: "16px 20px" }}>
+            <div className="rounded-3xl mb-3" style={{ background: PAPER, border: `1px solid ${ORANGE}`, color: INK, padding: "16px 20px" }}>
                 <p
-                    style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: "#fff", maxWidth: 800, margin: 0 }}
+                    style={{ fontSize: 16, lineHeight: 1.45, fontWeight: 400, color: INK, maxWidth: 800, margin: 0 }}
                     dangerouslySetInnerHTML={{
                         __html: headline
                             .replace(/\$[\d,.]+k?/g, "<strong>$&</strong>")
@@ -364,7 +364,6 @@ function TrendSection({ dailyData, anomalyPeriod, mode, kpiLabel }) {
             <SectionHeader
                 title={`Account Spend & ${kpiLabel} — Trailing 14 Days`}
                 sub={`Daily spend (bars) and ${kpiLabel} (line)${anomalyPeriod ? " · Anomaly period highlighted in pink" : ""}.`}
-                tag="02 · Trend"
             />
             <div className="grid grid-cols-3 gap-3 mb-4">
                 <MetricCard label="Total Spend · 14d" value={fmtCurrency(totalSpend)} />
@@ -425,7 +424,7 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
     if (!anomalyPeriod || !previousPeriod) {
         return (
             <SectionCard id="anomaly">
-                <SectionHeader title="Anomaly Detail" sub="Period-over-period comparison and contributing campaigns / adsets / ads." tag="04 · Anomaly" />
+                <SectionHeader title="Anomaly Detail" sub="Period-over-period comparison and contributing campaigns / adsets / ads." />
                 <div className="rounded-3xl px-4 py-3 text-sm" style={{ background: GOOD_SOFT, border: `1px solid rgba(34,197,94,0.22)`, color: INK_2 }}>
                     <span className="font-semibold" style={{ color: GOOD }}>No anomaly detected.</span> {kpiLabel} held within baseline range over the trailing 14 days.
                 </div>
@@ -438,32 +437,31 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
             <SectionHeader
                 title={`Anomaly: ${fmtDateShort(anomalyPeriod.startDate)} — ${fmtDateShort(anomalyPeriod.endDate)} (${anomalyPeriod.days} ${anomalyPeriod.days === 1 ? "day" : "days"})`}
                 sub="Compared against the same-length window immediately before the anomaly."
-                tag="04 · Anomaly"
             />
             <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="rounded-3xl p-4" style={{ background: ORANGE_SOFT, border: `1px solid rgba(255,72,0,0.24)` }}>
-                    <SmallLabel style={{ color: ORANGE_DEEP, marginBottom: 8 }}>Anomaly period ({anomalyPeriod.days}d)</SmallLabel>
+                <div className="rounded-2xl p-4" style={{ background: PAPER, border: `1px dotted ${BLUE_BORDER}` }}>
+                    <SmallLabel style={{ color: BLUE, marginBottom: 8 }}>Anomaly period ({anomalyPeriod.days}d)</SmallLabel>
                     <div className="flex items-baseline gap-6">
                         <div>
-                            <SmallLabel style={{ color: ORANGE_DEEP }}>{kpiLabel}</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: ORANGE_DEEP, letterSpacing: "-0.005em" }}>{fmtKpi(anomalyPeriod.avgKpi, mode)}</p>
+                            <SmallLabel style={{ color: MUTED }}>{kpiLabel}</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: INK, letterSpacing: "-0.005em" }}>{fmtKpi(anomalyPeriod.avgKpi, mode)}</p>
                         </div>
                         <div>
-                            <SmallLabel style={{ color: ORANGE_DEEP }}>Spend</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: ORANGE_DEEP, letterSpacing: "-0.005em" }}>{fmtCurrency(anomalyPeriod.spend)}</p>
+                            <SmallLabel style={{ color: MUTED }}>Spend</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: INK, letterSpacing: "-0.005em" }}>{fmtCurrency(anomalyPeriod.spend)}</p>
                         </div>
                     </div>
                 </div>
-                <div className="rounded-3xl p-4" style={{ background: GOOD_SOFT, border: `1px solid rgba(34,197,94,0.22)` }}>
-                    <SmallLabel style={{ color: GOOD, marginBottom: 8 }}>Comparison period ({previousPeriod.days}d)</SmallLabel>
+                <div className="rounded-2xl p-4" style={{ background: PAPER, border: `1px dotted ${LINE_2}` }}>
+                    <SmallLabel style={{ color: MUTED, marginBottom: 8 }}>Comparison period ({previousPeriod.days}d)</SmallLabel>
                     <div className="flex items-baseline gap-6">
                         <div>
-                            <SmallLabel style={{ color: GOOD }}>{kpiLabel}</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD, letterSpacing: "-0.005em" }}>{fmtKpi(previousPeriod.avgKpi, mode)}</p>
+                            <SmallLabel style={{ color: MUTED }}>{kpiLabel}</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: INK, letterSpacing: "-0.005em" }}>{fmtKpi(previousPeriod.avgKpi, mode)}</p>
                         </div>
                         <div>
-                            <SmallLabel style={{ color: GOOD }}>Spend</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD, letterSpacing: "-0.005em" }}>{fmtCurrency(previousPeriod.spend)}</p>
+                            <SmallLabel style={{ color: MUTED }}>Spend</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: INK, letterSpacing: "-0.005em" }}>{fmtCurrency(previousPeriod.spend)}</p>
                         </div>
                     </div>
                 </div>
@@ -551,7 +549,6 @@ function ChangesSection({ changes, anomalyDetected }) {
             <SectionHeader
                 title="Account Changes"
                 sub={anomalyDetected ? "Budget shifts >25% and targeting/audience changes near the anomaly period." : "Budget shifts >25% and targeting/audience changes over the last 7 days."}
-                tag="05 · Changes"
             />
             {changes.length > 0 ? (
                 <div className="overflow-x-auto rounded-2xl" style={{ border: `1px solid ${LINE}` }}>
@@ -713,7 +710,7 @@ function PerformanceMetricsChart({
         <SectionCard id="performance">
             <div className="flex items-start justify-between mb-5 gap-3">
                 <div className="min-w-0">
-                    <SectionHeader title="Performance Metrics" sub="Compare account-level delivery metrics over the selected period." tag="03 · Performance" />
+                    <SectionHeader title="Performance Metrics" sub="Compare account-level delivery metrics over the selected period." />
                     <div className="flex items-center gap-2 mt-2">
                         <PerfMetricSelector value={leftMetric} onChange={setLeftMetric} exclude={rightMetric} />
                         <span className="text-[10px] text-gray-400">vs</span>
@@ -728,8 +725,10 @@ function PerformanceMetricsChart({
                                 onClick={() => setDays(d)}
                                 className="px-3 py-1.5 text-[11px] font-medium rounded-lg transition-all"
                                 style={{
-                                    background: days === d ? INK : "transparent",
-                                    color: days === d ? "#fff" : MUTED,
+                                    background: days === d ? PAPER : "transparent",
+                                    color: days === d ? INK : MUTED,
+                                    border: days === d ? `1px solid ${LINE}` : "1px solid transparent",
+                                    boxShadow: days === d ? "0 1px 4px rgba(15,17,21,0.08)" : "none",
                                 }}
                             >
                                 {d} Days
@@ -742,7 +741,7 @@ function PerformanceMetricsChart({
             <div className="rounded-2xl" style={{ background: PAPER, border: `1px solid ${LINE}`, padding: "14px 12px 8px", height: 280 }}>
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full">
-                        <Helix size="32" speed="2.5" color={ORANGE} />
+                        <Helix size="32" speed="2.5" color={BLUE} />
                     </div>
                 ) : error ? (
                     <div className="flex items-center justify-center h-full text-red-500 text-sm">{error}</div>
@@ -818,7 +817,7 @@ function EventHealthSection({ eventHealth }) {
     if (!eventHealth) {
         return (
             <SectionCard id="health">
-                <SectionHeader title="Event Health" sub="Check whether your primary conversion event is firing as expected." tag="06 · Health" />
+                <SectionHeader title="Event Health" sub="Check whether your primary conversion event is firing as expected." />
                 <p className="text-sm italic" style={{ color: MUTED }}>Event health check was not available for this account.</p>
             </SectionCard>
         )
@@ -832,8 +831,8 @@ function EventHealthSection({ eventHealth }) {
 
     return (
         <SectionCard id="health">
-            <SectionHeader title="Event Health" sub="Activity status for the primary conversion event in the evaluation window." tag="06 · Health" />
-            <div className="flex items-start gap-3 p-4 rounded-3xl" style={{ background: palette.bg, border: `1px solid ${palette.border}` }}>
+            <SectionHeader title="Event Health" sub="Activity status for the primary conversion event in the evaluation window." />
+            <div className="flex items-start gap-3 p-4 rounded-2xl" style={{ background: PAPER, border: `1px dotted ${palette.border}` }}>
                 <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center" style={{ background: PAPER, color: palette.color, border: `1px solid ${palette.border}` }}>
                     <Stethoscope className="w-5 h-5" />
                 </div>
@@ -842,10 +841,10 @@ function EventHealthSection({ eventHealth }) {
                         {palette.label}
                         <span className="font-normal" style={{ color: INK_2 }}>
                             {" — "}
-                            {eventHealth.eventType === "custom_conversion" ? "Custom Conversion" : "Pixel Event"}: {eventHealth.eventName}
+                            {eventHealth.eventType === "custom_conversion" ? "Custom Conversion" : "Pixel Event"}: {formatEventName(eventHealth.eventName)}
                         </span>
                     </p>
-                    <p className="text-sm mt-1" style={{ color: INK_2 }}>{eventHealth.detail}</p>
+                    <p className="text-sm mt-1" style={{ color: INK_2 }}>{formatEventDetail(eventHealth.detail, eventHealth.eventName)}</p>
                     <div className="flex gap-4 mt-2 text-[11px]" style={{ color: MUTED }}>
                         <span>Last fired: {eventHealth.lastFiredAgo || "unknown"}</span>
                         {eventHealth.isUnavailable && <span style={{ color: BAD, fontWeight: 600 }}>Marked unavailable</span>}
@@ -934,7 +933,7 @@ export default function AdAccountDiagnostic({
                                     {report && (
                                         <span
                                             className="ml-2 px-2.5 py-0.5 text-[10px] font-semibold rounded-full"
-                                            style={{ background: ORANGE_SOFT, color: ORANGE_DEEP }}
+                                            style={{ background: BLUE_SOFT, color: BLUE, border: `1px solid ${BLUE_BORDER}` }}
                                         >
                                             {report.kpiLabel}
                                             {report.mode === "cpr" && report.conversionEvent
@@ -968,7 +967,7 @@ export default function AdAccountDiagnostic({
                             <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0" style={{ padding: 28, background: PAPER_2, fontFamily: FONT }}>
                             {isGenerating && (
                                 <div className="flex flex-col items-center justify-center py-24">
-                                    <div style={{ marginBottom: 12 }}><Helix size="44" speed="2.5" color={ORANGE} /></div>
+                                    <div style={{ marginBottom: 12 }}><Helix size="44" speed="2.5" color={BLUE} /></div>
                                     <p style={{ fontSize: 13, fontWeight: 600, color: INK_2, margin: 0 }}>Analyzing the last 14 days…</p>
                                     <p style={{ fontSize: 11.5, color: MUTED, marginTop: 4 }}>Scanning for anomalies, culprits, and account changes</p>
                                 </div>
