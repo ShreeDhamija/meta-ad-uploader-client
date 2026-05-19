@@ -136,16 +136,19 @@ export function TikTokAuthProvider({ children }) {
         credentials: 'include',
       })
       if (res.ok) {
-        console.log("✅ [TikTok Auth] Logout successful.");
+        console.log("✅ [TikTok Auth] Logout successful. Clearing local storage...");
+        // Clear tokens FIRST to prevent auto-recovery
+        try { localStorage.removeItem('tiktok_uid') } catch (_) {}
+        try { localStorage.removeItem('tiktok_token') } catch (_) {}
+        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) {}
+
         toast.info('Logged out of TikTok successfully!')
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
         setTikTokAdvertisers([])
-        // Navigate to login page after clearing state
+        
+        // Navigate to login page after state and storage are cleared
         window.location.href = '/tiktok-login'
-        try { localStorage.removeItem('tiktok_uid') } catch (_) {}
-        try { localStorage.removeItem('tiktok_token') } catch (_) {}
-        try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) {}
       } else {
         console.warn("⚠️ [TikTok Auth] Logout failed on server.");
         toast.error('Failed to log out of TikTok')
