@@ -23,6 +23,7 @@ export default function TikTokCallback() {
     const connected = params.get('connected')
     const errorMsg = params.get('error')
     const exchangeToken = params.get('t')
+    const loginType = params.get('login_type') || 'business'
 
     // 1. Check if already logged in (context might already have it)
     if (isTikTokLoggedIn) {
@@ -42,6 +43,18 @@ export default function TikTokCallback() {
     console.log('  Param [connected]  :', connected)
     console.log('  Param [error]      :', errorMsg)
     console.log('  Param [t] token    :', exchangeToken ? exchangeToken.substring(0, 8) + '...' : 'NONE')
+    console.log('  Param [login_type] :', loginType)
+
+    // Beautiful styled log to browser developer tools console
+    console.log(
+      '%c📊 [TikTok Authentication Classifier]',
+      'background: #FE2C55; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold;'
+    )
+    console.log(
+      `%cType: ${loginType.toUpperCase()} LOGIN`,
+      'color: #00f0ff; font-weight: bold; font-size: 13px;'
+    )
+    console.log('%c──────────────────────────────────────────', 'color: rgba(255,255,255,0.15);')
 
     if (errorMsg) {
       isExchangeInProgress = true
