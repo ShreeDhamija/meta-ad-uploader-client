@@ -1,3 +1,4 @@
+import DesktopIcon from '@/assets/Desktop.webp'
 import Header from '@/components/header'
 import MediaPreview from '@/components/media-preview'
 import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
@@ -47,7 +48,7 @@ export default function TikTokAds() {
   const navigate = useNavigate()
   const { isTikTokLoggedIn, tiktokAdvertisers, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
   const { showMessenger, hideMessenger } = useIntercom()
-  
+
   const [selectedAdvertiser, setSelectedAdvertiser] = useState('')
   const [adName, setAdName] = useState('')
   const [adText, setAdText] = useState('')
@@ -60,6 +61,7 @@ export default function TikTokAds() {
   const [selectedIdentity, setSelectedIdentity] = useState('')
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
+  const [showMobileBanner, setShowMobileBanner] = useState(true)
 
   // Lifted form fetching states (to snapshot campaign & ad group selections)
   const [campaigns, setCampaigns] = useState([])
@@ -147,10 +149,10 @@ export default function TikTokAds() {
       if (!selectedIdentity && advertiserPrefs.defaultIdentityId) {
         setSelectedIdentity(advertiserPrefs.defaultIdentityId);
       }
-      
+
       // 2. Default CTA (string conversion)
       if (cta === 'SHOP_NOW' && advertiserPrefs.defaultCTAs?.length > 0) {
-         setCta(advertiserPrefs.defaultCTAs[0]);
+        setCta(advertiserPrefs.defaultCTAs[0]);
       }
 
       // 3. Default Landing URL
@@ -440,111 +442,131 @@ export default function TikTokAds() {
   if (!isTikTokLoggedIn) return null
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
-      <Toaster richColors position="bottom-left" closeButton />
-      
-      <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
-
-      <main className="pt-4 pb-20">
-        <div className="flex flex-col lg:flex-row gap-6 min-w-0">
-          {/* Left Column: Form and Duplicator (55% width) */}
-          <div className="flex-1 lg:flex-[55] min-w-0 space-y-6">
-            <TikTokAdCreationForm 
-              advertiserId={selectedAdvertiser} 
-              advertisers={tiktokAdvertisers} 
-              onAdvertiserChange={setSelectedAdvertiser}
-              advertiserPrefs={advertiserPrefs}
-              
-              // Lifted Form State
-              adName={adName} setAdName={setAdName}
-              adText={adText} setAdText={setAdText}
-              cta={cta} setCta={setCta}
-              landingUrl={landingUrl} setLandingUrl={setLandingUrl}
-              videoFile={videoFile} setVideoFile={setVideoFile}
-              videoPreview={videoPreview} setVideoPreview={setVideoPreview}
-              driveFiles={driveFiles} setDriveFiles={setDriveFiles}
-              dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
-              selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
-              urlMode={urlMode} setUrlMode={setUrlMode}
-              adType={adType} setAdType={setAdType}
-
-              // Form Fetching States
-              campaigns={campaigns} setCampaigns={setCampaigns}
-              adGroups={adGroups} setAdGroups={setAdGroups}
-              selectedCampaign={selectedCampaign} setSelectedCampaign={setSelectedCampaign}
-              selectedAdGroup={selectedAdGroup} setSelectedAdGroup={setSelectedAdGroup}
-              identities={identities} setIdentities={setIdentities}
-              files={files} setFiles={setFiles}
-
-              // Variants Props
-              variants={variants}
-              setVariants={setVariants}
-              activeVariantId={activeVariantId}
-              setActiveVariantId={setActiveVariantId}
-              switchVariant={switchVariant}
-              handleAddVariant={handleAddVariant}
-              handleDeleteVariant={handleDeleteVariant}
-              handleDeleteAllVariants={handleDeleteAllVariants}
-              isFormFieldModified={isFormFieldModified}
-              fileVariantMap={fileVariantMap}
-              setFileVariantMap={setFileVariantMap}
-              groupVariantMap={groupVariantMap}
-              setGroupVariantMap={setGroupVariantMap}
-              postVariantMap={postVariantMap}
-              setPostVariantMap={setPostVariantMap}
-            />
-          </div>
-
-          {/* Right Column: Media Preview (45% width) */}
-          <div className="flex-1 lg:flex-[45] min-w-0">
-            <div className="sticky top-6">
-              <ErrorBoundary>
-                <MediaPreview
-                  files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
-                  setFiles={setFiles}
-                  importedPosts={importedPosts}
-                  setImportedPosts={setImportedPosts}
-                  driveFiles={driveFiles}
-                  setDriveFiles={setDriveFiles}
-                  dropboxFiles={dropboxFiles}
-                  setDropboxFiles={setDropboxFiles}
-                  frameioFiles={frameioFiles}
-                  setFrameioFiles={setFrameioFiles}
-                  importedFiles={importedFiles}
-                  setImportedFiles={setImportedFiles}
-                  videoThumbs={videoThumbs}
-                  isCarouselAd={isCarouselAd}
-                  adType={adType} // Pass adType to MediaPreview ('NORMAL' or 'SPARK')
-                  enablePlacementCustomization={enablePlacementCustomization}
-                  setEnablePlacementCustomization={setEnablePlacementCustomization}
-                  fileGroups={fileGroups}
-                  setFileGroups={setFileGroups}
-                  selectedAdSets={selectedAdSets}
-                  adSets={adSets}
-                  duplicateAdSet={duplicateAdSet}
-                  selectedFiles={selectedFiles}
-                  setSelectedFiles={setSelectedFiles}
-                  selectedIgOrganicPosts={selectedIgOrganicPosts}
-                  setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
-                  variants={variants}
-                  activeVariantId={activeVariantId}
-                  handleAddVariant={handleAddVariant}
-                  handleDeleteAllVariants={handleDeleteAllVariants}
-                  fileVariantMap={fileVariantMap}
-                  setFileVariantMap={setFileVariantMap}
-                  groupVariantMap={groupVariantMap}
-                  setGroupVariantMap={setGroupVariantMap}
-                  postVariantMap={postVariantMap}
-                  setPostVariantMap={setPostVariantMap}
-                  hasSeenPowerupPopup={hasSeenPowerupPopup}
-                  setShowPowerupPopup={setShowPowerupPopup}
-                  isLaunchingMedia={false}
-                />
-              </ErrorBoundary>
-            </div>
+    <>
+      {showMobileBanner && (
+        <div className="mobile-message fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-[100] lg:hidden">
+          <div className="text-center max-w-md">
+            <img src={DesktopIcon} alt="Desktop computer" className="w-24 h-24 mb-4 mx-auto" />
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Desktop Recommended</h1>
+            <p className="text-gray-600 mb-6">
+              Thanks for signing up! <br></br>Blip works best on a bigger screen. <br></br> We've sent you an email to help you<br></br> pick up from here.
+            </p>
+            <button
+              onClick={() => setShowMobileBanner(false)}
+              className="mt-4 px-6 py-2 text-sm text-white bg-blue-600 rounded-xl hover:text-blue-700 transition-colors"
+            >
+              Continue Anyway
+            </button>
           </div>
         </div>
-      </main>
-    </div>
+      )}
+
+      <div className="w-full max-w-[1600px] mx-auto py-8 px-2 sm:px-4 md:px-6">
+        <Toaster richColors position="bottom-left" closeButton />
+
+        <Header showMessenger={showMessenger} hideMessenger={hideMessenger} />
+
+        <main className="pt-4 pb-20">
+          <div className="flex flex-col lg:flex-row gap-6 min-w-0">
+            {/* Left Column: Form and Duplicator (55% width) */}
+            <div className="flex-1 lg:flex-[55] min-w-0 space-y-6">
+              <TikTokAdCreationForm
+                advertiserId={selectedAdvertiser}
+                advertisers={tiktokAdvertisers}
+                onAdvertiserChange={setSelectedAdvertiser}
+                advertiserPrefs={advertiserPrefs}
+
+                // Lifted Form State
+                adName={adName} setAdName={setAdName}
+                adText={adText} setAdText={setAdText}
+                cta={cta} setCta={setCta}
+                landingUrl={landingUrl} setLandingUrl={setLandingUrl}
+                videoFile={videoFile} setVideoFile={setVideoFile}
+                videoPreview={videoPreview} setVideoPreview={setVideoPreview}
+                driveFiles={driveFiles} setDriveFiles={setDriveFiles}
+                dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
+                selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
+                urlMode={urlMode} setUrlMode={setUrlMode}
+                adType={adType} setAdType={setAdType}
+
+                // Form Fetching States
+                campaigns={campaigns} setCampaigns={setCampaigns}
+                adGroups={adGroups} setAdGroups={setAdGroups}
+                selectedCampaign={selectedCampaign} setSelectedCampaign={setSelectedCampaign}
+                selectedAdGroup={selectedAdGroup} setSelectedAdGroup={setSelectedAdGroup}
+                identities={identities} setIdentities={setIdentities}
+                files={files} setFiles={setFiles}
+
+                // Variants Props
+                variants={variants}
+                setVariants={setVariants}
+                activeVariantId={activeVariantId}
+                setActiveVariantId={setActiveVariantId}
+                switchVariant={switchVariant}
+                handleAddVariant={handleAddVariant}
+                handleDeleteVariant={handleDeleteVariant}
+                handleDeleteAllVariants={handleDeleteAllVariants}
+                isFormFieldModified={isFormFieldModified}
+                fileVariantMap={fileVariantMap}
+                setFileVariantMap={setFileVariantMap}
+                groupVariantMap={groupVariantMap}
+                setGroupVariantMap={setGroupVariantMap}
+                postVariantMap={postVariantMap}
+                setPostVariantMap={setPostVariantMap}
+              />
+            </div>
+
+            {/* Right Column: Media Preview (45% width) */}
+            <div className="flex-1 lg:flex-[45] min-w-0">
+              <div className="sticky top-6">
+                <ErrorBoundary>
+                  <MediaPreview
+                    files={[...files, ...driveFiles.map((f) => ({ ...f, isDrive: true }))]}
+                    setFiles={setFiles}
+                    importedPosts={importedPosts}
+                    setImportedPosts={setImportedPosts}
+                    driveFiles={driveFiles}
+                    setDriveFiles={setDriveFiles}
+                    dropboxFiles={dropboxFiles}
+                    setDropboxFiles={setDropboxFiles}
+                    frameioFiles={frameioFiles}
+                    setFrameioFiles={setFrameioFiles}
+                    importedFiles={importedFiles}
+                    setImportedFiles={setImportedFiles}
+                    videoThumbs={videoThumbs}
+                    isCarouselAd={isCarouselAd}
+                    adType={adType} // Pass adType to MediaPreview ('NORMAL' or 'SPARK')
+                    enablePlacementCustomization={enablePlacementCustomization}
+                    setEnablePlacementCustomization={setEnablePlacementCustomization}
+                    fileGroups={fileGroups}
+                    setFileGroups={setFileGroups}
+                    selectedAdSets={selectedAdSets}
+                    adSets={adSets}
+                    duplicateAdSet={duplicateAdSet}
+                    selectedFiles={selectedFiles}
+                    setSelectedFiles={setSelectedFiles}
+                    selectedIgOrganicPosts={selectedIgOrganicPosts}
+                    setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
+                    variants={variants}
+                    activeVariantId={activeVariantId}
+                    handleAddVariant={handleAddVariant}
+                    handleDeleteAllVariants={handleDeleteAllVariants}
+                    fileVariantMap={fileVariantMap}
+                    setFileVariantMap={setFileVariantMap}
+                    groupVariantMap={groupVariantMap}
+                    setGroupVariantMap={setGroupVariantMap}
+                    postVariantMap={postVariantMap}
+                    setPostVariantMap={setPostVariantMap}
+                    hasSeenPowerupPopup={hasSeenPowerupPopup}
+                    setShowPowerupPopup={setShowPowerupPopup}
+                    isLaunchingMedia={false}
+                  />
+                </ErrorBoundary>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </>
   )
 }
