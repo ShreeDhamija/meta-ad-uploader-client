@@ -788,12 +788,15 @@ export default function TikTokAdCreationForm({
           setIsUploading(false)
           setUploadProgress(100)
         } else if (videoFile) {
+          console.log('[TikTok Submit] Uploading local video file:', videoFile.name, videoFile.size)
           toast.info('Uploading video...')
           const uploadResult = await uploadVideoToTikTok(videoFile)
+          console.log('[TikTok Submit] Upload hook result:', JSON.stringify(uploadResult))
           if (!uploadResult?.videoId) {
             throw new Error('Video upload failed — no video ID returned')
           }
           videoId = uploadResult.videoId
+          console.log('[TikTok Submit] ✅ Video ID resolved:', videoId)
           setIsUploading(false)
           setUploadProgress(100)
         } else {
@@ -868,12 +871,16 @@ export default function TikTokAdCreationForm({
         creatives: [creative]
       }
 
+      console.log('[TikTok Submit] 🚀 Sending create-ad payload:', JSON.stringify(createPayload, null, 2))
+
       const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createPayload),
       })
       const createData = await createRes.json()
+      console.log('[TikTok Submit] Create-ad response status:', createRes.status)
+      console.log('[TikTok Submit] Create-ad response data:', JSON.stringify(createData))
       if (!createRes.ok || !createData.success) {
         throw new Error(createData.error || 'Ad creation failed')
       }
