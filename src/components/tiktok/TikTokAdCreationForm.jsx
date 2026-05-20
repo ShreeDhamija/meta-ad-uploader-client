@@ -270,28 +270,35 @@ export default function TikTokAdCreationForm({
     }
 
     setLoadingIdentities(true)
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&identity_type=BC_AUTH_TT&identity_authorized_bc_id=7580411024059252752`)
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&identity_type=BC_AUTH_TT&identity_authorized_bc_id=7580411024059252752&_t=${Date.now()}`)
       .then(r => r.json())
       .then(d => {
         const list = d.identities || []
         setIdentities(list)
-        if (list.length > 0) {
-          const best = list.find(i => i.identity_type === 'TT_USER') ||
-            list.find(i => i.identity_type === 'BC_AUTH_TT') ||
-            list[0]
-          if (adType === 'SPARK') {
-            setSelectedIdentity(best.identity_id)
-          } else {
-            setSelectedIdentity('CUSTOMIZED_USER')
-          }
-        } else {
-          setSelectedIdentity('CUSTOMIZED_USER')
-          setAdType('NORMAL')
-        }
+        // Note: the identity selection logic now lives in the separate useEffect below
       })
       .catch(() => { })
       .finally(() => setLoadingIdentities(false))
-  }, [selectedAdvertiser, adType, setCampaigns, setSelectedCampaign, setAdGroups, setIdentities, setSelectedIdentity, setAdType, tiktokFetch])
+  }, [selectedAdvertiser, setCampaigns, setSelectedCampaign, setAdGroups, setIdentities, tiktokFetch])
+
+  // Automatically update selectedIdentity when adType or identities list changes
+  useEffect(() => {
+    if (identities.length > 0) {
+      if (adType === 'SPARK') {
+        const best = identities.find(i => i.identity_type === 'TT_USER') ||
+          identities.find(i => i.identity_type === 'BC_AUTH_TT') ||
+          identities[0]
+        setSelectedIdentity(best?.identity_id || 'CUSTOMIZED_USER')
+      } else {
+        setSelectedIdentity('CUSTOMIZED_USER')
+      }
+    } else {
+      setSelectedIdentity('CUSTOMIZED_USER')
+      if (adType === 'SPARK') {
+         setAdType('NORMAL')
+      }
+    }
+  }, [identities, adType, setSelectedIdentity, setAdType])
 
   // Fetch Ad Groups on Campaign change
   useEffect(() => {
@@ -389,7 +396,7 @@ export default function TikTokAdCreationForm({
     e.stopPropagation()
     if (!selectedAdvertiser || loadingIdentities) return
     setLoadingIdentities(true)
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&identity_type=BC_AUTH_TT&identity_authorized_bc_id=7580411024059252752`)
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&identity_type=BC_AUTH_TT&identity_authorized_bc_id=7580411024059252752&_t=${Date.now()}`)
       .then(r => r.json())
       .then(d => {
         const list = d.identities || []

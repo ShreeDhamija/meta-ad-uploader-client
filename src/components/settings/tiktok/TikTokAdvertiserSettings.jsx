@@ -59,7 +59,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const fetchIdentities = useCallback(() => {
         if (!selectedAdvertiser) return;
         setLoadingIdentities(true);
-        fetch(`${import.meta.env.VITE_API_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&identity_type=BC_AUTH_TT&identity_authorized_bc_id=7580411024059252752`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&identity_type=BC_AUTH_TT&identity_authorized_bc_id=7580411024059252752&_t=${Date.now()}`, {
             headers: tiktokHeaders()
         })
             .then(r => r.json())
