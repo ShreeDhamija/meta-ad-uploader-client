@@ -318,7 +318,7 @@ function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neu
                 )}
                 {value}
                 {valueUnit && (
-                    <span style={{ fontSize: 30, fontWeight: 700, color: INK, marginLeft: 1 }}>
+                    <span style={{ fontSize: 30, fontWeight: 900, color: INK, marginLeft: 1 }}>
                         {valueUnit}
                     </span>
                 )}

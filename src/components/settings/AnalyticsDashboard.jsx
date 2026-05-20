@@ -30,6 +30,8 @@ import AdAccountAudit from "./analytics/AdAccountAudit"
 import AdAccountDiagnostic from "./analytics/AdAccountDiagnostic"
 import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
 import FunnelHealthChart from "./analytics/FunnelHealthChart"
+import CreativeHitRateChart from "./analytics/CreativeHitRateChart"
+import TrendingCreative from "./analytics/TrendingCreative"
 // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19)
 import PeriodMetricsSummary from "./analytics/PeriodMetricsSummary"
 // FEATURE END: PERIOD METRICS SUMMARY
@@ -1346,6 +1348,31 @@ export default function AnalyticsDashboard() {
                             <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
                         </div>
 
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* ── Creative Hit Rate + Trending Creative ── */}
+            {selectedAdAccount && (
+                <Card className="rounded-3xl border-gray-200 overflow-visible">
+                    <CardContent className="p-0">
+                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
+                            <div>
+                                <CreativeHitRateChart
+                                    adAccountId={selectedAdAccount}
+                                    conversionEvent={adAccountSettings?.conversionEvent}
+                                    refreshKey={chartsRefreshKey}
+                                />
+                            </div>
+                            <div className="border-t border-gray-200 lg:border-t-0">
+                                <TrendingCreative
+                                    adAccountId={selectedAdAccount}
+                                    conversionEvent={adAccountSettings?.conversionEvent}
+                                    refreshKey={chartsRefreshKey}
+                                />
+                            </div>
+                            <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
+                        </div>
                     </CardContent>
                 </Card>
             )}
