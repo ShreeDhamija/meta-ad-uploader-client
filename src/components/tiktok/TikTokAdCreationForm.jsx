@@ -285,18 +285,14 @@ export default function TikTokAdCreationForm({
   // Automatically update selectedIdentity when adType or identities list changes
   useEffect(() => {
     if (identities.length > 0) {
-      if (adType === 'SPARK') {
-        const best = identities.find(i => i.identity_type === 'TT_USER') ||
-          identities.find(i => i.identity_type === 'BC_AUTH_TT') ||
-          identities[0]
-        setSelectedIdentity(best?.identity_id || 'CUSTOMIZED_USER')
-      } else {
-        setSelectedIdentity('CUSTOMIZED_USER')
-      }
+      const best = identities.find(i => i.identity_type === 'TT_USER') ||
+        identities.find(i => i.identity_type === 'BC_AUTH_TT') ||
+        identities[0]
+      setSelectedIdentity(best?.identity_id || '')
     } else {
-      setSelectedIdentity('CUSTOMIZED_USER')
+      setSelectedIdentity('')
       if (adType === 'SPARK') {
-         setAdType('NORMAL')
+        setAdType('NORMAL')
       }
     }
   }, [identities, adType, setSelectedIdentity, setAdType])
@@ -408,7 +404,7 @@ export default function TikTokAdCreationForm({
             list[0]
           setSelectedIdentity(best.identity_id)
         } else {
-          setSelectedIdentity('CUSTOMIZED_USER')
+          setSelectedIdentity('')
         }
         toast.success('Identities refreshed!')
       })
@@ -720,15 +716,17 @@ export default function TikTokAdCreationForm({
     if (!selectedAdvertiser) return toast.error('Please select an advertiser')
     if (!selectedAdGroup) return toast.error('Please select an ad group')
 
+    if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
+      return toast.error(adType === 'NORMAL'
+        ? 'Identity is required. Please select one.'
+        : 'Promote From is required. Please select a linked TikTok account.'
+      )
+    }
+
     if (adType === 'SPARK') {
-      if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
-        return toast.error('Spark Ads require a linked TikTok account. Please select one or switch to Normal Ad.')
-      }
       if (!sparkAuthCode || !sparkAuthCode.trim()) {
         return toast.error('Spark Ads require an Organic Post Authorization Code or link.')
       }
-    } else {
-      if (!selectedIdentity) setSelectedIdentity('CUSTOMIZED_USER')
     }
 
     if (!adName.trim()) return toast.error('Ad name is required')
@@ -1204,15 +1202,11 @@ export default function TikTokAdCreationForm({
                         onValueChange={(value) => {
                           if (activeVariantId !== 'default') return;
                           setAdType(value);
-                          if (value === 'NORMAL') {
-                            setSelectedIdentity('CUSTOMIZED_USER');
-                          } else if (value === 'SPARK') {
-                            const firstSpark = identities.find(i => i.identity_type === 'TT_USER' || i.identity_type === 'BC_AUTH_TT');
-                            if (firstSpark) {
-                              setSelectedIdentity(firstSpark.identity_id);
-                            } else if (identities.length > 0) {
-                              setSelectedIdentity(identities[0].identity_id);
-                            }
+                          const firstLinked = identities.find(i => i.identity_type === 'TT_USER' || i.identity_type === 'BC_AUTH_TT') || identities[0];
+                          if (firstLinked) {
+                            setSelectedIdentity(firstLinked.identity_id);
+                          } else {
+                            setSelectedIdentity('');
                           }
                         }}
                         disabled={activeVariantId !== 'default'}
@@ -1249,13 +1243,13 @@ export default function TikTokAdCreationForm({
         </CardHeader>
         <CardContent className="p-6 pt-0 space-y-6">
 
-          {/* 2. Post As (Linked Account) */}
+          {/* 2. Identity / Promote From (Linked Account) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
                 {renderDiffMark("selectedIdentity")}
                 <Users className="w-4 h-4 text-gray-500" />
-                Post As (Linked Account)
+                {adType === 'NORMAL' ? 'Identity' : 'Promote From'}
               </Label>
               <div className="flex items-center gap-2">
                 {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
@@ -1275,23 +1269,23 @@ export default function TikTokAdCreationForm({
                 <Button
                   variant="outline"
                   role="combobox"
-                  disabled={!selectedAdvertiser || loadingIdentities || adType === 'NORMAL'}
+                  disabled={!selectedAdvertiser || loadingIdentities}
                   className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 >
                   <span className="truncate text-sm font-medium">
-                    {adType === 'NORMAL'
-                      ? "Custom Identity (In-Feed Ad)"
-                      : selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
-                        ? identities.find(i => i.identity_id === selectedIdentity)?.display_name || selectedIdentity
-                        : "Select a Linked Account"}
+                    {selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
+                      ? identities.find(i => i.identity_id === selectedIdentity)?.display_name || selectedIdentity
+                      : adType === 'NORMAL'
+                        ? "Select Identity"
+                        : "Select account to Promote From"}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
-                  <CommandInput placeholder="Search linked accounts..." className="bg-transparent border-none focus:ring-0" />
-                  <CommandEmpty>No linked accounts found.</CommandEmpty>
+                  <CommandInput placeholder={adType === 'NORMAL' ? "Search identities..." : "Search accounts to promote from..."} className="bg-transparent border-none focus:ring-0" />
+                  <CommandEmpty>{adType === 'NORMAL' ? "No identities found." : "No accounts found."}</CommandEmpty>
                   <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                     <CommandGroup>
                       {identities.map((i) => (
