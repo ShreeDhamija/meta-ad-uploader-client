@@ -5,7 +5,9 @@
 import { useEffect, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
-import { Image as ImageIcon, TrendingUp, ExternalLink } from "lucide-react"
+import { Image as ImageIcon, ExternalLink } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
@@ -47,31 +49,41 @@ function DeltaBadge({ delta }) {
     )
 }
 
-function Thumbnail({ url, name, postUrl }) {
+function Thumbnail({ url, name }) {
     const [errored, setErrored] = useState(false)
-    const img = url && !errored ? (
-        <img
-            src={url}
-            alt={name}
-            className="h-[88px] w-[88px] rounded-xl object-cover"
-            onError={() => setErrored(true)}
-        />
-    ) : (
+    if (url && !errored) {
+        return (
+            <img
+                src={url}
+                alt={name}
+                className="h-[88px] w-[88px] rounded-xl object-cover"
+                onError={() => setErrored(true)}
+            />
+        )
+    }
+    return (
         <div className="flex h-[88px] w-[88px] flex-shrink-0 items-center justify-center rounded-xl bg-gray-100">
             <ImageIcon className="h-6 w-6 text-gray-300" />
         </div>
     )
-    if (postUrl) {
-        return (
-            <a href={postUrl} target="_blank" rel="noopener noreferrer" className="group relative block">
-                {img}
-                <span className="pointer-events-none absolute right-1 top-1 rounded-full bg-black/60 p-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <ExternalLink className="h-3 w-3 text-white" />
-                </span>
-            </a>
-        )
+}
+
+function TruncatedWithTooltip({ text, max, className, tooltipSide = "top" }) {
+    if (!text) return null
+    const truncated = text.length > max ? `${text.slice(0, max)}…` : text
+    if (text.length <= max) {
+        return <span className={className}>{text}</span>
     }
-    return img
+    return (
+        <Tooltip delayDuration={150}>
+            <TooltipTrigger asChild>
+                <span className={cn(className, "cursor-default")}>{truncated}</span>
+            </TooltipTrigger>
+            <TooltipContent side={tooltipSide} className="max-w-xs break-words">
+                {text}
+            </TooltipContent>
+        </Tooltip>
+    )
 }
 
 export default function TrendingCreative({ adAccountId, conversionEvent, refreshKey, className }) {
@@ -106,105 +118,110 @@ export default function TrendingCreative({ adAccountId, conversionEvent, refresh
     }, [adAccountId, conversionEvent, refreshKey])
 
     return (
-        <div className={cn("p-4", className)}>
-            <div className="mb-[22px] flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                    <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900">
-                        <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
-                        Trending Creatives
-                    </p>
-                    <p className="text-xs text-gray-400">
-                        Ads with &gt;35% spend growth vs prior 7 days
-                    </p>
-                </div>
-            </div>
+        <TooltipProvider delayDuration={150}>
+            <Card className={cn("rounded-3xl border-gray-200", className)}>
+                <CardContent className="p-6">
+                    <div className="mb-4 px-1">
+                        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                            Trending Creatives
+                            {data?.ads?.length > 0 && (
+                                <span className="text-base font-normal text-gray-400">({data.ads.length})</span>
+                            )}
+                        </h2>
+                        <p className="mt-1 text-sm text-gray-500">
+                            Ads with &gt;35% spend growth over the last 7 days vs the prior 7 days.
+                        </p>
+                    </div>
 
-            {loading ? (
-                <div className="flex h-[200px] items-center justify-center">
-                    <Helix size="36" speed="2.5" color="#3b82f6" />
-                </div>
-            ) : error ? (
-                <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
-            ) : !data || data.ads.length === 0 ? (
-                <div className="flex h-[200px] items-center justify-center text-sm text-gray-400">
-                    No trending creatives in the last 7 days
-                </div>
-            ) : (
-                <div className="overflow-y-auto" style={{ maxHeight: "50vh" }}>
-                    <table className="min-w-full">
-                        <thead className="sticky top-0 z-10 bg-white">
-                            <tr className="border-b border-gray-100">
-                                <th className="w-[100px] pb-2 pr-3" />
-                                <th className="pb-2 pr-4 text-left text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                                    Ad
-                                </th>
-                                <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                                    Spend
-                                </th>
-                                <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                                    CPA
-                                </th>
-                                <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                                    CTR
-                                </th>
-                                <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
-                                    Watch
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-50">
-                            {data.ads.map((ad) => (
-                                <tr key={ad.adId} className="transition-colors hover:bg-gray-50">
-                                    <td className="py-2.5 pr-3">
-                                        <Thumbnail url={ad.thumbnailUrl} name={ad.adName} postUrl={ad.postUrl} />
-                                    </td>
-                                    <td className="py-2.5 pr-4 align-middle">
-                                        {ad.postUrl ? (
-                                            <a
-                                                href={ad.postUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-sm font-medium leading-tight text-gray-800 hover:text-blue-600"
-                                                title={ad.adName}
-                                            >
-                                                {ad.adName.length > 40 ? `${ad.adName.slice(0, 40)}…` : ad.adName}
-                                            </a>
-                                        ) : (
-                                            <p
-                                                className="text-sm font-medium leading-tight text-gray-800"
-                                                title={ad.adName}
-                                            >
-                                                {ad.adName.length > 40 ? `${ad.adName.slice(0, 40)}…` : ad.adName}
-                                            </p>
-                                        )}
-                                        <p
-                                            className="mt-0.5 max-w-[180px] truncate text-xs leading-tight text-gray-400"
-                                            title={ad.campaignName}
-                                        >
-                                            {ad.campaignName}
-                                        </p>
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle">
-                                        <span className="text-sm font-medium text-gray-800">
-                                            {formatSpend(ad.currentSpend)}
-                                        </span>
-                                        <DeltaBadge delta={ad.spendDelta} />
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle text-sm font-medium text-gray-800">
-                                        {ad.cpa != null ? `$${Math.round(ad.cpa)}` : "—"}
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle text-sm font-medium text-gray-800">
-                                        {ad.ctr != null ? `${ad.ctr.toFixed(2)}%` : "—"}
-                                    </td>
-                                    <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle text-sm font-medium text-gray-800">
-                                        {formatWatchTime(ad.videoAvgWatchTime)}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
+                    {loading ? (
+                        <div className="flex h-[200px] items-center justify-center">
+                            <Helix size="36" speed="2.5" color="#3b82f6" />
+                        </div>
+                    ) : error ? (
+                        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+                    ) : !data || data.ads.length === 0 ? (
+                        <div className="flex h-[160px] items-center justify-center text-sm text-gray-400">
+                            No trending creatives in the last 7 days
+                        </div>
+                    ) : (
+                        <div className="overflow-y-auto" style={{ maxHeight: "55vh" }}>
+                            <table className="min-w-full">
+                                <thead className="sticky top-0 z-10 bg-white">
+                                    <tr className="border-b border-gray-100">
+                                        <th className="w-[100px] pb-2 pr-3" />
+                                        <th className="pb-2 pr-4 text-left text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                            Ad
+                                        </th>
+                                        <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                            Spend
+                                        </th>
+                                        <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                            CPA
+                                        </th>
+                                        <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                            CTR
+                                        </th>
+                                        <th className="px-3 pb-2 text-center text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                                            Watch
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {data.ads.map((ad) => (
+                                        <tr key={ad.adId} className="transition-colors hover:bg-gray-50">
+                                            <td className="py-2.5 pr-3">
+                                                <Thumbnail url={ad.thumbnailUrl} name={ad.adName} />
+                                            </td>
+                                            <td className="py-2.5 pr-4 align-middle">
+                                                <div className="flex items-center gap-1.5">
+                                                    <TruncatedWithTooltip
+                                                        text={ad.adName}
+                                                        max={40}
+                                                        className="text-sm font-medium leading-tight text-gray-800"
+                                                    />
+                                                    {ad.postUrl && (
+                                                        <a
+                                                            href={ad.postUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-shrink-0 text-gray-400 transition-colors hover:text-blue-600"
+                                                            title="Open ad on Facebook"
+                                                        >
+                                                            <ExternalLink className="h-3.5 w-3.5" />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                <div className="mt-0.5 max-w-[220px]">
+                                                    <TruncatedWithTooltip
+                                                        text={ad.campaignName}
+                                                        max={32}
+                                                        className="text-xs leading-tight text-gray-400"
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle">
+                                                <span className="text-sm font-medium text-gray-800">
+                                                    {formatSpend(ad.currentSpend)}
+                                                </span>
+                                                <DeltaBadge delta={ad.spendDelta} />
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle text-sm font-medium text-gray-800">
+                                                {ad.cpa != null ? `$${Math.round(ad.cpa)}` : "—"}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle text-sm font-medium text-gray-800">
+                                                {ad.ctr != null ? `${ad.ctr.toFixed(2)}%` : "—"}
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-2.5 text-center align-middle text-sm font-medium text-gray-800">
+                                                {formatWatchTime(ad.videoAvgWatchTime)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </TooltipProvider>
     )
 }

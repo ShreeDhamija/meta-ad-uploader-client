@@ -1352,31 +1352,6 @@ export default function AnalyticsDashboard() {
                 </Card>
             )}
 
-            {/* ── Creative Hit Rate + Trending Creative ── */}
-            {selectedAdAccount && (
-                <Card className="rounded-3xl border-gray-200 overflow-visible">
-                    <CardContent className="p-0">
-                        <div className="grid grid-cols-1 lg:relative lg:min-h-[360px] lg:grid-cols-2 [&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
-                            <div>
-                                <CreativeHitRateChart
-                                    adAccountId={selectedAdAccount}
-                                    conversionEvent={adAccountSettings?.conversionEvent}
-                                    refreshKey={chartsRefreshKey}
-                                />
-                            </div>
-                            <div className="border-t border-gray-200 lg:border-t-0">
-                                <TrendingCreative
-                                    adAccountId={selectedAdAccount}
-                                    conversionEvent={adAccountSettings?.conversionEvent}
-                                    refreshKey={chartsRefreshKey}
-                                />
-                            </div>
-                            <div className="pointer-events-none absolute left-1/2 top-[7%] hidden h-[90%] -translate-x-1/2 border-l border-dashed border-gray-300 lg:block" />
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
             {/* ── Tab Switcher ── */}
             <div className="w-full">
                 <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-2xl w-full border border-gray-200/60">
@@ -1465,6 +1440,25 @@ export default function AnalyticsDashboard() {
                         />
                     )}
                 </>
+            )}
+
+            {/* ── Trending Creative (full-width) ── */}
+            {selectedAdAccount && (
+                <TrendingCreative
+                    adAccountId={selectedAdAccount}
+                    conversionEvent={adAccountSettings?.conversionEvent}
+                    refreshKey={chartsRefreshKey}
+                />
+            )}
+
+            {/* ── Creative Hit Rate (full-width; bottom; deferred until recs return) ── */}
+            {selectedAdAccount && (
+                <CreativeHitRateChart
+                    adAccountId={selectedAdAccount}
+                    conversionEvent={adAccountSettings?.conversionEvent}
+                    refreshKey={chartsRefreshKey}
+                    enabled={!recsLoading && !!recommendations}
+                />
             )}
 
             {/* ── Info Footer ── */}
