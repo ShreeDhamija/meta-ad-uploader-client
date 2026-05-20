@@ -8,7 +8,7 @@ import "ldrs/react/Helix.css"
 import {
     ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts"
-import { Image as ImageIcon, Trophy, ExternalLink, ChevronDown } from "lucide-react"
+import { Image as ImageIcon, Trophy, ExternalLink, ChevronDown, BadgePercent } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip as ShadTooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -45,14 +45,14 @@ function CreativeThumbnail({ url, name }) {
             <img
                 src={url}
                 alt={name}
-                className="h-11 w-11 flex-shrink-0 rounded-lg object-cover"
+                className="h-[88px] w-[88px] flex-shrink-0 rounded-xl object-cover"
                 onError={() => setErrored(true)}
             />
         )
     }
     return (
-        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
-            <ImageIcon className="h-5 w-5 text-gray-300" />
+        <div className="flex h-[88px] w-[88px] flex-shrink-0 items-center justify-center rounded-xl bg-gray-100">
+            <ImageIcon className="h-6 w-6 text-gray-300" />
         </div>
     )
 }
@@ -81,7 +81,7 @@ function CreativeRow({ creative }) {
                 <div className="flex items-center gap-1.5">
                     <TruncatedWithTooltip
                         text={creative.adName}
-                        max={48}
+                        max={96}
                         className="text-sm text-gray-800"
                     />
                     {adUrl && (
@@ -236,6 +236,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                 <CardContent className="p-6">
                     <div className="mb-4 px-1">
                         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                            <BadgePercent className="h-5 w-5 text-amber-500" />
                             Creative Hit Rate
                             {data?.winnerThreshold != null && (
                                 <span className="text-base font-normal text-gray-400">
@@ -376,8 +377,15 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                                                     ))}
                                                 </div>
                                             )}
-                                            {/* Sticky toggle stays accessible when the expanded list overflows the viewport. */}
-                                            <div className="sticky bottom-3 z-10 mt-3 flex justify-center">
+                                            {/* Toggle is sticky only while expanded — keeps "Hide" reachable
+                                                when the list overflows; non-sticky when collapsed since the
+                                                button is already right there next to the winners. */}
+                                            <div
+                                                className={cn(
+                                                    "mt-3 flex justify-center",
+                                                    showAll && "sticky bottom-3 z-10",
+                                                )}
+                                            >
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowAll(prev => !prev)}
