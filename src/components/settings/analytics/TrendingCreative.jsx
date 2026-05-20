@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
-import { Image as ImageIcon, ExternalLink } from "lucide-react"
+import { Image as ImageIcon, ExternalLink, TrendingUp } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -123,6 +123,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, refresh
                 <CardContent className="p-6">
                     <div className="mb-4 px-1">
                         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                            <TrendingUp className="h-5 w-5 text-blue-500" />
                             Trending Creatives
                             {data?.ads?.length > 0 && (
                                 <span className="text-base font-normal text-gray-400">({data.ads.length})</span>

@@ -72,7 +72,7 @@ function TruncatedWithTooltip({ text, max, className }) {
     )
 }
 
-function CreativeRow({ creative, showWinnerBadge }) {
+function CreativeRow({ creative }) {
     const adUrl = buildAdUrl(creative.adId)
     return (
         <div className="flex items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-gray-50">
@@ -97,12 +97,6 @@ function CreativeRow({ creative, showWinnerBadge }) {
                     )}
                 </div>
             </div>
-            {showWinnerBadge && creative.isWinner && (
-                <span className="flex flex-shrink-0 items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                    <Trophy className="h-3 w-3" />
-                    Winner
-                </span>
-            )}
             <div className="ml-2 w-20 flex-shrink-0 text-right text-sm font-medium text-gray-800 tabular-nums">
                 {formatSpend(creative.spend)}
             </div>
@@ -144,8 +138,8 @@ function CustomTooltip({ active, payload, label }) {
 
 function MonthTabSwitcher({ months, selectedMonth, onSelect }) {
     return (
-        <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-0.5">
-            <div className="flex items-center gap-0.5 flex-wrap">
+        <div className="flex items-center gap-2 bg-gray-100 rounded-xl px-2 py-1.5">
+            <div className="flex flex-wrap items-center gap-0.5">
                 {months.map((m) => {
                     const isActive = selectedMonth === m.monthKey
                     return (
@@ -170,7 +164,7 @@ function MonthTabSwitcher({ months, selectedMonth, onSelect }) {
     )
 }
 
-export default function CreativeHitRateChart({ adAccountId, conversionEvent, refreshKey, enabled = true, className }) {
+export default function CreativeHitRateChart({ adAccountId, conversionEvent, refreshKey, className }) {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
@@ -178,7 +172,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
     const [showAll, setShowAll] = useState(false)
 
     useEffect(() => {
-        if (!adAccountId || !enabled) { return }
+        if (!adAccountId) { return }
         let cancelled = false
         setLoading(true)
         setError(null)
@@ -201,12 +195,13 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
             .finally(() => { if (!cancelled) setLoading(false) })
 
         return () => { cancelled = true }
-    }, [adAccountId, conversionEvent, refreshKey, enabled])
+    }, [adAccountId, conversionEvent, refreshKey])
 
     // Default selected month = most recent month with launches (else last month).
+    // The API returns rows shaped { month, launches, winners, ... }, so the key is `.month`.
     useEffect(() => {
         if (!data?.months?.length) return
-        if (selectedMonth && data.months.some(m => m.monthKey === selectedMonth)) return
+        if (selectedMonth && data.months.some(m => m.month === selectedMonth)) return
         const withLaunches = [...data.months].reverse().find(m => m.launches > 0)
         setSelectedMonth(withLaunches?.month || data.months[data.months.length - 1].month)
     }, [data, selectedMonth])
@@ -241,7 +236,6 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                 <CardContent className="p-6">
                     <div className="mb-4 px-1">
                         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                            <Trophy className="h-5 w-5 text-amber-500" />
                             Creative Hit Rate
                             {data?.winnerThreshold != null && (
                                 <span className="text-base font-normal text-gray-400">
@@ -271,54 +265,56 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                     ) : (
                         <>
                             {/* ── Bar chart ───────────────────────────────────── */}
-                            <ResponsiveContainer width="100%" height={260}>
-                                <ComposedChart
-                                    data={chartData}
-                                    margin={{ top: 5, right: 0, left: -10, bottom: 5 }}
-                                    style={{ cursor: "pointer" }}
-                                    onClick={(state) => {
-                                        const k = state?.activePayload?.[0]?.payload?.monthKey
-                                        if (k) setSelectedMonth(k)
-                                    }}
-                                >
-                                    <defs>
-                                        <linearGradient id="hitRateBarFill" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.95} />
-                                            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.55} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis
-                                        dataKey="month"
-                                        tick={{ fontSize: 10, fill: "#9ca3af" }}
-                                        tickLine={false}
-                                        axisLine={{ stroke: "#e5e7eb" }}
-                                    />
-                                    <YAxis
-                                        tick={{ fontSize: 10, fill: "#9ca3af" }}
-                                        tickLine={false}
-                                        axisLine={false}
-                                        width={32}
-                                        allowDecimals={false}
-                                    />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(59,130,246,0.06)" }} />
-                                    <Bar
-                                        dataKey="launches"
-                                        fill="url(#hitRateBarFill)"
-                                        radius={[6, 6, 0, 0]}
-                                        maxBarSize={48}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="winners"
-                                        stroke="#f59e0b"
-                                        strokeWidth={2}
-                                        dot={{ r: 4, strokeWidth: 0, fill: "#f59e0b" }}
-                                        activeDot={{ r: 6, strokeWidth: 0, fill: "#f59e0b" }}
-                                        connectNulls={false}
-                                    />
-                                </ComposedChart>
-                            </ResponsiveContainer>
+                            <div className="[&_*:focus]:outline-none [&_*:focus-visible]:outline-none">
+                                <ResponsiveContainer width="100%" height={260}>
+                                    <ComposedChart
+                                        data={chartData}
+                                        margin={{ top: 5, right: 0, left: -10, bottom: 5 }}
+                                        style={{ cursor: "pointer" }}
+                                        onClick={(state) => {
+                                            const k = state?.activePayload?.[0]?.payload?.monthKey
+                                            if (k) setSelectedMonth(k)
+                                        }}
+                                    >
+                                        <defs>
+                                            <linearGradient id="hitRateBarFill" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.95} />
+                                                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.55} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis
+                                            dataKey="month"
+                                            tick={{ fontSize: 10, fill: "#9ca3af" }}
+                                            tickLine={false}
+                                            axisLine={{ stroke: "#e5e7eb" }}
+                                        />
+                                        <YAxis
+                                            tick={{ fontSize: 10, fill: "#9ca3af" }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            width={32}
+                                            allowDecimals={false}
+                                        />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(59,130,246,0.06)" }} />
+                                        <Bar
+                                            dataKey="launches"
+                                            fill="url(#hitRateBarFill)"
+                                            radius={[6, 6, 0, 0]}
+                                            maxBarSize={48}
+                                        />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="winners"
+                                            stroke="#f59e0b"
+                                            strokeWidth={2}
+                                            dot={{ r: 4, strokeWidth: 0, fill: "#f59e0b" }}
+                                            activeDot={{ r: 6, strokeWidth: 0, fill: "#f59e0b" }}
+                                            connectNulls={false}
+                                        />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </div>
 
                             <div className="mt-3 flex items-center gap-4">
                                 <div className="flex items-center gap-2">
@@ -336,10 +332,11 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                                 <div className="mt-6 border-t border-gray-100 pt-5">
                                     <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                                         <div>
-                                            <p className="text-sm font-semibold text-gray-900">
+                                            <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+                                                <Trophy className="h-4 w-4 text-amber-500" />
                                                 Winners for {formatMonthFull(selectedMonth)}
                                                 {selectedMonthData && (
-                                                    <span className="ml-2 text-sm font-normal text-gray-400">
+                                                    <span className="ml-1 text-sm font-normal text-gray-400">
                                                         {selectedMonthData.winners} of {selectedMonthData.launches} launches
                                                     </span>
                                                 )}
@@ -364,24 +361,14 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                                     ) : (
                                         <div className="space-y-1">
                                             {winners.map(c => (
-                                                <CreativeRow key={c.adName} creative={c} showWinnerBadge />
+                                                <CreativeRow key={c.adName} creative={c} />
                                             ))}
                                         </div>
                                     )}
 
-                                    {/* Show-all toggle (mirrors "Show dismissed recommendations") */}
+                                    {/* Show-all expansion (mirrors "Show dismissed recommendations") */}
                                     {losers.length > 0 && (
-                                        <div className="pt-3">
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowAll(prev => !prev)}
-                                                className="inline-flex items-center gap-1 text-xs text-gray-500 transition-colors hover:text-gray-700"
-                                            >
-                                                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-180")} />
-                                                {showAll
-                                                    ? `Hide other launches`
-                                                    : `View all ${selectedMonthData?.launches ?? selectedCreatives.length} creatives from ${formatMonthLabel(selectedMonth)}`}
-                                            </button>
+                                        <>
                                             {showAll && (
                                                 <div className="mt-3 space-y-1 opacity-90">
                                                     {losers.map(c => (
@@ -389,27 +376,26 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
                                                     ))}
                                                 </div>
                                             )}
-                                        </div>
+                                            {/* Sticky toggle stays accessible when the expanded list overflows the viewport. */}
+                                            <div className="sticky bottom-3 z-10 mt-3 flex justify-center">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowAll(prev => !prev)}
+                                                    className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white/95 px-3 py-1.5 text-xs text-gray-600 shadow-sm backdrop-blur transition-colors hover:bg-white hover:text-gray-900"
+                                                >
+                                                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-180")} />
+                                                    {showAll
+                                                        ? `Hide other launches`
+                                                        : `View all ${selectedMonthData?.launches ?? selectedCreatives.length} creatives from ${formatMonthLabel(selectedMonth)}`}
+                                                </button>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             )}
                         </>
                     )}
 
-                    {!loading && !adAccountId && enabled && (
-                        <div className="flex h-[200px] items-center justify-center text-sm text-gray-400">
-                            Select an ad account to load creative hit rate
-                        </div>
-                    )}
-
-                    {!loading && !error && !data && adAccountId && !enabled && (
-                        <div className="flex flex-col items-center justify-center gap-2 py-16">
-                            <Helix size="32" speed="2.5" color="#cbd5e1" />
-                            <p className="text-sm text-gray-400">
-                                Queued · will start once recommendations load
-                            </p>
-                        </div>
-                    )}
                 </CardContent>
             </Card>
         </TooltipProvider>

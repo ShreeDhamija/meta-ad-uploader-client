@@ -1451,13 +1451,12 @@ export default function AnalyticsDashboard() {
                 />
             )}
 
-            {/* ── Creative Hit Rate (full-width; bottom; deferred until recs return) ── */}
+            {/* ── Creative Hit Rate (full-width; bottom) ── */}
             {selectedAdAccount && (
                 <CreativeHitRateChart
                     adAccountId={selectedAdAccount}
                     conversionEvent={adAccountSettings?.conversionEvent}
                     refreshKey={chartsRefreshKey}
-                    enabled={!recsLoading && !!recommendations}
                 />
             )}
 
