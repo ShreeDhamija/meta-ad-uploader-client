@@ -59,6 +59,7 @@ export default function TikTokAds() {
   const [driveFiles, setDriveFiles] = useState([])
   const [dropboxFiles, setDropboxFiles] = useState([])
   const [selectedIdentity, setSelectedIdentity] = useState('')
+  const [sparkAuthCode, setSparkAuthCode] = useState('')
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
   const [showMobileBanner, setShowMobileBanner] = useState(true)
@@ -188,6 +189,7 @@ export default function TikTokAds() {
     cta,
     landingUrl,
     selectedIdentity,
+    sparkAuthCode,
     urlMode,
     selectedCampaign,
     selectedAdGroup,
@@ -197,6 +199,7 @@ export default function TikTokAds() {
     cta,
     landingUrl,
     selectedIdentity,
+    sparkAuthCode,
     urlMode,
     selectedCampaign,
     selectedAdGroup,
@@ -209,6 +212,7 @@ export default function TikTokAds() {
     setCta(snapshot.cta || "SHOP_NOW");
     setLandingUrl(snapshot.landingUrl || "");
     setSelectedIdentity(snapshot.selectedIdentity || "");
+    setSparkAuthCode(snapshot.sparkAuthCode || "");
     setUrlMode(snapshot.urlMode || "WEBSITE");
     setSelectedCampaign(snapshot.selectedCampaign || "");
     setSelectedAdGroup(snapshot.selectedAdGroup || "");
@@ -486,6 +490,7 @@ export default function TikTokAds() {
                 driveFiles={driveFiles} setDriveFiles={setDriveFiles}
                 dropboxFiles={dropboxFiles} setDropboxFiles={setDropboxFiles}
                 selectedIdentity={selectedIdentity} setSelectedIdentity={setSelectedIdentity}
+                sparkAuthCode={sparkAuthCode} setSparkAuthCode={setSparkAuthCode}
                 urlMode={urlMode} setUrlMode={setUrlMode}
                 adType={adType} setAdType={setAdType}
 

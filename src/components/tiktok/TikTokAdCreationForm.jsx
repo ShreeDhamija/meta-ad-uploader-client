@@ -113,6 +113,7 @@ export default function TikTokAdCreationForm({
   driveFiles, setDriveFiles,
   dropboxFiles, setDropboxFiles,
   selectedIdentity, setSelectedIdentity,
+  sparkAuthCode, setSparkAuthCode,
   urlMode, setUrlMode,
   adType, setAdType,
 
@@ -723,14 +724,20 @@ export default function TikTokAdCreationForm({
       if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
         return toast.error('Spark Ads require a linked TikTok account. Please select one or switch to Normal Ad.')
       }
+      if (!sparkAuthCode || !sparkAuthCode.trim()) {
+        return toast.error('Spark Ads require an Organic Post Authorization Code or link.')
+      }
     } else {
       if (!selectedIdentity) setSelectedIdentity('CUSTOMIZED_USER')
     }
 
     if (!adName.trim()) return toast.error('Ad name is required')
     if (!cta) return toast.error('Please select a Call to Action')
+
     const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0
-    if (!videoFile && !isCloudFile) return toast.error("Please select a video")
+    if (adType === 'NORMAL' && !videoFile && !isCloudFile) {
+      return toast.error("Please select a video")
+    }
 
     setIsSubmitting(true)
     setIsUploading(true)
@@ -739,48 +746,81 @@ export default function TikTokAdCreationForm({
     try {
       let videoId = null
 
-      if (tiktokLibraryFiles.length > 0) {
-        videoId = tiktokLibraryFiles[0].videoId
-        setIsUploading(false)
-        setUploadProgress(100)
-      } else if (videoFile) {
-        toast.info('Uploading video...')
-        const uploadResult = await uploadVideoToTikTok(videoFile)
-        if (!uploadResult?.videoId) {
-          throw new Error('Video upload failed — no video ID returned')
+      if (adType === 'SPARK') {
+        toast.info('Authorizing organic TikTok post...')
+        // 1. POST /api/tiktok/spark-authorize
+        const authRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-authorize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            advertiserId: selectedAdvertiser,
+            authCode: sparkAuthCode.trim()
+          })
+        })
+        const authData = await authRes.json()
+        if (!authRes.ok || !authData.success) {
+          throw new Error(authData.error || 'Failed to authorize organic post')
         }
-        videoId = uploadResult.videoId
+
+        toast.info('Fetching organic video information...')
+        // 2. GET /api/tiktok/spark-video-info
+        const infoParams = new URLSearchParams({
+          advertiserId: selectedAdvertiser,
+          authCode: sparkAuthCode.trim()
+        })
+        const infoRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-video-info?${infoParams}`)
+        const infoData = await infoRes.json()
+        if (!infoRes.ok || !infoData.success) {
+          throw new Error(infoData.error || 'Failed to retrieve organic video information')
+        }
+
+        videoId = infoData.videoId
         setIsUploading(false)
         setUploadProgress(100)
       } else {
-        const formData = new FormData()
-        if (driveFiles.length > 0) {
-          formData.append('driveFile', JSON.stringify(driveFiles[0]))
-        } else if (dropboxFiles.length > 0) {
-          formData.append('dropboxFile', JSON.stringify(dropboxFiles[0]))
+        if (tiktokLibraryFiles.length > 0) {
+          videoId = tiktokLibraryFiles[0].videoId
+          setIsUploading(false)
+          setUploadProgress(100)
+        } else if (videoFile) {
+          toast.info('Uploading video...')
+          const uploadResult = await uploadVideoToTikTok(videoFile)
+          if (!uploadResult?.videoId) {
+            throw new Error('Video upload failed — no video ID returned')
+          }
+          videoId = uploadResult.videoId
+          setIsUploading(false)
+          setUploadProgress(100)
+        } else {
+          const formData = new FormData()
+          if (driveFiles.length > 0) {
+            formData.append('driveFile', JSON.stringify(driveFiles[0]))
+          } else if (dropboxFiles.length > 0) {
+            formData.append('dropboxFile', JSON.stringify(dropboxFiles[0]))
+          }
+
+          const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
+          const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
+          const sourceName = driveFiles.length > 0 ? 'Google Drive' : 'Dropbox'
+
+          toast.info(`Downloading from ${sourceName} and uploading...`)
+          const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData })
+          const uploadRawText = await uploadRes.text()
+
+          let uploadData = {}
+          try { uploadData = JSON.parse(uploadRawText) } catch (parseErr) {
+            throw new Error(`Server returned non-JSON response (${uploadRes.status}): ${uploadRawText.slice(0, 200)}`)
+          }
+
+          if (!uploadRes.ok || !uploadData.success) {
+            throw new Error(uploadData.error || uploadData.message || `Upload failed with status ${uploadRes.status}`)
+          }
+
+          videoId = uploadData.videoId
+          setUploadProgress(100)
+          setIsUploading(false)
+          toast.success('Video uploaded!')
         }
-
-        const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
-        const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
-        const sourceName = driveFiles.length > 0 ? 'Google Drive' : 'Dropbox'
-
-        toast.info(`Downloading from ${sourceName} and uploading...`)
-        const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData })
-        const uploadRawText = await uploadRes.text()
-
-        let uploadData = {}
-        try { uploadData = JSON.parse(uploadRawText) } catch (parseErr) {
-          throw new Error(`Server returned non-JSON response (${uploadRes.status}): ${uploadRawText.slice(0, 200)}`)
-        }
-
-        if (!uploadRes.ok || !uploadData.success) {
-          throw new Error(uploadData.error || uploadData.message || `Upload failed with status ${uploadRes.status}`)
-        }
-
-        videoId = uploadData.videoId
-        setUploadProgress(100)
-        setIsUploading(false)
-        toast.success('Video uploaded!')
       }
 
       const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
@@ -804,7 +844,12 @@ export default function TikTokAdCreationForm({
         ...(urlMode === 'WEBSITE'
           ? { landing_page_url: finalUrl }
           : { page_id: landingUrl }
-        )
+        ),
+        ...(adType === 'SPARK' ? {
+          is_spark_ad: true,
+          spark_ad_auth_code: sparkAuthCode.trim(),
+          adType: 'SPARK'
+        } : {})
       }
       if (currentIdentityId) creative.identity_id = currentIdentityId
 
@@ -814,6 +859,7 @@ export default function TikTokAdCreationForm({
         ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
         identityType: currentIdentityType,
         adName: adName.trim(),
+        adType: adType,
         creatives: [creative]
       }
 
@@ -839,6 +885,7 @@ export default function TikTokAdCreationForm({
       setDriveFiles([])
       setDropboxFiles([])
       setUploadProgress(0)
+      if (setSparkAuthCode) setSparkAuthCode('')
     } catch (err) {
       toast.error(err.message)
       setIsUploading(false)
@@ -1274,125 +1321,79 @@ export default function TikTokAdCreationForm({
             </Popover>
           </div>
 
-          {/* Conditional rendering depending on Spark Ad type */}
-          {adType === 'NORMAL' && (
-            <>
-              {/* 3. Ad Name */}
-              <div className="space-y-2">
+          {/* Organic Post to Boost for Spark Ads */}
+          {adType === 'SPARK' && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("sparkAuthCode")}
+                <Zap className="w-4 h-4 text-gray-500" />
+                Organic Post Authorization Code / Link
+              </Label>
+              <Input
+                type="text"
+                placeholder="e.g. 5zcX8aB9 or copy-paste the authorized video link"
+                value={sparkAuthCode || ''}
+                onChange={e => setSparkAuthCode(e.target.value)}
+                className={formInputChrome}
+              />
+              <p className="text-xs text-gray-400 leading-relaxed pl-1">
+                Enter the organic post video code (authorized from the TikTok app) or the post link to boost it as a Spark Ad.
+              </p>
+            </div>
+          )}
+
+          {/* Creative Fields - Visible for both Normal and Spark Ad types */}
+          <div className="space-y-6">
+            {/* 3. Ad Name */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                {renderDiffMark("adName")}
+                <FileText className="w-4 h-4 text-gray-500" />
+                Ad Name
+              </Label>
+              <Input
+                type="text"
+                placeholder="e.g. Black Friday Launch Ad"
+                value={adName}
+                onChange={e => setAdName(e.target.value)}
+                className={formInputChrome}
+              />
+            </div>
+
+            {/* 4. Ad Copy / Caption with template picker */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
-                  {renderDiffMark("adName")}
-                  <FileText className="w-4 h-4 text-gray-500" />
-                  Ad Name
+                  {renderDiffMark("adText")}
+                  <TemplateIcon className="w-4 h-4 text-gray-500" />
+                  Ad Copy / Caption {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional - uses organic caption if empty)</span>}
                 </Label>
-                <Input
-                  type="text"
-                  placeholder="e.g. Black Friday Launch Ad"
-                  value={adName}
-                  onChange={e => setAdName(e.target.value)}
-                  className={formInputChrome}
-                />
-              </div>
-
-              {/* 4. Ad Copy / Caption with template picker */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
-                    {renderDiffMark("adText")}
-                    <TemplateIcon className="w-4 h-4 text-gray-500" />
-                    Ad Copy / Caption
-                  </Label>
-                  {advertiserPrefs?.copyTemplates && Object.keys(advertiserPrefs.copyTemplates).length > 0 && (
-                    <Popover open={openTemplatePicker} onOpenChange={setOpenTemplatePicker}>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold text-blue-600 hover:text-blue-700 p-0">
-                          {openTemplatePicker ? "Close Picker" : "Use Template"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-64 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
-                        <Command>
-                          <CommandInput placeholder="Search templates..." className="h-8" />
-                          <CommandList>
-                            <CommandEmpty>No templates found.</CommandEmpty>
-                            <CommandGroup heading="Ad Text Templates">
-                              {Object.entries(advertiserPrefs.copyTemplates).map(([name, data]) => (
-                                <CommandItem
-                                  key={name}
-                                  onSelect={() => {
-                                    if (data.texts?.length > 0) setAdText(data.texts[0])
-                                    setOpenTemplatePicker(false)
-                                  }}
-                                  className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                                >
-                                  <div className="flex flex-col">
-                                    <span className="text-xs font-bold">{name}</span>
-                                    <span className="text-[10px] text-gray-500 line-clamp-1">{data.texts?.[0]}</span>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </div>
-                <TextareaAutosize
-                  value={adText}
-                  onChange={e => setAdText(e.target.value)}
-                  placeholder="Write a catchy caption... ✍️"
-                  minRows={3}
-                  maxRows={8}
-                  className={formTextareaChrome}
-                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-                />
-              </div>
-
-              {/* 5. Call to Action & Landing Page URL Stacked */}
-              <div className="space-y-6">
-
-                {/* Call to Action Single Selector */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    {renderDiffMark("cta")}
-                    <CTAIcon className="w-4 h-4 text-gray-500" />
-                    Call to Action
-                  </Label>
-                  <Popover open={openCta} onOpenChange={setOpenCta}>
+                {advertiserPrefs?.copyTemplates && Object.keys(advertiserPrefs.copyTemplates).length > 0 && (
+                  <Popover open={openTemplatePicker} onOpenChange={setOpenTemplatePicker}>
                     <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
-                      >
-                        <span className="truncate text-sm font-medium">
-                          {cta
-                            ? CTA_OPTIONS.find(o => o.value === cta)?.label || cta
-                            : "Select a Call to Action"}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold text-blue-600 hover:text-blue-700 p-0">
+                        {openTemplatePicker ? "Close Picker" : "Use Template"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                    <PopoverContent className="w-64 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
                       <Command>
-                        <CommandInput placeholder="Search CTAs..." className="bg-transparent border-none focus:ring-0" />
-                        <CommandEmpty>No CTA found.</CommandEmpty>
-                        <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
-                          <CommandGroup>
-                            {CTA_OPTIONS.map((opt) => (
+                        <CommandInput placeholder="Search templates..." className="h-8" />
+                        <CommandList>
+                          <CommandEmpty>No templates found.</CommandEmpty>
+                          <CommandGroup heading="Ad Text Templates">
+                            {Object.entries(advertiserPrefs.copyTemplates).map(([name, data]) => (
                               <CommandItem
-                                key={opt.value}
-                                value={opt.value}
+                                key={name}
                                 onSelect={() => {
-                                  setCta(opt.value)
-                                  setOpenCta(false)
+                                  if (data.texts?.length > 0) setAdText(data.texts[0])
+                                  setOpenTemplatePicker(false)
                                 }}
-                                className={cn(
-                                  "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                  cta === opt.value ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                                )}
+                                className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
                               >
-                                <span className="text-sm font-medium">{opt.label}</span>
-                                {cta === opt.value && <Check className="ml-auto h-4 w-4 text-black" />}
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold">{name}</span>
+                                  <span className="text-[10px] text-gray-500 line-clamp-1">{data.texts?.[0]}</span>
+                                </div>
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -1400,271 +1401,350 @@ export default function TikTokAdCreationForm({
                       </Command>
                     </PopoverContent>
                   </Popover>
-                </div>
-
-                {/* Landing URL Selector */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-1.5">
-                      {renderDiffMark("landingUrl")}
-                      <LinkIcon className="w-4 h-4 text-gray-500" />
-                      Landing Page URL
-                    </Label>
-                    <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
-                      <button
-                        type="button"
-                        onClick={() => setUrlMode('WEBSITE')}
-                        className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
-                      >
-                        Website
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setUrlMode('INSTANT_PAGE')}
-                        className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
-                      >
-                        Instant Page
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="relative group">
-                    <Input
-                      type="text"
-                      placeholder={urlMode === 'WEBSITE' ? "https://myshop.com/product" : "Select an Instant Page"}
-                      value={landingUrl}
-                      onChange={e => setLandingUrl(e.target.value)}
-                      className={cn(formInputChrome, "pr-10")}
-                    />
-                    <Popover open={openUrlPicker} onOpenChange={setOpenUrlPicker}>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
-                          <ChevronDown className="w-4 h-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
-                        <Command>
-                          <CommandInput placeholder="Search links..." className="h-8" />
-                          <CommandList className="max-h-[300px]">
-                            <CommandEmpty>No results found.</CommandEmpty>
-                            {urlMode === 'WEBSITE' ? (
-                              <CommandGroup heading="Saved Links (Preferences)">
-                                {advertiserPrefs?.links?.map(l => (
-                                  <CommandItem
-                                    key={l.url}
-                                    onSelect={() => { setLandingUrl(l.url); setOpenUrlPicker(false); }}
-                                    className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                                  >
-                                    <div className="flex items-center gap-2 overflow-hidden">
-                                      <Globe className="w-3 h-3 text-gray-400 shrink-0" />
-                                      <span className="text-xs truncate">{l.url}</span>
-                                      {l.isDefault && <span className="ml-auto text-[8px] font-bold bg-blue-50 text-blue-500 px-1 py-0.5 rounded">Default</span>}
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                                {(!advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
-                                  <div className="p-4 text-center">
-                                    <p className="text-[10px] text-gray-400 font-medium italic">No saved links in settings</p>
-                                  </div>
-                                )}
-                              </CommandGroup>
-                            ) : (
-                              <CommandGroup heading="Instant Pages (TikTok)">
-                                {loadingPages ? (
-                                  <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
-                                ) : instantPages.length > 0 ? (
-                                  instantPages.map(p => (
-                                    <CommandItem
-                                      key={p.page_id}
-                                      onSelect={() => { setLandingUrl(p.page_id); setOpenUrlPicker(false); }}
-                                      className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                                    >
-                                      <div className="flex items-center gap-2 overflow-hidden">
-                                        <Zap className="w-3 h-3 text-emerald-400 shrink-0" />
-                                        <div className="flex flex-col min-w-0">
-                                          <span className="text-xs font-bold truncate">{p.page_name}</span>
-                                          <span className="text-[10px] text-gray-400 truncate">{p.page_id}</span>
-                                        </div>
-                                      </div>
-                                    </CommandItem>
-                                  ))
-                                ) : (
-                                  <div className="p-4 text-center">
-                                    <p className="text-[10px] text-gray-400 font-medium italic">No instant pages found</p>
-                                  </div>
-                                )}
-                              </CommandGroup>
-                            )}
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
+                )}
               </div>
-            </>
-          )}
+              <TextareaAutosize
+                value={adText}
+                onChange={e => setAdText(e.target.value)}
+                placeholder="Write a catchy caption... ✍️"
+                minRows={3}
+                maxRows={8}
+                className={formTextareaChrome}
+                style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+              />
+            </div>
 
-          {/* 6. Media Section (Always visible under preferences) */}
-          <div className="border-t border-gray-100 pt-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            {/* 5. Call to Action & Landing Page URL Stacked */}
+            <div className="space-y-6">
+
+              {/* Call to Action Single Selector */}
+              <div className="space-y-2">
                 <Label className="flex items-center gap-2">
-                  {renderDiffMark("videoFile")}
-                  Video (.mp4, .mov)
+                  {renderDiffMark("cta")}
+                  <CTAIcon className="w-4 h-4 text-gray-500" />
+                  Call to Action
                 </Label>
-                <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+                <Popover open={openCta} onOpenChange={setOpenCta}>
                   <PopoverTrigger asChild>
                     <Button
-                      type="button"
-                      size="sm"
-                      className={cn(
-                        "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
-                        formFieldChrome
-                      )}
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                     >
-                      <CloudUpload className="h-4 w-4" />
-                      Manage Sources
+                      <span className="truncate text-sm font-medium">
+                        {cta
+                          ? CTA_OPTIONS.find(o => o.value === cta)?.label || cta
+                          : "Select a Call to Action"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
-                    <div className="flex flex-col">
-                      {UPLOAD_SOURCE_OPTIONS.map((src) => {
-                        const checked = uploadSources.includes(src.id)
-                        return (
-                          <label
-                            key={src.id}
-                            className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
-                          >
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={() => toggleUploadSource(src.id)}
-                            />
-                            <img
-                              src={src.icon}
-                              alt=""
-                              className={'h-4 w-4 object-contain'}
-                            />
-                            <span className="text-sm text-gray-800">{src.name}</span>
-                          </label>
-                        )
-                      })}
-                    </div>
+                  <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                    <Command>
+                      <CommandInput placeholder="Search CTAs..." className="bg-transparent border-none focus:ring-0" />
+                      <CommandEmpty>No CTA found.</CommandEmpty>
+                      <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
+                        <CommandGroup>
+                          {CTA_OPTIONS.map((opt) => (
+                            <CommandItem
+                              key={opt.value}
+                              value={opt.value}
+                              onSelect={() => {
+                                setCta(opt.value)
+                                setOpenCta(false)
+                              }}
+                              className={cn(
+                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                cta === opt.value ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                              )}
+                            >
+                              <span className="text-sm font-medium">{opt.label}</span>
+                              {cta === opt.value && <Check className="ml-auto h-4 w-4 text-black" />}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
                   </PopoverContent>
                 </Popover>
               </div>
 
-              {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
-                <div
-                  onClick={() => fileRef.current?.click()}
-                  className={cn(
-                    "group cursor-pointer border-2 border-dashed rounded-3xl p-8 text-center transition-all",
-                    videoFile ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                  )}
-                >
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept="video/mp4,video/quicktime"
-                    className="hidden"
-                    onChange={handleVideoSelect}
-                  />
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-700">Click to upload video</p>
-                      <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Cloud File Preview */}
-              {(driveFiles.length > 0 || dropboxFiles.length > 0) && (
-                <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-white border border-emerald-100 flex items-center justify-center shadow-sm">
-                        <Video className="w-6 h-6 text-emerald-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
-                          {driveFiles[0]?.name || dropboxFiles[0]?.name}
-                        </p>
-                        <p className="text-[10px] text-emerald-600 font-bold">
-                          {driveFiles.length > 0 ? "Google Drive" : "Dropbox"} Selected
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500"
-                      onClick={() => {
-                        setDriveFiles([])
-                        setDropboxFiles([])
-                      }}
+              {/* Landing URL Selector */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-1.5">
+                    {renderDiffMark("landingUrl")}
+                    <LinkIcon className="w-4 h-4 text-gray-500" />
+                    Landing Page URL
+                  </Label>
+                  <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setUrlMode('WEBSITE')}
+                      className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                      Website
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUrlMode('INSTANT_PAGE')}
+                      className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
+                    >
+                      Instant Page
+                    </button>
                   </div>
                 </div>
-              )}
 
-              {/* Cloud Source Buttons */}
-              {(() => {
-                const rowSources = uploadSources.filter((s) => s !== 'local')
-                if (rowSources.length === 0) return null
+                <div className="relative group">
+                  <Input
+                    type="text"
+                    placeholder={urlMode === 'WEBSITE' ? "https://myshop.com/product" : "Select an Instant Page"}
+                    value={landingUrl}
+                    onChange={e => setLandingUrl(e.target.value)}
+                    className={cn(formInputChrome, "pr-10")}
+                  />
+                  <Popover open={openUrlPicker} onOpenChange={setOpenUrlPicker}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
+                        <ChevronDown className="w-4 h-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
+                      <Command>
+                        <CommandInput placeholder="Search links..." className="h-8" />
+                        <CommandList className="max-h-[300px]">
+                          <CommandEmpty>No results found.</CommandEmpty>
+                          {urlMode === 'WEBSITE' ? (
+                            <CommandGroup heading="Saved Links (Preferences)">
+                              {advertiserPrefs?.links?.map(l => (
+                                <CommandItem
+                                  key={l.url}
+                                  onSelect={() => { setLandingUrl(l.url); setOpenUrlPicker(false); }}
+                                  className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2 overflow-hidden">
+                                    <Globe className="w-3 h-3 text-gray-400 shrink-0" />
+                                    <span className="text-xs truncate">{l.url}</span>
+                                    {l.isDefault && <span className="ml-auto text-[8px] font-bold bg-blue-50 text-blue-500 px-1 py-0.5 rounded">Default</span>}
+                                  </div>
+                                </CommandItem>
+                              ))}
+                              {(!advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
+                                <div className="p-4 text-center">
+                                  <p className="text-[10px] text-gray-400 font-medium italic">No saved links in settings</p>
+                                </div>
+                              )}
+                            </CommandGroup>
+                          ) : (
+                            <CommandGroup heading="Instant Pages (TikTok)">
+                              {loadingPages ? (
+                                <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
+                              ) : instantPages.length > 0 ? (
+                                instantPages.map(p => (
+                                  <CommandItem
+                                    key={p.page_id}
+                                    onSelect={() => { setLandingUrl(p.page_id); setOpenUrlPicker(false); }}
+                                    className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                  >
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                      <Zap className="w-3 h-3 text-emerald-400 shrink-0" />
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-bold truncate">{p.page_name}</span>
+                                        <span className="text-[10px] text-gray-400 truncate">{p.page_id}</span>
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                ))
+                              ) : (
+                                <div className="p-4 text-center">
+                                  <p className="text-[10px] text-gray-400 font-medium italic">No instant pages found</p>
+                                </div>
+                              )}
+                            </CommandGroup>
+                          )}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+          </div>
 
-                return (
-                  <div className="grid grid-cols-2 gap-2">
-                    {rowSources.map((id) => {
-                      const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
-                      if (!src) return null
-
-                      let onClick
-                      if (id === 'drive') onClick = handleDriveClick
-                      else if (id === 'dropbox') onClick = handleDropboxClick
-
-                      return (
-                        <Button
-                          key={id}
-                          type="button"
-                          onClick={onClick}
-                          className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
-                        >
-                          <img
-                            src={typeof src.icon === 'string' ? src.icon : undefined}
-                            alt={src.name}
-                            className="h-4 w-4 object-contain"
-                            style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
-                          />
-                          {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
-                          <span className="truncate text-xs font-semibold">{src.compactLabel}</span>
-                        </Button>
-                      )
-                    })}
-                  </div>
-                )
-              })()}
-
-              {/* Progress bar */}
-              {(isUploading || videoUploading) && (
-                <div className="mt-2">
-                  <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 transition-all duration-300"
-                      style={{ width: `${videoUploading ? videoUploadProgress : uploadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] font-medium text-emerald-600 mt-1">
-                    Uploading {videoUploading ? videoUploadProgress : uploadProgress}%
+          {/* 6. Media Section or Spark Info Card */}
+          <div className="border-t border-gray-100 pt-6">
+            {adType === 'SPARK' ? (
+              <div className="rounded-3xl border border-blue-100 bg-blue-50/20 p-6 flex flex-col md:flex-row items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-sm border border-blue-100">
+                  <Video className="w-6 h-6 text-blue-500" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-semibold text-gray-900">Organic Video Selected</h4>
+                  <p className="text-xs text-gray-500 leading-relaxed">
+                    You have selected a <strong>Spark Ad</strong>. The video and caption from the authorized organic TikTok post will be used directly. Local and cloud file uploads are automatically bypassed.
                   </p>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    {renderDiffMark("videoFile")}
+                    Video (.mp4, .mov)
+                  </Label>
+                  <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className={cn(
+                          "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
+                          formFieldChrome
+                        )}
+                      >
+                        <CloudUpload className="h-4 w-4" />
+                        Manage Sources
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                      <div className="flex flex-col">
+                        {UPLOAD_SOURCE_OPTIONS.map((src) => {
+                          const checked = uploadSources.includes(src.id)
+                          return (
+                            <label
+                              key={src.id}
+                              className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                            >
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={() => toggleUploadSource(src.id)}
+                              />
+                              <img
+                                src={src.icon}
+                                alt=""
+                                className={'h-4 w-4 object-contain'}
+                              />
+                              <span className="text-sm text-gray-800">{src.name}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
+                  <div
+                    onClick={() => fileRef.current?.click()}
+                    className={cn(
+                      "group cursor-pointer border-2 border-dashed rounded-3xl p-8 text-center transition-all",
+                      videoFile ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    )}
+                  >
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="video/mp4,video/quicktime"
+                      className="hidden"
+                      onChange={handleVideoSelect}
+                    />
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">Click to upload video</p>
+                        <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cloud File Preview */}
+                {(driveFiles.length > 0 || dropboxFiles.length > 0) && (
+                  <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-white border border-emerald-100 flex items-center justify-center shadow-sm">
+                          <Video className="w-6 h-6 text-emerald-500" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
+                            {driveFiles[0]?.name || dropboxFiles[0]?.name}
+                          </p>
+                          <p className="text-[10px] text-emerald-600 font-bold">
+                            {driveFiles.length > 0 ? "Google Drive" : "Dropbox"} Selected
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500"
+                        onClick={() => {
+                          setDriveFiles([])
+                          setDropboxFiles([])
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Cloud Source Buttons */}
+                {(() => {
+                  const rowSources = uploadSources.filter((s) => s !== 'local')
+                  if (rowSources.length === 0) return null
+
+                  return (
+                    <div className="grid grid-cols-2 gap-2">
+                      {rowSources.map((id) => {
+                        const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
+                        if (!src) return null
+
+                        let onClick
+                        if (id === 'drive') onClick = handleDriveClick
+                        else if (id === 'dropbox') onClick = handleDropboxClick
+
+                        return (
+                          <Button
+                            key={id}
+                            type="button"
+                            onClick={onClick}
+                            className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
+                          >
+                            <img
+                              src={typeof src.icon === 'string' ? src.icon : undefined}
+                              alt={src.name}
+                              className="h-4 w-4 object-contain"
+                              style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
+                            />
+                            {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
+                            <span className="truncate text-xs font-semibold">{src.compactLabel}</span>
+                          </Button>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+
+                {/* Progress bar */}
+                {(isUploading || videoUploading) && (
+                  <div className="mt-2">
+                    <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-300"
+                        style={{ width: `${videoUploading ? videoUploadProgress : uploadProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-[10px] font-medium text-emerald-600 mt-1">
+                      Uploading {videoUploading ? videoUploadProgress : uploadProgress}%
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </CardContent>
