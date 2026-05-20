@@ -305,11 +305,16 @@ export default function TikTokAdCreationForm({
       return
     }
 
+    // The saved default ad group for this campaign (from Firestore prefs)
+    const savedDefaultAdGroupId = advertiserPrefs?.defaultAdGroupId || ''
+
     const cacheKey = `tiktok_adgroups_${selectedCampaign}`
     const cached = readCache(cacheKey)
     if (cached) {
       setAdGroups(cached)
-      setSelectedAdGroup('')
+      // Restore saved default if it belongs to this campaign, otherwise clear
+      const savedExists = cached.some(g => g.adgroup_id === savedDefaultAdGroupId)
+      setSelectedAdGroup(savedExists ? savedDefaultAdGroupId : '')
     } else {
       setLoadingAdGroups(true)
       tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${selectedCampaign}`)
@@ -318,12 +323,14 @@ export default function TikTokAdCreationForm({
           const list = d.adGroups || d.adgroups || []
           setAdGroups(list)
           writeCache(cacheKey, list)
-          setSelectedAdGroup('')
+          // Restore saved default if it belongs to this campaign, otherwise clear
+          const savedExists = list.some(g => g.adgroup_id === savedDefaultAdGroupId)
+          setSelectedAdGroup(savedExists ? savedDefaultAdGroupId : '')
         })
         .catch(() => toast.error('Failed to load ad groups'))
         .finally(() => setLoadingAdGroups(false))
     }
-  }, [selectedCampaign, selectedAdvertiser, setAdGroups, setSelectedAdGroup, tiktokFetch])
+  }, [selectedCampaign, selectedAdvertiser, setAdGroups, setSelectedAdGroup, tiktokFetch, advertiserPrefs])
 
   // Fetch Instant Pages on Advertiser change
   useEffect(() => {

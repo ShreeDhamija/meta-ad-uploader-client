@@ -5,8 +5,9 @@ import TikTokAdCreationForm from '@/components/tiktok/TikTokAdCreationForm'
 import { useTikTokAuth } from '@/lib/TikTokAuthContext'
 import { useIntercom } from '@/lib/useIntercom'
 import useTikTokAdvertiserSettings from '@/lib/useTikTokAdvertiserSettings'
+import { saveTikTokSettings } from '@/lib/saveTikTokSettings'
 import { Loader2 } from "lucide-react"
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from 'react-router-dom'
 import { toast, Toaster } from 'sonner'
 import { v4 as uuidv4 } from "uuid"
@@ -169,8 +170,39 @@ export default function TikTokAds() {
           setAdText(template.texts[0]);
         }
       }
+
+      // 5. Default Campaign & Ad Group — restore saved defaults
+      if (!selectedCampaign && advertiserPrefs.defaultCampaignId) {
+        setSelectedCampaign(advertiserPrefs.defaultCampaignId);
+      }
+      if (!selectedAdGroup && advertiserPrefs.defaultAdGroupId) {
+        setSelectedAdGroup(advertiserPrefs.defaultAdGroupId);
+      }
     }
   }, [advertiserPrefs, selectedAdvertiser]);
+
+  // Auto-save campaign + adgroup selection as defaults whenever they change.
+  // Debounced to avoid hammering Firestore on rapid changes.
+  const saveDefaultsTimerRef = useRef(null);
+  useEffect(() => {
+    // Only save once we have a loaded pref object (prevents saving empty values on first mount)
+    if (!selectedAdvertiser || advertiserPrefs === null) return;
+
+    clearTimeout(saveDefaultsTimerRef.current);
+    saveDefaultsTimerRef.current = setTimeout(async () => {
+      try {
+        await saveTikTokSettings(selectedAdvertiser, {
+          defaultCampaignId: selectedCampaign || null,
+          defaultAdGroupId: selectedAdGroup || null,
+        });
+        console.log('[TikTok] Saved default campaign/adgroup:', selectedCampaign, selectedAdGroup);
+      } catch (err) {
+        console.warn('[TikTok] Failed to auto-save default campaign/adgroup:', err.message);
+      }
+    }, 1500); // 1.5s debounce
+
+    return () => clearTimeout(saveDefaultsTimerRef.current);
+  }, [selectedCampaign, selectedAdGroup, selectedAdvertiser, advertiserPrefs]);
 
   // Variant helper methods matching Home.jsx pattern
   const cloneSnapshotValue = (value) => {
