@@ -260,8 +260,6 @@ export default function Home() {
     const [showMobileBanner, setShowMobileBanner] = useState(true);
     const mediaPreviewLaunchTimeoutRef = useRef(null);
 
-    if (authLoading || tiktokAuthLoading) return null
-
     useEffect(() => {
         return () => {
             if (mediaPreviewLaunchTimeoutRef.current) {
@@ -1321,8 +1319,7 @@ export default function Home() {
         });
     }, [campaigns]);
 
-
-
+    if (authLoading || tiktokAuthLoading) return null;
 
     return (
 
