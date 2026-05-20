@@ -291,7 +291,7 @@ export default function TikTokAdCreationForm({
     }
 
     setLoadingIdentities(true)
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&identity_type=BC_AUTH_TT&identity_authorized_bc_id=7580411024059252752&_t=${Date.now()}`)
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&_t=${Date.now()}`)
       .then(r => r.json())
       .then(d => {
         const list = d.identities || []
@@ -420,7 +420,7 @@ export default function TikTokAdCreationForm({
     e.stopPropagation()
     if (!selectedAdvertiser || loadingIdentities) return
     setLoadingIdentities(true)
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&identity_type=BC_AUTH_TT&identity_authorized_bc_id=7580411024059252752&_t=${Date.now()}`)
+    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&_t=${Date.now()}`)
       .then(r => r.json())
       .then(d => {
         const list = d.identities || []
