@@ -59,20 +59,20 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const fetchIdentities = useCallback(() => {
         if (!selectedAdvertiser) return;
         setLoadingIdentities(true);
-        fetch(`${import.meta.env.VITE_API_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}`, {
+        fetch(`${import.meta.env.VITE_API_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&identity_type=BC_AUTH_TT&identity_authorized_bc_id=7580411024059252752`, {
             headers: tiktokHeaders()
         })
-        .then(r => r.json())
-        .then(d => {
-            const list = d.identities || [];
-            // Add fallback for customized user if not present
-            if (!list.find(i => i.identity_id === 'CUSTOMIZED_USER')) {
-                list.push({ identity_id: 'CUSTOMIZED_USER', display_name: 'Customized User', identity_type: 'CUSTOMIZED_USER' });
-            }
-            setIdentities(list);
-        })
-        .catch(e => console.error(e))
-        .finally(() => setLoadingIdentities(false));
+            .then(r => r.json())
+            .then(d => {
+                const list = d.identities || [];
+                // Add fallback for customized user if not present
+                if (!list.find(i => i.identity_id === 'CUSTOMIZED_USER')) {
+                    list.push({ identity_id: 'CUSTOMIZED_USER', display_name: 'Customized User', identity_type: 'CUSTOMIZED_USER' });
+                }
+                setIdentities(list);
+            })
+            .catch(e => console.error(e))
+            .finally(() => setLoadingIdentities(false));
     }, [selectedAdvertiser, tiktokHeaders]);
 
     useEffect(() => {
@@ -104,7 +104,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                     <h3 className="text-lg font-bold text-gray-900">TikTok Not Connected</h3>
                     <p className="text-sm text-gray-500 max-w-sm mx-auto font-medium">Please connect your TikTok For Business account to manage preferences and launch ads.</p>
                 </div>
-                <Button 
+                <Button
                     onClick={() => window.location.href = '/tiktok-login'}
                     className="h-12 px-8 rounded-2xl bg-black text-white font-bold"
                 >
@@ -152,8 +152,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                             {advertisers.map(a => {
                                                 const id = a.advertiser_id || a.id;
                                                 return (
-                                                    <CommandItem 
-                                                        key={id} 
+                                                    <CommandItem
+                                                        key={id}
                                                         onSelect={() => {
                                                             setSelectedAdvertiser(id);
                                                             setOpenAdvertiser(false);
@@ -172,9 +172,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         </Popover>
                     </div>
                 </div>
-                
-                <Button 
-                    onClick={() => handleSave()} 
+
+                <Button
+                    onClick={() => handleSave()}
                     disabled={isSaving || !selectedAdvertiser}
                     className="h-12 px-8 rounded-2xl bg-black text-white font-bold shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
@@ -241,10 +241,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                             return (
                                                                 <>
                                                                     {(found?.avatar_url || found?.identity_type === 'CUSTOMIZED_USER') && (
-                                                                        <img 
-                                                                            src={found?.avatar_url || "https://api.withblip.com/backup_page_image.png"} 
-                                                                            alt="Identity" 
-                                                                            className="w-6 h-6 rounded-full object-cover border border-gray-200" 
+                                                                        <img
+                                                                            src={found?.avatar_url || "https://api.withblip.com/backup_page_image.png"}
+                                                                            alt="Identity"
+                                                                            className="w-6 h-6 rounded-full object-cover border border-gray-200"
                                                                         />
                                                                     )}
                                                                     <span className="text-sm font-medium text-gray-900">
@@ -258,7 +258,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent 
+                                        <PopoverContent
                                             className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
                                             align="start"
                                             style={{
@@ -267,8 +267,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                             }}
                                         >
                                             <Command filter={() => 1} loop={false}>
-                                                <CommandInput 
-                                                    placeholder="Search identities..." 
+                                                <CommandInput
+                                                    placeholder="Search identities..."
                                                     wrapperClassName="bg-gray-50 border-gray-100"
                                                 />
                                                 <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
@@ -283,10 +283,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                             }}
                                                             className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
                                                         >
-                                                            <img 
-                                                                src={i.avatar_url || "https://api.withblip.com/backup_page_image.png"} 
-                                                                alt={i.display_name} 
-                                                                className="w-7 h-7 rounded-full object-cover" 
+                                                            <img
+                                                                src={i.avatar_url || "https://api.withblip.com/backup_page_image.png"}
+                                                                alt={i.display_name}
+                                                                className="w-7 h-7 rounded-full object-cover"
                                                             />
                                                             <div className="flex flex-col">
                                                                 <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
@@ -309,7 +309,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" className="w-full h-12 rounded-2xl border-gray-200 justify-between px-4">
                                             <span className="text-sm truncate">
-                                                {currentSettings.defaultCTAs?.length > 0 
+                                                {currentSettings.defaultCTAs?.length > 0
                                                     ? currentSettings.defaultCTAs.map(v => CTA_OPTIONS.find(o => o.value === v)?.label).join(", ")
                                                     : "None selected"}
                                             </span>
@@ -322,11 +322,11 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                             <CommandList>
                                                 <CommandGroup>
                                                     {CTA_OPTIONS.map(opt => (
-                                                        <CommandItem 
-                                                            key={opt.value} 
+                                                        <CommandItem
+                                                            key={opt.value}
                                                             onSelect={() => {
                                                                 const prev = currentSettings.defaultCTAs || [];
-                                                                const next = prev.includes(opt.value) 
+                                                                const next = prev.includes(opt.value)
                                                                     ? prev.filter(v => v !== opt.value)
                                                                     : [...prev, opt.value];
                                                                 setSettings({ ...currentSettings, defaultCTAs: next });
@@ -352,7 +352,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 <div className="space-y-1">
                                     <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Interactive Add-ons</p>
                                     <p className="text-[10px] text-blue-500/80 leading-relaxed font-medium">
-                                        TikTok Interactive Add-ons (music, stickers, etc.) cannot be configured via API. 
+                                        TikTok Interactive Add-ons (music, stickers, etc.) cannot be configured via API.
                                         Please set these in TikTok Ads Manager directly.
                                     </p>
                                 </div>
@@ -361,7 +361,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                     </Card>
 
                     {/* Links & UTMs */}
-                    <TikTokLinkParameters 
+                    <TikTokLinkParameters
                         advertiserId={selectedAdvertiser}
                         links={currentSettings.links || []}
                         setLinks={(links) => setSettings({ ...currentSettings, links })}
@@ -375,7 +375,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                 {/* Right Column: Content & Templates */}
                 <div className="space-y-6">
                     {/* Copy Templates */}
-                    <TikTokCopyTemplates 
+                    <TikTokCopyTemplates
                         advertiserId={selectedAdvertiser}
                         templates={currentSettings.copyTemplates || {}}
                         defaultName={currentSettings.defaultTemplateName || ""}
