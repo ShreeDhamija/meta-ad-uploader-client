@@ -68,8 +68,8 @@ export default function TikTokAds() {
   // Lifted form fetching states (to snapshot campaign & ad group selections)
   const [campaigns, setCampaigns] = useState([])
   const [adGroups, setAdGroups] = useState([])
-  const [selectedCampaign, setSelectedCampaign] = useState('')
-  const [selectedAdGroup, setSelectedAdGroup] = useState('')
+  const [selectedCampaign, setSelectedCampaign] = useState([])
+  const [selectedAdGroup, setSelectedAdGroup] = useState([])
   const [identities, setIdentities] = useState([])
 
   // Mocked state arrays & variables for MediaPreview integration compatibility
@@ -172,11 +172,13 @@ export default function TikTokAds() {
       }
 
       // 5. Default Campaign & Ad Group — restore saved defaults
-      if (!selectedCampaign && advertiserPrefs.defaultCampaignId) {
-        setSelectedCampaign(advertiserPrefs.defaultCampaignId);
+      if (selectedCampaign.length === 0 && advertiserPrefs.defaultCampaignId) {
+        const val = advertiserPrefs.defaultCampaignId;
+        setSelectedCampaign(Array.isArray(val) ? val : [val]);
       }
-      if (!selectedAdGroup && advertiserPrefs.defaultAdGroupId) {
-        setSelectedAdGroup(advertiserPrefs.defaultAdGroupId);
+      if (selectedAdGroup.length === 0 && advertiserPrefs.defaultAdGroupId) {
+        const val = advertiserPrefs.defaultAdGroupId;
+        setSelectedAdGroup(Array.isArray(val) ? val : [val]);
       }
     }
   }, [advertiserPrefs, selectedAdvertiser]);
@@ -192,8 +194,8 @@ export default function TikTokAds() {
     saveDefaultsTimerRef.current = setTimeout(async () => {
       try {
         await saveTikTokSettings(selectedAdvertiser, {
-          defaultCampaignId: selectedCampaign || null,
-          defaultAdGroupId: selectedAdGroup || null,
+          defaultCampaignId: selectedCampaign.length > 0 ? selectedCampaign : null,
+          defaultAdGroupId: selectedAdGroup.length > 0 ? selectedAdGroup : null,
         });
         console.log('[TikTok] Saved default campaign/adgroup:', selectedCampaign, selectedAdGroup);
       } catch (err) {
@@ -246,8 +248,10 @@ export default function TikTokAds() {
     setSelectedIdentity(snapshot.selectedIdentity || "");
     setSparkAuthCode(snapshot.sparkAuthCode || "");
     setUrlMode(snapshot.urlMode || "WEBSITE");
-    setSelectedCampaign(snapshot.selectedCampaign || "");
-    setSelectedAdGroup(snapshot.selectedAdGroup || "");
+    const rawCampaign = snapshot.selectedCampaign || "";
+    setSelectedCampaign(Array.isArray(rawCampaign) ? rawCampaign : (rawCampaign ? [rawCampaign] : []));
+    const rawAdGroup = snapshot.selectedAdGroup || "";
+    setSelectedAdGroup(Array.isArray(rawAdGroup) ? rawAdGroup : (rawAdGroup ? [rawAdGroup] : []));
   }, []);
 
   const switchVariant = useCallback((targetId) => {

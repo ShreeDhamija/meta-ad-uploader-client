@@ -30,7 +30,7 @@ import {
   X,
   Zap
 } from "lucide-react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
 
@@ -234,6 +234,20 @@ export default function TikTokAdCreationForm({
   const fileRef = useRef()
   const pickerInstanceRef = useRef(null)
 
+  const filteredCampaigns = useMemo(() =>
+    campaigns.filter((c) =>
+      (c.campaign_name || c.campaign_id || '').toLowerCase().includes(campaignSearch.toLowerCase())
+    ),
+    [campaigns, campaignSearch]
+  )
+
+  const filteredAdGroups = useMemo(() =>
+    adGroups.filter((ag) =>
+      (ag.adgroup_name || ag.adgroup_id || '').toLowerCase().includes(adGroupSearch.toLowerCase())
+    ),
+    [adGroups, adGroupSearch]
+  )
+
   const countFilesForVariant = (variantId) => {
     let count = 0
     Object.values(fileVariantMap).forEach((val) => {
@@ -254,8 +268,8 @@ export default function TikTokAdCreationForm({
     if (onAdvertiserChange) {
       onAdvertiserChange(value)
     }
-    setSelectedCampaign('')
-    setSelectedAdGroup('')
+    setSelectedCampaign([])
+    setSelectedAdGroup([])
     setCampaigns([])
     setAdGroups([])
   }, [onAdvertiserChange, setCampaigns, setAdGroups, setSelectedCampaign, setSelectedAdGroup])
@@ -264,7 +278,7 @@ export default function TikTokAdCreationForm({
   useEffect(() => {
     if (!selectedAdvertiser) {
       setCampaigns([])
-      setSelectedCampaign('')
+      setSelectedCampaign([])
       return
     }
 
@@ -272,7 +286,7 @@ export default function TikTokAdCreationForm({
     const cached = readCache(cacheKey)
     if (cached) {
       setCampaigns(cached)
-      setSelectedCampaign('')
+      setSelectedCampaign([])
       setAdGroups([])
     } else {
       setLoadingCampaigns(true)
@@ -283,7 +297,7 @@ export default function TikTokAdCreationForm({
           const list = d.campaigns || []
           setCampaigns(list)
           writeCache(cacheKey, list)
-          setSelectedCampaign('')
+          setSelectedCampaign([])
           setAdGroups([])
         })
         .catch(() => toast.error('Failed to load campaigns'))
@@ -319,38 +333,54 @@ export default function TikTokAdCreationForm({
 
   // Fetch Ad Groups on Campaign change
   useEffect(() => {
-    if (!selectedCampaign) {
+    if (!selectedCampaign || selectedCampaign.length === 0) {
       setAdGroups([])
-      setSelectedAdGroup('')
+      setSelectedAdGroup([])
       return
     }
 
     // The saved default ad group for this campaign (from Firestore prefs)
     const savedDefaultAdGroupId = advertiserPrefs?.defaultAdGroupId || ''
+    const defaultAdGroupIds = Array.isArray(savedDefaultAdGroupId)
+      ? savedDefaultAdGroupId
+      : (savedDefaultAdGroupId ? [savedDefaultAdGroupId] : [])
 
-    const cacheKey = `tiktok_adgroups_${selectedCampaign}`
-    const cached = readCache(cacheKey)
-    if (cached) {
-      setAdGroups(cached)
-      // Restore saved default if it belongs to this campaign, otherwise clear
-      const savedExists = cached.some(g => g.adgroup_id === savedDefaultAdGroupId)
-      setSelectedAdGroup(savedExists ? savedDefaultAdGroupId : '')
-    } else {
-      setLoadingAdGroups(true)
-      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${selectedCampaign}`)
-        .then(r => r.json())
-        .then(d => {
-          const list = d.adGroups || d.adgroups || []
-          setAdGroups(list)
-          writeCache(cacheKey, list)
-          // Restore saved default if it belongs to this campaign, otherwise clear
-          const savedExists = list.some(g => g.adgroup_id === savedDefaultAdGroupId)
-          setSelectedAdGroup(savedExists ? savedDefaultAdGroupId : '')
-        })
-        .catch(() => toast.error('Failed to load ad groups'))
-        .finally(() => setLoadingAdGroups(false))
-    }
-  }, [selectedCampaign, selectedAdvertiser, setAdGroups, setSelectedAdGroup, tiktokFetch, advertiserPrefs])
+    setLoadingAdGroups(true)
+
+    const fetchPromises = selectedCampaign.map(campId => {
+      const cacheKey = `tiktok_adgroups_${campId}`
+      const cached = readCache(cacheKey)
+      if (cached) {
+        return Promise.resolve(cached.map(ag => ({
+          ...ag,
+          campaignId: campId,
+          campaignName: campaigns.find(c => c.campaign_id === campId)?.campaign_name || campId
+        })))
+      } else {
+        return tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${campId}`)
+          .then(r => r.json())
+          .then(d => {
+            const list = d.adGroups || d.adgroups || []
+            writeCache(cacheKey, list)
+            return list.map(ag => ({
+              ...ag,
+              campaignId: campId,
+              campaignName: campaigns.find(c => c.campaign_id === campId)?.campaign_name || campId
+            }))
+          })
+      }
+    })
+
+    Promise.all(fetchPromises)
+      .then(results => {
+        const combined = results.flat()
+        setAdGroups(combined)
+        const validDefaults = defaultAdGroupIds.filter(id => combined.some(g => g.adgroup_id === id))
+        setSelectedAdGroup(validDefaults)
+      })
+      .catch(() => toast.error('Failed to load ad groups'))
+      .finally(() => setLoadingAdGroups(false))
+  }, [selectedCampaign, selectedAdvertiser, setAdGroups, setSelectedAdGroup, tiktokFetch, advertiserPrefs, campaigns])
 
   // Fetch Instant Pages on Advertiser change
   useEffect(() => {
@@ -372,8 +402,9 @@ export default function TikTokAdCreationForm({
 
   // Setup Campaign Duplication name automatic suffixing
   useEffect(() => {
-    if (selectedCampaign) {
-      const camp = campaigns.find(c => c.campaign_id === selectedCampaign)
+    if (selectedCampaign && selectedCampaign.length === 1) {
+      const campId = selectedCampaign[0]
+      const camp = campaigns.find(c => c.campaign_id === campId)
       if (camp) {
         setNewCampaignName((camp.campaign_name || '') + "_copy")
       }
@@ -402,14 +433,26 @@ export default function TikTokAdCreationForm({
 
   const forceRefreshAdGroups = (e) => {
     e.stopPropagation()
-    if (!selectedCampaign) return
+    if (!selectedCampaign || selectedCampaign.length === 0) return
     setLoadingAdGroups(true)
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${selectedCampaign}`)
-      .then(r => r.json())
-      .then(d => {
-        const list = d.adGroups || d.adgroups || []
-        setAdGroups(list)
-        writeCache(`tiktok_adgroups_${selectedCampaign}`, list)
+
+    const fetchPromises = selectedCampaign.map(campId => {
+      return tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?advertiserId=${selectedAdvertiser}&campaignId=${campId}`)
+        .then(r => r.json())
+        .then(d => {
+          const list = d.adGroups || d.adgroups || []
+          writeCache(`tiktok_adgroups_${campId}`, list)
+          return list.map(ag => ({
+            ...ag,
+            campaignId: campId,
+            campaignName: campaigns.find(c => c.campaign_id === campId)?.campaign_name || campId
+          }))
+        })
+    })
+
+    Promise.all(fetchPromises)
+      .then(results => {
+        setAdGroups(results.flat())
         toast.success('Ad Groups refreshed!')
       })
       .catch(() => toast.error('Failed to refresh ad groups'))
@@ -451,30 +494,32 @@ export default function TikTokAdCreationForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           advertiser_id: selectedAdvertiser,
-          source_campaign_id: campaignId,
-          new_campaign_name: newCampaignName.trim(),
-          adgroup_name_suffix: '',
-          ad_name_suffix: '',
-          duplicate_ads: duplicateIncludeAds,
-        }),
+          campaign_id: campaignId,
+          campaign_name: newCampaignName,
+          include_ads: duplicateIncludeAds
+        })
       })
       const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error || 'Duplication failed')
-      toast.success(`🎉 "${newCampaignName.trim()}" created!`)
-
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Duplication failed')
+      }
+      toast.success('🎉 Campaign duplicated successfully!')
+      setNewCampaignName('')
+      
       const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
-      tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
-        .then(r => r.json())
-        .then(d => {
-          const list = d.campaigns || []
-          setCampaigns(list)
-          writeCache(`tiktok_campaigns_${selectedAdvertiser}`, list)
-          if (data.new_campaign_id) {
-            setSelectedCampaign(data.new_campaign_id)
-            setOpenCampaign(false)
-          }
-        })
-        .catch(() => { })
+      try {
+        const listRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
+        const listData = await listRes.json()
+        const list = listData.campaigns || []
+        setCampaigns(list)
+        writeCache(`tiktok_campaigns_${selectedAdvertiser}`, list)
+        if (data.new_campaign_id) {
+          setSelectedCampaign([data.new_campaign_id])
+          setOpenCampaign(false)
+        }
+      } catch (err) {
+        console.error('Failed to refetch campaigns:', err)
+      }
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -741,7 +786,7 @@ export default function TikTokAdCreationForm({
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!selectedAdvertiser) return toast.error('Please select an advertiser')
-    if (!selectedAdGroup) return toast.error('Please select an ad group')
+    if (!selectedAdGroup || selectedAdGroup.length === 0) return toast.error('Please select at least one ad group')
 
     if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
       return toast.error(adType === 'NORMAL'
@@ -856,55 +901,77 @@ export default function TikTokAdCreationForm({
       const currentIdentityId = isCustomized ? undefined : selectedIdentity
       const currentIdentityType = isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER')
 
-      toast.info(`Creating TikTok ad...`)
+      toast.info(`Creating TikTok ads...`)
 
       const finalUrl = urlMode === 'WEBSITE'
         ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
         : landingUrl
 
-      const creative = {
-        video_id: videoId,
-        ad_text: adText,
-        call_to_action: cta,
-        ad_name: `${adName.trim()}`,
-        identity_type: currentIdentityType,
-        landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-        ...(urlMode === 'WEBSITE'
-          ? { landing_page_url: finalUrl }
-          : { page_id: landingUrl }
-        ),
-        ...(adType === 'SPARK' ? {
-          is_spark_ad: true,
-          spark_ad_auth_code: sparkAuthCode.trim(),
-          adType: 'SPARK'
-        } : {})
-      }
-      if (currentIdentityId) creative.identity_id = currentIdentityId
+      const results = []
+      const errors = []
 
-      const createPayload = {
-        advertiserId: selectedAdvertiser,
-        adgroupId: selectedAdGroup,
-        ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
-        identityType: currentIdentityType,
-        adName: adName.trim(),
-        adType: adType,
-        creatives: [creative]
+      for (const adgroupId of selectedAdGroup) {
+        const adGroupName = adGroups.find(ag => ag.adgroup_id === adgroupId)?.adgroup_name || adgroupId
+        toast.info(`Creating ad in: ${adGroupName}...`)
+
+        const creative = {
+          video_id: videoId,
+          ad_text: adText,
+          call_to_action: cta,
+          ad_name: `${adName.trim()}`,
+          identity_type: currentIdentityType,
+          landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+          ...(urlMode === 'WEBSITE'
+            ? { landing_page_url: finalUrl }
+            : { page_id: landingUrl }
+          ),
+          ...(adType === 'SPARK' ? {
+            is_spark_ad: true,
+            spark_ad_auth_code: sparkAuthCode.trim(),
+            adType: 'SPARK'
+          } : {})
+        }
+        if (currentIdentityId) creative.identity_id = currentIdentityId
+
+        const createPayload = {
+          advertiserId: selectedAdvertiser,
+          adgroupId: adgroupId,
+          ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
+          identityType: currentIdentityType,
+          adName: adName.trim(),
+          adType: adType,
+          creatives: [creative]
+        }
+
+        console.log(`[TikTok Submit] 🚀 Sending create-ad payload for ${adgroupId}:`, JSON.stringify(createPayload, null, 2))
+
+        try {
+          const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(createPayload),
+          })
+          const createData = await createRes.json()
+          console.log(`[TikTok Submit] Create-ad response status for ${adgroupId}:`, createRes.status)
+          console.log(`[TikTok Submit] Create-ad response data for ${adgroupId}:`, JSON.stringify(createData))
+          if (!createRes.ok || !createData.success) {
+            throw new Error(createData.error || 'Ad creation failed')
+          }
+          results.push(adgroupId)
+        } catch (err) {
+          errors.push({ adgroupId, adGroupName, error: err.message })
+        }
       }
 
-      console.log('[TikTok Submit] 🚀 Sending create-ad payload:', JSON.stringify(createPayload, null, 2))
-
-      const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(createPayload),
-      })
-      const createData = await createRes.json()
-      console.log('[TikTok Submit] Create-ad response status:', createRes.status)
-      console.log('[TikTok Submit] Create-ad response data:', JSON.stringify(createData))
-      if (!createRes.ok || !createData.success) {
-        throw new Error(createData.error || 'Ad creation failed')
+      if (errors.length > 0) {
+        if (results.length > 0) {
+          toast.warning(`🎉 Created ads in ${results.length} ad groups, but failed in ${errors.length} groups: \n` + errors.map(e => `${e.adGroupName}: ${e.error}`).join('\n'))
+        } else {
+          throw new Error(`Failed to create ads in all selected ad groups: \n` + errors.map(e => `${e.adGroupName}: ${e.error}`).join('\n'))
+        }
+      } else {
+        toast.success(`🎉 TikTok ads created successfully in all ${results.length} ad groups!`)
       }
-      toast.success(`🎉 TikTok ad created successfully!`)
 
       // Reset form fields
       setAdName('')
@@ -963,7 +1030,10 @@ export default function TikTokAdCreationForm({
                 >
                   <span className="truncate text-sm font-medium">
                     {selectedAdvertiser
-                      ? advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser))?.advertiser_name || selectedAdvertiser
+                      ? (() => {
+                          const found = advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
+                          return found ? (found.advertiser_name || found.name || selectedAdvertiser) : selectedAdvertiser;
+                        })()
                       : "Select Advertiser's Account"}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -998,7 +1068,7 @@ export default function TikTokAdCreationForm({
                               selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
                             )}
                           >
-                            <span className="text-sm font-medium">{a.advertiser_name || id}</span>
+                            <span className="text-sm font-medium">{a.advertiser_name || a.name || id}</span>
                             {selectedAdvertiser === id && <Check className="ml-auto h-4 w-4 text-black" />}
                           </CommandItem>
                         )
@@ -1038,9 +1108,11 @@ export default function TikTokAdCreationForm({
                   className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
                   <span className="truncate text-sm font-medium">
-                    {selectedCampaign
-                      ? campaigns.find(c => c.campaign_id === selectedCampaign)?.campaign_name || selectedCampaign
-                      : "Select a Campaign"}
+                    {selectedCampaign.length === 0
+                      ? "Select Campaigns"
+                      : selectedCampaign.length === 1
+                        ? campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || selectedCampaign[0]
+                        : `${selectedCampaign.length} campaigns selected`}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -1056,31 +1128,50 @@ export default function TikTokAdCreationForm({
                   <CommandEmpty>No campaign found.</CommandEmpty>
                   <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                     <CommandGroup>
-                      {campaigns.filter(c =>
-                        (c.campaign_name || '').toLowerCase().includes(campaignSearch.toLowerCase())
-                      ).map((c) => (
-                        <CommandItem
-                          key={c.campaign_id}
-                          value={c.campaign_id}
-                          onSelect={() => {
-                            setSelectedCampaign(c.campaign_id)
-                            setOpenCampaign(false)
-                          }}
-                          className={cn(
-                            "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                            selectedCampaign === c.campaign_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                          )}
-                        >
-                          <span className="text-sm font-medium truncate">{c.campaign_name}</span>
-                          {selectedCampaign === c.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
-                        </CommandItem>
-                      ))}
+                      {filteredCampaigns.map((c) => {
+                        const isSelected = selectedCampaign.includes(c.campaign_id)
+                        return (
+                          <CommandItem
+                            key={c.campaign_id}
+                            value={c.campaign_id}
+                            onSelect={() => {
+                              if (isSelected) {
+                                setSelectedCampaign(prev => prev.filter(id => id !== c.campaign_id))
+                              } else {
+                                setSelectedCampaign(prev => [...prev, c.campaign_id])
+                              }
+                              setSelectedAdGroup([])
+                            }}
+                            className={cn(
+                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                              isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              <Checkbox
+                                id={`campaign-${c.campaign_id}`}
+                                checked={isSelected}
+                                onCheckedChange={() => {
+                                  if (isSelected) {
+                                    setSelectedCampaign(prev => prev.filter(id => id !== c.campaign_id))
+                                  } else {
+                                    setSelectedCampaign(prev => [...prev, c.campaign_id])
+                                  }
+                                  setSelectedAdGroup([])
+                                }}
+                                className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white"
+                              />
+                              <span className="text-sm font-medium truncate flex-1">{c.campaign_name}</span>
+                            </div>
+                          </CommandItem>
+                        )
+                      })}
                     </CommandGroup>
                   </CommandList>
 
                   {/* Campaign Duplication Block */}
                   <div className="border-t border-gray-100 mt-1 bg-gray-50/50 rounded-b-2xl">
-                    {selectedCampaign ? (
+                    {selectedCampaign.length === 1 ? (
                       <div className="p-3 space-y-3">
                         <div className="flex items-center justify-between px-1">
                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
@@ -1117,7 +1208,7 @@ export default function TikTokAdCreationForm({
                         <Button
                           type="button"
                           disabled={isDuplicating || !newCampaignName.trim()}
-                          onClick={() => handleDuplicateCampaign(selectedCampaign)}
+                          onClick={() => handleDuplicateCampaign(selectedCampaign[0])}
                           className="w-full h-9 rounded-xl bg-zinc-800 hover:bg-black text-white text-[11px] font-bold tracking-wide disabled:opacity-50 flex items-center justify-center gap-1.5 px-3 shadow-sm transition-all active:scale-[0.98]"
                         >
                           {isDuplicating ? (
@@ -1131,7 +1222,9 @@ export default function TikTokAdCreationForm({
                         </Button>
                       </div>
                     ) : (
-                      <p className="text-[10px] text-gray-400 text-center py-4 font-medium uppercase tracking-widest">Select a campaign to launch a copy</p>
+                      <p className="text-[10px] text-gray-400 text-center py-4 font-medium uppercase tracking-widest">
+                        {selectedCampaign.length > 1 ? "Select exactly one campaign to duplicate" : "Select a campaign to launch a copy"}
+                      </p>
                     )}
                   </div>
                 </Command>
@@ -1167,9 +1260,11 @@ export default function TikTokAdCreationForm({
                   className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
                   <span className="truncate text-sm font-medium">
-                    {selectedAdGroup
-                      ? adGroups.find(ag => ag.adgroup_id === selectedAdGroup)?.adgroup_name || selectedAdGroup
-                      : "Select an Ad Group"}
+                    {selectedAdGroup.length === 0
+                      ? "Select Ad Groups"
+                      : selectedAdGroup.length === 1
+                        ? adGroups.find(ag => ag.adgroup_id === selectedAdGroup[0])?.adgroup_name || selectedAdGroup[0]
+                        : `${selectedAdGroup.length} ad groups selected`}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -1185,25 +1280,69 @@ export default function TikTokAdCreationForm({
                   <CommandEmpty>No ad group found.</CommandEmpty>
                   <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                     <CommandGroup>
-                      {adGroups.filter(ag =>
-                        (ag.adgroup_name || '').toLowerCase().includes(adGroupSearch.toLowerCase())
-                      ).map((ag) => (
-                        <CommandItem
-                          key={ag.adgroup_id}
-                          value={ag.adgroup_id}
-                          onSelect={() => {
-                            setSelectedAdGroup(ag.adgroup_id)
-                            setOpenAdGroup(false)
-                          }}
-                          className={cn(
-                            "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                            selectedAdGroup === ag.adgroup_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                          )}
-                        >
-                          <span className="text-sm font-medium truncate">{ag.adgroup_name}</span>
-                          {selectedAdGroup === ag.adgroup_id && <Check className="ml-auto h-4 w-4 text-black" />}
-                        </CommandItem>
-                      ))}
+                      {filteredAdGroups.length > 0 ? (
+                        (() => {
+                          const groupedByCampaign = filteredAdGroups.reduce((acc, adgroup) => {
+                            const campaignId = adgroup.campaignId || 'unknown';
+                            if (!acc[campaignId]) {
+                              acc[campaignId] = [];
+                            }
+                            acc[campaignId].push(adgroup);
+                            return acc;
+                          }, {});
+
+                          return Object.entries(groupedByCampaign).map(([campaignId, campaignAdGroups]) => {
+                            const campaignName = campaignAdGroups[0]?.campaignName || campaignId;
+                            return (
+                              <div key={campaignId}>
+                                {selectedCampaign.length >= 2 && (
+                                  <div className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none">
+                                    {campaignName} Ad Groups
+                                  </div>
+                                )}
+                                {campaignAdGroups.map((ag) => {
+                                  const isSelected = selectedAdGroup.includes(ag.adgroup_id);
+                                  return (
+                                    <CommandItem
+                                      key={ag.adgroup_id}
+                                      value={ag.adgroup_id}
+                                      onSelect={() => {
+                                        if (isSelected) {
+                                          setSelectedAdGroup(prev => prev.filter(id => id !== ag.adgroup_id))
+                                        } else {
+                                          setSelectedAdGroup(prev => [...prev, ag.adgroup_id])
+                                        }
+                                      }}
+                                      className={cn(
+                                        "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                        isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-2 w-full">
+                                        <Checkbox
+                                          id={`adgroup-${ag.adgroup_id}`}
+                                          checked={isSelected}
+                                          onCheckedChange={() => {
+                                            if (isSelected) {
+                                              setSelectedAdGroup(prev => prev.filter(id => id !== ag.adgroup_id))
+                                            } else {
+                                              setSelectedAdGroup(prev => [...prev, ag.adgroup_id])
+                                            }
+                                          }}
+                                          className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white"
+                                        />
+                                        <span className="text-sm font-medium truncate flex-1">{ag.adgroup_name}</span>
+                                      </div>
+                                    </CommandItem>
+                                  )
+                                })}
+                              </div>
+                            )
+                          });
+                        })()
+                      ) : (
+                        <p className="text-sm text-gray-400 text-center py-4">No ad groups found.</p>
+                      )}
                     </CommandGroup>
                   </CommandList>
                 </Command>
