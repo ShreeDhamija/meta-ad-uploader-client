@@ -1251,7 +1251,12 @@ export default function TikTokAdCreationForm({
                                 }}
                                 className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white"
                               />
-                              <span className="text-sm font-medium truncate flex-1">{c.campaign_name}</span>
+                              <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", c.operation_status !== "ENABLE" && "text-gray-400")}>
+                                <span className="text-sm font-medium truncate leading-[1.25]">{c.campaign_name}</span>
+                                {c.operation_status === "ENABLE" && (
+                                  <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                )}
+                              </Label>
                             </div>
                           </CommandItem>
                         )
@@ -1363,11 +1368,17 @@ export default function TikTokAdCreationForm({
                                   }}
                                   className={cn(
                                     "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
+                                    c.operation_status !== "ENABLE" && "text-gray-400",
                                     duplicateCampaign === c.campaign_id && "bg-gray-100 font-semibold"
                                   )}
                                 >
-                                  <span className="text-sm font-medium">{c.campaign_name}</span>
-                                  {duplicateCampaign === c.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                                  <div className="flex items-center justify-between w-full truncate">
+                                    <span className="text-sm font-medium truncate">{c.campaign_name}</span>
+                                    <div className="flex items-center gap-2">
+                                      {c.operation_status === "ENABLE" && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                      {duplicateCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
+                                    </div>
+                                  </div>
                                 </CommandItem>
                               ))}
                           </CommandGroup>
@@ -1523,7 +1534,12 @@ export default function TikTokAdCreationForm({
                                           }}
                                           className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white"
                                         />
-                                        <span className="text-sm font-medium truncate flex-1">{ag.adgroup_name}</span>
+                                        <Label className={cn("flex-1 cursor-pointer flex items-center justify-between", ag.operation_status !== "ENABLE" && "text-gray-400")}>
+                                          <span className="text-sm font-medium truncate leading-[1.25]">{ag.adgroup_name}</span>
+                                          {ag.operation_status === "ENABLE" && (
+                                            <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                          )}
+                                        </Label>
                                       </div>
                                     </CommandItem>
                                   )
@@ -1633,11 +1649,17 @@ export default function TikTokAdCreationForm({
                                   }}
                                   className={cn(
                                     "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
+                                    ag.operation_status !== "ENABLE" && "text-gray-400",
                                     duplicateAdGroup === ag.adgroup_id && "bg-gray-100 font-semibold"
                                   )}
                                 >
-                                  <span className="text-sm font-medium">{ag.adgroup_name}</span>
-                                  {duplicateAdGroup === ag.adgroup_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                                  <div className="flex items-center justify-between w-full truncate">
+                                    <span className="text-sm font-medium truncate">{ag.adgroup_name}</span>
+                                    <div className="flex items-center gap-2">
+                                      {ag.operation_status === "ENABLE" && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                      {duplicateAdGroup === ag.adgroup_id && <Check className="h-4 w-4 text-black shrink-0" />}
+                                    </div>
+                                  </div>
                                 </CommandItem>
                               ))}
                           </CommandGroup>
