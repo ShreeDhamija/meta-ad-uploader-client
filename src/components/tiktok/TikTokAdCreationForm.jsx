@@ -15,7 +15,6 @@ import {
   ChevronsUpDown,
   CloudUpload,
   Copy,
-  MousePointer2 as CTAIcon,
   FileText,
   Globe,
   Link as LinkIcon,
@@ -34,7 +33,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
-
+import CTAIcon from '@/assets/icons/cta.svg?react';
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -1908,7 +1907,7 @@ export default function TikTokAdCreationForm({
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   {renderDiffMark("cta")}
-                  <CTAIcon className="w-4 h-4 text-gray-500" />
+                  <CTAIcon className="w-4 h-4" />
                   Call to Action
                 </Label>
                 <Popover open={openCta} onOpenChange={setOpenCta}>
