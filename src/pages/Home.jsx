@@ -495,6 +495,8 @@ export default function Home() {
         previousAdAccountRef.current = selectedAdAccount;
         if (!hadPrevious) return;
         setVariants((prev) => prev.map((variant) => ({ ...variant, snapshot: null })));
+        setCustomLink("");
+        setShowCustomLink(false);
     }, [selectedAdAccount]);
 
     // Seed launcher state when arriving from Analytics "Scale Winners" pill.
