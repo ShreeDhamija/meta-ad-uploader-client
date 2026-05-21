@@ -191,16 +191,11 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                               selectedCampaign === c.campaign_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
                             )}
                           >
-                            <div className="flex items-center justify-between w-full">
-                              <div className="flex flex-col">
-                                <span className={cn("font-medium", c.operation_status !== "ENABLE" && "text-gray-400")}>{c.campaign_name}</span>
-                                <span className="text-[10px] text-gray-400 font-mono">ID: {c.campaign_id}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {c.operation_status === "ENABLE" && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
-                                {selectedCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
-                              </div>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{c.campaign_name}</span>
+                              <span className="text-[10px] text-gray-400 font-mono">ID: {c.campaign_id}</span>
                             </div>
+                            {selectedCampaign === c.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
                           </CommandItem>
                         ))}
                       </CommandGroup>
