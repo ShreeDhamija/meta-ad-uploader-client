@@ -1,6 +1,6 @@
 import pica from 'pica';
 
-const MAX_DIMENSION = 3999;
+const MAX_DIMENSION = 2048;
 const JPEG_QUALITY = 0.92;
 
 let picaInstance;
@@ -32,9 +32,10 @@ async function resizeOne(file) {
     return file;
   }
 
+  const scale = MAX_DIMENSION / Math.max(width, height);
   const target = document.createElement('canvas');
-  target.width = Math.max(1, Math.floor(width / 2));
-  target.height = Math.max(1, Math.floor(height / 2));
+  target.width = Math.max(1, Math.round(width * scale));
+  target.height = Math.max(1, Math.round(height * scale));
 
   try {
     await getPica().resize(bitmap, target);
@@ -76,7 +77,8 @@ async function resizeOne(file) {
 }
 
 /**
- * Resize images whose width or height exceeds MAX_DIMENSION down to half-dimension.
+ * Resize images whose width or height exceeds MAX_DIMENSION so the longer side
+ * becomes MAX_DIMENSION, preserving aspect ratio.
  * Files are processed sequentially to keep peak memory low (one decoded image at a time).
  * onProgress is called as { done, total, resizedCount } after each file.
  * If a signal is provided and gets aborted, throws an AbortError.
