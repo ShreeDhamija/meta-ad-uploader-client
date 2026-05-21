@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronsUpDown,
   CloudUpload,
+  Copy,
   MousePointer2 as CTAIcon,
   FileText,
   Globe,
@@ -204,6 +205,10 @@ export default function TikTokAdCreationForm({
   const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(false)
   const [newCampaignName, setNewCampaignName] = useState('')
   const [isDuplicating, setIsDuplicating] = useState(false)
+  const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
+  const [duplicateCampaign, setDuplicateCampaign] = useState('')
+  const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
+  const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState('')
 
   // Search input local states
   const [advertiserSearch, setAdvertiserSearch] = useState('')
@@ -505,7 +510,9 @@ export default function TikTokAdCreationForm({
       }
       toast.success('🎉 Campaign duplicated successfully!')
       setNewCampaignName('')
-      
+      setDuplicateCampaign('')
+      setShowDuplicateCampaignBlock(false)
+
       const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
       try {
         const listRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
@@ -1031,9 +1038,9 @@ export default function TikTokAdCreationForm({
                   <span className="truncate text-sm font-medium">
                     {selectedAdvertiser
                       ? (() => {
-                          const found = advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
-                          return found ? (found.advertiser_name || found.name || selectedAdvertiser) : selectedAdvertiser;
-                        })()
+                        const found = advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
+                        return found ? (found.advertiser_name || found.name || selectedAdvertiser) : selectedAdvertiser;
+                      })()
                       : "Select Advertiser's Account"}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -1169,67 +1176,162 @@ export default function TikTokAdCreationForm({
                     </CommandGroup>
                   </CommandList>
 
-                  {/* Campaign Duplication Block */}
-                  <div className="border-t border-gray-100 mt-1 bg-gray-50/50 rounded-b-2xl">
-                    {selectedCampaign.length === 1 ? (
-                      <div className="p-3 space-y-3">
-                        <div className="flex items-center justify-between px-1">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                            Launch New Campaign
-                          </span>
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <span className="text-[10px] text-gray-500 font-medium">Include Ads</span>
-                            <div
-                              onClick={(e) => { e.stopPropagation(); setDuplicateIncludeAds(v => !v); }}
-                              className={cn(
-                                "relative w-7 h-3.5 rounded-full cursor-pointer transition-colors duration-200",
-                                duplicateIncludeAds ? "bg-zinc-800" : "bg-gray-200"
-                              )}
-                            >
-                              <div className={cn(
-                                "absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow transition-transform duration-200",
-                                duplicateIncludeAds ? "translate-x-3.5" : "translate-x-0.5"
-                              )} />
-                            </div>
-                          </label>
-                        </div>
-
-                        <div className="space-y-1">
-                          <Label className="text-[9px] text-gray-400 font-bold uppercase tracking-tight ml-1">Campaign Name</Label>
-                          <Input
-                            placeholder="New Campaign Name"
-                            value={newCampaignName}
-                            onChange={(e) => setNewCampaignName(e.target.value)}
-                            className="h-8 text-[11px] rounded-xl border-gray-200 bg-gray-50 focus:bg-white transition-colors focus:ring-0 focus:border-gray-300"
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        </div>
-
-                        <Button
-                          type="button"
-                          disabled={isDuplicating || !newCampaignName.trim()}
-                          onClick={() => handleDuplicateCampaign(selectedCampaign[0])}
-                          className="w-full h-9 rounded-xl bg-zinc-800 hover:bg-black text-white text-[11px] font-bold tracking-wide disabled:opacity-50 flex items-center justify-center gap-1.5 px-3 shadow-sm transition-all active:scale-[0.98]"
-                        >
-                          {isDuplicating ? (
-                            <><Loader className="w-3 h-3 animate-spin" />Launching...</>
-                          ) : (
-                            <>
-                              <PlusIcon className="w-3 h-3" />
-                              <span>Launch Campaign</span>
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    ) : (
-                      <p className="text-[10px] text-gray-400 text-center py-4 font-medium uppercase tracking-widest">
-                        {selectedCampaign.length > 1 ? "Select exactly one campaign to duplicate" : "Select a campaign to launch a copy"}
-                      </p>
-                    )}
+                  <div className="p-2 border-t border-gray-100">
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setShowDuplicateCampaignBlock(true);
+                        setOpenCampaign(false);
+                      }}
+                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 hover:bg-black"
+                      variant="outline"
+                    >
+                      <CampaignIcon className="mr-2 h-4 w-4 text-white" />
+                      Launch in a New Campaign
+                    </Button>
                   </div>
                 </Command>
               </PopoverContent>
             </Popover>
+
+            {showDuplicateCampaignBlock && (
+              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDuplicateCampaignBlock(false)
+                    setDuplicateCampaign("")
+                    setNewCampaignName("")
+                  }}
+                  className="absolute top-2 right-2 p-0.5 rounded-full bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+                  aria-label="Close duplicate campaign selection"
+                >
+                  <X className="h-3.5 w-3.5 text-gray-500" />
+                </button>
+                <div className="flex-1 space-y-2 p-1">
+                  <Label htmlFor="duplicateCampaign" className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                    {renderDiffMark("duplicateCampaign")}
+                    <Copy className="w-4 h-4 text-gray-500" />
+                    Select a campaign to duplicate
+                  </Label>
+                  <Label className="text-gray-500 text-[11px] font-regular block">
+                    We'll copy the campaign and all its ad groups
+                  </Label>
+
+                  <Popover open={openDuplicateCampaign} onOpenChange={setOpenDuplicateCampaign}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openDuplicateCampaign}
+                        disabled={campaigns.length === 0}
+                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow overflow-hidden whitespace-nowrap hover:bg-white text-sm"
+                      >
+                        <span className="block truncate text-left font-medium">
+                          {duplicateCampaign
+                            ? campaigns.find((campaign) => campaign.campaign_id === duplicateCampaign)?.campaign_name || duplicateCampaign
+                            : "Select campaign to duplicate"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="p-0 bg-white shadow-lg rounded-2xl"
+                      align="start"
+                      sideOffset={4}
+                      side="bottom"
+                      style={{
+                        width: 'var(--radix-popover-trigger-width)'
+                      }}
+                    >
+                      <Command>
+                        <CommandInput
+                          placeholder="Search campaign..."
+                          value={duplicateCampaignSearchValue}
+                          onValueChange={setDuplicateCampaignSearchValue}
+                          className="bg-transparent border-none focus:ring-0"
+                        />
+                        <CommandEmpty>No campaigns found.</CommandEmpty>
+                        <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
+                          <CommandGroup>
+                            {campaigns
+                              .filter((campaign) =>
+                                (campaign.campaign_name || campaign.campaign_id || '').toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
+                              )
+                              .map((campaign) => (
+                                <CommandItem
+                                  key={campaign.campaign_id}
+                                  value={campaign.campaign_id}
+                                  onSelect={() => {
+                                    setDuplicateCampaign(campaign.campaign_id);
+                                    setNewCampaignName((campaign.campaign_name || '') + "_copy");
+                                    setOpenDuplicateCampaign(false);
+                                  }}
+                                  className={cn(
+                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
+                                    duplicateCampaign === campaign.campaign_id && "bg-gray-100 font-semibold"
+                                  )}
+                                >
+                                  <span className="text-sm font-medium">{campaign.campaign_name}</span>
+                                  {duplicateCampaign === campaign.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* New Campaign Name Input */}
+                  {duplicateCampaign && (
+                    <div className="space-y-3 pt-1 border-t border-gray-100 mt-2">
+                      <div className="space-y-1">
+                        <Label htmlFor="newCampaignName" className="text-xs font-semibold text-gray-700">
+                          {renderDiffMark("newCampaignName")}
+                          New Campaign Name
+                        </Label>
+                        <Input
+                          id="newCampaignName"
+                          value={newCampaignName}
+                          onChange={(e) => setNewCampaignName(e.target.value)}
+                          placeholder="Enter new campaign name..."
+                          className="border border-gray-300 rounded-2xl bg-white shadow py-2 px-3 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between bg-white p-2.5 rounded-2xl border border-gray-150">
+                        <span className="text-xs font-semibold text-gray-700">Include Ads</span>
+                        <div
+                          onClick={() => setDuplicateIncludeAds(v => !v)}
+                          className={cn(
+                            "relative w-7 h-3.5 rounded-full cursor-pointer transition-colors duration-200",
+                            duplicateIncludeAds ? "bg-zinc-800" : "bg-gray-200"
+                          )}
+                        >
+                          <div className={cn(
+                            "absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow transition-transform duration-200",
+                            duplicateIncludeAds ? "translate-x-3.5" : "translate-x-0.5"
+                          )} />
+                        </div>
+                      </div>
+
+                      <Button
+                        type="button"
+                        onClick={() => handleDuplicateCampaign(duplicateCampaign)}
+                        disabled={isDuplicating || !newCampaignName.trim()}
+                        className="w-full h-10 rounded-xl bg-zinc-800 hover:bg-black text-white text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-1.5 px-3 shadow transition-all active:scale-[0.98]"
+                      >
+                        {isDuplicating ? (
+                          <><Loader className="w-3.5 h-3.5 animate-spin" />Creating...</>
+                        ) : (
+                          "Create Campaign"
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 3. Ad Group Combobox */}
