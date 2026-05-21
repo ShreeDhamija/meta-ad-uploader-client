@@ -36,6 +36,7 @@ import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
 
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -143,6 +144,8 @@ export default function TikTokAdCreationForm({
   adGroups, setAdGroups,
   selectedCampaign, setSelectedCampaign,
   selectedAdGroup, setSelectedAdGroup,
+  duplicateAdGroup, setDuplicateAdGroup,
+  newAdGroupName, setNewAdGroupName,
   identities, setIdentities,
   files, setFiles,
 
@@ -202,13 +205,16 @@ export default function TikTokAdCreationForm({
   const [openTemplatePicker, setOpenTemplatePicker] = useState(false)
 
   // Duplication local states
-  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(false)
+  const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(true)
   const [newCampaignName, setNewCampaignName] = useState('')
   const [isDuplicating, setIsDuplicating] = useState(false)
   const [showDuplicateCampaignBlock, setShowDuplicateCampaignBlock] = useState(false)
   const [duplicateCampaign, setDuplicateCampaign] = useState('')
   const [openDuplicateCampaign, setOpenDuplicateCampaign] = useState(false)
   const [duplicateCampaignSearchValue, setDuplicateCampaignSearchValue] = useState('')
+  const [showDuplicateAdGroupBlock, setShowDuplicateAdGroupBlock] = useState(false)
+  const [openDuplicateAdGroup, setOpenDuplicateAdGroup] = useState(false)
+  const [duplicateAdGroupSearchValue, setDuplicateAdGroupSearchValue] = useState('')
 
   // Search input local states
   const [advertiserSearch, setAdvertiserSearch] = useState('')
@@ -418,6 +424,18 @@ export default function TikTokAdCreationForm({
     }
   }, [selectedCampaign, campaigns])
 
+  // Setup Ad Group Duplication name automatic suffixing
+  useEffect(() => {
+    if (duplicateAdGroup) {
+      const adGroup = adGroups.find(ag => ag.adgroup_id === duplicateAdGroup)
+      if (adGroup) {
+        setNewAdGroupName((adGroup.adgroup_name || '') + "_copy")
+      }
+    } else {
+      setNewAdGroupName('')
+    }
+  }, [duplicateAdGroup, adGroups, setNewAdGroupName])
+
   // Force refreshes
   const forceRefreshCampaigns = (e) => {
     e.stopPropagation()
@@ -493,15 +511,16 @@ export default function TikTokAdCreationForm({
     const campaign = campaigns.find(c => c.campaign_id === campaignId)
     if (!campaign) return
     setIsDuplicating(true)
+    const duplicatedName = newCampaignName.trim()
     try {
       const res = await tiktokFetch(`${API_BASE_URL}/api/tiktok/campaign/duplicate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           advertiser_id: selectedAdvertiser,
-          campaign_id: campaignId,
-          campaign_name: newCampaignName,
-          include_ads: duplicateIncludeAds
+          source_campaign_id: campaignId,
+          new_campaign_name: duplicatedName,
+          duplicate_ads: duplicateIncludeAds
         })
       })
       const data = await res.json()
@@ -513,17 +532,32 @@ export default function TikTokAdCreationForm({
       setDuplicateCampaign('')
       setShowDuplicateCampaignBlock(false)
 
+      const newCampaignObj = {
+        campaign_id: data.new_campaign_id,
+        campaign_name: duplicatedName
+      }
+
+      if (data.new_campaign_id) {
+        setCampaigns(prev => {
+          if (prev.some(c => c.campaign_id === data.new_campaign_id)) return prev;
+          return [newCampaignObj, ...prev];
+        });
+        setSelectedCampaign([data.new_campaign_id])
+        setSelectedAdGroup([])
+        setOpenCampaign(false)
+      }
+
       const params = new URLSearchParams({ advertiserId: selectedAdvertiser, page: '1', pageSize: '100' })
       try {
         const listRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-campaigns?${params}`)
         const listData = await listRes.json()
         const list = listData.campaigns || []
-        setCampaigns(list)
-        writeCache(`tiktok_campaigns_${selectedAdvertiser}`, list)
-        if (data.new_campaign_id) {
-          setSelectedCampaign([data.new_campaign_id])
-          setOpenCampaign(false)
-        }
+        const mergedList = [
+          newCampaignObj,
+          ...list.filter(c => c.campaign_id !== data.new_campaign_id)
+        ]
+        setCampaigns(mergedList)
+        writeCache(`tiktok_campaigns_${selectedAdvertiser}`, mergedList)
       } catch (err) {
         console.error('Failed to refetch campaigns:', err)
       }
@@ -532,7 +566,7 @@ export default function TikTokAdCreationForm({
     } finally {
       setIsDuplicating(false)
     }
-  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign])
+  }, [selectedAdvertiser, campaigns, duplicateIncludeAds, newCampaignName, tiktokFetch, setCampaigns, setSelectedCampaign, setSelectedAdGroup])
 
   const getMimeFromName = (name) => {
     const ext = name.split('.').pop().toLowerCase()
@@ -792,8 +826,14 @@ export default function TikTokAdCreationForm({
   // Submit form handler
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const isDuplicatingAdGroupMode = showDuplicateAdGroupBlock && duplicateAdGroup
     if (!selectedAdvertiser) return toast.error('Please select an advertiser')
-    if (!selectedAdGroup || selectedAdGroup.length === 0) return toast.error('Please select at least one ad group')
+    if (!isDuplicatingAdGroupMode && (!selectedAdGroup || selectedAdGroup.length === 0)) {
+      return toast.error('Please select at least one ad group')
+    }
+    if (isDuplicatingAdGroupMode && !newAdGroupName.trim()) {
+      return toast.error('Please enter a name for the new duplicated ad group')
+    }
 
     if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
       return toast.error(adType === 'NORMAL'
@@ -917,8 +957,49 @@ export default function TikTokAdCreationForm({
       const results = []
       const errors = []
 
-      for (const adgroupId of selectedAdGroup) {
-        const adGroupName = adGroups.find(ag => ag.adgroup_id === adgroupId)?.adgroup_name || adgroupId
+      let adGroupIdsToSubmit = [...selectedAdGroup]
+
+      if (isDuplicatingAdGroupMode) {
+        toast.info('Duplicating ad group on-the-fly...')
+        const dupRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/adgroup/duplicate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            advertiser_id: selectedAdvertiser,
+            source_adgroup_id: duplicateAdGroup,
+            new_campaign_id: selectedCampaign[0],
+            new_adgroup_name: newAdGroupName.trim()
+          })
+        })
+        const dupData = await dupRes.json()
+        if (!dupRes.ok || !dupData.success || !dupData.copied_adgroup_id) {
+          throw new Error(dupData.error || 'Ad group duplication failed')
+        }
+
+        toast.success(`🎉 Ad group duplicated successfully as "${dupData.adgroup_name}"!`)
+        adGroupIdsToSubmit = [dupData.copied_adgroup_id]
+
+        // Fetch refreshed list of ad groups to populate dropdown
+        try {
+          const params = new URLSearchParams({ advertiserId: selectedAdvertiser, campaignId: selectedCampaign[0] })
+          const refetchRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`)
+          const refetchData = await refetchRes.json()
+          const list = refetchData.adGroups || refetchData.adgroups || []
+          const enrichedList = list.map(ag => ({
+            ...ag,
+            campaignId: selectedCampaign[0],
+            campaignName: campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || selectedCampaign[0]
+          }))
+          setAdGroups(enrichedList)
+          writeCache(`tiktok_adgroups_${selectedCampaign[0]}`, list)
+        } catch (e) {
+          console.warn('Failed to refresh ad groups after duplication:', e.message)
+        }
+      }
+
+      for (const adgroupId of adGroupIdsToSubmit) {
+        const adGroupName = adGroups.find(ag => ag.adgroup_id === adgroupId)?.adgroup_name ||
+          (isDuplicatingAdGroupMode ? newAdGroupName.trim() : adgroupId)
         toast.info(`Creating ad in: ${adGroupName}...`)
 
         const creative = {
@@ -992,6 +1073,9 @@ export default function TikTokAdCreationForm({
       setDropboxFiles([])
       setUploadProgress(0)
       if (setSparkAuthCode) setSparkAuthCode('')
+      setDuplicateAdGroup('')
+      setNewAdGroupName('')
+      setShowDuplicateAdGroupBlock(false)
     } catch (err) {
       toast.error(err.message)
       setIsUploading(false)
@@ -1179,11 +1263,20 @@ export default function TikTokAdCreationForm({
                   <div className="p-2 border-t border-gray-100">
                     <Button
                       type="button"
+                      disabled={selectedCampaign.length !== 1}
                       onClick={() => {
+                        if (selectedCampaign.length === 1) {
+                          const campId = selectedCampaign[0];
+                          setDuplicateCampaign(campId);
+                          const camp = campaigns.find(c => c.campaign_id === campId);
+                          if (camp) {
+                            setNewCampaignName((camp.campaign_name || '') + "_copy");
+                          }
+                        }
                         setShowDuplicateCampaignBlock(true);
                         setOpenCampaign(false);
                       }}
-                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 hover:bg-black"
+                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
                       variant="outline"
                     >
                       <CampaignIcon className="mr-2 h-4 w-4 text-white" />
@@ -1195,7 +1288,7 @@ export default function TikTokAdCreationForm({
             </Popover>
 
             {showDuplicateCampaignBlock && (
-              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex flex-col gap-4 p-5 bg-white border border-gray-200 rounded-3xl relative mt-3 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
                 <button
                   type="button"
                   onClick={() => {
@@ -1203,21 +1296,23 @@ export default function TikTokAdCreationForm({
                     setDuplicateCampaign("")
                     setNewCampaignName("")
                   }}
-                  className="absolute top-2 right-2 p-0.5 rounded-full bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+                  className="absolute top-4 right-4 p-1.5 rounded-full bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-400 hover:text-gray-600 transition-all duration-150 shadow-sm"
                   aria-label="Close duplicate campaign selection"
                 >
-                  <X className="h-3.5 w-3.5 text-gray-500" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
-                <div className="flex-1 space-y-2 p-1">
-                  <Label htmlFor="duplicateCampaign" className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                    {renderDiffMark("duplicateCampaign")}
-                    <Copy className="w-4 h-4 text-gray-500" />
-                    Select a campaign to duplicate
-                  </Label>
-                  <Label className="text-gray-500 text-[11px] font-regular block">
-                    We'll copy the campaign and all its ad groups
-                  </Label>
+                <div className="flex-1 space-y-4">
+                  <div className="space-y-1.5 pr-6">
+                    <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 leading-none">
+                      <Copy className="w-4 h-4 text-gray-700 shrink-0" />
+                      Select a Campaign to Duplicate
+                    </div>
+                    <span className="text-xs sm:text-[13px] text-gray-500 font-medium block leading-none">
+                      We'll copy the selected campaign and duplicate its ad groups.
+                    </span>
+                  </div>
 
+                  {/* Dropdown/Popover to select campaign to duplicate */}
                   <Popover open={openDuplicateCampaign} onOpenChange={setOpenDuplicateCampaign}>
                     <PopoverTrigger asChild>
                       <Button
@@ -1225,14 +1320,14 @@ export default function TikTokAdCreationForm({
                         role="combobox"
                         aria-expanded={openDuplicateCampaign}
                         disabled={campaigns.length === 0}
-                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow overflow-hidden whitespace-nowrap hover:bg-white text-sm"
+                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
                       >
-                        <span className="block truncate text-left font-medium">
+                        <span className="block truncate text-left">
                           {duplicateCampaign
-                            ? campaigns.find((campaign) => campaign.campaign_id === duplicateCampaign)?.campaign_name || duplicateCampaign
+                            ? campaigns.find((c) => c.campaign_id === duplicateCampaign)?.campaign_name || duplicateCampaign
                             : "Select campaign to duplicate"}
                         </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
@@ -1255,25 +1350,25 @@ export default function TikTokAdCreationForm({
                         <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                           <CommandGroup>
                             {campaigns
-                              .filter((campaign) =>
-                                (campaign.campaign_name || campaign.campaign_id || '').toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
+                              .filter((c) =>
+                                (c.campaign_name || c.campaign_id || '').toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
                               )
-                              .map((campaign) => (
+                              .map((c) => (
                                 <CommandItem
-                                  key={campaign.campaign_id}
-                                  value={campaign.campaign_id}
+                                  key={c.campaign_id}
+                                  value={c.campaign_id}
                                   onSelect={() => {
-                                    setDuplicateCampaign(campaign.campaign_id);
-                                    setNewCampaignName((campaign.campaign_name || '') + "_copy");
+                                    setDuplicateCampaign(c.campaign_id);
+                                    setNewCampaignName((c.campaign_name || '') + "_copy");
                                     setOpenDuplicateCampaign(false);
                                   }}
                                   className={cn(
                                     "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
-                                    duplicateCampaign === campaign.campaign_id && "bg-gray-100 font-semibold"
+                                    duplicateCampaign === c.campaign_id && "bg-gray-100 font-semibold"
                                   )}
                                 >
-                                  <span className="text-sm font-medium">{campaign.campaign_name}</span>
-                                  {duplicateCampaign === campaign.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                                  <span className="text-sm font-medium">{c.campaign_name}</span>
+                                  {duplicateCampaign === c.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
                                 </CommandItem>
                               ))}
                           </CommandGroup>
@@ -1282,10 +1377,22 @@ export default function TikTokAdCreationForm({
                     </PopoverContent>
                   </Popover>
 
+                  {/* Includes Ads Option */}
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 mt-2">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm font-semibold text-gray-900">Includes Ads</Label>
+                      <p className="text-xs text-gray-500 font-medium">Also recreate ads under each ad group</p>
+                    </div>
+                    <Switch
+                      checked={duplicateIncludeAds}
+                      onCheckedChange={setDuplicateIncludeAds}
+                    />
+                  </div>
+
                   {/* New Campaign Name Input */}
                   {duplicateCampaign && (
-                    <div className="space-y-3 pt-1 border-t border-gray-100 mt-2">
-                      <div className="space-y-1">
+                    <div className="space-y-4 pt-2 border-t border-gray-100 animate-in fade-in duration-200">
+                      <div className="space-y-1.5">
                         <Label htmlFor="newCampaignName" className="text-xs font-semibold text-gray-700">
                           {renderDiffMark("newCampaignName")}
                           New Campaign Name
@@ -1295,34 +1402,18 @@ export default function TikTokAdCreationForm({
                           value={newCampaignName}
                           onChange={(e) => setNewCampaignName(e.target.value)}
                           placeholder="Enter new campaign name..."
-                          className="border border-gray-300 rounded-2xl bg-white shadow py-2 px-3 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                          className="border border-gray-300 rounded-2xl bg-white shadow-sm py-2 px-4 text-sm h-11 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
                         />
-                      </div>
-
-                      <div className="flex items-center justify-between bg-white p-2.5 rounded-2xl border border-gray-150">
-                        <span className="text-xs font-semibold text-gray-700">Include Ads</span>
-                        <div
-                          onClick={() => setDuplicateIncludeAds(v => !v)}
-                          className={cn(
-                            "relative w-7 h-3.5 rounded-full cursor-pointer transition-colors duration-200",
-                            duplicateIncludeAds ? "bg-zinc-800" : "bg-gray-200"
-                          )}
-                        >
-                          <div className={cn(
-                            "absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow transition-transform duration-200",
-                            duplicateIncludeAds ? "translate-x-3.5" : "translate-x-0.5"
-                          )} />
-                        </div>
                       </div>
 
                       <Button
                         type="button"
                         onClick={() => handleDuplicateCampaign(duplicateCampaign)}
                         disabled={isDuplicating || !newCampaignName.trim()}
-                        className="w-full h-10 rounded-xl bg-zinc-800 hover:bg-black text-white text-xs font-bold disabled:opacity-50 flex items-center justify-center gap-1.5 px-3 shadow transition-all active:scale-[0.98]"
+                        className="w-full h-11 rounded-2xl bg-zinc-800 hover:bg-black text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 px-4 shadow transition-all active:scale-[0.98]"
                       >
                         {isDuplicating ? (
-                          <><Loader className="w-3.5 h-3.5 animate-spin" />Creating...</>
+                          <><Loader className="w-4 h-4 animate-spin" />Creating...</>
                         ) : (
                           "Create Campaign"
                         )}
@@ -1447,9 +1538,136 @@ export default function TikTokAdCreationForm({
                       )}
                     </CommandGroup>
                   </CommandList>
+
+                  <div className="p-2 border-t border-gray-100">
+                    <Button
+                      type="button"
+                      disabled={selectedCampaign.length !== 1}
+                      onClick={() => {
+                        setShowDuplicateAdGroupBlock(true);
+                        setOpenAdGroup(false);
+                      }}
+                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
+                      variant="outline"
+                    >
+                      <AdSetIcon className="mr-2 h-4 w-4 text-white" />
+                      Launch in a New Ad Group
+                    </Button>
+                  </div>
                 </Command>
               </PopoverContent>
             </Popover>
+
+            {showDuplicateAdGroupBlock && (
+              <div className="flex flex-col gap-4 p-5 bg-white border border-gray-200 rounded-3xl relative mt-3 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDuplicateAdGroupBlock(false)
+                    setDuplicateAdGroup("")
+                    setNewAdGroupName("")
+                  }}
+                  className="absolute top-4 right-4 p-1.5 rounded-full bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-400 hover:text-gray-600 transition-all duration-150 shadow-sm"
+                  aria-label="Close duplicate ad group selection"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+                <div className="flex-1 space-y-4">
+                  <div className="space-y-1.5 pr-6">
+                    <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 leading-none">
+                      {renderDiffMark("duplicateAdGroup")}
+                      <Copy className="w-4 h-4 text-gray-700 shrink-0" />
+                      Select an ad group to duplicate
+                    </div>
+                    <span className="text-xs sm:text-[13px] text-gray-500 font-medium block leading-none">
+                      We'll copy the ad group and all its settings
+                    </span>
+                  </div>
+
+                  <Popover open={openDuplicateAdGroup} onOpenChange={setOpenDuplicateAdGroup}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openDuplicateAdGroup}
+                        disabled={adGroups.length === 0}
+                        className="w-full justify-between border border-gray-300 rounded-full bg-white shadow-sm overflow-hidden whitespace-nowrap hover:bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
+                      >
+                        <span className="block truncate text-left">
+                          {duplicateAdGroup
+                            ? adGroups.find((ag) => ag.adgroup_id === duplicateAdGroup)?.adgroup_name || duplicateAdGroup
+                            : "Select ad group to duplicate"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="p-0 bg-white shadow-lg rounded-2xl"
+                      align="start"
+                      sideOffset={4}
+                      side="bottom"
+                      style={{
+                        width: 'var(--radix-popover-trigger-width)'
+                      }}
+                    >
+                      <Command>
+                        <CommandInput
+                          placeholder="Search ad group..."
+                          value={duplicateAdGroupSearchValue}
+                          onValueChange={setDuplicateAdGroupSearchValue}
+                          className="bg-transparent border-none focus:ring-0"
+                        />
+                        <CommandEmpty>No ad groups found.</CommandEmpty>
+                        <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
+                          <CommandGroup>
+                            {adGroups
+                              .filter((ag) =>
+                                (ag.adgroup_name || ag.adgroup_id || '').toLowerCase().includes(duplicateAdGroupSearchValue.toLowerCase())
+                              )
+                              .map((ag) => (
+                                <CommandItem
+                                  key={ag.adgroup_id}
+                                  value={ag.adgroup_id}
+                                  onSelect={() => {
+                                    setDuplicateAdGroup(ag.adgroup_id);
+                                    setOpenDuplicateAdGroup(false);
+                                  }}
+                                  className={cn(
+                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
+                                    duplicateAdGroup === ag.adgroup_id && "bg-gray-100 font-semibold"
+                                  )}
+                                >
+                                  <span className="text-sm font-medium">{ag.adgroup_name}</span>
+                                  {duplicateAdGroup === ag.adgroup_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* New Ad Group Name Input */}
+                  {duplicateAdGroup && (
+                    <div className="space-y-4 pt-4 border-t border-gray-100 animate-in fade-in duration-200">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="newAdGroupName" className="text-xs font-semibold text-gray-700">
+                          {renderDiffMark("newAdGroupName")}
+                          New Ad Group Name
+                        </Label>
+                        <Input
+                          id="newAdGroupName"
+                          value={newAdGroupName}
+                          onChange={(e) => setNewAdGroupName(e.target.value)}
+                          placeholder="Enter new ad group name..."
+                          className="border border-gray-300 rounded-2xl bg-white shadow-sm py-2 px-4 text-sm h-11 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
         </CardContent>

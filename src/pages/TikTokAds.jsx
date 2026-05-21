@@ -84,6 +84,8 @@ export default function TikTokAds() {
   const [selectedAdSets, setSelectedAdSets] = useState([])
   const [adSets, setAdSets] = useState([])
   const [duplicateAdSet, setDuplicateAdSet] = useState('')
+  const [duplicateAdGroup, setDuplicateAdGroup] = useState('')
+  const [newAdGroupName, setNewAdGroupName] = useState('')
   const [selectedFiles, setSelectedFiles] = useState(new Set())
   const [selectedIgOrganicPosts, setSelectedIgOrganicPosts] = useState([])
   const [hasSeenPowerupPopup, setHasSeenPowerupPopup] = useState(false)
@@ -227,6 +229,8 @@ export default function TikTokAds() {
     urlMode,
     selectedCampaign,
     selectedAdGroup,
+    duplicateAdGroup,
+    newAdGroupName,
   }), [
     adName,
     adText,
@@ -237,6 +241,8 @@ export default function TikTokAds() {
     urlMode,
     selectedCampaign,
     selectedAdGroup,
+    duplicateAdGroup,
+    newAdGroupName,
   ]);
 
   const hydrateFromSnapshot = useCallback((snapshot) => {
@@ -252,6 +258,8 @@ export default function TikTokAds() {
     setSelectedCampaign(Array.isArray(rawCampaign) ? rawCampaign : (rawCampaign ? [rawCampaign] : []));
     const rawAdGroup = snapshot.selectedAdGroup || "";
     setSelectedAdGroup(Array.isArray(rawAdGroup) ? rawAdGroup : (rawAdGroup ? [rawAdGroup] : []));
+    setDuplicateAdGroup(snapshot.duplicateAdGroup || "");
+    setNewAdGroupName(snapshot.newAdGroupName || "");
   }, []);
 
   const switchVariant = useCallback((targetId) => {
@@ -535,6 +543,8 @@ export default function TikTokAds() {
                 adGroups={adGroups} setAdGroups={setAdGroups}
                 selectedCampaign={selectedCampaign} setSelectedCampaign={setSelectedCampaign}
                 selectedAdGroup={selectedAdGroup} setSelectedAdGroup={setSelectedAdGroup}
+                duplicateAdGroup={duplicateAdGroup} setDuplicateAdGroup={setDuplicateAdGroup}
+                newAdGroupName={newAdGroupName} setNewAdGroupName={setNewAdGroupName}
                 identities={identities} setIdentities={setIdentities}
                 files={files} setFiles={setFiles}
 
