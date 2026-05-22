@@ -34,6 +34,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
 import { toast } from "sonner"
 import CTAIcon from '@/assets/icons/cta.svg?react';
+import CheckBlackIcon from '@/assets/icons/CheckBlack.svg?react';
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -1587,6 +1588,30 @@ export default function TikTokAdCreationForm({
                 </Command>
               </PopoverContent>
             </Popover>
+
+            {selectedAdGroup.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedAdGroup.map((id) => {
+                  const adgroup = adGroups.find((a) => a.adgroup_id === id)
+                  return (
+                    <label
+                      key={id}
+                      className="inline-flex items-center gap-2 bg-white rounded-2xl border border-gray-300 px-4 py-2 cursor-pointer hover:bg-gray-50"
+                    >
+                      <button
+                        type="button"
+                        aria-label={`Remove ${adgroup ? adgroup.adgroup_name : id}`}
+                        onClick={() => setSelectedAdGroup(prev => prev.filter((item) => item !== id))}
+                        className="flex h-4 w-4 items-center justify-center"
+                      >
+                        <CheckBlackIcon className="w-4.5 h-4.5" />
+                      </button>
+                      <span className="text-gray-800 text-xs break-all">{adgroup ? adgroup.adgroup_name : id}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
 
             {showDuplicateAdGroupBlock && (
               <div className="flex flex-col gap-4 p-5 bg-white border border-gray-200 rounded-3xl relative mt-3 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
