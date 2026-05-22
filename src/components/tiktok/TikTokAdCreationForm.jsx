@@ -1241,15 +1241,7 @@ export default function TikTokAdCreationForm({
                               <Checkbox
                                 id={`campaign-${c.campaign_id}`}
                                 checked={isSelected}
-                                onCheckedChange={() => {
-                                  if (isSelected) {
-                                    setSelectedCampaign(prev => prev.filter(id => id !== c.campaign_id))
-                                  } else {
-                                    setSelectedCampaign(prev => [...prev, c.campaign_id])
-                                  }
-                                  setSelectedAdGroup([])
-                                }}
-                                className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white"
+                                className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
                               />
                               <div className="flex-1 min-w-0 flex items-center justify-between">
                                 <span className={cn("text-sm font-medium truncate flex-1", c.operation_status === "DISABLE" && "text-gray-400")}>
@@ -1528,14 +1520,7 @@ export default function TikTokAdCreationForm({
                                         <Checkbox
                                           id={`adgroup-${ag.adgroup_id}`}
                                           checked={isSelected}
-                                          onCheckedChange={() => {
-                                            if (isSelected) {
-                                              setSelectedAdGroup(prev => prev.filter(id => id !== ag.adgroup_id))
-                                            } else {
-                                              setSelectedAdGroup(prev => [...prev, ag.adgroup_id])
-                                            }
-                                          }}
-                                          className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white"
+                                          className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
                                         />
                                         <div className="flex-1 min-w-0 flex items-center justify-between">
                                           <span className={cn("text-sm font-medium truncate flex-1", ag.operation_status === "DISABLE" && "text-gray-400")}>
