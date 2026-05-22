@@ -106,7 +106,7 @@ function fmtDateShort(d) {
 function SmallLabel({ children, className, style }) {
     return (
         <p
-            className={cn("font-semibold", className)}
+            className={cn("font-medium", className)}
             style={{ fontSize: 10.5, color: MUTED, margin: 0, ...style }}
         >
             {children}
@@ -152,7 +152,7 @@ function SectionCard({ children, id, dark }) {
 function MetricCard({ label, value, unit, sub, dark }) {
     return (
         <div
-            className="flex flex-col gap-1.5 p-4 min-w-0"
+            className="flex flex-col gap-3 p-4 min-w-0"
             style={{
                 background: dark ? INK : PAPER,
                 color: dark ? "#fff" : INK,
@@ -163,7 +163,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
                 className="tabular-nums"
                 style={{
                     fontSize: 40,
-                    fontWeight: 900,
+                    fontWeight: 800,
                     letterSpacing: "-0.015em",
                     lineHeight: 1,
                     margin: 0,
@@ -171,7 +171,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
                 }}
             >
                 {value}
-                {unit && <span style={{ fontSize: 40, fontWeight: 700, color: dark ? "#fff" : INK, marginLeft: 2 }}>{unit}</span>}
+                {unit && <span style={{ fontSize: 40, fontWeight: 600, color: dark ? "#fff" : INK, marginLeft: 2 }}>{unit}</span>}
             </p>
             {sub && (
                 <p style={{ fontSize: 11.5, color: dark ? "rgba(255,255,255,0.6)" : MUTED, margin: 0 }}>
@@ -230,14 +230,14 @@ function InsightTile({ label, value, valuePrefix, valueUnit, desc, status = "neu
                     boxShadow: `0 0 0 4px ${colors.ring}`,
                 }}
             />
-            <SmallLabel style={{ fontSize: 9.5, marginBottom: 6, paddingRight: 20 }}>{label}</SmallLabel>
+            <SmallLabel style={{ fontSize: 9.5, marginBottom: 14, paddingRight: 20 }}>{label}</SmallLabel>
             <div
                 className="tabular-nums"
-                style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: INK }}
+                style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.01em", lineHeight: 1, color: INK }}
             >
-                {valuePrefix && <span style={{ fontSize: 30, fontWeight: 700, color: INK }}>{valuePrefix}</span>}
+                {valuePrefix && <span style={{ fontSize: 30, fontWeight: 600, color: INK }}>{valuePrefix}</span>}
                 {value}
-                {valueUnit && <span style={{ fontSize: 30, fontWeight: 700, color: INK, marginLeft: 1 }}>{valueUnit}</span>}
+                {valueUnit && <span style={{ fontSize: 30, fontWeight: 600, color: INK, marginLeft: 1 }}>{valueUnit}</span>}
             </div>
             {desc && <p style={{ fontSize: 11.5, color: MUTED, margin: "6px 0 0", lineHeight: 1.4 }}>{desc}</p>}
         </div>

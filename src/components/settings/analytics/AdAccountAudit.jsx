@@ -92,7 +92,7 @@ function formatEventName(actionType) {
 function UpperLabel({ children, className, style }) {
     return (
         <p
-            className={cn("font-semibold", className)}
+            className={cn("font-medium", className)}
             style={{
                 fontSize: 10.5,
                 color: MUTED,
@@ -109,7 +109,7 @@ function UpperLabel({ children, className, style }) {
 function MetricCard({ label, value, unit, sub, dark }) {
     return (
         <div
-            className="flex flex-col gap-1.5 p-4 min-w-0"
+            className="flex flex-col gap-3 p-4 min-w-0"
             style={{
                 background: dark ? INK : PAPER,
                 color: dark ? "#fff" : INK,
@@ -122,7 +122,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
                 className="tabular-nums"
                 style={{
                     fontSize: 40,
-                    fontWeight: 900,
+                    fontWeight: 800,
                     letterSpacing: "-0.015em",
                     lineHeight: 1,
                     margin: 0,
@@ -131,7 +131,7 @@ function MetricCard({ label, value, unit, sub, dark }) {
             >
                 {value}
                 {unit && (
-                    <span style={{ fontSize: 40, fontWeight: 700, color: dark ? "#fff" : INK, marginLeft: 2 }}>
+                    <span style={{ fontSize: 40, fontWeight: 600, color: dark ? "#fff" : INK, marginLeft: 2 }}>
                         {unit}
                     </span>
                 )}
@@ -306,19 +306,19 @@ function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neu
                     boxShadow: `0 0 0 4px ${colors.ring}`,
                 }}
             />
-            <UpperLabel style={{ fontSize: 9.5, color: MUTED, marginBottom: 6, paddingRight: 20 }}>
+            <UpperLabel style={{ fontSize: 9.5, color: MUTED, marginBottom: 14, paddingRight: 20 }}>
                 {label}
             </UpperLabel>
             <div
                 className="tabular-nums"
-                style={{ fontSize: 30, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: INK }}
+                style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.01em", lineHeight: 1, color: INK }}
             >
                 {valuePrefix && (
-                    <span style={{ fontSize: 30, fontWeight: 700, color: INK }}>{valuePrefix}</span>
+                    <span style={{ fontSize: 30, fontWeight: 600, color: INK }}>{valuePrefix}</span>
                 )}
                 {value}
                 {valueUnit && (
-                    <span style={{ fontSize: 30, fontWeight: 900, color: INK, marginLeft: 1 }}>
+                    <span style={{ fontSize: 30, fontWeight: 800, color: INK, marginLeft: 1 }}>
                         {valueUnit}
                     </span>
                 )}
@@ -394,7 +394,7 @@ function SummarySection({ report, kpiType, kpiTarget }) {
                 value: cur.kpi.toFixed(kpiType === "roas" ? 2 : 1),
                 valuePrefix: kpiType === "cpa" ? "$" : undefined,
                 valueUnit: kpiType === "roas" ? "×" : undefined,
-                desc: `Blended ${kpiLabel} is ${kpiType === "roas" ? `${cur.kpi.toFixed(2)}×` : `$${cur.kpi.toFixed(1)}`} — ${fmtGap} ${above ? "worse than" : "better than"} your ${kpiType === "roas" ? `${kpiTarget}×` : `$${kpiTarget}`} target.`,
+                desc: `This is ${fmtGap} ${above ? "worse than" : "better than"} your ${kpiType === "roas" ? `${kpiTarget}×` : `$${kpiTarget}`} target.`,
                 status: above ? "warn" : "good",
             })
         }
@@ -623,11 +623,11 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
                         <UpperLabel style={{ color: MUTED }}>Spend This Month</UpperLabel>
                         <div
                             className="tabular-nums"
-                            style={{ fontSize: 60, fontWeight: 900, letterSpacing: "-0.015em", lineHeight: 1, color: INK, marginTop: 6 }}
+                            style={{ fontSize: 48, fontWeight: 800, letterSpacing: "-0.015em", lineHeight: 1, color: INK, marginTop: 14 }}
                         >
-                            <span style={{ fontSize: 60, color: INK }}>$</span>
+                            <span style={{ fontSize: 48, color: INK }}>$</span>
                             {cur ? (cur.spend / 1000).toFixed(1) : "—"}
-                            <span style={{ fontSize: 60, color: INK }}>k</span>
+                            <span style={{ fontSize: 48, color: INK }}>k</span>
                         </div>
                         {deltaPct !== null && (
                             <p style={{ marginTop: 8, fontSize: 12, color: INK_2 }}>
@@ -642,12 +642,12 @@ function MonthlySpendSection({ monthlySpend, kpiType, kpiTarget }) {
                         <UpperLabel style={{ color: MUTED }}>Blended {kpiLabel}</UpperLabel>
                         <div
                             className="tabular-nums"
-                            style={{ fontSize: 40, fontWeight: 900, letterSpacing: "-0.01em", lineHeight: 1, color: INK, marginTop: 6 }}
+                            style={{ fontSize: 48, fontWeight: 800, letterSpacing: "-0.01em", lineHeight: 1, color: INK, marginTop: 14 }}
                         >
                             {cur?.kpi != null
                                 ? (kpiType === "roas"
-                                    ? <>{cur.kpi.toFixed(2)}<span style={{ fontSize: 40, color: INK }}>×</span></>
-                                    : <><span style={{ fontSize: 40, color: INK }}>$</span>{cur.kpi.toFixed(2)}</>)
+                                    ? <>{cur.kpi.toFixed(2)}<span style={{ fontSize: 48, color: INK }}>×</span></>
+                                    : <><span style={{ fontSize: 48, color: INK }}>$</span>{cur.kpi.toFixed(2)}</>)
                                 : "—"}
                         </div>
                         {kpiTarget != null && gap !== null && (
@@ -746,12 +746,12 @@ function AudienceSection({ audience }) {
                 style={{ height: 56, background: PAPER, border: `1px solid ${LINE}`, overflow: "hidden", display: "flex" }}
             >
                 <div
-                    style={{ flex: prospPct, background: PROSPECTING_COLOR, color: "#fff", display: "flex", alignItems: "center", padding: "0 16px", fontWeight: 700, fontSize: 13.5 }}
+                    style={{ flex: prospPct, background: PROSPECTING_COLOR, color: "#fff", display: "flex", alignItems: "center", padding: "0 16px", fontWeight: 700, fontSize: 13.5, whiteSpace: "nowrap" }}
                 >
                     Prospecting <span style={{ fontSize: 11, opacity: 0.85, marginLeft: 8, fontWeight: 500 }}>{fmt$(audience.prospectingSpend)} · {prospPct}%</span>
                 </div>
                 <div
-                    style={{ flex: retasPct, background: RETARGETING_COLOR, color: "#fff", display: "flex", alignItems: "center", padding: "0 16px", fontWeight: 700, fontSize: 13.5 }}
+                    style={{ flex: retasPct, background: RETARGETING_COLOR, color: "#fff", display: "flex", alignItems: "center", padding: "0 16px", fontWeight: 700, fontSize: 13.5, whiteSpace: "nowrap" }}
                 >
                     Retargeting <span style={{ fontSize: 11, opacity: 0.85, marginLeft: 8, fontWeight: 500 }}>{fmt$(audience.retargetingSpend)} · {retasPct}%</span>
                 </div>
