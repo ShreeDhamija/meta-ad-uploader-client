@@ -47,11 +47,10 @@ const CTA_OPTIONS = [
 ];
 
 export default function TikTokAdvertiserSettings({ advertisers = [] }) {
-    const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
-        return advertisers.length > 0 ? (advertisers[0].advertiser_id || advertisers[0].id) : null;
-    });
+    const [selectedAdvertiser, setSelectedAdvertiser] = useState(null);
     const { settings, setSettings, loading, refetch } = useTikTokAdvertiserSettings(selectedAdvertiser);
-    const { isTikTokLoggedIn } = useTikTokAuth();
+    const { isTikTokLoggedIn, refreshTikTokUser } = useTikTokAuth();
+    const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [identities, setIdentities] = useState([]);
     const [loadingIdentities, setLoadingIdentities] = useState(false);
@@ -70,12 +69,17 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         };
     }, []);
 
-    // Sync selected advertiser if the list changes and nothing is selected
-    useEffect(() => {
-        if (!selectedAdvertiser && advertisers.length > 0) {
-            setSelectedAdvertiser(advertisers[0].advertiser_id || advertisers[0].id);
+    const handleRefreshAdvertisers = async () => {
+        setRefreshingAdvertisers(true);
+        try {
+            await refreshTikTokUser();
+            toast.success("Advertiser accounts refreshed");
+        } catch (err) {
+            toast.error("Failed to refresh advertiser accounts");
+        } finally {
+            setRefreshingAdvertisers(false);
         }
-    }, [advertisers, selectedAdvertiser]);
+    };
 
     // Track initial settings for dirty detection
     useEffect(() => {
@@ -239,6 +243,14 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             </Command>
                         </PopoverContent>
                     </Popover>
+                    <button
+                        type="button"
+                        onClick={handleRefreshAdvertisers}
+                        disabled={refreshingAdvertisers}
+                        className="disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    >
+                        <RefreshCcw className={`w-4 h-4 text-gray-500 ${refreshingAdvertisers ? 'animate-spin' : ''}`} />
+                    </button>
                 </div>
 
                 {selectedAdvertiser && loading && (

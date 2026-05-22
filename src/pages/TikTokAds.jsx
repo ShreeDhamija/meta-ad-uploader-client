@@ -147,8 +147,12 @@ export default function TikTokAds() {
   }, [tiktokAdvertisers, selectedAdvertiser])
 
   // Sync state with preferences when they load
+  const restoredDefaultsRef = useRef({});
   useEffect(() => {
-    if (advertiserPrefs) {
+    if (advertiserPrefs && selectedAdvertiser) {
+      // Check if we already restored defaults for this advertiser
+      if (restoredDefaultsRef.current[selectedAdvertiser]) return;
+
       // 1. Default Identity (only if not already set)
       if (!selectedIdentity && advertiserPrefs.defaultIdentityId) {
         setSelectedIdentity(advertiserPrefs.defaultIdentityId);
@@ -173,15 +177,20 @@ export default function TikTokAds() {
         }
       }
 
-      // 5. Default Campaign & Ad Group — restore saved defaults
-      if (selectedCampaign.length === 0 && advertiserPrefs.defaultCampaignId) {
-        const val = advertiserPrefs.defaultCampaignId;
-        setSelectedCampaign(Array.isArray(val) ? val : [val]);
+      // 5. Default Campaign & Ad Group — restore saved defaults only when both selections are empty (e.g. on initial load or full clear)
+      if (selectedCampaign.length === 0 && selectedAdGroup.length === 0) {
+        if (advertiserPrefs.defaultCampaignId) {
+          const val = advertiserPrefs.defaultCampaignId;
+          setSelectedCampaign(Array.isArray(val) ? val : [val]);
+        }
+        if (advertiserPrefs.defaultAdGroupId) {
+          const val = advertiserPrefs.defaultAdGroupId;
+          setSelectedAdGroup(Array.isArray(val) ? val : [val]);
+        }
       }
-      if (selectedAdGroup.length === 0 && advertiserPrefs.defaultAdGroupId) {
-        const val = advertiserPrefs.defaultAdGroupId;
-        setSelectedAdGroup(Array.isArray(val) ? val : [val]);
-      }
+
+      // Mark as restored
+      restoredDefaultsRef.current[selectedAdvertiser] = true;
     }
   }, [advertiserPrefs, selectedAdvertiser]);
 

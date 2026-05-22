@@ -343,6 +343,8 @@ export default function TikTokAdCreationForm({
 
   // Fetch Ad Groups on Campaign change
   useEffect(() => {
+    let active = true
+
     if (!selectedCampaign || selectedCampaign.length === 0) {
       setAdGroups([])
       setSelectedAdGroup([])
@@ -356,6 +358,7 @@ export default function TikTokAdCreationForm({
       : (savedDefaultAdGroupId ? [savedDefaultAdGroupId] : [])
 
     setLoadingAdGroups(true)
+    setAdGroups([]) // Clear old ad groups immediately to avoid showing stale data from the previous campaign!
 
     const fetchPromises = selectedCampaign.map(campId => {
       const cacheKey = `tiktok_adgroups_${campId}`
@@ -383,13 +386,31 @@ export default function TikTokAdCreationForm({
 
     Promise.all(fetchPromises)
       .then(results => {
+        if (!active) return
         const combined = results.flat()
         setAdGroups(combined)
-        const validDefaults = defaultAdGroupIds.filter(id => combined.some(g => g.adgroup_id === id))
-        setSelectedAdGroup(validDefaults)
+        setSelectedAdGroup(prevSelected => {
+          // Keep any currently selected ad groups that are actually present in the newly fetched ad groups
+          const stillValidSelected = prevSelected.filter(id => combined.some(g => g.adgroup_id === id))
+          if (stillValidSelected.length > 0) {
+            return stillValidSelected
+          } else {
+            // Fallback to defaults if none of the previously selected ones are still valid
+            return defaultAdGroupIds.filter(id => combined.some(g => g.adgroup_id === id))
+          }
+        })
       })
-      .catch(() => toast.error('Failed to load ad groups'))
-      .finally(() => setLoadingAdGroups(false))
+      .catch(() => {
+        if (!active) return
+        toast.error('Failed to load ad groups')
+      })
+      .finally(() => {
+        if (active) setLoadingAdGroups(false)
+      })
+
+    return () => {
+      active = false
+    }
   }, [selectedCampaign, selectedAdvertiser, setAdGroups, setSelectedAdGroup, tiktokFetch, advertiserPrefs, campaigns])
 
   // Fetch Instant Pages on Advertiser change
