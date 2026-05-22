@@ -1256,7 +1256,6 @@ export default function TikTokAdCreationForm({
                               } else {
                                 setSelectedCampaign(prev => [...prev, c.campaign_id])
                               }
-                              setSelectedAdGroup([])
                             }}
                             className={cn(
                               "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
