@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
-import { ExternalLink, Image as ImageIcon, Video, Zap, ArrowRight } from "lucide-react"
+import { ExternalLink, Image as ImageIcon, Video, Zap, ArrowRight, Loader2, Plus } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -20,6 +20,13 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "https://api.withblip.com"
 // single assets but the analytics use-case is explicitly about combining
 // multiple winners.
 const MIN_SELECTION = 2
+
+// Backend paginates in two tiers to avoid Meta's "please reduce the amount of
+// data" error: initial load fetches LIMIT_INITIAL, "Load more" refetches at
+// LIMIT_EXPANDED. These must agree with FLEX_CANDIDATE_LIMIT_DEFAULT /
+// FLEX_CANDIDATE_LIMIT_MAX on the server.
+const LIMIT_INITIAL = 10
+const LIMIT_EXPANDED = 30
 
 // ── Formatting helpers ──────────────────────────────────────────────────────
 
@@ -93,38 +100,71 @@ function TruncatedWithTooltip({ text, max, className }) {
 
 export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "cpr", refreshKey, className }) {
     const navigate = useNavigate()
-    const [data, setData] = useState(null)            // { candidates: [...] }
-    const [loading, setLoading] = useState(false)
+    const [data, setData] = useState(null)            // { candidates: [...], hasMore }
+    const [loading, setLoading] = useState(false)     // initial fetch in flight
+    const [loadingMore, setLoadingMore] = useState(false)  // "Load more" refetch in flight
     const [error, setError] = useState(null)
     const [selectedAdIds, setSelectedAdIds] = useState(() => new Set())
+    // Track the limit we requested most recently so re-renders (and the Load
+    // More button) know whether we're already at the expanded ceiling.
+    const [currentLimit, setCurrentLimit] = useState(LIMIT_INITIAL)
 
-    // Fetch candidates whenever account / conversion event / mode / refresh changes.
-    useEffect(() => {
-        if (!adAccountId) { setData(null); setSelectedAdIds(new Set()); return }
-        let cancelled = false
-        setLoading(true)
-        setError(null)
-        setSelectedAdIds(new Set())
-
-        const params = new URLSearchParams({ adAccountId, mode })
+    // Shared fetcher used by both the initial effect and the "Load more"
+    // click. Keeps the URL-building / parsing logic in one place. `signal` is
+    // optional and used by the initial-fetch effect for cleanup; "Load more"
+    // doesn't need it since the user explicitly triggered the request.
+    const fetchCandidates = (limit, signal) => {
+        const params = new URLSearchParams({ adAccountId, mode, limit: String(limit) })
         if (conversionEvent) params.set("conversionEvent", conversionEvent)
         if (refreshKey) params.set("rk", String(refreshKey))
-
-        fetch(`${API_BASE_URL}/api/analytics/flex-ads/candidates?${params}`, {
+        return fetch(`${API_BASE_URL}/api/analytics/flex-ads/candidates?${params}`, {
             credentials: "include",
             cache: "no-store",
+            ...(signal ? { signal } : {}),
         })
             .then(r => r.json().then(body => ({ ok: r.ok, body })))
             .then(({ ok, body }) => {
-                if (cancelled) return
                 if (!ok) throw new Error(body.error || "Failed to load")
-                setData(body)
+                return body
             })
-            .catch(err => { if (!cancelled) setError(err.message || "Error loading data") })
-            .finally(() => { if (!cancelled) setLoading(false) })
+    }
 
-        return () => { cancelled = true }
+    // Initial fetch (LIMIT_INITIAL=10) whenever account / event / mode / refresh changes.
+    useEffect(() => {
+        if (!adAccountId) { setData(null); setSelectedAdIds(new Set()); setCurrentLimit(LIMIT_INITIAL); return }
+        const controller = new AbortController()
+        setLoading(true)
+        setError(null)
+        setSelectedAdIds(new Set())
+        setCurrentLimit(LIMIT_INITIAL)
+
+        fetchCandidates(LIMIT_INITIAL, controller.signal)
+            .then(body => setData(body))
+            .catch(err => {
+                if (err.name === "AbortError") return
+                setError(err.message || "Error loading data")
+            })
+            .finally(() => setLoading(false))
+
+        return () => controller.abort()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [adAccountId, conversionEvent, mode, refreshKey])
+
+    // "Load more" — refetch with LIMIT_EXPANDED. Preserves current selection
+    // since the first 10 results are guaranteed to be a prefix of the 30
+    // (both are sorted by spend desc with the same filters).
+    const handleLoadMore = () => {
+        if (loadingMore || currentLimit >= LIMIT_EXPANDED) return
+        setLoadingMore(true)
+        setError(null)
+        fetchCandidates(LIMIT_EXPANDED)
+            .then(body => {
+                setData(body)
+                setCurrentLimit(LIMIT_EXPANDED)
+            })
+            .catch(err => setError(err.message || "Failed to load more"))
+            .finally(() => setLoadingMore(false))
+    }
 
     const candidates = useMemo(() => data?.candidates ?? [], [data])
 
@@ -190,9 +230,8 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
                             )}
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">
-                            Top {candidates.length || 30} highest-spending ads from the last 13 days (created within last 14 days,
-                            excluding existing flex ads and carousels). Pick winners, then continue in the launcher to set campaign,
-                            copy, and link.
+                            Highest-spending ads from the last 13 days (created within last 14 days, excluding existing flex ads
+                            and carousels). Pick winners, then continue in the launcher to set campaign, copy, and link.
                         </p>
                     </div>
 
@@ -301,6 +340,33 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
                                     })}
                                 </tbody>
                             </table>
+                        </div>
+                    )}
+
+                    {/* "Load more" — only visible when the backend signaled there
+                        are additional candidates beyond the initial 10. Refetches
+                        with limit=30; the first 10 are guaranteed to be a prefix
+                        of the 30 so selection is preserved. */}
+                    {!loading && data?.hasMore && currentLimit < LIMIT_EXPANDED && (
+                        <div className="mt-3 flex justify-center">
+                            <Button
+                                variant="outline"
+                                onClick={handleLoadMore}
+                                disabled={loadingMore}
+                                className="gap-2 rounded-xl text-sm"
+                            >
+                                {loadingMore ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Loading more…
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="h-4 w-4" />
+                                        Load more ({LIMIT_EXPANDED - LIMIT_INITIAL} more)
+                                    </>
+                                )}
+                            </Button>
                         </div>
                     )}
 
