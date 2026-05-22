@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
-import { ExternalLink, Image as ImageIcon, Video, Zap, ArrowRight, Loader2, Plus } from "lucide-react"
+import { ExternalLink, Image as ImageIcon, Video, BicepsFlexed, ArrowRight, Loader2, Plus } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -56,6 +56,31 @@ function buildAdManagerUrl(adId) {
 }
 
 // ── Small UI subcomponents ──────────────────────────────────────────────────
+
+// Small fixed-size thumbnail with image-load fallback to a media-type icon.
+// The url for image ads comes from `asset.url` (creative.image_url chain) and
+// for videos from `asset.thumbnail_url` (creative.thumbnail_url chain). Both
+// are resolved server-side in getCreativePreviewUrl.
+function Thumbnail({ url, type, name }) {
+    const [errored, setErrored] = useState(false)
+    if (url && !errored) {
+        return (
+            <img
+                src={url}
+                alt={name || ""}
+                title={name || ""}
+                className="h-10 w-10 flex-shrink-0 rounded-md object-cover"
+                onError={() => setErrored(true)}
+            />
+        )
+    }
+    const Icon = type === "video" ? Video : ImageIcon
+    return (
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-gray-100">
+            <Icon className="h-4 w-4 text-gray-400" />
+        </div>
+    )
+}
 
 function MediaTypeBadge({ type }) {
     if (type === "video") {
@@ -210,9 +235,12 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
         })
     }
 
+    // When nothing is selected, leave the label empty — the launch button on
+    // its own is a sufficient call-to-action. As soon as the user starts
+    // picking, show progress toward the minimum and final selection counts.
     const selectionLabel =
         selectedAdIds.size === 0
-            ? `Select at least ${MIN_SELECTION} ads to launch a flex ad`
+            ? ""
             : selectedAdIds.size < MIN_SELECTION
                 ? `Select ${MIN_SELECTION - selectedAdIds.size} more ad${MIN_SELECTION - selectedAdIds.size === 1 ? "" : "s"}`
                 : `${selectedAdIds.size} of ${candidates.length} selected`
@@ -223,15 +251,14 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
                 <CardContent className="p-6">
                     <div className="mb-4 px-1">
                         <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                            <Zap className="h-5 w-5 text-amber-500" />
+                            <BicepsFlexed className="h-5 w-5 text-purple-500" />
                             Flex Ads — Winner Bundle
                             {candidates.length > 0 && (
                                 <span className="text-base font-normal text-gray-400">({candidates.length})</span>
                             )}
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">
-                            Highest-spending ads from the last 13 days (created within last 14 days, excluding existing flex ads
-                            and carousels). Pick winners, then continue in the launcher to set campaign, copy, and link.
+                            Highest-spending ads from the last 14 days (excluding existing flex ads and carousels).
                         </p>
                     </div>
 
@@ -257,6 +284,9 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
                                                 aria-label="Select all"
                                             />
                                         </th>
+                                        {/* Empty header above the thumbnail column — the asset preview
+                                            doesn't need a label, and the Ad name column reads cleaner without one. */}
+                                        <th className="w-14 px-2 py-2.5" aria-hidden="true" />
                                         <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase tracking-wide text-gray-500">
                                             Ad
                                         </th>
@@ -291,6 +321,13 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
                                                         checked={checked}
                                                         onCheckedChange={() => toggleOne(c.adId)}
                                                         aria-label={`Select ${c.adName}`}
+                                                    />
+                                                </td>
+                                                <td className="px-2 py-2 align-middle">
+                                                    <Thumbnail
+                                                        url={c.asset?.url || c.asset?.thumbnail_url || null}
+                                                        type={c.mediaType}
+                                                        name={c.adName}
                                                     />
                                                 </td>
                                                 <td className="px-3 py-2.5 align-middle">
@@ -379,7 +416,6 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
                             disabled={!canLaunch}
                             className="h-10 gap-2 rounded-xl bg-blue-600 px-5 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            <Zap className="h-4 w-4" />
                             Launch Flex Ads
                             <ArrowRight className="h-4 w-4" />
                         </Button>
