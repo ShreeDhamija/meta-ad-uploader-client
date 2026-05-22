@@ -125,7 +125,14 @@ function TruncatedWithTooltip({ text, max, className }) {
 
 export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "cpr", refreshKey, className }) {
     const navigate = useNavigate()
-    const [data, setData] = useState(null)            // { candidates: [...], hasMore }
+    // `data` is tagged with the accountId it was fetched for. This lets us
+    // detect the brief render between an adAccountId prop change and the
+    // useEffect re-running — during that gap, raw state still reflects the
+    // OLD account but the prop is the NEW one. By checking
+    // `data.accountId !== adAccountId` we can treat the component as
+    // loading until the new effect's setData lands, avoiding a one-frame
+    // flash of the previous account's table.
+    const [data, setData] = useState(null)            // { accountId, candidates, hasMore } | null
     // Initial `loading` is derived from the prop: if the parent passes an
     // adAccountId on first mount, we know a fetch is about to fire — start in
     // loading state so the very first paint shows the Helix instead of
@@ -137,6 +144,11 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
     // Track the limit we requested most recently so re-renders (and the Load
     // More button) know whether we're already at the expanded ceiling.
     const [currentLimit, setCurrentLimit] = useState(LIMIT_INITIAL)
+
+    // Derived loading: true if a fetch is explicitly in flight OR our cached
+    // data belongs to a different account than the current prop. Use this
+    // (not raw `loading`) in the render condition.
+    const isLoading = loading || (!!adAccountId && data != null && data.accountId !== adAccountId)
 
     // Shared fetcher used by both the initial effect and the "Load more"
     // click. Keeps the URL-building / parsing logic in one place.
@@ -180,8 +192,13 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
         setSelectedAdIds(new Set())
         setCurrentLimit(LIMIT_INITIAL)
 
+        // Capture the adAccountId we're fetching for so the response is
+        // tagged correctly even if the prop changes between request and
+        // response. (The cancelled flag would normally catch this, but
+        // tagging gives us a single source of truth that survives any race.)
+        const requestedAccountId = adAccountId
         fetchCandidates(LIMIT_INITIAL)
-            .then(body => { if (!cancelled) setData(body) })
+            .then(body => { if (!cancelled) setData({ ...body, accountId: requestedAccountId }) })
             .catch(err => { if (!cancelled) setError(err.message || "Error loading data") })
             .finally(() => { if (!cancelled) setLoading(false) })
 
@@ -196,16 +213,28 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
         if (loadingMore || currentLimit >= LIMIT_EXPANDED) return
         setLoadingMore(true)
         setError(null)
+        const requestedAccountId = adAccountId
         fetchCandidates(LIMIT_EXPANDED)
             .then(body => {
-                setData(body)
+                // Defensive: ignore the response if the user switched accounts
+                // mid-Load-More. Without this, the expanded data would leak
+                // into the new account's view tagged with the wrong id.
+                if (requestedAccountId !== adAccountId) return
+                setData({ ...body, accountId: requestedAccountId })
                 setCurrentLimit(LIMIT_EXPANDED)
             })
             .catch(err => setError(err.message || "Failed to load more"))
             .finally(() => setLoadingMore(false))
     }
 
-    const candidates = useMemo(() => data?.candidates ?? [], [data])
+    // Only surface candidates if `data` belongs to the current account. When
+    // adAccountId changes, React renders once with the new prop before the
+    // useEffect fires — during that gap, returning [] (and showing isLoading
+    // = true above) prevents stale rows from flashing through.
+    const candidates = useMemo(() => {
+        if (!data || data.accountId !== adAccountId) return []
+        return data.candidates ?? []
+    }, [data, adAccountId])
 
     const allSelected = candidates.length > 0 && selectedAdIds.size === candidates.length
     const toggleAll = () => {
@@ -276,7 +305,7 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
                         </p>
                     </div>
 
-                    {loading ? (
+                    {isLoading ? (
                         <div className="flex h-[200px] items-center justify-center">
                             <Helix size="36" speed="2.5" color="#3b82f6" />
                         </div>
@@ -398,7 +427,7 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
                         are additional candidates beyond the initial 10. Refetches
                         with limit=30; the first 10 are guaranteed to be a prefix
                         of the 30 so selection is preserved. */}
-                    {!loading && data?.hasMore && currentLimit < LIMIT_EXPANDED && (
+                    {!isLoading && data?.hasMore && data?.accountId === adAccountId && currentLimit < LIMIT_EXPANDED && (
                         <div className="mt-3 flex justify-center">
                             <Button
                                 variant="outline"
