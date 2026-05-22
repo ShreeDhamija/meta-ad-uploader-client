@@ -869,7 +869,7 @@ export default function TikTokAdCreationForm({
     }
 
     if (!adName.trim()) return toast.error('Ad name is required')
-    if (!cta) return toast.error('Please select a Call to Action')
+    if (!cta || cta.length === 0) return toast.error('Please select at least one Call to Action')
 
     const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0
     if (adType === 'NORMAL' && !videoFile && !isCloudFile) {
@@ -1022,24 +1022,28 @@ export default function TikTokAdCreationForm({
           (isDuplicatingAdGroupMode ? newAdGroupName.trim() : adgroupId)
         toast.info(`Creating ad in: ${adGroupName}...`)
 
-        const creative = {
-          video_id: videoId,
-          ad_text: adText,
-          call_to_action: cta,
-          ad_name: `${adName.trim()}`,
-          identity_type: currentIdentityType,
-          landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-          ...(urlMode === 'WEBSITE'
-            ? { landing_page_url: finalUrl }
-            : { page_id: landingUrl }
-          ),
-          ...(adType === 'SPARK' ? {
-            is_spark_ad: true,
-            spark_ad_auth_code: sparkAuthCode.trim(),
-            adType: 'SPARK'
-          } : {})
-        }
-        if (currentIdentityId) creative.identity_id = currentIdentityId
+        const creativeCTAs = Array.isArray(cta) ? cta : [cta];
+        const creatives = creativeCTAs.map((singleCta) => {
+          const creative = {
+            video_id: videoId,
+            ad_text: adText,
+            call_to_action: singleCta,
+            ad_name: creativeCTAs.length > 1 ? `${adName.trim()} - ${singleCta}` : `${adName.trim()}`,
+            identity_type: currentIdentityType,
+            landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+            ...(urlMode === 'WEBSITE'
+              ? { landing_page_url: finalUrl }
+              : { page_id: landingUrl }
+            ),
+            ...(adType === 'SPARK' ? {
+              is_spark_ad: true,
+              spark_ad_auth_code: sparkAuthCode.trim(),
+              adType: 'SPARK'
+            } : {})
+          }
+          if (currentIdentityId) creative.identity_id = currentIdentityId
+          return creative;
+        })
 
         const createPayload = {
           advertiserId: selectedAdvertiser,
@@ -1048,7 +1052,7 @@ export default function TikTokAdCreationForm({
           identityType: currentIdentityType,
           adName: adName.trim(),
           adType: adType,
-          creatives: [creative]
+          creatives: creatives
         }
 
         console.log(`[TikTok Submit] 🚀 Sending create-ad payload for ${adgroupId}:`, JSON.stringify(createPayload, null, 2))
@@ -1085,7 +1089,7 @@ export default function TikTokAdCreationForm({
       setAdName('')
       setAdText('')
       setLandingUrl('')
-      setCta('SHOP_NOW')
+      setCta(['SHOP_NOW'])
       setVideoFile(null)
       setVideoPreview(null)
       if (setFiles) setFiles([])
@@ -1937,7 +1941,7 @@ export default function TikTokAdCreationForm({
             {/* 5. Call to Action & Landing Page URL Stacked */}
             <div className="space-y-6">
 
-              {/* Call to Action Single Selector */}
+              {/* Call to Action Multi Selector */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   {renderDiffMark("cta")}
@@ -1948,40 +1952,44 @@ export default function TikTokAdCreationForm({
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      role="combobox"
-                      className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                      className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-6"
                     >
-                      <span className="truncate text-sm font-medium">
-                        {cta
-                          ? CTA_OPTIONS.find(o => o.value === cta)?.label || cta
-                          : "Select a Call to Action"}
+                      <span className="text-sm truncate">
+                        {Array.isArray(cta) && cta.length > 0
+                          ? cta.map(v => CTA_OPTIONS.find(o => o.value === v)?.label || v).join(", ")
+                          : "None selected"}
                       </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                  <PopoverContent className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                     <Command>
                       <CommandInput placeholder="Search CTAs..." className="bg-transparent border-none focus:ring-0" />
                       <CommandEmpty>No CTA found.</CommandEmpty>
                       <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                         <CommandGroup>
-                          {CTA_OPTIONS.map((opt) => (
-                            <CommandItem
-                              key={opt.value}
-                              value={opt.value}
-                              onSelect={() => {
-                                setCta(opt.value)
-                                setOpenCta(false)
-                              }}
-                              className={cn(
-                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                cta === opt.value ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                              )}
-                            >
-                              <span className="text-sm font-medium">{opt.label}</span>
-                              {cta === opt.value && <Check className="ml-auto h-4 w-4 text-black" />}
-                            </CommandItem>
-                          ))}
+                          {CTA_OPTIONS.map((opt) => {
+                            const isSelected = Array.isArray(cta) && cta.includes(opt.value);
+                            return (
+                              <CommandItem
+                                key={opt.value}
+                                value={opt.value}
+                                onSelect={() => {
+                                  const prev = Array.isArray(cta) ? cta : [];
+                                  const next = prev.includes(opt.value)
+                                    ? prev.filter(v => v !== opt.value)
+                                    : [...prev, opt.value];
+                                  setCta(next);
+                                }}
+                                className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                              >
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}>
+                                  {isSelected && <Check className="w-3 h-3" />}
+                                </div>
+                                <span className="text-xs font-medium">{opt.label}</span>
+                              </CommandItem>
+                            );
+                          })}
                         </CommandGroup>
                       </CommandList>
                     </Command>

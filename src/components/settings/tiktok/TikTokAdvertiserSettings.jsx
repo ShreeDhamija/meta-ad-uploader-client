@@ -285,7 +285,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         </div>
 
                         <div>
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1 block">TikTok Identity</label>
+                            <label className="text-sm text-gray-500 mb-1 block">Identity</label>
                             <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -375,7 +375,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             <h3 className="font-medium text-[14px] text-zinc-950">Default Call to Actions</h3>
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest block">Multi-select CTAs</label>
+                            <label className="text-sm text-gray-500 mb-1 block">Multi-select CTAs</label>
                             <Popover open={openCta} onOpenChange={setOpenCta}>
                                 <PopoverTrigger asChild>
                                     <Button

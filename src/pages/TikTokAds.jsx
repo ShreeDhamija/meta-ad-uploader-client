@@ -53,7 +53,7 @@ export default function TikTokAds() {
   const [selectedAdvertiser, setSelectedAdvertiser] = useState('')
   const [adName, setAdName] = useState('')
   const [adText, setAdText] = useState('')
-  const [cta, setCta] = useState('SHOP_NOW') // Now a single string default value
+  const [cta, setCta] = useState(['SHOP_NOW'])
   const [landingUrl, setLandingUrl] = useState('')
   const [videoFile, setVideoFile] = useState(null)
   const [videoPreview, setVideoPreview] = useState(null)
@@ -158,9 +158,9 @@ export default function TikTokAds() {
         setSelectedIdentity(advertiserPrefs.defaultIdentityId);
       }
 
-      // 2. Default CTA (string conversion)
-      if (cta === 'SHOP_NOW' && advertiserPrefs.defaultCTAs?.length > 0) {
-        setCta(advertiserPrefs.defaultCTAs[0]);
+      // 2. Default CTA
+      if (Array.isArray(cta) && cta.length === 1 && cta[0] === 'SHOP_NOW' && advertiserPrefs.defaultCTAs?.length > 0) {
+        setCta(advertiserPrefs.defaultCTAs);
       }
 
       // 3. Default Landing URL
@@ -258,7 +258,8 @@ export default function TikTokAds() {
     if (!snapshot) return;
     setAdName(snapshot.adName || "");
     setAdText(snapshot.adText || "");
-    setCta(snapshot.cta || "SHOP_NOW");
+    const rawCta = snapshot.cta;
+    setCta(Array.isArray(rawCta) ? rawCta : (rawCta ? [rawCta] : ["SHOP_NOW"]));
     setLandingUrl(snapshot.landingUrl || "");
     setSelectedIdentity(snapshot.selectedIdentity || "");
     setSparkAuthCode(snapshot.sparkAuthCode || "");
