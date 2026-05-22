@@ -126,7 +126,11 @@ function TruncatedWithTooltip({ text, max, className }) {
 export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "cpr", refreshKey, className }) {
     const navigate = useNavigate()
     const [data, setData] = useState(null)            // { candidates: [...], hasMore }
-    const [loading, setLoading] = useState(false)     // initial fetch in flight
+    // Initial `loading` is derived from the prop: if the parent passes an
+    // adAccountId on first mount, we know a fetch is about to fire — start in
+    // loading state so the very first paint shows the Helix instead of
+    // flashing the empty-state branch for one frame.
+    const [loading, setLoading] = useState(() => !!adAccountId)
     const [loadingMore, setLoadingMore] = useState(false)  // "Load more" refetch in flight
     const [error, setError] = useState(null)
     const [selectedAdIds, setSelectedAdIds] = useState(() => new Set())
@@ -135,17 +139,14 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
     const [currentLimit, setCurrentLimit] = useState(LIMIT_INITIAL)
 
     // Shared fetcher used by both the initial effect and the "Load more"
-    // click. Keeps the URL-building / parsing logic in one place. `signal` is
-    // optional and used by the initial-fetch effect for cleanup; "Load more"
-    // doesn't need it since the user explicitly triggered the request.
-    const fetchCandidates = (limit, signal) => {
+    // click. Keeps the URL-building / parsing logic in one place.
+    const fetchCandidates = (limit) => {
         const params = new URLSearchParams({ adAccountId, mode, limit: String(limit) })
         if (conversionEvent) params.set("conversionEvent", conversionEvent)
         if (refreshKey) params.set("rk", String(refreshKey))
         return fetch(`${API_BASE_URL}/api/analytics/flex-ads/candidates?${params}`, {
             credentials: "include",
             cache: "no-store",
-            ...(signal ? { signal } : {}),
         })
             .then(r => r.json().then(body => ({ ok: r.ok, body })))
             .then(({ ok, body }) => {
@@ -155,23 +156,36 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
     }
 
     // Initial fetch (LIMIT_INITIAL=10) whenever account / event / mode / refresh changes.
+    //
+    // Uses the `cancelled` flag pattern (matches TrendingCreative) — checked
+    // in EVERY callback including `.finally`. Subtle but critical: if an
+    // AbortController is used and only the fetch is aborted, the stale
+    // `.finally(() => setLoading(false))` still fires for the OLD effect and
+    // overrides the NEW effect's `setLoading(true)` — producing a flash of
+    // the previous account's data between the loading state and the new
+    // fetch resolving. The cancelled flag prevents that.
     useEffect(() => {
-        if (!adAccountId) { setData(null); setSelectedAdIds(new Set()); setCurrentLimit(LIMIT_INITIAL); return }
-        const controller = new AbortController()
+        if (!adAccountId) {
+            setData(null); setLoading(false); setError(null)
+            setSelectedAdIds(new Set()); setCurrentLimit(LIMIT_INITIAL)
+            return
+        }
+        let cancelled = false
         setLoading(true)
         setError(null)
+        // Clear stale data proactively. Without this, a slow refetch lets the
+        // previous account's candidates remain visible briefly even with the
+        // loading spinner active in some render orders.
+        setData(null)
         setSelectedAdIds(new Set())
         setCurrentLimit(LIMIT_INITIAL)
 
-        fetchCandidates(LIMIT_INITIAL, controller.signal)
-            .then(body => setData(body))
-            .catch(err => {
-                if (err.name === "AbortError") return
-                setError(err.message || "Error loading data")
-            })
-            .finally(() => setLoading(false))
+        fetchCandidates(LIMIT_INITIAL)
+            .then(body => { if (!cancelled) setData(body) })
+            .catch(err => { if (!cancelled) setError(err.message || "Error loading data") })
+            .finally(() => { if (!cancelled) setLoading(false) })
 
-        return () => controller.abort()
+        return () => { cancelled = true }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [adAccountId, conversionEvent, mode, refreshKey])
 
