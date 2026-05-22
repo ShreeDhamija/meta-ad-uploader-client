@@ -45,6 +45,25 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
+const isVideoFile = (file) => {
+  if (!file) return false;
+  const type = file.type || file.mimeType || "";
+  if (type.startsWith("video/") || type === "video/quicktime") return true;
+
+  const name = file.name || file.originalname || "";
+  return /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(name);
+};
+
+const getFileId = (file) => {
+  if (file.isDrive) return file.id;
+  if (file.isDropbox) return file.dropboxId;
+  if (file.isFrameio) return file.frameioId;
+  if (file.isMetaLibrary) return file.type === 'image' ? file.hash : file.id;
+  return file.uniqueId || file.name;
+};
+
 export default function TikTokAds() {
   const navigate = useNavigate()
   const { isTikTokLoggedIn, tiktokAdvertisers, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
@@ -97,6 +116,257 @@ export default function TikTokAds() {
   const [fileVariantMap, setFileVariantMap] = useState({})
   const [groupVariantMap, setGroupVariantMap] = useState({})
   const [postVariantMap, setPostVariantMap] = useState({})
+
+  // Video thumbnail processing refs and effects
+  const processingRef = useRef(new Set());
+  const videoThumbsRef = useRef(videoThumbs);
+
+  useEffect(() => {
+    videoThumbsRef.current = videoThumbs;
+  }, [videoThumbs]);
+
+  const generateThumbnail = useCallback((file) => {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement("video");
+
+      const cleanup = () => {
+        URL.revokeObjectURL(url);
+        video.remove();
+        clearTimeout(timeout);
+      };
+
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject("Timeout");
+      }, 8000);
+
+      video.preload = "metadata";
+      video.src = url;
+      video.muted = true;
+      video.playsInline = true;
+      video.currentTime = 0.1;
+
+      video.addEventListener("loadeddata", () => {
+        clearTimeout(timeout);
+        try {
+          const canvas = document.createElement("canvas");
+          const MAX_THUMB_SIZE = 320;
+          const scale = Math.min(1, MAX_THUMB_SIZE / Math.max(video.videoWidth, video.videoHeight));
+
+          canvas.width = video.videoWidth * scale;
+          canvas.height = video.videoHeight * scale;
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const dataURL = canvas.toDataURL("image/jpeg", 0.7);
+
+          cleanup();
+          resolve(dataURL);
+        } catch (err) {
+          cleanup();
+          reject(err);
+        }
+      });
+
+      video.addEventListener("error", () => {
+        cleanup();
+        reject("Error generating thumbnail");
+      });
+    });
+  }, []);
+
+  const getDriveVideoThumbnail = useCallback(async (file, signal) => {
+    if (file.pickerThumbnail) {
+      return file.pickerThumbnail.replace(/=s\d+$/, '=w400-h300');
+    }
+    try {
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${file.id}?fields=thumbnailLink`,
+        {
+          headers: { Authorization: `Bearer ${file.accessToken}` },
+          signal: signal
+        }
+      );
+      if (!response.ok) throw new Error('Failed to fetch Drive thumbnail');
+      const data = await response.json();
+      if (data.thumbnailLink) {
+        return data.thumbnailLink.replace(/=s\d+$/, '=w400-h300');
+      }
+      return "https://api.withblip.com/thumbnail.jpg";
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      return "https://api.withblip.com/thumbnail.jpg";
+    }
+  }, []);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    const processThumbnails = async () => {
+      // --- 1. LOCAL FILES ---
+      const videoFiles = files.filter(file => {
+        const fileId = getFileId(file);
+        return isVideoFile(file) &&
+          !file.isDrive &&
+          !file.isDropbox &&
+          !videoThumbsRef.current[fileId] &&
+          !processingRef.current.has(fileId);
+      });
+
+      if (videoFiles.length > 0) {
+        videoFiles.forEach(file => processingRef.current.add(getFileId(file)));
+        const MAX_CONCURRENT = 2;
+        const queue = [...videoFiles];
+
+        const processNext = async () => {
+          if (queue.length === 0 || abortController.signal.aborted) return;
+          const file = queue.shift();
+          const fileId = getFileId(file);
+
+          try {
+            const thumb = await generateThumbnail(file);
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({ ...prev, [fileId]: thumb }));
+            }
+          } catch (err) {
+            console.error(`Thumbnail error for ${file.name}:`, err);
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({
+                ...prev,
+                [fileId]: "https://api.withblip.com/thumbnail.jpg"
+              }));
+            }
+          } finally {
+            processingRef.current.delete(fileId);
+            if (queue.length > 0 && !abortController.signal.aborted) {
+              if ('requestIdleCallback' in window) {
+                requestIdleCallback(() => processNext(), { timeout: 100 });
+              } else {
+                setTimeout(processNext, 0);
+              }
+            }
+          }
+        };
+
+        const initialPromises = [];
+        for (let i = 0; i < Math.min(MAX_CONCURRENT, videoFiles.length); i++) {
+          initialPromises.push(processNext());
+        }
+        await Promise.all(initialPromises);
+      }
+
+      // --- 2. GOOGLE DRIVE ---
+      const driveFilesNeedingThumbs = driveFiles.filter(file => {
+        const fileId = getFileId(file);
+        return isVideoFile(file) &&
+          !videoThumbsRef.current[fileId] &&
+          !processingRef.current.has(fileId);
+      });
+
+      if (driveFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        driveFilesNeedingThumbs.forEach(file => processingRef.current.add(getFileId(file)));
+        const MAX_DRIVE_CONCURRENT = 3;
+        const driveQueue = [...driveFilesNeedingThumbs];
+
+        const processNextDrive = async () => {
+          if (driveQueue.length === 0 || abortController.signal.aborted) return;
+          const file = driveQueue.shift();
+          const fileId = getFileId(file);
+
+          try {
+            const thumbUrl = await getDriveVideoThumbnail(file, abortController.signal);
+            if (!abortController.signal.aborted) {
+              setVideoThumbs(prev => ({ ...prev, [fileId]: thumbUrl }));
+            }
+          } finally {
+            processingRef.current.delete(fileId);
+            if (driveQueue.length > 0 && !abortController.signal.aborted) {
+              processNextDrive();
+            }
+          }
+        };
+
+        const drivePromises = [];
+        for (let i = 0; i < Math.min(MAX_DRIVE_CONCURRENT, driveFilesNeedingThumbs.length); i++) {
+          drivePromises.push(processNextDrive());
+        }
+      }
+
+      // --- 3. DROPBOX ---
+      const dropboxFilesNeedingThumbs = dropboxFiles.filter(file => {
+        const fileId = file.dropboxId;
+        return !videoThumbsRef.current[fileId] && !processingRef.current.has(fileId);
+      });
+
+      if (dropboxFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        dropboxFilesNeedingThumbs.forEach(file => processingRef.current.add(file.dropboxId));
+        const BATCH_SIZE = 25;
+
+        for (let i = 0; i < dropboxFilesNeedingThumbs.length; i += BATCH_SIZE) {
+          if (abortController.signal.aborted) break;
+          const batch = dropboxFilesNeedingThumbs.slice(i, i + BATCH_SIZE);
+          const filesData = batch.map(f => ({ id: f.dropboxId, link: f.link }));
+
+          try {
+            const response = await fetch(`${API_BASE_URL}/api/dropbox/thumbnails/batch`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ files: filesData }),
+              signal: abortController.signal
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              const newThumbs = {};
+              batch.forEach(file => {
+                const dId = file.dropboxId;
+                if (data.thumbnails && data.thumbnails[dId]) {
+                  newThumbs[dId] = data.thumbnails[dId];
+                } else {
+                  newThumbs[dId] = file.icon || "https://api.withblip.com/thumbnail.jpg";
+                }
+              });
+              setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+            }
+          } catch (error) {
+            if (error.name === 'AbortError') return;
+            console.error("Dropbox batch error:", error);
+            const failedThumbs = {};
+            batch.forEach(f => {
+              failedThumbs[f.dropboxId] = "https://api.withblip.com/thumbnail.jpg";
+            });
+            setVideoThumbs(prev => ({ ...prev, ...failedThumbs }));
+          } finally {
+            batch.forEach(f => processingRef.current.delete(f.dropboxId));
+          }
+        }
+      }
+
+      // --- 4. FRAME.IO ---
+      const frameioFilesNeedingThumbs = (frameioFiles || []).filter(file => {
+        const fileId = file.frameioId;
+        return !videoThumbsRef.current[fileId] && !processingRef.current.has(fileId);
+      });
+
+      if (frameioFilesNeedingThumbs.length > 0 && !abortController.signal.aborted) {
+        const newThumbs = {};
+        frameioFilesNeedingThumbs.forEach(file => {
+          newThumbs[file.frameioId] = file.pickerThumbnail || "https://api.withblip.com/thumbnail.jpg";
+        });
+        setVideoThumbs(prev => ({ ...prev, ...newThumbs }));
+      }
+    };
+
+    processThumbnails();
+
+    return () => {
+      abortController.abort();
+      processingRef.current.clear();
+    };
+  }, [files, driveFiles, dropboxFiles, frameioFiles, generateThumbnail, getDriveVideoThumbnail, setVideoThumbs]);
+
 
   // Load preferences for selected advertiser
   const { settings: advertiserPrefs } = useTikTokAdvertiserSettings(selectedAdvertiser)
