@@ -17,17 +17,17 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
 export default function TikTokCampaignDuplicator({ advertiserId }) {
   const { tiktokFetch } = useTikTokAuth()
-  
+
   const [campaigns, setCampaigns] = useState([])
   const [loadingCampaigns, setLoadingCampaigns] = useState(false)
   const [selectedCampaign, setSelectedCampaign] = useState('')
-  
+
   const [newCampaignName, setNewCampaignName] = useState('')
   const [adgroupSuffix, setAdgroupSuffix] = useState('')
   const [adSuffix, setAdSuffix] = useState('')
   const [duplicateAds, setDuplicateAds] = useState(true)
   const [status, setStatus] = useState('DISABLE')
-  
+
   const [isDuplicating, setIsDuplicating] = useState(false)
   const [duplicationResult, setDuplicationResult] = useState(null)
 
@@ -128,7 +128,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 space-y-6">
-          
+
           {/* Source Selection */}
           <div className="space-y-4">
             <div className="space-y-2">
@@ -137,8 +137,8 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                   <CampaignIcon className="w-3.5 h-3.5" />
                   Source Campaign
                 </Label>
-                <RefreshCcw 
-                  className={cn("h-3.5 w-3.5 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors", loadingCampaigns && "animate-spin")} 
+                <RefreshCcw
+                  className={cn("h-3.5 w-3.5 text-gray-400 cursor-pointer hover:text-gray-600 transition-colors", loadingCampaigns && "animate-spin")}
                   onClick={fetchCampaigns}
                 />
               </div>
@@ -161,14 +161,14 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent 
-                  className="p-0 bg-white shadow-lg rounded-2xl" 
+                <PopoverContent
+                  className="p-0 bg-white shadow-lg rounded-2xl"
                   align="start"
                   style={{ width: 'var(--radix-popover-trigger-width)' }}
                 >
                   <Command>
-                    <CommandInput 
-                      placeholder="Search campaigns..." 
+                    <CommandInput
+                      placeholder="Search campaigns..."
                       value={campaignSearch}
                       onValueChange={setCampaignSearch}
                       className="bg-transparent border-none focus:ring-0"
@@ -176,7 +176,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                     <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
                       <CommandEmpty>No campaign found.</CommandEmpty>
                       <CommandGroup>
-                        {campaigns.filter(c => 
+                        {campaigns.filter(c =>
                           (c.campaign_name || '').toLowerCase().includes(campaignSearch.toLowerCase())
                         ).map(c => (
                           <CommandItem
@@ -191,11 +191,16 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                               selectedCampaign === c.campaign_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
                             )}
                           >
-                            <div className="flex flex-col">
-                              <span className="font-medium">{c.campaign_name}</span>
-                              <span className="text-[10px] text-gray-400 font-mono">ID: {c.campaign_id}</span>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex flex-col">
+                                <span className={cn("font-medium", c.operation_status === "DISABLE" && "text-gray-400")}>{c.campaign_name}</span>
+                                <span className="text-[10px] text-gray-400 font-mono">ID: {c.campaign_id}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {c.operation_status === "ENABLE" && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                {selectedCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
+                              </div>
                             </div>
-                            {selectedCampaign === c.campaign_id && <Check className="ml-auto h-4 w-4 text-black" />}
                           </CommandItem>
                         ))}
                       </CommandGroup>
@@ -250,7 +255,7 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                 <Label className="text-sm font-semibold text-gray-900">Duplicate Ads</Label>
                 <p className="text-xs text-gray-500">Also recreate ads under each ad group</p>
               </div>
-              <Switch 
+              <Switch
                 checked={duplicateAds}
                 onCheckedChange={setDuplicateAds}
               />
