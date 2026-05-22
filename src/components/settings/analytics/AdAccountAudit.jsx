@@ -306,7 +306,7 @@ function InsightTile({ label, value, valueUnit, valuePrefix, desc, status = "neu
                     boxShadow: `0 0 0 4px ${colors.ring}`,
                 }}
             />
-            <UpperLabel style={{ fontSize: 9.5, color: MUTED, marginBottom: 14, paddingRight: 20 }}>
+            <UpperLabel style={{ fontSize: 9.5, color: MUTED, marginBottom: 22, paddingRight: 20 }}>
                 {label}
             </UpperLabel>
             <div

@@ -37,6 +37,7 @@ const PAPER = "#FFFFFF"
 const PAPER_2 = "#F8F9FB"
 
 const GOOD = "#22c55e"
+const GOOD_DEEP = "#15803d"
 const WARN = "#f59e0b"
 const BAD = "#ef4444"
 const GOOD_SOFT = "rgba(34,197,94,0.08)"
@@ -230,7 +231,7 @@ function InsightTile({ label, value, valuePrefix, valueUnit, desc, status = "neu
                     boxShadow: `0 0 0 4px ${colors.ring}`,
                 }}
             />
-            <SmallLabel style={{ fontSize: 9.5, marginBottom: 14, paddingRight: 20 }}>{label}</SmallLabel>
+            <SmallLabel style={{ fontSize: 9.5, marginBottom: 22, paddingRight: 20 }}>{label}</SmallLabel>
             <div
                 className="tabular-nums"
                 style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-0.01em", lineHeight: 1, color: INK }}
@@ -478,15 +479,15 @@ function AnomalySection({ anomalyPeriod, previousPeriod, culprits, mode, kpiLabe
                     </div>
                 </div>
                 <div className="rounded-3xl p-4" style={{ background: GOOD_SOFT, border: `1px solid rgba(34,197,94,0.22)` }}>
-                    <SmallLabel style={{ color: GOOD, marginBottom: 8 }}>Comparison period ({previousPeriod.days}d)</SmallLabel>
+                    <SmallLabel style={{ color: GOOD_DEEP, marginBottom: 8 }}>Comparison period ({previousPeriod.days}d)</SmallLabel>
                     <div className="flex items-baseline gap-6">
                         <div>
-                            <SmallLabel style={{ color: GOOD }}>{kpiLabel}</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD, letterSpacing: "-0.005em" }}>{fmtKpi(previousPeriod.avgKpi, mode)}</p>
+                            <SmallLabel style={{ color: GOOD_DEEP }}>{kpiLabel}</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD_DEEP, letterSpacing: "-0.005em" }}>{fmtKpi(previousPeriod.avgKpi, mode)}</p>
                         </div>
                         <div>
-                            <SmallLabel style={{ color: GOOD }}>Spend</SmallLabel>
-                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD, letterSpacing: "-0.005em" }}>{fmtCurrency(previousPeriod.spend)}</p>
+                            <SmallLabel style={{ color: GOOD_DEEP }}>Spend</SmallLabel>
+                            <p className="text-xl font-bold tabular-nums" style={{ color: GOOD_DEEP, letterSpacing: "-0.005em" }}>{fmtCurrency(previousPeriod.spend)}</p>
                         </div>
                     </div>
                 </div>
