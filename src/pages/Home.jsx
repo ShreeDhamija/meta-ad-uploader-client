@@ -522,6 +522,36 @@ export default function Home() {
         navigate(location.pathname, { replace: true, state: null });
     }, [location.state]);
 
+    // Seed launcher state when arriving from Analytics "Flex Ads — Winner Bundle".
+    // Items in payload match the importedFiles shape consumed by ad-creation-form.jsx:
+    //   { type: 'image', hash, name }   or   { type: 'video', id, name, thumbnailUrl? }
+    // We deliberately do NOT preset adType to 'flexible' here — that depends on
+    // the campaign/adset the user picks (only some campaigns allow flex), so we
+    // let the user choose it from the ad type dropdown on the home page.
+    useEffect(() => {
+        const payload = location.state?.importedFiles;
+        if (!Array.isArray(payload) || payload.length === 0) return;
+
+        const incomingAdAccount = location.state?.adAccountId;
+        if (incomingAdAccount && incomingAdAccount !== selectedAdAccount) {
+            setSelectedAdAccount(incomingAdAccount);
+        }
+        setImportedFiles((prev) => {
+            // Dedupe against anything already imported (e.g. user navigated back).
+            // Images keyed by hash, videos by id — matches getMetaFileId in MetaMediaLibraryModal.
+            const existingIds = new Set(
+                prev.map((f) => (f.type === 'image' ? f.hash : f.id))
+            );
+            const additions = payload.filter(
+                (f) => !existingIds.has(f.type === 'image' ? f.hash : f.id)
+            );
+            return [...prev, ...additions];
+        });
+
+        // Clear router state so a refresh or re-mount doesn't re-seed.
+        navigate(location.pathname, { replace: true, state: null });
+    }, [location.state]);
+
 
 
     const handleWizardFinish = async ({ seenIds, fullyCompleted }) => {

@@ -32,6 +32,7 @@ import WeeklyPlacementChart from "./analytics/WeeklyPlacementChart"
 import FunnelHealthChart from "./analytics/FunnelHealthChart"
 import CreativeHitRateChart from "./analytics/CreativeHitRateChart"
 import TrendingCreative from "./analytics/TrendingCreative"
+import FlexAdsLauncher from "./analytics/FlexAdsLauncher"
 // FEATURE START: PERIOD METRICS SUMMARY (added 2026-05-19)
 import PeriodMetricsSummary from "./analytics/PeriodMetricsSummary"
 // FEATURE END: PERIOD METRICS SUMMARY
@@ -1456,6 +1457,16 @@ export default function AnalyticsDashboard() {
                 <CreativeHitRateChart
                     adAccountId={selectedAdAccount}
                     conversionEvent={adAccountSettings?.conversionEvent}
+                    refreshKey={chartsRefreshKey}
+                />
+            )}
+
+            {/* ── Flex Ads Launcher (full-width; bottom) ── */}
+            {selectedAdAccount && (
+                <FlexAdsLauncher
+                    adAccountId={selectedAdAccount}
+                    conversionEvent={adAccountSettings?.conversionEvent}
+                    mode={metricMode}
                     refreshKey={chartsRefreshKey}
                 />
             )}
