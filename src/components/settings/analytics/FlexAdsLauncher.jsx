@@ -2,7 +2,7 @@
 
 /* eslint-disable react/prop-types */
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
@@ -150,6 +150,17 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
     // (not raw `loading`) in the render condition.
     const isLoading = loading || (!!adAccountId && data != null && data.accountId !== adAccountId)
 
+    // Session-scoped response cache, keyed by adAccountId + conversionEvent
+    // + mode + refreshKey. Two notes vs. TrendingCreative/CreativeHitRateChart:
+    //   1. Cache value also stores `requestedLimit` so re-entering an account
+    //      where the user previously clicked Load More restores the expanded
+    //      view (and hides the Load More button) without a refetch.
+    //   2. The Load More handler writes the expanded payload back to the
+    //      same key, replacing the initial 10-result entry with the 30.
+    const cacheRef = useRef({})
+    const getCacheKey = (acct) =>
+        `${acct}::${conversionEvent || "__auto__"}::${mode}::${refreshKey || 0}`
+
     // Shared fetcher used by both the initial effect and the "Load more"
     // click. Keeps the URL-building / parsing logic in one place.
     const fetchCandidates = (limit) => {
@@ -182,6 +193,24 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
             setSelectedAdIds(new Set()); setCurrentLimit(LIMIT_INITIAL)
             return
         }
+
+        // Cache hit — render instantly (no Helix, no fetch). Restore the
+        // requestedLimit alongside data so the Load More button correctly
+        // hides itself if the user had previously expanded for this account.
+        const cacheKey = getCacheKey(adAccountId)
+        const cached = cacheRef.current[cacheKey]
+        if (cached) {
+            setData(cached)
+            setCurrentLimit(cached.requestedLimit || LIMIT_INITIAL)
+            setLoading(false)
+            setError(null)
+            // Selection is intentionally NOT restored — the user's previous
+            // pick set is associated with one launch session; returning to an
+            // account starts a fresh selection. Matches scaleWinners' UX.
+            setSelectedAdIds(new Set())
+            return
+        }
+
         let cancelled = false
         setLoading(true)
         setError(null)
@@ -198,7 +227,12 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
         // tagging gives us a single source of truth that survives any race.)
         const requestedAccountId = adAccountId
         fetchCandidates(LIMIT_INITIAL)
-            .then(body => { if (!cancelled) setData({ ...body, accountId: requestedAccountId }) })
+            .then(body => {
+                if (cancelled) return
+                const payload = { ...body, accountId: requestedAccountId, requestedLimit: LIMIT_INITIAL }
+                cacheRef.current[cacheKey] = payload
+                setData(payload)
+            })
             .catch(err => { if (!cancelled) setError(err.message || "Error loading data") })
             .finally(() => { if (!cancelled) setLoading(false) })
 
@@ -214,13 +248,19 @@ export default function FlexAdsLauncher({ adAccountId, conversionEvent, mode = "
         setLoadingMore(true)
         setError(null)
         const requestedAccountId = adAccountId
+        const cacheKey = getCacheKey(requestedAccountId)
         fetchCandidates(LIMIT_EXPANDED)
             .then(body => {
                 // Defensive: ignore the response if the user switched accounts
                 // mid-Load-More. Without this, the expanded data would leak
                 // into the new account's view tagged with the wrong id.
                 if (requestedAccountId !== adAccountId) return
-                setData({ ...body, accountId: requestedAccountId })
+                const payload = { ...body, accountId: requestedAccountId, requestedLimit: LIMIT_EXPANDED }
+                // Overwrite the cached initial-10 entry with the expanded 30
+                // so re-entering this account skips the fetch AND shows the
+                // expanded view directly.
+                cacheRef.current[cacheKey] = payload
+                setData(payload)
                 setCurrentLimit(LIMIT_EXPANDED)
             })
             .catch(err => setError(err.message || "Failed to load more"))

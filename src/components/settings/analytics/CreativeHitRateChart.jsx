@@ -2,7 +2,7 @@
 
 /* eslint-disable react/prop-types */
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import {
@@ -171,8 +171,23 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
     const [selectedMonth, setSelectedMonth] = useState(null)
     const [showAll, setShowAll] = useState(false)
 
+    // Session-scoped response cache (see TrendingCreative for rationale).
+    // Cache key includes refreshKey, so the user's manual chart refresh
+    // lands on a fresh key and bypasses any stale entry automatically.
+    const cacheRef = useRef({})
+
     useEffect(() => {
         if (!adAccountId) { return }
+        const cacheKey = `${adAccountId}::${conversionEvent || "__auto__"}::${refreshKey || 0}`
+
+        // Cache hit — render instantly, no Helix.
+        if (cacheRef.current[cacheKey]) {
+            setData(cacheRef.current[cacheKey])
+            setLoading(false)
+            setError(null)
+            return
+        }
+
         let cancelled = false
         setLoading(true)
         setError(null)
@@ -189,6 +204,7 @@ export default function CreativeHitRateChart({ adAccountId, conversionEvent, ref
             .then(({ ok, body }) => {
                 if (cancelled) return
                 if (!ok) throw new Error(body.error || "Failed to load")
+                cacheRef.current[cacheKey] = body
                 setData(body)
             })
             .catch(err => { if (!cancelled) setError(err.message || "Error loading data") })

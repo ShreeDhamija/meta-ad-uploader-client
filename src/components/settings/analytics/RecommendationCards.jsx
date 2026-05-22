@@ -12,12 +12,15 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
     Loader2, XCircle, Activity, Pause,
-    CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw, RotateCcw,
+    CheckCircle2, AlertTriangle, Zap, ChevronDown, RefreshCw, RotateCcw, Info,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
     Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogOverlay,
 } from "@/components/ui/dialog"
+import {
+    Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import scaleIcon from "@/assets/icons/analytics/recommendations/scale.svg"
 import reduceIcon from "@/assets/icons/analytics/recommendations/reduce.svg"
@@ -146,6 +149,103 @@ const SEVERITY_PILL = {
  *  - poorAdsLoading: boolean
  */
 
+
+const RECOMMENDATION_GUIDE = [
+    {
+        type: 'scale',
+        title: 'Scale',
+        trigger: 'Campaign or ad set delivering CPA/ROAS notably better than the account average over a 3-day window.',
+    },
+    {
+        type: 'reduce',
+        title: 'Reduce',
+        trigger: 'Campaign or ad set performing moderately worse than account average — trim budget instead of pausing.',
+    },
+    {
+        type: 'pause',
+        title: 'Pause',
+        trigger: 'Campaign or ad set performing severely below account average with no signs of recovery.',
+    },
+    {
+        type: 'scale_winner',
+        title: 'Scale Winner',
+        trigger: 'Individual ad with strong CPA/ROAS and meaningful spend — relaunch it into new ad sets to scale further.',
+    },
+    {
+        type: 'consolidate',
+        title: 'Consolidate',
+        trigger: 'Multiple ad sets in the same campaign with very low budgets — combine them so the algorithm can exit learning.',
+    },
+    {
+        type: 'creative_fatigue',
+        title: 'Creative Fatigue',
+        trigger: 'Top-spending ads showing rising frequency with declining CTR or conversion rate — refresh the creative.',
+    },
+    {
+        type: 'trend_alert',
+        title: 'Trend Alert',
+        trigger: 'Rising frequency, falling CTR, rising CPM, or falling conversion rate detected over recent windows.',
+    },
+    {
+        type: 'spend_shift',
+        title: 'Spend Shift',
+        trigger: 'Significant shift in spend distribution across age ranges or placements that may need rebalancing.',
+    },
+]
+
+function RecommendationGuideTooltip() {
+    return (
+        <TooltipProvider delayDuration={150}>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-xl h-9 px-3 flex-shrink-0"
+                        aria-label="Recommendation guide"
+                    >
+                        <Info className="w-4 h-4" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent
+                    side="bottom"
+                    align="end"
+                    className="bg-white text-gray-900 border border-gray-200 shadow-lg rounded-2xl p-4 max-w-[380px]"
+                >
+                    <p className="text-xs font-semibold text-gray-900 mb-2">Recommendation Guide</p>
+                    <p className="text-[11px] text-gray-500 mb-3 leading-snug">
+                        Quick reference for what triggers each recommendation type.
+                    </p>
+                    <div className="space-y-2.5">
+                        {RECOMMENDATION_GUIDE.map(item => {
+                            const cfg = TYPE_CONFIG[item.type]
+                            if (!cfg) return null
+                            return (
+                                <div key={item.type} className="flex items-start gap-2.5">
+                                    <img
+                                        src={cfg.iconSrc}
+                                        alt=""
+                                        aria-hidden="true"
+                                        className="h-5 w-5 flex-shrink-0 mt-0.5"
+                                    />
+                                    <div className="min-w-0">
+                                        <p className={cn("text-xs font-semibold leading-tight", cfg.titleText)}>
+                                            {item.title}
+                                        </p>
+                                        <p className="text-[11px] text-gray-600 leading-snug mt-0.5">
+                                            {item.trigger}
+                                        </p>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    )
+}
 
 function formatEventName(actionType) {
     if (!actionType) return 'Unknown';
@@ -762,16 +862,19 @@ export default function RecommendationCards({
                                     and reducing or pausing underperformers.
                                 </p>
                             </div>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={onRefreshBudgetRecommendations}
-                                disabled={loading || budgetRefreshing}
-                                className="rounded-xl h-9 px-3 flex-shrink-0"
-                            >
-                                <RefreshCw className={cn("w-4 h-4", (loading || budgetRefreshing) && "animate-spin")} />
-                            </Button>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                <RecommendationGuideTooltip />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={onRefreshBudgetRecommendations}
+                                    disabled={loading || budgetRefreshing}
+                                    className="rounded-xl h-9 px-3 flex-shrink-0"
+                                >
+                                    <RefreshCw className={cn("w-4 h-4", (loading || budgetRefreshing) && "animate-spin")} />
+                                </Button>
+                            </div>
                         </div>
                     </div>
 

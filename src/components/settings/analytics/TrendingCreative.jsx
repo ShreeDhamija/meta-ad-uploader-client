@@ -2,7 +2,7 @@
 
 /* eslint-disable react/prop-types */
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Helix } from "ldrs/react"
 import "ldrs/react/Helix.css"
 import { Image as ImageIcon, ExternalLink, TrendingUp } from "lucide-react"
@@ -91,8 +91,25 @@ export default function TrendingCreative({ adAccountId, conversionEvent, refresh
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
 
+    // Session-scoped response cache. Keyed by accountId + conversionEvent +
+    // refreshKey — includes refreshKey so the user's manual refresh (which
+    // bumps chartsRefreshKey in AnalyticsDashboard) automatically lands on a
+    // fresh cache key and bypasses any stale entry. Mirrors the useRef-map
+    // pattern used elsewhere in AnalyticsDashboard (recsCacheRef, etc.).
+    const cacheRef = useRef({})
+
     useEffect(() => {
         if (!adAccountId) { setData(null); return }
+        const cacheKey = `${adAccountId}::${conversionEvent || "__auto__"}::${refreshKey || 0}`
+
+        // Cache hit — render instantly, no Helix.
+        if (cacheRef.current[cacheKey]) {
+            setData(cacheRef.current[cacheKey])
+            setLoading(false)
+            setError(null)
+            return
+        }
+
         let cancelled = false
         setLoading(true)
         setError(null)
@@ -109,6 +126,7 @@ export default function TrendingCreative({ adAccountId, conversionEvent, refresh
             .then(({ ok, body }) => {
                 if (cancelled) return
                 if (!ok) throw new Error(body.error || "Failed to load")
+                cacheRef.current[cacheKey] = body
                 setData(body)
             })
             .catch(err => { if (!cancelled) setError(err.message || "Error loading data") })
