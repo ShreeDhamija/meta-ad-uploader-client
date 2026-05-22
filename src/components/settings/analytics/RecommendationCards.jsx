@@ -202,10 +202,13 @@ function RecommendationGuideTooltip() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="rounded-xl h-9 px-3 flex-shrink-0"
+                        onPointerDown={(e) => e.preventDefault()}
+                        onClick={(e) => e.preventDefault()}
+                        className="rounded-xl h-9 px-3 flex-shrink-0 gap-1.5"
                         aria-label="Recommendation guide"
                     >
                         <Info className="w-4 h-4" />
+                        <span className="text-xs font-medium">Guide</span>
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent
@@ -233,7 +236,7 @@ function RecommendationGuideTooltip() {
                                         <p className={cn("text-xs font-semibold leading-tight", cfg.titleText)}>
                                             {item.title}
                                         </p>
-                                        <p className="text-[11px] text-gray-600 leading-snug mt-0.5">
+                                        <p className="text-[13px] text-gray-600 leading-snug mt-0.5">
                                             {item.trigger}
                                         </p>
                                     </div>
