@@ -1396,13 +1396,21 @@ export default function TikTokAdCreationForm({
   const handleVideoSelect = (e) => {
     const selectedFiles = Array.from(e.target.files)
     if (selectedFiles.length === 0) return
+    
+    const taggedFiles = selectedFiles.map(file => {
+      if (file.uniqueId) return file;
+      file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      return file;
+    });
+
     if (setFiles) {
-      setFiles(selectedFiles)
+      setFiles(prev => [...(prev || []), ...taggedFiles])
     } else {
-      setVideoFile(selectedFiles[0])
-      setVideoPreview(URL.createObjectURL(selectedFiles[0]))
+      setVideoFile(taggedFiles[0])
+      setVideoPreview(URL.createObjectURL(taggedFiles[0]))
     }
     setUploadProgress(0)
+    e.target.value = ""
   }
 
   const applyUtmsToUrl = (url, pairs = []) => {
