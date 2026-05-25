@@ -108,9 +108,13 @@ export default function Settings() {
 
     useEffect(() => {
         if (!loading && !hasSeenSettingsOnboarding) {
-            setShowSettingsPopup(true)
+            if (activeTab === 'tiktok') {
+                setShowSettingsPopup(false)
+            } else {
+                setShowSettingsPopup(true)
+            }
         }
-    }, [loading, hasSeenSettingsOnboarding])
+    }, [loading, hasSeenSettingsOnboarding, activeTab])
 
     useEffect(() => {
         if (loading || subscriptionLoading) return;

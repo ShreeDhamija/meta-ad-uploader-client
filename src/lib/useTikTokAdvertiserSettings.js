@@ -44,6 +44,7 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
 
   // Re-fetch whenever advertiserId changes
   useEffect(() => {
+    setSettings(null);
     fetchSettings();
   }, [fetchSettings]);
 

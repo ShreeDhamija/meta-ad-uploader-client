@@ -2156,6 +2156,7 @@ export default function TikTokAdCreationForm({
             <Popover open={openAdvertiser} onOpenChange={setOpenAdvertiser}>
               <PopoverTrigger asChild>
                 <Button
+                  type="button"
                   variant="outline"
                   role="combobox"
                   className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
@@ -2235,6 +2236,7 @@ export default function TikTokAdCreationForm({
             <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
               <PopoverTrigger asChild>
                 <Button
+                  type="button"
                   variant="outline"
                   role="combobox"
                   className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
@@ -2483,6 +2485,7 @@ export default function TikTokAdCreationForm({
             <Popover open={openAdGroup} onOpenChange={setOpenAdGroup}>
               <PopoverTrigger asChild>
                 <Button
+                  type="button"
                   variant="outline"
                   role="combobox"
                   disabled={selectedCampaign.length === 0}
@@ -2644,6 +2647,7 @@ export default function TikTokAdCreationForm({
                   <Popover open={openDuplicateAdGroup} onOpenChange={setOpenDuplicateAdGroup}>
                     <PopoverTrigger asChild>
                       <Button
+                        type="button"
                         variant="outline"
                         role="combobox"
                         aria-expanded={openDuplicateAdGroup}
@@ -2824,6 +2828,7 @@ export default function TikTokAdCreationForm({
             <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
               <PopoverTrigger asChild>
                 <Button
+                  type="button"
                   variant="outline"
                   role="combobox"
                   disabled={!selectedAdvertiser || loadingIdentities}
@@ -2860,7 +2865,6 @@ export default function TikTokAdCreationForm({
                         >
                           <div className="flex flex-col">
                             <span className="text-sm font-medium">{i.display_name}</span>
-                            <span className="text-[10px] text-gray-400 uppercase tracking-tight">{i.identity_type}</span>
                           </div>
                           {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black" />}
                         </CommandItem>
@@ -3018,6 +3022,7 @@ export default function TikTokAdCreationForm({
                 <Popover open={openCta} onOpenChange={setOpenCta}>
                   <PopoverTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-6"
                     >
@@ -3098,7 +3103,7 @@ export default function TikTokAdCreationForm({
                   />
                   <Popover open={openUrlPicker} onOpenChange={setOpenUrlPicker}>
                     <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
+                      <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
                         <ChevronDown className="w-4 h-4" />
                       </Button>
                     </PopoverTrigger>

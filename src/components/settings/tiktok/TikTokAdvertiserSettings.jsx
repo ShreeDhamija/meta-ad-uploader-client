@@ -6,12 +6,15 @@ import { saveTikTokSettings } from "@/lib/saveTikTokSettings"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import useTikTokAdvertiserSettings from "@/lib/useTikTokAdvertiserSettings"
 import { cn } from "@/lib/utils"
-import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw } from "lucide-react"
+import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 import TikTokCopyTemplates from "./TikTokCopyTemplates"
 import TikTokLinkParameters from "./TikTokLinkParameters"
+import LabelIcon from "@/assets/icons/label.svg?react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 
 const CTA_OPTIONS = [
     { value: 'LEARN_MORE', label: 'Learn More' },
@@ -420,16 +423,63 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         </div>
                     </div>
 
-                    {/* Interactive Add-ons Info */}
-                    <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex gap-3">
-                        <HelpCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Interactive Add-ons</p>
-                            <p className="text-[10px] text-blue-500/80 leading-relaxed font-medium">
-                                TikTok Interactive Add-ons (music, stickers, etc.) cannot be configured via API.
-                                Please set these in TikTok Ads Manager directly.
-                            </p>
+                    {/* Ad Naming Convention */}
+                    <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <LabelIcon className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+                            <h3 className="font-medium text-[14px] text-zinc-950">
+                                Set up your default ad naming conventions
+                            </h3>
+                            <TooltipProvider delayDuration={200}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                                        >
+                                            <Info className="w-3.5 h-3.5" />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent
+                                        side="top"
+                                        align="end"
+                                        className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
+                                    >
+                                        <p className="font-medium mb-1.5">Select the Custom Date option & replace 'custom' with any combination of the tokens below.</p>
+                                        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
+                                            <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
+                                            <span className="font-semibold">DD</span><span className="text-gray-400">Day, zero-padded (01–31)</span>
+                                            <span className="font-semibold">M</span><span className="text-gray-400">Month (1–12)</span>
+                                            <span className="font-semibold">MM</span><span className="text-gray-400">Month, zero-padded (01–12)</span>
+                                            <span className="font-semibold">MMM</span><span className="text-gray-400">Month name (Jan, Feb…)</span>
+                                            <span className="font-semibold">YY</span><span className="text-gray-400">Year, 2-digit (25)</span>
+                                            <span className="font-semibold">YYYY</span><span className="text-gray-400">Year, 4-digit (2025)</span>
+                                        </div>
+                                        <p className="text-gray-400 mt-2">Use any separator: <span className="font-mono">/ - . _</span> or space</p>
+                                        <p className="text-gray-400 italic mt-1.5">{"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </div>
+
+                        <ReorderAdNameParts
+                            formulaInput={currentSettings.adNameFormulaV2?.rawInput || ""}
+                            onFormulaChange={(newRawInput) => {
+                                setSettings({
+                                    ...currentSettings,
+                                    adNameFormulaV2: { rawInput: newRawInput }
+                                });
+                            }}
+                            variant="default"
+                            customVariables={currentSettings.customVariables || []}
+                            onCustomVariablesChange={(newVars) => {
+                                setSettings({
+                                    ...currentSettings,
+                                    customVariables: newVars
+                                });
+                            }}
+                            hideInfoTooltip
+                        />
                     </div>
 
                     {/* Links & UTMs */}
