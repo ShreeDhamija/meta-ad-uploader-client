@@ -2148,7 +2148,7 @@ export default function TikTokAdCreationForm({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
                 {renderDiffMark("selectedAdvertiser")}
-                <AdAccountIcon className="w-4 h-4 text-gray-500" />
+                <AdAccountIcon className="w-4 h-4" />
                 Ad Account
               </Label>
               {authLoading && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
@@ -2217,7 +2217,7 @@ export default function TikTokAdCreationForm({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
                 {renderDiffMark("selectedCampaign")}
-                <CampaignIcon className="w-4 h-4 text-gray-500" />
+                <CampaignIcon className="w-4 h-4" />
                 Select a Campaign to launch Ads in
               </Label>
               <div className="flex items-center gap-2">
@@ -2465,7 +2465,7 @@ export default function TikTokAdCreationForm({
             <div className="flex items-center justify-between">
               <Label className="flex items-center gap-2">
                 {renderDiffMark("selectedAdGroup")}
-                <AdSetIcon className="w-4 h-4 text-gray-500" />
+                <AdSetIcon className="w-4 h-4" />
                 Launch in a new or existing ad set
               </Label>
               <div className="flex items-center gap-2">
@@ -2900,7 +2900,7 @@ export default function TikTokAdCreationForm({
               <Label htmlFor="adName" className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
                   {renderDiffMark("adName")}
-                  <LabelIcon className="w-4 h-4 text-gray-500" />
+                  <LabelIcon className="w-4 h-4" />
                   Ad Name
                 </div>
                 {selectedAdvertiser && !advertiserPrefs?.adNameFormulaV2?.rawInput && (
@@ -2941,7 +2941,7 @@ export default function TikTokAdCreationForm({
               <div className="flex items-center justify-between">
                 <Label className="flex items-center gap-2">
                   {renderDiffMark("adText")}
-                  <TemplateIcon className="w-4 h-4 text-gray-500" />
+                  <TemplateIcon className="w-4 h-4" />
                   Ad Copy / Caption {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional - uses organic caption if empty)</span>}
                 </Label>
                 {advertiserPrefs?.copyTemplates && Object.keys(advertiserPrefs.copyTemplates).length > 0 && (
@@ -3217,7 +3217,7 @@ export default function TikTokAdCreationForm({
                                 alt=""
                                 className={'h-4 w-4 object-contain'}
                               />
-                              <span className="text-sm text-gray-800">{src.name}</span>
+                              <span className="text-sm text-gray-800">{src.fullLabel}</span>
                             </label>
                           )
                         })}
