@@ -3158,22 +3158,21 @@ export default function TikTokAdCreationForm({
           <div className="space-y-6">
             {/* 3. Ad Name */}
             <div id="adName" className="space-y-1">
-              <Label htmlFor="adName" className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  {renderDiffMark("adName")}
-                  <LabelIcon className="w-4 h-4" />
-                  Ad Name
-                </div>
-                {selectedAdvertiser && !advertiserPrefs?.adNameFormulaV2?.rawInput && (
+              <Label htmlFor="adName" className="flex items-center gap-2 w-full">
+                {renderDiffMark("adName")}
+                <LabelIcon className="w-4 h-4" />
+                <span className="font-semibold text-sm">Ad Name</span>
+                {selectedAdvertiser && (
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={() => navigate(`/settings?tab=tiktok&advertiser=${selectedAdvertiser}`)}
-                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
+                    className="text-[9px] px-1.5 py-0.5 border-zinc-200 text-white bg-zinc-800 rounded-lg hover:text-white hover:bg-zinc-900 h-5 flex items-center gap-1 font-medium ml-1 cursor-pointer"
+                    title="Configure ad name formula in settings"
                   >
-                    <CogIcon className="w-3 h-3 mr-1 text-white" />
-                    Set Up Ad Name Formula
+                    <CogIcon className="w-2.5 h-2.5 text-white" />
+                    Configure Formula
                   </Button>
                 )}
               </Label>
@@ -3206,6 +3205,19 @@ export default function TikTokAdCreationForm({
                     <TemplateIcon className="w-4 h-4 text-zinc-600" />
                     <span className="font-semibold text-sm">Ad Copy / Caption</span>
                     {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
+                    {selectedAdvertiser && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/settings?tab=tiktok&advertiser=${selectedAdvertiser}`)}
+                        className="text-[9px] px-1.5 py-0.5 border-zinc-200 text-white bg-zinc-800 rounded-lg hover:text-white hover:bg-zinc-900 h-5 flex items-center gap-1 font-medium ml-1 cursor-pointer"
+                        title="Configure copy templates in settings"
+                      >
+                        <CogIcon className="w-2.5 h-2.5 text-white" />
+                        Configure Templates
+                      </Button>
+                    )}
                   </Label>
 
                   {/* Inline template action buttons (Save as New / Update Template) when there are unsaved changes */}

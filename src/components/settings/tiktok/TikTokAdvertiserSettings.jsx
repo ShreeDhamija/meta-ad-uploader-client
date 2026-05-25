@@ -166,13 +166,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         );
     }
 
-    if (loading && !settings) {
-        return (
-            <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 animate-spin text-gray-200" />
-            </div>
-        );
-    }
 
     const currentSettings = settings || {};
     const currentAdvertiser = advertisers.find(a => (a.advertiser_id || a.id) === selectedAdvertiser);
@@ -249,9 +242,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                 </div>
 
                 {selectedAdvertiser && loading && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500 mt-2">
-                        <Loader className="h-4 w-4 animate-spin" />
-                        Loading settings...
+                    <div className="flex items-center gap-2 mb-2 text-zinc-500 font-semibold animate-pulse text-sm mt-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+                        Loading Account settings...
                     </div>
                 )}
             </div>
