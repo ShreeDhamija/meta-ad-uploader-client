@@ -56,6 +56,12 @@ import PartialSuccess from '@/assets/icons/partialsuccess.svg?react';
 import pLimit from 'p-limit';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 
+// Staging gate — used to hide work-in-progress UI (currently: the
+// "View Top Creatives for Flexible Ads" trigger). Mirrors the pattern in
+// pages/Login.jsx: prefer the env var, but fall back to a URL substring
+// check so the gate still works on staging deploys with missing env vars.
+const IS_STAGING = import.meta.env.VITE_ENV === 'staging' || API_BASE_URL.includes('staging');
+
 const UPLOAD_SOURCE_OPTIONS = [
   {
     id: 'local',
@@ -8235,7 +8241,11 @@ export default function AdCreationForm({
                           flexible ad type. Opens a modal that fetches the same
                           flex-ad candidates as the analytics dashboard and imports
                           the selected assets directly into importedFiles. */}
-                      {adType === 'flexible' && (
+                      {/* Staging-only for now — feature is not ready for production.
+                          Mirrors the env+URL gate pattern from pages/Login.jsx so
+                          it stays visible even if env vars are misconfigured on a
+                          staging deploy. Remove the IS_STAGING guard when shipping. */}
+                      {adType === 'flexible' && IS_STAGING && (
                         <Button
                           type="button"
                           size="sm"
@@ -8246,13 +8256,17 @@ export default function AdCreationForm({
                             }
                             setFlexAdsImportOpen(true);
                           }}
+                          // Purple border + faint purple drop-shadow to match the
+                          // BicepsFlexed icon (text-purple-500 == rgb(168, 85, 247)).
+                          // Drop-shadow alpha kept at ~0.25 so it reads as a subtle
+                          // lift rather than competing with the sibling button.
                           className={cn(
-                            "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
+                            "h-9 px-3 flex items-center gap-1.5 text-black bg-white hover:bg-white border !border-purple-500 shadow-[0_1px_4px_0_rgba(168,85,247,0.25)]",
                             formFieldChrome
                           )}
                         >
                           <BicepsFlexed className="h-4 w-4 text-purple-500" />
-                          Get Top Ads For Flex
+                          View Top Creatives for Flexible Ads
                         </Button>
                       )}
 

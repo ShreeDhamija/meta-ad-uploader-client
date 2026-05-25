@@ -114,7 +114,6 @@ export default function FlexAdsImportModal({
                         </h2>
                         <p className="mt-1 text-sm text-gray-500">
                             Highest-spending ads from the last 14 days (excluding existing flex ads and carousels).
-                            Selected assets will be added to the launcher&apos;s media list.
                         </p>
                     </div>
                     <button
@@ -141,23 +140,13 @@ export default function FlexAdsImportModal({
                 </div>
 
                 {/* Footer — Import button spans the full modal width per spec.
-                    Cancel + selection count sit above it (subtle secondary actions). */}
-                <div className="mt-4 flex flex-col gap-3 border-t pt-4">
-                    <div className="flex items-center justify-between">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={handleClose}
-                            className="rounded-xl text-sm text-gray-500 hover:text-gray-700"
-                        >
-                            Cancel
-                        </Button>
-                        {selectionLabel && (
-                            <span className="text-sm font-medium text-primary">
-                                {selectionLabel}
-                            </span>
-                        )}
-                    </div>
+                    Selection count sits above it on the right when present. */}
+                <div className="mt-4 flex flex-col gap-3">
+                    {selectionLabel && (
+                        <span className="text-right text-sm font-medium text-primary">
+                            {selectionLabel}
+                        </span>
+                    )}
                     <Button
                         type="button"
                         onClick={handleImport}
