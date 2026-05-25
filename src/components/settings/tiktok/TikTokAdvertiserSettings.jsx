@@ -321,6 +321,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 <PopoverContent
                                     className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
                                     align="start"
+                                    sideOffset={4}
+                                    side="bottom"
+                                    avoidCollisions={false}
                                     style={{
                                         minWidth: "var(--radix-popover-trigger-width)",
                                         width: "auto",
@@ -377,7 +380,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                         <ChevronsUpDown className="w-4 h-4 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100">
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={false}>
                                     <Command>
                                         <CommandList>
                                             <CommandGroup>

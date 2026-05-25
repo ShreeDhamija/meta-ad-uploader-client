@@ -147,7 +147,7 @@ export default function TikTokCopyTemplates({
                             <ChevronDown className="w-4 h-4 opacity-50" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100">
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={false}>
                         <Command>
                             <CommandInput placeholder="Search templates..." value={searchQuery} onValueChange={setSearchQuery} />
                             <CommandList>

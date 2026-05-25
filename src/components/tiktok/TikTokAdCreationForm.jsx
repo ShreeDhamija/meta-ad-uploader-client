@@ -2172,7 +2172,7 @@ export default function TikTokAdCreationForm({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
                   <CommandInput
                     placeholder="Search Advertiser..."
@@ -2251,7 +2251,7 @@ export default function TikTokAdCreationForm({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
                   <CommandInput
                     placeholder="Search campaigns..."
@@ -2345,14 +2345,12 @@ export default function TikTokAdCreationForm({
                   <X className="h-3 w-3 text-gray-700" />
                 </button>
                 <div className="flex-1 space-y-2">
-                  <div className="flex-1 space-y-2">
-                    <Label className="flex items-center gap-2">
-                      {renderDiffMark("duplicateCampaign")}
-                      <Copy className="w-4 h-4 text-gray-700 shrink-0" />
-                      Select a campaign to duplicate
-                    </Label>
-                    <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad sets</Label>
-                  </div>
+                  <Label htmlFor="duplicateCampaign" className="flex items-center gap-2">
+                    {renderDiffMark("duplicateCampaign")}
+                    <CopyIcon className="w-4 h-4" />
+                    Select a campaign to duplicate
+                  </Label>
+                  <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad sets</Label>
 
                   {/* Dropdown/Popover to select campaign to duplicate */}
                   <Popover open={openDuplicateCampaign} onOpenChange={setOpenDuplicateCampaign}>
@@ -2377,6 +2375,7 @@ export default function TikTokAdCreationForm({
                       align="start"
                       sideOffset={4}
                       side="bottom"
+                      avoidCollisions={false}
                       style={{
                         width: 'var(--radix-popover-trigger-width)'
                       }}
@@ -2501,7 +2500,7 @@ export default function TikTokAdCreationForm({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
                   <CommandInput
                     placeholder="Search ad groups..."
@@ -2667,6 +2666,7 @@ export default function TikTokAdCreationForm({
                       align="start"
                       sideOffset={4}
                       side="bottom"
+                      avoidCollisions={false}
                       style={{
                         width: 'var(--radix-popover-trigger-width)'
                       }}
@@ -2844,7 +2844,7 @@ export default function TikTokAdCreationForm({
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
                 <Command>
                   <CommandInput placeholder={adType === 'NORMAL' ? "Search identities..." : "Search accounts to promote from..."} className="bg-transparent border-none focus:ring-0" />
                   <CommandEmpty>{adType === 'NORMAL' ? "No identities found." : "No accounts found."}</CommandEmpty>
@@ -2955,7 +2955,7 @@ export default function TikTokAdCreationForm({
                         {openTemplatePicker ? "Close Picker" : "Use Template"}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-64 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
+                    <PopoverContent className="w-64 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end" side="bottom" avoidCollisions={false}>
                       <Command>
                         <CommandInput placeholder="Search templates..." className="h-8" />
                         <CommandList>
@@ -3034,7 +3034,7 @@ export default function TikTokAdCreationForm({
                       <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                  <PopoverContent className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
                     <Command>
                       <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                         <CommandGroup>
@@ -3107,7 +3107,7 @@ export default function TikTokAdCreationForm({
                         <ChevronDown className="w-4 h-4" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end">
+                    <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end" side="bottom" avoidCollisions={false}>
                       <Command>
                         <CommandInput placeholder="Search links..." className="h-8" />
                         <CommandList className="max-h-[300px]">
@@ -3204,7 +3204,7 @@ export default function TikTokAdCreationForm({
                         Manage Sources
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                    <PopoverContent align="end" side="bottom" avoidCollisions={false} className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
                       <div className="flex flex-col">
                         {UPLOAD_SOURCE_OPTIONS.map((src) => {
                           const checked = uploadSources.includes(src.id)
@@ -3341,12 +3341,9 @@ export default function TikTokAdCreationForm({
                   {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
                 </div>
               ) : (
-                'Create TikTok Ad'
+                'Publish Ads'
               )}
             </Button>
-            <p className="text-center text-[11px] text-gray-400 mt-3 font-medium">
-              Your ad will be live after TikTok's review process
-            </p>
           </div>
 
         </CardContent>
