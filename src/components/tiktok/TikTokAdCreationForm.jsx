@@ -489,7 +489,7 @@ export default function TikTokAdCreationForm({
     metaData: trackedMetaData,
     resetProgress
   } = useAdCreationProgress(jobId)
-  
+
   const [jobQueue, setJobQueue] = useState([])
   const [currentJob, setCurrentJob] = useState(null)
   const [isProcessingQueue, setIsProcessingQueue] = useState(false)
@@ -500,7 +500,7 @@ export default function TikTokAdCreationForm({
   const [currentAbortController, setCurrentAbortController] = useState(null)
   const [isQueueingJobs, setIsQueueingJobs] = useState(false)
   const currentJobIdRef = useRef(null)
-  
+
   const [liveProgress, setLiveProgress] = useState({
     completed: 0,
     succeeded: 0,
@@ -553,7 +553,7 @@ export default function TikTokAdCreationForm({
       if (!v) return null
       return v.state || v
     }
-    
+
     const variantState = getVariantState(variantId)
     if (!variantState) return null
 
@@ -575,16 +575,16 @@ export default function TikTokAdCreationForm({
       sparkAuthCode: variantState.sparkAuthCode || sparkAuthCode || '',
       urlMode: variantState.urlMode || urlMode || 'WEBSITE',
       adType: variantState.adType || adType || 'NORMAL',
-      
+
       files: [...variantFiles],
       driveFiles: [...variantDriveFiles],
       dropboxFiles: [...variantDropboxFiles],
       tiktokLibraryFiles: [...variantLibraryFiles],
-      
+
       selectedAdvertiser,
       selectedCampaign,
       selectedAdGroup,
-      
+
       isDuplicatingAdGroupMode: showDuplicateAdGroupBlock && duplicateAdGroup,
       duplicateAdGroup,
       newAdGroupName,
@@ -690,16 +690,16 @@ export default function TikTokAdCreationForm({
       itemsToUpload.push({ type: 'spark', file: { name: 'Spark Ad' } })
     } else {
       (files || []).forEach(f => itemsToUpload.push({ type: 'local', file: f }))
-      (driveFiles || []).forEach(f => itemsToUpload.push({ type: 'drive', file: f }))
-      (dropboxFiles || []).forEach(f => itemsToUpload.push({ type: 'dropbox', file: f }))
-      (tiktokLibraryFiles || []).forEach(f => itemsToUpload.push({ type: 'library', file: f }))
+        (driveFiles || []).forEach(f => itemsToUpload.push({ type: 'drive', file: f }))
+        (dropboxFiles || []).forEach(f => itemsToUpload.push({ type: 'dropbox', file: f }))
+        (tiktokLibraryFiles || []).forEach(f => itemsToUpload.push({ type: 'library', file: f }))
     }
 
     let successCount = 0
     let failureCount = 0
     let totalCount = itemsToUpload.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length)
     let errorMessages = []
-    
+
     setLiveProgress({
       completed: 0,
       succeeded: 0,
@@ -878,7 +878,7 @@ export default function TikTokAdCreationForm({
             if (!createRes.ok || !createData.success) {
               throw new Error(createData.error || 'Ad creation failed')
             }
-            
+
             successCount++
             setLiveProgress(prev => {
               const updatedCompleted = prev.completed + 1
@@ -907,11 +907,11 @@ export default function TikTokAdCreationForm({
 
       updateProgress(100, 'TikTok ad creation complete!')
       setStatus('complete')
-      
+
       const completedJob = {
         id: jobToProcess.id,
-        message: failureCount > 0 
-          ? `Completed with ${failureCount} failure(s).` 
+        message: failureCount > 0
+          ? `Completed with ${failureCount} failure(s).`
           : `🎉 Created TikTok ads successfully for all ${itemsToUpload.length} videos!`,
         completedAt: Date.now(),
         status: failureCount === 0 ? 'complete' : (successCount > 0 ? 'partial-success' : 'error'),
@@ -921,9 +921,9 @@ export default function TikTokAdCreationForm({
         totalCount,
         errorMessages,
       }
-      
+
       addCompletedJob(completedJob)
-      
+
       await fetch(`${API_BASE_URL}/auth/complete-job`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -936,7 +936,7 @@ export default function TikTokAdCreationForm({
           totalCount,
           errorMessages,
         })
-      }).catch(() => {})
+      }).catch(() => { })
 
     } catch (err) {
       if (err.name === 'AbortError' || signal.aborted) {
@@ -954,12 +954,12 @@ export default function TikTokAdCreationForm({
           errorMessages,
         }
         addCompletedJob(cancelledJob)
-        
+
         await fetch(`${API_BASE_URL}/auth/cancel-job`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ jobId: jobToProcess.id })
-        }).catch(() => {})
+        }).catch(() => { })
       } else {
         setStatus('error')
         updateProgress(100, `Job Failed: ${err.message}`)
@@ -988,7 +988,7 @@ export default function TikTokAdCreationForm({
             totalCount,
             errorMessages: [{ error: err.message }],
           })
-        }).catch(() => {})
+        }).catch(() => { })
       }
     } finally {
       setJobQueue(prev => prev.slice(1))
@@ -1398,7 +1398,7 @@ export default function TikTokAdCreationForm({
   const handleVideoSelect = (e) => {
     const selectedFiles = Array.from(e.target.files)
     if (selectedFiles.length === 0) return
-    
+
     const taggedFiles = selectedFiles.map(file => {
       if (file.uniqueId) return file;
       file.uniqueId = `${file.name}-${file.lastModified || Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
@@ -1837,7 +1837,7 @@ export default function TikTokAdCreationForm({
     const adGroupName = job.formData?.selectedAdGroup?.map(id => {
       return adGroups.find(ag => ag.adgroup_id === id)?.adgroup_name || id;
     }).join(', ') || 'Duplicated Group';
-    
+
     const summary = `${job.adCount} ad${job.adCount !== 1 ? 's' : ''} to ${adGroupName}`;
     return job.showVariantLabel && job.variantName
       ? `${prefix} ${job.variantName}: ${summary}`
@@ -1918,18 +1918,17 @@ export default function TikTokAdCreationForm({
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm break-words leading-tight ${
-                          job.status === 'cancelled'
-                            ? 'text-orange-500 font-medium'
-                            : job.status === 'error'
-                              ? 'text-red-600 font-medium'
-                              : job.status === 'partial-success'
-                                ? 'text-yellow-600 font-medium'
-                                : 'text-gray-700'
-                        }`}>
+                        <p className={`text-sm break-words leading-tight ${job.status === 'cancelled'
+                          ? 'text-orange-500 font-medium'
+                          : job.status === 'error'
+                            ? 'text-red-600 font-medium'
+                            : job.status === 'partial-success'
+                              ? 'text-yellow-600 font-medium'
+                              : 'text-gray-700'
+                          }`}>
                           {job.message}
                         </p>
-                        
+
                         {(job.status === 'cancelled' || job.status === 'partial-success') && job.totalCount > 0 && (
                           <div className="flex gap-2 mt-1.5">
                             <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-50 border border-green-200 rounded-lg">
@@ -3230,10 +3229,7 @@ export default function TikTokAdCreationForm({
                 {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
                   <div
                     onClick={() => fileRef.current?.click()}
-                    className={cn(
-                      "group cursor-pointer border-2 border-dashed rounded-3xl p-8 text-center transition-all",
-                      (videoFile || (files && files.length > 0)) ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                    )}
+                    className="group cursor-pointer border-2 border-dashed border-gray-300 rounded-3xl p-8 text-center transition-all hover:border-gray-400 hover:bg-gray-50"
                   >
                     <input
                       ref={fileRef}
@@ -3251,76 +3247,6 @@ export default function TikTokAdCreationForm({
                         <p className="text-sm font-medium text-gray-700">Click to upload video or image</p>
                         <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok videos</p>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Local Files Preview */}
-                {files && files.length > 0 && (
-                  <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4 space-y-2">
-                    {files.map((file, idx) => (
-                      <div key={idx} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-white border border-emerald-100 flex items-center justify-center shadow-sm shrink-0">
-                            {file.type?.startsWith('image/') || /\.(jpe?g|png|gif|webp)$/i.test(file.name) ? (
-                              <Image className="w-5 h-5 text-emerald-500" />
-                            ) : (
-                              <Video className="w-5 h-5 text-emerald-500" />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-gray-900 truncate max-w-[200px]">
-                              {file.name}
-                            </p>
-                            <p className="text-[10px] text-gray-400">
-                              {(file.size / (1024 * 1024)).toFixed(2)} MB
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500 shrink-0"
-                          onClick={() => {
-                            setFiles(files.filter((_, i) => i !== idx))
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Cloud File Preview */}
-                {(driveFiles.length > 0 || dropboxFiles.length > 0) && (
-                  <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-white border border-emerald-100 flex items-center justify-center shadow-sm">
-                          <Video className="w-6 h-6 text-emerald-500" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">
-                            {driveFiles[0]?.name || dropboxFiles[0]?.name}
-                          </p>
-                          <p className="text-[10px] text-emerald-600 font-bold">
-                            {driveFiles.length > 0 ? "Google Drive" : "Dropbox"} Selected
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500"
-                        onClick={() => {
-                          setDriveFiles([])
-                          setDropboxFiles([])
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
                     </div>
                   </div>
                 )}
