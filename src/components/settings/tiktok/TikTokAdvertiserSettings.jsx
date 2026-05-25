@@ -301,11 +301,16 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                         return <span className="text-sm font-medium">{currentSettings.defaultIdentityId}</span>;
                                                     }
                                                     return (
-                                                        <>
+                                                        <span className="flex items-center gap-1.5">
                                                             <span className="text-sm font-medium text-gray-900">
-                                                                {found ? `${found.display_name} (${found.identity_id})` : "Select TikTok Identity"}
+                                                                {found ? found.display_name : "Select TikTok Identity"}
                                                             </span>
-                                                        </>
+                                                            {found && (
+                                                                <span className="text-xs text-gray-400 font-normal">
+                                                                    {found.identity_id}
+                                                                </span>
+                                                            )}
+                                                        </span>
                                                     );
                                                 })()}
                                             </div>
@@ -341,8 +346,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     }}
                                                     className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
                                                 >
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-semibold text-gray-900">{i.display_name} ({i.identity_id})</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
+                                                        <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
                                                     </div>
                                                     {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black" />}
                                                 </CommandItem>

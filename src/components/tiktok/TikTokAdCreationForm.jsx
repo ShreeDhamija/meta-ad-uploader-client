@@ -1802,6 +1802,27 @@ export default function TikTokAdCreationForm({
         return;
       }
 
+      if (fd.urlMode === 'WEBSITE') {
+        if (!fd.landingUrl || !fd.landingUrl.trim()) {
+          toast.error(`${variant.name}: Landing Page URL is required`);
+          return;
+        }
+
+        let isValidUrl = false;
+        try {
+          const urlString = fd.landingUrl.trim();
+          if (/^https?:\/\//i.test(urlString)) {
+            new URL(urlString);
+            isValidUrl = true;
+          }
+        } catch (_) { }
+
+        if (!isValidUrl) {
+          toast.error(`${variant.name}: Please enter a valid Landing Page URL starting with http:// or https://`);
+          return;
+        }
+      }
+
       newJobs.push(job);
     }
 
@@ -2833,15 +2854,18 @@ export default function TikTokAdCreationForm({
                   disabled={!selectedAdvertiser || loadingIdentities}
                   className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
                 >
-                  <span className="truncate text-sm font-medium">
+                  <span className="truncate text-sm font-medium flex items-center gap-1.5">
                     {selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
                       ? (() => {
                         const found = identities.find(i => i.identity_id === selectedIdentity);
-                        return found ? `${found.display_name} (${found.identity_id})` : selectedIdentity;
+                        return found ? (
+                          <>
+                            <span className="font-semibold text-gray-900">{found.display_name}</span>
+                            <span className="text-xs text-gray-400 font-normal">{found.identity_id}</span>
+                          </>
+                        ) : <span>{selectedIdentity}</span>;
                       })()
-                      : adType === 'NORMAL'
-                        ? "Select Identity"
-                        : "Select account to Promote From"}
+                      : <span>{adType === 'NORMAL' ? "Select Identity" : "Select account to Promote From"}</span>}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -2865,8 +2889,9 @@ export default function TikTokAdCreationForm({
                             selectedIdentity === i.identity_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
                           )}
                         >
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">{i.display_name} ({i.identity_id})</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
+                            <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
                           </div>
                           {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black" />}
                         </CommandItem>
