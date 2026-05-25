@@ -1244,7 +1244,7 @@ export default function Home() {
                 return;
             }
             const { url } = await res.json();
-            window.open(url, '_blank');
+            window.location.href = url;
         } catch {
             toast.error("Couldn't open payment update page");
         }
