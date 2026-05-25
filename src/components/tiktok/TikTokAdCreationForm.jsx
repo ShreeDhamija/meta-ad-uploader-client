@@ -36,7 +36,8 @@ import {
   CircleX,
   Eye,
   RotateCcw,
-  Image
+  Image,
+  CopyIcon
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
