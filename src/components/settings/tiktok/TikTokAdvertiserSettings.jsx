@@ -303,7 +303,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     return (
                                                         <>
                                                             <span className="text-sm font-medium text-gray-900">
-                                                                {found?.display_name || "Select TikTok Identity"}
+                                                                {found ? `${found.display_name} (${found.identity_id})` : "Select TikTok Identity"}
                                                             </span>
                                                         </>
                                                     );
@@ -342,7 +342,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
                                                 >
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
+                                                        <span className="text-sm font-semibold text-gray-900">{i.display_name} ({i.identity_id})</span>
                                                     </div>
                                                     {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black" />}
                                                 </CommandItem>
@@ -394,7 +394,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                         <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${currentSettings.defaultCTAs?.includes(opt.value) ? "bg-black border-black text-white" : "border-gray-200"}`}>
                                                             {currentSettings.defaultCTAs?.includes(opt.value) && <Check className="w-3 h-3" />}
                                                         </div>
-                                                        <span className="text-xs font-medium">{opt.label}</span>
+                                                        <span className="text-sm font-medium">{opt.label}</span>
                                                     </CommandItem>
                                                 ))}
                                             </CommandGroup>

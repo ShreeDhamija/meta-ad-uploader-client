@@ -2834,7 +2834,10 @@ export default function TikTokAdCreationForm({
                 >
                   <span className="truncate text-sm font-medium">
                     {selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
-                      ? identities.find(i => i.identity_id === selectedIdentity)?.display_name || selectedIdentity
+                      ? (() => {
+                        const found = identities.find(i => i.identity_id === selectedIdentity);
+                        return found ? `${found.display_name} (${found.identity_id})` : selectedIdentity;
+                      })()
                       : adType === 'NORMAL'
                         ? "Select Identity"
                         : "Select account to Promote From"}
@@ -2862,7 +2865,7 @@ export default function TikTokAdCreationForm({
                           )}
                         >
                           <div className="flex flex-col">
-                            <span className="text-sm font-medium">{i.display_name}</span>
+                            <span className="text-sm font-medium">{i.display_name} ({i.identity_id})</span>
                           </div>
                           {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black" />}
                         </CommandItem>
@@ -3054,7 +3057,7 @@ export default function TikTokAdCreationForm({
                                 <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}>
                                   {isSelected && <Check className="w-3 h-3" />}
                                 </div>
-                                <span className="text-xs font-medium">{opt.label}</span>
+                                <span className="text-sm font-medium">{opt.label}</span>
                               </CommandItem>
                             );
                           })}
