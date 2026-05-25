@@ -51,6 +51,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import axios from "axios"
+import { useAppData } from "@/lib/AppContext"
 
 import DesktopIcon from '@/assets/Desktop.webp'
 import DropboxIcon from '@/assets/Dropbox.png'
@@ -415,6 +416,7 @@ export default function TikTokAdCreationForm({
   }
 
   const { tiktokFetch, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
+  const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities } = useAppData()
 
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
   const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
@@ -472,7 +474,7 @@ export default function TikTokAdCreationForm({
 
   const [loadingCampaigns, setLoadingCampaigns] = useState(false)
   const [loadingAdGroups, setLoadingAdGroups] = useState(false)
-  const [loadingIdentities, setLoadingIdentities] = useState(false)
+  const loadingIdentities = tiktokIdentitiesLoading[selectedAdvertiser] || false
   const [instantPages, setInstantPages] = useState([])
   const [loadingPages, setLoadingPages] = useState(false)
   const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false)
@@ -1078,17 +1080,17 @@ export default function TikTokAdCreationForm({
         .finally(() => setLoadingCampaigns(false))
     }
 
-    setLoadingIdentities(true)
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&_t=${Date.now()}`)
-      .then(r => r.json())
-      .then(d => {
-        const list = d.identities || []
-        setIdentities(list)
-        // Note: the identity selection logic now lives in the separate useEffect below
-      })
-      .catch(() => { })
-      .finally(() => setLoadingIdentities(false))
-  }, [selectedAdvertiser, setCampaigns, setSelectedCampaign, setAdGroups, setIdentities, tiktokFetch])
+    fetchTikTokIdentities(selectedAdvertiser).then(list => {
+      setIdentities(list)
+    })
+  }, [selectedAdvertiser, setCampaigns, setSelectedCampaign, setAdGroups, setIdentities, tiktokFetch, fetchTikTokIdentities])
+
+  // Automatically sync identities from context cache when selectedAdvertiser or context value changes
+  useEffect(() => {
+    if (selectedAdvertiser && tiktokIdentities[selectedAdvertiser]) {
+      setIdentities(tiktokIdentities[selectedAdvertiser]);
+    }
+  }, [selectedAdvertiser, tiktokIdentities, setIdentities]);
 
   // Automatically update selectedIdentity when adType or identities list changes
   useEffect(() => {
@@ -1298,11 +1300,8 @@ export default function TikTokAdCreationForm({
   const forceRefreshIdentities = (e) => {
     e.stopPropagation()
     if (!selectedAdvertiser || loadingIdentities) return
-    setLoadingIdentities(true)
-    tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&_t=${Date.now()}`)
-      .then(r => r.json())
-      .then(d => {
-        const list = d.identities || []
+    fetchTikTokIdentities(selectedAdvertiser, true)
+      .then(list => {
         setIdentities(list)
         if (list.length > 0) {
           const best = list.find(i => i.identity_type === 'TT_USER') ||
@@ -1315,7 +1314,6 @@ export default function TikTokAdCreationForm({
         toast.success('Identities refreshed!')
       })
       .catch(() => toast.error('Failed to refresh identities'))
-      .finally(() => setLoadingIdentities(false))
   }
 
   // Handle Campaign Duplication request

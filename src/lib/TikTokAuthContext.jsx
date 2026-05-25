@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { readCache, writeCache, clearCache } from '@/lib/dataCache'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 
@@ -12,7 +13,7 @@ const TikTokAuthContext = createContext(null)
 export function TikTokAuthProvider({ children }) {
   const [isTikTokLoggedIn, setIsTikTokLoggedIn] = useState(false)
   const [tiktokUser, setTikTokUser] = useState(null)
-  const [tiktokAdvertisers, setTikTokAdvertisers] = useState([])
+  const [tiktokAdvertisers, setTikTokAdvertisers] = useState(readCache('tiktokAdvertisers') || [])
   const [isLoading, setIsLoading] = useState(true)
 
   // Called directly by TikTokCallback after the exchange endpoint succeeds
@@ -21,6 +22,7 @@ export function TikTokAuthProvider({ children }) {
     setIsTikTokLoggedIn(true)
     setTikTokUser(user)
     setTikTokAdvertisers(advertisers)
+    writeCache('tiktokAdvertisers', advertisers)
     setIsLoading(false)
     // Persist auth data to localStorage so the server can recover the session from Firestore
     if (user?.tiktokId) {
@@ -93,6 +95,7 @@ export function TikTokAuthProvider({ children }) {
           setIsTikTokLoggedIn(true)
           setTikTokUser(data.user)
           setTikTokAdvertisers(data.advertisers || [])
+          writeCache('tiktokAdvertisers', data.advertisers || [])
           // Keep localStorage in sync
           if (data.user?.tiktokId) {
             try { localStorage.setItem('tiktok_uid', data.user.tiktokId) } catch (_) {}
@@ -111,18 +114,21 @@ export function TikTokAuthProvider({ children }) {
           setIsTikTokLoggedIn(false)
           setTikTokUser(null)
           setTikTokAdvertisers([])
+          writeCache('tiktokAdvertisers', [])
         }
       } else {
         console.warn('⚠️ [TikTok Auth] Non-OK HTTP status:', res.status, '| body:', rawText)
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
         setTikTokAdvertisers([])
+        writeCache('tiktokAdvertisers', [])
       }
     } catch (err) {
       console.error('❌ [TikTok Auth] Network/fetch error calling', endpoint, err)
       setIsTikTokLoggedIn(false)
       setTikTokUser(null)
       setTikTokAdvertisers([])
+      writeCache('tiktokAdvertisers', [])
     } finally {
       setIsLoading(false)
     }
@@ -141,6 +147,9 @@ export function TikTokAuthProvider({ children }) {
         try { localStorage.removeItem('tiktok_uid') } catch (_) {}
         try { localStorage.removeItem('tiktok_token') } catch (_) {}
         try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) {}
+
+        clearCache('tiktokAdvertisers')
+        clearCache('tiktokIdentities')
 
         toast.info('Logged out of TikTok successfully!')
         setIsTikTokLoggedIn(false)

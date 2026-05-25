@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { saveTikTokSettings } from "@/lib/saveTikTokSettings"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import useTikTokAdvertiserSettings from "@/lib/useTikTokAdvertiserSettings"
+import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
 import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
@@ -55,8 +56,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const { isTikTokLoggedIn, refreshTikTokUser } = useTikTokAuth();
     const [refreshingAdvertisers, setRefreshingAdvertisers] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [identities, setIdentities] = useState([]);
-    const [loadingIdentities, setLoadingIdentities] = useState(false);
+    const { tiktokIdentities, tiktokIdentitiesLoading, fetchTikTokIdentities } = useAppData();
+    const identities = tiktokIdentities[selectedAdvertiser] || [];
+    const loadingIdentities = tiktokIdentitiesLoading[selectedAdvertiser] || false;
     const [openIdentity, setOpenIdentity] = useState(false);
     const [openCta, setOpenCta] = useState(false);
     const [openAdvertiser, setOpenAdvertiser] = useState(false);
@@ -101,24 +103,17 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     }, [settings, initialSettings]);
 
     // Fetch identities when advertiser changes
-    const fetchIdentities = useCallback(() => {
-        if (!selectedAdvertiser) return;
-        setLoadingIdentities(true);
-        fetch(`${import.meta.env.VITE_API_URL}/api/tiktok/fetch-identities?advertiserId=${selectedAdvertiser}&_t=${Date.now()}`, {
-            headers: tiktokHeaders()
-        })
-            .then(r => r.json())
-            .then(d => {
-                const list = d.identities || [];
-                setIdentities(list);
-            })
-            .catch(e => console.error(e))
-            .finally(() => setLoadingIdentities(false));
-    }, [selectedAdvertiser, tiktokHeaders]);
-
     useEffect(() => {
-        fetchIdentities();
-    }, [fetchIdentities]);
+        if (selectedAdvertiser) {
+            fetchTikTokIdentities(selectedAdvertiser);
+        }
+    }, [selectedAdvertiser, fetchTikTokIdentities]);
+
+    const fetchIdentities = () => {
+        if (selectedAdvertiser) {
+            fetchTikTokIdentities(selectedAdvertiser, true);
+        }
+    };
 
     const handleSave = async (updatedSettings = settings) => {
         if (!selectedAdvertiser) return;

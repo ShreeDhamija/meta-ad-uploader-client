@@ -27,6 +27,10 @@ export const AppProvider = ({ children }) => {
   const [pagesLoading, setPagesLoading] = useState(false)
   const [adAccountsLoading, setAdAccountsLoading] = useState(false)
 
+  const cachedTiktokIdentities = readCache('tiktokIdentities') || {}
+  const [tiktokIdentities, setTiktokIdentities] = useState(cachedTiktokIdentities)
+  const [tiktokIdentitiesLoading, setTiktokIdentitiesLoading] = useState({})
+
   const { subscriptionData } = useSubscription()
   const { selectedAdAccountIds } = useGlobalSettings()
 
@@ -76,6 +80,46 @@ export const AppProvider = ({ children }) => {
     }
   }, [])
 
+
+  const fetchTikTokIdentities = useCallback(async (advertiserId, force = false) => {
+    if (!advertiserId) return [];
+
+    if (!force) {
+      if (tiktokIdentities[advertiserId]?.length > 0) {
+        return tiktokIdentities[advertiserId];
+      }
+    }
+
+    setTiktokIdentitiesLoading(prev => ({ ...prev, [advertiserId]: true }));
+    try {
+      const storedUid = (() => { try { return localStorage.getItem('tiktok_uid') } catch (_) { return null } })()
+      const storedToken = (() => { try { return localStorage.getItem('tiktok_token') } catch (_) { return null } })()
+      const storedAdvertiserIds = (() => { try { return localStorage.getItem('tiktok_advertiser_ids') } catch (_) { return null } })()
+      const headers = { 'Content-Type': 'application/json' }
+      if (storedUid) headers['x-tiktok-user-id'] = storedUid
+      if (storedToken) headers['x-tiktok-token'] = storedToken
+      if (storedAdvertiserIds) headers['x-tiktok-advertiser-ids'] = storedAdvertiserIds
+
+      const res = await fetch(`${API_BASE_URL}/api/tiktok/fetch-identities?advertiserId=${advertiserId}&_t=${Date.now()}`, {
+        credentials: "include",
+        headers
+      });
+      const data = await res.json();
+      const list = data.identities || [];
+
+      setTiktokIdentities(prev => {
+        const updated = { ...prev, [advertiserId]: list };
+        writeCache('tiktokIdentities', updated);
+        return updated;
+      });
+      return list;
+    } catch (err) {
+      console.error("Failed to fetch TikTok identities:", err);
+      return [];
+    } finally {
+      setTiktokIdentitiesLoading(prev => ({ ...prev, [advertiserId]: false }));
+    }
+  }, [tiktokIdentities]);
 
   const refreshPagePictures = useCallback(async (pagesToRefresh) => {
     if (!pagesToRefresh.length) return;
@@ -147,6 +191,9 @@ export const AppProvider = ({ children }) => {
       pagesLoading, adAccountsLoading,
       refetchAdAccounts: fetchAdAccounts,
       refetchPages: fetchPages,
+      tiktokIdentities,
+      tiktokIdentitiesLoading,
+      fetchTikTokIdentities,
     }}>
       {children}
     </AppContext.Provider>
