@@ -30,7 +30,12 @@ import {
   Users,
   Video,
   X,
-  Zap
+  Zap,
+  AlertTriangle,
+  Ban,
+  CircleX,
+  Eye,
+  RotateCcw
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
@@ -53,6 +58,11 @@ import { default as CogIcon, default as ConfigIcon } from '@/assets/icons/cog.sv
 import CampaignIcon from '@/assets/icons/folder.svg?react'
 import AdSetIcon from '@/assets/icons/grid.svg?react'
 import PlusIcon from '@/assets/icons/plus.svg?react'
+import RocketIcon2 from '@/assets/icons/rocket.svg?react'
+import CheckIcon from '@/assets/icons/check.svg?react'
+import UploadIcon from '@/assets/icons/upload.svg?react'
+import QueueIcon from '@/assets/icons/queue.svg?react'
+import PartialSuccess from '@/assets/icons/partialsuccess.svg?react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
@@ -121,6 +131,225 @@ const UPLOAD_SOURCE_OPTIONS = [
     compactLabel: 'Dropbox'
   },
 ]
+
+const ErrorFileName = ({ name }) => {
+  const [expanded, setExpanded] = useState(false);
+  const LIMIT = 50;
+  const needsTruncation = name.length > LIMIT;
+  const display = !needsTruncation || expanded ? name : name.slice(0, LIMIT) + '…';
+  return (
+    <li className="break-words text-[#FF0000] leading-snug">
+      {display}
+      {needsTruncation && !expanded && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="ml-1 text-[#FF8080] hover:text-[#FF0000] underline underline-offset-2"
+        >
+          View Full Ad Name
+        </button>
+      )}
+    </li>
+  );
+};
+
+const useAdCreationProgress = (jobId) => {
+  const [progress, setProgress] = useState(0);
+  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState('idle');
+  const [metaData, setMetadata] = useState({});
+
+  const resetProgress = useCallback(() => {
+    setProgress(0);
+    setMessage('');
+    setStatus('idle');
+  }, []);
+
+  useEffect(() => {
+    if (!jobId) {
+      setProgress(0);
+      setMessage('');
+      setStatus('idle');
+      return;
+    }
+
+    setProgress(0);
+    setMessage('');
+    setStatus('idle');
+
+    let eventSource = null;
+    let retryTimeoutId = null;
+    let connectionTimeoutId = null;
+    let isSubscribed = true;
+    let retryCount = 0;
+    let jobNotFoundCount = 0;
+
+    const baseRetryDelay = 500;
+    const maxRetryDelay = 5000;
+    const maxConnectionRetries = 10;
+    const maxJobNotFoundRetries = 50;
+    const connectionTimeout = 10000;
+
+    const cleanup = () => {
+      isSubscribed = false;
+
+      if (retryTimeoutId) {
+        clearTimeout(retryTimeoutId);
+        retryTimeoutId = null;
+      }
+
+      if (connectionTimeoutId) {
+        clearTimeout(connectionTimeoutId);
+        connectionTimeoutId = null;
+      }
+
+      if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+        eventSource.close();
+        eventSource = null;
+      }
+    };
+
+    const scheduleConnectionRetry = (reason) => {
+      if (!isSubscribed || retryCount >= maxConnectionRetries) {
+        if (retryCount >= maxConnectionRetries) {
+          setStatus('error');
+          setMessage('Connection failed. Please check your internet connection.');
+        }
+        return;
+      }
+
+      retryCount++;
+      const delay = Math.min(
+        baseRetryDelay * Math.pow(2, retryCount - 1),
+        maxRetryDelay
+      );
+
+      retryTimeoutId = setTimeout(() => {
+        if (isSubscribed) connectSSE();
+      }, delay);
+    };
+
+    const scheduleJobRetry = () => {
+      if (!isSubscribed || jobNotFoundCount >= maxJobNotFoundRetries) {
+        if (jobNotFoundCount >= maxJobNotFoundRetries) {
+          setStatus('job-not-found');
+          setMessage('Job not found. The task may have expired or been cancelled.');
+        }
+        return;
+      }
+
+      jobNotFoundCount++;
+      const delay = Math.min(baseRetryDelay, 1000);
+
+      retryTimeoutId = setTimeout(() => {
+        if (isSubscribed) connectSSE();
+      }, delay);
+    };
+
+    const connectSSE = () => {
+      if (!isSubscribed) return;
+
+      try {
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+
+        eventSource = new EventSource(`${API_BASE_URL}/api/progress/${jobId}`);
+
+        connectionTimeoutId = setTimeout(() => {
+          if (eventSource && eventSource.readyState === EventSource.CONNECTING) {
+            eventSource.close();
+            scheduleConnectionRetry('Connection timeout');
+          }
+        }, connectionTimeout);
+
+        eventSource.onopen = () => {
+          retryCount = 0;
+
+          if (connectionTimeoutId) {
+            clearTimeout(connectionTimeoutId);
+            connectionTimeoutId = null;
+          }
+        };
+
+        eventSource.onmessage = (event) => {
+          if (!isSubscribed) {
+            cleanup();
+            return;
+          }
+
+          try {
+            const data = JSON.parse(event.data);
+
+            if (data.message === 'Job not found') {
+              if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+              }
+
+              retryCount = 0;
+              scheduleJobRetry();
+              return;
+            }
+
+            if (isSubscribed) {
+              retryCount = 0;
+              jobNotFoundCount = 0;
+
+              setProgress(data.progress);
+              setMessage(data.message);
+              setStatus(data.status);
+              setMetadata({
+                successCount: data.successCount,
+                failureCount: data.failureCount,
+                totalCount: data.totalCount,
+                errorMessages: data.errorMessages
+              });
+
+              if (data.status === 'complete' || data.status === 'error' || data.status === 'partial-success' || data.status === 'cancelled') {
+                cleanup();
+              }
+            }
+          } catch (err) {
+            console.error('Failed to parse SSE message:', err);
+          }
+        };
+
+        eventSource.onerror = (error) => {
+          if (!isSubscribed) {
+            cleanup();
+            return;
+          }
+
+          if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+          }
+
+          if (connectionTimeoutId) {
+            clearTimeout(connectionTimeoutId);
+            connectionTimeoutId = null;
+          }
+
+          scheduleConnectionRetry('Connection error');
+        };
+
+      } catch (error) {
+        if (isSubscribed) {
+          setStatus('error');
+          setMessage('Failed to initialize progress tracking.');
+        }
+        cleanup();
+      }
+    };
+
+    connectSSE();
+    return cleanup;
+  }, [jobId]);
+
+  return { progress, message, status, metaData, resetProgress };
+};
 
 export default function TikTokAdCreationForm({
   advertiserId,
@@ -246,6 +475,40 @@ export default function TikTokAdCreationForm({
   const [loadingPages, setLoadingPages] = useState(false)
   const [showDeleteAllVariantsDialog, setShowDeleteAllVariantsDialog] = useState(false)
 
+  // Job Queue / Progress tracking states
+  const [jobId, setJobId] = useState(null)
+  const [progress, setProgress] = useState(0)
+  const [progressMessage, setProgressMessage] = useState('')
+  const [status, setStatus] = useState('idle')
+  const {
+    progress: trackedProgress,
+    message: trackedMessage,
+    status: trackedStatus,
+    metaData: trackedMetaData,
+    resetProgress
+  } = useAdCreationProgress(jobId)
+  
+  const [jobQueue, setJobQueue] = useState([])
+  const [currentJob, setCurrentJob] = useState(null)
+  const [isProcessingQueue, setIsProcessingQueue] = useState(false)
+  const [isJobTrackerExpanded, setIsJobTrackerExpanded] = useState(true)
+  const [completedJobs, setCompletedJobs] = useState([])
+  const [hasStartedAnyJob, setHasStartedAnyJob] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const [currentAbortController, setCurrentAbortController] = useState(null)
+  const [isQueueingJobs, setIsQueueingJobs] = useState(false)
+  const currentJobIdRef = useRef(null)
+  
+  const [liveProgress, setLiveProgress] = useState({
+    completed: 0,
+    succeeded: 0,
+    failed: 0,
+    total: 0,
+    errors: []
+  })
+  const [preserveMedia, setPreserveMedia] = useState(false)
+
+
   const fileRef = useRef()
   const pickerInstanceRef = useRef(null)
 
@@ -276,6 +539,500 @@ export default function TikTokAdCreationForm({
     })
     return count
   }
+
+  const getFileId = (file) => {
+    if (!file) return ''
+    return file.id || file.name || file.videoId || ''
+  }
+
+  const captureFormDataAsJob = useCallback((variantId = 'default') => {
+    const getVariantState = (vid) => {
+      const v = variants.find(val => val.id === vid)
+      if (!v) return null
+      return v.state || v
+    }
+    
+    const variantState = getVariantState(variantId)
+    if (!variantState) return null
+
+    const filterFiles = (items) => items.filter((file) => {
+      const fileId = getFileId(file)
+      return (fileVariantMap[fileId] || 'default') === variantId
+    })
+
+    const variantFiles = filterFiles(files || [])
+    const variantDriveFiles = filterFiles(driveFiles || []).map(f => ({ ...f, isDrive: true }))
+    const variantDropboxFiles = filterFiles(dropboxFiles || []).map(f => ({ ...f, isDropbox: true }))
+    const variantLibraryFiles = filterFiles(tiktokLibraryFiles || [])
+
+    const formData = {
+      adName: variantState.adName || adName || '',
+      adText: variantState.adText || adText || '',
+      cta: variantState.cta || cta || ['SHOP_NOW'],
+      landingUrl: variantState.landingUrl || landingUrl || '',
+      sparkAuthCode: variantState.sparkAuthCode || sparkAuthCode || '',
+      urlMode: variantState.urlMode || urlMode || 'WEBSITE',
+      adType: variantState.adType || adType || 'NORMAL',
+      
+      files: [...variantFiles],
+      driveFiles: [...variantDriveFiles],
+      dropboxFiles: [...variantDropboxFiles],
+      tiktokLibraryFiles: [...variantLibraryFiles],
+      
+      selectedAdvertiser,
+      selectedCampaign,
+      selectedAdGroup,
+      
+      isDuplicatingAdGroupMode: showDuplicateAdGroupBlock && duplicateAdGroup,
+      duplicateAdGroup,
+      newAdGroupName,
+      selectedIdentity,
+    }
+
+    let fileCount = formData.files.length + formData.driveFiles.length + formData.dropboxFiles.length + formData.tiktokLibraryFiles.length
+    if (formData.adType === 'SPARK') {
+      fileCount = 1
+    }
+
+    return {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      variantId,
+      variantName: variants.find(v => v.id === variantId)?.name || 'Default',
+      adCount: fileCount * (formData.selectedAdGroup?.length || 1),
+      formData,
+    }
+  }, [
+    variants, adName, adText, cta, landingUrl, sparkAuthCode, urlMode, adType,
+    files, driveFiles, dropboxFiles, tiktokLibraryFiles, selectedAdvertiser,
+    selectedCampaign, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup,
+    newAdGroupName, selectedIdentity, fileVariantMap
+  ])
+
+  const addCompletedJob = useCallback((completedJob) => {
+    setCompletedJobs(prev => {
+      const updated = [...prev, completedJob]
+      return updated.map((j, i) =>
+        i < updated.length - 3 ? { ...j, formData: null } : j
+      )
+    })
+  }, [])
+
+  const handleRetryJob = useCallback((job) => {
+    const d = job.formData
+    if (!d) return
+
+    setAdName(d.adName || '')
+    setAdText(d.adText || '')
+    setCta(d.cta || ['SHOP_NOW'])
+    setLandingUrl(d.landingUrl || '')
+    setSparkAuthCode(d.sparkAuthCode || '')
+    setUrlMode(d.urlMode || 'WEBSITE')
+    setAdType(d.adType || 'NORMAL')
+
+    setFiles(d.files || [])
+    setDriveFiles(d.driveFiles || [])
+    setDropboxFiles(d.dropboxFiles || [])
+    if (setSparkAuthCode) setSparkAuthCode(d.sparkAuthCode || '')
+
+    setSelectedAdvertiser(d.selectedAdvertiser || '')
+    setSelectedCampaign(d.selectedCampaign || [])
+    setSelectedAdGroup(d.selectedAdGroup || [])
+
+    setVariants([{ id: 'default', name: 'Default', snapshot: null }])
+    setActiveVariantId('default')
+    setFileVariantMap({})
+    setGroupVariantMap({})
+    setPostVariantMap({})
+  }, [
+    setAdName, setAdText, setCta, setLandingUrl, setSparkAuthCode, setUrlMode,
+    setAdType, setFiles, setDriveFiles, setDropboxFiles, setSelectedAdvertiser,
+    setSelectedCampaign, setSelectedAdGroup, setVariants, setActiveVariantId,
+    setFileVariantMap, setGroupVariantMap, setPostVariantMap
+  ])
+
+  // Sequentially process the publishing job queue
+  const handleCreateAd = async (jobToProcess) => {
+    const abortController = new AbortController()
+    const signal = abortController.signal
+    setCurrentAbortController(abortController)
+    currentJobIdRef.current = jobToProcess.id
+
+    const {
+      adName,
+      adText,
+      cta,
+      landingUrl,
+      sparkAuthCode,
+      urlMode,
+      adType,
+      files,
+      driveFiles,
+      dropboxFiles,
+      tiktokLibraryFiles,
+      selectedAdvertiser,
+      selectedCampaign,
+      selectedAdGroup,
+      isDuplicatingAdGroupMode,
+      duplicateAdGroup,
+      newAdGroupName,
+      selectedIdentity,
+    } = jobToProcess.formData
+
+    setIsSubmitting(true)
+    setIsUploading(true)
+    setProgress(0)
+    setProgressMessage('Starting TikTok ad creation...')
+
+    const itemsToUpload = []
+    if (adType === 'SPARK') {
+      itemsToUpload.push({ type: 'spark', file: { name: 'Spark Ad' } })
+    } else {
+      (files || []).forEach(f => itemsToUpload.push({ type: 'local', file: f }))
+      (driveFiles || []).forEach(f => itemsToUpload.push({ type: 'drive', file: f }))
+      (dropboxFiles || []).forEach(f => itemsToUpload.push({ type: 'dropbox', file: f }))
+      (tiktokLibraryFiles || []).forEach(f => itemsToUpload.push({ type: 'library', file: f }))
+    }
+
+    let successCount = 0
+    let failureCount = 0
+    let totalCount = itemsToUpload.length * (isDuplicatingAdGroupMode ? 1 : selectedAdGroup.length)
+    let errorMessages = []
+    
+    setLiveProgress({
+      completed: 0,
+      succeeded: 0,
+      failed: 0,
+      total: totalCount,
+      errors: []
+    })
+
+    const updateProgress = (pct, msg) => {
+      setProgress(pct)
+      setProgressMessage(msg)
+    }
+
+    try {
+      let sparkVideoId = null
+      if (adType === 'SPARK') {
+        updateProgress(5, 'Authorizing organic TikTok post...')
+        if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
+        const authRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-authorize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            advertiserId: selectedAdvertiser,
+            authCode: sparkAuthCode.trim()
+          }),
+          signal
+        })
+        const authData = await authRes.json()
+        if (!authRes.ok || !authData.success) {
+          throw new Error(authData.error || 'Failed to authorize organic post')
+        }
+
+        updateProgress(10, 'Fetching organic video information...')
+        if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
+        const infoParams = new URLSearchParams({
+          advertiserId: selectedAdvertiser,
+          authCode: sparkAuthCode.trim()
+        })
+        const infoRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-video-info?${infoParams}`, { signal })
+        const infoData = await infoRes.json()
+        if (!infoRes.ok || !infoData.success) {
+          throw new Error(infoData.error || 'Failed to retrieve organic video information')
+        }
+        sparkVideoId = infoData.videoId
+      }
+
+      for (let i = 0; i < itemsToUpload.length; i++) {
+        if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
+        const item = itemsToUpload[i]
+        let videoId = null
+
+        const progressBase = Math.round((i / itemsToUpload.length) * 90)
+        const progressNext = Math.round(((i + 1) / itemsToUpload.length) * 90)
+
+        updateProgress(progressBase + 5, `Uploading and processing media ${i + 1}/${itemsToUpload.length}: ${item.file.name}...`)
+
+        if (adType === 'SPARK') {
+          videoId = sparkVideoId
+        } else if (item.type === 'local') {
+          const uploadResult = await uploadVideoToTikTok(item.file)
+          if (!uploadResult?.videoId) {
+            throw new Error(`Video upload failed for "${item.file.name}"`)
+          }
+          videoId = uploadResult.videoId
+        } else if (item.type === 'drive' || item.type === 'dropbox') {
+          const formData = new FormData()
+          if (item.type === 'drive') {
+            formData.append('driveFile', JSON.stringify(item.file))
+          } else {
+            formData.append('dropboxFile', JSON.stringify(item.file))
+          }
+
+          const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
+          const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
+          const sourceName = item.type === 'drive' ? 'Google Drive' : 'Dropbox'
+
+          updateProgress(progressBase + 10, `Downloading "${item.file.name}" from ${sourceName}...`)
+          const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData, signal })
+          const uploadData = await uploadRes.json()
+          if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
+            throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`)
+          }
+          videoId = uploadData.videoId
+        } else if (item.type === 'library') {
+          videoId = item.file.videoId
+        }
+
+        const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
+        const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
+        const currentIdentityId = isCustomized ? undefined : selectedIdentity
+        const currentIdentityType = isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER')
+
+        const finalUrl = urlMode === 'WEBSITE'
+          ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
+          : landingUrl
+
+        let adGroupIdsToSubmit = [...selectedAdGroup]
+
+        if (isDuplicatingAdGroupMode && i === 0) {
+          updateProgress(progressBase + 15, 'Duplicating ad group on-the-fly...')
+          const dupRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/adgroup/duplicate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              advertiser_id: selectedAdvertiser,
+              source_adgroup_id: duplicateAdGroup,
+              new_campaign_id: selectedCampaign[0],
+              new_adgroup_name: newAdGroupName.trim()
+            }),
+            signal
+          })
+          const dupData = await dupRes.json()
+          if (!dupRes.ok || !dupData.success || !dupData.copied_adgroup_id) {
+            throw new Error(dupData.error || 'Ad group duplication failed')
+          }
+          adGroupIdsToSubmit = [dupData.copied_adgroup_id]
+        }
+
+        for (const adgroupId of adGroupIdsToSubmit) {
+          if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
+          const adGroupName = adGroups.find(ag => ag.adgroup_id === adgroupId)?.adgroup_name || adgroupId
+
+          const finalAdName = computeAdNameFromFormula(
+            item.file,
+            i,
+            landingUrl,
+            adNameFormulaV2,
+            adType
+          )
+
+          updateProgress(progressBase + 20, `Creating ad "${finalAdName}" in group "${adGroupName}"...`)
+
+          const creativeCTAs = Array.isArray(cta) ? cta : [cta]
+          const creatives = creativeCTAs.map((singleCta) => {
+            const creativeAdName = creativeCTAs.length > 1 ? `${finalAdName} - ${singleCta}` : finalAdName
+            const creative = {
+              video_id: videoId,
+              ad_text: adText,
+              call_to_action: singleCta,
+              ad_name: creativeAdName,
+              identity_type: currentIdentityType,
+              landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+              ...(urlMode === 'WEBSITE'
+                ? { landing_page_url: finalUrl }
+                : { page_id: landingUrl }
+              ),
+              ...(adType === 'SPARK' ? {
+                is_spark_ad: true,
+                spark_ad_auth_code: sparkAuthCode.trim(),
+                adType: 'SPARK'
+              } : {})
+            }
+            if (currentIdentityId) creative.identity_id = currentIdentityId
+            return creative
+          })
+
+          const createPayload = {
+            advertiserId: selectedAdvertiser,
+            adgroupId: adgroupId,
+            ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
+            identityType: currentIdentityType,
+            adName: finalAdName,
+            adType: adType,
+            creatives: creatives,
+            jobId: jobToProcess.id
+          }
+
+          try {
+            const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(createPayload),
+              signal
+            })
+            const createData = await createRes.json()
+            if (!createRes.ok || !createData.success) {
+              throw new Error(createData.error || 'Ad creation failed')
+            }
+            
+            successCount++
+            setLiveProgress(prev => {
+              const updatedCompleted = prev.completed + 1
+              return {
+                ...prev,
+                completed: updatedCompleted,
+                succeeded: prev.succeeded + 1
+              }
+            })
+          } catch (err) {
+            failureCount++
+            const errDetail = err.message || 'Ad creation failed'
+            errorMessages.push({ error: errDetail, fileName: item.file.name })
+            setLiveProgress(prev => {
+              const updatedCompleted = prev.completed + 1
+              return {
+                ...prev,
+                completed: updatedCompleted,
+                failed: prev.failed + 1,
+                errors: [...prev.errors, { error: errDetail, fileName: item.file.name }]
+              }
+            })
+          }
+        }
+      }
+
+      updateProgress(100, 'TikTok ad creation complete!')
+      setStatus('complete')
+      
+      const completedJob = {
+        id: jobToProcess.id,
+        message: failureCount > 0 
+          ? `Completed with ${failureCount} failure(s).` 
+          : `🎉 Created TikTok ads successfully for all ${itemsToUpload.length} videos!`,
+        completedAt: Date.now(),
+        status: failureCount === 0 ? 'complete' : (successCount > 0 ? 'partial-success' : 'error'),
+        formData: jobToProcess.formData,
+        successCount,
+        failureCount,
+        totalCount,
+        errorMessages,
+      }
+      
+      addCompletedJob(completedJob)
+      
+      await fetch(`${API_BASE_URL}/auth/complete-job`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobId: jobToProcess.id,
+          message: completedJob.message,
+          status: completedJob.status,
+          successCount,
+          failureCount,
+          totalCount,
+          errorMessages,
+        })
+      }).catch(() => {})
+
+    } catch (err) {
+      if (err.name === 'AbortError' || signal.aborted) {
+        setStatus('cancelled')
+        updateProgress(100, 'Job cancelled.')
+        const cancelledJob = {
+          id: jobToProcess.id,
+          message: 'Job cancelled.',
+          completedAt: Date.now(),
+          status: 'cancelled',
+          formData: jobToProcess.formData,
+          successCount,
+          failureCount,
+          totalCount,
+          errorMessages,
+        }
+        addCompletedJob(cancelledJob)
+        
+        await fetch(`${API_BASE_URL}/auth/cancel-job`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId: jobToProcess.id })
+        }).catch(() => {})
+      } else {
+        setStatus('error')
+        updateProgress(100, `Job Failed: ${err.message}`)
+        const failedJob = {
+          id: jobToProcess.id,
+          message: `Job Failed: ${err.message}`,
+          completedAt: Date.now(),
+          status: 'error',
+          formData: jobToProcess.formData,
+          successCount,
+          failureCount,
+          totalCount,
+          errorMessages: [{ error: err.message }],
+        }
+        addCompletedJob(failedJob)
+
+        await fetch(`${API_BASE_URL}/auth/complete-job`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jobId: jobToProcess.id,
+            message: failedJob.message,
+            status: 'error',
+            successCount,
+            failureCount,
+            totalCount,
+            errorMessages: [{ error: err.message }],
+          })
+        }).catch(() => {})
+      }
+    } finally {
+      setJobQueue(prev => prev.slice(1))
+      setIsSubmitting(false)
+      setIsUploading(false)
+      setCurrentJob(null)
+      setIsProcessingQueue(false)
+      setIsCancelling(false)
+    }
+  }
+
+  useEffect(() => {
+    if (jobQueue.length === 0 || isProcessingQueue) {
+      return
+    }
+
+    const jobToProcess = jobQueue[0]
+
+    setIsProcessingQueue(true)
+    setCurrentJob(jobToProcess)
+    setHasStartedAnyJob(true)
+
+    setProgress(0)
+    setProgressMessage('Initializing...')
+    setJobId(jobToProcess.id)
+    setIsCancelling(false)
+
+    handleCreateAd(jobToProcess).catch(err => {
+      const failedJob = {
+        id: jobToProcess.id,
+        message: `Job Failed: ${err.message || 'An initialization error occurred.'}`,
+        completedAt: Date.now(),
+        status: 'error',
+        formData: jobToProcess.formData,
+        successCount: 0,
+        failureCount: 0,
+        totalCount: jobToProcess.adCount,
+        errorMessages: [{ error: err.message }],
+      }
+      addCompletedJob(failedJob)
+      setJobQueue(prev => prev.slice(1))
+      setCurrentJob(null)
+      setIsProcessingQueue(false)
+      setIsCancelling(false)
+    })
+  }, [jobQueue, isProcessingQueue])
 
   // Handle advertiser account change
   const handleAdvertiserChange = useCallback((value) => {
@@ -942,299 +1699,427 @@ export default function TikTokAdCreationForm({
       .replace(/\{\{Iteration\}\}/gi, String(iterationIndex + 1).padStart(2, "0"))
       .replace(/\{\{URL Slug\}\}/gi, urlSlug)
       .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
-    
+
     calculatedName = calculatedName.replace(/\{\{([^}]+)\}\}/g, "");
     return calculatedName.trim() || "Ad Generated Through Blip";
   }, [adNameFormulaV2, adName]);
 
-  // Submit form handler
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    const isDuplicatingAdGroupMode = showDuplicateAdGroupBlock && duplicateAdGroup
-    if (!selectedAdvertiser) return toast.error('Please select an advertiser')
-    if (!isDuplicatingAdGroupMode && (!selectedAdGroup || selectedAdGroup.length === 0)) {
-      return toast.error('Please select at least one ad group')
-    }
-    if (isDuplicatingAdGroupMode && !newAdGroupName.trim()) {
-      return toast.error('Please enter a name for the new duplicated ad group')
-    }
+  const hasMediaInFormData = (fd) => {
+    if (fd.adType === 'SPARK') return true;
+    return fd.files.length > 0 || fd.driveFiles.length > 0 || fd.dropboxFiles.length > 0 || fd.tiktokLibraryFiles.length > 0;
+  }
 
-    if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
-      return toast.error(adType === 'NORMAL'
-        ? 'Identity is required. Please select one.'
-        : 'Promote From is required. Please select a linked TikTok account.'
-      )
-    }
-
-    if (adType === 'SPARK') {
-      if (!sparkAuthCode || !sparkAuthCode.trim()) {
-        return toast.error('Spark Ads require an Organic Post Authorization Code or link.')
-      }
-    }
-
-    const hasFormula = adNameFormulaV2?.rawInput?.trim()
-    if (!hasFormula && !adName.trim()) return toast.error('Ad name is required')
-    if (!cta || cta.length === 0) return toast.error('Please select at least one Call to Action')
-
-    const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0
-    if (adType === 'NORMAL' && !videoFile && !isCloudFile && files.length === 0) {
-      return toast.error("Please select a video")
-    }
-
-    setIsSubmitting(true)
-    setIsUploading(true)
+  const clearQueuedMedia = () => {
+    setAdName('')
+    setAdText('')
+    setLandingUrl('')
+    setCta(['SHOP_NOW'])
+    setVideoFile(null)
+    setVideoPreview(null)
+    if (setFiles) setFiles([])
+    setDriveFiles([])
+    setDropboxFiles([])
     setUploadProgress(0)
+    if (setSparkAuthCode) setSparkAuthCode('')
+    setDuplicateAdGroup('')
+    setNewAdGroupName('')
+    setShowDuplicateAdGroupBlock(false)
+    setFileVariantMap({})
+    setGroupVariantMap({})
+    setPostVariantMap({})
+  }
+
+  // Submit form handler to queue background jobs
+  const handleQueueJob = async (e) => {
+    e.preventDefault();
+
+    if (isQueueingJobs) {
+      return;
+    }
+
+    const orderedVariants = [
+      variants.find((variant) => variant.id === 'default'),
+      ...variants.filter((variant) => variant.id !== 'default'),
+    ].filter(Boolean);
+
+    const newJobs = [];
+
+    for (const variant of orderedVariants) {
+      const job = captureFormDataAsJob(variant.id);
+      if (!job || job.adCount === 0 || !hasMediaInFormData(job.formData)) {
+        continue;
+      }
+
+      const fd = job.formData;
+
+      if (!fd.selectedAdvertiser) {
+        toast.error(`${variant.name}: Please select an advertiser account`);
+        return;
+      }
+
+      if (!fd.isDuplicatingAdGroupMode && (!fd.selectedAdGroup || fd.selectedAdGroup.length === 0)) {
+        toast.error(`${variant.name}: Please select at least one ad group`);
+        return;
+      }
+
+      if (fd.isDuplicatingAdGroupMode && !fd.newAdGroupName.trim()) {
+        toast.error(`${variant.name}: Please enter a name for the new duplicated ad group`);
+        return;
+      }
+
+      if (!fd.selectedIdentity || fd.selectedIdentity === 'CUSTOMIZED_USER') {
+        toast.error(fd.adType === 'NORMAL'
+          ? `${variant.name}: Identity is required. Please select one.`
+          : `${variant.name}: Promote From is required. Please select a linked TikTok account.`
+        );
+        return;
+      }
+
+      if (fd.adType === 'SPARK') {
+        if (!fd.sparkAuthCode || !fd.sparkAuthCode.trim()) {
+          toast.error(`${variant.name}: Spark Ads require an Organic Post Authorization Code or link.`);
+          return;
+        }
+      }
+
+      const hasFormula = adNameFormulaV2?.rawInput?.trim();
+      if (!hasFormula && !fd.adName.trim()) {
+        toast.error(`${variant.name}: Ad name is required`);
+        return;
+      }
+
+      if (!fd.cta || fd.cta.length === 0) {
+        toast.error(`${variant.name}: Please select at least one Call to Action`);
+        return;
+      }
+
+      newJobs.push(job);
+    }
+
+    if (newJobs.length === 0) {
+      toast.error('No variants have files assigned or required fields filled. Nothing to publish.');
+      return;
+    }
+
+    const shouldShowVariantLabel = newJobs.some((job) => job.variantId !== 'default');
+    const queuedJobs = newJobs.map((job) => ({
+      ...job,
+      showVariantLabel: shouldShowVariantLabel,
+    }));
+
+    setIsQueueingJobs(true);
 
     try {
-      const results = []
-      const errors = []
-
-      // Unified array of files to process
-      const itemsToUpload = []
-      if (adType === 'SPARK') {
-        itemsToUpload.push({ type: 'spark', file: { name: 'Spark Ad' } })
-      } else if (files && files.length > 0) {
-        files.forEach(f => itemsToUpload.push({ type: 'local', file: f }))
-      } else if (driveFiles && driveFiles.length > 0) {
-        driveFiles.forEach(f => itemsToUpload.push({ type: 'drive', file: f }))
-      } else if (dropboxFiles && dropboxFiles.length > 0) {
-        dropboxFiles.forEach(f => itemsToUpload.push({ type: 'dropbox', file: f }))
-      } else if (tiktokLibraryFiles.length > 0) {
-        tiktokLibraryFiles.forEach(f => itemsToUpload.push({ type: 'library', file: f }))
+      setJobQueue((prev) => [...prev, ...queuedJobs]);
+      if (!preserveMedia) {
+        clearQueuedMedia();
       }
-
-      if (itemsToUpload.length === 0) {
-        throw new Error('Please select at least one video to upload.')
-      }
-
-      let sparkVideoId = null
-      if (adType === 'SPARK') {
-        toast.info('Authorizing organic TikTok post...')
-        const authRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-authorize`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            advertiserId: selectedAdvertiser,
-            authCode: sparkAuthCode.trim()
-          })
-        })
-        const authData = await authRes.json()
-        if (!authRes.ok || !authData.success) {
-          throw new Error(authData.error || 'Failed to authorize organic post')
-        }
-
-        toast.info('Fetching organic video information...')
-        const infoParams = new URLSearchParams({
-          advertiserId: selectedAdvertiser,
-          authCode: sparkAuthCode.trim()
-        })
-        const infoRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-video-info?${infoParams}`)
-        const infoData = await infoRes.json()
-        if (!infoRes.ok || !infoData.success) {
-          throw new Error(infoData.error || 'Failed to retrieve organic video information')
-        }
-        sparkVideoId = infoData.videoId
-      }
-
-      for (let i = 0; i < itemsToUpload.length; i++) {
-        const item = itemsToUpload[i]
-        let videoId = null
-
-        toast.info(`Processing media ${i + 1} of ${itemsToUpload.length}: ${item.file.name}...`)
-
-        if (adType === 'SPARK') {
-          videoId = sparkVideoId
-        } else if (item.type === 'local') {
-          console.log('[TikTok Submit] Uploading local video file:', item.file.name, item.file.size)
-          toast.info(`Uploading video "${item.file.name}"...`)
-          const uploadResult = await uploadVideoToTikTok(item.file)
-          if (!uploadResult?.videoId) {
-            throw new Error(`Video upload failed for "${item.file.name}"`)
-          }
-          videoId = uploadResult.videoId
-        } else if (item.type === 'drive' || item.type === 'dropbox') {
-          const formData = new FormData()
-          if (item.type === 'drive') {
-            formData.append('driveFile', JSON.stringify(item.file))
-          } else {
-            formData.append('dropboxFile', JSON.stringify(item.file))
-          }
-
-          const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
-          const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
-          const sourceName = item.type === 'drive' ? 'Google Drive' : 'Dropbox'
-
-          toast.info(`Downloading "${item.file.name}" from ${sourceName} and uploading...`)
-          const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData })
-          const uploadData = await uploadRes.json()
-          if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
-            throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`)
-          }
-          videoId = uploadData.videoId
-        } else if (item.type === 'library') {
-          videoId = item.file.videoId
-        }
-
-        const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
-        const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
-        const currentIdentityId = isCustomized ? undefined : selectedIdentity
-        const currentIdentityType = isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER')
-
-        const finalUrl = urlMode === 'WEBSITE'
-          ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
-          : landingUrl
-
-        let adGroupIdsToSubmit = [...selectedAdGroup]
-
-        if (isDuplicatingAdGroupMode && i === 0) {
-          toast.info('Duplicating ad group on-the-fly...')
-          const dupRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/adgroup/duplicate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              advertiser_id: selectedAdvertiser,
-              source_adgroup_id: duplicateAdGroup,
-              new_campaign_id: selectedCampaign[0],
-              new_adgroup_name: newAdGroupName.trim()
-            })
-          })
-          const dupData = await dupRes.json()
-          if (!dupRes.ok || !dupData.success || !dupData.copied_adgroup_id) {
-            throw new Error(dupData.error || 'Ad group duplication failed')
-          }
-
-          toast.success(`🎉 Ad group duplicated successfully as "${dupData.adgroup_name}"!`)
-          adGroupIdsToSubmit = [dupData.copied_adgroup_id]
-
-          try {
-            const params = new URLSearchParams({ advertiserId: selectedAdvertiser, campaignId: selectedCampaign[0] })
-            const refetchRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`)
-            const refetchData = await refetchRes.json()
-            const list = refetchData.adGroups || refetchData.adgroups || []
-            const enrichedList = list.map(ag => ({
-              ...ag,
-              campaignId: selectedCampaign[0],
-              campaignName: campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || selectedCampaign[0]
-            }))
-            const unique = []
-            const seen = new Set()
-            for (const ag of enrichedList) {
-              if (!seen.has(ag.adgroup_id)) {
-                seen.add(ag.adgroup_id)
-                unique.push(ag)
-              }
-            }
-            setAdGroups(unique)
-            writeCache(`tiktok_adgroups_${selectedCampaign[0]}`, list)
-          } catch (e) {
-            console.warn('Failed to refresh ad groups after duplication:', e.message)
-          }
-        }
-
-        for (const adgroupId of adGroupIdsToSubmit) {
-          const adGroupName = adGroups.find(ag => ag.adgroup_id === adgroupId)?.adgroup_name ||
-            (isDuplicatingAdGroupMode ? newAdGroupName.trim() : adgroupId)
-          
-          const finalAdName = computeAdNameFromFormula(
-            item.file,
-            i,
-            landingUrl,
-            adNameFormulaV2,
-            adType
-          );
-
-          toast.info(`Creating ad "${finalAdName}" in: ${adGroupName}...`)
-
-          const creativeCTAs = Array.isArray(cta) ? cta : [cta];
-          const creatives = creativeCTAs.map((singleCta) => {
-            const creativeAdName = creativeCTAs.length > 1 ? `${finalAdName} - ${singleCta}` : finalAdName;
-            const creative = {
-              video_id: videoId,
-              ad_text: adText,
-              call_to_action: singleCta,
-              ad_name: creativeAdName,
-              identity_type: currentIdentityType,
-              landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-              ...(urlMode === 'WEBSITE'
-                ? { landing_page_url: finalUrl }
-                : { page_id: landingUrl }
-              ),
-              ...(adType === 'SPARK' ? {
-                is_spark_ad: true,
-                spark_ad_auth_code: sparkAuthCode.trim(),
-                adType: 'SPARK'
-              } : {})
-            }
-            if (currentIdentityId) creative.identity_id = currentIdentityId
-            return creative;
-          })
-
-          const createPayload = {
-            advertiserId: selectedAdvertiser,
-            adgroupId: adgroupId,
-            ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
-            identityType: currentIdentityType,
-            adName: finalAdName,
-            adType: adType,
-            creatives: creatives
-          }
-
-          console.log(`[TikTok Submit] 🚀 Sending create-ad payload for ${adgroupId}:`, JSON.stringify(createPayload, null, 2))
-
-          try {
-            const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(createPayload),
-            })
-            const createData = await createRes.json()
-            if (!createRes.ok || !createData.success) {
-              throw new Error(createData.error || 'Ad creation failed')
-            }
-            results.push(adgroupId)
-          } catch (err) {
-            errors.push({ adgroupId, adGroupName, error: err.message })
-          }
-        }
-      }
-
-      if (errors.length > 0) {
-        if (results.length > 0) {
-          toast.warning(`🎉 Created ads for ${results.length} items, but failed for some: \n` + errors.map(e => `${e.adGroupName}: ${e.error}`).join('\n'))
-        } else {
-          throw new Error(`Failed to create ads: \n` + errors.map(e => `${e.adGroupName}: ${e.error}`).join('\n'))
-        }
-      } else {
-        toast.success(`🎉 TikTok ads created successfully for all ${itemsToUpload.length} videos!`)
-      }
-
-      // Reset form fields
-      setAdName('')
-      setAdText('')
-      setLandingUrl('')
-      setCta(['SHOP_NOW'])
-      setVideoFile(null)
-      setVideoPreview(null)
-      if (setFiles) setFiles([])
-      setDriveFiles([])
-      setDropboxFiles([])
-      setUploadProgress(0)
-      if (setSparkAuthCode) setSparkAuthCode('')
-      setDuplicateAdGroup('')
-      setNewAdGroupName('')
-      setShowDuplicateAdGroupBlock(false)
-    } catch (err) {
-      toast.error(err.message)
-      setIsUploading(false)
     } finally {
-      setIsSubmitting(false)
+      setIsQueueingJobs(false);
     }
+  };
+
+  const refreshPage = () => {
+    window.location.reload();
   }
+
+  const formatQueuedJobLabel = (job, prefix) => {
+    const adGroupName = job.formData?.selectedAdGroup?.map(id => {
+      return adGroups.find(ag => ag.adgroup_id === id)?.adgroup_name || id;
+    }).join(', ') || 'Duplicated Group';
+    
+    const summary = `${job.adCount} ad${job.adCount !== 1 ? 's' : ''} to ${adGroupName}`;
+    return job.showVariantLabel && job.variantName
+      ? `${prefix} ${job.variantName}: ${summary}`
+      : `${prefix} ${summary}`;
+  };
 
   const shouldScrollVariantPicker = variants.length > 3
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleQueueJob} className="space-y-6">
+
+      {hasStartedAnyJob && (
+        <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          {/* Collapsed State */}
+          {!isJobTrackerExpanded && (
+            <div
+              className="bg-white rounded-3xl border-4 border-gray-200/50 shadow-xl p-2 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
+              onClick={() => setIsJobTrackerExpanded(true)}
+            >
+              <div className="flex items-center gap-2">
+                <RocketIcon2
+                  alt="Rocket Icon"
+                  className="w-10 h-10 object-contain animate-bounce"
+                />
+                <span className="font-medium text-sm">Job Queue</span>
+              </div>
+              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
+                {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
+              </span>
+              <ChevronDown className="h-4 w-4 text-gray-500 rotate-180" />
+            </div>
+          )}
+
+          {/* Expanded State */}
+          {isJobTrackerExpanded && (
+            <div className="bg-white border-4 border-gray-200/50 rounded-[20px] shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out">
+              {/* Header */}
+              <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-12 h-12 flex-shrink-0">
+                    <RocketIcon2
+                      alt="Rocket Icon"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <h3 className="font-semibold text-sm">Job Queue</h3>
+                    <p className="text-sm font-medium text-gray-400">
+                      {jobQueue.length + (currentJob ? 1 : 0)} Active
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsJobTrackerExpanded(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Jobs List */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {/* Completed Jobs */}
+                {completedJobs.map((job) => (
+                  <div key={job.id} className="p-3.5 border-b border-gray-100">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-0.5">
+                        {job.status === 'cancelled' ? (
+                          <Ban className="w-5 h-5 text-orange-500" />
+                        ) : job.status === 'error' ? (
+                          <CircleX className="w-5 h-5 text-red-500" />
+                        ) : job.status === 'partial-success' ? (
+                          <PartialSuccess className="w-5 h-5 text-yellow-500" />
+                        ) : (
+                          <CheckIcon className="w-5 h-5 text-green-500" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm break-words leading-tight ${
+                          job.status === 'cancelled'
+                            ? 'text-orange-500 font-medium'
+                            : job.status === 'error'
+                              ? 'text-red-600 font-medium'
+                              : job.status === 'partial-success'
+                                ? 'text-yellow-600 font-medium'
+                                : 'text-gray-700'
+                        }`}>
+                          {job.message}
+                        </p>
+                        
+                        {(job.status === 'cancelled' || job.status === 'partial-success') && job.totalCount > 0 && (
+                          <div className="flex gap-2 mt-1.5">
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-50 border border-green-200 rounded-lg">
+                              <CheckIcon className="w-3 h-3 text-green-600" />
+                              <span className="text-[10px] font-semibold text-green-700">
+                                {job.successCount} created
+                              </span>
+                            </div>
+                            {job.failureCount > 0 && (
+                              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded-lg">
+                                <CircleX className="w-3 h-3 text-red-500" />
+                                <span className="text-[10px] font-semibold text-red-600">
+                                  {job.failureCount} failed
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                        {job.formData?.selectedAdvertiser && (
+                          <a
+                            href={`https://ads.tiktok.com/i18n/dashboard?advertiser_id=${job.formData.selectedAdvertiser}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-gray-400 hover:text-blue-500 transition-colors p-1"
+                            title="View in TikTok Ads Manager"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </a>
+                        )}
+
+                        {(job.status === 'error' || job.status === 'partial-success') && job.formData && (
+                          <button
+                            type="button"
+                            onClick={() => handleRetryJob(job)}
+                            className="text-gray-400 hover:text-blue-500 transition-colors p-1"
+                            title="Restore to form"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setCompletedJobs((prev) => prev.filter((j) => j.id !== job.id))}
+                          className="text-gray-400 hover:text-gray-600 p-1"
+                          title="Remove job"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Error Details */}
+                    {(job.status === 'partial-success' || job.status === 'error' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
+                      <div className="mt-2 ml-8">
+                        <details className="text-xs">
+                          <summary className="cursor-pointer text-red-500 font-medium hover:underline">
+                            View error details
+                          </summary>
+                          <div className="mt-2 pl-2 border-l border-red-200 space-y-2">
+                            {job.errorMessages.map((err, idx) => (
+                              <div key={idx} className="text-red-600 font-medium">
+                                {err.fileName ? <span className="font-semibold">{err.fileName}: </span> : null}
+                                {err.error}
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Current Job */}
+                {currentJob && (
+                  <div className="p-3.5 border-b border-gray-100 bg-blue-50/20">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="flex-shrink-0">
+                        <UploadIcon className="w-5 h-5 text-blue-600 animate-pulse" />
+                      </div>
+                      <p className="flex-1 text-sm font-semibold text-gray-700 truncate">
+                        {formatQueuedJobLabel(currentJob, 'Posting')}
+                      </p>
+                      <span className="text-sm font-bold text-gray-900">
+                        {Math.round(progress || trackedProgress || 0)}%
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${progress || trackedProgress || 0}%` }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setIsCancelling(true);
+                          if (currentAbortController) {
+                            currentAbortController.abort();
+                          }
+                          const cancelJobId = currentJobIdRef.current || jobId;
+                          if (cancelJobId) {
+                            try {
+                              await fetch(`${API_BASE_URL}/auth/cancel-job`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ jobId: cancelJobId })
+                              });
+                            } catch (e) { /* best-effort */ }
+                          }
+                        }}
+                        className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                        title="Cancel job"
+                      >
+                        <CircleX className="h-4 w-4 text-red-500" />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-2.5">
+                      {isCancelling ? (
+                        <div className="flex items-center gap-1.5">
+                          <Loader className="animate-spin h-3 w-3 text-red-400" />
+                          <span className="text-xs text-red-400">Cancelling...</span>
+                        </div>
+                      ) : (
+                        <p className="text-xs font-medium text-gray-500 max-w-[200px] truncate">
+                          {progressMessage || trackedMessage || 'Processing...'}
+                        </p>
+                      )}
+
+                      {liveProgress.total > 0 && (
+                        <div className="flex gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-50 border border-green-200 rounded-lg">
+                            <CheckIcon className="w-3.5 h-3.5 text-green-600" />
+                            <span className="text-[10px] font-bold text-green-700">
+                              {liveProgress.succeeded}/{liveProgress.total}
+                            </span>
+                          </div>
+                          {liveProgress.failed > 0 && (
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded-lg">
+                              <CircleX className="w-3.5 h-3.5 text-red-500" />
+                              <span className="text-[10px] font-bold text-red-600">
+                                {liveProgress.failed}/{liveProgress.total}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Live Errors */}
+                    {liveProgress.errors && liveProgress.errors.length > 0 && (
+                      <div className="mt-2">
+                        <details className="text-xs" open>
+                          <summary className="cursor-pointer text-red-500 font-semibold hover:underline">
+                            View live errors
+                          </summary>
+                          <div className="mt-2 pl-2 border-l border-red-200 space-y-1.5 max-h-24 overflow-y-auto">
+                            {liveProgress.errors.map((err, idx) => (
+                              <div key={idx} className="text-red-600 font-medium">
+                                {err.fileName ? <span className="font-semibold">{err.fileName}: </span> : null}
+                                {err.error}
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Queued Jobs */}
+                {jobQueue.slice(currentJob ? 1 : 0).map((job, index) => (
+                  <div key={job.id || index} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
+                    <div className="flex-shrink-0">
+                      <QueueIcon className="w-5 h-5 text-blue-500" />
+                    </div>
+                    <p className="flex-1 text-sm text-gray-600 truncate">
+                      {formatQueuedJobLabel(job, 'Queued')}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
+                      className="text-gray-400 hover:text-red-600 p-1"
+                      title="Remove from queue"
+                    >
+                      <X className="h-4 w-4 text-red-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Card 1: Ads Account and Configuration */}
       <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
@@ -1531,18 +2416,6 @@ export default function TikTokAdCreationForm({
                       </Command>
                     </PopoverContent>
                   </Popover>
-
-                  {/* Includes Ads Option */}
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 mt-2">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm font-semibold text-gray-900">Includes Ads</Label>
-                      <p className="text-xs text-gray-500 font-medium">Also recreate ads under each ad group</p>
-                    </div>
-                    <Switch
-                      checked={duplicateIncludeAds}
-                      onCheckedChange={setDuplicateIncludeAds}
-                    />
-                  </div>
 
                   {/* New Campaign Name Input */}
                   {duplicateCampaign && (
@@ -2112,8 +2985,8 @@ export default function TikTokAdCreationForm({
               />
               <div className="flex items-center justify-between mt-1 text-xs px-1">
                 <span className={cn(
-                  (adType === 'SPARK' && adText.length === 0) || (adText.length >= 12 && adText.length <= 100) 
-                    ? "text-gray-400" 
+                  (adType === 'SPARK' && adText.length === 0) || (adText.length >= 12 && adText.length <= 100)
+                    ? "text-gray-400"
                     : "text-red-500 font-medium"
                 )}>
                   {adText.length} / 100 characters
@@ -2500,7 +3373,21 @@ export default function TikTokAdCreationForm({
           </div>
 
           {/* Submit Button */}
-          <div className="pt-6 border-t border-gray-100">
+          <div className="pt-6 border-t border-gray-100 space-y-4">
+            <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150 mb-2">
+              <Checkbox
+                id="preserveMedia"
+                checked={preserveMedia}
+                onCheckedChange={setPreserveMedia}
+                className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+              />
+              <Label
+                htmlFor="preserveMedia"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Don't clear media after publishing ads
+              </Label>
+            </div>
             <Button
               type="submit"
               disabled={isSubmitting}
