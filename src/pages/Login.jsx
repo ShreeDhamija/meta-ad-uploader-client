@@ -74,31 +74,33 @@ function ProgressBar({ activeIndex }) {
     )
 }
 
-function RadioList({ options, value, onChange }) {
+function RadioList({ options, value, onChange, renderBelow }) {
     return (
         <div className="space-y-3">
             {options.map(opt => {
                 const selected = value === opt
                 return (
-                    <label
-                        key={opt}
-                        className="flex items-center gap-3 cursor-pointer text-sm text-zinc-800"
-                    >
-                        <span
-                            className={`relative flex items-center justify-center w-4 h-4 rounded-full border-2 transition-colors ${selected ? 'border-[#F90E6C]' : 'border-zinc-300'
-                                }`}
+                    <div key={opt}>
+                        <label
+                            className="flex items-center gap-3 cursor-pointer text-sm text-zinc-800"
                         >
-                            {selected && <span className="w-2 h-2 rounded-full bg-[#F90E6C]" />}
-                        </span>
-                        <input
-                            type="radio"
-                            name="radio-list"
-                            checked={selected}
-                            onChange={() => onChange(opt)}
-                            className="sr-only"
-                        />
-                        {opt}
-                    </label>
+                            <span
+                                className={`relative flex items-center justify-center w-4 h-4 rounded-full border-2 transition-colors ${selected ? 'border-[#F90E6C]' : 'border-zinc-300'
+                                    }`}
+                            >
+                                {selected && <span className="w-2 h-2 rounded-full bg-[#F90E6C]" />}
+                            </span>
+                            <input
+                                type="radio"
+                                name="radio-list"
+                                checked={selected}
+                                onChange={() => onChange(opt)}
+                                className="sr-only"
+                            />
+                            {opt}
+                        </label>
+                        {renderBelow?.(opt)}
+                    </div>
                 )
             })}
         </div>
@@ -157,6 +159,7 @@ export default function Login() {
     const [popupStep, setPopupStep] = useState(null) // null | 'role' | 'source' | 'fb'
     const [jobRole, setJobRole] = useState("")
     const [signupSource, setSignupSource] = useState("")
+    const [teamCode, setTeamCode] = useState("")
     const [isInitializing, setIsInitializing] = useState(false)
     const [initError, setInitError] = useState("")
 
@@ -188,7 +191,12 @@ export default function Login() {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, signupSource, jobRole }),
+                body: JSON.stringify({
+                    email,
+                    signupSource,
+                    jobRole,
+                    teamCode: signupSource === 'Joining a Team' ? teamCode.trim() : '',
+                }),
             })
             if (!res.ok) throw new Error('Failed to start signup')
             window.location.href = `${API_BASE_URL}/auth/facebook?state=signup`
@@ -229,6 +237,8 @@ export default function Login() {
     }
 
     const popupActiveIndex = popupStep === 'role' ? 0 : popupStep === 'source' ? 1 : 2
+    const showTeamCodeRow = popupStep === 'source' && signupSource === 'Joining a Team'
+    const popupHeight = showTeamCodeRow ? 640 : 500
 
     return (
         <div className="relative flex h-screen w-full overflow-hidden">
@@ -411,11 +421,13 @@ export default function Login() {
                             transition={{ duration: 0.2, ease: "easeOut" }}
                             className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none"
                         >
-                            <div
+                            <motion.div
                                 className="pointer-events-auto bg-white shadow-xl flex flex-col"
+                                initial={false}
+                                animate={{ height: popupHeight }}
+                                transition={{ duration: 0.28, ease: 'easeOut' }}
                                 style={{
                                     width: 405,
-                                    height: 500,
                                     borderRadius: 40,
                                     border: '1px solid rgba(0,0,0,0.1)',
                                 }}
@@ -460,7 +472,38 @@ export default function Login() {
                                                     This is the last one. Kind of for us.
                                                 </p>
                                                 <div className="font-semibold text-zinc-900 mb-3">How did you hear about Blip?</div>
-                                                <RadioList options={SOURCE_OPTIONS} value={signupSource} onChange={setSignupSource} />
+                                                <RadioList
+                                                    options={SOURCE_OPTIONS}
+                                                    value={signupSource}
+                                                    onChange={setSignupSource}
+                                                    renderBelow={(opt) => opt === 'Joining a Team' && (
+                                                        <AnimatePresence initial={false}>
+                                                            {signupSource === 'Joining a Team' && (
+                                                                <motion.div
+                                                                    key="team-code"
+                                                                    initial={{ opacity: 0, height: 0 }}
+                                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                                    exit={{ opacity: 0, height: 0 }}
+                                                                    transition={{ duration: 0.25, ease: 'easeOut' }}
+                                                                    className="overflow-hidden"
+                                                                >
+                                                                    <div className="pt-2 pl-7 space-y-2">
+                                                                        <p className="text-xs text-zinc-500 leading-snug">
+                                                                            You'll be auto-added to the team on signup — you can also do this later from inside the app. Your code is in the invite email, or ask a team member for it.
+                                                                        </p>
+                                                                        <Input
+                                                                            type="text"
+                                                                            placeholder="Enter Team Code (Optional)"
+                                                                            value={teamCode}
+                                                                            onChange={(e) => setTeamCode(e.target.value)}
+                                                                            className="rounded-xl h-9 text-sm"
+                                                                        />
+                                                                    </div>
+                                                                </motion.div>
+                                                            )}
+                                                        </AnimatePresence>
+                                                    )}
+                                                />
                                             </motion.div>
                                         )}
                                         {popupStep === 'fb' && (
@@ -515,7 +558,7 @@ export default function Login() {
                                         </button>
                                     )}
                                 </div>
-                            </div>
+                            </motion.div>
                         </motion.div>
                     </>
                 )}
