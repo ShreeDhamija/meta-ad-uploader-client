@@ -712,8 +712,7 @@ export default function ReorderAdNameParts({
               for custom variables.
             </>
           )}
-          <br />
-          You can also save custom text.
+          {" "}You can also save custom text.
         </Label>
 
         <div className="flex items-center gap-1.5">

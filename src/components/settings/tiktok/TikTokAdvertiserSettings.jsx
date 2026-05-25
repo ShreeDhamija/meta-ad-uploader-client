@@ -392,7 +392,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100">
                                     <Command>
-                                        <CommandInput placeholder="Search CTAs..." />
                                         <CommandList>
                                             <CommandGroup>
                                                 {CTA_OPTIONS.map(opt => (

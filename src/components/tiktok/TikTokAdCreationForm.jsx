@@ -35,7 +35,8 @@ import {
   Ban,
   CircleX,
   Eye,
-  RotateCcw
+  RotateCcw,
+  Image
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
@@ -63,6 +64,7 @@ import CheckIcon from '@/assets/icons/check.svg?react'
 import UploadIcon from '@/assets/icons/upload.svg?react'
 import QueueIcon from '@/assets/icons/queue.svg?react'
 import PartialSuccess from '@/assets/icons/partialsuccess.svg?react'
+import LabelIcon from '@/assets/icons/label.svg?react'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com'
 const TIKTOK_PINK = '#FE2C55'
@@ -2148,7 +2150,7 @@ export default function TikTokAdCreationForm({
               <Label className="flex items-center gap-2">
                 {renderDiffMark("selectedAdvertiser")}
                 <AdAccountIcon className="w-4 h-4 text-gray-500" />
-                Advertiser's Account
+                Ad Account
               </Label>
               {authLoading && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
             </div>
@@ -2165,7 +2167,7 @@ export default function TikTokAdCreationForm({
                         const found = advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
                         return found ? (found.advertiser_name || found.name || selectedAdvertiser) : selectedAdvertiser;
                       })()
-                      : "Select Advertiser's Account"}
+                      : "Select Ad Account"}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -2217,7 +2219,7 @@ export default function TikTokAdCreationForm({
               <Label className="flex items-center gap-2">
                 {renderDiffMark("selectedCampaign")}
                 <CampaignIcon className="w-4 h-4 text-gray-500" />
-                Select a Campaign
+                Select a Campaign to launch Ads in
               </Label>
               <div className="flex items-center gap-2">
                 {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
@@ -2317,8 +2319,7 @@ export default function TikTokAdCreationForm({
                         setShowDuplicateCampaignBlock(true);
                         setOpenCampaign(false);
                       }}
-                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
-                      variant="outline"
+                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
                     >
                       <CampaignIcon className="mr-2 h-4 w-4 text-white" />
                       Launch in a New Campaign
@@ -2329,7 +2330,7 @@ export default function TikTokAdCreationForm({
             </Popover>
 
             {showDuplicateCampaignBlock && (
-              <div className="flex flex-col gap-4 p-5 bg-white border border-gray-200 rounded-3xl relative mt-3 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
                 <button
                   type="button"
                   onClick={() => {
@@ -2337,20 +2338,19 @@ export default function TikTokAdCreationForm({
                     setDuplicateCampaign("")
                     setNewCampaignName("")
                   }}
-                  className="absolute top-4 right-4 p-1.5 rounded-full bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-400 hover:text-gray-600 transition-all duration-150 shadow-sm"
+                  className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
                   aria-label="Close duplicate campaign selection"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-3 w-3 text-gray-700" />
                 </button>
-                <div className="flex-1 space-y-4">
-                  <div className="space-y-1.5 pr-6">
-                    <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 leading-none">
+                <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2">
+                    <Label className="flex items-center gap-2">
+                      {renderDiffMark("duplicateCampaign")}
                       <Copy className="w-4 h-4 text-gray-700 shrink-0" />
-                      Select a Campaign to Duplicate
-                    </div>
-                    <span className="text-xs sm:text-[13px] text-gray-500 font-medium block leading-none">
-                      We'll copy the selected campaign and duplicate its ad groups.
-                    </span>
+                      Select a campaign to duplicate
+                    </Label>
+                    <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad sets</Label>
                   </div>
 
                   {/* Dropdown/Popover to select campaign to duplicate */}
@@ -2361,7 +2361,7 @@ export default function TikTokAdCreationForm({
                         role="combobox"
                         aria-expanded={openDuplicateCampaign}
                         disabled={campaigns.length === 0}
-                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
+                        className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:!bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
                       >
                         <span className="block truncate text-left">
                           {duplicateCampaign
@@ -2429,9 +2429,9 @@ export default function TikTokAdCreationForm({
                   {duplicateCampaign && (
                     <div className="space-y-4 pt-2 border-t border-gray-100 animate-in fade-in duration-200">
                       <div className="space-y-1.5">
-                        <Label htmlFor="newCampaignName" className="text-xs font-semibold text-gray-700">
+                        <Label htmlFor="newCampaignName" className="inline-flex items-center gap-1">
                           {renderDiffMark("newCampaignName")}
-                          New Campaign Name
+                          <span>New campaign name</span>
                         </Label>
                         <Input
                           id="newCampaignName"
@@ -2446,7 +2446,7 @@ export default function TikTokAdCreationForm({
                         type="button"
                         onClick={() => handleDuplicateCampaign(duplicateCampaign)}
                         disabled={isDuplicating || !newCampaignName.trim()}
-                        className="w-full h-11 rounded-2xl bg-zinc-800 hover:bg-black text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 px-4 shadow transition-all active:scale-[0.98]"
+                        className="w-full h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 px-4 shadow transition-all active:scale-[0.98]"
                       >
                         {isDuplicating ? (
                           <><Loader className="w-4 h-4 animate-spin" />Creating...</>
@@ -2467,7 +2467,7 @@ export default function TikTokAdCreationForm({
               <Label className="flex items-center gap-2">
                 {renderDiffMark("selectedAdGroup")}
                 <AdSetIcon className="w-4 h-4 text-gray-500" />
-                Select an Ad Group
+                Launch in a new or existing ad set
               </Label>
               <div className="flex items-center gap-2">
                 {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
@@ -2486,6 +2486,7 @@ export default function TikTokAdCreationForm({
                 <Button
                   variant="outline"
                   role="combobox"
+                  disabled={selectedCampaign.length === 0}
                   className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                 >
                   <span className="truncate text-sm font-medium">
@@ -2583,8 +2584,7 @@ export default function TikTokAdCreationForm({
                         setShowDuplicateAdGroupBlock(true);
                         setOpenAdGroup(false);
                       }}
-                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed"
-                      variant="outline"
+                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
                     >
                       <AdSetIcon className="mr-2 h-4 w-4 text-white" />
                       Launch in a New Ad Group
@@ -2619,7 +2619,7 @@ export default function TikTokAdCreationForm({
             )}
 
             {showDuplicateAdGroupBlock && (
-              <div className="flex flex-col gap-4 p-5 bg-white border border-gray-200 rounded-3xl relative mt-3 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
                 <button
                   type="button"
                   onClick={() => {
@@ -2627,21 +2627,19 @@ export default function TikTokAdCreationForm({
                     setDuplicateAdGroup("")
                     setNewAdGroupName("")
                   }}
-                  className="absolute top-4 right-4 p-1.5 rounded-full bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-400 hover:text-gray-600 transition-all duration-150 shadow-sm"
+                  className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
                   aria-label="Close duplicate ad group selection"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X className="h-3 w-3 text-gray-700" />
                 </button>
-                <div className="flex-1 space-y-4">
-                  <div className="space-y-1.5 pr-6">
-                    <div className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 leading-none">
+                <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-2">
+                    <Label className="flex items-center gap-2">
                       {renderDiffMark("duplicateAdGroup")}
                       <Copy className="w-4 h-4 text-gray-700 shrink-0" />
-                      Select an ad group to duplicate
-                    </div>
-                    <span className="text-xs sm:text-[13px] text-gray-500 font-medium block leading-none">
-                      We'll copy the ad group and all its settings
-                    </span>
+                      Select an ad set shell to duplicate
+                    </Label>
+                    <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
                   </div>
 
                   <Popover open={openDuplicateAdGroup} onOpenChange={setOpenDuplicateAdGroup}>
@@ -2651,12 +2649,12 @@ export default function TikTokAdCreationForm({
                         role="combobox"
                         aria-expanded={openDuplicateAdGroup}
                         disabled={adGroups.length === 0}
-                        className="w-full justify-between border border-gray-300 rounded-full bg-white shadow-sm overflow-hidden whitespace-nowrap hover:bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
+                        className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:!bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
                       >
                         <span className="block truncate text-left">
                           {duplicateAdGroup
                             ? adGroups.find((ag) => ag.adgroup_id === duplicateAdGroup)?.adgroup_name || duplicateAdGroup
-                            : "Select ad group to duplicate"}
+                            : "Select existing ad group"}
                         </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
                       </Button>
@@ -2720,7 +2718,7 @@ export default function TikTokAdCreationForm({
                       <div className="space-y-1.5">
                         <Label htmlFor="newAdGroupName" className="text-xs font-semibold text-gray-700">
                           {renderDiffMark("newAdGroupName")}
-                          New Ad Group Name
+                          <span>New ad set name</span>
                         </Label>
                         <Input
                           id="newAdGroupName"
@@ -2903,7 +2901,7 @@ export default function TikTokAdCreationForm({
               <Label htmlFor="adName" className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
                   {renderDiffMark("adName")}
-                  <FileText className="w-4 h-4 text-gray-500" />
+                  <LabelIcon className="w-4 h-4 text-gray-500" />
                   Ad Name
                 </div>
                 {selectedAdvertiser && !advertiserPrefs?.adNameFormulaV2?.rawInput && (
@@ -2931,8 +2929,8 @@ export default function TikTokAdCreationForm({
               <div className="mt-1">
                 <Label className="text-xs text-gray-500">
                   Ad Name Preview: {
-                    (files?.length > 0 || driveFiles?.length > 0 || dropboxFiles?.length > 0)
-                      ? computeAdNameFromFormula(files[0] || driveFiles[0] || dropboxFiles[0], 0, landingUrl, null, adType)
+                    (files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0)
+                      ? computeAdNameFromFormula(files[0] || videoFile || driveFiles[0] || dropboxFiles[0], 0, landingUrl, null, adType)
                       : "Upload a file to see example"
                   }
                 </Label>
@@ -3034,8 +3032,6 @@ export default function TikTokAdCreationForm({
                   </PopoverTrigger>
                   <PopoverContent className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100" align="start" style={{ width: 'var(--radix-popover-trigger-width)' }}>
                     <Command>
-                      <CommandInput placeholder="Search CTAs..." className="bg-transparent border-none focus:ring-0" />
-                      <CommandEmpty>No CTA found.</CommandEmpty>
                       <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
                         <CommandGroup>
                           {CTA_OPTIONS.map((opt) => {
@@ -3242,7 +3238,7 @@ export default function TikTokAdCreationForm({
                     <input
                       ref={fileRef}
                       type="file"
-                      accept="video/mp4,video/quicktime"
+                      accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/gif"
                       multiple
                       className="hidden"
                       onChange={handleVideoSelect}
@@ -3252,8 +3248,8 @@ export default function TikTokAdCreationForm({
                         <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-700">Click to upload video</p>
-                        <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok</p>
+                        <p className="text-sm font-medium text-gray-700">Click to upload video or image</p>
+                        <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok videos</p>
                       </div>
                     </div>
                   </div>
@@ -3266,7 +3262,11 @@ export default function TikTokAdCreationForm({
                       <div key={idx} className="flex items-center justify-between">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-10 h-10 rounded-xl bg-white border border-emerald-100 flex items-center justify-center shadow-sm shrink-0">
-                            <Video className="w-5 h-5 text-emerald-500" />
+                            {file.type?.startsWith('image/') || /\.(jpe?g|png|gif|webp)$/i.test(file.name) ? (
+                              <Image className="w-5 h-5 text-emerald-500" />
+                            ) : (
+                              <Video className="w-5 h-5 text-emerald-500" />
+                            )}
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs font-semibold text-gray-900 truncate max-w-[200px]">
