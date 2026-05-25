@@ -110,9 +110,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             .then(r => r.json())
             .then(d => {
                 const list = d.identities || [];
-                if (!list.find(i => i.identity_id === 'CUSTOMIZED_USER')) {
-                    list.push({ identity_id: 'CUSTOMIZED_USER', display_name: 'Customized User', identity_type: 'CUSTOMIZED_USER' });
-                }
                 setIdentities(list);
             })
             .catch(e => console.error(e))
@@ -310,13 +307,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     }
                                                     return (
                                                         <>
-                                                            {(found?.avatar_url || found?.identity_type === 'CUSTOMIZED_USER') && (
-                                                                <img
-                                                                    src={found?.avatar_url || "https://api.withblip.com/backup_page_image.png"}
-                                                                    alt="Identity"
-                                                                    className="w-6 h-6 rounded-full object-cover border border-gray-200"
-                                                                />
-                                                            )}
                                                             <span className="text-sm font-medium text-gray-900">
                                                                 {found?.display_name || "Select TikTok Identity"}
                                                             </span>
@@ -353,14 +343,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                                     }}
                                                     className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
                                                 >
-                                                    <img
-                                                        src={i.avatar_url || "https://api.withblip.com/backup_page_image.png"}
-                                                        alt={i.display_name}
-                                                        className="w-7 h-7 rounded-full object-cover"
-                                                    />
                                                     <div className="flex flex-col">
                                                         <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
-                                                        <span className="text-[9px] uppercase tracking-widest text-gray-400 font-bold">{i.identity_type}</span>
                                                     </div>
                                                     {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black" />}
                                                 </CommandItem>

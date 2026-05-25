@@ -756,17 +756,6 @@ export default function TikTokAds() {
     })
   }, [files, driveFiles, dropboxFiles])
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-widest">Loading TikTok Ads...</p>
-        </div>
-      </div>
-    )
-  }
-
   if (!isTikTokLoggedIn) return null
 
   return (
