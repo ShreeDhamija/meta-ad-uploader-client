@@ -11,6 +11,7 @@ import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload"
 import { readCache, writeCache } from "@/lib/dataCache"
 import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import { cn } from "@/lib/utils"
+import { saveTikTokSettings, deleteTikTokCopyTemplate } from "@/lib/saveTikTokSettings"
 import {
   Check,
   ChevronDown,
@@ -37,7 +38,9 @@ import {
   Eye,
   RotateCcw,
   Image,
-  CopyIcon
+  CopyIcon,
+  ArrowUpDown,
+  Info
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import TextareaAutosize from 'react-textarea-autosize'
@@ -359,10 +362,12 @@ export default function TikTokAdCreationForm({
   advertiserId,
   advertisers,
   onAdvertiserChange,
+  advertiserPrefs,
+  refetchAdvertiserPrefs,
 
   // Lifted Form State
   adName, setAdName,
-  adText, setAdText,
+  adTexts, setAdTexts,
   cta, setCta,
   landingUrl, setLandingUrl,
   videoFile, setVideoFile,
@@ -399,8 +404,7 @@ export default function TikTokAdCreationForm({
   groupVariantMap,
   setGroupVariantMap,
   postVariantMap,
-  setPostVariantMap,
-  advertiserPrefs
+  setPostVariantMap
 }) {
   const navigate = useNavigate()
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
@@ -441,6 +445,19 @@ export default function TikTokAdCreationForm({
   const [openCta, setOpenCta] = useState(false)
   const [openUrlPicker, setOpenUrlPicker] = useState(false)
   const [openTemplatePicker, setOpenTemplatePicker] = useState(false)
+
+  // Copy template state
+  const [selectedTemplate, setSelectedTemplate] = useState("")
+  const [templateSearch, setTemplateSearch] = useState("")
+  const [sortMode, setSortMode] = useState(() => localStorage.getItem("tiktokHomeTemplateSortMode") || "default")
+  const [showSortMenu, setShowSortMenu] = useState(false)
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false)
+  const [selectedForDelete, setSelectedForDelete] = useState(new Set())
+  const [isDeletingTemplates, setIsDeletingTemplates] = useState(false)
+  const [isSavingNew, setIsSavingNew] = useState(false)
+  const [isUpdatingTemplate, setIsUpdatingTemplate] = useState(false)
+  const [showSaveNewDialog, setShowSaveNewDialog] = useState(false)
+  const [newTemplateNameInput, setNewTemplateNameInput] = useState("")
 
   // Duplication local states
   const [duplicateIncludeAds, setDuplicateIncludeAds] = useState(true)
@@ -572,7 +589,7 @@ export default function TikTokAdCreationForm({
 
     const formData = {
       adName: variantState.adName || adName || '',
-      adText: variantState.adText || adText || '',
+      adTexts: variantState.adTexts || (variantState.adText ? [variantState.adText] : null) || adTexts || [''],
       cta: variantState.cta || cta || ['SHOP_NOW'],
       landingUrl: variantState.landingUrl || landingUrl || '',
       sparkAuthCode: variantState.sparkAuthCode || sparkAuthCode || '',
@@ -607,7 +624,7 @@ export default function TikTokAdCreationForm({
       formData,
     }
   }, [
-    variants, adName, adText, cta, landingUrl, sparkAuthCode, urlMode, adType,
+    variants, adName, adTexts, cta, landingUrl, sparkAuthCode, urlMode, adType,
     files, driveFiles, dropboxFiles, tiktokLibraryFiles, selectedAdvertiser,
     selectedCampaign, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup,
     newAdGroupName, selectedIdentity, fileVariantMap
@@ -627,7 +644,7 @@ export default function TikTokAdCreationForm({
     if (!d) return
 
     setAdName(d.adName || '')
-    setAdText(d.adText || '')
+    setAdTexts(d.adTexts || (d.adText ? [d.adText] : ['']))
     setCta(d.cta || ['SHOP_NOW'])
     setLandingUrl(d.landingUrl || '')
     setSparkAuthCode(d.sparkAuthCode || '')
@@ -649,7 +666,7 @@ export default function TikTokAdCreationForm({
     setGroupVariantMap({})
     setPostVariantMap({})
   }, [
-    setAdName, setAdText, setCta, setLandingUrl, setSparkAuthCode, setUrlMode,
+    setAdName, setAdTexts, setCta, setLandingUrl, setSparkAuthCode, setUrlMode,
     setAdType, setFiles, setDriveFiles, setDropboxFiles, setSelectedAdvertiser,
     setSelectedCampaign, setSelectedAdGroup, setVariants, setActiveVariantId,
     setFileVariantMap, setGroupVariantMap, setPostVariantMap
@@ -664,7 +681,7 @@ export default function TikTokAdCreationForm({
 
     const {
       adName,
-      adText,
+      adTexts,
       cta,
       landingUrl,
       sparkAuthCode,
@@ -836,28 +853,46 @@ export default function TikTokAdCreationForm({
           updateProgress(progressBase + 20, `Creating ad "${finalAdName}" in group "${adGroupName}"...`)
 
           const creativeCTAs = Array.isArray(cta) ? cta : [cta]
-          const creatives = creativeCTAs.map((singleCta) => {
-            const creativeAdName = creativeCTAs.length > 1 ? `${finalAdName} - ${singleCta}` : finalAdName
-            const creative = {
-              video_id: videoId,
-              ad_text: adText,
-              call_to_action: singleCta,
-              ad_name: creativeAdName,
-              identity_type: currentIdentityType,
-              landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-              ...(urlMode === 'WEBSITE'
-                ? { landing_page_url: finalUrl }
-                : { page_id: landingUrl }
-              ),
-              ...(adType === 'SPARK' ? {
-                is_spark_ad: true,
-                spark_ad_auth_code: sparkAuthCode.trim(),
-                adType: 'SPARK'
-              } : {})
+          const activeCaptions = (adTexts || []).filter(t => t.trim() !== '')
+          const finalCaptions = activeCaptions.length > 0 ? activeCaptions : ['']
+
+          const creatives = []
+          for (const singleCaption of finalCaptions) {
+            for (const singleCta of creativeCTAs) {
+              let creativeAdName = finalAdName
+              const modifiers = []
+              if (finalCaptions.length > 1) {
+                const cleanCap = singleCaption.trim().substring(0, 15)
+                modifiers.push(cleanCap ? `"${cleanCap}"` : `Caption ${finalCaptions.indexOf(singleCaption) + 1}`)
+              }
+              if (creativeCTAs.length > 1) {
+                modifiers.push(singleCta)
+              }
+              if (modifiers.length > 0) {
+                creativeAdName = `${finalAdName} - ${modifiers.join(' - ')}`
+              }
+
+              const creative = {
+                video_id: videoId,
+                ad_text: singleCaption,
+                call_to_action: singleCta,
+                ad_name: creativeAdName,
+                identity_type: currentIdentityType,
+                landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+                ...(urlMode === 'WEBSITE'
+                  ? { landing_page_url: finalUrl }
+                  : { page_id: landingUrl }
+                ),
+                ...(adType === 'SPARK' ? {
+                  is_spark_ad: true,
+                  spark_ad_auth_code: sparkAuthCode.trim(),
+                  adType: 'SPARK'
+                } : {})
+              }
+              if (currentIdentityId) creative.identity_id = currentIdentityId
+              creatives.push(creative)
             }
-            if (currentIdentityId) creative.identity_id = currentIdentityId
-            return creative
-          })
+          }
 
           const createPayload = {
             advertiserId: selectedAdvertiser,
@@ -1217,6 +1252,168 @@ export default function TikTokAdCreationForm({
       }
     }
   }, [advertiserPrefs]);
+
+  // Sync copy templates
+  useEffect(() => {
+    if (advertiserPrefs?.defaultTemplateName) {
+      setSelectedTemplate(advertiserPrefs.defaultTemplateName);
+    } else {
+      setSelectedTemplate("");
+    }
+  }, [selectedAdvertiser, advertiserPrefs]);
+
+  const copyTemplates = advertiserPrefs?.copyTemplates || {};
+  const defaultTemplateName = advertiserPrefs?.defaultTemplateName || "";
+
+  const hasUnsavedTemplateChangesRaw = useMemo(() => {
+    if (!selectedTemplate || !copyTemplates[selectedTemplate]) return false;
+    const tpl = copyTemplates[selectedTemplate];
+    const currentTexts = adTexts.filter(t => t.trim() !== "");
+    const originalTexts = tpl.texts || [];
+    return JSON.stringify(currentTexts) !== JSON.stringify(originalTexts);
+  }, [adTexts, copyTemplates, selectedTemplate]);
+
+  const [hasUnsavedTemplateChanges, setHasUnsavedTemplateChanges] = useState(false);
+
+  useEffect(() => {
+    if (!hasUnsavedTemplateChangesRaw) {
+      setHasUnsavedTemplateChanges(false);
+      return;
+    }
+    const timer = setTimeout(() => setHasUnsavedTemplateChanges(true), 300);
+    return () => clearTimeout(timer);
+  }, [hasUnsavedTemplateChangesRaw]);
+
+  // Does this exact combo already exist in another template?
+  const existingDuplicateTemplate = useMemo(() => {
+    const currentTexts = JSON.stringify(adTexts.filter(t => t.trim() !== "").sort());
+    for (const [name, tpl] of Object.entries(copyTemplates)) {
+      if (name === selectedTemplate) continue;
+      if (currentTexts === JSON.stringify((tpl.texts || []).filter(t => t.trim() !== "").sort())) {
+        return name;
+      }
+    }
+    return null;
+  }, [adTexts, copyTemplates, selectedTemplate]);
+
+  const handleSaveAsNewTemplate = async () => {
+    const name = newTemplateNameInput.trim();
+    if (!name || copyTemplates[name]) return;
+    setIsSavingNew(true);
+    try {
+      const templateData = {
+        name,
+        texts: adTexts.filter(t => t.trim() !== ""),
+      };
+      const updated = { ...(copyTemplates || {}) };
+      updated[name] = templateData;
+      
+      const nextSettings = { ...advertiserPrefs, copyTemplates: updated };
+      await saveTikTokSettings(selectedAdvertiser, nextSettings);
+      
+      if (refetchAdvertiserPrefs) {
+        await refetchAdvertiserPrefs();
+      }
+      
+      setSelectedTemplate(name);
+      toast.success("Template saved!");
+      setShowSaveNewDialog(false);
+      setNewTemplateNameInput("");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save template");
+    } finally {
+      setIsSavingNew(false);
+    }
+  };
+
+  const handleUpdateSelectedTemplate = async () => {
+    if (!selectedTemplate || !copyTemplates[selectedTemplate]) return;
+    setIsUpdatingTemplate(true);
+    try {
+      const templateData = {
+        name: selectedTemplate,
+        texts: adTexts.filter(t => t.trim() !== ""),
+      };
+      const updated = { ...(copyTemplates || {}) };
+      updated[selectedTemplate] = templateData;
+      
+      const nextSettings = { ...advertiserPrefs, copyTemplates: updated };
+      await saveTikTokSettings(selectedAdvertiser, nextSettings);
+      
+      if (refetchAdvertiserPrefs) {
+        await refetchAdvertiserPrefs();
+      }
+      
+      toast.success("Template updated!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to update template");
+    } finally {
+      setIsUpdatingTemplate(false);
+    }
+  };
+
+  const handleBulkDeleteTemplates = async () => {
+    if (selectedForDelete.size === 0) return;
+    setIsDeletingTemplates(true);
+    try {
+      const namesToDelete = [...selectedForDelete];
+      for (const name of namesToDelete) {
+        await deleteTikTokCopyTemplate(selectedAdvertiser, name);
+      }
+      
+      if (refetchAdvertiserPrefs) {
+        await refetchAdvertiserPrefs();
+      }
+      
+      toast.success(`Deleted ${namesToDelete.length} template${namesToDelete.length > 1 ? "s" : ""}`);
+      setSelectedForDelete(new Set());
+      setBulkDeleteMode(false);
+      if (namesToDelete.includes(selectedTemplate)) {
+        setSelectedTemplate("");
+      }
+    } catch (err) {
+      toast.error("Failed to delete templates");
+      console.error(err);
+    } finally {
+      setIsDeletingTemplates(false);
+    }
+  };
+
+  const toggleDeleteSelection = useCallback((name) => {
+    setSelectedForDelete((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }, []);
+
+  const sortedFilteredTemplates = useMemo(() => {
+    let entries = Object.entries(copyTemplates);
+
+    // Filter by search
+    if (templateSearch.trim()) {
+      const query = templateSearch.toLowerCase();
+      entries = entries.filter(([name]) => name.toLowerCase().includes(query));
+    }
+
+    // Sort — default template always pinned at top
+    entries.sort(([a, aData], [b, bData]) => {
+      if (a === defaultTemplateName) return -1;
+      if (b === defaultTemplateName) return 1;
+      return 0;
+    });
+
+    if (sortMode === "oldest") {
+      const defaultEntry = entries.find(([name]) => name === defaultTemplateName);
+      const rest = entries.filter(([name]) => name !== defaultTemplateName);
+      entries = defaultEntry ? [defaultEntry, ...rest.reverse()] : rest.reverse();
+    }
+
+    return entries;
+  }, [copyTemplates, defaultTemplateName, templateSearch, sortMode]);
 
   // Setup Campaign Duplication name automatic suffixing
   useEffect(() => {
@@ -1720,7 +1917,7 @@ export default function TikTokAdCreationForm({
 
   const clearQueuedMedia = () => {
     setAdName('')
-    setAdText('')
+    setAdTexts([''])
     setLandingUrl('')
     setCta(['SHOP_NOW'])
     setVideoFile(null)
@@ -1802,6 +1999,24 @@ export default function TikTokAdCreationForm({
         return;
       }
 
+      if (fd.adType !== 'SPARK') {
+        const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
+        if (activeTexts.length === 0) {
+          toast.error(`${variant.name}: Please enter at least one ad caption`);
+          return;
+        }
+        for (const singleText of activeTexts) {
+          if (singleText.length < 12) {
+            toast.error(`${variant.name}: Caption must be at least 12 characters ("${singleText.substring(0, 15)}...")`);
+            return;
+          }
+          if (singleText.length > 100) {
+            toast.error(`${variant.name}: Caption cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
+            return;
+          }
+        }
+      }
+
       if (fd.urlMode === 'WEBSITE') {
         if (!fd.landingUrl || !fd.landingUrl.trim()) {
           toast.error(`${variant.name}: Landing Page URL is required`);
@@ -1864,7 +2079,22 @@ export default function TikTokAdCreationForm({
       : `${prefix} ${summary}`;
   };
 
-  const shouldScrollVariantPicker = variants.length > 3
+  const duplicateCaptionIndices = useMemo(() => {
+    const dupes = new Set();
+    const seen = {};
+    adTexts.forEach((val, i) => {
+      const normalized = val.trim().toLowerCase();
+      if (!normalized) return;
+      if (normalized in seen) {
+        dupes.add(i);
+      } else {
+        seen[normalized] = i;
+      }
+    });
+    return dupes;
+  }, [adTexts]);
+
+  const hasDuplicateCaptions = duplicateCaptionIndices.size > 0;
 
   return (
     <form onSubmit={handleQueueJob} className="space-y-6">
@@ -2968,70 +3198,288 @@ export default function TikTokAdCreationForm({
             </div>
 
             {/* 4. Ad Copy / Caption with template picker */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="flex items-center gap-2">
-                  {renderDiffMark("adText")}
-                  <TemplateIcon className="w-4 h-4" />
-                  Ad Copy / Caption {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional - uses organic caption if empty)</span>}
-                </Label>
-                {advertiserPrefs?.copyTemplates && Object.keys(advertiserPrefs.copyTemplates).length > 0 && (
-                  <Popover open={openTemplatePicker} onOpenChange={setOpenTemplatePicker}>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-6 text-[10px] font-bold text-blue-600 hover:text-blue-700 p-0">
-                        {openTemplatePicker ? "Close Picker" : "Use Template"}
+            <div className="space-y-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2">
+                    {renderDiffMark("adTexts")}
+                    <TemplateIcon className="w-4 h-4 text-zinc-600" />
+                    <span className="font-semibold text-sm">Ad Copy / Caption</span>
+                    {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
+                  </Label>
+                  
+                  {/* Inline template action buttons (Save as New / Update Template) when there are unsaved changes */}
+                  {(adTexts.some(t => t.trim() !== "")) && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate || hasDuplicateCaptions}
+                        onClick={() => setShowSaveNewDialog(true)}
+                        className="text-[10px] px-2.5 py-0.5 border-zinc-200 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-6"
+                      >
+                        {isSavingNew ? (
+                          <Loader className="w-3 h-3 animate-spin" />
+                        ) : existingDuplicateTemplate ? (
+                          `Exists as "${existingDuplicateTemplate}"`
+                        ) : (
+                          "Save as New Template"
+                        )}
                       </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-64 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end" side="bottom" avoidCollisions={false}>
-                      <Command>
-                        <CommandInput placeholder="Search templates..." className="h-8" />
-                        <CommandList>
-                          <CommandEmpty>No templates found.</CommandEmpty>
-                          <CommandGroup heading="Ad Text Templates">
-                            {Object.entries(advertiserPrefs.copyTemplates).map(([name, data]) => (
-                              <CommandItem
-                                key={name}
-                                onSelect={() => {
-                                  if (data.texts?.length > 0) setAdText(data.texts[0])
-                                  setOpenTemplatePicker(false)
-                                }}
-                                className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                              >
-                                <div className="flex flex-col">
-                                  <span className="text-xs font-bold">{name}</span>
-                                  <span className="text-[10px] text-gray-500 line-clamp-1">{data.texts?.[0]}</span>
+                      {selectedTemplate && copyTemplates[selectedTemplate] && hasUnsavedTemplateChanges && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate || hasDuplicateCaptions}
+                          onClick={handleUpdateSelectedTemplate}
+                          className="text-[10px] px-2.5 py-0.5 border-blue-200 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 h-6 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both"
+                        >
+                          {isUpdatingTemplate ? (
+                            <>
+                              <Loader className="w-3 h-3 animate-spin mr-1" />
+                              Updating...
+                            </>
+                          ) : (
+                            "Update Selected Template"
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Popover Template Dropdown - Meta styled */}
+                <Popover open={templateDropdownOpen} onOpenChange={(open) => {
+                  setTemplateDropdownOpen(open);
+                  if (!open) {
+                    setTemplateSearch("");
+                    setShowSortMenu(false);
+                    if (bulkDeleteMode && selectedForDelete.size === 0) {
+                      setBulkDeleteMode(false);
+                    }
+                  }
+                }}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`w-full justify-between ${formFieldChrome} hover:bg-white text-sm px-3 text-zinc-700`}
+                    >
+                      <span className="truncate">
+                        {Object.keys(copyTemplates).length === 0
+                          ? "No templates available for selected advertiser"
+                          : selectedTemplate || "Choose a Template"}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border border-gray-100 shadow-xl"
+                    align="start"
+                    side="bottom"
+                    avoidCollisions={false}
+                    style={{
+                      minWidth: "var(--radix-popover-trigger-width)",
+                      width: "auto",
+                    }}
+                  >
+                    <Command filter={() => 1} loop={false} className="overflow-visible">
+                      <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
+                        <CommandInput
+                          placeholder="Search templates..."
+                          value={templateSearch}
+                          onValueChange={setTemplateSearch}
+                          wrapperClassName="flex-1 border-gray-200 bg-gray-50 mx-0 mt-0 mb-0"
+                        />
+                        <div className="flex items-center gap-1">
+                          {/* Sort Menu */}
+                          <div className="relative">
+                            <button
+                              type="button"
+                              className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowSortMenu(!showSortMenu);
+                              }}
+                              title="Sort templates"
+                            >
+                              <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
+                            </button>
+                            {showSortMenu && (
+                              <>
+                                <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
+                                <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]">
+                                  {[
+                                    { value: "default", label: "Recently Made" },
+                                    { value: "oldest", label: "Oldest First" },
+                                  ].map((option) => (
+                                    <button
+                                      key={option.value}
+                                      type="button"
+                                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSortMode(option.value);
+                                        localStorage.setItem("tiktokHomeTemplateSortMode", option.value);
+                                        setShowSortMenu(false);
+                                      }}
+                                    >
+                                      <span className="flex items-center gap-1.5">
+                                        {option.label}
+                                      </span>
+                                      {sortMode === option.value && (
+                                        <Check className="h-3.5 w-3.5 text-blue-500" />
+                                      )}
+                                    </button>
+                                  ))}
                                 </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                )}
+                              </>
+                            )}
+                          </div>
+                          {/* Bulk Delete Button */}
+                          {bulkDeleteMode && selectedForDelete.size > 0 ? (
+                            <button
+                              type="button"
+                              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-70 animate-in zoom-in-95 duration-150"
+                              disabled={isDeletingTemplates}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBulkDeleteTemplates();
+                              }}
+                            >
+                              {isDeletingTemplates ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                              {isDeletingTemplates ? "Deleting..." : `Delete (${selectedForDelete.size})`}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (bulkDeleteMode) {
+                                  setBulkDeleteMode(false);
+                                  setSelectedForDelete(new Set());
+                                } else {
+                                  setBulkDeleteMode(true);
+                                }
+                              }}
+                              title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
+                            >
+                              {bulkDeleteMode ? (
+                                <X className="h-3.5 w-3.5" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5 text-gray-500" />
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                        {sortedFilteredTemplates.map(([name, data]) => (
+                          <CommandItem
+                            key={name}
+                            value={name}
+                            onSelect={() => {
+                              if (bulkDeleteMode) {
+                                toggleDeleteSelection(name);
+                              } else {
+                                setSelectedTemplate(name);
+                                if (data.texts && data.texts.length > 0) {
+                                  setAdTexts(data.texts);
+                                }
+                                setTemplateDropdownOpen(false);
+                                setTemplateSearch("");
+                              }
+                            }}
+                            className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                          >
+                            <div className="flex items-center gap-2 w-full">
+                              {bulkDeleteMode && (
+                                <Checkbox
+                                  checked={selectedForDelete.has(name)}
+                                  className="border-gray-300 w-4 h-4 rounded-md pointer-events-none"
+                                />
+                              )}
+                              <span className="text-sm truncate flex-1">{name}</span>
+                              {name === defaultTemplateName && (
+                                <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
+                                  Default
+                                </span>
+                              )}
+                              {!bulkDeleteMode && name === selectedTemplate && (
+                                <Check className="h-4 w-4 text-blue-500 shrink-0" />
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
-              <TextareaAutosize
-                value={adText}
-                onChange={e => setAdText(e.target.value)}
-                placeholder="Write a catchy caption... ✍️"
-                minRows={3}
-                maxRows={8}
-                className={formTextareaChrome}
-                style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-              />
-              <div className="flex items-center justify-between mt-1 text-xs px-1">
-                <span className={cn(
-                  (adType === 'SPARK' && adText.length === 0) || (adText.length >= 12 && adText.length <= 100)
-                    ? "text-gray-400"
-                    : "text-red-500 font-medium"
-                )}>
-                  {adText.length} / 100 characters
-                </span>
-                {adText.length > 0 && adText.length < 12 && (
-                  <span className="text-red-500 font-medium">Caption must be at least 12 characters</span>
-                )}
-                {adText.length > 100 && (
-                  <span className="text-red-500 font-medium">Caption cannot exceed 100 characters</span>
+
+              {/* List of Caption Textareas */}
+              <div className="space-y-3">
+                {adTexts.map((text, i) => (
+                  <div key={i} className="flex items-start gap-2.5 group">
+                    <div className="flex-1 flex flex-col min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-semibold text-zinc-500">Caption Variant {i + 1}</span>
+                        <span className="text-[10px] text-zinc-400 font-medium">{text.length}/100</span>
+                      </div>
+                      <TextareaAutosize
+                        value={text}
+                        onChange={(e) => {
+                          const updated = [...adTexts];
+                          updated[i] = e.target.value;
+                          setAdTexts(updated);
+                        }}
+                        placeholder="Write a catchy caption... ✍️"
+                        minRows={2}
+                        maxRows={6}
+                        className={cn(
+                          formTextareaChrome,
+                          duplicateCaptionIndices.has(i) && "border-red-500 focus:border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]"
+                        )}
+                        style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+                      />
+                      {duplicateCaptionIndices.has(i) && (
+                        <span className="text-[10px] text-red-500 font-medium mt-1">Duplicate caption values can cause errors when making ads</span>
+                      )}
+                      {text.length > 0 && text.length < 12 && (
+                        <span className="text-[10px] text-red-500 font-medium mt-1">Caption must be at least 12 characters</span>
+                      )}
+                      {text.length > 100 && (
+                        <span className="text-[10px] text-red-500 font-medium mt-1">Caption cannot exceed 100 characters</span>
+                      )}
+                    </div>
+                    {adTexts.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...adTexts];
+                          updated.splice(i, 1);
+                          setAdTexts(updated);
+                        }}
+                        className="mt-6 p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        title="Remove Variant"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {adTexts.length < 5 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setAdTexts([...adTexts, ""])}
+                    className="w-full h-10 border-dashed border-zinc-300 hover:border-zinc-400 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-50 flex items-center justify-center gap-1 bg-white"
+                  >
+                    <Plus className="w-4 h-4" /> Add new caption variant
+                  </Button>
                 )}
               </div>
             </div>
@@ -3492,6 +3940,58 @@ export default function TikTokAdCreationForm({
                 }}
               >
                 Delete All Variants
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSaveNewDialog && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => {
+              setShowSaveNewDialog(false);
+              setNewTemplateNameInput("");
+            }}
+          />
+          <div
+            className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-150"
+            style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-zinc-900">Save Ad Caption Template</h3>
+              <p className="text-xs text-zinc-500">
+                Enter a name for this caption template:
+              </p>
+              <Input
+                type="text"
+                placeholder="Template name (e.g. Summer Caption)..."
+                value={newTemplateNameInput}
+                onChange={(e) => setNewTemplateNameInput(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 mt-2"
+                autoFocus
+              />
+            </div>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <Button
+                variant="outline"
+                className="w-full rounded-xl border border-zinc-200"
+                onClick={() => {
+                  setShowSaveNewDialog(false);
+                  setNewTemplateNameInput("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={!newTemplateNameInput.trim() || isSavingNew}
+                className="w-full rounded-xl bg-zinc-800 text-white hover:bg-zinc-900"
+                onClick={handleSaveAsNewTemplate}
+              >
+                {isSavingNew ? <Loader className="h-4 w-4 animate-spin mr-1" /> : null}
+                Save Template
               </Button>
             </div>
           </div>

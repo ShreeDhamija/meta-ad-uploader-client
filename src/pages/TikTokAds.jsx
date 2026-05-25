@@ -71,7 +71,7 @@ export default function TikTokAds() {
 
   const [selectedAdvertiser, setSelectedAdvertiser] = useState('')
   const [adName, setAdName] = useState('')
-  const [adText, setAdText] = useState('')
+  const [adTexts, setAdTexts] = useState([''])
   const [cta, setCta] = useState(['SHOP_NOW'])
   const [landingUrl, setLandingUrl] = useState('')
   const [videoFile, setVideoFile] = useState(null)
@@ -369,7 +369,7 @@ export default function TikTokAds() {
 
 
   // Load preferences for selected advertiser
-  const { settings: advertiserPrefs } = useTikTokAdvertiserSettings(selectedAdvertiser)
+  const { settings: advertiserPrefs, refetch: refetchAdvertiserPrefs } = useTikTokAdvertiserSettings(selectedAdvertiser)
 
   // Sync files with videoFile/videoPreview for backend submissions and video uploading hooks
   useEffect(() => {
@@ -440,10 +440,10 @@ export default function TikTokAds() {
       }
 
       // 4. Default Ad Text (from default template)
-      if (!adText && advertiserPrefs.copyTemplates && advertiserPrefs.defaultTemplateName) {
+      if (adTexts.length === 1 && adTexts[0] === '' && advertiserPrefs.copyTemplates && advertiserPrefs.defaultTemplateName) {
         const template = advertiserPrefs.copyTemplates[advertiserPrefs.defaultTemplateName];
         if (template && template.texts?.length > 0) {
-          setAdText(template.texts[0]);
+          setAdTexts(template.texts);
         }
       }
 
@@ -500,7 +500,7 @@ export default function TikTokAds() {
 
   const captureCurrentSnapshot = useCallback(() => ({
     adName,
-    adText,
+    adTexts,
     cta,
     landingUrl,
     selectedIdentity,
@@ -512,7 +512,7 @@ export default function TikTokAds() {
     newAdGroupName,
   }), [
     adName,
-    adText,
+    adTexts,
     cta,
     landingUrl,
     selectedIdentity,
@@ -527,7 +527,7 @@ export default function TikTokAds() {
   const hydrateFromSnapshot = useCallback((snapshot) => {
     if (!snapshot) return;
     setAdName(snapshot.adName || "");
-    setAdText(snapshot.adText || "");
+    setAdTexts(snapshot.adTexts || [""]);
     const rawCta = snapshot.cta;
     setCta(Array.isArray(rawCta) ? rawCta : (rawCta ? [rawCta] : ["SHOP_NOW"]));
     setLandingUrl(snapshot.landingUrl || "");
@@ -792,10 +792,11 @@ export default function TikTokAds() {
                 advertisers={tiktokAdvertisers}
                 onAdvertiserChange={setSelectedAdvertiser}
                 advertiserPrefs={advertiserPrefs}
+                refetchAdvertiserPrefs={refetchAdvertiserPrefs}
 
                 // Lifted Form State
                 adName={adName} setAdName={setAdName}
-                adText={adText} setAdText={setAdText}
+                adTexts={adTexts} setAdTexts={setAdTexts}
                 cta={cta} setCta={setCta}
                 landingUrl={landingUrl} setLandingUrl={setLandingUrl}
                 videoFile={videoFile} setVideoFile={setVideoFile}

@@ -1,52 +1,40 @@
-import { useEffect, useState, useCallback } from 'react';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+import { useEffect } from 'react';
+import { useAppData } from './AppContext';
 
 /**
- * Fetches and caches TikTok advertiser preferences from tiktokDb.
- * Mirrors useAdAccountSettings but for TikTok advertisers.
- *
- * Returns the full settings object, a loading flag, a setter, and a refetch fn.
+ * Fetches and caches TikTok advertiser preferences globally in AppContext.
+ * Avoids redundant backend calls and instantly resolves preferences on mount.
  */
 export default function useTikTokAdvertiserSettings(advertiserId) {
-  const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState(null); // null = not yet loaded
+  const { 
+    tiktokSettings, 
+    tiktokSettingsLoading, 
+    fetchTikTokSettings, 
+    updateTikTokSettingsCache 
+  } = useAppData();
 
-  const tiktokHeaders = useCallback(() => {
-    const uid   = localStorage.getItem('tiktok_uid');
-    const token = localStorage.getItem('tiktok_token');
-    return {
-      ...(uid   && { 'x-tiktok-user-id': uid }),
-      ...(token && { 'x-tiktok-token': token }),
-    };
-  }, []);
+  const settings = advertiserId ? (tiktokSettings[advertiserId] || null) : null;
+  const loading = advertiserId ? (tiktokSettingsLoading[advertiserId] || false) : false;
 
-  const fetchSettings = useCallback(async () => {
-    if (!advertiserId) {
-      setSettings(null);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `${API_BASE_URL}/api/tiktok/settings/advertiser?advertiserId=${advertiserId}`,
-        { credentials: 'include', headers: tiktokHeaders() }
-      );
-      const data = await res.json();
-      setSettings(data.settings || {});
-    } catch (err) {
-      console.error('[useTikTokAdvertiserSettings] Failed to fetch settings:', err);
-      setSettings({});
-    } finally {
-      setLoading(false);
-    }
-  }, [advertiserId, tiktokHeaders]);
-
-  // Re-fetch whenever advertiserId changes
   useEffect(() => {
-    setSettings(null);
-    fetchSettings();
-  }, [fetchSettings]);
+    if (advertiserId && !tiktokSettings[advertiserId]) {
+      fetchTikTokSettings(advertiserId);
+    }
+  }, [advertiserId, fetchTikTokSettings, tiktokSettings]);
 
-  return { settings, setSettings, loading, refetch: fetchSettings };
+  const setSettings = (nextVal) => {
+    if (advertiserId) {
+      const current = tiktokSettings[advertiserId] || {};
+      const updated = typeof nextVal === 'function' ? nextVal(current) : nextVal;
+      updateTikTokSettingsCache(advertiserId, updated);
+    }
+  };
+
+  const refetch = () => {
+    if (advertiserId) {
+      return fetchTikTokSettings(advertiserId, true);
+    }
+  };
+
+  return { settings, setSettings, loading, refetch };
 }
