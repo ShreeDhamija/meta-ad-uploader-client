@@ -21,7 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload } from "lucide-react"
+import { Users, ChevronDown, Loader, Plus, Trash2, Upload, ChevronsUpDown, RefreshCcw, CircleX, AlertTriangle, RotateCcw, Eye, FileText, X, Clock, ChevronLeft, ChevronRight, Ban, Phone, ArrowUpDown, Check, Info, CloudUpload, BicepsFlexed } from "lucide-react"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useAuth } from "@/lib/AuthContext"
@@ -32,6 +32,7 @@ import ShopDestinationSelector from "@/components/shop-destination-selector"
 import PostSelectorInline from "@/components/PostIDSelector"
 import MetaMediaLibraryModal from "@/components/MetaMediaLibraryModal";
 import FrameioPickerModal from "@/components/FrameioPickerModal";
+import FlexAdsImportModal from "@/components/FlexAdsImportModal";
 import { v4 as uuidv4 } from 'uuid';
 import ConfigIcon from '@/assets/icons/plus.svg?react';
 import FacebookIcon from '@/assets/icons/fb.svg?react';
@@ -814,6 +815,10 @@ export default function AdCreationForm({
   const [uploadSources, setUploadSourcesLocal] = useState(globalUploadSources);
   const [uploadSourcesDirty, setUploadSourcesDirty] = useState(false);
   const [uploadSourcesOpen, setUploadSourcesOpen] = useState(false);
+  // Modal for "Get Top Ads For Flex" — only opened when adType === 'flexible'.
+  // Imports selected ads' image hashes / video IDs into importedFiles, which
+  // the existing flexible-ad launch path then bundles into asset_feed_spec.
+  const [flexAdsImportOpen, setFlexAdsImportOpen] = useState(false);
 
   useEffect(() => {
     if (!uploadSourcesDirty) {
@@ -8225,20 +8230,46 @@ export default function AdCreationForm({
                   <div className="flex items-center justify-between">
                     <Label className="block">Upload Media</Label>
 
-                    <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
-                      <PopoverTrigger asChild>
+                    <div className="flex items-center gap-2">
+                      {/* "Get Top Ads For Flex" — only when the user has chosen the
+                          flexible ad type. Opens a modal that fetches the same
+                          flex-ad candidates as the analytics dashboard and imports
+                          the selected assets directly into importedFiles. */}
+                      {adType === 'flexible' && (
                         <Button
                           type="button"
                           size="sm"
+                          onClick={() => {
+                            if (!selectedAdAccount) {
+                              toast.error("Please select an ad account first");
+                              return;
+                            }
+                            setFlexAdsImportOpen(true);
+                          }}
                           className={cn(
                             "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
                             formFieldChrome
                           )}
                         >
-                          <CloudUpload className="h-4 w-4" />
-                          Manage Upload Sources
+                          <BicepsFlexed className="h-4 w-4 text-purple-500" />
+                          Get Top Ads For Flex
                         </Button>
-                      </PopoverTrigger>
+                      )}
+
+                      <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className={cn(
+                              "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
+                              formFieldChrome
+                            )}
+                          >
+                            <CloudUpload className="h-4 w-4" />
+                            Manage Upload Sources
+                          </Button>
+                        </PopoverTrigger>
                       <PopoverContent align="end" className="bg-white rounded-xl p-2 w-72 border border-gray-200 shadow-lg">
                         <div className="flex flex-col">
                           {UPLOAD_SOURCE_OPTIONS.map((src) => {
@@ -8264,6 +8295,7 @@ export default function AdCreationForm({
                         </div>
                       </PopoverContent>
                     </Popover>
+                    </div>
                   </div>
 
                   {uploadSources.includes('local') && (
@@ -8373,6 +8405,19 @@ export default function AdCreationForm({
                   open={frameioPickerOpen}
                   onOpenChange={setFrameioPickerOpen}
                   onConfirm={handleFrameioFilesSelected}
+                />
+
+                {/* Flex Ads import modal — opened by the "Get Top Ads For Flex"
+                    button. mode defaults to 'cpr' since the form doesn't track
+                    a CPA/ROAS preference today; the column label adjusts but
+                    backend candidate selection is unaffected. */}
+                <FlexAdsImportModal
+                  open={flexAdsImportOpen}
+                  onOpenChange={setFlexAdsImportOpen}
+                  adAccountId={selectedAdAccount}
+                  conversionEvent={adAccountSettings?.conversionEvent}
+                  importedFiles={importedFiles}
+                  setImportedFiles={setImportedFiles}
                 />
 
 
