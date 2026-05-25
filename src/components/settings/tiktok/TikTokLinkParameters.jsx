@@ -30,11 +30,11 @@ const DEFAULT_PREFILL_PAIRS = [
     { key: "utm_content", value: "{{ad.name}}" }
 ];
 
-export default function TikTokLinkParameters({ 
-    links = [], 
-    setLinks, 
-    utmPairs = [], 
-    setUtmPairs, 
+export default function TikTokLinkParameters({
+    links = [],
+    setLinks,
+    utmPairs = [],
+    setUtmPairs,
     advertiserId,
     thirdPartyTrackingUrl = "",
     setThirdPartyTrackingUrl

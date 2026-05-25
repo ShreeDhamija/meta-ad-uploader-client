@@ -444,7 +444,7 @@ export default function TikTokAdCreationForm({
   const [openIdentity, setOpenIdentity] = useState(false)
   const [openCta, setOpenCta] = useState(false)
   const [openUrlPicker, setOpenUrlPicker] = useState(false)
-  const [openTemplatePicker, setOpenTemplatePicker] = useState(false)
+  const [templateDropdownOpen, setTemplateDropdownOpen] = useState(false)
 
   // Copy template state
   const [selectedTemplate, setSelectedTemplate] = useState("")
@@ -1307,14 +1307,14 @@ export default function TikTokAdCreationForm({
       };
       const updated = { ...(copyTemplates || {}) };
       updated[name] = templateData;
-      
+
       const nextSettings = { ...advertiserPrefs, copyTemplates: updated };
       await saveTikTokSettings(selectedAdvertiser, nextSettings);
-      
+
       if (refetchAdvertiserPrefs) {
         await refetchAdvertiserPrefs();
       }
-      
+
       setSelectedTemplate(name);
       toast.success("Template saved!");
       setShowSaveNewDialog(false);
@@ -1337,14 +1337,14 @@ export default function TikTokAdCreationForm({
       };
       const updated = { ...(copyTemplates || {}) };
       updated[selectedTemplate] = templateData;
-      
+
       const nextSettings = { ...advertiserPrefs, copyTemplates: updated };
       await saveTikTokSettings(selectedAdvertiser, nextSettings);
-      
+
       if (refetchAdvertiserPrefs) {
         await refetchAdvertiserPrefs();
       }
-      
+
       toast.success("Template updated!");
     } catch (err) {
       console.error(err);
@@ -1362,11 +1362,11 @@ export default function TikTokAdCreationForm({
       for (const name of namesToDelete) {
         await deleteTikTokCopyTemplate(selectedAdvertiser, name);
       }
-      
+
       if (refetchAdvertiserPrefs) {
         await refetchAdvertiserPrefs();
       }
-      
+
       toast.success(`Deleted ${namesToDelete.length} template${namesToDelete.length > 1 ? "s" : ""}`);
       setSelectedForDelete(new Set());
       setBulkDeleteMode(false);
@@ -3207,7 +3207,7 @@ export default function TikTokAdCreationForm({
                     <span className="font-semibold text-sm">Ad Copy / Caption</span>
                     {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
                   </Label>
-                  
+
                   {/* Inline template action buttons (Save as New / Update Template) when there are unsaved changes */}
                   {(adTexts.some(t => t.trim() !== "")) && (
                     <div className="flex items-center gap-2">
