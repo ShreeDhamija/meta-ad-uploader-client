@@ -467,9 +467,17 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                     <TikTokLinkParameters
                         advertiserId={selectedAdvertiser}
                         links={currentSettings.links || []}
-                        setLinks={(links) => setSettings({ ...currentSettings, links })}
+                        setLinks={(nextVal) => {
+                            const currentLinks = currentSettings.links || [];
+                            const evaluated = typeof nextVal === 'function' ? nextVal(currentLinks) : nextVal;
+                            setSettings({ ...currentSettings, links: evaluated });
+                        }}
                         utmPairs={currentSettings.defaultUTMs || []}
-                        setUtmPairs={(defaultUTMs) => setSettings({ ...currentSettings, defaultUTMs })}
+                        setUtmPairs={(nextVal) => {
+                            const currentUTMs = currentSettings.defaultUTMs || [];
+                            const evaluated = typeof nextVal === 'function' ? nextVal(currentUTMs) : nextVal;
+                            setSettings({ ...currentSettings, defaultUTMs: evaluated });
+                        }}
                         thirdPartyTrackingUrl={currentSettings.thirdPartyTrackingUrl || ""}
                         setThirdPartyTrackingUrl={(thirdPartyTrackingUrl) => setSettings({ ...currentSettings, thirdPartyTrackingUrl })}
                     />
