@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
+import { useNavigate } from "react-router-dom"
 
 import { useTikTokVideoUpload } from "@/hooks/useTikTokVideoUpload"
 import { readCache, writeCache } from "@/lib/dataCache"
@@ -167,6 +169,7 @@ export default function TikTokAdCreationForm({
   setPostVariantMap,
   advertiserPrefs
 }) {
+  const navigate = useNavigate()
   const formFieldChrome = "border-gray-300 rounded-2xl py-4.5 bg-white shadow"
   const formInputChrome = `${formFieldChrome} focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0`
   const formTextareaChrome = "w-full border border-gray-300 rounded-2xl bg-white px-3 pt-2.5 pb-2.5 text-sm leading-5 resize-none shadow focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -183,6 +186,7 @@ export default function TikTokAdCreationForm({
   const { tiktokFetch, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
 
   const [selectedAdvertiser, setSelectedAdvertiser] = useState(advertiserId || '')
+  const [adNameFormulaV2, setAdNameFormulaV2] = useState({ rawInput: "" })
 
   useEffect(() => {
     if (advertiserId) setSelectedAdvertiser(advertiserId)
@@ -389,15 +393,24 @@ export default function TikTokAdCreationForm({
       .then(results => {
         if (!active) return
         const combined = results.flat()
-        setAdGroups(combined)
+        // Unique by adgroup_id
+        const unique = []
+        const seen = new Set()
+        for (const ag of combined) {
+          if (!seen.has(ag.adgroup_id)) {
+            seen.add(ag.adgroup_id)
+            unique.push(ag)
+          }
+        }
+        setAdGroups(unique)
         setSelectedAdGroup(prevSelected => {
           // Keep any currently selected ad groups that are actually present in the newly fetched ad groups
-          const stillValidSelected = prevSelected.filter(id => combined.some(g => g.adgroup_id === id))
+          const stillValidSelected = prevSelected.filter(id => unique.some(g => g.adgroup_id === id))
           if (stillValidSelected.length > 0) {
             return stillValidSelected
           } else {
             // Fallback to defaults if none of the previously selected ones are still valid
-            return defaultAdGroupIds.filter(id => combined.some(g => g.adgroup_id === id))
+            return defaultAdGroupIds.filter(id => unique.some(g => g.adgroup_id === id))
           }
         })
       })
@@ -431,6 +444,17 @@ export default function TikTokAdCreationForm({
       .catch(() => { })
       .finally(() => setLoadingPages(false))
   }, [selectedAdvertiser])
+
+  // Sync advertiser preferences for Ad Name Formula
+  useEffect(() => {
+    if (advertiserPrefs) {
+      if (advertiserPrefs.adNameFormulaV2) {
+        setAdNameFormulaV2(advertiserPrefs.adNameFormulaV2);
+      } else {
+        setAdNameFormulaV2({ rawInput: "" });
+      }
+    }
+  }, [advertiserPrefs]);
 
   // Setup Campaign Duplication name automatic suffixing
   useEffect(() => {
@@ -496,7 +520,16 @@ export default function TikTokAdCreationForm({
 
     Promise.all(fetchPromises)
       .then(results => {
-        setAdGroups(results.flat())
+        const combined = results.flat()
+        const unique = []
+        const seen = new Set()
+        for (const ag of combined) {
+          if (!seen.has(ag.adgroup_id)) {
+            seen.add(ag.adgroup_id)
+            unique.push(ag)
+          }
+        }
+        setAdGroups(unique)
         toast.success('Ad Groups refreshed!')
       })
       .catch(() => toast.error('Failed to refresh ad groups'))
@@ -604,13 +637,13 @@ export default function TikTokAdCreationForm({
   }
 
   const handleVideoSelect = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
+    const selectedFiles = Array.from(e.target.files)
+    if (selectedFiles.length === 0) return
     if (setFiles) {
-      setFiles([file])
+      setFiles(selectedFiles)
     } else {
-      setVideoFile(file)
-      setVideoPreview(URL.createObjectURL(file))
+      setVideoFile(selectedFiles[0])
+      setVideoPreview(URL.createObjectURL(selectedFiles[0]))
     }
     setUploadProgress(0)
   }
@@ -844,6 +877,76 @@ export default function TikTokAdCreationForm({
     window.addEventListener('message', handleMessage)
   }, [openDropboxChooser])
 
+  const computeAdNameFromFormula = useCallback((file, iterationIndex = 0, link = "", formula = null, adType = "") => {
+    const formulaToUse = formula || adNameFormulaV2;
+    if (!formulaToUse?.rawInput?.trim()) {
+      return adName || "Ad Generated Through Blip";
+    }
+
+    let fileName = "";
+    if (file && file.name) {
+      fileName = file.name.replace(/\.[^/.]+$/, "");
+    }
+
+    let fileType = "";
+    if (file) {
+      const type = file.type || file.mimeType || "";
+      if (type.startsWith("video/") || type === "video/quicktime" || /\.(mov|mp4|avi|webm|mkv|m4v)$/i.test(file.name || "")) {
+        fileType = "Video";
+      } else {
+        fileType = "Static";
+      }
+    }
+
+    let urlSlug = "";
+    if (link) {
+      try {
+        const urlWithoutProtocol = link.replace(/^https?:\/\//, "");
+        const lastSlashIndex = urlWithoutProtocol.lastIndexOf("/");
+        if (lastSlashIndex > 0 && lastSlashIndex < urlWithoutProtocol.length - 1) {
+          urlSlug = urlWithoutProtocol.substring(lastSlashIndex + 1);
+        }
+      } catch (e) {
+        urlSlug = "";
+      }
+    }
+
+    let adTypeLabel = "Video";
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const monthAbbrev = monthNames[now.getMonth()];
+    const date = String(now.getDate()).padStart(2, "0");
+    const year = now.getFullYear();
+
+    const formatDate = (formatStr) => {
+      const day = now.getDate();
+      const month = now.getMonth();
+      const year = now.getFullYear();
+      const fmt = formatStr === 'custom' ? 'MMDDYYYY' : formatStr.toUpperCase();
+      return fmt
+        .replace(/YYYY/g, String(year))
+        .replace(/YY/g, String(year).slice(-2))
+        .replace(/MMM/g, monthNames[month])
+        .replace(/MM/g, String(month + 1).padStart(2, '0'))
+        .replace(/M/g, String(month + 1))
+        .replace(/DD/g, String(day).padStart(2, '0'))
+        .replace(/D/g, String(day));
+    };
+
+    let calculatedName = formulaToUse.rawInput
+      .replace(/\{\{File Name\}\}/gi, fileName)
+      .replace(/\{\{File Type\}\}/gi, fileType)
+      .replace(/\{\{Date \(MonthYYYY\)\}\}/gi, `${monthAbbrev}${year}`)
+      .replace(/\{\{Date \(MonthDDYYYY\)\}\}/gi, `${monthAbbrev}${date}${year}`)
+      .replace(/\{\{Date\(([^)]+)\)\}\}/gi, (match, fmt) => formatDate(fmt))
+      .replace(/\{\{Iteration\}\}/gi, String(iterationIndex + 1).padStart(2, "0"))
+      .replace(/\{\{URL Slug\}\}/gi, urlSlug)
+      .replace(/\{\{Ad Type\}\}/gi, adTypeLabel);
+    
+    calculatedName = calculatedName.replace(/\{\{([^}]+)\}\}/g, "");
+    return calculatedName.trim() || "Ad Generated Through Blip";
+  }, [adNameFormulaV2, adName]);
+
   // Submit form handler
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -869,11 +972,12 @@ export default function TikTokAdCreationForm({
       }
     }
 
-    if (!adName.trim()) return toast.error('Ad name is required')
+    const hasFormula = adNameFormulaV2?.rawInput?.trim()
+    if (!hasFormula && !adName.trim()) return toast.error('Ad name is required')
     if (!cta || cta.length === 0) return toast.error('Please select at least one Call to Action')
 
     const isCloudFile = driveFiles.length > 0 || dropboxFiles.length > 0
-    if (adType === 'NORMAL' && !videoFile && !isCloudFile) {
+    if (adType === 'NORMAL' && !videoFile && !isCloudFile && files.length === 0) {
       return toast.error("Please select a video")
     }
 
@@ -882,11 +986,30 @@ export default function TikTokAdCreationForm({
     setUploadProgress(0)
 
     try {
-      let videoId = null
+      const results = []
+      const errors = []
 
+      // Unified array of files to process
+      const itemsToUpload = []
+      if (adType === 'SPARK') {
+        itemsToUpload.push({ type: 'spark', file: { name: 'Spark Ad' } })
+      } else if (files && files.length > 0) {
+        files.forEach(f => itemsToUpload.push({ type: 'local', file: f }))
+      } else if (driveFiles && driveFiles.length > 0) {
+        driveFiles.forEach(f => itemsToUpload.push({ type: 'drive', file: f }))
+      } else if (dropboxFiles && dropboxFiles.length > 0) {
+        dropboxFiles.forEach(f => itemsToUpload.push({ type: 'dropbox', file: f }))
+      } else if (tiktokLibraryFiles.length > 0) {
+        tiktokLibraryFiles.forEach(f => itemsToUpload.push({ type: 'library', file: f }))
+      }
+
+      if (itemsToUpload.length === 0) {
+        throw new Error('Please select at least one video to upload.')
+      }
+
+      let sparkVideoId = null
       if (adType === 'SPARK') {
         toast.info('Authorizing organic TikTok post...')
-        // 1. POST /api/tiktok/spark-authorize
         const authRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/spark-authorize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -901,7 +1024,6 @@ export default function TikTokAdCreationForm({
         }
 
         toast.info('Fetching organic video information...')
-        // 2. GET /api/tiktok/spark-video-info
         const infoParams = new URLSearchParams({
           advertiserId: selectedAdvertiser,
           authCode: sparkAuthCode.trim()
@@ -911,179 +1033,179 @@ export default function TikTokAdCreationForm({
         if (!infoRes.ok || !infoData.success) {
           throw new Error(infoData.error || 'Failed to retrieve organic video information')
         }
+        sparkVideoId = infoData.videoId
+      }
 
-        videoId = infoData.videoId
-        setIsUploading(false)
-        setUploadProgress(100)
-      } else {
-        if (tiktokLibraryFiles.length > 0) {
-          videoId = tiktokLibraryFiles[0].videoId
-          setIsUploading(false)
-          setUploadProgress(100)
-        } else if (videoFile) {
-          console.log('[TikTok Submit] Uploading local video file:', videoFile.name, videoFile.size)
-          toast.info('Uploading video...')
-          const uploadResult = await uploadVideoToTikTok(videoFile)
-          console.log('[TikTok Submit] Upload hook result:', JSON.stringify(uploadResult))
+      for (let i = 0; i < itemsToUpload.length; i++) {
+        const item = itemsToUpload[i]
+        let videoId = null
+
+        toast.info(`Processing media ${i + 1} of ${itemsToUpload.length}: ${item.file.name}...`)
+
+        if (adType === 'SPARK') {
+          videoId = sparkVideoId
+        } else if (item.type === 'local') {
+          console.log('[TikTok Submit] Uploading local video file:', item.file.name, item.file.size)
+          toast.info(`Uploading video "${item.file.name}"...`)
+          const uploadResult = await uploadVideoToTikTok(item.file)
           if (!uploadResult?.videoId) {
-            throw new Error('Video upload failed — no video ID returned')
+            throw new Error(`Video upload failed for "${item.file.name}"`)
           }
           videoId = uploadResult.videoId
-          console.log('[TikTok Submit] ✅ Video ID resolved:', videoId)
-          setIsUploading(false)
-          setUploadProgress(100)
-        } else {
+        } else if (item.type === 'drive' || item.type === 'dropbox') {
           const formData = new FormData()
-          if (driveFiles.length > 0) {
-            formData.append('driveFile', JSON.stringify(driveFiles[0]))
-          } else if (dropboxFiles.length > 0) {
-            formData.append('dropboxFile', JSON.stringify(dropboxFiles[0]))
+          if (item.type === 'drive') {
+            formData.append('driveFile', JSON.stringify(item.file))
+          } else {
+            formData.append('dropboxFile', JSON.stringify(item.file))
           }
 
           const uploadParams = new URLSearchParams({ advertiserId: selectedAdvertiser })
           const uploadUrl = `${API_BASE_URL}/api/tiktok/upload-video?${uploadParams}`
-          const sourceName = driveFiles.length > 0 ? 'Google Drive' : 'Dropbox'
+          const sourceName = item.type === 'drive' ? 'Google Drive' : 'Dropbox'
 
-          toast.info(`Downloading from ${sourceName} and uploading...`)
+          toast.info(`Downloading "${item.file.name}" from ${sourceName} and uploading...`)
           const uploadRes = await tiktokFetch(uploadUrl, { method: 'POST', body: formData })
-          const uploadRawText = await uploadRes.text()
-
-          let uploadData = {}
-          try { uploadData = JSON.parse(uploadRawText) } catch (parseErr) {
-            throw new Error(`Server returned non-JSON response (${uploadRes.status}): ${uploadRawText.slice(0, 200)}`)
+          const uploadData = await uploadRes.json()
+          if (!uploadRes.ok || !uploadData.success || !uploadData.videoId) {
+            throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`)
           }
-
-          if (!uploadRes.ok || !uploadData.success) {
-            throw new Error(uploadData.error || uploadData.message || `Upload failed with status ${uploadRes.status}`)
-          }
-
           videoId = uploadData.videoId
-          setUploadProgress(100)
-          setIsUploading(false)
-          toast.success('Video uploaded!')
-        }
-      }
-
-      const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
-      const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
-      const currentIdentityId = isCustomized ? undefined : selectedIdentity
-      const currentIdentityType = isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER')
-
-      toast.info(`Creating TikTok ads...`)
-
-      const finalUrl = urlMode === 'WEBSITE'
-        ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
-        : landingUrl
-
-      const results = []
-      const errors = []
-
-      let adGroupIdsToSubmit = [...selectedAdGroup]
-
-      if (isDuplicatingAdGroupMode) {
-        toast.info('Duplicating ad group on-the-fly...')
-        const dupRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/adgroup/duplicate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            advertiser_id: selectedAdvertiser,
-            source_adgroup_id: duplicateAdGroup,
-            new_campaign_id: selectedCampaign[0],
-            new_adgroup_name: newAdGroupName.trim()
-          })
-        })
-        const dupData = await dupRes.json()
-        if (!dupRes.ok || !dupData.success || !dupData.copied_adgroup_id) {
-          throw new Error(dupData.error || 'Ad group duplication failed')
+        } else if (item.type === 'library') {
+          videoId = item.file.videoId
         }
 
-        toast.success(`🎉 Ad group duplicated successfully as "${dupData.adgroup_name}"!`)
-        adGroupIdsToSubmit = [dupData.copied_adgroup_id]
+        const selectedIdentityObj = identities.find(i => i.identity_id === selectedIdentity)
+        const isCustomized = !selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER'
+        const currentIdentityId = isCustomized ? undefined : selectedIdentity
+        const currentIdentityType = isCustomized ? 'CUSTOMIZED_USER' : (selectedIdentityObj?.identity_type || 'TT_USER')
 
-        // Fetch refreshed list of ad groups to populate dropdown
-        try {
-          const params = new URLSearchParams({ advertiserId: selectedAdvertiser, campaignId: selectedCampaign[0] })
-          const refetchRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`)
-          const refetchData = await refetchRes.json()
-          const list = refetchData.adGroups || refetchData.adgroups || []
-          const enrichedList = list.map(ag => ({
-            ...ag,
-            campaignId: selectedCampaign[0],
-            campaignName: campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || selectedCampaign[0]
-          }))
-          setAdGroups(enrichedList)
-          writeCache(`tiktok_adgroups_${selectedCampaign[0]}`, list)
-        } catch (e) {
-          console.warn('Failed to refresh ad groups after duplication:', e.message)
-        }
-      }
+        const finalUrl = urlMode === 'WEBSITE'
+          ? applyUtmsToUrl(landingUrl, advertiserPrefs?.defaultUTMs || [])
+          : landingUrl
 
-      for (const adgroupId of adGroupIdsToSubmit) {
-        const adGroupName = adGroups.find(ag => ag.adgroup_id === adgroupId)?.adgroup_name ||
-          (isDuplicatingAdGroupMode ? newAdGroupName.trim() : adgroupId)
-        toast.info(`Creating ad in: ${adGroupName}...`)
+        let adGroupIdsToSubmit = [...selectedAdGroup]
 
-        const creativeCTAs = Array.isArray(cta) ? cta : [cta];
-        const creatives = creativeCTAs.map((singleCta) => {
-          const creative = {
-            video_id: videoId,
-            ad_text: adText,
-            call_to_action: singleCta,
-            ad_name: creativeCTAs.length > 1 ? `${adName.trim()} - ${singleCta}` : `${adName.trim()}`,
-            identity_type: currentIdentityType,
-            landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
-            ...(urlMode === 'WEBSITE'
-              ? { landing_page_url: finalUrl }
-              : { page_id: landingUrl }
-            ),
-            ...(adType === 'SPARK' ? {
-              is_spark_ad: true,
-              spark_ad_auth_code: sparkAuthCode.trim(),
-              adType: 'SPARK'
-            } : {})
-          }
-          if (currentIdentityId) creative.identity_id = currentIdentityId
-          return creative;
-        })
-
-        const createPayload = {
-          advertiserId: selectedAdvertiser,
-          adgroupId: adgroupId,
-          ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
-          identityType: currentIdentityType,
-          adName: adName.trim(),
-          adType: adType,
-          creatives: creatives
-        }
-
-        console.log(`[TikTok Submit] 🚀 Sending create-ad payload for ${adgroupId}:`, JSON.stringify(createPayload, null, 2))
-
-        try {
-          const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
+        if (isDuplicatingAdGroupMode && i === 0) {
+          toast.info('Duplicating ad group on-the-fly...')
+          const dupRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/adgroup/duplicate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(createPayload),
+            body: JSON.stringify({
+              advertiser_id: selectedAdvertiser,
+              source_adgroup_id: duplicateAdGroup,
+              new_campaign_id: selectedCampaign[0],
+              new_adgroup_name: newAdGroupName.trim()
+            })
           })
-          const createData = await createRes.json()
-          console.log(`[TikTok Submit] Create-ad response status for ${adgroupId}:`, createRes.status)
-          console.log(`[TikTok Submit] Create-ad response data for ${adgroupId}:`, JSON.stringify(createData))
-          if (!createRes.ok || !createData.success) {
-            throw new Error(createData.error || 'Ad creation failed')
+          const dupData = await dupRes.json()
+          if (!dupRes.ok || !dupData.success || !dupData.copied_adgroup_id) {
+            throw new Error(dupData.error || 'Ad group duplication failed')
           }
-          results.push(adgroupId)
-        } catch (err) {
-          errors.push({ adgroupId, adGroupName, error: err.message })
+
+          toast.success(`🎉 Ad group duplicated successfully as "${dupData.adgroup_name}"!`)
+          adGroupIdsToSubmit = [dupData.copied_adgroup_id]
+
+          try {
+            const params = new URLSearchParams({ advertiserId: selectedAdvertiser, campaignId: selectedCampaign[0] })
+            const refetchRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/fetch-adgroups?${params}`)
+            const refetchData = await refetchRes.json()
+            const list = refetchData.adGroups || refetchData.adgroups || []
+            const enrichedList = list.map(ag => ({
+              ...ag,
+              campaignId: selectedCampaign[0],
+              campaignName: campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || selectedCampaign[0]
+            }))
+            const unique = []
+            const seen = new Set()
+            for (const ag of enrichedList) {
+              if (!seen.has(ag.adgroup_id)) {
+                seen.add(ag.adgroup_id)
+                unique.push(ag)
+              }
+            }
+            setAdGroups(unique)
+            writeCache(`tiktok_adgroups_${selectedCampaign[0]}`, list)
+          } catch (e) {
+            console.warn('Failed to refresh ad groups after duplication:', e.message)
+          }
+        }
+
+        for (const adgroupId of adGroupIdsToSubmit) {
+          const adGroupName = adGroups.find(ag => ag.adgroup_id === adgroupId)?.adgroup_name ||
+            (isDuplicatingAdGroupMode ? newAdGroupName.trim() : adgroupId)
+          
+          const finalAdName = computeAdNameFromFormula(
+            item.file,
+            i,
+            landingUrl,
+            adNameFormulaV2,
+            adType
+          );
+
+          toast.info(`Creating ad "${finalAdName}" in: ${adGroupName}...`)
+
+          const creativeCTAs = Array.isArray(cta) ? cta : [cta];
+          const creatives = creativeCTAs.map((singleCta) => {
+            const creativeAdName = creativeCTAs.length > 1 ? `${finalAdName} - ${singleCta}` : finalAdName;
+            const creative = {
+              video_id: videoId,
+              ad_text: adText,
+              call_to_action: singleCta,
+              ad_name: creativeAdName,
+              identity_type: currentIdentityType,
+              landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+              ...(urlMode === 'WEBSITE'
+                ? { landing_page_url: finalUrl }
+                : { page_id: landingUrl }
+              ),
+              ...(adType === 'SPARK' ? {
+                is_spark_ad: true,
+                spark_ad_auth_code: sparkAuthCode.trim(),
+                adType: 'SPARK'
+              } : {})
+            }
+            if (currentIdentityId) creative.identity_id = currentIdentityId
+            return creative;
+          })
+
+          const createPayload = {
+            advertiserId: selectedAdvertiser,
+            adgroupId: adgroupId,
+            ...(currentIdentityId ? { identityId: currentIdentityId } : {}),
+            identityType: currentIdentityType,
+            adName: finalAdName,
+            adType: adType,
+            creatives: creatives
+          }
+
+          console.log(`[TikTok Submit] 🚀 Sending create-ad payload for ${adgroupId}:`, JSON.stringify(createPayload, null, 2))
+
+          try {
+            const createRes = await tiktokFetch(`${API_BASE_URL}/api/tiktok/create-ad`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(createPayload),
+            })
+            const createData = await createRes.json()
+            if (!createRes.ok || !createData.success) {
+              throw new Error(createData.error || 'Ad creation failed')
+            }
+            results.push(adgroupId)
+          } catch (err) {
+            errors.push({ adgroupId, adGroupName, error: err.message })
+          }
         }
       }
 
       if (errors.length > 0) {
         if (results.length > 0) {
-          toast.warning(`🎉 Created ads in ${results.length} ad groups, but failed in ${errors.length} groups: \n` + errors.map(e => `${e.adGroupName}: ${e.error}`).join('\n'))
+          toast.warning(`🎉 Created ads for ${results.length} items, but failed for some: \n` + errors.map(e => `${e.adGroupName}: ${e.error}`).join('\n'))
         } else {
-          throw new Error(`Failed to create ads in all selected ad groups: \n` + errors.map(e => `${e.adGroupName}: ${e.error}`).join('\n'))
+          throw new Error(`Failed to create ads: \n` + errors.map(e => `${e.adGroupName}: ${e.error}`).join('\n'))
         }
       } else {
-        toast.success(`🎉 TikTok ads created successfully in all ${results.length} ad groups!`)
+        toast.success(`🎉 TikTok ads created successfully for all ${itemsToUpload.length} videos!`)
       }
 
       // Reset form fields
@@ -1286,7 +1408,7 @@ export default function TikTokAdCreationForm({
                   <div className="p-2 border-t border-gray-100">
                     <Button
                       type="button"
-                      disabled={selectedCampaign.length !== 1}
+                      disabled={campaigns.length === 0}
                       onClick={() => {
                         if (selectedCampaign.length === 1) {
                           const campId = selectedCampaign[0];
@@ -1295,6 +1417,9 @@ export default function TikTokAdCreationForm({
                           if (camp) {
                             setNewCampaignName((camp.campaign_name || '') + "_copy");
                           }
+                        } else {
+                          setDuplicateCampaign("");
+                          setNewCampaignName("");
                         }
                         setShowDuplicateCampaignBlock(true);
                         setOpenCampaign(false);
@@ -1527,7 +1652,7 @@ export default function TikTokAdCreationForm({
                                   const isSelected = selectedAdGroup.includes(ag.adgroup_id);
                                   return (
                                     <CommandItem
-                                      key={ag.adgroup_id}
+                                      key={`${ag.campaignId || 'camp'}-${ag.adgroup_id}`}
                                       value={ag.adgroup_id}
                                       onSelect={() => {
                                         if (isSelected) {
@@ -1572,7 +1697,7 @@ export default function TikTokAdCreationForm({
                   <div className="p-2 border-t border-gray-100">
                     <Button
                       type="button"
-                      disabled={selectedCampaign.length !== 1}
+                      disabled={campaigns.length === 0}
                       onClick={() => {
                         setShowDuplicateAdGroupBlock(true);
                         setOpenAdGroup(false);
@@ -1893,19 +2018,44 @@ export default function TikTokAdCreationForm({
           {/* Creative Fields - Visible for both Normal and Spark Ad types */}
           <div className="space-y-6">
             {/* 3. Ad Name */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("adName")}
-                <FileText className="w-4 h-4 text-gray-500" />
-                Ad Name
+            <div id="adName" className="space-y-1">
+              <Label htmlFor="adName" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  {renderDiffMark("adName")}
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  Ad Name
+                </div>
+                {selectedAdvertiser && !advertiserPrefs?.adNameFormulaV2?.rawInput && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/settings?tab=tiktok&advertiser=${selectedAdvertiser}`)}
+                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900"
+                  >
+                    <CogIcon className="w-3 h-3 mr-1 text-white" />
+                    Set Up Ad Name Formula
+                  </Button>
+                )}
               </Label>
-              <Input
-                type="text"
-                placeholder="e.g. Black Friday Launch Ad"
-                value={adName}
-                onChange={e => setAdName(e.target.value)}
-                className={formInputChrome}
+
+              <ReorderAdNameParts
+                formulaInput={adNameFormulaV2?.rawInput || ""}
+                onFormulaChange={(newRawInput) => {
+                  setAdNameFormulaV2({ rawInput: newRawInput });
+                }}
+                variant="home"
+                customVariables={advertiserPrefs?.customVariables || []}
               />
+              <div className="mt-1">
+                <Label className="text-xs text-gray-500">
+                  Ad Name Preview: {
+                    (files?.length > 0 || driveFiles?.length > 0 || dropboxFiles?.length > 0)
+                      ? computeAdNameFromFormula(files[0] || driveFiles[0] || dropboxFiles[0], 0, landingUrl, null, adType)
+                      : "Upload a file to see example"
+                  }
+                </Label>
+              </div>
             </div>
 
             {/* 4. Ad Copy / Caption with template picker */}
@@ -1960,6 +2110,21 @@ export default function TikTokAdCreationForm({
                 className={formTextareaChrome}
                 style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
               />
+              <div className="flex items-center justify-between mt-1 text-xs px-1">
+                <span className={cn(
+                  (adType === 'SPARK' && adText.length === 0) || (adText.length >= 12 && adText.length <= 100) 
+                    ? "text-gray-400" 
+                    : "text-red-500 font-medium"
+                )}>
+                  {adText.length} / 100 characters
+                </span>
+                {adText.length > 0 && adText.length < 12 && (
+                  <span className="text-red-500 font-medium">Caption must be at least 12 characters</span>
+                )}
+                {adText.length > 100 && (
+                  <span className="text-red-500 font-medium">Caption cannot exceed 100 characters</span>
+                )}
+              </div>
             </div>
 
             {/* 5. Call to Action & Landing Page URL Stacked */}
@@ -2190,13 +2355,14 @@ export default function TikTokAdCreationForm({
                     onClick={() => fileRef.current?.click()}
                     className={cn(
                       "group cursor-pointer border-2 border-dashed rounded-3xl p-8 text-center transition-all",
-                      videoFile ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                      (videoFile || (files && files.length > 0)) ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                     )}
                   >
                     <input
                       ref={fileRef}
                       type="file"
                       accept="video/mp4,video/quicktime"
+                      multiple
                       className="hidden"
                       onChange={handleVideoSelect}
                     />
@@ -2209,6 +2375,40 @@ export default function TikTokAdCreationForm({
                         <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok</p>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Local Files Preview */}
+                {files && files.length > 0 && (
+                  <div className="border border-emerald-200 bg-emerald-50/30 rounded-3xl p-4 space-y-2">
+                    {files.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-white border border-emerald-100 flex items-center justify-center shadow-sm shrink-0">
+                            <Video className="w-5 h-5 text-emerald-500" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-gray-900 truncate max-w-[200px]">
+                              {file.name}
+                            </p>
+                            <p className="text-[10px] text-gray-400">
+                              {(file.size / (1024 * 1024)).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full hover:bg-red-50 hover:text-red-500 shrink-0"
+                          onClick={() => {
+                            setFiles(files.filter((_, i) => i !== idx))
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -2299,32 +2499,32 @@ export default function TikTokAdCreationForm({
             )}
           </div>
 
+          {/* Submit Button */}
+          <div className="pt-6 border-t border-gray-100">
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className={cn(
+                "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50",
+                isSubmitting && "opacity-50 cursor-not-allowed"
+              )}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader className="w-5 h-5 animate-spin" />
+                  {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
+                </div>
+              ) : (
+                'Create TikTok Ad'
+              )}
+            </Button>
+            <p className="text-center text-[11px] text-gray-400 mt-3 font-medium">
+              Your ad will be live after TikTok's review process
+            </p>
+          </div>
+
         </CardContent>
       </Card>
-
-      {/* Submit Button */}
-      <div className="pt-4">
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className={cn(
-            "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50",
-            isSubmitting && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          {isSubmitting ? (
-            <div className="flex items-center justify-center gap-2">
-              <Loader className="w-5 h-5 animate-spin" />
-              {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
-            </div>
-          ) : (
-            'Create TikTok Ad'
-          )}
-        </Button>
-        <p className="text-center text-[11px] text-gray-400 mt-3 font-medium">
-          Your ad will be live after TikTok's review process
-        </p>
-      </div>
 
       <FolderPickerOverlay
         show={showFolderInput}

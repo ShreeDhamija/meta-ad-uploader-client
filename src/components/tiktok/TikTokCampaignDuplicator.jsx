@@ -249,18 +249,6 @@ export default function TikTokCampaignDuplicator({ advertiserId }) {
                 />
               </div>
             </div>
-
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-semibold text-gray-900">Duplicate Ads</Label>
-                <p className="text-xs text-gray-500">Also recreate ads under each ad group</p>
-              </div>
-              <Switch
-                checked={duplicateAds}
-                onCheckedChange={setDuplicateAds}
-              />
-            </div>
-
             <div className="space-y-2">
               <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Initial Status
