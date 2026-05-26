@@ -49,6 +49,7 @@ import CTAIcon from '@/assets/icons/cta.svg?react';
 import CheckBlackIcon from '@/assets/icons/CheckBlack.svg?react';
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -520,6 +521,7 @@ export default function TikTokAdCreationForm({
   const [currentAbortController, setCurrentAbortController] = useState(null)
   const [isQueueingJobs, setIsQueueingJobs] = useState(false)
   const currentJobIdRef = useRef(null)
+  const [launchPaused, setLaunchPaused] = useState(false)
 
   const [liveProgress, setLiveProgress] = useState({
     completed: 0,
@@ -609,6 +611,7 @@ export default function TikTokAdCreationForm({
       duplicateAdGroup,
       newAdGroupName,
       selectedIdentity,
+      launchPaused,
     }
 
     let fileCount = formData.files.length + formData.driveFiles.length + formData.dropboxFiles.length + formData.tiktokLibraryFiles.length
@@ -627,7 +630,7 @@ export default function TikTokAdCreationForm({
     variants, adName, adTexts, cta, landingUrl, sparkAuthCode, urlMode, adType,
     files, driveFiles, dropboxFiles, tiktokLibraryFiles, selectedAdvertiser,
     selectedCampaign, selectedAdGroup, showDuplicateAdGroupBlock, duplicateAdGroup,
-    newAdGroupName, selectedIdentity, fileVariantMap
+    newAdGroupName, selectedIdentity, fileVariantMap, launchPaused
   ])
 
   const addCompletedJob = useCallback((completedJob) => {
@@ -698,6 +701,7 @@ export default function TikTokAdCreationForm({
       duplicateAdGroup,
       newAdGroupName,
       selectedIdentity,
+      launchPaused,
     } = jobToProcess.formData
 
     setIsSubmitting(true)
@@ -879,6 +883,7 @@ export default function TikTokAdCreationForm({
                 ad_name: creativeAdName,
                 identity_type: currentIdentityType,
                 landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+                operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
                 ...(urlMode === 'WEBSITE'
                   ? { landing_page_url: finalUrl }
                   : { page_id: landingUrl }
@@ -2266,7 +2271,7 @@ export default function TikTokAdCreationForm({
                         {formatQueuedJobLabel(currentJob, 'Posting')}
                       </p>
                       <span className="text-sm font-bold text-gray-900">
-                        {Math.round(progress || trackedProgress || 0)}%
+                        {Math.round(videoUploading ? videoUploadProgress : (progress || trackedProgress || 0))}%
                       </span>
                     </div>
 
@@ -2274,7 +2279,7 @@ export default function TikTokAdCreationForm({
                       <div className="flex-1 bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${progress || trackedProgress || 0}%` }}
+                          style={{ width: `${videoUploading ? videoUploadProgress : (progress || trackedProgress || 0)}%` }}
                         />
                       </div>
                       <button
@@ -2310,7 +2315,7 @@ export default function TikTokAdCreationForm({
                         </div>
                       ) : (
                         <p className="text-xs font-medium text-gray-500 max-w-[200px] truncate">
-                          {progressMessage || trackedMessage || 'Processing...'}
+                          {videoUploading ? 'Uploading video to TikTok...' : (progressMessage || trackedMessage || 'Processing...')}
                         </p>
                       )}
 
@@ -2838,7 +2843,7 @@ export default function TikTokAdCreationForm({
                       className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
                     >
                       <AdSetIcon className="mr-2 h-4 w-4 text-white" />
-                      Launch in a New Ad Group
+                      🚀 Launch in a New Ad Group
                     </Button>
                   </div>
                 </Command>
@@ -3781,7 +3786,7 @@ export default function TikTokAdCreationForm({
                 })()}
 
                 {/* Progress bar */}
-                {(isUploading || videoUploading) && (
+                {(isUploading || videoUploading) && !isSubmitting && (
                   <div className="mt-2">
                     <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
                       <div
@@ -3800,6 +3805,70 @@ export default function TikTokAdCreationForm({
 
           {/* Submit Button */}
           <div className="pt-6 border-t border-gray-100 space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <Label className="text-sm font-medium inline-flex items-center gap-1">
+                  {renderDiffMark("launchPaused")}
+                  <span>Ad Status:</span>
+                </Label>
+
+                <RadioGroup
+                  value={launchPaused ? "paused" : "active"}
+                  onValueChange={(value) => setLaunchPaused(value === "paused")}
+                  disabled={isSubmitting}
+                  className="flex items-center space-x-2"
+                >
+                  <div
+                    className={cn(
+                      "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                      !launchPaused
+                        ? "bg-green-50 border border-green-300"
+                        : "border border-transparent"
+                    )}
+                  >
+                    <RadioGroupItem
+                      value="active"
+                      id="statusActive"
+                      className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
+                    />
+                    <Label
+                      htmlFor="statusActive"
+                      className={cn(
+                        "text-sm font-medium leading-none cursor-pointer",
+                        !launchPaused ? "text-green-600" : "text-gray-600"
+                      )}
+                    >
+                      Active
+                    </Label>
+                  </div>
+
+                  <div
+                    className={cn(
+                      "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                      launchPaused
+                        ? "bg-red-50 border border-red-300"
+                        : "border border-transparent"
+                    )}
+                  >
+                    <RadioGroupItem
+                      value="paused"
+                      id="statusPaused"
+                      className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
+                    />
+                    <Label
+                      htmlFor="statusPaused"
+                      className={cn(
+                        "text-sm font-medium leading-none cursor-pointer",
+                        launchPaused ? "text-red-600" : "text-gray-600"
+                      )}
+                    >
+                      Paused
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+
             <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150 mb-2">
               <Checkbox
                 id="preserveMedia"
