@@ -3908,176 +3908,176 @@ export default function TikTokAdCreationForm({
         isImporting={isImportingFolder}
       />
 
-      {/* FLOATING VARIANT PICKER BAR AT BOTTOM */ }
-  {
-    variants.length > 1 && (
-      <TooltipProvider delayDuration={0}>
-        <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <ScrollArea
-            type="always"
-            className={cn(
-              "rounded-full",
-              shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2"
-            )}
-          >
-            <div className="flex w-max items-center gap-1 pr-1">
-              {variants.map((variant) => {
-                const isActive = variant.id === activeVariantId
-                const assignedCount = countFilesForVariant(variant.id)
+      {/* FLOATING VARIANT PICKER BAR AT BOTTOM */}
+      {
+        variants.length > 1 && (
+          <TooltipProvider delayDuration={0}>
+            <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <ScrollArea
+                type="always"
+                className={cn(
+                  "rounded-full",
+                  shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2"
+                )}
+              >
+                <div className="flex w-max items-center gap-1 pr-1">
+                  {variants.map((variant) => {
+                    const isActive = variant.id === activeVariantId
+                    const assignedCount = countFilesForVariant(variant.id)
 
-                return (
-                  <div key={variant.id} className="group flex shrink-0 items-center">
+                    return (
+                      <div key={variant.id} className="group flex shrink-0 items-center">
+                        <button
+                          type="button"
+                          onClick={() => switchVariant(variant.id)}
+                          className={cn(
+                            "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
+                            isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                          )}
+                        >
+                          <VariantDot variantId={variant.id} variants={variants} />
+                          <span className="whitespace-nowrap">{variant.name}</span>
+                          <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
+                            · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
+                          </span>
+                        </button>
+                        {variant.id !== 'default' && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteVariant(variant.id)}
+                            className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
+                            title="Delete variant"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </ScrollArea>
+              <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <button
                       type="button"
-                      onClick={() => switchVariant(variant.id)}
-                      className={cn(
-                        "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
-                        isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
-                      )}
+                      onClick={handleAddVariant}
+                      className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
                     >
-                      <VariantDot variantId={variant.id} variants={variants} />
-                      <span className="whitespace-nowrap">{variant.name}</span>
-                      <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
-                        · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
-                      </span>
+                      <Plus className="h-4 w-4" />
                     </button>
-                    {variant.id !== 'default' && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteVariant(variant.id)}
-                        className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
-                        title="Delete variant"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
+                  </TooltipTrigger>
+                  <TooltipContent>Add variant</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteAllVariantsDialog(true)}
+                      className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <Trash className="h-4 w-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete all variants</TooltipContent>
+                </Tooltip>
+              </div>
             </div>
-          </ScrollArea>
-          <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={handleAddVariant}
-                  className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Add variant</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => setShowDeleteAllVariantsDialog(true)}
-                  className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                >
-                  <Trash className="h-4 w-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Delete all variants</TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
-      </TooltipProvider>
-    )
-  }
+          </TooltipProvider>
+        )
+      }
 
-  {
-    showDeleteAllVariantsDialog && (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-        <div
-          className="absolute inset-0 bg-black/30"
-          onClick={() => setShowDeleteAllVariantsDialog(false)}
-        />
-        <div
-          className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl"
-          style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold">Delete all variants?</h3>
-            <p className="text-sm text-gray-500">
-              This will remove every variant and move all assignments back to Default.
-            </p>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              className="w-full rounded-xl"
-              onClick={() => {
-                setShowDeleteAllVariantsDialog(false)
-                handleDeleteAllVariants()
-              }}
-            >
-              Delete All Variants
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  {
-    showSaveNewDialog && (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-        <div
-          className="absolute inset-0 bg-black/30"
-          onClick={() => {
-            setShowSaveNewDialog(false);
-            setNewTemplateNameInput("");
-          }}
-        />
-        <div
-          className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-150"
-          style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-zinc-900">Save Ad Caption Template</h3>
-            <p className="text-xs text-zinc-500">
-              Enter a name for this caption template:
-            </p>
-            <Input
-              type="text"
-              placeholder="Template name (e.g. Summer Caption)..."
-              value={newTemplateNameInput}
-              onChange={(e) => setNewTemplateNameInput(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 mt-2"
-              autoFocus
+      {
+        showDeleteAllVariantsDialog && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setShowDeleteAllVariantsDialog(false)}
             />
+            <div
+              className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl"
+              style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">Delete all variants?</h3>
+                <p className="text-sm text-gray-500">
+                  This will remove every variant and move all assignments back to Default.
+                </p>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="w-full rounded-xl"
+                  onClick={() => {
+                    setShowDeleteAllVariantsDialog(false)
+                    handleDeleteAllVariants()
+                  }}
+                >
+                  Delete All Variants
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <Button
-              variant="outline"
-              className="w-full rounded-xl border border-zinc-200"
+        )
+      }
+
+      {
+        showSaveNewDialog && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/30"
               onClick={() => {
                 setShowSaveNewDialog(false);
                 setNewTemplateNameInput("");
               }}
+            />
+            <div
+              className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-150"
+              style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+              onClick={(e) => e.stopPropagation()}
             >
-              Cancel
-            </Button>
-            <Button
-              disabled={!newTemplateNameInput.trim() || isSavingNew}
-              className="w-full rounded-xl bg-zinc-800 text-white hover:bg-zinc-900"
-              onClick={handleSaveAsNewTemplate}
-            >
-              {isSavingNew ? <Loader className="h-4 w-4 animate-spin mr-1" /> : null}
-              Save Template
-            </Button>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-zinc-900">Save Ad Caption Template</h3>
+                <p className="text-xs text-zinc-500">
+                  Enter a name for this caption template:
+                </p>
+                <Input
+                  type="text"
+                  placeholder="Template name (e.g. Summer Caption)..."
+                  value={newTemplateNameInput}
+                  onChange={(e) => setNewTemplateNameInput(e.target.value)}
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 mt-2"
+                  autoFocus
+                />
+              </div>
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl border border-zinc-200"
+                  onClick={() => {
+                    setShowSaveNewDialog(false);
+                    setNewTemplateNameInput("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  disabled={!newTemplateNameInput.trim() || isSavingNew}
+                  className="w-full rounded-xl bg-zinc-800 text-white hover:bg-zinc-900"
+                  onClick={handleSaveAsNewTemplate}
+                >
+                  {isSavingNew ? <Loader className="h-4 w-4 animate-spin mr-1" /> : null}
+                  Save Template
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    )
-  }
+        )
+      }
 
     </form >
   )
