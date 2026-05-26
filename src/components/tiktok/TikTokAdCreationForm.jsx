@@ -2546,10 +2546,10 @@ export default function TikTokAdCreationForm({
                                 className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
                               />
                               <div className="flex-1 min-w-0 flex items-center justify-between">
-                                <span className={cn("text-sm font-medium truncate flex-1", c.operation_status === "DISABLE" && "text-gray-400")}>
+                                <span className={cn("text-sm font-medium truncate flex-1", (c.operation_status === "DISABLE" || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
                                   {c.campaign_name}
                                 </span>
-                                {c.operation_status === "ENABLE" && (
+                                {(c.operation_status === "ENABLE" || c.operation_status === true || c.operation_status === "true") && (
                                   <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
                                 )}
                               </div>
@@ -2668,11 +2668,11 @@ export default function TikTokAdCreationForm({
                                   )}
                                 >
                                   <div className="flex items-center justify-between w-full">
-                                    <span className={cn("text-sm font-medium", c.operation_status === "DISABLE" && "text-gray-400")}>
+                                    <span className={cn("text-sm font-medium", (c.operation_status === "DISABLE" || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
                                       {c.campaign_name}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                      {c.operation_status === "ENABLE" && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                      {(c.operation_status === "ENABLE" || c.operation_status === true || c.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                                       {duplicateCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
                                     </div>
                                   </div>
@@ -2708,7 +2708,7 @@ export default function TikTokAdCreationForm({
                         className="w-full h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 px-4 shadow transition-all active:scale-[0.98]"
                       >
                         {isDuplicating ? (
-                          <><Loader className="w-4 h-4 animate-spin" />Creating...</>
+                          <><Loader className="w-4 h-4 animate-spin" />Duplicating...</>
                         ) : (
                           "Create Campaign"
                         )}
@@ -2726,7 +2726,7 @@ export default function TikTokAdCreationForm({
               <Label className="flex items-center gap-2">
                 {renderDiffMark("selectedAdGroup")}
                 <AdSetIcon className="w-4 h-4" />
-                Launch in a new or existing ad set
+                Launch in a new or existing ad group
               </Label>
               <div className="flex items-center gap-2">
                 {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
@@ -2815,10 +2815,10 @@ export default function TikTokAdCreationForm({
                                           className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
                                         />
                                         <div className="flex-1 min-w-0 flex items-center justify-between">
-                                          <span className={cn("text-sm font-medium truncate flex-1", ag.operation_status === "DISABLE" && "text-gray-400")}>
+                                          <span className={cn("text-sm font-medium truncate flex-1", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
                                             {ag.adgroup_name}
                                           </span>
-                                          {ag.operation_status === "ENABLE" && (
+                                          {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && (
                                             <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
                                           )}
                                         </div>
@@ -2958,11 +2958,11 @@ export default function TikTokAdCreationForm({
                                   )}
                                 >
                                   <div className="flex items-center justify-between w-full">
-                                    <span className={cn("text-sm font-medium", ag.operation_status === "DISABLE" && "text-gray-400")}>
+                                    <span className={cn("text-sm font-medium", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
                                       {ag.adgroup_name}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                      {ag.operation_status === "ENABLE" && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                      {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
                                       {duplicateAdGroup === ag.adgroup_id && <Check className="h-4 w-4 text-black shrink-0" />}
                                     </div>
                                   </div>
