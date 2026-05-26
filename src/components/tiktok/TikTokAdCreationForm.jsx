@@ -1270,12 +1270,14 @@ export default function TikTokAdCreationForm({
   const copyTemplates = advertiserPrefs?.copyTemplates || {};
   const defaultTemplateName = advertiserPrefs?.defaultTemplateName || "";
 
+  const hasAnyContent = adTexts[0]?.trim() !== "";
+
   const hasUnsavedTemplateChangesRaw = useMemo(() => {
     if (!selectedTemplate || !copyTemplates[selectedTemplate]) return false;
     const tpl = copyTemplates[selectedTemplate];
-    const currentTexts = adTexts.filter(t => t.trim() !== "");
-    const originalTexts = tpl.texts || [];
-    return JSON.stringify(currentTexts) !== JSON.stringify(originalTexts);
+    const currentText = adTexts[0] || "";
+    const originalText = tpl.texts?.[0] || tpl.text || "";
+    return currentText.trim() !== originalText.trim();
   }, [adTexts, copyTemplates, selectedTemplate]);
 
   const [hasUnsavedTemplateChanges, setHasUnsavedTemplateChanges] = useState(false);
@@ -1291,10 +1293,12 @@ export default function TikTokAdCreationForm({
 
   // Does this exact combo already exist in another template?
   const existingDuplicateTemplate = useMemo(() => {
-    const currentTexts = JSON.stringify(adTexts.filter(t => t.trim() !== "").sort());
+    const currentText = adTexts[0]?.trim() || "";
+    if (!currentText) return null;
     for (const [name, tpl] of Object.entries(copyTemplates)) {
       if (name === selectedTemplate) continue;
-      if (currentTexts === JSON.stringify((tpl.texts || []).filter(t => t.trim() !== "").sort())) {
+      const originalText = tpl.texts?.[0] || tpl.text || "";
+      if (currentText === originalText.trim()) {
         return name;
       }
     }
@@ -1308,7 +1312,7 @@ export default function TikTokAdCreationForm({
     try {
       const templateData = {
         name,
-        texts: adTexts.filter(t => t.trim() !== ""),
+        texts: [adTexts[0]?.trim() || ""],
       };
       const updated = { ...(copyTemplates || {}) };
       updated[name] = templateData;
@@ -1338,7 +1342,7 @@ export default function TikTokAdCreationForm({
     try {
       const templateData = {
         name: selectedTemplate,
-        texts: adTexts.filter(t => t.trim() !== ""),
+        texts: [adTexts[0]?.trim() || ""],
       };
       const updated = { ...(copyTemplates || {}) };
       updated[selectedTemplate] = templateData;
@@ -3163,21 +3167,23 @@ export default function TikTokAdCreationForm({
           <div className="space-y-6">
             {/* 3. Ad Name */}
             <div id="adName" className="space-y-1">
-              <Label htmlFor="adName" className="flex items-center gap-2 w-full">
-                {renderDiffMark("adName")}
-                <LabelIcon className="w-4 h-4" />
-                <span className="font-semibold text-sm">Ad Name</span>
-                {selectedAdvertiser && (
+              <Label htmlFor="adName" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  {renderDiffMark("adNameFormulaV2")}
+                  <LabelIcon className="w-4 h-4" />
+                  <span className="font-semibold text-sm">Ad Name</span>
+                </div>
+                {selectedAdvertiser && !advertiserPrefs?.adNameFormulaV2?.rawInput && (
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={() => navigate(`/settings?tab=tiktok&advertiser=${selectedAdvertiser}`)}
-                    className="text-[9px] px-1.5 py-0.5 border-zinc-200 text-white bg-zinc-800 rounded-lg hover:text-white hover:bg-zinc-900 h-5 flex items-center gap-1 font-medium ml-1 cursor-pointer"
+                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
                     title="Configure ad name formula in settings"
                   >
-                    <CogIcon className="w-2.5 h-2.5 text-white" />
-                    Configure Formula
+                    <CogIcon className="w-3 h-3 text-white mr-1" />
+                    Set Up Ad Name Formula
                   </Button>
                 )}
               </Label>
@@ -3203,300 +3209,288 @@ export default function TikTokAdCreationForm({
 
             {/* 4. Ad Copy / Caption with template picker */}
             <div className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
-                    {renderDiffMark("adTexts")}
-                    <TemplateIcon className="w-4 h-4 text-zinc-600" />
-                    <span className="font-semibold text-sm">Ad Copy / Caption</span>
-                    {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
-                    {selectedAdvertiser && (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2 mb-0">
+                      <TemplateIcon className="w-4 h-4 text-zinc-600" />
+                      Select a Copy Template
+                    </Label>
+
+                    {/* No templates + no content → Setup button */}
+                    {Object.keys(copyTemplates).length === 0 && !hasAnyContent && selectedAdvertiser && (
                       <Button
                         type="button"
                         size="sm"
                         variant="outline"
                         onClick={() => navigate(`/settings?tab=tiktok&advertiser=${selectedAdvertiser}`)}
-                        className="text-[9px] px-1.5 py-0.5 border-zinc-200 text-white bg-zinc-800 rounded-lg hover:text-white hover:bg-zinc-900 h-5 flex items-center gap-1 font-medium ml-1 cursor-pointer"
-                        title="Configure copy templates in settings"
+                        className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
                       >
-                        <CogIcon className="w-2.5 h-2.5 text-white" />
-                        Configure Templates
+                        <CogIcon className="w-3 h-3 text-white mr-1" />
+                        Set Up Templates
                       </Button>
                     )}
-                  </Label>
 
-                  {/* Inline template action buttons (Save as New / Update Template) when there are unsaved changes */}
-                  {(adTexts.some(t => t.trim() !== "")) && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate || hasDuplicateCaptions}
-                        onClick={() => setShowSaveNewDialog(true)}
-                        className="text-[10px] px-2.5 py-0.5 border-zinc-200 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-6"
-                      >
-                        {isSavingNew ? (
-                          <Loader className="w-3 h-3 animate-spin" />
-                        ) : existingDuplicateTemplate ? (
-                          `Exists as "${existingDuplicateTemplate}"`
-                        ) : (
-                          "Save as New Template"
-                        )}
-                      </Button>
-                      {selectedTemplate && copyTemplates[selectedTemplate] && hasUnsavedTemplateChanges && (
+                    {/* No templates + content typed → Save as New only */}
+                    {Object.keys(copyTemplates).length === 0 && hasAnyContent && (
+                      <div className="ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
-                          disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate || hasDuplicateCaptions}
-                          onClick={handleUpdateSelectedTemplate}
-                          className="text-[10px] px-2.5 py-0.5 border-blue-200 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 h-6 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both"
+                          disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
+                          onClick={() => setShowSaveNewDialog(true)}
+                          className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
                         >
-                          {isUpdatingTemplate ? (
-                            <>
-                              <Loader className="w-3 h-3 animate-spin mr-1" />
-                              Updating...
-                            </>
+                          {isSavingNew ? (
+                            <Loader className="w-3 h-3 animate-spin" />
+                          ) : existingDuplicateTemplate ? (
+                            `Already exists as "${existingDuplicateTemplate}"`
                           ) : (
-                            "Update Selected Template"
+                            "Save as New Template"
                           )}
                         </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    )}
 
-                {/* Popover Template Dropdown - Meta styled */}
-                <Popover open={templateDropdownOpen} onOpenChange={(open) => {
-                  setTemplateDropdownOpen(open);
-                  if (!open) {
-                    setTemplateSearch("");
-                    setShowSortMenu(false);
-                    if (bulkDeleteMode && selectedForDelete.size === 0) {
-                      setBulkDeleteMode(false);
-                    }
-                  }
-                }}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={`w-full justify-between ${formFieldChrome} hover:bg-white text-sm px-3 text-zinc-700`}
-                    >
-                      <span className="truncate">
-                        {Object.keys(copyTemplates).length === 0
-                          ? "No templates available for selected advertiser"
-                          : selectedTemplate || "Choose a Template"}
-                      </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border border-gray-100 shadow-xl"
-                    align="start"
-                    side="bottom"
-                    avoidCollisions={false}
-                    style={{
-                      minWidth: "var(--radix-popover-trigger-width)",
-                      width: "auto",
-                    }}
-                  >
-                    <Command filter={() => 1} loop={false} className="overflow-visible">
-                      <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
-                        <CommandInput
-                          placeholder="Search templates..."
-                          value={templateSearch}
-                          onValueChange={setTemplateSearch}
-                          wrapperClassName="flex-1 border-gray-200 bg-gray-50 mx-0 mt-0 mb-0"
-                        />
-                        <div className="flex items-center gap-1">
-                          {/* Sort Menu */}
-                          <div className="relative">
-                            <button
-                              type="button"
-                              className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowSortMenu(!showSortMenu);
-                              }}
-                              title="Sort templates"
-                            >
-                              <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
-                            </button>
-                            {showSortMenu && (
-                              <>
-                                <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
-                                <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]">
-                                  {[
-                                    { value: "default", label: "Recently Made" },
-                                    { value: "oldest", label: "Oldest First" },
-                                  ].map((option) => (
-                                    <button
-                                      key={option.value}
-                                      type="button"
-                                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setSortMode(option.value);
-                                        localStorage.setItem("tiktokHomeTemplateSortMode", option.value);
-                                        setShowSortMenu(false);
-                                      }}
-                                    >
-                                      <span className="flex items-center gap-1.5">
-                                        {option.label}
-                                      </span>
-                                      {sortMode === option.value && (
-                                        <Check className="h-3.5 w-3.5 text-blue-500" />
-                                      )}
-                                    </button>
-                                  ))}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                          {/* Bulk Delete Button */}
-                          {bulkDeleteMode && selectedForDelete.size > 0 ? (
-                            <button
-                              type="button"
-                              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-70 animate-in zoom-in-95 duration-150"
-                              disabled={isDeletingTemplates}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleBulkDeleteTemplates();
-                              }}
-                            >
-                              {isDeletingTemplates ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                              {isDeletingTemplates ? "Deleting..." : `Delete (${selectedForDelete.size})`}
-                            </button>
+                    {/* Has templates + changes detected → both buttons */}
+                    {Object.keys(copyTemplates).length > 0 && hasUnsavedTemplateChanges && (
+                      <div className="flex items-center gap-2 ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
+                          onClick={() => setShowSaveNewDialog(true)}
+                          className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
+                        >
+                          {isSavingNew ? (
+                            <Loader className="w-3 h-3 animate-spin" />
+                          ) : existingDuplicateTemplate ? (
+                            `Already exists as "${existingDuplicateTemplate}"`
                           ) : (
-                            <button
-                              type="button"
-                              className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (bulkDeleteMode) {
-                                  setBulkDeleteMode(false);
-                                  setSelectedForDelete(new Set());
-                                } else {
-                                  setBulkDeleteMode(true);
-                                }
-                              }}
-                              title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
-                            >
-                              {bulkDeleteMode ? (
-                                <X className="h-3.5 w-3.5" />
-                              ) : (
-                                <Trash2 className="h-3.5 w-3.5 text-gray-500" />
-                              )}
-                            </button>
+                            "Save as New Template"
                           )}
-                        </div>
-                      </div>
-                      <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                        {sortedFilteredTemplates.map(([name, data]) => (
-                          <CommandItem
-                            key={name}
-                            value={name}
-                            onSelect={() => {
-                              if (bulkDeleteMode) {
-                                toggleDeleteSelection(name);
-                              } else {
-                                setSelectedTemplate(name);
-                                if (data.texts && data.texts.length > 0) {
-                                  setAdTexts(data.texts);
-                                }
-                                setTemplateDropdownOpen(false);
-                                setTemplateSearch("");
-                              }
-                            }}
-                            className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                        </Button>
+                        {selectedTemplate && copyTemplates[selectedTemplate] && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate}
+                            onClick={handleUpdateSelectedTemplate}
+                            className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200 h-7 flex items-center gap-1 font-medium"
                           >
-                            <div className="flex items-center gap-2 w-full">
-                              {bulkDeleteMode && (
-                                <Checkbox
-                                  checked={selectedForDelete.has(name)}
-                                  className="border-gray-300 w-4 h-4 rounded-md pointer-events-none"
-                                />
-                              )}
-                              <span className="text-sm truncate flex-1">{name}</span>
-                              {name === defaultTemplateName && (
-                                <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
-                                  Default
-                                </span>
-                              )}
-                              {!bulkDeleteMode && name === selectedTemplate && (
-                                <Check className="h-4 w-4 text-blue-500 shrink-0" />
-                              )}
-                            </div>
-                          </CommandItem>
-                        ))}
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* List of Caption Textareas */}
-              <div className="space-y-3">
-                {adTexts.map((text, i) => (
-                  <div key={i} className="flex items-start gap-2.5 group">
-                    <div className="flex-1 flex flex-col min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold text-zinc-500">Caption Variant {i + 1}</span>
-                        <span className="text-[10px] text-zinc-400 font-medium">{text.length}/100</span>
-                      </div>
-                      <TextareaAutosize
-                        value={text}
-                        onChange={(e) => {
-                          const updated = [...adTexts];
-                          updated[i] = e.target.value;
-                          setAdTexts(updated);
-                        }}
-                        placeholder="Write a catchy caption... ✍️"
-                        minRows={2}
-                        maxRows={6}
-                        className={cn(
-                          formTextareaChrome,
-                          duplicateCaptionIndices.has(i) && "border-red-500 focus:border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.2)]"
+                            {isUpdatingTemplate ? (
+                              <>
+                                <Loader className="w-3 h-3 animate-spin mr-1" />
+                                Updating Template...
+                              </>
+                            ) : (
+                              "Update Selected Template"
+                            )}
+                          </Button>
                         )}
-                        style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-                      />
-                      {duplicateCaptionIndices.has(i) && (
-                        <span className="text-[10px] text-red-500 font-medium mt-1">Duplicate caption values can cause errors when making ads</span>
-                      )}
-                      {text.length > 0 && text.length < 12 && (
-                        <span className="text-[10px] text-red-500 font-medium mt-1">Caption must be at least 12 characters</span>
-                      )}
-                      {text.length > 100 && (
-                        <span className="text-[10px] text-red-500 font-medium mt-1">Caption cannot exceed 100 characters</span>
-                      )}
-                    </div>
-                    {adTexts.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = [...adTexts];
-                          updated.splice(i, 1);
-                          setAdTexts(updated);
-                        }}
-                        className="mt-6 p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        title="Remove Variant"
-                      >
-                        <Trash className="w-4 h-4" />
-                      </button>
+                      </div>
                     )}
                   </div>
-                ))}
 
-                {adTexts.length < 5 && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setAdTexts([...adTexts, ""])}
-                    className="w-full h-10 border-dashed border-zinc-300 hover:border-zinc-400 rounded-xl text-xs font-semibold text-zinc-600 hover:bg-zinc-50 flex items-center justify-center gap-1 bg-white"
-                  >
-                    <Plus className="w-4 h-4" /> Add new caption variant
-                  </Button>
+                  {/* Popover Template Dropdown - Meta styled */}
+                  <Popover open={templateDropdownOpen} onOpenChange={(open) => {
+                    setTemplateDropdownOpen(open);
+                    if (!open) {
+                      setTemplateSearch("");
+                      setShowSortMenu(false);
+                      if (bulkDeleteMode && selectedForDelete.size === 0) {
+                        setBulkDeleteMode(false);
+                      }
+                    }
+                  }}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-between ${formFieldChrome} hover:bg-white text-sm px-3 text-zinc-700`}
+                      >
+                        <span className="truncate">
+                          {Object.keys(copyTemplates).length === 0
+                            ? "No templates available for selected advertiser"
+                            : selectedTemplate || "Choose a Template"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border border-gray-100 shadow-xl"
+                      align="start"
+                      side="bottom"
+                      avoidCollisions={false}
+                      style={{
+                        minWidth: "var(--radix-popover-trigger-width)",
+                        width: "auto",
+                      }}
+                    >
+                      <Command filter={() => 1} loop={false} className="overflow-visible">
+                        <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
+                          <CommandInput
+                            placeholder="Search templates..."
+                            value={templateSearch}
+                            onValueChange={setTemplateSearch}
+                            wrapperClassName="flex-1 border-gray-200 bg-gray-50 mx-0 mt-0 mb-0"
+                          />
+                          <div className="flex items-center gap-1">
+                            {/* Sort Menu */}
+                            <div className="relative">
+                              <button
+                                type="button"
+                                className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowSortMenu(!showSortMenu);
+                                }}
+                                title="Sort templates"
+                              >
+                                <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
+                              </button>
+                              {showSortMenu && (
+                                <>
+                                  <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
+                                  <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]">
+                                    {[
+                                      { value: "default", label: "Recently Made" },
+                                      { value: "oldest", label: "Oldest First" },
+                                    ].map((option) => (
+                                      <button
+                                        key={option.value}
+                                        type="button"
+                                        className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSortMode(option.value);
+                                          localStorage.setItem("tiktokHomeTemplateSortMode", option.value);
+                                          setShowSortMenu(false);
+                                        }}
+                                      >
+                                        <span className="flex items-center gap-1.5">
+                                          {option.label}
+                                        </span>
+                                        {sortMode === option.value && (
+                                          <Check className="h-3.5 w-3.5 text-blue-500" />
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            {/* Bulk Delete Button */}
+                            {bulkDeleteMode && selectedForDelete.size > 0 ? (
+                              <button
+                                type="button"
+                                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-70 animate-in zoom-in-95 duration-150"
+                                disabled={isDeletingTemplates}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleBulkDeleteTemplates();
+                                }}
+                              >
+                                {isDeletingTemplates ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                                {isDeletingTemplates ? "Deleting..." : `Delete (${selectedForDelete.size})`}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (bulkDeleteMode) {
+                                    setBulkDeleteMode(false);
+                                    setSelectedForDelete(new Set());
+                                  } else {
+                                    setBulkDeleteMode(true);
+                                  }
+                                }}
+                                title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
+                              >
+                                {bulkDeleteMode ? (
+                                  <X className="h-3.5 w-3.5" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5 text-gray-500" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                          {sortedFilteredTemplates.map(([name, data]) => (
+                            <CommandItem
+                              key={name}
+                              value={name}
+                              onSelect={() => {
+                                if (bulkDeleteMode) {
+                                  toggleDeleteSelection(name);
+                                } else {
+                                  setSelectedTemplate(name);
+                                  if (data.texts && data.texts.length > 0) {
+                                    setAdTexts([data.texts[0] || ""]);
+                                  }
+                                  setTemplateDropdownOpen(false);
+                                  setTemplateSearch("");
+                                }
+                              }}
+                              className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                {bulkDeleteMode && (
+                                  <Checkbox
+                                    checked={selectedForDelete.has(name)}
+                                    className="border-gray-300 w-4 h-4 rounded-md pointer-events-none"
+                                  />
+                                )}
+                                <span className="text-sm truncate flex-1">{name}</span>
+                                {name === defaultTemplateName && (
+                                  <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
+                                    Default
+                                  </span>
+                                )}
+                                {!bulkDeleteMode && name === selectedTemplate && (
+                                  <Check className="h-4 w-4 text-blue-500 shrink-0" />
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              {/* Single Caption Textarea */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-1.5">
+                    {renderDiffMark("adTexts")}
+                    <span className="font-semibold text-sm">Ad Copy / Caption</span>
+                    {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
+                  </Label>
+                  <span className="text-[10px] text-zinc-400 font-medium">{(adTexts[0] || "").length}/100</span>
+                </div>
+                <TextareaAutosize
+                  value={adTexts[0] || ""}
+                  onChange={(e) => {
+                    setAdTexts([e.target.value]);
+                  }}
+                  placeholder="Write a catchy caption... ✍️"
+                  minRows={3}
+                  maxRows={8}
+                  className={formTextareaChrome}
+                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+                />
+                {(adTexts[0] || "").length > 0 && (adTexts[0] || "").length < 12 && (
+                  <p className="text-[10px] text-red-500 font-medium mt-1">Caption must be at least 12 characters</p>
+                )}
+                {(adTexts[0] || "").length > 100 && (
+                  <p className="text-[10px] text-red-500 font-medium mt-1">Caption cannot exceed 100 characters</p>
                 )}
               </div>
             </div>
@@ -3914,172 +3908,178 @@ export default function TikTokAdCreationForm({
         isImporting={isImportingFolder}
       />
 
-      {/* FLOATING VARIANT PICKER BAR AT BOTTOM */}
-      {variants.length > 1 && (
-        <TooltipProvider delayDuration={0}>
-          <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <ScrollArea
-              type="always"
-              className={cn(
-                "rounded-full",
-                shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2"
-              )}
-            >
-              <div className="flex w-max items-center gap-1 pr-1">
-                {variants.map((variant) => {
-                  const isActive = variant.id === activeVariantId
-                  const assignedCount = countFilesForVariant(variant.id)
+      {/* FLOATING VARIANT PICKER BAR AT BOTTOM */ }
+  {
+    variants.length > 1 && (
+      <TooltipProvider delayDuration={0}>
+        <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <ScrollArea
+            type="always"
+            className={cn(
+              "rounded-full",
+              shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2"
+            )}
+          >
+            <div className="flex w-max items-center gap-1 pr-1">
+              {variants.map((variant) => {
+                const isActive = variant.id === activeVariantId
+                const assignedCount = countFilesForVariant(variant.id)
 
-                  return (
-                    <div key={variant.id} className="group flex shrink-0 items-center">
+                return (
+                  <div key={variant.id} className="group flex shrink-0 items-center">
+                    <button
+                      type="button"
+                      onClick={() => switchVariant(variant.id)}
+                      className={cn(
+                        "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
+                        isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      <VariantDot variantId={variant.id} variants={variants} />
+                      <span className="whitespace-nowrap">{variant.name}</span>
+                      <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
+                        · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
+                      </span>
+                    </button>
+                    {variant.id !== 'default' && (
                       <button
                         type="button"
-                        onClick={() => switchVariant(variant.id)}
-                        className={cn(
-                          "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
-                          isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
-                        )}
+                        onClick={() => handleDeleteVariant(variant.id)}
+                        className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
+                        title="Delete variant"
                       >
-                        <VariantDot variantId={variant.id} variants={variants} />
-                        <span className="whitespace-nowrap">{variant.name}</span>
-                        <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
-                          · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
-                        </span>
+                        <X className="h-3 w-3" />
                       </button>
-                      {variant.id !== 'default' && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteVariant(variant.id)}
-                          className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
-                          title="Delete variant"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </ScrollArea>
-            <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={handleAddVariant}
-                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Add variant</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteAllVariantsDialog(true)}
-                    className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <Trash className="h-4 w-4" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Delete all variants</TooltipContent>
-              </Tooltip>
+                    )}
+                  </div>
+                )
+              })}
             </div>
-          </div>
-        </TooltipProvider>
-      )}
-
-      {showDeleteAllVariantsDialog && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setShowDeleteAllVariantsDialog(false)}
-          />
-          <div
-            className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl"
-            style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Delete all variants?</h3>
-              <p className="text-sm text-gray-500">
-                This will remove every variant and move all assignments back to Default.
-              </p>
-            </div>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                className="w-full rounded-xl"
-                onClick={() => {
-                  setShowDeleteAllVariantsDialog(false)
-                  handleDeleteAllVariants()
-                }}
-              >
-                Delete All Variants
-              </Button>
-            </div>
+          </ScrollArea>
+          <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={handleAddVariant}
+                  className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Add variant</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteAllVariantsDialog(true)}
+                  className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                >
+                  <Trash className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Delete all variants</TooltipContent>
+            </Tooltip>
           </div>
         </div>
-      )}
+      </TooltipProvider>
+    )
+  }
 
-      {showSaveNewDialog && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => {
-              setShowSaveNewDialog(false);
-              setNewTemplateNameInput("");
-            }}
-          />
-          <div
-            className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-150"
-            style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-zinc-900">Save Ad Caption Template</h3>
-              <p className="text-xs text-zinc-500">
-                Enter a name for this caption template:
-              </p>
-              <Input
-                type="text"
-                placeholder="Template name (e.g. Summer Caption)..."
-                value={newTemplateNameInput}
-                onChange={(e) => setNewTemplateNameInput(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 mt-2"
-                autoFocus
-              />
-            </div>
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <Button
-                variant="outline"
-                className="w-full rounded-xl border border-zinc-200"
-                onClick={() => {
-                  setShowSaveNewDialog(false);
-                  setNewTemplateNameInput("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                disabled={!newTemplateNameInput.trim() || isSavingNew}
-                className="w-full rounded-xl bg-zinc-800 text-white hover:bg-zinc-900"
-                onClick={handleSaveAsNewTemplate}
-              >
-                {isSavingNew ? <Loader className="h-4 w-4 animate-spin mr-1" /> : null}
-                Save Template
-              </Button>
-            </div>
+  {
+    showDeleteAllVariantsDialog && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div
+          className="absolute inset-0 bg-black/30"
+          onClick={() => setShowDeleteAllVariantsDialog(false)}
+        />
+        <div
+          className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl"
+          style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Delete all variants?</h3>
+            <p className="text-sm text-gray-500">
+              This will remove every variant and move all assignments back to Default.
+            </p>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              className="w-full rounded-xl"
+              onClick={() => {
+                setShowDeleteAllVariantsDialog(false)
+                handleDeleteAllVariants()
+              }}
+            >
+              Delete All Variants
+            </Button>
           </div>
         </div>
-      )}
+      </div>
+    )
+  }
 
-    </form>
+  {
+    showSaveNewDialog && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div
+          className="absolute inset-0 bg-black/30"
+          onClick={() => {
+            setShowSaveNewDialog(false);
+            setNewTemplateNameInput("");
+          }}
+        />
+        <div
+          className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-150"
+          style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-zinc-900">Save Ad Caption Template</h3>
+            <p className="text-xs text-zinc-500">
+              Enter a name for this caption template:
+            </p>
+            <Input
+              type="text"
+              placeholder="Template name (e.g. Summer Caption)..."
+              value={newTemplateNameInput}
+              onChange={(e) => setNewTemplateNameInput(e.target.value)}
+              className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 mt-2"
+              autoFocus
+            />
+          </div>
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <Button
+              variant="outline"
+              className="w-full rounded-xl border border-zinc-200"
+              onClick={() => {
+                setShowSaveNewDialog(false);
+                setNewTemplateNameInput("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!newTemplateNameInput.trim() || isSavingNew}
+              className="w-full rounded-xl bg-zinc-800 text-white hover:bg-zinc-900"
+              onClick={handleSaveAsNewTemplate}
+            >
+              {isSavingNew ? <Loader className="h-4 w-4 animate-spin mr-1" /> : null}
+              Save Template
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+    </form >
   )
 }
 
