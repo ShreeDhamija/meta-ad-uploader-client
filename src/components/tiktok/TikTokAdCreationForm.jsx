@@ -709,10 +709,10 @@ export default function TikTokAdCreationForm({
     if (adType === 'SPARK') {
       itemsToUpload.push({ type: 'spark', file: { name: 'Spark Ad' } })
     } else {
-      (files || []).forEach(f => itemsToUpload.push({ type: 'local', file: f }))
-        (driveFiles || []).forEach(f => itemsToUpload.push({ type: 'drive', file: f }))
-        (dropboxFiles || []).forEach(f => itemsToUpload.push({ type: 'dropbox', file: f }))
-        (tiktokLibraryFiles || []).forEach(f => itemsToUpload.push({ type: 'library', file: f }))
+      (files || []).forEach(f => itemsToUpload.push({ type: 'local', file: f }));
+      (driveFiles || []).forEach(f => itemsToUpload.push({ type: 'drive', file: f }));
+      (dropboxFiles || []).forEach(f => itemsToUpload.push({ type: 'dropbox', file: f }));
+      (tiktokLibraryFiles || []).forEach(f => itemsToUpload.push({ type: 'library', file: f }));
     }
 
     let successCount = 0
