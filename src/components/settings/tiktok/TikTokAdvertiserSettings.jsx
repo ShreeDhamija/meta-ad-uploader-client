@@ -7,7 +7,7 @@ import { useTikTokAuth } from "@/lib/TikTokAuthContext"
 import useTikTokAdvertiserSettings from "@/lib/useTikTokAdvertiserSettings"
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
-import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info } from "lucide-react"
+import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info, Trash, Plus, X, Upload, Pencil, Folder } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
@@ -64,6 +64,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const [openAdvertiser, setOpenAdvertiser] = useState(false);
     const [initialSettings, setInitialSettings] = useState(null);
     const [hasChanges, setHasChanges] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [newSellingPoint, setNewSellingPoint] = useState("");
 
     const tiktokHeaders = useCallback(() => {
         const uid = localStorage.getItem('tiktok_uid');
@@ -252,264 +254,533 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             <fieldset disabled={!selectedAdvertiser || loading}>
                 <div className={!selectedAdvertiser || loading ? "opacity-70 cursor-not-allowed space-y-6" : "space-y-6"}>
 
-                    {/* Identity Section — mirrors Meta's bg-[#f7f7f7] section style */}
+                    {/* Product Information Section */}
                     <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                                <TikTokIcon className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+                                <Folder className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
                                 <h3 className="font-medium text-[14px] text-zinc-950">
-                                    Default Linked TikTok Account
+                                    Product Information Preferences
                                 </h3>
                             </div>
-                            <RefreshCcw
-                                className={cn(
-                                    "h-4 w-4 cursor-pointer transition-all duration-200",
-                                    loadingIdentities
-                                        ? "text-gray-300 animate-spin"
-                                        : "text-gray-500 hover:text-gray-700"
-                                )}
-                                onClick={fetchIdentities}
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                    setEditingProduct({ id: Date.now(), name: "", image: "", sellingPoints: [] });
+                                    setNewSellingPoint("");
+                                }}
+                                className="text-xs rounded-xl border-gray-300 hover:bg-gray-50 flex items-center gap-1 bg-white"
+                            >
+                                <Plus className="w-3.5 h-3.5" />
+                                Add Product
+                            </Button>
+                        </div>
+
+                        {/* List of Products */}
+                        {!(currentSettings.products?.length > 0) ? (
+                            <p className="text-xs text-gray-500 italic py-2 text-center">No products added yet. Add products to auto-fill your ad campaigns.</p>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-2">
+                                {currentSettings.products.map((product) => (
+                                    <div key={product.id} className="bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between gap-3 shadow-xs">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            {product.image ? (
+                                                <img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover border border-gray-100 shrink-0" />
+                                            ) : (
+                                                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                                                    <Info className="w-5 h-5 text-gray-400" />
+                                                </div>
+                                            )}
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-gray-800 truncate">{product.name}</p>
+                                                <p className="text-xs text-gray-500 truncate">
+                                                    {product.sellingPoints?.length || 0} selling points
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <Button
+                                                type="button"
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => {
+                                                    setEditingProduct({ ...product });
+                                                    setNewSellingPoint("");
+                                                }}
+                                                className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                                            >
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="icon"
+                                                variant="ghost"
+                                                onClick={() => {
+                                                    const updatedProducts = currentSettings.products.filter(p => p.id !== product.id);
+                                                    setSettings({ ...currentSettings, products: updatedProducts });
+                                                }}
+                                                className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            >
+                                                <Trash className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Editing / Adding Dialog / Inline Modal */}
+                        {editingProduct && (
+                            <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center p-4">
+                                <div className="bg-white rounded-3xl w-[500px] max-w-full shadow-xl border border-gray-200 p-6 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-base font-semibold text-gray-900">
+                                            {currentSettings.products?.some(p => p.id === editingProduct.id) ? "Edit Product" : "Add New Product"}
+                                        </h4>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditingProduct(null)}
+                                            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                                        >
+                                            <X className="w-4 h-4 text-gray-500" />
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {/* Product Name */}
+                                        <div className="space-y-1">
+                                            <label htmlFor="prod-name" className="text-xs font-semibold text-gray-700">Product Name</label>
+                                            <input
+                                                id="prod-name"
+                                                value={editingProduct.name}
+                                                onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                                                placeholder="e.g. Premium Wireless Earbuds"
+                                                className="border border-gray-300 rounded-2xl h-11 px-4 text-sm w-full focus:outline-hidden focus:ring-0 focus-visible:outline-hidden"
+                                            />
+                                        </div>
+
+                                        {/* Product Image */}
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-gray-700 block">Product Image</label>
+                                            <div className="flex items-center gap-3">
+                                                {editingProduct.image ? (
+                                                    <div className="relative shrink-0">
+                                                        <img src={editingProduct.image} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditingProduct({ ...editingProduct, image: "" })}
+                                                            className="absolute -top-1.5 -right-1.5 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 animate-[bounce_1s_infinite]"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
+                                                        <Info className="w-6 h-6 text-gray-300" />
+                                                    </div>
+                                                )}
+                                                <div className="flex-1">
+                                                    <label className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-xl bg-white text-xs font-semibold text-gray-700 shadow-sm cursor-pointer hover:bg-gray-50">
+                                                        <Upload className="w-3.5 h-3.5 mr-1.5 text-gray-500" />
+                                                        Upload Image
+                                                        <input
+                                                            type="file"
+                                                            accept="image/*"
+                                                            className="hidden"
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (!file) return;
+
+                                                                const formData = new FormData();
+                                                                formData.append("file", file);
+                                                                formData.append("advertiserId", selectedAdvertiser);
+
+                                                                toast.loading("Uploading image to S3...");
+                                                                try {
+                                                                    const res = await fetch(`${API_BASE_URL}/api/tiktok/product-image/upload`, {
+                                                                        method: "POST",
+                                                                        body: formData,
+                                                                        credentials: "include",
+                                                                        headers: tiktokHeaders()
+                                                                    });
+                                                                    const data = await res.json();
+                                                                    if (data.success && data.url) {
+                                                                        setEditingProduct({ ...editingProduct, image: data.url });
+                                                                        toast.dismiss();
+                                                                        toast.success("Image uploaded successfully!");
+                                                                    } else {
+                                                                        throw new Error(data.error || "Failed to upload image");
+                                                                    }
+                                                                } catch (err) {
+                                                                    toast.dismiss();
+                                                                    toast.error(err.message || "Failed to upload image");
+                                                                }
+                                                            }}
+                                                        />
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Selling Points */}
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-semibold text-gray-700 block">Selling Points</label>
+                                            <div className="flex gap-2">
+                                                <input
+                                                    value={newSellingPoint}
+                                                    onChange={(e) => setNewSellingPoint(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter") {
+                                                            e.preventDefault();
+                                                            if (!newSellingPoint.trim()) return;
+                                                            if (editingProduct.sellingPoints.includes(newSellingPoint.trim())) return;
+                                                            setEditingProduct({
+                                                                ...editingProduct,
+                                                                sellingPoints: [...editingProduct.sellingPoints, newSellingPoint.trim()]
+                                                            });
+                                                            setNewSellingPoint("");
+                                                        }
+                                                    }}
+                                                    placeholder="Press enter to add selling point..."
+                                                    className="border border-gray-300 rounded-2xl h-11 px-4 text-sm flex-1 focus:outline-hidden focus:ring-0 focus-visible:outline-hidden"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (!newSellingPoint.trim()) return;
+                                                        if (editingProduct.sellingPoints.includes(newSellingPoint.trim())) return;
+                                                        setEditingProduct({
+                                                            ...editingProduct,
+                                                            sellingPoints: [...editingProduct.sellingPoints, newSellingPoint.trim()]
+                                                        });
+                                                        setNewSellingPoint("");
+                                                    }}
+                                                    className="rounded-2xl h-11 px-4 text-xs bg-zinc-800 text-white font-semibold hover:bg-black"
+                                                >
+                                                    Confirm
+                                                </Button>
+                                            </div>
+
+                                            {/* Render tags */}
+                                            {editingProduct.sellingPoints?.length > 0 && (
+                                                <div className="flex flex-wrap gap-1.5 pt-2">
+                                                    {editingProduct.sellingPoints.map((tag) => (
+                                                        <span key={tag} className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-[11px] text-gray-700 px-2 py-0.5 rounded-full">
+                                                            {tag}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditingProduct({
+                                                                    ...editingProduct,
+                                                                    sellingPoints: editingProduct.sellingPoints.filter(t => t !== tag)
+                                                                })}
+                                                                className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-3 pt-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setEditingProduct(null)}
+                                            className="rounded-2xl flex-1 border-gray-200"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!editingProduct.name.trim()) {
+                                                    toast.error("Product name is required");
+                                                    return;
+                                                }
+                                                const existingList = currentSettings.products || [];
+                                                const isExisting = existingList.some(p => p.id === editingProduct.id);
+                                                let nextList;
+                                                if (isExisting) {
+                                                    nextList = existingList.map(p => p.id === editingProduct.id ? editingProduct : p);
+                                                } else {
+                                                    nextList = [...existingList, editingProduct];
+                                                }
+                                                setSettings({ ...currentSettings, products: nextList });
+                                                setEditingProduct(null);
+                                            }}
+                                            className="rounded-2xl flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                                        >
+                                            Save Product
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Identity Section — mirrors Meta's bg-[#f7f7f7] section style */}
+                        <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
+                            <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center gap-2">
+                                    <TikTokIcon className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+                                    <h3 className="font-medium text-[14px] text-zinc-950">
+                                        Default Linked TikTok Account
+                                    </h3>
+                                </div>
+                                <RefreshCcw
+                                    className={cn(
+                                        "h-4 w-4 cursor-pointer transition-all duration-200",
+                                        loadingIdentities
+                                            ? "text-gray-300 animate-spin"
+                                            : "text-gray-500 hover:text-gray-700"
+                                    )}
+                                    onClick={fetchIdentities}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-sm text-gray-500 mb-1 block">Identity</label>
+                                <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            disabled={loadingIdentities}
+                                            className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-6"
+                                        >
+                                            {loadingIdentities ? (
+                                                <div className="flex items-center gap-2">
+                                                    <Loader className="h-4 w-4 animate-spin" />
+                                                    <span className="text-sm font-medium text-gray-500">Loading identities...</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    {(() => {
+                                                        const found = identities.find(i => i.identity_id === currentSettings.defaultIdentityId);
+                                                        if (!found && currentSettings.defaultIdentityId) {
+                                                            return <span className="text-sm font-medium">{currentSettings.defaultIdentityId}</span>;
+                                                        }
+                                                        return (
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className="text-sm font-medium text-gray-900">
+                                                                    {found ? found.display_name : "Select TikTok Identity"}
+                                                                </span>
+                                                                {found && (
+                                                                    <span className="text-xs text-gray-400 font-normal">
+                                                                        {found.identity_id}
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            )}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent
+                                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
+                                        align="start"
+                                        sideOffset={4}
+                                        side="bottom"
+                                        avoidCollisions={false}
+                                        style={{
+                                            minWidth: "var(--radix-popover-trigger-width)",
+                                            width: "auto",
+                                        }}
+                                    >
+                                        <Command filter={() => 1} loop={false}>
+                                            <CommandInput
+                                                placeholder="Search identities..."
+                                                wrapperClassName="bg-gray-50 border-gray-100"
+                                            />
+                                            <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                                                <CommandEmpty className="p-4 text-center text-xs text-gray-500">No identities found.</CommandEmpty>
+                                                {identities.map((i) => (
+                                                    <CommandItem
+                                                        key={i.identity_id}
+                                                        value={i.identity_id}
+                                                        onSelect={() => {
+                                                            setSettings({ ...currentSettings, defaultIdentityId: i.identity_id });
+                                                            setOpenIdentity(false);
+                                                        }}
+                                                        className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
+                                                    >
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
+                                                            <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
+                                                        </div>
+                                                        {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black" />}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                        </div>
+
+                        {/* Default CTAs — flat section like Meta */}
+                        <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
+                            <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-medium text-[14px] text-zinc-950">Default Call to Actions</h3>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm text-gray-500 mb-1 block">Multi-select CTAs</label>
+                                <Popover open={openCta} onOpenChange={setOpenCta}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-6"
+                                        >
+                                            <span className="text-sm truncate">
+                                                {currentSettings.defaultCTAs?.length > 0
+                                                    ? currentSettings.defaultCTAs.map(v => CTA_OPTIONS.find(o => o.value === v)?.label).join(", ")
+                                                    : "None selected"}
+                                            </span>
+                                            <ChevronsUpDown className="w-4 h-4 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={false}>
+                                        <Command>
+                                            <CommandList>
+                                                <CommandGroup>
+                                                    {CTA_OPTIONS.map(opt => (
+                                                        <CommandItem
+                                                            key={opt.value}
+                                                            onSelect={() => {
+                                                                const prev = currentSettings.defaultCTAs || [];
+                                                                const next = prev.includes(opt.value)
+                                                                    ? prev.filter(v => v !== opt.value)
+                                                                    : [...prev, opt.value];
+                                                                setSettings({ ...currentSettings, defaultCTAs: next });
+                                                            }}
+                                                            className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                                        >
+                                                            <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${currentSettings.defaultCTAs?.includes(opt.value) ? "bg-black border-black text-white" : "border-gray-200"}`}>
+                                                                {currentSettings.defaultCTAs?.includes(opt.value) && <Check className="w-3 h-3" />}
+                                                            </div>
+                                                            <span className="text-sm font-medium">{opt.label}</span>
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                        </div>
+
+                        {/* Ad Naming Convention */}
+                        <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
+                            <div className="flex items-center gap-2">
+                                <LabelIcon className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+                                <h3 className="font-medium text-[14px] text-zinc-950">
+                                    Set up your default ad naming conventions
+                                </h3>
+                                <TooltipProvider delayDuration={200}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                type="button"
+                                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                            >
+                                                <Info className="w-3.5 h-3.5" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent
+                                            side="top"
+                                            align="end"
+                                            className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
+                                        >
+                                            <p className="font-medium mb-1.5">Select the Custom Date option & replace 'custom' with any combination of the tokens below.</p>
+                                            <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
+                                                <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
+                                                <span className="font-semibold">DD</span><span className="text-gray-400">Day, zero-padded (01–31)</span>
+                                                <span className="font-semibold">M</span><span className="text-gray-400">Month (1–12)</span>
+                                                <span className="font-semibold">MM</span><span className="text-gray-400">Month, zero-padded (01–12)</span>
+                                                <span className="font-semibold">MMM</span><span className="text-gray-400">Month name (Jan, Feb…)</span>
+                                                <span className="font-semibold">YY</span><span className="text-gray-400">Year, 2-digit (25)</span>
+                                                <span className="font-semibold">YYYY</span><span className="text-gray-400">Year, 4-digit (2025)</span>
+                                            </div>
+                                            <p className="text-gray-400 mt-2">Use any separator: <span className="font-mono">/ - . _</span> or space</p>
+                                            <p className="text-gray-400 italic mt-1.5">{"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+
+                            <ReorderAdNameParts
+                                formulaInput={currentSettings.adNameFormulaV2?.rawInput || ""}
+                                onFormulaChange={(newRawInput) => {
+                                    setSettings({
+                                        ...currentSettings,
+                                        adNameFormulaV2: { rawInput: newRawInput }
+                                    });
+                                }}
+                                variant="default"
+                                customVariables={currentSettings.customVariables || []}
+                                onCustomVariablesChange={(newVars) => {
+                                    setSettings({
+                                        ...currentSettings,
+                                        customVariables: newVars
+                                    });
+                                }}
+                                hideInfoTooltip
                             />
                         </div>
 
-                        <div>
-                            <label className="text-sm text-gray-500 mb-1 block">Identity</label>
-                            <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        disabled={loadingIdentities}
-                                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow flex items-center hover:bg-white px-3 py-6"
-                                    >
-                                        {loadingIdentities ? (
-                                            <div className="flex items-center gap-2">
-                                                <Loader className="h-4 w-4 animate-spin" />
-                                                <span className="text-sm font-medium text-gray-500">Loading identities...</span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-center gap-2">
-                                                {(() => {
-                                                    const found = identities.find(i => i.identity_id === currentSettings.defaultIdentityId);
-                                                    if (!found && currentSettings.defaultIdentityId) {
-                                                        return <span className="text-sm font-medium">{currentSettings.defaultIdentityId}</span>;
-                                                    }
-                                                    return (
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className="text-sm font-medium text-gray-900">
-                                                                {found ? found.display_name : "Select TikTok Identity"}
-                                                            </span>
-                                                            {found && (
-                                                                <span className="text-xs text-gray-400 font-normal">
-                                                                    {found.identity_id}
-                                                                </span>
-                                                            )}
-                                                        </span>
-                                                    );
-                                                })()}
-                                            </div>
-                                        )}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent
-                                    className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border-gray-200 shadow-2xl"
-                                    align="start"
-                                    sideOffset={4}
-                                    side="bottom"
-                                    avoidCollisions={false}
-                                    style={{
-                                        minWidth: "var(--radix-popover-trigger-width)",
-                                        width: "auto",
-                                    }}
-                                >
-                                    <Command filter={() => 1} loop={false}>
-                                        <CommandInput
-                                            placeholder="Search identities..."
-                                            wrapperClassName="bg-gray-50 border-gray-100"
-                                        />
-                                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                                            <CommandEmpty className="p-4 text-center text-xs text-gray-500">No identities found.</CommandEmpty>
-                                            {identities.map((i) => (
-                                                <CommandItem
-                                                    key={i.identity_id}
-                                                    value={i.identity_id}
-                                                    onSelect={() => {
-                                                        setSettings({ ...currentSettings, defaultIdentityId: i.identity_id });
-                                                        setOpenIdentity(false);
-                                                    }}
-                                                    className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100 flex items-center gap-3"
-                                                >
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
-                                                        <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
-                                                    </div>
-                                                    {currentSettings.defaultIdentityId === i.identity_id && <Check className="ml-auto w-4 h-4 text-black" />}
-                                                </CommandItem>
-                                            ))}
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    </div>
-
-                    {/* Default CTAs — flat section like Meta */}
-                    <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-medium text-[14px] text-zinc-950">Default Call to Actions</h3>
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm text-gray-500 mb-1 block">Multi-select CTAs</label>
-                            <Popover open={openCta} onOpenChange={setOpenCta}>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-6"
-                                    >
-                                        <span className="text-sm truncate">
-                                            {currentSettings.defaultCTAs?.length > 0
-                                                ? currentSettings.defaultCTAs.map(v => CTA_OPTIONS.find(o => o.value === v)?.label).join(", ")
-                                                : "None selected"}
-                                        </span>
-                                        <ChevronsUpDown className="w-4 h-4 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-1 bg-white rounded-2xl shadow-xl border-gray-100" side="bottom" avoidCollisions={false}>
-                                    <Command>
-                                        <CommandList>
-                                            <CommandGroup>
-                                                {CTA_OPTIONS.map(opt => (
-                                                    <CommandItem
-                                                        key={opt.value}
-                                                        onSelect={() => {
-                                                            const prev = currentSettings.defaultCTAs || [];
-                                                            const next = prev.includes(opt.value)
-                                                                ? prev.filter(v => v !== opt.value)
-                                                                : [...prev, opt.value];
-                                                            setSettings({ ...currentSettings, defaultCTAs: next });
-                                                        }}
-                                                        className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                                                    >
-                                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${currentSettings.defaultCTAs?.includes(opt.value) ? "bg-black border-black text-white" : "border-gray-200"}`}>
-                                                            {currentSettings.defaultCTAs?.includes(opt.value) && <Check className="w-3 h-3" />}
-                                                        </div>
-                                                        <span className="text-sm font-medium">{opt.label}</span>
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    </div>
-
-                    {/* Ad Naming Convention */}
-                    <div className="bg-[#f5f5f5] rounded-2xl p-4 space-y-3">
-                        <div className="flex items-center gap-2">
-                            <LabelIcon className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
-                            <h3 className="font-medium text-[14px] text-zinc-950">
-                                Set up your default ad naming conventions
-                            </h3>
-                            <TooltipProvider delayDuration={200}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <button
-                                            type="button"
-                                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                                        >
-                                            <Info className="w-3.5 h-3.5" />
-                                        </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent
-                                        side="top"
-                                        align="end"
-                                        className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
-                                    >
-                                        <p className="font-medium mb-1.5">Select the Custom Date option & replace 'custom' with any combination of the tokens below.</p>
-                                        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
-                                            <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
-                                            <span className="font-semibold">DD</span><span className="text-gray-400">Day, zero-padded (01–31)</span>
-                                            <span className="font-semibold">M</span><span className="text-gray-400">Month (1–12)</span>
-                                            <span className="font-semibold">MM</span><span className="text-gray-400">Month, zero-padded (01–12)</span>
-                                            <span className="font-semibold">MMM</span><span className="text-gray-400">Month name (Jan, Feb…)</span>
-                                            <span className="font-semibold">YY</span><span className="text-gray-400">Year, 2-digit (25)</span>
-                                            <span className="font-semibold">YYYY</span><span className="text-gray-400">Year, 4-digit (2025)</span>
-                                        </div>
-                                        <p className="text-gray-400 mt-2">Use any separator: <span className="font-mono">/ - . _</span> or space</p>
-                                        <p className="text-gray-400 italic mt-1.5">{"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </div>
-
-                        <ReorderAdNameParts
-                            formulaInput={currentSettings.adNameFormulaV2?.rawInput || ""}
-                            onFormulaChange={(newRawInput) => {
-                                setSettings({
-                                    ...currentSettings,
-                                    adNameFormulaV2: { rawInput: newRawInput }
-                                });
+                        {/* Links & UTMs */}
+                        <TikTokLinkParameters
+                            advertiserId={selectedAdvertiser}
+                            links={currentSettings.links || []}
+                            setLinks={(nextVal) => {
+                                const currentLinks = currentSettings.links || [];
+                                const evaluated = typeof nextVal === 'function' ? nextVal(currentLinks) : nextVal;
+                                setSettings({ ...currentSettings, links: evaluated });
                             }}
-                            variant="default"
-                            customVariables={currentSettings.customVariables || []}
-                            onCustomVariablesChange={(newVars) => {
-                                setSettings({
-                                    ...currentSettings,
-                                    customVariables: newVars
-                                });
+                            utmPairs={currentSettings.defaultUTMs || []}
+                            setUtmPairs={(nextVal) => {
+                                const currentUTMs = currentSettings.defaultUTMs || [];
+                                const evaluated = typeof nextVal === 'function' ? nextVal(currentUTMs) : nextVal;
+                                setSettings({ ...currentSettings, defaultUTMs: evaluated });
                             }}
-                            hideInfoTooltip
+                            thirdPartyTrackingUrl={currentSettings.thirdPartyTrackingUrl || ""}
+                            setThirdPartyTrackingUrl={(thirdPartyTrackingUrl) => setSettings({ ...currentSettings, thirdPartyTrackingUrl })}
                         />
+
+                        {/* Copy Templates */}
+                        <TikTokCopyTemplates
+                            advertiserId={selectedAdvertiser}
+                            templates={currentSettings.copyTemplates || {}}
+                            defaultName={currentSettings.defaultTemplateName || ""}
+                            onSaveTemplate={(name, data, oldName) => {
+                                const updated = { ...currentSettings.copyTemplates };
+                                if (oldName && oldName !== name) delete updated[oldName];
+                                updated[name] = data;
+                                const next = { ...currentSettings, copyTemplates: updated };
+                                setSettings(next);
+                                handleSave(next);
+                            }}
+                            onSetDefault={(name) => {
+                                const next = { ...currentSettings, defaultTemplateName: name };
+                                setSettings(next);
+                                handleSave(next);
+                            }}
+                            onDeleteTemplate={(name) => {
+                                const updated = { ...currentSettings.copyTemplates };
+                                delete updated[name];
+                                const next = { ...currentSettings, copyTemplates: updated };
+                                if (currentSettings.defaultTemplateName === name) next.defaultTemplateName = "";
+                                setSettings(next);
+                            }}
+                        />
+
                     </div>
-
-                    {/* Links & UTMs */}
-                    <TikTokLinkParameters
-                        advertiserId={selectedAdvertiser}
-                        links={currentSettings.links || []}
-                        setLinks={(nextVal) => {
-                            const currentLinks = currentSettings.links || [];
-                            const evaluated = typeof nextVal === 'function' ? nextVal(currentLinks) : nextVal;
-                            setSettings({ ...currentSettings, links: evaluated });
-                        }}
-                        utmPairs={currentSettings.defaultUTMs || []}
-                        setUtmPairs={(nextVal) => {
-                            const currentUTMs = currentSettings.defaultUTMs || [];
-                            const evaluated = typeof nextVal === 'function' ? nextVal(currentUTMs) : nextVal;
-                            setSettings({ ...currentSettings, defaultUTMs: evaluated });
-                        }}
-                        thirdPartyTrackingUrl={currentSettings.thirdPartyTrackingUrl || ""}
-                        setThirdPartyTrackingUrl={(thirdPartyTrackingUrl) => setSettings({ ...currentSettings, thirdPartyTrackingUrl })}
-                    />
-
-                    {/* Copy Templates */}
-                    <TikTokCopyTemplates
-                        advertiserId={selectedAdvertiser}
-                        templates={currentSettings.copyTemplates || {}}
-                        defaultName={currentSettings.defaultTemplateName || ""}
-                        onSaveTemplate={(name, data, oldName) => {
-                            const updated = { ...currentSettings.copyTemplates };
-                            if (oldName && oldName !== name) delete updated[oldName];
-                            updated[name] = data;
-                            const next = { ...currentSettings, copyTemplates: updated };
-                            setSettings(next);
-                            handleSave(next);
-                        }}
-                        onSetDefault={(name) => {
-                            const next = { ...currentSettings, defaultTemplateName: name };
-                            setSettings(next);
-                            handleSave(next);
-                        }}
-                        onDeleteTemplate={(name) => {
-                            const updated = { ...currentSettings.copyTemplates };
-                            delete updated[name];
-                            const next = { ...currentSettings, copyTemplates: updated };
-                            if (currentSettings.defaultTemplateName === name) next.defaultTemplateName = "";
-                            setSettings(next);
-                        }}
-                    />
-
-                </div>
             </fieldset>
 
             {/* Portal Save Bar — identical pattern to Meta's AdAccountSettings */}

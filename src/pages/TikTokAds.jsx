@@ -83,6 +83,11 @@ export default function TikTokAds() {
   const [urlMode, setUrlMode] = useState('WEBSITE')
   const [adType, setAdType] = useState('NORMAL')
   const [showMobileBanner, setShowMobileBanner] = useState(true)
+  const [productName, setProductName] = useState("")
+  const [productImageUrl, setProductImageUrl] = useState("")
+  const [sellingPoints, setSellingPoints] = useState([])
+  const [selectedSavedProductId, setSelectedSavedProductId] = useState("")
+
 
   // Lifted form fetching states (to snapshot campaign & ad group selections)
   const [campaigns, setCampaigns] = useState([])
@@ -510,6 +515,10 @@ export default function TikTokAds() {
     selectedAdGroup,
     duplicateAdGroup,
     newAdGroupName,
+    productName,
+    productImageUrl,
+    sellingPoints,
+    selectedSavedProductId,
   }), [
     adName,
     adTexts,
@@ -522,6 +531,10 @@ export default function TikTokAds() {
     selectedAdGroup,
     duplicateAdGroup,
     newAdGroupName,
+    productName,
+    productImageUrl,
+    sellingPoints,
+    selectedSavedProductId,
   ]);
 
   const hydrateFromSnapshot = useCallback((snapshot) => {
@@ -540,6 +553,10 @@ export default function TikTokAds() {
     setSelectedAdGroup(Array.isArray(rawAdGroup) ? rawAdGroup : (rawAdGroup ? [rawAdGroup] : []));
     setDuplicateAdGroup(snapshot.duplicateAdGroup || "");
     setNewAdGroupName(snapshot.newAdGroupName || "");
+    setProductName(snapshot.productName || "");
+    setProductImageUrl(snapshot.productImageUrl || "");
+    setSellingPoints(snapshot.sellingPoints || []);
+    setSelectedSavedProductId(snapshot.selectedSavedProductId || "");
   }, []);
 
   const switchVariant = useCallback((targetId) => {
@@ -799,6 +816,10 @@ export default function TikTokAds() {
                 adTexts={adTexts} setAdTexts={setAdTexts}
                 cta={cta} setCta={setCta}
                 landingUrl={landingUrl} setLandingUrl={setLandingUrl}
+                productName={productName} setProductName={setProductName}
+                productImageUrl={productImageUrl} setProductImageUrl={setProductImageUrl}
+                sellingPoints={sellingPoints} setSellingPoints={setSellingPoints}
+                selectedSavedProductId={selectedSavedProductId} setSelectedSavedProductId={setSelectedSavedProductId}
                 videoFile={videoFile} setVideoFile={setVideoFile}
                 videoPreview={videoPreview} setVideoPreview={setVideoPreview}
                 driveFiles={driveFiles} setDriveFiles={setDriveFiles}

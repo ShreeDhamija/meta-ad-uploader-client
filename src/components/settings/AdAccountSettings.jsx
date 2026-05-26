@@ -6,7 +6,7 @@ import { Command, CommandInput, CommandList, CommandItem, CommandGroup } from "@
 import { Dialog, DialogContent, DialogOverlay } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX, Folder, Pencil, CloudSync } from "lucide-react"
+import { ChevronsUpDown, Loader, CirclePlus, Info, RefreshCw, ChevronDown, CircleX, Folder, Pencil, CloudSync, Trash, Plus, X, Upload } from "lucide-react"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { useAppData } from "@/lib/AppContext"
 import CopyTemplates from "./CopyTemplates"
@@ -103,6 +103,9 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
   const [isDirty, setIsDirty] = useState(false)
   const [initialSettings, setInitialSettings] = useState({})
   const [isReauthOpen, setIsReauthOpen] = useState(false)
+  const [products, setProducts] = useState([])
+  const [editingProduct, setEditingProduct] = useState(null)
+  const [newSellingPoint, setNewSellingPoint] = useState("")
 
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
@@ -217,7 +220,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       JSON.stringify(enhancements) !== JSON.stringify(initialSettings.creativeEnhancements) ||
       adNameFormulaV2?.rawInput !== initialSettings.adNameFormulaV2?.rawInput ||
       multiAdvertiserAds !== initialSettings.multiAdvertiserAds ||
-      displayLink !== initialSettings.displayLink
+      displayLink !== initialSettings.displayLink ||
+      JSON.stringify(products) !== JSON.stringify(initialSettings.products)
     );
   }, [
     selectedPage,
@@ -231,9 +235,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     multiAdvertiserAds,  // ADD THIS
     selectedAdAccount,
     areUtmPairsEqual,
-    displayLink
-
-
+    displayLink,
+    products
   ]);
 
   // Memoized initial settings calculation
@@ -256,8 +259,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       multiAdvertiserAds: adSettings.multiAdvertiserAds || false,
       customVariables: adSettings.customVariables || [],
       displayLink: adSettings.displayLink || "",
-
-
+      products: adSettings.products || [],
     };
   }, []);
 
@@ -279,7 +281,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       setCustomVariables([]);  // ← ADD THIS
       setInitialSettings({});
       setDisplayLink("");
-
+      setProducts([]);
     }
 
     // Reset cache restored flag when switching accounts
@@ -309,7 +311,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setMultiAdvertiserAds(initialSettings.multiAdvertiserAds);
     setCustomVariables(initialSettings.customVariables);
     setDisplayLink(initialSettings.displayLink);
-
+    setProducts(initialSettings.products || []);
 
     // Clear the cached draft
     localStorage.removeItem(DRAFT_CACHE_KEY);
@@ -338,8 +340,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
       multiAdvertiserAds: multiAdvertiserAds,
       customVariables: customVariables,
       displayLink: displayLink,
-
-
+      products,
     };
 
     try {
@@ -372,8 +373,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         multiAdvertiserAds: multiAdvertiserAds,
         customVariables: customVariables,
         displayLink: displayLink,
-
-
+        products,
       };
 
       setInitialSettings(newInitialSettings);
@@ -399,7 +399,8 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     multiAdvertiserAds,
     isFirstEverSave,
     customVariables,
-    displayLink
+    displayLink,
+    products
   ]);
 
 
@@ -436,7 +437,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setIsDirty(hasChanges);
   }, [hasChanges]);
 
-  // Effect to save draft to localStorage when there are unsaved changes
   // Effect to save/clear draft in localStorage based on unsaved changes
   useEffect(() => {
     if (!selectedAdAccount) return;
@@ -458,6 +458,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         multiAdvertiserAds,
         customVariables,
         displayLink,     // ← ADD THIS
+        products,
         timestamp: Date.now()
       };
 
@@ -476,7 +477,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
         // Ignore parse errors
       }
     }
-  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, customVariables, displayLink]);
+  }, [selectedAdAccount, hasChanges, selectedPage, selectedInstagram, links, utmPairs, defaultCTA, enhancements, adNameFormulaV2, multiAdvertiserAds, customVariables, displayLink, products]);
 
 
 
@@ -520,6 +521,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
           setMultiAdvertiserAds(draft.multiAdvertiserAds);
           setCustomVariables(draft.customVariables || []);
           setDisplayLink(draft.displayLink || "");
+          setProducts(draft.products || []);
           setInitialSettings(initial);
           cacheRestoredRef.current = true;
           return;
@@ -541,7 +543,7 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
     setMultiAdvertiserAds(initial.multiAdvertiserAds);
     setCustomVariables(initial.customVariables || []);  // ← ADD THIS
     setDisplayLink(initial.displayLink || "");
-
+    setProducts(initial.products || []);
   }, [adSettings, selectedAdAccount, calculateInitialSettings]);
 
 
@@ -777,6 +779,270 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             selectedInstagram={selectedInstagram}
             setSelectedInstagram={setSelectedInstagram}
           />
+
+          {/* Product Information Section */}
+          <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-3">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Folder className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+                <h3 className="font-medium text-[14px] text-zinc-950">
+                  Product Information Preferences
+                </h3>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditingProduct({ id: Date.now(), name: "", image: "", sellingPoints: [] });
+                  setNewSellingPoint("");
+                }}
+                className="text-xs rounded-xl border-gray-300 hover:bg-gray-50 flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add Product
+              </Button>
+            </div>
+
+            {/* List of Products */}
+            {products.length === 0 ? (
+              <p className="text-xs text-gray-500 italic py-2 text-center">No products added yet. Add products to auto-fill your ad campaigns.</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-2">
+                {products.map((product) => (
+                  <div key={product.id} className="bg-white border border-gray-200 rounded-xl p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {product.image ? (
+                        <img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover border border-gray-100 shrink-0" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                          <Info className="w-5 h-5 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 truncate">{product.name}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {product.sellingPoints?.length || 0} selling points
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingProduct({ ...product });
+                          setNewSellingPoint("");
+                        }}
+                        className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          setProducts(products.filter(p => p.id !== product.id));
+                        }}
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Editing / Adding Dialog / Inline Modal */}
+            {editingProduct && (
+              <div className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center p-4">
+                <div className="bg-white rounded-3xl w-[500px] max-w-full shadow-xl border border-gray-200 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-base font-semibold text-gray-900">
+                      {products.some(p => p.id === editingProduct.id) ? "Edit Product" : "Add New Product"}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => setEditingProduct(null)}
+                      className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                    >
+                      <X className="w-4 h-4 text-gray-500" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Product Name */}
+                    <div className="space-y-1">
+                      <label htmlFor="prod-name" className="text-xs font-semibold text-gray-700">Product Name</label>
+                      <Input
+                        id="prod-name"
+                        value={editingProduct.name}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                        placeholder="e.g. Premium Wireless Earbuds"
+                        className="border border-gray-300 rounded-2xl h-11 px-4 text-sm w-full"
+                      />
+                    </div>
+
+                    {/* Product Image */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700 block">Product Image</label>
+                      <div className="flex items-center gap-3">
+                        {editingProduct.image ? (
+                          <div className="relative shrink-0">
+                            <img src={editingProduct.image} alt="Preview" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
+                            <button
+                              type="button"
+                              onClick={() => setEditingProduct({ ...editingProduct, image: "" })}
+                              className="absolute -top-1.5 -right-1.5 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 animate-[bounce_1s_infinite]"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0">
+                            <Info className="w-6 h-6 text-gray-300" />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <label className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 rounded-xl bg-white text-xs font-semibold text-gray-700 shadow-sm cursor-pointer hover:bg-gray-50">
+                            <Upload className="w-3.5 h-3.5 mr-1.5 text-gray-500" />
+                            Upload Image
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+
+                                const formData = new FormData();
+                                formData.append("file", file);
+                                formData.append("advertiserId", selectedAdAccount); // Use active account ID!
+
+                                toast.loading("Uploading image to S3...");
+                                try {
+                                  const res = await fetch(`${API_BASE_URL}/api/tiktok/product-image/upload`, {
+                                    method: "POST",
+                                    body: formData,
+                                    credentials: "include"
+                                  });
+                                  const data = await res.json();
+                                  if (data.success && data.url) {
+                                    setEditingProduct({ ...editingProduct, image: data.url });
+                                    toast.dismiss();
+                                    toast.success("Image uploaded successfully!");
+                                  } else {
+                                    throw new Error(data.error || "Failed to upload image");
+                                  }
+                                } catch (err) {
+                                  toast.dismiss();
+                                  toast.error(err.message || "Failed to upload image");
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Selling Points */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-700 block">Selling Points</label>
+                      <div className="flex gap-2">
+                        <Input
+                          value={newSellingPoint}
+                          onChange={(e) => setNewSellingPoint(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              if (!newSellingPoint.trim()) return;
+                              if (editingProduct.sellingPoints.includes(newSellingPoint.trim())) return;
+                              setEditingProduct({
+                                ...editingProduct,
+                                sellingPoints: [...editingProduct.sellingPoints, newSellingPoint.trim()]
+                              });
+                              setNewSellingPoint("");
+                            }
+                          }}
+                          placeholder="Press enter to add selling point..."
+                          className="border border-gray-300 rounded-2xl h-11 px-4 text-sm flex-1"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            if (!newSellingPoint.trim()) return;
+                            if (editingProduct.sellingPoints.includes(newSellingPoint.trim())) return;
+                            setEditingProduct({
+                              ...editingProduct,
+                              sellingPoints: [...editingProduct.sellingPoints, newSellingPoint.trim()]
+                            });
+                            setNewSellingPoint("");
+                          }}
+                          className="rounded-2xl h-11 px-4 text-xs bg-zinc-800 text-white font-semibold hover:bg-black"
+                        >
+                          Confirm
+                        </Button>
+                      </div>
+
+                      {/* Render tags */}
+                      {editingProduct.sellingPoints?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-2">
+                          {editingProduct.sellingPoints.map((tag) => (
+                            <span key={tag} className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-[11px] text-gray-700 px-2 py-0.5 rounded-full">
+                              {tag}
+                              <button
+                                type="button"
+                                onClick={() => setEditingProduct({
+                                  ...editingProduct,
+                                  sellingPoints: editingProduct.sellingPoints.filter(t => t !== tag)
+                                })}
+                                className="text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingProduct(null)}
+                      className="rounded-2xl flex-1 border-gray-200"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        if (!editingProduct.name.trim()) {
+                          toast.error("Product name is required");
+                          return;
+                        }
+                        const isExisting = products.some(p => p.id === editingProduct.id);
+                        if (isExisting) {
+                          setProducts(products.map(p => p.id === editingProduct.id ? editingProduct : p));
+                        } else {
+                          setProducts([...products, editingProduct]);
+                        }
+                        setEditingProduct(null);
+                      }}
+                      className="rounded-2xl flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                    >
+                      Save Product
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <CopyTemplates
             selectedAdAccount={selectedAdAccount}
