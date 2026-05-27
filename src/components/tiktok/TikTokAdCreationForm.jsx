@@ -880,7 +880,7 @@ export default function TikTokAdCreationForm({
               const modifiers = []
               if (finalCaptions.length > 1) {
                 const cleanCap = singleCaption.trim().substring(0, 15)
-                modifiers.push(cleanCap ? `"${cleanCap}"` : `Caption ${finalCaptions.indexOf(singleCaption) + 1}`)
+                modifiers.push(cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`)
               }
               if (creativeCTAs.length > 1) {
                 modifiers.push(singleCta)
@@ -2024,12 +2024,12 @@ export default function TikTokAdCreationForm({
       if (fd.adType !== 'SPARK') {
         const activeTexts = fd.adTexts ? fd.adTexts.filter(t => t.trim() !== '') : [];
         if (activeTexts.length === 0) {
-          toast.error(`${variant.name}: Please enter at least one ad caption`);
+          toast.error(`${variant.name}: Please enter ad text`);
           return;
         }
         for (const singleText of activeTexts) {
           if (singleText.length > 100) {
-            toast.error(`${variant.name}: Caption cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
+            toast.error(`${variant.name}: Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
             return;
           }
         }
@@ -2142,11 +2142,11 @@ export default function TikTokAdCreationForm({
     } else {
       const activeTexts = adTexts ? adTexts.filter(t => t.trim() !== '') : []
       if (activeTexts.length === 0) {
-        errors.push("Enter at least one ad caption")
+        errors.push("Enter ad text")
       }
       for (const singleText of activeTexts) {
         if (singleText.length > 100) {
-          errors.push(`Caption cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`)
+          errors.push(`Text cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`)
         }
       }
     }
@@ -3336,7 +3336,7 @@ export default function TikTokAdCreationForm({
                     <LabelIcon className="w-4 h-4" />
                     <span className="font-semibold text-sm">Ad Name</span>
                   </div>
-                  {selectedAdvertiser && !advertiserPrefs?.adNameFormulaV2?.rawInput && (
+                  {selectedAdvertiser && !adNameFormulaV2?.rawInput?.trim() && (
                     <Button
                       type="button"
                       size="sm"
@@ -3368,9 +3368,7 @@ export default function TikTokAdCreationForm({
                     }
                   </Label>
                 </div>
-                {!adNameFormulaV2?.rawInput?.trim() && !adName.trim() && (
-                  <p className="text-xs text-red-500 font-medium mt-1">Ad name is required</p>
-                )}
+
               </div>
 
               {/* 4. Ad Copy / Caption with template picker */}
@@ -3637,7 +3635,7 @@ export default function TikTokAdCreationForm({
                   <div className="flex items-center justify-between">
                     <Label className="flex items-center gap-1.5">
                       {renderDiffMark("adTexts")}
-                      <span className="font-semibold text-sm">Ad Copy / Caption</span>
+                      <span className="font-semibold text-sm">Text</span>
                       {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
                     </Label>
                     <span className="text-[10px] text-zinc-400 font-medium">{(adTexts[0] || "").length}/100</span>
@@ -3647,17 +3645,14 @@ export default function TikTokAdCreationForm({
                     onChange={(e) => {
                       setAdTexts([e.target.value]);
                     }}
-                    placeholder="Write a catchy caption... ✍️"
+                    placeholder="Write catchy ad text... ✍️"
                     minRows={3}
                     maxRows={8}
                     className={formTextareaChrome}
                     style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
                   />
-                  {adType !== 'SPARK' && !adTexts[0]?.trim() && (
-                    <p className="text-xs text-red-500 font-medium mt-1">Please enter at least one ad caption</p>
-                  )}
                   {(adTexts[0] || "").length > 100 && (
-                    <p className="text-xs text-red-500 font-medium mt-1">Caption cannot exceed 100 characters</p>
+                    <p className="text-xs text-red-500 font-medium mt-1">Text cannot exceed 100 characters</p>
                   )}
                 </div>
               </div>
@@ -4453,13 +4448,13 @@ export default function TikTokAdCreationForm({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-zinc-900">Save Ad Caption Template</h3>
+                <h3 className="text-lg font-semibold text-zinc-900">Save Ad Text Template</h3>
                 <p className="text-xs text-zinc-500">
-                  Enter a name for this caption template:
+                  Enter a name for this text template:
                 </p>
                 <Input
                   type="text"
-                  placeholder="Template name (e.g. Summer Caption)..."
+                  placeholder="Template name (e.g. Summer Text)..."
                   value={newTemplateNameInput}
                   onChange={(e) => setNewTemplateNameInput(e.target.value)}
                   className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 mt-2"

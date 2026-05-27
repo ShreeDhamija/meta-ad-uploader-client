@@ -72,14 +72,20 @@ export default function TikTokCopyTemplates({
         }
     }, [selectedName, templates]);
 
+    const lastInitializedAdvertiserRef = useRef(null);
+
     // Initial default selection
     useEffect(() => {
-        if (!selectedName && defaultName && templates[defaultName]) {
-            setSelectedName(defaultName);
-        } else if (!selectedName && Object.keys(templates).length > 0) {
-            setSelectedName(Object.keys(templates)[0]);
+        if (advertiserId !== lastInitializedAdvertiserRef.current && Object.keys(templates).length > 0) {
+            if (defaultName && templates[defaultName]) {
+                setSelectedName(defaultName);
+                lastInitializedAdvertiserRef.current = advertiserId;
+            } else if (Object.keys(templates).length > 0) {
+                setSelectedName(Object.keys(templates)[0]);
+                lastInitializedAdvertiserRef.current = advertiserId;
+            }
         }
-    }, [defaultName, templates, selectedName]);
+    }, [advertiserId, templates, defaultName]);
 
     const handleAdd = useCallback(() => {
         if (texts.length < 5) setTexts([...texts, ""])
@@ -129,7 +135,7 @@ export default function TikTokCopyTemplates({
 
         const filteredTexts = filterFilledTexts(texts);
         if (filteredTexts.length === 0) {
-            toast.error("Caption is required")
+            toast.error("Text is required")
             return false
         }
 
@@ -244,7 +250,7 @@ export default function TikTokCopyTemplates({
                         <span className="text-sm font-medium text-zinc-950">Copy Templates</span>
                     </div>
                     <p className="text-xs text-gray-500 leading-tight">
-                        Enter a caption below, <br />
+                        Enter ad text below, <br />
                         Then save as a template to easily add to your TikTok ads in the future
                     </p>
                 </div>
@@ -448,11 +454,11 @@ export default function TikTokCopyTemplates({
 
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <label className="text-[14px] text-gray-700">Caption / Ad Copy</label>
+                    <label className="text-[14px] text-gray-700">Text</label>
                 </div>
                 <div className="flex flex-col w-full">
                     <TextareaAutosize
-                        placeholder="Enter caption..."
+                        placeholder="Enter text..."
                         value={texts[0] || ""}
                         onChange={(e) => handleChange(0, e.target.value)}
                         className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0`}
