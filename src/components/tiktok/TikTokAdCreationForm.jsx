@@ -4047,7 +4047,7 @@ export default function TikTokAdCreationForm({
                                   alt=""
                                   className={'h-4 w-4 object-contain'}
                                 />
-                                <span className="text-sm text-gray-800">{src.fullLabel}</span>
+                                <span className="text-sm text-gray-800">{src.compactLabel}</span>
                               </label>
                             )
                           })}
@@ -4110,7 +4110,7 @@ export default function TikTokAdCreationForm({
                                 style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
                               />
                               {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
-                              <span className="truncate text-xs font-semibold">{src.compactLabel}</span>
+                              <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
                             </Button>
                           )
                         })}
@@ -4138,84 +4138,6 @@ export default function TikTokAdCreationForm({
 
             {/* Submit Button */}
             <div className="pt-6 border-t border-gray-100 space-y-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  <Label className="text-sm font-medium inline-flex items-center gap-1">
-                    {renderDiffMark("launchPaused")}
-                    <span>Ad Status:</span>
-                  </Label>
-
-                  <RadioGroup
-                    value={launchPaused ? "paused" : "active"}
-                    onValueChange={(value) => setLaunchPaused(value === "paused")}
-                    disabled={isSubmitting}
-                    className="flex items-center space-x-2"
-                  >
-                    <div
-                      className={cn(
-                        "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                        !launchPaused
-                          ? "bg-green-50 border border-green-300"
-                          : "border border-transparent"
-                      )}
-                    >
-                      <RadioGroupItem
-                        value="active"
-                        id="statusActive"
-                        className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
-                      />
-                      <Label
-                        htmlFor="statusActive"
-                        className={cn(
-                          "text-sm font-medium leading-none cursor-pointer",
-                          !launchPaused ? "text-green-600" : "text-gray-600"
-                        )}
-                      >
-                        Active
-                      </Label>
-                    </div>
-
-                    <div
-                      className={cn(
-                        "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                        launchPaused
-                          ? "bg-red-50 border border-red-300"
-                          : "border border-transparent"
-                      )}
-                    >
-                      <RadioGroupItem
-                        value="paused"
-                        id="statusPaused"
-                        className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
-                      />
-                      <Label
-                        htmlFor="statusPaused"
-                        className={cn(
-                          "text-sm font-medium leading-none cursor-pointer",
-                          launchPaused ? "text-red-600" : "text-gray-600"
-                        )}
-                      >
-                        Paused
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150 mb-2">
-                <Checkbox
-                  id="preserveMedia"
-                  checked={preserveMedia}
-                  onCheckedChange={setPreserveMedia}
-                  className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                />
-                <Label
-                  htmlFor="preserveMedia"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                >
-                  Don't clear media after publishing ads
-                </Label>
-              </div>
               <Button
                 type="submit"
                 disabled={isSubmitting || !isFormValid}
@@ -4233,6 +4155,87 @@ export default function TikTokAdCreationForm({
                   'Publish Ads'
                 )}
               </Button>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Label className="text-sm font-medium inline-flex items-center gap-1">
+                      {renderDiffMark("launchPaused")}
+                      <span>Ad Status:</span>
+                    </Label>
+
+                    <RadioGroup
+                      value={launchPaused ? "paused" : "active"}
+                      onValueChange={(value) => setLaunchPaused(value === "paused")}
+                      disabled={isSubmitting}
+                      className="flex items-center space-x-2"
+                    >
+                      <div
+                        className={cn(
+                          "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                          !launchPaused
+                            ? "bg-green-50 border border-green-300"
+                            : "border border-transparent"
+                        )}
+                      >
+                        <RadioGroupItem
+                          value="active"
+                          id="statusActive"
+                          className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
+                        />
+                        <Label
+                          htmlFor="statusActive"
+                          className={cn(
+                            "text-sm font-medium leading-none cursor-pointer",
+                            !launchPaused ? "text-green-600" : "text-gray-600"
+                          )}
+                        >
+                          Active
+                        </Label>
+                      </div>
+
+                      <div
+                        className={cn(
+                          "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                          launchPaused
+                            ? "bg-red-50 border border-red-300"
+                            : "border border-transparent"
+                        )}
+                      >
+                        <RadioGroupItem
+                          value="paused"
+                          id="statusPaused"
+                          className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
+                        />
+                        <Label
+                          htmlFor="statusPaused"
+                          className={cn(
+                            "text-sm font-medium leading-none cursor-pointer",
+                            launchPaused ? "text-red-600" : "text-gray-600"
+                          )}
+                        >
+                          Paused
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+                  <Checkbox
+                    id="preserveMedia"
+                    checked={preserveMedia}
+                    onCheckedChange={setPreserveMedia}
+                    className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                  <Label
+                    htmlFor="preserveMedia"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  >
+                    Don't clear media after publishing ads
+                  </Label>
+                </div>
+              </div>
             </div>
           </div>
 
