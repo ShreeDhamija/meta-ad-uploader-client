@@ -968,7 +968,7 @@ export default function TikTokAdCreationForm({
         id: jobToProcess.id,
         message: failureCount > 0
           ? `Completed with ${failureCount} failure(s).`
-          : `🎉 Created TikTok ads successfully for all ${itemsToUpload.length} videos!`,
+          : `Created TikTok ads successfully for all ${itemsToUpload.length} videos!`,
         completedAt: Date.now(),
         status: failureCount === 0 ? 'complete' : (successCount > 0 ? 'partial-success' : 'error'),
         formData: jobToProcess.formData,
@@ -2028,10 +2028,6 @@ export default function TikTokAdCreationForm({
           return;
         }
         for (const singleText of activeTexts) {
-          if (singleText.length < 12) {
-            toast.error(`${variant.name}: Caption must be at least 12 characters ("${singleText.substring(0, 15)}...")`);
-            return;
-          }
           if (singleText.length > 100) {
             toast.error(`${variant.name}: Caption cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`);
             return;
@@ -2078,9 +2074,6 @@ export default function TikTokAdCreationForm({
 
     try {
       setJobQueue((prev) => [...prev, ...queuedJobs]);
-      if (!preserveMedia) {
-        clearQueuedMedia();
-      }
     } finally {
       setIsQueueingJobs(false);
     }
@@ -2117,6 +2110,89 @@ export default function TikTokAdCreationForm({
   }, [adTexts]);
 
   const hasDuplicateCaptions = duplicateCaptionIndices.size > 0;
+
+  const getValidationErrors = useCallback(() => {
+    const errors = []
+
+    if (!selectedAdvertiser) {
+      errors.push("Select an advertiser account")
+    }
+
+    if (!selectedCampaign || selectedCampaign.length === 0) {
+      errors.push("Select a campaign")
+    }
+
+    const isDuplicatingAdGroup = showDuplicateAdGroupBlock && duplicateAdGroup
+    if (!isDuplicatingAdGroup && (!selectedAdGroup || selectedAdGroup.length === 0)) {
+      errors.push("Select at least one ad group")
+    }
+
+    if (isDuplicatingAdGroup && !newAdGroupName.trim()) {
+      errors.push("Enter a name for the duplicated ad group")
+    }
+
+    if (!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') {
+      errors.push(adType === 'NORMAL' ? "Select an identity" : "Select an account to Promote From")
+    }
+
+    if (adType === 'SPARK') {
+      if (!sparkAuthCode || !sparkAuthCode.trim()) {
+        errors.push("Organic Post Authorization Code is required")
+      }
+    } else {
+      const activeTexts = adTexts ? adTexts.filter(t => t.trim() !== '') : []
+      if (activeTexts.length === 0) {
+        errors.push("Enter at least one ad caption")
+      }
+      for (const singleText of activeTexts) {
+        if (singleText.length > 100) {
+          errors.push(`Caption cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`)
+        }
+      }
+
+      const totalFiles = (files?.length || 0) + (driveFiles?.length || 0) + (dropboxFiles?.length || 0) + (tiktokLibraryFiles?.length || 0)
+      if (totalFiles === 0) {
+        errors.push("Upload at least one video or image")
+      }
+    }
+
+    const hasFormula = adNameFormulaV2?.rawInput?.trim()
+    if (!hasFormula && !adName.trim()) {
+      errors.push("Ad name is required")
+    }
+
+    if (!cta || cta.length === 0) {
+      errors.push("Select at least one Call to Action")
+    }
+
+    if (urlMode === 'WEBSITE') {
+      if (!landingUrl || !landingUrl.trim()) {
+        errors.push("Landing Page URL is required")
+      } else {
+        let isValidUrl = false
+        try {
+          const urlString = landingUrl.trim()
+          if (/^https?:\/\//i.test(urlString)) {
+            new URL(urlString)
+            isValidUrl = true
+          }
+        } catch (_) { }
+        if (!isValidUrl) {
+          errors.push("Landing Page URL must be a valid URL starting with http:// or https://")
+        }
+      }
+    }
+
+    return errors
+  }, [
+    selectedAdvertiser, selectedCampaign, showDuplicateAdGroupBlock, duplicateAdGroup,
+    selectedAdGroup, newAdGroupName, selectedIdentity, adType, sparkAuthCode,
+    adTexts, files, driveFiles, dropboxFiles, tiktokLibraryFiles, adNameFormulaV2,
+    adName, cta, urlMode, landingUrl
+  ])
+
+  const validationErrors = getValidationErrors()
+  const isFormValid = validationErrors.length === 0
 
   return (
     <form onSubmit={handleQueueJob} className="space-y-6">
@@ -2782,9 +2858,9 @@ export default function TikTokAdCreationForm({
                   />
                   <CommandEmpty>No ad group found.</CommandEmpty>
                   <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
-                    <CommandGroup>
-                      {filteredAdGroups.length > 0 ? (
-                        (() => {
+                    {filteredAdGroups.length > 0 && (
+                      <CommandGroup>
+                        {(() => {
                           const groupedByCampaign = filteredAdGroups.reduce((acc, adgroup) => {
                             const campaignId = adgroup.campaignId || 'unknown';
                             if (!acc[campaignId]) {
@@ -2842,11 +2918,9 @@ export default function TikTokAdCreationForm({
                               </div>
                             )
                           });
-                        })()
-                      ) : (
-                        <p className="text-sm text-gray-400 text-center py-4">No ad groups found.</p>
-                      )}
-                    </CommandGroup>
+                        })()}
+                      </CommandGroup>
+                    )}
                   </CommandList>
 
                   <div className="p-2 border-t border-gray-100">
@@ -3111,10 +3185,7 @@ export default function TikTokAdCreationForm({
                       ? (() => {
                         const found = identities.find(i => i.identity_id === selectedIdentity);
                         return found ? (
-                          <>
-                            <span className="font-semibold text-gray-900">{found.display_name}</span>
-                            <span className="text-xs text-gray-400 font-normal">{found.identity_id}</span>
-                          </>
+                          <span className="font-semibold text-gray-900">{found.display_name}</span>
                         ) : <span>{selectedIdentity}</span>;
                       })()
                       : <span>{adType === 'NORMAL' ? "Select Identity" : "Select account to Promote From"}</span>}
@@ -3499,9 +3570,6 @@ export default function TikTokAdCreationForm({
                   className={formTextareaChrome}
                   style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
                 />
-                {(adTexts[0] || "").length > 0 && (adTexts[0] || "").length < 12 && (
-                  <p className="text-[10px] text-red-500 font-medium mt-1">Caption must be at least 12 characters</p>
-                )}
                 {(adTexts[0] || "").length > 100 && (
                   <p className="text-[10px] text-red-500 font-medium mt-1">Caption cannot exceed 100 characters</p>
                 )}
@@ -3769,7 +3837,6 @@ export default function TikTokAdCreationForm({
                           formData.append("file", file);
                           formData.append("advertiserId", selectedAdvertiser);
 
-                          toast.loading("Uploading image to S3...");
                           try {
                             const res = await fetch(`${API_BASE_URL}/api/tiktok/product-image/upload`, {
                               method: "POST",
@@ -3783,14 +3850,11 @@ export default function TikTokAdCreationForm({
                             const data = await res.json();
                             if (data.success && data.url) {
                               setProductImageUrl(data.url);
-                              toast.dismiss();
-                              toast.success("Image uploaded successfully!");
                             } else {
                               throw new Error(data.error || "Failed to upload image");
                             }
                           } catch (err) {
-                            toast.dismiss();
-                            toast.error(err.message || "Failed to upload image");
+                            console.error("Failed to upload image:", err.message);
                           }
                         }}
                       />
@@ -3894,257 +3958,270 @@ export default function TikTokAdCreationForm({
 
             {/* 6. Media Section or Spark Info Card */}
             <div className="border-t border-gray-100 pt-6">
-            {adType === 'SPARK' ? (
-              <div className="rounded-3xl border border-blue-100 bg-blue-50/20 p-6 flex flex-col md:flex-row items-start gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-sm border border-blue-100">
-                  <Video className="w-6 h-6 text-blue-500" />
+              {adType === 'SPARK' ? (
+                <div className="rounded-3xl border border-blue-100 bg-blue-50/20 p-6 flex flex-col md:flex-row items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-sm border border-blue-100">
+                    <Video className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-semibold text-gray-900">Organic Video Selected</h4>
+                    <p className="text-xs text-gray-500 leading-relaxed">
+                      You have selected a <strong>Spark Ad</strong>. The video and caption from the authorized organic TikTok post will be used directly. Local and cloud file uploads are automatically bypassed.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <h4 className="text-sm font-semibold text-gray-900">Organic Video Selected</h4>
-                  <p className="text-xs text-gray-500 leading-relaxed">
-                    You have selected a <strong>Spark Ad</strong>. The video and caption from the authorized organic TikTok post will be used directly. Local and cloud file uploads are automatically bypassed.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-2">
-                    {renderDiffMark("videoFile")}
-                    Video (.mp4, .mov)
-                  </Label>
-                  <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className={cn(
-                          "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
-                          formFieldChrome
-                        )}
-                      >
-                        <CloudUpload className="h-4 w-4" />
-                        Manage Sources
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" side="bottom" avoidCollisions={false} className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
-                      <div className="flex flex-col">
-                        {UPLOAD_SOURCE_OPTIONS.map((src) => {
-                          const checked = uploadSources.includes(src.id)
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-2">
+                      {renderDiffMark("videoFile")}
+                      Video (.mp4, .mov)
+                    </Label>
+                    <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className={cn(
+                            "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
+                            formFieldChrome
+                          )}
+                        >
+                          <CloudUpload className="h-4 w-4" />
+                          Manage Sources
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" side="bottom" avoidCollisions={false} className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                        <div className="flex flex-col">
+                          {UPLOAD_SOURCE_OPTIONS.map((src) => {
+                            const checked = uploadSources.includes(src.id)
+                            return (
+                              <label
+                                key={src.id}
+                                className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={() => toggleUploadSource(src.id)}
+                                />
+                                <img
+                                  src={src.icon}
+                                  alt=""
+                                  className={'h-4 w-4 object-contain'}
+                                />
+                                <span className="text-sm text-gray-800">{src.fullLabel}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
+                    <div
+                      onClick={() => fileRef.current?.click()}
+                      className="group cursor-pointer border-2 border-dashed border-gray-300 rounded-3xl p-8 text-center transition-all hover:border-gray-400 hover:bg-gray-50"
+                    >
+                      <input
+                        ref={fileRef}
+                        type="file"
+                        accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/gif"
+                        multiple
+                        className="hidden"
+                        onChange={handleVideoSelect}
+                      />
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-700">Click to upload video or image</p>
+                          <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok videos</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Cloud Source Buttons */}
+                  {(() => {
+                    const rowSources = uploadSources.filter((s) => s !== 'local')
+                    if (rowSources.length === 0) return null
+
+                    return (
+                      <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+                        {rowSources.map((id) => {
+                          const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
+                          if (!src) return null
+
+                          let onClick
+                          if (id === 'drive') onClick = handleDriveClick
+                          else if (id === 'dropbox') onClick = handleDropboxClick
+
                           return (
-                            <label
-                              key={src.id}
-                              className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                            <Button
+                              key={id}
+                              type="button"
+                              onClick={onClick}
+                              className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
                             >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={() => toggleUploadSource(src.id)}
-                              />
                               <img
-                                src={src.icon}
-                                alt=""
-                                className={'h-4 w-4 object-contain'}
+                                src={typeof src.icon === 'string' ? src.icon : undefined}
+                                alt={src.name}
+                                className="h-4 w-4 object-contain"
+                                style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
                               />
-                              <span className="text-sm text-gray-800">{src.fullLabel}</span>
-                            </label>
+                              {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
+                              <span className="truncate text-xs font-semibold">{src.compactLabel}</span>
+                            </Button>
                           )
                         })}
                       </div>
-                    </PopoverContent>
-                  </Popover>
+                    )
+                  })()}
+
+                  {/* Progress bar */}
+                  {(isUploading || videoUploading) && !isSubmitting && (
+                    <div className="mt-2">
+                      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 transition-all duration-300"
+                          style={{ width: `${videoUploading ? videoUploadProgress : uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] font-medium text-emerald-600 mt-1">
+                        Uploading {videoUploading ? videoUploadProgress : uploadProgress}%
+                      </p>
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
 
-                {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
-                  <div
-                    onClick={() => fileRef.current?.click()}
-                    className="group cursor-pointer border-2 border-dashed border-gray-300 rounded-3xl p-8 text-center transition-all hover:border-gray-400 hover:bg-gray-50"
+            {/* Submit Button */}
+            <div className="pt-6 border-t border-gray-100 space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <Label className="text-sm font-medium inline-flex items-center gap-1">
+                    {renderDiffMark("launchPaused")}
+                    <span>Ad Status:</span>
+                  </Label>
+
+                  <RadioGroup
+                    value={launchPaused ? "paused" : "active"}
+                    onValueChange={(value) => setLaunchPaused(value === "paused")}
+                    disabled={isSubmitting}
+                    className="flex items-center space-x-2"
                   >
-                    <input
-                      ref={fileRef}
-                      type="file"
-                      accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/gif"
-                      multiple
-                      className="hidden"
-                      onChange={handleVideoSelect}
-                    />
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700">Click to upload video or image</p>
-                        <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok videos</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Cloud Source Buttons */}
-                {(() => {
-                  const rowSources = uploadSources.filter((s) => s !== 'local')
-                  if (rowSources.length === 0) return null
-
-                  return (
-                    <div className="grid grid-cols-2 gap-2">
-                      {rowSources.map((id) => {
-                        const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
-                        if (!src) return null
-
-                        let onClick
-                        if (id === 'drive') onClick = handleDriveClick
-                        else if (id === 'dropbox') onClick = handleDropboxClick
-
-                        return (
-                          <Button
-                            key={id}
-                            type="button"
-                            onClick={onClick}
-                            className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
-                          >
-                            <img
-                              src={typeof src.icon === 'string' ? src.icon : undefined}
-                              alt={src.name}
-                              className="h-4 w-4 object-contain"
-                              style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
-                            />
-                            {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
-                            <span className="truncate text-xs font-semibold">{src.compactLabel}</span>
-                          </Button>
-                        )
-                      })}
-                    </div>
-                  )
-                })()}
-
-                {/* Progress bar */}
-                {(isUploading || videoUploading) && !isSubmitting && (
-                  <div className="mt-2">
-                    <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
-                      <div
-                        className="h-full bg-emerald-500 transition-all duration-300"
-                        style={{ width: `${videoUploading ? videoUploadProgress : uploadProgress}%` }}
+                    <div
+                      className={cn(
+                        "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                        !launchPaused
+                          ? "bg-green-50 border border-green-300"
+                          : "border border-transparent"
+                      )}
+                    >
+                      <RadioGroupItem
+                        value="active"
+                        id="statusActive"
+                        className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
                       />
+                      <Label
+                        htmlFor="statusActive"
+                        className={cn(
+                          "text-sm font-medium leading-none cursor-pointer",
+                          !launchPaused ? "text-green-600" : "text-gray-600"
+                        )}
+                      >
+                        Active
+                      </Label>
                     </div>
-                    <p className="text-[10px] font-medium text-emerald-600 mt-1">
-                      Uploading {videoUploading ? videoUploadProgress : uploadProgress}%
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
 
-          {/* Submit Button */}
-          <div className="pt-6 border-t border-gray-100 space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center space-x-2">
-                <Label className="text-sm font-medium inline-flex items-center gap-1">
-                  {renderDiffMark("launchPaused")}
-                  <span>Ad Status:</span>
-                </Label>
-
-                <RadioGroup
-                  value={launchPaused ? "paused" : "active"}
-                  onValueChange={(value) => setLaunchPaused(value === "paused")}
-                  disabled={isSubmitting}
-                  className="flex items-center space-x-2"
-                >
-                  <div
-                    className={cn(
-                      "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                      !launchPaused
-                        ? "bg-green-50 border border-green-300"
-                        : "border border-transparent"
-                    )}
-                  >
-                    <RadioGroupItem
-                      value="active"
-                      id="statusActive"
-                      className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
-                    />
-                    <Label
-                      htmlFor="statusActive"
+                    <div
                       className={cn(
-                        "text-sm font-medium leading-none cursor-pointer",
-                        !launchPaused ? "text-green-600" : "text-gray-600"
+                        "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                        launchPaused
+                          ? "bg-red-50 border border-red-300"
+                          : "border border-transparent"
                       )}
                     >
-                      Active
-                    </Label>
-                  </div>
-
-                  <div
-                    className={cn(
-                      "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                      launchPaused
-                        ? "bg-red-50 border border-red-300"
-                        : "border border-transparent"
-                    )}
-                  >
-                    <RadioGroupItem
-                      value="paused"
-                      id="statusPaused"
-                      className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
-                    />
-                    <Label
-                      htmlFor="statusPaused"
-                      className={cn(
-                        "text-sm font-medium leading-none cursor-pointer",
-                        launchPaused ? "text-red-600" : "text-gray-600"
-                      )}
-                    >
-                      Paused
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150 mb-2">
-              <Checkbox
-                id="preserveMedia"
-                checked={preserveMedia}
-                onCheckedChange={setPreserveMedia}
-                className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-              <Label
-                htmlFor="preserveMedia"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Don't clear media after publishing ads
-              </Label>
-            </div>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className={cn(
-                "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50",
-                isSubmitting && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              {isSubmitting ? (
-                <div className="flex items-center justify-center gap-2">
-                  <Loader className="w-5 h-5 animate-spin" />
-                  {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
+                      <RadioGroupItem
+                        value="paused"
+                        id="statusPaused"
+                        className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
+                      />
+                      <Label
+                        htmlFor="statusPaused"
+                        className={cn(
+                          "text-sm font-medium leading-none cursor-pointer",
+                          launchPaused ? "text-red-600" : "text-gray-600"
+                        )}
+                      >
+                        Paused
+                      </Label>
+                    </div>
+                  </RadioGroup>
                 </div>
-              ) : (
-                'Publish Ads'
+              </div>
+
+              <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150 mb-2">
+                <Checkbox
+                  id="preserveMedia"
+                  checked={preserveMedia}
+                  onCheckedChange={setPreserveMedia}
+                  className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                <Label
+                  htmlFor="preserveMedia"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Don't clear media after publishing ads
+                </Label>
+              </div>
+              {validationErrors.length > 0 && (
+                <div className="bg-red-50/50 border border-red-200 rounded-2xl p-4 space-y-2 text-xs text-red-600 font-medium animate-in fade-in slide-in-from-bottom-2 duration-200 mb-4">
+                  <p className="font-semibold text-red-800 text-sm flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                    Please fix the following to publish:
+                  </p>
+                  <ul className="list-disc pl-4 space-y-1">
+                    {validationErrors.map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
               )}
-            </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting || !isFormValid}
+                className={cn(
+                  "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50",
+                  (isSubmitting || !isFormValid) && "opacity-50 cursor-not-allowed"
+                )}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader className="w-5 h-5 animate-spin" />
+                    {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
+                  </div>
+                ) : (
+                  'Publish Ads'
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
 
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
 
-    <FolderPickerOverlay
-      show={showFolderInput}
-      linkValue={folderLinkValue}
-      setLinkValue={setFolderLinkValue}
-      onImport={handleImportFromFolder}
-      onCancel={() => setShowFolderInput(false)}
-      isImporting={isImportingFolder}
-    />
+      <FolderPickerOverlay
+        show={showFolderInput}
+        linkValue={folderLinkValue}
+        setLinkValue={setFolderLinkValue}
+        onImport={handleImportFromFolder}
+        onCancel={() => setShowFolderInput(false)}
+        isImporting={isImportingFolder}
+      />
 
       {/* FLOATING VARIANT PICKER BAR AT BOTTOM */}
       {

@@ -13,11 +13,11 @@ import { deleteTikTokCopyTemplate } from "@/lib/saveTikTokSettings"
 const settingsFieldChrome = "rounded-2xl border border-gray-300 py-4.5 bg-white shadow";
 const settingsTextareaChrome = "rounded-2xl border border-gray-300 bg-white px-3 pt-2.5 pb-2.5 leading-5 shadow";
 
-export default function TikTokCopyTemplates({ 
-    templates = {}, 
-    defaultName = "", 
-    onSaveTemplate, 
-    onSetDefault, 
+export default function TikTokCopyTemplates({
+    templates = {},
+    defaultName = "",
+    onSaveTemplate,
+    onSetDefault,
     onDeleteTemplate,
     advertiserId
 }) {
@@ -41,23 +41,6 @@ export default function TikTokCopyTemplates({
 
     const hasFilledTextValue = useCallback((text) => text.trim() !== "", [])
     const filterFilledTexts = useCallback((items) => items.filter(hasFilledTextValue), [hasFilledTextValue])
-
-    const duplicateIndices = useMemo(() => {
-        const dupes = new Set();
-        const seen = {};
-        texts.forEach((val, i) => {
-            const normalized = val.trim().toLowerCase();
-            if (!normalized) return;
-            if (normalized in seen) {
-                dupes.add(i);
-            } else {
-                seen[normalized] = i;
-            }
-        });
-        return dupes;
-    }, [texts]);
-
-    const hasDuplicates = useMemo(() => duplicateIndices.size > 0, [duplicateIndices]);
 
     const templateChanged = useMemo(() => {
         const currentTemplate = templates[selectedName] || {};
@@ -125,7 +108,7 @@ export default function TikTokCopyTemplates({
 
         const filteredTexts = filterFilledTexts(texts);
         if (filteredTexts.length === 0) {
-            toast.error("At least one copy variant is required")
+            toast.error("Caption is required")
             return
         }
 
@@ -238,7 +221,7 @@ export default function TikTokCopyTemplates({
                         <span className="text-sm font-medium text-zinc-950">Ad Text Templates</span>
                     </div>
                     <p className="text-xs text-gray-500 leading-tight">
-                        Add up to 5 Caption variants below, <br />
+                        Enter a caption below, <br />
                         Then save as a template to easily add to your TikTok ads in the future
                     </p>
                 </div>
@@ -436,54 +419,26 @@ export default function TikTokCopyTemplates({
 
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <label className="text-[14px] text-gray-700">Captions / Ad Copy Variants</label>
-                    <span className="text-xs text-gray-400 font-medium">{texts.length}/5 Variants</span>
+                    <label className="text-[14px] text-gray-700">Caption / Ad Copy</label>
                 </div>
-                {texts.map((text, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                        <div className="flex flex-col w-full">
-                            <TextareaAutosize
-                                placeholder={`Caption Variant ${i + 1}`}
-                                value={text}
-                                onChange={(e) => handleChange(i, e.target.value)}
-                                className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 ${duplicateIndices.has(i)
-                                    ? "border-red-500 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
-                                    : ""
-                                }`}
-                                minRows={2}
-                                maxRows={10}
-                                disabled={isProcessing}
-                            />
-                            {duplicateIndices.has(i) && (
-                                <p className="text-xs text-red-500 mt-1">Duplicate values can cause errors when making ads</p>
-                            )}
-                        </div>
-
-                        {texts.length > 1 && (
-                            <Trash2
-                                className="w-4 h-4 text-gray-400 cursor-pointer hover:text-red-500"
-                                onClick={() => handleRemove(i)}
-                            />
-                        )}
-                    </div>
-                ))}
-                {texts.length < 5 && (
-                    <Button
-                        variant="ghost"
-                        className="bg-zinc-600 border border-gray-200 text-sm text-white w-full rounded-xl shadow-xs hover:bg-zinc-800 hover:text-white h-[40px]"
-                        onClick={handleAdd}
+                <div className="flex flex-col w-full">
+                    <TextareaAutosize
+                        placeholder="Enter caption..."
+                        value={texts[0] || ""}
+                        onChange={(e) => handleChange(0, e.target.value)}
+                        className={`${settingsTextareaChrome} w-full text-sm resize-none focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0`}
+                        minRows={3}
+                        maxRows={10}
                         disabled={isProcessing}
-                    >
-                        + Add new caption variant
-                    </Button>
-                )}
+                    />
+                </div>
             </div>
 
             <div className="space-y-2 pt-2">
                 <Button
                     className="bg-blue-500 text-white w-full rounded-xl hover:bg-blue-600 h-[45px]"
                     onClick={handleSaveTemplate}
-                    disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || hasDuplicates || !texts.some(hasFilledTextValue)}
+                    disabled={!templateName.trim() || isProcessing || nameAlreadyExists || !templateChanged || !texts.some(hasFilledTextValue)}
                 >
                     {nameAlreadyExists
                         ? "This template name already exists"
@@ -514,11 +469,7 @@ export default function TikTokCopyTemplates({
                     )}
                 </div>
 
-                {hasDuplicates ? (
-                    <p className="text-xs text-white bg-rose-500 rounded-xl border text-left mt-1 p-2">
-                        Please remove duplicate values above to save the template.
-                    </p>
-                ) : templateChanged && !nameAlreadyExists ? (
+                {templateChanged && !nameAlreadyExists ? (
                     <p className="text-xs text-white bg-rose-500 rounded-xl border text-left mt-1 p-2">
                         Your templates have unsaved changes.
                     </p>
