@@ -31,6 +31,9 @@ export default function TikTokCopyTemplates({
     const [showSortMenu, setShowSortMenu] = useState(false)
     const [bulkDeleteMode, setBulkDeleteMode] = useState(false)
     const [selectedForDelete, setSelectedForDelete] = useState(new Set())
+    const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false)
+    const [pendingAction, setPendingAction] = useState(null)
+    const [pendingPayload, setPendingPayload] = useState(null)
 
     const nameAlreadyExists = useMemo(() =>
         templateName.trim() &&
@@ -100,16 +103,34 @@ export default function TikTokCopyTemplates({
         setTexts([""])
     }, [])
 
+    const executePendingAction = useCallback((action, payload) => {
+        if (action === "NEW_TEMPLATE") {
+            handleNewTemplate()
+        } else if (action === "SELECT_TEMPLATE") {
+            setSelectedName(payload)
+        }
+    }, [handleNewTemplate])
+
+    const handleNewTemplateClick = () => {
+        if (templateChanged) {
+            setPendingAction("NEW_TEMPLATE")
+            setPendingPayload(null)
+            setShowUnsavedChangesDialog(true)
+        } else {
+            handleNewTemplate()
+        }
+    }
+
     const handleSaveTemplate = async () => {
         if (!templateName.trim()) {
             toast.error("Template name is required")
-            return
+            return false
         }
 
         const filteredTexts = filterFilledTexts(texts);
         if (filteredTexts.length === 0) {
             toast.error("Caption is required")
-            return
+            return false
         }
 
         const newTemplate = {
@@ -126,9 +147,11 @@ export default function TikTokCopyTemplates({
             await onSaveTemplate(templateName, newTemplate, isRenaming ? selectedName : null);
             setSelectedName(templateName);
             toast.success(isRenaming ? "Template renamed" : isEditing ? "Template updated" : "Template saved")
+            return true
         } catch (err) {
             toast.error("Failed to save template")
             console.error(err)
+            return false
         } finally {
             setIsProcessing(false)
         }
@@ -363,7 +386,13 @@ export default function TikTokCopyTemplates({
                                                     if (bulkDeleteMode) {
                                                         toggleDeleteSelection(name)
                                                     } else {
-                                                        setSelectedName(name)
+                                                        if (templateChanged) {
+                                                            setPendingAction("SELECT_TEMPLATE")
+                                                            setPendingPayload(name)
+                                                            setShowUnsavedChangesDialog(true)
+                                                        } else {
+                                                            setSelectedName(name)
+                                                        }
                                                         setTemplateDropdownOpen(false)
                                                         setTemplateSearch("")
                                                     }
@@ -460,7 +489,7 @@ export default function TikTokCopyTemplates({
                         <Button
                             variant="outline"
                             className="w-full rounded-xl h-[40px] bg-zinc-800 hover:bg-black flex hover:text-white items-center gap-2 text-white transition-all duration-300"
-                            onClick={handleNewTemplate}
+                            onClick={handleNewTemplateClick}
                             disabled={isProcessing}
                         >
                             <CirclePlus className="w-4 h-4 text-white" />
@@ -475,6 +504,57 @@ export default function TikTokCopyTemplates({
                     </p>
                 ) : null}
             </div>
+
+            {showUnsavedChangesDialog && (
+                <div
+                    className="fixed inset-0 z-[9999] bg-black/30 flex justify-center items-center"
+                    style={{ top: -20, left: 0, right: 0, bottom: 0, position: 'fixed' }}
+                    onClick={() => setShowUnsavedChangesDialog(false)}
+                >
+                    <div
+                        className="bg-white rounded-2xl w-[500px] shadow-xl relative border border-gray-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-8">
+                            <h2 className="text-xl font-semibold mb-2 text-zinc-950">Unsaved Template Changes</h2>
+                            <p className="text-sm text-gray-600 mb-6">
+                                You have unsaved changes in your template. What would you like to do?
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <Button
+                                    className="bg-blue-500 text-white rounded-xl hover:bg-blue-600 w-full"
+                                    onClick={async () => {
+                                        const saved = await handleSaveTemplate();
+                                        if (saved) {
+                                            executePendingAction(pendingAction, pendingPayload);
+                                            setShowUnsavedChangesDialog(false);
+                                        }
+                                    }}
+                                >
+                                    Save & Continue
+                                </Button>
+                                <Button
+                                    className="rounded-xl bg-rose-500 text-white hover:bg-red-600 w-full"
+                                    onClick={() => {
+                                        executePendingAction(pendingAction, pendingPayload);
+                                        setShowUnsavedChangesDialog(false);
+                                    }}
+                                >
+                                    Discard Changes and Proceed
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    className="rounded-xl w-full border-gray-300"
+                                    onClick={() => setShowUnsavedChangesDialog(false)}
+                                >
+                                    Cancel
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
