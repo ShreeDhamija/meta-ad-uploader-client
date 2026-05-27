@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAppData } from './AppContext';
 
 /**
@@ -6,18 +6,21 @@ import { useAppData } from './AppContext';
  * Avoids redundant backend calls and instantly resolves preferences on mount.
  */
 export default function useTikTokAdvertiserSettings(advertiserId) {
-  const { 
-    tiktokSettings, 
-    tiktokSettingsLoading, 
-    fetchTikTokSettings, 
-    updateTikTokSettingsCache 
+  const {
+    tiktokSettings,
+    tiktokSettingsLoading,
+    fetchTikTokSettings,
+    updateTikTokSettingsCache
   } = useAppData();
 
   const settings = advertiserId ? (tiktokSettings[advertiserId] || null) : null;
   const loading = advertiserId ? (tiktokSettingsLoading[advertiserId] || false) : false;
 
+  const lastFetchedIdRef = useRef(null);
+
   useEffect(() => {
-    if (advertiserId) {
+    if (advertiserId && advertiserId !== lastFetchedIdRef.current) {
+      lastFetchedIdRef.current = advertiserId;
       fetchTikTokSettings(advertiserId, true);
     }
   }, [advertiserId, fetchTikTokSettings]);
