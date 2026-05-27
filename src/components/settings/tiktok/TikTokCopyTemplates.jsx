@@ -431,8 +431,7 @@ export default function TikTokCopyTemplates({
                     </div>
                     <Button
                         variant="outline"
-                        size="sm"
-                        className="shrink-0 rounded-xl px-3 h-11 bg-white hover:bg-gray-50"
+                        className="shrink-0 rounded-2xl px-4 h-[56px] border border-gray-300 bg-white hover:bg-gray-50 shadow text-sm font-medium"
                         disabled={!templateName.trim() || defaultName === templateName || isProcessing}
                         onClick={handleSetAsDefault}
                     >

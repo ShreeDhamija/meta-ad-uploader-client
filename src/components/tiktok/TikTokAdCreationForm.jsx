@@ -3817,21 +3817,7 @@ export default function TikTokAdCreationForm({
                       </PopoverContent>
                     </Popover>
                   </div>
-                  {urlMode === 'WEBSITE' && !landingUrl?.trim() && (
-                    <p className="text-xs text-red-500 font-medium mt-1">Landing Page URL is required</p>
-                  )}
-                  {urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
-                    try {
-                      const urlString = landingUrl.trim();
-                      if (/^https?:\/\//i.test(urlString)) {
-                        new URL(urlString);
-                        return true;
-                      }
-                    } catch (_) { }
-                    return false;
-                  })() && (
-                      <p className="text-xs text-red-500 font-medium mt-1">Landing Page URL must be a valid URL starting with http:// or https://</p>
-                    )}
+
                 </div>
               </div>
 
@@ -4217,6 +4203,27 @@ export default function TikTokAdCreationForm({
                     'Publish Ads'
                   )}
                 </Button>
+
+                {urlMode === 'WEBSITE' && !landingUrl?.trim() && (
+                  <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl mt-2">
+                    Please provide a link URL
+                  </div>
+                )}
+
+                {urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
+                  try {
+                    const urlString = landingUrl.trim();
+                    if (/^https?:\/\//i.test(urlString)) {
+                      new URL(urlString);
+                      return true;
+                    }
+                  } catch (_) { }
+                  return false;
+                })() && (
+                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl mt-2">
+                      Landing Page URL must be a valid URL starting with http:// or https://
+                    </div>
+                  )}
 
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between mt-2 mb-2">
