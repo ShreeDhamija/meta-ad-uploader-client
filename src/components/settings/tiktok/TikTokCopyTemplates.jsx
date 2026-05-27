@@ -5,11 +5,13 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Command, CommandInput, CommandList, CommandItem } from "@/components/ui/command"
 import { toast } from "sonner"
-import { FileText, CirclePlus, Trash2, X, Loader, ChevronsUpDown, ArrowUpDown, Check, Info } from 'lucide-react';
+import { FileText, CirclePlus, Trash2, X, Loader, ChevronsUpDown, ArrowUpDown, Check, Info, Download } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import TextareaAutosize from 'react-textarea-autosize'
+import { RotateLoader } from "react-spinners"
 import { deleteTikTokCopyTemplate } from "@/lib/saveTikTokSettings"
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
 const settingsFieldChrome = "rounded-2xl border border-gray-300 py-4.5 bg-white shadow";
 const settingsTextareaChrome = "rounded-2xl border border-gray-300 bg-white px-3 pt-2.5 pb-2.5 leading-5 shadow";
 
@@ -34,6 +36,122 @@ export default function TikTokCopyTemplates({
     const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false)
     const [pendingAction, setPendingAction] = useState(null)
     const [pendingPayload, setPendingPayload] = useState(null)
+
+    const [showImportPopup, setShowImportPopup] = useState(false)
+    const [recentAds, setRecentAds] = useState([])
+    const [isFetchingCopy, setIsFetchingCopy] = useState(false)
+    const [previouslyFetched, setPreviouslyFetched] = useState([])
+    const [isLoadingMore, setIsLoadingMore] = useState(false)
+    const [nextPage, setNextPage] = useState(null)
+
+    const tiktokHeaders = useCallback(() => {
+        const uid = localStorage.getItem('tiktok_uid');
+        const token = localStorage.getItem('tiktok_token');
+        return {
+            ...(uid && { 'x-tiktok-user-id': uid }),
+            ...(token && { 'x-tiktok-token': token }),
+            "Content-Type": "application/json"
+        };
+    }, []);
+
+    // Fetch recent ad copy
+    useEffect(() => {
+        if (!showImportPopup || !advertiserId) return;
+
+        setIsFetchingCopy(true);
+        setNextPage(null);
+
+        fetch(`${API_BASE_URL}/api/tiktok/fetch-recent-copy`, {
+            method: "POST",
+            headers: tiktokHeaders(),
+            body: JSON.stringify({
+                advertiserId,
+                excludeTexts: [],
+                page: 1
+            })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.texts) {
+                    setRecentAds(data.texts || []);
+                    setPreviouslyFetched(data.texts || []);
+                    setNextPage(data.nextPage);
+                } else {
+                    throw new Error("No data");
+                }
+            })
+            .catch(err => {
+                console.error("Error fetching TikTok ad copy:", err);
+                toast.error("Failed to load recent ad copy");
+            })
+            .finally(() => {
+                setIsFetchingCopy(false);
+            });
+    }, [showImportPopup, advertiserId, tiktokHeaders]);
+
+    const handleLoadMore = useCallback(async () => {
+        if (!nextPage) {
+            toast.info("No more copy available");
+            return;
+        }
+
+        setIsLoadingMore(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/tiktok/fetch-recent-copy`, {
+                method: "POST",
+                headers: tiktokHeaders(),
+                body: JSON.stringify({
+                    advertiserId,
+                    excludeTexts: previouslyFetched,
+                    page: nextPage
+                })
+            });
+
+            const data = await response.json();
+            const newCount = data.texts?.length || 0;
+
+            if (newCount > 0) {
+                setRecentAds(prev => [...prev, ...(data.texts || [])]);
+                setPreviouslyFetched(prev => [...prev, ...(data.texts || [])]);
+                setNextPage(data.nextPage);
+            } else {
+                toast.info("No more unique copy found");
+            }
+        } catch (err) {
+            console.error("Error loading more TikTok copy:", err);
+            toast.error("Failed to load more copy");
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [advertiserId, previouslyFetched, nextPage, tiktokHeaders]);
+
+    const normalizeText = (text) => text.trim().toLowerCase().replace(/\s+/g, ' ');
+
+    const textExistsInTemplate = useCallback((text) => {
+        const normalizedText = normalizeText(text);
+        return texts.some(t => normalizeText(t) === normalizedText);
+    }, [texts]);
+
+    const createTextImportHandler = useCallback((text) => () => {
+        const currentTexts = [...texts];
+        // find first empty or blank input
+        const emptyIndex = currentTexts.findIndex(t => t.trim() === "");
+        let importedToIndex;
+
+        if (emptyIndex !== -1) {
+            currentTexts[emptyIndex] = text;
+            importedToIndex = emptyIndex;
+        } else if (currentTexts.length < 5) {
+            currentTexts.push(text);
+            importedToIndex = currentTexts.length - 1;
+        } else {
+            currentTexts[0] = text;
+            importedToIndex = 0;
+        }
+
+        setTexts(currentTexts);
+        toast.success(`Imported text into Text slot ${importedToIndex + 1}`);
+    }, [texts]);
 
     const nameAlreadyExists = useMemo(() =>
         templateName.trim() &&
@@ -253,6 +371,17 @@ export default function TikTokCopyTemplates({
                         Enter ad text below, <br />
                         Then save as a template to easily add to your TikTok ads in the future
                     </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        className="flex items-center text-xs rounded-xl px-3 py-1 bg-zinc-800 text-white hover:text-white hover:bg-black"
+                        onClick={() => setShowImportPopup(true)}
+                    >
+                        <Download className="w-4 h-4 mr-2" />
+                        Import Copy from Recent Ads
+                    </Button>
                 </div>
             </div>
 
@@ -555,6 +684,99 @@ export default function TikTokCopyTemplates({
                                 >
                                     Cancel
                                 </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showImportPopup && (
+                <div
+                    className="fixed z-50 flex items-center justify-center bg-black/50 p-4"
+                    style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        width: "100vw",
+                        height: "100dvh",
+                        minHeight: "100vh",
+                    }}
+                    onClick={() => setShowImportPopup(false)}
+                >
+                    <div className="relative w-[600px] max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-hidden rounded-[32px] border border-gray-200 bg-white shadow-xl transition-all duration-300 ease-in-out"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="max-h-[80vh] overflow-y-auto import-popup-scroll transition-all duration-300 ease-in-out">
+                            <div className="px-6 pb-6 pt-4">
+                                {isFetchingCopy ? (
+                                    <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                        <RotateLoader size={6} margin={-16} color="#adadad" />
+                                        <span className="text-sm text-gray-600">Loading text copy...</span>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between mb-4 w-full">
+                                            <h3 className="text-lg font-semibold text-zinc-950">Recent Ad Copy ({recentAds.length})</h3>
+                                            <Button
+                                                className="bg-red-600 hover:bg-red-700 !shadow-none rounded-xl"
+                                                onClick={() => setShowImportPopup(false)}
+                                            >
+                                                <CirclePlus className="w-4 h-4 rotate-45 text-white mr-1" />
+                                                <span className="text-white">Close</span>
+                                            </Button>
+                                        </div>
+
+                                        {recentAds.length > 0 ? (
+                                            <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2 max-h-[450px] overflow-y-auto">
+                                                {recentAds.map((text, index) => (
+                                                    <div key={index} className="rounded-lg p-4">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <div className="text-xs font-medium text-gray-500">
+                                                                Text Option {index + 1}
+                                                            </div>
+                                                            <Button
+                                                                className={`flex items-center text-xs rounded-xl px-2 py-1 shrink-0 ${textExistsInTemplate(text)
+                                                                    ? 'bg-white text-black cursor-not-allowed border border-gray-300 !shadow-none'
+                                                                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                                                                    }`}
+                                                                onClick={textExistsInTemplate(text) ? undefined : createTextImportHandler(text)}
+                                                                disabled={textExistsInTemplate(text)}
+                                                            >
+                                                                {textExistsInTemplate(text) ? 'Exists' : 'Import'}
+                                                            </Button>
+                                                        </div>
+                                                        <div className="bg-gray-200 rounded-lg p-3 text-sm text-gray-800 whitespace-pre-line">
+                                                            {text}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-10 text-gray-500">
+                                                No recent ad copy found
+                                            </div>
+                                        )}
+
+                                        {nextPage && (
+                                            <div className="text-center pt-4 mt-2">
+                                                <Button
+                                                    className="bg-gray-700 text-white hover:bg-gray-900 rounded-xl w-full"
+                                                    onClick={handleLoadMore}
+                                                    disabled={isFetchingCopy || isLoadingMore}
+                                                >
+                                                    {isFetchingCopy || isLoadingMore ? (
+                                                        <>
+                                                            <Loader className="w-4 h-4 animate-spin mr-2" />
+                                                            Loading More Copy...
+                                                        </>
+                                                    ) : (
+                                                        'Load More Copy'
+                                                    )}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

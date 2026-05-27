@@ -3724,9 +3724,7 @@ export default function TikTokAdCreationForm({
                       <LinkIcon className="w-4 h-4 text-gray-500" />
                       Landing Page URL
                     </Label>
-                    <p className="text-gray-500 text-[12px] font-regular">
-                      Your UTMs will be auto applied from Preferences
-                    </p>
+
                     <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
                       <button
                         type="button"
@@ -3744,6 +3742,9 @@ export default function TikTokAdCreationForm({
                       </button>
                     </div>
                   </div>
+                  <p className="text-gray-500 text-[12px] font-regular">
+                    Your UTMs will be auto applied from Preferences
+                  </p>
 
                   <div className="relative group">
                     <Input
