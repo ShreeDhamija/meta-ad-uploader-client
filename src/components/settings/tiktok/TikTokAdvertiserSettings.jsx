@@ -542,7 +542,6 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         </div>
 
                         <div>
-                            <label className="text-sm text-gray-500 mb-1 block">Identity</label>
                             <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
                                 <PopoverTrigger asChild>
                                     <Button
