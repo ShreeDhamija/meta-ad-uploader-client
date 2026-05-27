@@ -2149,11 +2149,6 @@ export default function TikTokAdCreationForm({
           errors.push(`Caption cannot exceed 100 characters ("${singleText.substring(0, 15)}...")`)
         }
       }
-
-      const totalFiles = (files?.length || 0) + (driveFiles?.length || 0) + (dropboxFiles?.length || 0) + (tiktokLibraryFiles?.length || 0)
-      if (totalFiles === 0) {
-        errors.push("Upload at least one video or image")
-      }
     }
 
     const hasFormula = adNameFormulaV2?.rawInput?.trim()
@@ -2187,8 +2182,7 @@ export default function TikTokAdCreationForm({
   }, [
     selectedAdvertiser, selectedCampaign, showDuplicateAdGroupBlock, duplicateAdGroup,
     selectedAdGroup, newAdGroupName, selectedIdentity, adType, sparkAuthCode,
-    adTexts, files, driveFiles, dropboxFiles, tiktokLibraryFiles, adNameFormulaV2,
-    adName, cta, urlMode, landingUrl
+    adTexts, adNameFormulaV2, adName, cta, urlMode, landingUrl
   ])
 
   const validationErrors = getValidationErrors()
@@ -2559,6 +2553,9 @@ export default function TikTokAdCreationForm({
                 </Command>
               </PopoverContent>
             </Popover>
+            {!selectedAdvertiser && (
+              <p className="text-xs text-red-500 font-medium mt-1">Please select an advertiser account</p>
+            )}
           </div>
 
           {/* 2. Campaign Combobox with Duplication Form */}
@@ -2677,6 +2674,9 @@ export default function TikTokAdCreationForm({
                 </Command>
               </PopoverContent>
             </Popover>
+            {(!selectedCampaign || selectedCampaign.length === 0) && (
+              <p className="text-xs text-red-500 font-medium mt-1">Please select a campaign</p>
+            )}
 
             {showDuplicateCampaignBlock && (
               <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
@@ -2940,6 +2940,9 @@ export default function TikTokAdCreationForm({
                 </Command>
               </PopoverContent>
             </Popover>
+            {!showDuplicateAdGroupBlock && (!selectedAdGroup || selectedAdGroup.length === 0) && (
+              <p className="text-xs text-red-500 font-medium mt-1">Please select at least one ad group</p>
+            )}
 
             {selectedAdGroup.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
@@ -3076,6 +3079,9 @@ export default function TikTokAdCreationForm({
                           placeholder="Enter new ad group name..."
                           className="border border-gray-300 rounded-2xl bg-white shadow-sm py-2 px-4 text-sm h-11 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
                         />
+                        {!newAdGroupName.trim() && (
+                          <p className="text-xs text-red-500 font-medium mt-1">Please enter a name for the duplicated ad group</p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -3224,6 +3230,11 @@ export default function TikTokAdCreationForm({
                 </Command>
               </PopoverContent>
             </Popover>
+            {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') && (
+              <p className="text-xs text-red-500 font-medium mt-1">
+                {adType === 'NORMAL' ? "Please select an identity" : "Please select an account to Promote From"}
+              </p>
+            )}
           </div>
 
           {/* Organic Post to Boost for Spark Ads */}
@@ -3241,6 +3252,9 @@ export default function TikTokAdCreationForm({
                 onChange={e => setSparkAuthCode(e.target.value)}
                 className={formInputChrome}
               />
+              {(!sparkAuthCode || !sparkAuthCode.trim()) && (
+                <p className="text-xs text-red-500 font-medium mt-1">Organic Post Authorization Code is required</p>
+              )}
               <p className="text-xs text-gray-400 leading-relaxed pl-1">
                 Enter the organic post video code (authorized from the TikTok app) or the post link to boost it as a Spark Ad.
               </p>
@@ -3289,6 +3303,9 @@ export default function TikTokAdCreationForm({
                   }
                 </Label>
               </div>
+              {!adNameFormulaV2?.rawInput?.trim() && !adName.trim() && (
+                <p className="text-xs text-red-500 font-medium mt-1">Ad name is required</p>
+              )}
             </div>
 
             {/* 4. Ad Copy / Caption with template picker */}
@@ -3570,8 +3587,11 @@ export default function TikTokAdCreationForm({
                   className={formTextareaChrome}
                   style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
                 />
+                {adType !== 'SPARK' && !adTexts[0]?.trim() && (
+                  <p className="text-xs text-red-500 font-medium mt-1">Please enter at least one ad caption</p>
+                )}
                 {(adTexts[0] || "").length > 100 && (
-                  <p className="text-[10px] text-red-500 font-medium mt-1">Caption cannot exceed 100 characters</p>
+                  <p className="text-xs text-red-500 font-medium mt-1">Caption cannot exceed 100 characters</p>
                 )}
               </div>
             </div>
@@ -3632,6 +3652,9 @@ export default function TikTokAdCreationForm({
                     </Command>
                   </PopoverContent>
                 </Popover>
+                {(!cta || cta.length === 0) && (
+                  <p className="text-xs text-red-500 font-medium mt-1">Please select at least one Call to Action</p>
+                )}
               </div>
 
               {/* Landing URL Selector */}
@@ -3732,6 +3755,21 @@ export default function TikTokAdCreationForm({
                     </PopoverContent>
                   </Popover>
                 </div>
+                {urlMode === 'WEBSITE' && !landingUrl?.trim() && (
+                  <p className="text-xs text-red-500 font-medium mt-1">Landing Page URL is required</p>
+                )}
+                {urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
+                  try {
+                    const urlString = landingUrl.trim();
+                    if (/^https?:\/\//i.test(urlString)) {
+                      new URL(urlString);
+                      return true;
+                    }
+                  } catch (_) { }
+                  return false;
+                })() && (
+                    <p className="text-xs text-red-500 font-medium mt-1">Landing Page URL must be a valid URL starting with http:// or https://</p>
+                  )}
               </div>
             </div>
 
@@ -4178,19 +4216,6 @@ export default function TikTokAdCreationForm({
                   Don't clear media after publishing ads
                 </Label>
               </div>
-              {validationErrors.length > 0 && (
-                <div className="bg-red-50/50 border border-red-200 rounded-2xl p-4 space-y-2 text-xs text-red-600 font-medium animate-in fade-in slide-in-from-bottom-2 duration-200 mb-4">
-                  <p className="font-semibold text-red-800 text-sm flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 text-red-600" />
-                    Please fix the following to publish:
-                  </p>
-                  <ul className="list-disc pl-4 space-y-1">
-                    {validationErrors.map((err, idx) => (
-                      <li key={idx}>{err}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
               <Button
                 type="submit"
                 disabled={isSubmitting || !isFormValid}
