@@ -17,6 +17,8 @@ import LabelIcon from "@/assets/icons/label.svg?react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import ReorderAdNameParts from "@/components/ui/ReorderAdNameParts"
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.withblip.com';
+
 const CTA_OPTIONS = [
     { value: 'LEARN_MORE', label: 'Learn More' },
     { value: 'SHOP_NOW', label: 'Shop Now' },
