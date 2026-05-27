@@ -69,7 +69,27 @@ export default function TikTokAds() {
   const { isTikTokLoggedIn, tiktokAdvertisers, refreshTikTokUser, isLoading: authLoading } = useTikTokAuth()
   const { showMessenger, hideMessenger } = useIntercom()
 
-  const [selectedAdvertiser, setSelectedAdvertiser] = useState('')
+  const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
+    // 1. Check URL query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselected = urlParams.get('adsaccount') || urlParams.get('advertiser');
+    if (preselected) {
+      try {
+        localStorage.setItem('last_selected_tiktok_advertiser', preselected);
+      } catch (e) { }
+      return preselected;
+    }
+
+    // 2. Check localStorage
+    try {
+      const lastSelected = localStorage.getItem('last_selected_tiktok_advertiser');
+      if (lastSelected) return lastSelected;
+    } catch (e) {
+      console.error('Failed to read last selected advertiser:', e);
+    }
+
+    return '';
+  });
   const [adName, setAdName] = useState('')
   const [adTexts, setAdTexts] = useState([''])
   const [cta, setCta] = useState(['SHOP_NOW'])
@@ -420,6 +440,15 @@ export default function TikTokAds() {
       setSelectedAdvertiser(firstId)
     }
   }, [tiktokAdvertisers, selectedAdvertiser])
+
+  // Save selected advertiser to localStorage to persist selection across page navigations
+  useEffect(() => {
+    if (selectedAdvertiser) {
+      try {
+        localStorage.setItem('last_selected_tiktok_advertiser', selectedAdvertiser);
+      } catch (e) { }
+    }
+  }, [selectedAdvertiser])
 
   // Sync state with preferences when they load
   const restoredDefaultsRef = useRef({});
