@@ -780,6 +780,80 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
             setSelectedInstagram={setSelectedInstagram}
           />
 
+
+
+          <CopyTemplates
+            selectedAdAccount={selectedAdAccount}
+            adSettings={adSettings}
+            setAdSettings={setAdSettings}
+            onTemplateUpdate={handleTemplateUpdate}
+
+          />
+
+          {/* Ad Naming Convention */}
+          <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
+              <h3 className="font-medium text-[14px] text-zinc-950">
+                Set up your default ad naming conventions
+              </h3>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <Info className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent
+                    side="top"
+                    align="end"
+                    className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
+                  >
+                    <p className="font-medium mb-1.5">Select the Custom Date option & replace 'custom' with any combination of the tokens below.</p>
+                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
+                      <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
+                      <span className="font-semibold">DD</span><span className="text-gray-400">Day, zero-padded (01–31)</span>
+                      <span className="font-semibold">M</span><span className="text-gray-400">Month (1–12)</span>
+                      <span className="font-semibold">MM</span><span className="text-gray-400">Month, zero-padded (01–12)</span>
+                      <span className="font-semibold">MMM</span><span className="text-gray-400">Month name (Jan, Feb…)</span>
+                      <span className="font-semibold">YY</span><span className="text-gray-400">Year, 2-digit (25)</span>
+                      <span className="font-semibold">YYYY</span><span className="text-gray-400">Year, 4-digit (2025)</span>
+                    </div>
+                    <p className="text-gray-400 mt-2">Use any separator: <span className="font-mono">/ - . _</span> or space</p>
+                    <p className="mt-1.5 text-gray-400 italic">{"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            <ReorderAdNameParts
+              formulaInput={adNameFormulaV2?.rawInput || ""}
+              onFormulaChange={handleFormulaInputChange}
+              variant="default"
+              customVariables={customVariables}
+              onCustomVariablesChange={handleCustomVariablesSave}
+              hideInfoTooltip
+            />
+          </div>
+
+          <LinkParameters
+            links={links}
+            setLinks={setLinks}
+            utmPairs={utmPairs}
+            setUtmPairs={setUtmPairs}
+            selectedAdAccount={selectedAdAccount}
+            displayLink={displayLink}
+            setDisplayLink={setDisplayLink}
+          />
+
+          <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
+
+          <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
+          <MultiAdvertiserAds enabled={multiAdvertiserAds} setEnabled={setMultiAdvertiserAds} />
+
           {/* Product Information Section */}
           <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between mb-1">
@@ -1043,78 +1117,6 @@ export default function AdAccountSettings({ preselectedAdAccount, onTriggerAdAcc
               </div>
             )}
           </div>
-
-          <CopyTemplates
-            selectedAdAccount={selectedAdAccount}
-            adSettings={adSettings}
-            setAdSettings={setAdSettings}
-            onTemplateUpdate={handleTemplateUpdate}
-
-          />
-
-          {/* Ad Naming Convention */}
-          <div className="bg-[#f7f7f7] rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <LabelIcon alt="Ad Name Icon" className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60" />
-              <h3 className="font-medium text-[14px] text-zinc-950">
-                Set up your default ad naming conventions
-              </h3>
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <Info className="w-3.5 h-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="top"
-                    align="end"
-                    className="max-w-xs p-3 text-xs leading-relaxed rounded-2xl bg-zinc-800 text-white border-black"
-                  >
-                    <p className="font-medium mb-1.5">Select the Custom Date option & replace 'custom' with any combination of the tokens below.</p>
-                    <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 font-mono text-[11px]">
-                      <span className="font-semibold">D</span><span className="text-gray-400">Day (1–31)</span>
-                      <span className="font-semibold">DD</span><span className="text-gray-400">Day, zero-padded (01–31)</span>
-                      <span className="font-semibold">M</span><span className="text-gray-400">Month (1–12)</span>
-                      <span className="font-semibold">MM</span><span className="text-gray-400">Month, zero-padded (01–12)</span>
-                      <span className="font-semibold">MMM</span><span className="text-gray-400">Month name (Jan, Feb…)</span>
-                      <span className="font-semibold">YY</span><span className="text-gray-400">Year, 2-digit (25)</span>
-                      <span className="font-semibold">YYYY</span><span className="text-gray-400">Year, 4-digit (2025)</span>
-                    </div>
-                    <p className="text-gray-400 mt-2">Use any separator: <span className="font-mono">/ - . _</span> or space</p>
-                    <p className="mt-1.5 text-gray-400 italic">{"Example: {{Date(DD-MMM-YYYY)}} → 05-Mar-2025"}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-
-            <ReorderAdNameParts
-              formulaInput={adNameFormulaV2?.rawInput || ""}
-              onFormulaChange={handleFormulaInputChange}
-              variant="default"
-              customVariables={customVariables}
-              onCustomVariablesChange={handleCustomVariablesSave}
-              hideInfoTooltip
-            />
-          </div>
-
-          <LinkParameters
-            links={links}
-            setLinks={setLinks}
-            utmPairs={utmPairs}
-            setUtmPairs={setUtmPairs}
-            selectedAdAccount={selectedAdAccount}
-            displayLink={displayLink}
-            setDisplayLink={setDisplayLink}
-          />
-
-          <DefaultCTA defaultCTA={defaultCTA} setDefaultCTA={setDefaultCTA} />
-
-          <CreativeEnhancements enhancements={enhancements} setEnhancements={setEnhancements} />
-          <MultiAdvertiserAds enabled={multiAdvertiserAds} setEnabled={setMultiAdvertiserAds} />
 
 
         </div>
