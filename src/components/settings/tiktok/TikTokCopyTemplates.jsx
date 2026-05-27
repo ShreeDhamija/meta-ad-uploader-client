@@ -218,7 +218,7 @@ export default function TikTokCopyTemplates({
                         <FileText
                             className="w-5 h-5 grayscale brightness-75 contrast-75 opacity-60 text-zinc-800"
                         />
-                        <span className="text-sm font-medium text-zinc-950">Ad Text Templates</span>
+                        <span className="text-sm font-medium text-zinc-950">Copy Templates</span>
                     </div>
                     <p className="text-xs text-gray-500 leading-tight">
                         Enter a caption below, <br />

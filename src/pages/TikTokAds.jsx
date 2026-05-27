@@ -891,7 +891,7 @@ export default function TikTokAds() {
                     setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                     variants={variants}
                     activeVariantId={activeVariantId}
-                    handleAddVariant={handleAddVariant}
+                    handleAddVariant={() => {}} // Safe no-op to disable adding variants in TikTok
                     handleDeleteAllVariants={handleDeleteAllVariants}
                     fileVariantMap={fileVariantMap}
                     setFileVariantMap={setFileVariantMap}

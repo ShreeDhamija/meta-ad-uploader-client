@@ -56,7 +56,7 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const [selectedAdvertiser, setSelectedAdvertiser] = useState(() => {
         // 1. Check URL query parameter
         const urlParams = new URLSearchParams(window.location.search);
-        const preselected = urlParams.get('advertiser');
+        const preselected = urlParams.get('adsaccount') || urlParams.get('advertiser');
         if (preselected) {
             try {
                 localStorage.setItem('last_selected_tiktok_advertiser', preselected);
@@ -145,7 +145,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             // Update URL query parameter
             try {
                 const newUrl = new URL(window.location);
-                newUrl.searchParams.set('advertiser', firstAdvertiserId);
+                newUrl.searchParams.set('adsaccount', firstAdvertiserId);
+                newUrl.searchParams.delete('advertiser');
                 window.history.replaceState({}, '', newUrl);
             } catch (e) { }
         }
@@ -194,7 +195,8 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         // Update URL query parameter
         try {
             const newUrl = new URL(window.location);
-            newUrl.searchParams.set('advertiser', id);
+            newUrl.searchParams.set('adsaccount', id);
+            newUrl.searchParams.delete('advertiser');
             window.history.replaceState({}, '', newUrl);
         } catch (e) { }
     };
