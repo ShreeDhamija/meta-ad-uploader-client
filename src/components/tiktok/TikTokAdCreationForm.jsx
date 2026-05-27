@@ -2674,9 +2674,7 @@ export default function TikTokAdCreationForm({
                 </Command>
               </PopoverContent>
             </Popover>
-            {(!selectedCampaign || selectedCampaign.length === 0) && (
-              <p className="text-xs text-red-500 font-medium mt-1">Please select a campaign</p>
-            )}
+
 
             {showDuplicateCampaignBlock && (
               <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
@@ -2939,9 +2937,7 @@ export default function TikTokAdCreationForm({
                 </Command>
               </PopoverContent>
             </Popover>
-            {!showDuplicateAdGroupBlock && (!selectedAdGroup || selectedAdGroup.length === 0) && (
-              <p className="text-xs text-red-500 font-medium mt-1">Please select at least one ad group</p>
-            )}
+
 
             {selectedAdGroup.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-2">
