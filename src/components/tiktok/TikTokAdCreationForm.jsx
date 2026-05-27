@@ -2189,2141 +2189,2145 @@ export default function TikTokAdCreationForm({
   const isFormValid = validationErrors.length === 0
 
   return (
-    <form onSubmit={handleQueueJob} className="space-y-6">
+    <>
+      <form onSubmit={handleQueueJob} className="space-y-6">
 
-      {hasStartedAnyJob && (
-        <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          {/* Collapsed State */}
-          {!isJobTrackerExpanded && (
-            <div
-              className="bg-white rounded-3xl border-4 border-gray-200/50 shadow-xl p-2 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
-              onClick={() => setIsJobTrackerExpanded(true)}
-            >
-              <div className="flex items-center gap-2">
-                <RocketIcon2
-                  alt="Rocket Icon"
-                  className="w-10 h-10 object-contain animate-bounce"
-                />
-                <span className="font-medium text-sm">Job Queue</span>
-              </div>
-              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
-                {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
-              </span>
-              <ChevronDown className="h-4 w-4 text-gray-500 rotate-180" />
-            </div>
-          )}
-
-          {/* Expanded State */}
-          {isJobTrackerExpanded && (
-            <div className="bg-white border-4 border-gray-200/50 rounded-[20px] shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out">
-              {/* Header */}
-              <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+        {hasStartedAnyJob && (
+          <div className="fixed bottom-4 right-4 z-50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {/* Collapsed State */}
+            {!isJobTrackerExpanded && (
+              <div
+                className="bg-white rounded-3xl border-4 border-gray-200/50 shadow-xl p-2 flex items-center gap-3 cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-105"
+                onClick={() => setIsJobTrackerExpanded(true)}
+              >
                 <div className="flex items-center gap-2">
-                  <div className="w-12 h-12 flex-shrink-0">
-                    <RocketIcon2
-                      alt="Rocket Icon"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <h3 className="font-semibold text-sm">Job Queue</h3>
-                    <p className="text-sm font-medium text-gray-400">
-                      {jobQueue.length + (currentJob ? 1 : 0)} Active
-                    </p>
-                  </div>
+                  <RocketIcon2
+                    alt="Rocket Icon"
+                    className="w-10 h-10 object-contain animate-bounce"
+                  />
+                  <span className="font-medium text-sm">Job Queue</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsJobTrackerExpanded(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                </button>
+                <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-semibold">
+                  {jobQueue.length + (currentJob && jobQueue.length === 0 ? 1 : 0)} Active
+                </span>
+                <ChevronDown className="h-4 w-4 text-gray-500 rotate-180" />
               </div>
+            )}
 
-              {/* Jobs List */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                {/* Completed Jobs */}
-                {completedJobs.map((job) => (
-                  <div key={job.id} className="p-3.5 border-b border-gray-100">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-0.5">
-                        {job.status === 'cancelled' ? (
-                          <Ban className="w-5 h-5 text-orange-500" />
-                        ) : job.status === 'error' ? (
-                          <CircleX className="w-5 h-5 text-red-500" />
-                        ) : job.status === 'partial-success' ? (
-                          <PartialSuccess className="w-5 h-5 text-yellow-500" />
-                        ) : (
-                          <CheckIcon className="w-5 h-5 text-green-500" />
-                        )}
-                      </div>
+            {/* Expanded State */}
+            {isJobTrackerExpanded && (
+              <div className="bg-white border-4 border-gray-200/50 rounded-[20px] shadow-lg w-96 max-h-[600px] overflow-hidden flex flex-col transition-all duration-300 ease-in-out">
+                {/* Header */}
+                <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-12 h-12 flex-shrink-0">
+                      <RocketIcon2
+                        alt="Rocket Icon"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <h3 className="font-semibold text-sm">Job Queue</h3>
+                      <p className="text-sm font-medium text-gray-400">
+                        {jobQueue.length + (currentJob ? 1 : 0)} Active
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsJobTrackerExpanded(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                </div>
 
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm break-words leading-tight ${job.status === 'cancelled'
-                          ? 'text-orange-500 font-medium'
-                          : job.status === 'error'
-                            ? 'text-red-600 font-medium'
-                            : job.status === 'partial-success'
-                              ? 'text-yellow-600 font-medium'
-                              : 'text-gray-700'
-                          }`}>
-                          {job.message}
-                        </p>
+                {/* Jobs List */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  {/* Completed Jobs */}
+                  {completedJobs.map((job) => (
+                    <div key={job.id} className="p-3.5 border-b border-gray-100">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {job.status === 'cancelled' ? (
+                            <Ban className="w-5 h-5 text-orange-500" />
+                          ) : job.status === 'error' ? (
+                            <CircleX className="w-5 h-5 text-red-500" />
+                          ) : job.status === 'partial-success' ? (
+                            <PartialSuccess className="w-5 h-5 text-yellow-500" />
+                          ) : (
+                            <CheckIcon className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
 
-                        {(job.status === 'cancelled' || job.status === 'partial-success') && job.totalCount > 0 && (
-                          <div className="flex gap-2 mt-1.5">
-                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-50 border border-green-200 rounded-lg">
-                              <CheckIcon className="w-3 h-3 text-green-600" />
-                              <span className="text-[10px] font-semibold text-green-700">
-                                {job.successCount} created
-                              </span>
-                            </div>
-                            {job.failureCount > 0 && (
-                              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded-lg">
-                                <CircleX className="w-3 h-3 text-red-500" />
-                                <span className="text-[10px] font-semibold text-red-600">
-                                  {job.failureCount} failed
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm break-words leading-tight ${job.status === 'cancelled'
+                            ? 'text-orange-500 font-medium'
+                            : job.status === 'error'
+                              ? 'text-red-600 font-medium'
+                              : job.status === 'partial-success'
+                                ? 'text-yellow-600 font-medium'
+                                : 'text-gray-700'
+                            }`}>
+                            {job.message}
+                          </p>
+
+                          {(job.status === 'cancelled' || job.status === 'partial-success') && job.totalCount > 0 && (
+                            <div className="flex gap-2 mt-1.5">
+                              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-50 border border-green-200 rounded-lg">
+                                <CheckIcon className="w-3 h-3 text-green-600" />
+                                <span className="text-[10px] font-semibold text-green-700">
+                                  {job.successCount} created
                                 </span>
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                              {job.failureCount > 0 && (
+                                <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded-lg">
+                                  <CircleX className="w-3 h-3 text-red-500" />
+                                  <span className="text-[10px] font-semibold text-red-600">
+                                    {job.failureCount} failed
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
 
-                      <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                        {job.formData?.selectedAdvertiser && (
-                          <a
-                            href={`https://ads.tiktok.com/i18n/dashboard?advertiser_id=${job.formData.selectedAdvertiser}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-gray-400 hover:text-blue-500 transition-colors p-1"
-                            title="View in TikTok Ads Manager"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </a>
-                        )}
+                        <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                          {job.formData?.selectedAdvertiser && (
+                            <a
+                              href={`https://ads.tiktok.com/i18n/dashboard?advertiser_id=${job.formData.selectedAdvertiser}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-gray-400 hover:text-blue-500 transition-colors p-1"
+                              title="View in TikTok Ads Manager"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </a>
+                          )}
 
-                        {(job.status === 'error' || job.status === 'partial-success') && job.formData && (
+                          {(job.status === 'error' || job.status === 'partial-success') && job.formData && (
+                            <button
+                              type="button"
+                              onClick={() => handleRetryJob(job)}
+                              className="text-gray-400 hover:text-blue-500 transition-colors p-1"
+                              title="Restore to form"
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                            </button>
+                          )}
+
                           <button
                             type="button"
-                            onClick={() => handleRetryJob(job)}
-                            className="text-gray-400 hover:text-blue-500 transition-colors p-1"
-                            title="Restore to form"
+                            onClick={() => setCompletedJobs((prev) => prev.filter((j) => j.id !== job.id))}
+                            className="text-gray-400 hover:text-gray-600 p-1"
+                            title="Remove job"
                           >
-                            <RotateCcw className="h-4 w-4" />
+                            <X className="h-4 w-4" />
                           </button>
-                        )}
+                        </div>
+                      </div>
 
+                      {/* Error Details */}
+                      {(job.status === 'partial-success' || job.status === 'error' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
+                        <div className="mt-2 ml-8">
+                          <details className="text-xs">
+                            <summary className="cursor-pointer text-red-500 font-medium hover:underline">
+                              View error details
+                            </summary>
+                            <div className="mt-2 pl-2 border-l border-red-200 space-y-2">
+                              {job.errorMessages.map((err, idx) => (
+                                <div key={idx} className="text-red-600 font-medium">
+                                  {err.fileName ? <span className="font-semibold">{err.fileName}: </span> : null}
+                                  {err.error}
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Current Job */}
+                  {currentJob && (
+                    <div className="p-3.5 border-b border-gray-100 bg-blue-50/20">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="flex-shrink-0">
+                          <UploadIcon className="w-5 h-5 text-blue-600 animate-pulse" />
+                        </div>
+                        <p className="flex-1 text-sm font-semibold text-gray-700 truncate">
+                          {formatQueuedJobLabel(currentJob, 'Posting')}
+                        </p>
+                        <span className="text-sm font-bold text-gray-900">
+                          {Math.round(videoUploading ? videoUploadProgress : (progress || trackedProgress || 0))}%
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${videoUploading ? videoUploadProgress : (progress || trackedProgress || 0)}%` }}
+                          />
+                        </div>
                         <button
                           type="button"
-                          onClick={() => setCompletedJobs((prev) => prev.filter((j) => j.id !== job.id))}
-                          className="text-gray-400 hover:text-gray-600 p-1"
-                          title="Remove job"
+                          onClick={async () => {
+                            setIsCancelling(true);
+                            if (currentAbortController) {
+                              currentAbortController.abort();
+                            }
+                            const cancelJobId = currentJobIdRef.current || jobId;
+                            if (cancelJobId) {
+                              try {
+                                await fetch(`${API_BASE_URL}/auth/cancel-job`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ jobId: cancelJobId })
+                                });
+                              } catch (e) { /* best-effort */ }
+                            }
+                          }}
+                          className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                          title="Cancel job"
                         >
-                          <X className="h-4 w-4" />
+                          <CircleX className="h-4 w-4 text-red-500" />
                         </button>
                       </div>
-                    </div>
 
-                    {/* Error Details */}
-                    {(job.status === 'partial-success' || job.status === 'error' || job.status === 'cancelled') && job.errorMessages?.length > 0 && (
-                      <div className="mt-2 ml-8">
-                        <details className="text-xs">
-                          <summary className="cursor-pointer text-red-500 font-medium hover:underline">
-                            View error details
-                          </summary>
-                          <div className="mt-2 pl-2 border-l border-red-200 space-y-2">
-                            {job.errorMessages.map((err, idx) => (
-                              <div key={idx} className="text-red-600 font-medium">
-                                {err.fileName ? <span className="font-semibold">{err.fileName}: </span> : null}
-                                {err.error}
-                              </div>
-                            ))}
+                      <div className="flex justify-between items-center mt-2.5">
+                        {isCancelling ? (
+                          <div className="flex items-center gap-1.5">
+                            <Loader className="animate-spin h-3 w-3 text-red-400" />
+                            <span className="text-xs text-red-400">Cancelling...</span>
                           </div>
-                        </details>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                        ) : (
+                          <p className="text-xs font-medium text-gray-500 max-w-[200px] truncate">
+                            {videoUploading ? 'Uploading video to TikTok...' : (progressMessage || trackedMessage || 'Processing...')}
+                          </p>
+                        )}
 
-                {/* Current Job */}
-                {currentJob && (
-                  <div className="p-3.5 border-b border-gray-100 bg-blue-50/20">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex-shrink-0">
-                        <UploadIcon className="w-5 h-5 text-blue-600 animate-pulse" />
-                      </div>
-                      <p className="flex-1 text-sm font-semibold text-gray-700 truncate">
-                        {formatQueuedJobLabel(currentJob, 'Posting')}
-                      </p>
-                      <span className="text-sm font-bold text-gray-900">
-                        {Math.round(videoUploading ? videoUploadProgress : (progress || trackedProgress || 0))}%
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${videoUploading ? videoUploadProgress : (progress || trackedProgress || 0)}%` }}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          setIsCancelling(true);
-                          if (currentAbortController) {
-                            currentAbortController.abort();
-                          }
-                          const cancelJobId = currentJobIdRef.current || jobId;
-                          if (cancelJobId) {
-                            try {
-                              await fetch(`${API_BASE_URL}/auth/cancel-job`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ jobId: cancelJobId })
-                              });
-                            } catch (e) { /* best-effort */ }
-                          }
-                        }}
-                        className="flex-shrink-0 text-gray-400 hover:text-red-500 transition-colors"
-                        title="Cancel job"
-                      >
-                        <CircleX className="h-4 w-4 text-red-500" />
-                      </button>
-                    </div>
-
-                    <div className="flex justify-between items-center mt-2.5">
-                      {isCancelling ? (
-                        <div className="flex items-center gap-1.5">
-                          <Loader className="animate-spin h-3 w-3 text-red-400" />
-                          <span className="text-xs text-red-400">Cancelling...</span>
-                        </div>
-                      ) : (
-                        <p className="text-xs font-medium text-gray-500 max-w-[200px] truncate">
-                          {videoUploading ? 'Uploading video to TikTok...' : (progressMessage || trackedMessage || 'Processing...')}
-                        </p>
-                      )}
-
-                      {liveProgress.total > 0 && (
-                        <div className="flex gap-1.5 shrink-0">
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-50 border border-green-200 rounded-lg">
-                            <CheckIcon className="w-3.5 h-3.5 text-green-600" />
-                            <span className="text-[10px] font-bold text-green-700">
-                              {liveProgress.succeeded}/{liveProgress.total}
-                            </span>
-                          </div>
-                          {liveProgress.failed > 0 && (
-                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded-lg">
-                              <CircleX className="w-3.5 h-3.5 text-red-500" />
-                              <span className="text-[10px] font-bold text-red-600">
-                                {liveProgress.failed}/{liveProgress.total}
+                        {liveProgress.total > 0 && (
+                          <div className="flex gap-1.5 shrink-0">
+                            <div className="flex items-center gap-1 px-1.5 py-0.5 bg-green-50 border border-green-200 rounded-lg">
+                              <CheckIcon className="w-3.5 h-3.5 text-green-600" />
+                              <span className="text-[10px] font-bold text-green-700">
+                                {liveProgress.succeeded}/{liveProgress.total}
                               </span>
                             </div>
-                          )}
+                            {liveProgress.failed > 0 && (
+                              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded-lg">
+                                <CircleX className="w-3.5 h-3.5 text-red-500" />
+                                <span className="text-[10px] font-bold text-red-600">
+                                  {liveProgress.failed}/{liveProgress.total}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Live Errors */}
+                      {liveProgress.errors && liveProgress.errors.length > 0 && (
+                        <div className="mt-2">
+                          <details className="text-xs" open>
+                            <summary className="cursor-pointer text-red-500 font-semibold hover:underline">
+                              View live errors
+                            </summary>
+                            <div className="mt-2 pl-2 border-l border-red-200 space-y-1.5 max-h-24 overflow-y-auto">
+                              {liveProgress.errors.map((err, idx) => (
+                                <div key={idx} className="text-red-600 font-medium">
+                                  {err.fileName ? <span className="font-semibold">{err.fileName}: </span> : null}
+                                  {err.error}
+                                </div>
+                              ))}
+                            </div>
+                          </details>
                         </div>
                       )}
                     </div>
-
-                    {/* Live Errors */}
-                    {liveProgress.errors && liveProgress.errors.length > 0 && (
-                      <div className="mt-2">
-                        <details className="text-xs" open>
-                          <summary className="cursor-pointer text-red-500 font-semibold hover:underline">
-                            View live errors
-                          </summary>
-                          <div className="mt-2 pl-2 border-l border-red-200 space-y-1.5 max-h-24 overflow-y-auto">
-                            {liveProgress.errors.map((err, idx) => (
-                              <div key={idx} className="text-red-600 font-medium">
-                                {err.fileName ? <span className="font-semibold">{err.fileName}: </span> : null}
-                                {err.error}
-                              </div>
-                            ))}
-                          </div>
-                        </details>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Queued Jobs */}
-                {jobQueue.slice(currentJob ? 1 : 0).map((job, index) => (
-                  <div key={job.id || index} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
-                    <div className="flex-shrink-0">
-                      <QueueIcon className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <p className="flex-1 text-sm text-gray-600 truncate">
-                      {formatQueuedJobLabel(job, 'Queued')}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
-                      className="text-gray-400 hover:text-red-600 p-1"
-                      title="Remove from queue"
-                    >
-                      <X className="h-4 w-4 text-red-500" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Card 1: Ads Account and Configuration */}
-      <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <CogIcon className="w-5 h-5" />
-              Ad Account Configuration
-            </div>
-          </CardTitle>
-          <CardDescription>Select your ad account, campaign and ad set</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 pt-0 space-y-6">
-
-          {/* 1. Advertiser Account Combobox */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("selectedAdvertiser")}
-                <AdAccountIcon className="w-4 h-4" />
-                Ad Account
-              </Label>
-              {authLoading && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-            </div>
-            <Popover open={openAdvertiser} onOpenChange={setOpenAdvertiser}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  role="combobox"
-                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
-                >
-                  <span className="truncate text-sm font-medium">
-                    {selectedAdvertiser
-                      ? (() => {
-                        const found = advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
-                        return found ? (found.advertiser_name || found.name || selectedAdvertiser) : selectedAdvertiser;
-                      })()
-                      : "Select Ad Account"}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                <Command>
-                  <CommandInput
-                    placeholder="Search Advertiser..."
-                    value={advertiserSearch}
-                    onValueChange={setAdvertiserSearch}
-                    className="bg-transparent border-none focus:ring-0"
-                  />
-                  <CommandEmpty>No advertiser found.</CommandEmpty>
-                  <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
-                    <CommandGroup>
-                      {advertisers?.filter(adv =>
-                        (adv.advertiser_name || adv.name || '').toLowerCase().includes(advertiserSearch.toLowerCase()) ||
-                        (adv.advertiser_id || adv.id || '').toLowerCase().includes(advertiserSearch.toLowerCase())
-                      ).map((a) => {
-                        const id = a.advertiser_id || a.id
-                        return (
-                          <CommandItem
-                            key={id}
-                            value={id}
-                            onSelect={() => {
-                              handleAdvertiserChange(id)
-                              setOpenAdvertiser(false)
-                            }}
-                            className={cn(
-                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                              selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                            )}
-                          >
-                            <span className="text-sm font-medium">{a.advertiser_name || a.name || id}</span>
-                            {selectedAdvertiser === id && <Check className="ml-auto h-4 w-4 text-black" />}
-                          </CommandItem>
-                        )
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            {!selectedAdvertiser && (
-              <p className="text-xs text-red-500 font-medium mt-1">Please select an advertiser account</p>
-            )}
-          </div>
-
-          {/* 2. Campaign Combobox with Duplication Form */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("selectedCampaign")}
-                <CampaignIcon className="w-4 h-4" />
-                Select a Campaign to launch Ads in
-              </Label>
-              <div className="flex items-center gap-2">
-                {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-                <button
-                  type="button"
-                  onClick={forceRefreshCampaigns}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Refresh campaigns"
-                >
-                  <RefreshCcw className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-            <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  role="combobox"
-                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
-                >
-                  <span className="truncate text-sm font-medium">
-                    {selectedCampaign.length === 0
-                      ? "Select Campaigns"
-                      : selectedCampaign.length === 1
-                        ? campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || selectedCampaign[0]
-                        : `${selectedCampaign.length} campaigns selected`}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                <Command>
-                  <CommandInput
-                    placeholder="Search campaigns..."
-                    value={campaignSearch}
-                    onValueChange={setCampaignSearch}
-                    className="bg-transparent border-none focus:ring-0"
-                  />
-                  <CommandEmpty>No campaign found.</CommandEmpty>
-                  <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
-                    <CommandGroup>
-                      {filteredCampaigns.map((c) => {
-                        const isSelected = selectedCampaign.includes(c.campaign_id)
-                        return (
-                          <CommandItem
-                            key={c.campaign_id}
-                            value={c.campaign_id}
-                            onSelect={() => {
-                              if (isSelected) {
-                                setSelectedCampaign(prev => prev.filter(id => id !== c.campaign_id))
-                              } else {
-                                setSelectedCampaign(prev => [...prev, c.campaign_id])
-                              }
-                            }}
-                            className={cn(
-                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                              isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                            )}
-                          >
-                            <div className="flex items-center gap-2 w-full">
-                              <Checkbox
-                                id={`campaign-${c.campaign_id}`}
-                                checked={isSelected}
-                                className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
-                              />
-                              <div className="flex-1 min-w-0 flex items-center justify-between">
-                                <span className={cn("text-sm font-medium truncate flex-1", (c.operation_status === "DISABLE" || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
-                                  {c.campaign_name}
-                                </span>
-                                {(c.operation_status === "ENABLE" || c.operation_status === true || c.operation_status === "true") && (
-                                  <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                                )}
-                              </div>
-                            </div>
-                          </CommandItem>
-                        )
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-
-                  <div className="p-2 border-t border-gray-100">
-                    <Button
-                      type="button"
-                      disabled={campaigns.length === 0}
-                      onClick={() => {
-                        if (selectedCampaign.length === 1) {
-                          const campId = selectedCampaign[0];
-                          setDuplicateCampaign(campId);
-                          const camp = campaigns.find(c => c.campaign_id === campId);
-                          if (camp) {
-                            setNewCampaignName((camp.campaign_name || '') + "_copy");
-                          }
-                        } else {
-                          setDuplicateCampaign("");
-                          setNewCampaignName("");
-                        }
-                        setShowDuplicateCampaignBlock(true);
-                        setOpenCampaign(false);
-                      }}
-                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
-                    >
-                      <CampaignIcon className="mr-2 h-4 w-4 text-white" />
-                      Launch in a New Campaign
-                    </Button>
-                  </div>
-                </Command>
-              </PopoverContent>
-            </Popover>
-
-
-            {showDuplicateCampaignBlock && (
-              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDuplicateCampaignBlock(false)
-                    setDuplicateCampaign("")
-                    setNewCampaignName("")
-                  }}
-                  className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
-                  aria-label="Close duplicate campaign selection"
-                >
-                  <X className="h-3 w-3 text-gray-700" />
-                </button>
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor="duplicateCampaign" className="flex items-center gap-2">
-                    {renderDiffMark("duplicateCampaign")}
-                    <CopyIcon className="w-4 h-4" />
-                    Select a campaign to duplicate
-                  </Label>
-                  <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad groups</Label>
-
-                  {/* Dropdown/Popover to select campaign to duplicate */}
-                  <Popover open={openDuplicateCampaign} onOpenChange={setOpenDuplicateCampaign}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openDuplicateCampaign}
-                        disabled={campaigns.length === 0}
-                        className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:!bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
-                      >
-                        <span className="block truncate text-left">
-                          {duplicateCampaign
-                            ? campaigns.find((c) => c.campaign_id === duplicateCampaign)?.campaign_name || duplicateCampaign
-                            : "Select campaign to duplicate"}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="p-0 bg-white shadow-lg rounded-2xl"
-                      align="start"
-                      sideOffset={4}
-                      side="bottom"
-                      avoidCollisions={false}
-                      style={{
-                        width: 'var(--radix-popover-trigger-width)'
-                      }}
-                    >
-                      <Command>
-                        <CommandInput
-                          placeholder="Search campaign..."
-                          value={duplicateCampaignSearchValue}
-                          onValueChange={setDuplicateCampaignSearchValue}
-                          className="bg-transparent border-none focus:ring-0"
-                        />
-                        <CommandEmpty>No campaigns found.</CommandEmpty>
-                        <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
-                          <CommandGroup>
-                            {campaigns
-                              .filter((c) =>
-                                (c.campaign_name || c.campaign_id || '').toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
-                              )
-                              .map((c) => (
-                                <CommandItem
-                                  key={c.campaign_id}
-                                  value={c.campaign_id}
-                                  onSelect={() => {
-                                    setDuplicateCampaign(c.campaign_id);
-                                    setNewCampaignName((c.campaign_name || '') + "_copy");
-                                    setOpenDuplicateCampaign(false);
-                                  }}
-                                  className={cn(
-                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
-                                    duplicateCampaign === c.campaign_id && "bg-gray-100 font-semibold"
-                                  )}
-                                >
-                                  <div className="flex items-center justify-between w-full">
-                                    <span className={cn("text-sm font-medium", (c.operation_status === "DISABLE" || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
-                                      {c.campaign_name}
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                      {(c.operation_status === "ENABLE" || c.operation_status === true || c.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
-                                      {duplicateCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
-                                    </div>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-
-                  {/* New Campaign Name Input */}
-                  {duplicateCampaign && (
-                    <div className="space-y-4 pt-2 border-t border-gray-100 animate-in fade-in duration-200">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="newCampaignName" className="inline-flex items-center gap-1">
-                          {renderDiffMark("newCampaignName")}
-                          <span>New campaign name</span>
-                        </Label>
-                        <Input
-                          id="newCampaignName"
-                          value={newCampaignName}
-                          onChange={(e) => setNewCampaignName(e.target.value)}
-                          placeholder="Enter new campaign name..."
-                          className="border border-gray-300 rounded-2xl bg-white shadow-sm py-2 px-4 text-sm h-11 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                        />
-                      </div>
-
-                      <Button
-                        type="button"
-                        onClick={() => handleDuplicateCampaign(duplicateCampaign)}
-                        disabled={isDuplicating || !newCampaignName.trim()}
-                        className="w-full h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 px-4 shadow transition-all active:scale-[0.98]"
-                      >
-                        {isDuplicating ? (
-                          <><Loader className="w-4 h-4 animate-spin" />Duplicating...</>
-                        ) : (
-                          "Create Campaign"
-                        )}
-                      </Button>
-                    </div>
                   )}
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* 3. Ad Group Combobox */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("selectedAdGroup")}
-                <AdSetIcon className="w-4 h-4" />
-                Launch in a new or existing ad group
-              </Label>
-              <div className="flex items-center gap-2">
-                {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-                <button
-                  type="button"
-                  onClick={forceRefreshAdGroups}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Refresh ad groups"
-                >
-                  <RefreshCcw className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-            <Popover open={openAdGroup} onOpenChange={setOpenAdGroup}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  role="combobox"
-                  disabled={selectedCampaign.length === 0}
-                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
-                >
-                  <span className="truncate text-sm font-medium">
-                    {selectedAdGroup.length === 0
-                      ? "Select Ad Groups"
-                      : selectedAdGroup.length === 1
-                        ? adGroups.find(ag => ag.adgroup_id === selectedAdGroup[0])?.adgroup_name || selectedAdGroup[0]
-                        : `${selectedAdGroup.length} ad groups selected`}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                <Command>
-                  <CommandInput
-                    placeholder="Search ad groups..."
-                    value={adGroupSearch}
-                    onValueChange={setAdGroupSearch}
-                    className="bg-transparent border-none focus:ring-0"
-                  />
-                  <CommandEmpty>No ad group found.</CommandEmpty>
-                  <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
-                    {filteredAdGroups.length > 0 && (
-                      <CommandGroup>
-                        {(() => {
-                          const groupedByCampaign = filteredAdGroups.reduce((acc, adgroup) => {
-                            const campaignId = adgroup.campaignId || 'unknown';
-                            if (!acc[campaignId]) {
-                              acc[campaignId] = [];
-                            }
-                            acc[campaignId].push(adgroup);
-                            return acc;
-                          }, {});
-
-                          return Object.entries(groupedByCampaign).map(([campaignId, campaignAdGroups]) => {
-                            const campaignName = campaignAdGroups[0]?.campaignName || campaignId;
-                            return (
-                              <div key={campaignId}>
-                                {selectedCampaign.length >= 2 && (
-                                  <div className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none">
-                                    {campaignName} Ad Groups
-                                  </div>
-                                )}
-                                {campaignAdGroups.map((ag) => {
-                                  const isSelected = selectedAdGroup.includes(ag.adgroup_id);
-                                  return (
-                                    <CommandItem
-                                      key={`${ag.campaignId || 'camp'}-${ag.adgroup_id}`}
-                                      value={ag.adgroup_id}
-                                      onSelect={() => {
-                                        if (isSelected) {
-                                          setSelectedAdGroup(prev => prev.filter(id => id !== ag.adgroup_id))
-                                        } else {
-                                          setSelectedAdGroup(prev => [...prev, ag.adgroup_id])
-                                        }
-                                      }}
-                                      className={cn(
-                                        "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                                        isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                                      )}
-                                    >
-                                      <div className="flex items-center gap-2 w-full">
-                                        <Checkbox
-                                          id={`adgroup-${ag.adgroup_id}`}
-                                          checked={isSelected}
-                                          className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
-                                        />
-                                        <div className="flex-1 min-w-0 flex items-center justify-between">
-                                          <span className={cn("text-sm font-medium truncate flex-1", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
-                                            {ag.adgroup_name}
-                                          </span>
-                                          {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && (
-                                            <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
-                                          )}
-                                        </div>
-                                      </div>
-                                    </CommandItem>
-                                  )
-                                })}
-                              </div>
-                            )
-                          });
-                        })()}
-                      </CommandGroup>
-                    )}
-                  </CommandList>
-
-                  <div className="p-2 border-t border-gray-100">
-                    <Button
-                      type="button"
-                      disabled={campaigns.length === 0}
-                      onClick={() => {
-                        setShowDuplicateAdGroupBlock(true);
-                        setOpenAdGroup(false);
-                      }}
-                      className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
-                    >
-                      🚀 Launch in a New Ad Group
-                    </Button>
-                  </div>
-                </Command>
-              </PopoverContent>
-            </Popover>
-
-
-            {selectedAdGroup.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {selectedAdGroup.map((id) => {
-                  const adgroup = adGroups.find((a) => a.adgroup_id === id)
-                  return (
-                    <label
-                      key={id}
-                      className="inline-flex items-center gap-2 bg-white rounded-2xl border border-gray-300 px-4 py-2 cursor-pointer hover:bg-gray-50"
-                    >
+                  {/* Queued Jobs */}
+                  {jobQueue.slice(currentJob ? 1 : 0).map((job, index) => (
+                    <div key={job.id || index} className="p-3.5 border-b border-gray-100 flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        <QueueIcon className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <p className="flex-1 text-sm text-gray-600 truncate">
+                        {formatQueuedJobLabel(job, 'Queued')}
+                      </p>
                       <button
                         type="button"
-                        aria-label={`Remove ${adgroup ? adgroup.adgroup_name : id}`}
-                        onClick={() => setSelectedAdGroup(prev => prev.filter((item) => item !== id))}
-                        className="flex h-4 w-4 items-center justify-center"
+                        onClick={() => setJobQueue(prev => prev.filter((_, i) => i !== (currentJob ? index + 1 : index)))}
+                        className="text-gray-400 hover:text-red-600 p-1"
+                        title="Remove from queue"
                       >
-                        <CheckBlackIcon className="w-4.5 h-4.5" />
+                        <X className="h-4 w-4 text-red-500" />
                       </button>
-                      <span className="text-gray-800 text-xs break-all">{adgroup ? adgroup.adgroup_name : id}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            )}
-
-            {showDuplicateAdGroupBlock && (
-              <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowDuplicateAdGroupBlock(false)
-                    setDuplicateAdGroup("")
-                    setNewAdGroupName("")
-                  }}
-                  className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
-                  aria-label="Close duplicate ad group selection"
-                >
-                  <X className="h-3 w-3 text-gray-700" />
-                </button>
-                <div className="flex-1 space-y-2">
-                  <div className="flex-1 space-y-2">
-                    <Label className="flex items-center gap-2">
-                      {renderDiffMark("duplicateAdGroup")}
-                      <Copy className="w-4 h-4 text-gray-700 shrink-0" />
-                      Select an ad set shell to duplicate
-                    </Label>
-                    <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
-                  </div>
-
-                  <Popover open={openDuplicateAdGroup} onOpenChange={setOpenDuplicateAdGroup}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openDuplicateAdGroup}
-                        disabled={adGroups.length === 0}
-                        className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:!bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
-                      >
-                        <span className="block truncate text-left">
-                          {duplicateAdGroup
-                            ? adGroups.find((ag) => ag.adgroup_id === duplicateAdGroup)?.adgroup_name || duplicateAdGroup
-                            : "Select existing ad group"}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="p-0 bg-white shadow-lg rounded-2xl"
-                      align="start"
-                      sideOffset={4}
-                      side="bottom"
-                      avoidCollisions={false}
-                      style={{
-                        width: 'var(--radix-popover-trigger-width)'
-                      }}
-                    >
-                      <Command>
-                        <CommandInput
-                          placeholder="Search ad group..."
-                          value={duplicateAdGroupSearchValue}
-                          onValueChange={setDuplicateAdGroupSearchValue}
-                          className="bg-transparent border-none focus:ring-0"
-                        />
-                        <CommandEmpty>No ad groups found.</CommandEmpty>
-                        <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
-                          <CommandGroup>
-                            {adGroups
-                              .filter((ag) =>
-                                (ag.adgroup_name || ag.adgroup_id || '').toLowerCase().includes(duplicateAdGroupSearchValue.toLowerCase())
-                              )
-                              .map((ag) => (
-                                <CommandItem
-                                  key={ag.adgroup_id}
-                                  value={ag.adgroup_id}
-                                  onSelect={() => {
-                                    setDuplicateAdGroup(ag.adgroup_id);
-                                    setOpenDuplicateAdGroup(false);
-                                  }}
-                                  className={cn(
-                                    "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
-                                    duplicateAdGroup === ag.adgroup_id && "bg-gray-100 font-semibold"
-                                  )}
-                                >
-                                  <div className="flex items-center justify-between w-full">
-                                    <span className={cn("text-sm font-medium", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
-                                      {ag.adgroup_name}
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                      {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
-                                      {duplicateAdGroup === ag.adgroup_id && <Check className="h-4 w-4 text-black shrink-0" />}
-                                    </div>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-
-                  {/* New Ad Group Name Input */}
-                  {duplicateAdGroup && (
-                    <div className="space-y-4 pt-4 border-t border-gray-100 animate-in fade-in duration-200">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="newAdGroupName" className="text-xs font-semibold text-gray-700">
-                          {renderDiffMark("newAdGroupName")}
-                          <span>New ad set name</span>
-                        </Label>
-                        <Input
-                          id="newAdGroupName"
-                          value={newAdGroupName}
-                          onChange={(e) => setNewAdGroupName(e.target.value)}
-                          placeholder="Enter new ad group name..."
-                          className="border border-gray-300 rounded-2xl bg-white shadow-sm py-2 px-4 text-sm h-11 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
-                        />
-                        {!newAdGroupName.trim() && (
-                          <p className="text-xs text-red-500 font-medium mt-1">Please enter a name for the duplicated ad group</p>
-                        )}
-                      </div>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
             )}
           </div>
+        )}
 
-        </CardContent>
-      </Card>
-
-      {/* Card 2: Select Ad Preferences */}
-      <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
-        <CardHeader>
-          <CardTitle className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 md:gap-2">
-            <div className="flex items-center gap-2">
-              <ConfigIcon className="w-5 h-5 text-gray-500" />
-              Select ad preferences
-            </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Label htmlFor="ad-type" className="text-sm whitespace-nowrap flex items-center gap-2">
-                {renderDiffMark("adType")}
-                Ad Type:
-              </Label>
-              <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className={activeVariantId !== 'default' ? 'cursor-not-allowed' : ''}>
-                      <Select
-                        value={adType}
-                        onValueChange={(value) => {
-                          if (activeVariantId !== 'default') return;
-                          setAdType(value);
-                          const firstLinked = identities.find(i => i.identity_type === 'TT_USER' || i.identity_type === 'BC_AUTH_TT') || identities[0];
-                          if (firstLinked) {
-                            setSelectedIdentity(firstLinked.identity_id);
-                          } else {
-                            setSelectedIdentity('');
-                          }
-                        }}
-                        disabled={activeVariantId !== 'default'}
-                      >
-                        <SelectTrigger className={cn("w-[180px] h-10 py-2 font-medium", formFieldChrome)}>
-                          <SelectValue placeholder="Select ad type" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white rounded-xl gap-4">
-                          <SelectItem
-                            value="NORMAL"
-                            className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
-                          >
-                            Normal Ad
-                          </SelectItem>
-                          <SelectItem
-                            value="SPARK"
-                            className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
-                          >
-                            Spark Ad
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </span>
-                  </TooltipTrigger>
-                  {activeVariantId !== 'default' && (
-                    <TooltipContent side="bottom" className="max-w-xs text-xs">
-                      Ad type is only changeable in the Default variant. Changing it there will apply to all variants.
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 pt-0 space-y-6">
-
-          {/* 2. Identity / Promote From (Linked Account) */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("selectedIdentity")}
-                <Users className="w-4 h-4 text-gray-500" />
-                {adType === 'NORMAL' ? 'Identity' : 'Promote From'}
-              </Label>
+        {/* Card 1: Ads Account and Configuration */}
+        <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
-                <button
-                  type="button"
-                  onClick={forceRefreshIdentities}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                  title="Refresh identities"
-                  disabled={!selectedAdvertiser || loadingIdentities}
-                >
-                  <RefreshCcw className="w-3 h-3" />
-                </button>
+                <CogIcon className="w-5 h-5" />
+                Ad Account Configuration
               </div>
-            </div>
-            <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  role="combobox"
-                  disabled={!selectedAdvertiser || loadingIdentities}
-                  className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
-                >
-                  <span className="truncate text-sm font-medium flex items-center gap-1.5">
-                    {selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
-                      ? (() => {
-                        const found = identities.find(i => i.identity_id === selectedIdentity);
-                        return found ? (
-                          <span className="font-semibold text-gray-900">{found.display_name}</span>
-                        ) : <span>{selectedIdentity}</span>;
-                      })()
-                      : <span>{adType === 'NORMAL' ? "Select Identity" : "Select account to Promote From"}</span>}
-                  </span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                <Command>
-                  <CommandInput placeholder={adType === 'NORMAL' ? "Search identities..." : "Search accounts to promote from..."} className="bg-transparent border-none focus:ring-0" />
-                  <CommandEmpty>{adType === 'NORMAL' ? "No identities found." : "No accounts found."}</CommandEmpty>
-                  <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
-                    <CommandGroup>
-                      {identities.map((i) => (
-                        <CommandItem
-                          key={i.identity_id}
-                          value={i.identity_id}
-                          onSelect={() => {
-                            setSelectedIdentity(i.identity_id)
-                            setOpenIdentity(false)
-                          }}
-                          className={cn(
-                            "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
-                            selectedIdentity === i.identity_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
-                          )}
-                        >
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
-                            <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
-                          </div>
-                          {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black" />}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-            {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') && (
-              <p className="text-xs text-red-500 font-medium mt-1">
-                {adType === 'NORMAL' ? "Please select an identity" : "Please select an account to Promote From"}
-              </p>
-            )}
-          </div>
+            </CardTitle>
+            <CardDescription>Select your ad account, campaign and ad set</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 pt-0 space-y-6">
 
-          {/* Organic Post to Boost for Spark Ads */}
-          {adType === 'SPARK' && (
+            {/* 1. Advertiser Account Combobox */}
             <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                {renderDiffMark("sparkAuthCode")}
-                <Zap className="w-4 h-4 text-gray-500" />
-                Organic Post Authorization Code / Link
-              </Label>
-              <Input
-                type="text"
-                placeholder="e.g. 5zcX8aB9 or copy-paste the authorized video link"
-                value={sparkAuthCode || ''}
-                onChange={e => setSparkAuthCode(e.target.value)}
-                className={formInputChrome}
-              />
-              {(!sparkAuthCode || !sparkAuthCode.trim()) && (
-                <p className="text-xs text-red-500 font-medium mt-1">Organic Post Authorization Code is required</p>
-              )}
-              <p className="text-xs text-gray-400 leading-relaxed pl-1">
-                Enter the organic post video code (authorized from the TikTok app) or the post link to boost it as a Spark Ad.
-              </p>
-            </div>
-          )}
-
-          {/* Creative Fields - Visible for both Normal and Spark Ad types */}
-          <div className="space-y-6">
-            {/* 3. Ad Name */}
-            <div id="adName" className="space-y-1">
-              <Label htmlFor="adName" className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  {renderDiffMark("adNameFormulaV2")}
-                  <LabelIcon className="w-4 h-4" />
-                  <span className="font-semibold text-sm">Ad Name</span>
-                </div>
-                {selectedAdvertiser && !advertiserPrefs?.adNameFormulaV2?.rawInput && (
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  {renderDiffMark("selectedAdvertiser")}
+                  <AdAccountIcon className="w-4 h-4" />
+                  Ad Account
+                </Label>
+                {authLoading && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+              </div>
+              <Popover open={openAdvertiser} onOpenChange={setOpenAdvertiser}>
+                <PopoverTrigger asChild>
                   <Button
                     type="button"
-                    size="sm"
                     variant="outline"
-                    onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
-                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
-                    title="Configure ad name formula in settings"
+                    role="combobox"
+                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
                   >
-                    <CogIcon className="w-3 h-3 text-white mr-1" />
-                    Set Up Ad Name Formula
+                    <span className="truncate text-sm font-medium">
+                      {selectedAdvertiser
+                        ? (() => {
+                          const found = advertisers.find(a => String(a.advertiser_id || a.id) === String(selectedAdvertiser));
+                          return found ? (found.advertiser_name || found.name || selectedAdvertiser) : selectedAdvertiser;
+                        })()
+                        : "Select Ad Account"}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
-                )}
-              </Label>
-
-              <ReorderAdNameParts
-                formulaInput={adNameFormulaV2?.rawInput || ""}
-                onFormulaChange={(newRawInput) => {
-                  setAdNameFormulaV2({ rawInput: newRawInput });
-                }}
-                variant="home"
-                customVariables={advertiserPrefs?.customVariables || []}
-              />
-              <div className="mt-1">
-                <Label className="text-xs text-gray-500">
-                  Ad Name Preview: {
-                    (files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0)
-                      ? computeAdNameFromFormula(files[0] || videoFile || driveFiles[0] || dropboxFiles[0], 0, landingUrl, null, adType)
-                      : "Upload a file to see example"
-                  }
-                </Label>
-              </div>
-              {!adNameFormulaV2?.rawInput?.trim() && !adName.trim() && (
-                <p className="text-xs text-red-500 font-medium mt-1">Ad name is required</p>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                  <Command>
+                    <CommandInput
+                      placeholder="Search Advertiser..."
+                      value={advertiserSearch}
+                      onValueChange={setAdvertiserSearch}
+                      className="bg-transparent border-none focus:ring-0"
+                    />
+                    <CommandEmpty>No advertiser found.</CommandEmpty>
+                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                      <CommandGroup>
+                        {advertisers?.filter(adv =>
+                          (adv.advertiser_name || adv.name || '').toLowerCase().includes(advertiserSearch.toLowerCase()) ||
+                          (adv.advertiser_id || adv.id || '').toLowerCase().includes(advertiserSearch.toLowerCase())
+                        ).map((a) => {
+                          const id = a.advertiser_id || a.id
+                          return (
+                            <CommandItem
+                              key={id}
+                              value={id}
+                              onSelect={() => {
+                                handleAdvertiserChange(id)
+                                setOpenAdvertiser(false)
+                              }}
+                              className={cn(
+                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                selectedAdvertiser === id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                              )}
+                            >
+                              <span className="text-sm font-medium">{a.advertiser_name || a.name || id}</span>
+                              {selectedAdvertiser === id && <Check className="ml-auto h-4 w-4 text-black" />}
+                            </CommandItem>
+                          )
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {!selectedAdvertiser && (
+                <p className="text-xs text-red-500 font-medium mt-1">Please select an advertiser account</p>
               )}
             </div>
 
-            {/* 4. Ad Copy / Caption with template picker */}
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Label className="flex items-center gap-2 mb-0">
-                      <TemplateIcon className="w-4 h-4 text-zinc-600" />
-                      Select a Copy Template
-                    </Label>
+            {/* 2. Campaign Combobox with Duplication Form */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  {renderDiffMark("selectedCampaign")}
+                  <CampaignIcon className="w-4 h-4" />
+                  Select a Campaign to launch Ads in
+                </Label>
+                <div className="flex items-center gap-2">
+                  {loadingCampaigns && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                  <button
+                    type="button"
+                    onClick={forceRefreshCampaigns}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Refresh campaigns"
+                  >
+                    <RefreshCcw className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+              <Popover open={openCampaign} onOpenChange={setOpenCampaign}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                  >
+                    <span className="truncate text-sm font-medium">
+                      {selectedCampaign.length === 0
+                        ? "Select Campaigns"
+                        : selectedCampaign.length === 1
+                          ? campaigns.find(c => c.campaign_id === selectedCampaign[0])?.campaign_name || selectedCampaign[0]
+                          : `${selectedCampaign.length} campaigns selected`}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                  <Command>
+                    <CommandInput
+                      placeholder="Search campaigns..."
+                      value={campaignSearch}
+                      onValueChange={setCampaignSearch}
+                      className="bg-transparent border-none focus:ring-0"
+                    />
+                    <CommandEmpty>No campaign found.</CommandEmpty>
+                    <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
+                      <CommandGroup>
+                        {filteredCampaigns.map((c) => {
+                          const isSelected = selectedCampaign.includes(c.campaign_id)
+                          return (
+                            <CommandItem
+                              key={c.campaign_id}
+                              value={c.campaign_id}
+                              onSelect={() => {
+                                if (isSelected) {
+                                  setSelectedCampaign(prev => prev.filter(id => id !== c.campaign_id))
+                                } else {
+                                  setSelectedCampaign(prev => [...prev, c.campaign_id])
+                                }
+                              }}
+                              className={cn(
+                                "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                              )}
+                            >
+                              <div className="flex items-center gap-2 w-full">
+                                <Checkbox
+                                  id={`campaign-${c.campaign_id}`}
+                                  checked={isSelected}
+                                  className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
+                                />
+                                <div className="flex-1 min-w-0 flex items-center justify-between">
+                                  <span className={cn("text-sm font-medium truncate flex-1", (c.operation_status === "DISABLE" || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
+                                    {c.campaign_name}
+                                  </span>
+                                  {(c.operation_status === "ENABLE" || c.operation_status === true || c.operation_status === "true") && (
+                                    <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                  )}
+                                </div>
+                              </div>
+                            </CommandItem>
+                          )
+                        })}
+                      </CommandGroup>
+                    </CommandList>
 
-                    {/* No templates + no content → Setup button */}
-                    {Object.keys(copyTemplates).length === 0 && !hasAnyContent && selectedAdvertiser && (
+                    <div className="p-2 border-t border-gray-100">
                       <Button
                         type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
-                        className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
+                        disabled={campaigns.length === 0}
+                        onClick={() => {
+                          if (selectedCampaign.length === 1) {
+                            const campId = selectedCampaign[0];
+                            setDuplicateCampaign(campId);
+                            const camp = campaigns.find(c => c.campaign_id === campId);
+                            if (camp) {
+                              setNewCampaignName((camp.campaign_name || '') + "_copy");
+                            }
+                          } else {
+                            setDuplicateCampaign("");
+                            setNewCampaignName("");
+                          }
+                          setShowDuplicateCampaignBlock(true);
+                          setOpenCampaign(false);
+                        }}
+                        className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
                       >
-                        <CogIcon className="w-3 h-3 text-white mr-1" />
-                        Set Up Templates
+                        <CampaignIcon className="mr-2 h-4 w-4 text-white" />
+                        Launch in a New Campaign
                       </Button>
-                    )}
+                    </div>
+                  </Command>
+                </PopoverContent>
+              </Popover>
 
-                    {/* No templates + content typed → Save as New only */}
-                    {Object.keys(copyTemplates).length === 0 && hasAnyContent && (
-                      <div className="ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+
+              {showDuplicateCampaignBlock && (
+                <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDuplicateCampaignBlock(false)
+                      setDuplicateCampaign("")
+                      setNewCampaignName("")
+                    }}
+                    className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
+                    aria-label="Close duplicate campaign selection"
+                  >
+                    <X className="h-3 w-3 text-gray-700" />
+                  </button>
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="duplicateCampaign" className="flex items-center gap-2">
+                      {renderDiffMark("duplicateCampaign")}
+                      <CopyIcon className="w-4 h-4" />
+                      Select a campaign to duplicate
+                    </Label>
+                    <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad groups</Label>
+
+                    {/* Dropdown/Popover to select campaign to duplicate */}
+                    <Popover open={openDuplicateCampaign} onOpenChange={setOpenDuplicateCampaign}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openDuplicateCampaign}
+                          disabled={campaigns.length === 0}
+                          className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:!bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
+                        >
+                          <span className="block truncate text-left">
+                            {duplicateCampaign
+                              ? campaigns.find((c) => c.campaign_id === duplicateCampaign)?.campaign_name || duplicateCampaign
+                              : "Select campaign to duplicate"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="p-0 bg-white shadow-lg rounded-2xl"
+                        align="start"
+                        sideOffset={4}
+                        side="bottom"
+                        avoidCollisions={false}
+                        style={{
+                          width: 'var(--radix-popover-trigger-width)'
+                        }}
+                      >
+                        <Command>
+                          <CommandInput
+                            placeholder="Search campaign..."
+                            value={duplicateCampaignSearchValue}
+                            onValueChange={setDuplicateCampaignSearchValue}
+                            className="bg-transparent border-none focus:ring-0"
+                          />
+                          <CommandEmpty>No campaigns found.</CommandEmpty>
+                          <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
+                            <CommandGroup>
+                              {campaigns
+                                .filter((c) =>
+                                  (c.campaign_name || c.campaign_id || '').toLowerCase().includes(duplicateCampaignSearchValue.toLowerCase())
+                                )
+                                .map((c) => (
+                                  <CommandItem
+                                    key={c.campaign_id}
+                                    value={c.campaign_id}
+                                    onSelect={() => {
+                                      setDuplicateCampaign(c.campaign_id);
+                                      setNewCampaignName((c.campaign_name || '') + "_copy");
+                                      setOpenDuplicateCampaign(false);
+                                    }}
+                                    className={cn(
+                                      "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
+                                      duplicateCampaign === c.campaign_id && "bg-gray-100 font-semibold"
+                                    )}
+                                  >
+                                    <div className="flex items-center justify-between w-full">
+                                      <span className={cn("text-sm font-medium", (c.operation_status === "DISABLE" || c.operation_status === false || c.operation_status === "false") && "text-gray-400")}>
+                                        {c.campaign_name}
+                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        {(c.operation_status === "ENABLE" || c.operation_status === true || c.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                        {duplicateCampaign === c.campaign_id && <Check className="h-4 w-4 text-black shrink-0" />}
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* New Campaign Name Input */}
+                    {duplicateCampaign && (
+                      <div className="space-y-4 pt-2 border-t border-gray-100 animate-in fade-in duration-200">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="newCampaignName" className="inline-flex items-center gap-1">
+                            {renderDiffMark("newCampaignName")}
+                            <span>New campaign name</span>
+                          </Label>
+                          <Input
+                            id="newCampaignName"
+                            value={newCampaignName}
+                            onChange={(e) => setNewCampaignName(e.target.value)}
+                            placeholder="Enter new campaign name..."
+                            className="border border-gray-300 rounded-2xl bg-white shadow-sm py-2 px-4 text-sm h-11 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                          />
+                        </div>
+
                         <Button
                           type="button"
-                          size="sm"
-                          variant="outline"
-                          disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
-                          onClick={() => setShowSaveNewDialog(true)}
-                          className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
+                          onClick={() => handleDuplicateCampaign(duplicateCampaign)}
+                          disabled={isDuplicating || !newCampaignName.trim()}
+                          className="w-full h-11 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 px-4 shadow transition-all active:scale-[0.98]"
                         >
-                          {isSavingNew ? (
-                            <Loader className="w-3 h-3 animate-spin" />
-                          ) : existingDuplicateTemplate ? (
-                            `Already exists as "${existingDuplicateTemplate}"`
+                          {isDuplicating ? (
+                            <><Loader className="w-4 h-4 animate-spin" />Duplicating...</>
                           ) : (
-                            "Save as New Template"
+                            "Create Campaign"
                           )}
                         </Button>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+            </div>
 
-                    {/* Has templates + changes detected → both buttons */}
-                    {Object.keys(copyTemplates).length > 0 && hasUnsavedTemplateChanges && (
-                      <div className="flex items-center gap-2 ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+            {/* 3. Ad Group Combobox */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  {renderDiffMark("selectedAdGroup")}
+                  <AdSetIcon className="w-4 h-4" />
+                  Launch in a new or existing ad group
+                </Label>
+                <div className="flex items-center gap-2">
+                  {loadingAdGroups && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                  <button
+                    type="button"
+                    onClick={forceRefreshAdGroups}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Refresh ad groups"
+                  >
+                    <RefreshCcw className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+              <Popover open={openAdGroup} onOpenChange={setOpenAdGroup}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    disabled={selectedCampaign.length === 0}
+                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow group-data-[state=open]:border-blue-500 transition-colors duration-150 hover:bg-white"
+                  >
+                    <span className="truncate text-sm font-medium">
+                      {selectedAdGroup.length === 0
+                        ? "Select Ad Groups"
+                        : selectedAdGroup.length === 1
+                          ? adGroups.find(ag => ag.adgroup_id === selectedAdGroup[0])?.adgroup_name || selectedAdGroup[0]
+                          : `${selectedAdGroup.length} ad groups selected`}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                  <Command>
+                    <CommandInput
+                      placeholder="Search ad groups..."
+                      value={adGroupSearch}
+                      onValueChange={setAdGroupSearch}
+                      className="bg-transparent border-none focus:ring-0"
+                    />
+                    <CommandEmpty>No ad group found.</CommandEmpty>
+                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                      {filteredAdGroups.length > 0 && (
+                        <CommandGroup>
+                          {(() => {
+                            const groupedByCampaign = filteredAdGroups.reduce((acc, adgroup) => {
+                              const campaignId = adgroup.campaignId || 'unknown';
+                              if (!acc[campaignId]) {
+                                acc[campaignId] = [];
+                              }
+                              acc[campaignId].push(adgroup);
+                              return acc;
+                            }, {});
+
+                            return Object.entries(groupedByCampaign).map(([campaignId, campaignAdGroups]) => {
+                              const campaignName = campaignAdGroups[0]?.campaignName || campaignId;
+                              return (
+                                <div key={campaignId}>
+                                  {selectedCampaign.length >= 2 && (
+                                    <div className="px-4 py-2 mx-1 mb-1 bg-gray-100 text-gray-700 font-semibold text-xs rounded-lg pointer-events-none">
+                                      {campaignName} Ad Groups
+                                    </div>
+                                  )}
+                                  {campaignAdGroups.map((ag) => {
+                                    const isSelected = selectedAdGroup.includes(ag.adgroup_id);
+                                    return (
+                                      <CommandItem
+                                        key={`${ag.campaignId || 'camp'}-${ag.adgroup_id}`}
+                                        value={ag.adgroup_id}
+                                        onSelect={() => {
+                                          if (isSelected) {
+                                            setSelectedAdGroup(prev => prev.filter(id => id !== ag.adgroup_id))
+                                          } else {
+                                            setSelectedAdGroup(prev => [...prev, ag.adgroup_id])
+                                          }
+                                        }}
+                                        className={cn(
+                                          "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                                          isSelected ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                                        )}
+                                      >
+                                        <div className="flex items-center gap-2 w-full">
+                                          <Checkbox
+                                            id={`adgroup-${ag.adgroup_id}`}
+                                            checked={isSelected}
+                                            className="w-4 h-4 bg-white border border-gray-300 rounded-[6px] data-[state=checked]:bg-zinc-800 data-[state=checked]:text-white pointer-events-none"
+                                          />
+                                          <div className="flex-1 min-w-0 flex items-center justify-between">
+                                            <span className={cn("text-sm font-medium truncate flex-1", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
+                                              {ag.adgroup_name}
+                                            </span>
+                                            {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && (
+                                              <span className="ml-2 w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                                            )}
+                                          </div>
+                                        </div>
+                                      </CommandItem>
+                                    )
+                                  })}
+                                </div>
+                              )
+                            });
+                          })()}
+                        </CommandGroup>
+                      )}
+                    </CommandList>
+
+                    <div className="p-2 border-t border-gray-100">
+                      <Button
+                        type="button"
+                        disabled={campaigns.length === 0}
+                        onClick={() => {
+                          setShowDuplicateAdGroupBlock(true);
+                          setOpenAdGroup(false);
+                        }}
+                        className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
+                      >
+                        🚀 Launch in a New Ad Group
+                      </Button>
+                    </div>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+
+              {selectedAdGroup.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedAdGroup.map((id) => {
+                    const adgroup = adGroups.find((a) => a.adgroup_id === id)
+                    return (
+                      <label
+                        key={id}
+                        className="inline-flex items-center gap-2 bg-white rounded-2xl border border-gray-300 px-4 py-2 cursor-pointer hover:bg-gray-50"
+                      >
+                        <button
+                          type="button"
+                          aria-label={`Remove ${adgroup ? adgroup.adgroup_name : id}`}
+                          onClick={() => setSelectedAdGroup(prev => prev.filter((item) => item !== id))}
+                          className="flex h-4 w-4 items-center justify-center"
+                        >
+                          <CheckBlackIcon className="w-4.5 h-4.5" />
+                        </button>
+                        <span className="text-gray-800 text-xs break-all">{adgroup ? adgroup.adgroup_name : id}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+
+              {showDuplicateAdGroupBlock && (
+                <div className="flex flex-col gap-2 p-3 bg-gray-50 rounded-2xl border border-gray-200 relative mt-2 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDuplicateAdGroupBlock(false)
+                      setDuplicateAdGroup("")
+                      setNewAdGroupName("")
+                    }}
+                    className="absolute top-2 right-2 p-0.5 rounded-full !bg-white border border-gray-200 hover:bg-gray-50 text-gray-700"
+                    aria-label="Close duplicate ad group selection"
+                  >
+                    <X className="h-3 w-3 text-gray-700" />
+                  </button>
+                  <div className="flex-1 space-y-2">
+                    <div className="flex-1 space-y-2">
+                      <Label className="flex items-center gap-2">
+                        {renderDiffMark("duplicateAdGroup")}
+                        <Copy className="w-4 h-4 text-gray-700 shrink-0" />
+                        Select an ad set shell to duplicate
+                      </Label>
+                      <Label className="text-gray-500 text-[12px] font-regular">We’ll retain all targeting settings and replace the creative</Label>
+                    </div>
+
+                    <Popover open={openDuplicateAdGroup} onOpenChange={setOpenDuplicateAdGroup}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={openDuplicateAdGroup}
+                          disabled={adGroups.length === 0}
+                          className="w-full justify-between border border-gray-400 rounded-2xl bg-white shadow-sm overflow-hidden whitespace-nowrap hover:!bg-white text-sm h-11 px-5 font-normal text-gray-900 transition-all duration-150"
+                        >
+                          <span className="block truncate text-left">
+                            {duplicateAdGroup
+                              ? adGroups.find((ag) => ag.adgroup_id === duplicateAdGroup)?.adgroup_name || duplicateAdGroup
+                              : "Select existing ad group"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-gray-500" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="p-0 bg-white shadow-lg rounded-2xl"
+                        align="start"
+                        sideOffset={4}
+                        side="bottom"
+                        avoidCollisions={false}
+                        style={{
+                          width: 'var(--radix-popover-trigger-width)'
+                        }}
+                      >
+                        <Command>
+                          <CommandInput
+                            placeholder="Search ad group..."
+                            value={duplicateAdGroupSearchValue}
+                            onValueChange={setDuplicateAdGroupSearchValue}
+                            className="bg-transparent border-none focus:ring-0"
+                          />
+                          <CommandEmpty>No ad groups found.</CommandEmpty>
+                          <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
+                            <CommandGroup>
+                              {adGroups
+                                .filter((ag) =>
+                                  (ag.adgroup_name || ag.adgroup_id || '').toLowerCase().includes(duplicateAdGroupSearchValue.toLowerCase())
+                                )
+                                .map((ag) => (
+                                  <CommandItem
+                                    key={ag.adgroup_id}
+                                    value={ag.adgroup_id}
+                                    onSelect={() => {
+                                      setDuplicateAdGroup(ag.adgroup_id);
+                                      setOpenDuplicateAdGroup(false);
+                                    }}
+                                    className={cn(
+                                      "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150 hover:bg-gray-50",
+                                      duplicateAdGroup === ag.adgroup_id && "bg-gray-100 font-semibold"
+                                    )}
+                                  >
+                                    <div className="flex items-center justify-between w-full">
+                                      <span className={cn("text-sm font-medium", (ag.operation_status === "DISABLE" || ag.operation_status === false || ag.operation_status === "false") && "text-gray-400")}>
+                                        {ag.adgroup_name}
+                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        {(ag.operation_status === "ENABLE" || ag.operation_status === true || ag.operation_status === "true") && <span className="w-2 h-2 rounded-full bg-green-500 shrink-0" />}
+                                        {duplicateAdGroup === ag.adgroup_id && <Check className="h-4 w-4 text-black shrink-0" />}
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* New Ad Group Name Input */}
+                    {duplicateAdGroup && (
+                      <div className="space-y-4 pt-4 border-t border-gray-100 animate-in fade-in duration-200">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="newAdGroupName" className="text-xs font-semibold text-gray-700">
+                            {renderDiffMark("newAdGroupName")}
+                            <span>New ad set name</span>
+                          </Label>
+                          <Input
+                            id="newAdGroupName"
+                            value={newAdGroupName}
+                            onChange={(e) => setNewAdGroupName(e.target.value)}
+                            placeholder="Enter new ad group name..."
+                            className="border border-gray-300 rounded-2xl bg-white shadow-sm py-2 px-4 text-sm h-11 focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none"
+                          />
+                          {!newAdGroupName.trim() && (
+                            <p className="text-xs text-red-500 font-medium mt-1">Please enter a name for the duplicated ad group</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Select Ad Preferences */}
+        <Card className="!bg-white border border-gray-300 shadow-[0_2px_4px_rgba(0,0,0,0.08)] rounded-3xl overflow-hidden">
+          <CardHeader>
+            <CardTitle className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4 md:gap-2">
+              <div className="flex items-center gap-2">
+                <ConfigIcon className="w-5 h-5 text-gray-500" />
+                Select ad preferences
+              </div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Label htmlFor="ad-type" className="text-sm whitespace-nowrap flex items-center gap-2">
+                  {renderDiffMark("adType")}
+                  Ad Type:
+                </Label>
+                <TooltipProvider delayDuration={0}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={activeVariantId !== 'default' ? 'cursor-not-allowed' : ''}>
+                        <Select
+                          value={adType}
+                          onValueChange={(value) => {
+                            if (activeVariantId !== 'default') return;
+                            setAdType(value);
+                            const firstLinked = identities.find(i => i.identity_type === 'TT_USER' || i.identity_type === 'BC_AUTH_TT') || identities[0];
+                            if (firstLinked) {
+                              setSelectedIdentity(firstLinked.identity_id);
+                            } else {
+                              setSelectedIdentity('');
+                            }
+                          }}
+                          disabled={activeVariantId !== 'default'}
+                        >
+                          <SelectTrigger className={cn("w-[180px] h-10 py-2 font-medium", formFieldChrome)}>
+                            <SelectValue placeholder="Select ad type" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white rounded-xl gap-4">
+                            <SelectItem
+                              value="NORMAL"
+                              className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                            >
+                              Normal Ad
+                            </SelectItem>
+                            <SelectItem
+                              value="SPARK"
+                              className="rounded-xl data-[highlighted]:bg-gray-100 data-[state=checked]:bg-gray-100 transition-all my-0.5"
+                            >
+                              Spark Ad
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </span>
+                    </TooltipTrigger>
+                    {activeVariantId !== 'default' && (
+                      <TooltipContent side="bottom" className="max-w-xs text-xs">
+                        Ad type is only changeable in the Default variant. Changing it there will apply to all variants.
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 pt-0 space-y-6">
+
+            {/* 2. Identity / Promote From (Linked Account) */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  {renderDiffMark("selectedIdentity")}
+                  <Users className="w-4 h-4 text-gray-500" />
+                  {adType === 'NORMAL' ? 'Identity' : 'Promote From'}
+                </Label>
+                <div className="flex items-center gap-2">
+                  {loadingIdentities && <Loader className="w-3 h-3 animate-spin text-gray-400" />}
+                  <button
+                    type="button"
+                    onClick={forceRefreshIdentities}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Refresh identities"
+                    disabled={!selectedAdvertiser || loadingIdentities}
+                  >
+                    <RefreshCcw className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+              <Popover open={openIdentity} onOpenChange={setOpenIdentity}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    disabled={!selectedAdvertiser || loadingIdentities}
+                    className="w-full justify-between border border-gray-300 rounded-2xl py-4.5 bg-white shadow transition-colors duration-150 hover:bg-white disabled:opacity-60 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="truncate text-sm font-medium flex items-center gap-1.5">
+                      {selectedIdentity && selectedIdentity !== 'CUSTOMIZED_USER'
+                        ? (() => {
+                          const found = identities.find(i => i.identity_id === selectedIdentity);
+                          return found ? (
+                            <span className="font-semibold text-gray-900">{found.display_name}</span>
+                          ) : <span>{selectedIdentity}</span>;
+                        })()
+                        : <span>{adType === 'NORMAL' ? "Select Identity" : "Select account to Promote From"}</span>}
+                    </span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 bg-white shadow-lg rounded-2xl" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                  <Command>
+                    <CommandInput placeholder={adType === 'NORMAL' ? "Search identities..." : "Search accounts to promote from..."} className="bg-transparent border-none focus:ring-0" />
+                    <CommandEmpty>{adType === 'NORMAL' ? "No identities found." : "No accounts found."}</CommandEmpty>
+                    <CommandList className="max-h-[300px] overflow-y-auto rounded-2xl custom-scrollbar">
+                      <CommandGroup>
+                        {identities.map((i) => (
+                          <CommandItem
+                            key={i.identity_id}
+                            value={i.identity_id}
+                            onSelect={() => {
+                              setSelectedIdentity(i.identity_id)
+                              setOpenIdentity(false)
+                            }}
+                            className={cn(
+                              "px-4 py-2 cursor-pointer m-1 rounded-2xl transition-colors duration-150",
+                              selectedIdentity === i.identity_id ? "bg-gray-100 font-semibold" : "hover:bg-gray-50"
+                            )}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-semibold text-gray-900">{i.display_name}</span>
+                              <span className="text-xs text-gray-400 font-normal">{i.identity_id}</span>
+                            </div>
+                            {selectedIdentity === i.identity_id && <Check className="ml-auto h-4 w-4 text-black" />}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {(!selectedIdentity || selectedIdentity === 'CUSTOMIZED_USER') && (
+                <p className="text-xs text-red-500 font-medium mt-1">
+                  {adType === 'NORMAL' ? "Please select an identity" : "Please select an account to Promote From"}
+                </p>
+              )}
+            </div>
+
+            {/* Organic Post to Boost for Spark Ads */}
+            {adType === 'SPARK' && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  {renderDiffMark("sparkAuthCode")}
+                  <Zap className="w-4 h-4 text-gray-500" />
+                  Organic Post Authorization Code / Link
+                </Label>
+                <Input
+                  type="text"
+                  placeholder="e.g. 5zcX8aB9 or copy-paste the authorized video link"
+                  value={sparkAuthCode || ''}
+                  onChange={e => setSparkAuthCode(e.target.value)}
+                  className={formInputChrome}
+                />
+                {(!sparkAuthCode || !sparkAuthCode.trim()) && (
+                  <p className="text-xs text-red-500 font-medium mt-1">Organic Post Authorization Code is required</p>
+                )}
+                <p className="text-xs text-gray-400 leading-relaxed pl-1">
+                  Enter the organic post video code (authorized from the TikTok app) or the post link to boost it as a Spark Ad.
+                </p>
+              </div>
+            )}
+
+            {/* Creative Fields - Visible for both Normal and Spark Ad types */}
+            <div className="space-y-6">
+              {/* 3. Ad Name */}
+              <div id="adName" className="space-y-1">
+                <Label htmlFor="adName" className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    {renderDiffMark("adNameFormulaV2")}
+                    <LabelIcon className="w-4 h-4" />
+                    <span className="font-semibold text-sm">Ad Name</span>
+                  </div>
+                  {selectedAdvertiser && !advertiserPrefs?.adNameFormulaV2?.rawInput && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
+                      className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
+                      title="Configure ad name formula in settings"
+                    >
+                      <CogIcon className="w-3 h-3 text-white mr-1" />
+                      Set Up Ad Name Formula
+                    </Button>
+                  )}
+                </Label>
+
+                <ReorderAdNameParts
+                  formulaInput={adNameFormulaV2?.rawInput || ""}
+                  onFormulaChange={(newRawInput) => {
+                    setAdNameFormulaV2({ rawInput: newRawInput });
+                  }}
+                  variant="home"
+                  customVariables={advertiserPrefs?.customVariables || []}
+                />
+                <div className="mt-1">
+                  <Label className="text-xs text-gray-500">
+                    Ad Name Preview: {
+                      (files?.length > 0 || videoFile || driveFiles?.length > 0 || dropboxFiles?.length > 0)
+                        ? computeAdNameFromFormula(files[0] || videoFile || driveFiles[0] || dropboxFiles[0], 0, landingUrl, null, adType)
+                        : "Upload a file to see example"
+                    }
+                  </Label>
+                </div>
+                {!adNameFormulaV2?.rawInput?.trim() && !adName.trim() && (
+                  <p className="text-xs text-red-500 font-medium mt-1">Ad name is required</p>
+                )}
+              </div>
+
+              {/* 4. Ad Copy / Caption with template picker */}
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label className="flex items-center gap-2 mb-0">
+                        <TemplateIcon className="w-4 h-4 text-zinc-600" />
+                        Select a Copy Template
+                      </Label>
+
+                      {/* No templates + no content → Setup button */}
+                      {Object.keys(copyTemplates).length === 0 && !hasAnyContent && selectedAdvertiser && (
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
-                          disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
-                          onClick={() => setShowSaveNewDialog(true)}
-                          className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
+                          onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
+                          className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
                         >
-                          {isSavingNew ? (
-                            <Loader className="w-3 h-3 animate-spin" />
-                          ) : existingDuplicateTemplate ? (
-                            `Already exists as "${existingDuplicateTemplate}"`
-                          ) : (
-                            "Save as New Template"
-                          )}
+                          <CogIcon className="w-3 h-3 text-white mr-1" />
+                          Set Up Templates
                         </Button>
-                        {selectedTemplate && copyTemplates[selectedTemplate] && (
+                      )}
+
+                      {/* No templates + content typed → Save as New only */}
+                      {Object.keys(copyTemplates).length === 0 && hasAnyContent && (
+                        <div className="ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
                           <Button
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate}
-                            onClick={handleUpdateSelectedTemplate}
-                            className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200 h-7 flex items-center gap-1 font-medium"
+                            disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
+                            onClick={() => setShowSaveNewDialog(true)}
+                            className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
                           >
-                            {isUpdatingTemplate ? (
-                              <>
-                                <Loader className="w-3 h-3 animate-spin mr-1" />
-                                Updating Template...
-                              </>
+                            {isSavingNew ? (
+                              <Loader className="w-3 h-3 animate-spin" />
+                            ) : existingDuplicateTemplate ? (
+                              `Already exists as "${existingDuplicateTemplate}"`
                             ) : (
-                              "Update Selected Template"
+                              "Save as New Template"
                             )}
                           </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Popover Template Dropdown - Meta styled */}
-                  <Popover open={templateDropdownOpen} onOpenChange={(open) => {
-                    setTemplateDropdownOpen(open);
-                    if (!open) {
-                      setTemplateSearch("");
-                      setShowSortMenu(false);
-                      if (bulkDeleteMode && selectedForDelete.size === 0) {
-                        setBulkDeleteMode(false);
-                      }
-                    }
-                  }}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={`w-full justify-between ${formFieldChrome} hover:bg-white text-sm px-3 text-zinc-700`}
-                      >
-                        <span className="truncate">
-                          {Object.keys(copyTemplates).length === 0
-                            ? "No templates available for selected advertiser"
-                            : selectedTemplate || "Choose a Template"}
-                        </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border border-gray-100 shadow-xl"
-                      align="start"
-                      side="bottom"
-                      avoidCollisions={false}
-                      style={{
-                        minWidth: "var(--radix-popover-trigger-width)",
-                        width: "auto",
-                      }}
-                    >
-                      <Command filter={() => 1} loop={false} className="overflow-visible">
-                        <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
-                          <CommandInput
-                            placeholder="Search templates..."
-                            value={templateSearch}
-                            onValueChange={setTemplateSearch}
-                            wrapperClassName="flex-1 border-gray-200 bg-gray-50 mx-0 mt-0 mb-0"
-                          />
-                          <div className="flex items-center gap-1">
-                            {/* Sort Menu */}
-                            <div className="relative">
-                              <button
-                                type="button"
-                                className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setShowSortMenu(!showSortMenu);
-                                }}
-                                title="Sort templates"
-                              >
-                                <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
-                              </button>
-                              {showSortMenu && (
-                                <>
-                                  <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
-                                  <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]">
-                                    {[
-                                      { value: "default", label: "Recently Made" },
-                                      { value: "oldest", label: "Oldest First" },
-                                    ].map((option) => (
-                                      <button
-                                        key={option.value}
-                                        type="button"
-                                        className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSortMode(option.value);
-                                          localStorage.setItem("tiktokHomeTemplateSortMode", option.value);
-                                          setShowSortMenu(false);
-                                        }}
-                                      >
-                                        <span className="flex items-center gap-1.5">
-                                          {option.label}
-                                        </span>
-                                        {sortMode === option.value && (
-                                          <Check className="h-3.5 w-3.5 text-blue-500" />
-                                        )}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                            {/* Bulk Delete Button */}
-                            {bulkDeleteMode && selectedForDelete.size > 0 ? (
-                              <button
-                                type="button"
-                                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-70 animate-in zoom-in-95 duration-150"
-                                disabled={isDeletingTemplates}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleBulkDeleteTemplates();
-                                }}
-                              >
-                                {isDeletingTemplates ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                                {isDeletingTemplates ? "Deleting..." : `Delete (${selectedForDelete.size})`}
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (bulkDeleteMode) {
-                                    setBulkDeleteMode(false);
-                                    setSelectedForDelete(new Set());
-                                  } else {
-                                    setBulkDeleteMode(true);
-                                  }
-                                }}
-                                title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
-                              >
-                                {bulkDeleteMode ? (
-                                  <X className="h-3.5 w-3.5" />
-                                ) : (
-                                  <Trash2 className="h-3.5 w-3.5 text-gray-500" />
-                                )}
-                              </button>
-                            )}
-                          </div>
                         </div>
-                        <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
-                          {sortedFilteredTemplates.map(([name, data]) => (
-                            <CommandItem
-                              key={name}
-                              value={name}
-                              onSelect={() => {
-                                if (bulkDeleteMode) {
-                                  toggleDeleteSelection(name);
-                                } else {
-                                  setSelectedTemplate(name);
-                                  if (data.texts && data.texts.length > 0) {
-                                    setAdTexts([data.texts[0] || ""]);
-                                  }
-                                  setTemplateDropdownOpen(false);
-                                  setTemplateSearch("");
-                                }
-                              }}
-                              className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                      )}
+
+                      {/* Has templates + changes detected → both buttons */}
+                      {Object.keys(copyTemplates).length > 0 && hasUnsavedTemplateChanges && (
+                        <div className="flex items-center gap-2 ml-auto animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isSavingNew || isUpdatingTemplate || !!existingDuplicateTemplate}
+                            onClick={() => setShowSaveNewDialog(true)}
+                            className="text-xs px-3 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 h-7 flex items-center gap-1 font-medium"
+                          >
+                            {isSavingNew ? (
+                              <Loader className="w-3 h-3 animate-spin" />
+                            ) : existingDuplicateTemplate ? (
+                              `Already exists as "${existingDuplicateTemplate}"`
+                            ) : (
+                              "Save as New Template"
+                            )}
+                          </Button>
+                          {selectedTemplate && copyTemplates[selectedTemplate] && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isUpdatingTemplate || isSavingNew || !!existingDuplicateTemplate}
+                              onClick={handleUpdateSelectedTemplate}
+                              className="text-xs px-3 py-0.5 border-gray-300 text-white bg-blue-600 rounded-xl hover:text-white hover:bg-blue-700 animate-in fade-in slide-in-from-bottom-1 duration-500 ease-out fill-mode-both delay-200 h-7 flex items-center gap-1 font-medium"
                             >
-                              <div className="flex items-center gap-2 w-full">
-                                {bulkDeleteMode && (
-                                  <Checkbox
-                                    checked={selectedForDelete.has(name)}
-                                    className="border-gray-300 w-4 h-4 rounded-md pointer-events-none"
-                                  />
-                                )}
-                                <span className="text-sm truncate flex-1">{name}</span>
-                                {name === defaultTemplateName && (
-                                  <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
-                                    Default
-                                  </span>
-                                )}
-                                {!bulkDeleteMode && name === selectedTemplate && (
-                                  <Check className="h-4 w-4 text-blue-500 shrink-0" />
+                              {isUpdatingTemplate ? (
+                                <>
+                                  <Loader className="w-3 h-3 animate-spin mr-1" />
+                                  Updating Template...
+                                </>
+                              ) : (
+                                "Update Selected Template"
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Popover Template Dropdown - Meta styled */}
+                    <Popover open={templateDropdownOpen} onOpenChange={(open) => {
+                      setTemplateDropdownOpen(open);
+                      if (!open) {
+                        setTemplateSearch("");
+                        setShowSortMenu(false);
+                        if (bulkDeleteMode && selectedForDelete.size === 0) {
+                          setBulkDeleteMode(false);
+                        }
+                      }
+                    }}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={`w-full justify-between ${formFieldChrome} hover:bg-white text-sm px-3 text-zinc-700`}
+                          disabled={Object.keys(copyTemplates).length === 0}
+                        >
+                          <span className="truncate">
+                            {Object.keys(copyTemplates).length === 0
+                              ? "No templates available for selected advertiser"
+                              : selectedTemplate || "Choose a Template"}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        className="min-w-[--radix-popover-trigger-width] w-auto !max-w-none p-0 rounded-xl bg-white border border-gray-100 shadow-xl"
+                        align="start"
+                        side="bottom"
+                        avoidCollisions={false}
+                        style={{
+                          minWidth: "var(--radix-popover-trigger-width)",
+                          width: "auto",
+                        }}
+                      >
+                        <Command filter={() => 1} loop={false} className="overflow-visible">
+                          <div className="flex items-center gap-1.5 mx-2 mt-2 mb-1">
+                            <CommandInput
+                              placeholder="Search templates..."
+                              value={templateSearch}
+                              onValueChange={setTemplateSearch}
+                              wrapperClassName="flex-1 border-gray-200 bg-gray-50 mx-0 mt-0 mb-0"
+                            />
+                            <div className="flex items-center gap-1">
+                              {/* Sort Menu */}
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowSortMenu(!showSortMenu);
+                                  }}
+                                  title="Sort templates"
+                                >
+                                  <ArrowUpDown className="h-3.5 w-3.5 text-gray-500" />
+                                </button>
+                                {showSortMenu && (
+                                  <>
+                                    <div className="fixed inset-0 z-[99]" onClick={() => setShowSortMenu(false)} />
+                                    <div className="absolute right-0 top-full mt-1 z-[100] bg-white rounded-xl border border-gray-200 shadow-lg py-1 min-w-[150px]">
+                                      {[
+                                        { value: "default", label: "Recently Made" },
+                                        { value: "oldest", label: "Oldest First" },
+                                      ].map((option) => (
+                                        <button
+                                          key={option.value}
+                                          type="button"
+                                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-100 flex items-center justify-between"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSortMode(option.value);
+                                            localStorage.setItem("tiktokHomeTemplateSortMode", option.value);
+                                            setShowSortMenu(false);
+                                          }}
+                                        >
+                                          <span className="flex items-center gap-1.5">
+                                            {option.label}
+                                          </span>
+                                          {sortMode === option.value && (
+                                            <Check className="h-3.5 w-3.5 text-blue-500" />
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
                                 )}
                               </div>
-                            </CommandItem>
-                          ))}
+                              {/* Bulk Delete Button */}
+                              {bulkDeleteMode && selectedForDelete.size > 0 ? (
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-red-500 text-white text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-70 animate-in zoom-in-95 duration-150"
+                                  disabled={isDeletingTemplates}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleBulkDeleteTemplates();
+                                  }}
+                                >
+                                  {isDeletingTemplates ? <Loader className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                                  {isDeletingTemplates ? "Deleting..." : `Delete (${selectedForDelete.size})`}
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className={`p-1.5 rounded-lg transition-colors ${bulkDeleteMode ? 'bg-red-50 text-red-500' : 'hover:bg-gray-100'}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (bulkDeleteMode) {
+                                      setBulkDeleteMode(false);
+                                      setSelectedForDelete(new Set());
+                                    } else {
+                                      setBulkDeleteMode(true);
+                                    }
+                                  }}
+                                  title={bulkDeleteMode ? "Cancel delete" : "Delete templates"}
+                                >
+                                  {bulkDeleteMode ? (
+                                    <X className="h-3.5 w-3.5" />
+                                  ) : (
+                                    <Trash2 className="h-3.5 w-3.5 text-gray-500" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <CommandList className="max-h-[300px] overflow-y-auto rounded-xl">
+                            {sortedFilteredTemplates.map(([name, data]) => (
+                              <CommandItem
+                                key={name}
+                                value={name}
+                                onSelect={() => {
+                                  if (bulkDeleteMode) {
+                                    toggleDeleteSelection(name);
+                                  } else {
+                                    setSelectedTemplate(name);
+                                    if (data.texts && data.texts.length > 0) {
+                                      setAdTexts([data.texts[0] || ""]);
+                                    }
+                                    setTemplateDropdownOpen(false);
+                                    setTemplateSearch("");
+                                  }
+                                }}
+                                className="px-3 py-2 cursor-pointer m-1 rounded-xl transition-colors duration-150 hover:bg-gray-100"
+                              >
+                                <div className="flex items-center gap-2 w-full">
+                                  {bulkDeleteMode && (
+                                    <Checkbox
+                                      checked={selectedForDelete.has(name)}
+                                      className="border-gray-300 w-4 h-4 rounded-md pointer-events-none"
+                                    />
+                                  )}
+                                  <span className="text-sm truncate flex-1">{name}</span>
+                                  {name === defaultTemplateName && (
+                                    <span className="ml-2 text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-lg shrink-0">
+                                      Default
+                                    </span>
+                                  )}
+                                  {!bulkDeleteMode && name === selectedTemplate && (
+                                    <Check className="h-4 w-4 text-blue-500 shrink-0" />
+                                  )}
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                {/* Single Caption Textarea */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-1.5">
+                      {renderDiffMark("adTexts")}
+                      <span className="font-semibold text-sm">Ad Copy / Caption</span>
+                      {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
+                    </Label>
+                    <span className="text-[10px] text-zinc-400 font-medium">{(adTexts[0] || "").length}/100</span>
+                  </div>
+                  <TextareaAutosize
+                    value={adTexts[0] || ""}
+                    onChange={(e) => {
+                      setAdTexts([e.target.value]);
+                    }}
+                    placeholder="Write a catchy caption... ✍️"
+                    minRows={3}
+                    maxRows={8}
+                    className={formTextareaChrome}
+                    style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
+                  />
+                  {adType !== 'SPARK' && !adTexts[0]?.trim() && (
+                    <p className="text-xs text-red-500 font-medium mt-1">Please enter at least one ad caption</p>
+                  )}
+                  {(adTexts[0] || "").length > 100 && (
+                    <p className="text-xs text-red-500 font-medium mt-1">Caption cannot exceed 100 characters</p>
+                  )}
+                </div>
+              </div>
+
+              {/* 5. Call to Action & Landing Page URL Stacked */}
+              <div className="space-y-6">
+
+                {/* Call to Action Multi Selector */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    {renderDiffMark("cta")}
+                    <CTAIcon className="w-4 h-4" />
+                    Call to Action
+                  </Label>
+                  <Popover open={openCta} onOpenChange={setOpenCta}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-6"
+                      >
+                        <span className="text-sm truncate">
+                          {Array.isArray(cta) && cta.length > 0
+                            ? cta.map(v => CTA_OPTIONS.find(o => o.value === v)?.label || v).join(", ")
+                            : "None selected"}
+                        </span>
+                        <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
+                      <Command>
+                        <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
+                          <CommandGroup>
+                            {CTA_OPTIONS.map((opt) => {
+                              const isSelected = Array.isArray(cta) && cta.includes(opt.value);
+                              return (
+                                <CommandItem
+                                  key={opt.value}
+                                  value={opt.value}
+                                  onSelect={() => {
+                                    const prev = Array.isArray(cta) ? cta : [];
+                                    const next = prev.includes(opt.value)
+                                      ? prev.filter(v => v !== opt.value)
+                                      : [...prev, opt.value];
+                                    setCta(next);
+                                  }}
+                                  className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                >
+                                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}>
+                                    {isSelected && <Check className="w-3 h-3" />}
+                                  </div>
+                                  <span className="text-sm font-medium">{opt.label}</span>
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
                         </CommandList>
                       </Command>
                     </PopoverContent>
                   </Popover>
+                  {(!cta || cta.length === 0) && (
+                    <p className="text-xs text-red-500 font-medium mt-1">Please select at least one Call to Action</p>
+                  )}
                 </div>
-              </div>
 
-              {/* Single Caption Textarea */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-1.5">
-                    {renderDiffMark("adTexts")}
-                    <span className="font-semibold text-sm">Ad Copy / Caption</span>
-                    {adType === 'SPARK' && <span className="text-gray-400 font-normal text-xs">(Optional)</span>}
-                  </Label>
-                  <span className="text-[10px] text-zinc-400 font-medium">{(adTexts[0] || "").length}/100</span>
-                </div>
-                <TextareaAutosize
-                  value={adTexts[0] || ""}
-                  onChange={(e) => {
-                    setAdTexts([e.target.value]);
-                  }}
-                  placeholder="Write a catchy caption... ✍️"
-                  minRows={3}
-                  maxRows={8}
-                  className={formTextareaChrome}
-                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}
-                />
-                {adType !== 'SPARK' && !adTexts[0]?.trim() && (
-                  <p className="text-xs text-red-500 font-medium mt-1">Please enter at least one ad caption</p>
-                )}
-                {(adTexts[0] || "").length > 100 && (
-                  <p className="text-xs text-red-500 font-medium mt-1">Caption cannot exceed 100 characters</p>
-                )}
-              </div>
-            </div>
-
-            {/* 5. Call to Action & Landing Page URL Stacked */}
-            <div className="space-y-6">
-
-              {/* Call to Action Multi Selector */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  {renderDiffMark("cta")}
-                  <CTAIcon className="w-4 h-4" />
-                  Call to Action
-                </Label>
-                <Popover open={openCta} onOpenChange={setOpenCta}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full justify-between border border-gray-300 rounded-2xl bg-white shadow hover:bg-white px-3 py-6"
-                    >
-                      <span className="text-sm truncate">
-                        {Array.isArray(cta) && cta.length > 0
-                          ? cta.map(v => CTA_OPTIONS.find(o => o.value === v)?.label || v).join(", ")
-                          : "None selected"}
-                      </span>
-                      <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0 bg-white rounded-2xl shadow-xl border border-gray-100" align="start" side="bottom" avoidCollisions={false} style={{ width: 'var(--radix-popover-trigger-width)' }}>
-                    <Command>
-                      <CommandList className="max-h-[220px] overflow-y-auto rounded-2xl custom-scrollbar">
-                        <CommandGroup>
-                          {CTA_OPTIONS.map((opt) => {
-                            const isSelected = Array.isArray(cta) && cta.includes(opt.value);
-                            return (
-                              <CommandItem
-                                key={opt.value}
-                                value={opt.value}
-                                onSelect={() => {
-                                  const prev = Array.isArray(cta) ? cta : [];
-                                  const next = prev.includes(opt.value)
-                                    ? prev.filter(v => v !== opt.value)
-                                    : [...prev, opt.value];
-                                  setCta(next);
-                                }}
-                                className="flex items-center gap-2 p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                              >
-                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-black border-black text-white" : "border-gray-200"}`}>
-                                  {isSelected && <Check className="w-3 h-3" />}
-                                </div>
-                                <span className="text-sm font-medium">{opt.label}</span>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                {(!cta || cta.length === 0) && (
-                  <p className="text-xs text-red-500 font-medium mt-1">Please select at least one Call to Action</p>
-                )}
-              </div>
-
-              {/* Landing URL Selector */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="flex items-center gap-1.5">
-                    {renderDiffMark("landingUrl")}
-                    <LinkIcon className="w-4 h-4 text-gray-500" />
-                    Landing Page URL
-                  </Label>
-                  <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setUrlMode('WEBSITE')}
-                      className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
-                    >
-                      Website
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setUrlMode('INSTANT_PAGE')}
-                      className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
-                    >
-                      Instant Page
-                    </button>
+                {/* Landing URL Selector */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="flex items-center gap-1.5">
+                      {renderDiffMark("landingUrl")}
+                      <LinkIcon className="w-4 h-4 text-gray-500" />
+                      Landing Page URL
+                    </Label>
+                    <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => setUrlMode('WEBSITE')}
+                        className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'WEBSITE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
+                      >
+                        Website
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setUrlMode('INSTANT_PAGE')}
+                        className={cn("px-2 py-1 text-[10px] font-bold rounded-lg transition-all", urlMode === 'INSTANT_PAGE' ? "bg-white shadow-sm text-zinc-900" : "text-gray-400")}
+                      >
+                        Instant Page
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="relative group">
-                  <Input
-                    type="text"
-                    placeholder={urlMode === 'WEBSITE' ? "https://myshop.com/product" : "Select an Instant Page"}
-                    value={landingUrl}
-                    onChange={e => setLandingUrl(e.target.value)}
-                    className={cn(formInputChrome, "pr-10")}
-                  />
-                  <Popover open={openUrlPicker} onOpenChange={setOpenUrlPicker}>
-                    <PopoverTrigger asChild>
-                      <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
-                        <ChevronDown className="w-4 h-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end" side="bottom" avoidCollisions={false}>
-                      <Command>
-                        <CommandInput placeholder="Search links..." className="h-8" />
-                        <CommandList className="max-h-[300px]">
-                          <CommandEmpty>No results found.</CommandEmpty>
-                          {urlMode === 'WEBSITE' ? (
-                            <CommandGroup heading="Saved Links (Preferences)">
-                              {advertiserPrefs?.links?.map(l => (
-                                <CommandItem
-                                  key={l.url}
-                                  onSelect={() => { setLandingUrl(l.url); setOpenUrlPicker(false); }}
-                                  className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
-                                >
-                                  <div className="flex items-center gap-2 overflow-hidden">
-                                    <Globe className="w-3 h-3 text-gray-400 shrink-0" />
-                                    <span className="text-xs truncate">{l.url}</span>
-                                    {l.isDefault && <span className="ml-auto text-[8px] font-bold bg-blue-50 text-blue-500 px-1 py-0.5 rounded">Default</span>}
-                                  </div>
-                                </CommandItem>
-                              ))}
-                              {(!advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
-                                <div className="p-4 text-center">
-                                  <p className="text-[10px] text-gray-400 font-medium italic">No saved links in settings</p>
-                                </div>
-                              )}
-                            </CommandGroup>
-                          ) : (
-                            <CommandGroup heading="Instant Pages (TikTok)">
-                              {loadingPages ? (
-                                <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
-                              ) : instantPages.length > 0 ? (
-                                instantPages.map(p => (
+                  <div className="relative group">
+                    <Input
+                      type="text"
+                      placeholder={urlMode === 'WEBSITE' ? "https://myshop.com/product" : "Select an Instant Page"}
+                      value={landingUrl}
+                      onChange={e => setLandingUrl(e.target.value)}
+                      className={cn(formInputChrome, "pr-10")}
+                    />
+                    <Popover open={openUrlPicker} onOpenChange={setOpenUrlPicker}>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-300 hover:text-gray-600">
+                          <ChevronDown className="w-4 h-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-1 bg-white rounded-2xl shadow-xl border-gray-100" align="end" side="bottom" avoidCollisions={false}>
+                        <Command>
+                          <CommandInput placeholder="Search links..." className="h-8" />
+                          <CommandList className="max-h-[300px]">
+                            <CommandEmpty>No results found.</CommandEmpty>
+                            {urlMode === 'WEBSITE' ? (
+                              <CommandGroup heading="Saved Links (Preferences)">
+                                {advertiserPrefs?.links?.map(l => (
                                   <CommandItem
-                                    key={p.page_id}
-                                    onSelect={() => { setLandingUrl(p.page_id); setOpenUrlPicker(false); }}
+                                    key={l.url}
+                                    onSelect={() => { setLandingUrl(l.url); setOpenUrlPicker(false); }}
                                     className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
                                   >
                                     <div className="flex items-center gap-2 overflow-hidden">
-                                      <Zap className="w-3 h-3 text-emerald-400 shrink-0" />
-                                      <div className="flex flex-col min-w-0">
-                                        <span className="text-xs font-bold truncate">{p.page_name}</span>
-                                        <span className="text-[10px] text-gray-400 truncate">{p.page_id}</span>
-                                      </div>
+                                      <Globe className="w-3 h-3 text-gray-400 shrink-0" />
+                                      <span className="text-xs truncate">{l.url}</span>
+                                      {l.isDefault && <span className="ml-auto text-[8px] font-bold bg-blue-50 text-blue-500 px-1 py-0.5 rounded">Default</span>}
                                     </div>
                                   </CommandItem>
-                                ))
-                              ) : (
-                                <div className="p-4 text-center">
-                                  <p className="text-[10px] text-gray-400 font-medium italic">No instant pages found</p>
-                                </div>
-                              )}
-                            </CommandGroup>
-                          )}
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                {urlMode === 'WEBSITE' && !landingUrl?.trim() && (
-                  <p className="text-xs text-red-500 font-medium mt-1">Landing Page URL is required</p>
-                )}
-                {urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
-                  try {
-                    const urlString = landingUrl.trim();
-                    if (/^https?:\/\//i.test(urlString)) {
-                      new URL(urlString);
-                      return true;
-                    }
-                  } catch (_) { }
-                  return false;
-                })() && (
-                    <p className="text-xs text-red-500 font-medium mt-1">Landing Page URL must be a valid URL starting with http:// or https://</p>
+                                ))}
+                                {(!advertiserPrefs?.links || advertiserPrefs.links.length === 0) && (
+                                  <div className="p-4 text-center">
+                                    <p className="text-[10px] text-gray-400 font-medium italic">No saved links in settings</p>
+                                  </div>
+                                )}
+                              </CommandGroup>
+                            ) : (
+                              <CommandGroup heading="Instant Pages (TikTok)">
+                                {loadingPages ? (
+                                  <div className="p-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-300" /></div>
+                                ) : instantPages.length > 0 ? (
+                                  instantPages.map(p => (
+                                    <CommandItem
+                                      key={p.page_id}
+                                      onSelect={() => { setLandingUrl(p.page_id); setOpenUrlPicker(false); }}
+                                      className="p-2 rounded-xl hover:bg-gray-50 cursor-pointer"
+                                    >
+                                      <div className="flex items-center gap-2 overflow-hidden">
+                                        <Zap className="w-3 h-3 text-emerald-400 shrink-0" />
+                                        <div className="flex flex-col min-w-0">
+                                          <span className="text-xs font-bold truncate">{p.page_name}</span>
+                                          <span className="text-[10px] text-gray-400 truncate">{p.page_id}</span>
+                                        </div>
+                                      </div>
+                                    </CommandItem>
+                                  ))
+                                ) : (
+                                  <div className="p-4 text-center">
+                                    <p className="text-[10px] text-gray-400 font-medium italic">No instant pages found</p>
+                                  </div>
+                                )}
+                              </CommandGroup>
+                            )}
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  {urlMode === 'WEBSITE' && !landingUrl?.trim() && (
+                    <p className="text-xs text-red-500 font-medium mt-1">Landing Page URL is required</p>
                   )}
-              </div>
-            </div>
-
-            {/* Optional Section: Add Product Information */}
-            <div className="border-t border-gray-100 pt-6 space-y-4">
-              <div className="flex flex-col gap-1">
-                <Label className="flex items-center gap-2 font-semibold text-sm">
-                  {renderDiffMark(["productName", "productImageUrl", "sellingPoints"])}
-                  <Info className="w-4 h-4 text-gray-500" />
-                  Add product information <span className="text-gray-400 font-normal text-xs">• Optional</span>
-                </Label>
-                <span className="text-xs text-gray-500 leading-relaxed">
-                  This information will be used in different ad variations to create personalized ad delivery with the goal of improving ad performance.
-                </span>
-              </div>
-
-              {/* Saved Product Picker */}
-              {advertiserPrefs?.products?.length > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-gray-700">Select Saved Product</Label>
-                  <Select
-                    value={selectedSavedProductId}
-                    onValueChange={(value) => {
-                      setSelectedSavedProductId(value);
-                      if (value === "none") {
-                        setProductName("");
-                        setProductImageUrl("");
-                        setSellingPoints([]);
-                        return;
+                  {urlMode === 'WEBSITE' && landingUrl?.trim() && !(() => {
+                    try {
+                      const urlString = landingUrl.trim();
+                      if (/^https?:\/\//i.test(urlString)) {
+                        new URL(urlString);
+                        return true;
                       }
-                      const selectedProduct = advertiserPrefs.products.find(p => String(p.id) === value);
-                      if (selectedProduct) {
-                        setProductName(selectedProduct.name || "");
-                        setProductImageUrl(selectedProduct.image || "");
-                        setSellingPoints(selectedProduct.sellingPoints || []);
-                      } else {
-                        setProductName("");
-                        setProductImageUrl("");
-                        setSellingPoints([]);
-                      }
-                    }}
-                  >
-                    <SelectTrigger className={cn("w-full h-11 py-2 font-medium", formFieldChrome)}>
-                      <SelectValue placeholder="Select a saved product to auto-fill..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white rounded-xl gap-4">
-                      <SelectItem value="none" className="rounded-xl data-[highlighted]:bg-gray-100 transition-all my-0.5">
-                        -- Clear Selection / Custom Product --
-                      </SelectItem>
-                      {advertiserPrefs.products.map(p => (
-                        <SelectItem
-                          key={p.id}
-                          value={String(p.id)}
-                          className="rounded-xl data-[highlighted]:bg-gray-100 transition-all my-0.5 cursor-pointer"
-                        >
-                          {p.name}
+                    } catch (_) { }
+                    return false;
+                  })() && (
+                      <p className="text-xs text-red-500 font-medium mt-1">Landing Page URL must be a valid URL starting with http:// or https://</p>
+                    )}
+                </div>
+              </div>
+
+              {/* Optional Section: Add Product Information */}
+              <div className="border-t border-gray-100 pt-6 space-y-4">
+                <div className="flex flex-col gap-1">
+                  <Label className="flex items-center gap-2 font-semibold text-sm">
+                    {renderDiffMark(["productName", "productImageUrl", "sellingPoints"])}
+                    <Info className="w-4 h-4 text-gray-500" />
+                    Add product information <span className="text-gray-400 font-normal text-xs">• Optional</span>
+                  </Label>
+                  <span className="text-xs text-gray-500 leading-relaxed">
+                    This information will be used in different ad variations to create personalized ad delivery with the goal of improving ad performance.
+                  </span>
+                </div>
+
+                {/* Saved Product Picker */}
+                {advertiserPrefs?.products?.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-gray-700">Select Saved Product</Label>
+                    <Select
+                      value={selectedSavedProductId}
+                      onValueChange={(value) => {
+                        setSelectedSavedProductId(value);
+                        if (value === "none") {
+                          setProductName("");
+                          setProductImageUrl("");
+                          setSellingPoints([]);
+                          return;
+                        }
+                        const selectedProduct = advertiserPrefs.products.find(p => String(p.id) === value);
+                        if (selectedProduct) {
+                          setProductName(selectedProduct.name || "");
+                          setProductImageUrl(selectedProduct.image || "");
+                          setSellingPoints(selectedProduct.sellingPoints || []);
+                        } else {
+                          setProductName("");
+                          setProductImageUrl("");
+                          setSellingPoints([]);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className={cn("w-full h-11 py-2 font-medium", formFieldChrome)}>
+                        <SelectValue placeholder="Select a saved product to auto-fill..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white rounded-xl gap-4">
+                        <SelectItem value="none" className="rounded-xl data-[highlighted]:bg-gray-100 transition-all my-0.5">
+                          -- Clear Selection / Custom Product --
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+                        {advertiserPrefs.products.map(p => (
+                          <SelectItem
+                            key={p.id}
+                            value={String(p.id)}
+                            className="rounded-xl data-[highlighted]:bg-gray-100 transition-all my-0.5 cursor-pointer"
+                          >
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
-              {/* Product Name */}
-              <div className="space-y-2">
-                <Label htmlFor="product-name" className="text-xs font-semibold text-gray-700">Product name</Label>
-                <Input
-                  id="product-name"
-                  value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
-                  placeholder="Enter title"
-                  className={formInputChrome}
-                />
-              </div>
-
-              {/* Product Image */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-gray-700 block">Product image</Label>
-                <div className="flex items-center gap-3">
-                  {productImageUrl ? (
-                    <div className="relative shrink-0">
-                      <img src={productImageUrl} alt="Product" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
-                      <button
-                        type="button"
-                        onClick={() => setProductImageUrl("")}
-                        className="absolute -top-1.5 -right-1.5 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 animate-[bounce_1s_infinite]"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center shrink-0 cursor-pointer hover:bg-gray-100 transition-colors">
-                      <Plus className="w-6 h-6 text-gray-400" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-
-                          const formData = new FormData();
-                          formData.append("file", file);
-                          formData.append("advertiserId", selectedAdvertiser);
-
-                          try {
-                            const res = await fetch(`${API_BASE_URL}/api/tiktok/product-image/upload`, {
-                              method: "POST",
-                              body: formData,
-                              credentials: "include",
-                              headers: {
-                                'x-tiktok-user-id': localStorage.getItem('tiktok_uid'),
-                                'x-tiktok-token': localStorage.getItem('tiktok_token'),
-                              }
-                            });
-                            const data = await res.json();
-                            if (data.success && data.url) {
-                              setProductImageUrl(data.url);
-                            } else {
-                              throw new Error(data.error || "Failed to upload image");
-                            }
-                          } catch (err) {
-                            console.error("Failed to upload image:", err.message);
-                          }
-                        }}
-                      />
-                    </label>
-                  )}
-                </div>
-              </div>
-
-              {/* Selling Points */}
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold text-gray-700 block">Selling points</Label>
-                <div className="flex gap-2">
+                {/* Product Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="product-name" className="text-xs font-semibold text-gray-700">Product name</Label>
                   <Input
-                    value={newSellingPoint}
-                    onChange={(e) => setNewSellingPoint(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
+                    id="product-name"
+                    value={productName}
+                    onChange={(e) => setProductName(e.target.value)}
+                    placeholder="Enter title"
+                    className={formInputChrome}
+                  />
+                </div>
+
+                {/* Product Image */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-gray-700 block">Product image</Label>
+                  <div className="flex items-center gap-3">
+                    {productImageUrl ? (
+                      <div className="relative shrink-0">
+                        <img src={productImageUrl} alt="Product" className="w-16 h-16 rounded-xl object-cover border border-gray-200" />
+                        <button
+                          type="button"
+                          onClick={() => setProductImageUrl("")}
+                          className="absolute -top-1.5 -right-1.5 p-0.5 bg-red-500 text-white rounded-full hover:bg-red-600 animate-[bounce_1s_infinite]"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-16 h-16 rounded-xl bg-gray-50 border-2 border-dashed border-gray-300 flex flex-col items-center justify-center shrink-0 cursor-pointer hover:bg-gray-100 transition-colors">
+                        <Plus className="w-6 h-6 text-gray-400" />
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            const formData = new FormData();
+                            formData.append("file", file);
+                            formData.append("advertiserId", selectedAdvertiser);
+
+                            try {
+                              const res = await fetch(`${API_BASE_URL}/api/tiktok/product-image/upload`, {
+                                method: "POST",
+                                body: formData,
+                                credentials: "include",
+                                headers: {
+                                  'x-tiktok-user-id': localStorage.getItem('tiktok_uid'),
+                                  'x-tiktok-token': localStorage.getItem('tiktok_token'),
+                                }
+                              });
+                              const data = await res.json();
+                              if (data.success && data.url) {
+                                setProductImageUrl(data.url);
+                              } else {
+                                throw new Error(data.error || "Failed to upload image");
+                              }
+                            } catch (err) {
+                              console.error("Failed to upload image:", err.message);
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* Selling Points */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-gray-700 block">Selling points</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newSellingPoint}
+                      onChange={(e) => setNewSellingPoint(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (!newSellingPoint.trim()) return;
+                          if (sellingPoints.includes(newSellingPoint.trim())) return;
+                          setSellingPoints([...sellingPoints, newSellingPoint.trim()]);
+                          setNewSellingPoint("");
+                        }
+                      }}
+                      placeholder="Press enter to add each entry"
+                      className="border border-gray-300 rounded-2xl h-11 px-4 text-sm flex-1 focus:outline-hidden focus:ring-0 focus-visible:outline-hidden"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => {
                         if (!newSellingPoint.trim()) return;
                         if (sellingPoints.includes(newSellingPoint.trim())) return;
                         setSellingPoints([...sellingPoints, newSellingPoint.trim()]);
                         setNewSellingPoint("");
-                      }
-                    }}
-                    placeholder="Press enter to add each entry"
-                    className="border border-gray-300 rounded-2xl h-11 px-4 text-sm flex-1 focus:outline-hidden focus:ring-0 focus-visible:outline-hidden"
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      if (!newSellingPoint.trim()) return;
-                      if (sellingPoints.includes(newSellingPoint.trim())) return;
-                      setSellingPoints([...sellingPoints, newSellingPoint.trim()]);
-                      setNewSellingPoint("");
-                    }}
-                    className="rounded-2xl h-11 px-6 bg-zinc-800 text-white font-semibold hover:bg-black"
-                  >
-                    Confirm
-                  </Button>
-                </div>
-
-                {/* Suggestions */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-gray-500">
-                  <span>Suggestions:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!sellingPoints.includes("x% off")) {
-                        setSellingPoints([...sellingPoints, "x% off"]);
-                      }
-                    }}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
-                  >
-                    + x% off
-                  </button>
-                  <span>,</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!sellingPoints.includes("Save $x")) {
-                        setSellingPoints([...sellingPoints, "Save $x"]);
-                      }
-                    }}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
-                  >
-                    + Save $x
-                  </button>
-                  <span>,</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!sellingPoints.includes("Limited-time offer")) {
-                        setSellingPoints([...sellingPoints, "Limited-time offer"]);
-                      }
-                    }}
-                    className="text-blue-600 hover:underline font-medium cursor-pointer"
-                  >
-                    + Limited-time offer
-                  </button>
-                </div>
-
-                {/* Tags display */}
-                {sellingPoints.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 pt-2">
-                    {sellingPoints.map((tag) => (
-                      <span key={tag} className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-[11px] text-gray-700 px-2.5 py-1 rounded-full font-medium">
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => setSellingPoints(sellingPoints.filter(t => t !== tag))}
-                          className="text-gray-400 hover:text-gray-600 cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </span>
-                    ))}
+                      }}
+                      className="rounded-2xl h-11 px-6 bg-zinc-800 text-white font-semibold hover:bg-black"
+                    >
+                      Confirm
+                    </Button>
                   </div>
-                )}
+
+                  {/* Suggestions */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs text-gray-500">
+                    <span>Suggestions:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!sellingPoints.includes("x% off")) {
+                          setSellingPoints([...sellingPoints, "x% off"]);
+                        }
+                      }}
+                      className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    >
+                      + x% off
+                    </button>
+                    <span>,</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!sellingPoints.includes("Save $x")) {
+                          setSellingPoints([...sellingPoints, "Save $x"]);
+                        }
+                      }}
+                      className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    >
+                      + Save $x
+                    </button>
+                    <span>,</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!sellingPoints.includes("Limited-time offer")) {
+                          setSellingPoints([...sellingPoints, "Limited-time offer"]);
+                        }
+                      }}
+                      className="text-blue-600 hover:underline font-medium cursor-pointer"
+                    >
+                      + Limited-time offer
+                    </button>
+                  </div>
+
+                  {/* Tags display */}
+                  {sellingPoints.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-2">
+                      {sellingPoints.map((tag) => (
+                        <span key={tag} className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 text-[11px] text-gray-700 px-2.5 py-1 rounded-full font-medium">
+                          {tag}
+                          <button
+                            type="button"
+                            onClick={() => setSellingPoints(sellingPoints.filter(t => t !== tag))}
+                            className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* 6. Media Section or Spark Info Card */}
-            <div className="border-t border-gray-100 pt-6">
-              {adType === 'SPARK' ? (
-                <div className="rounded-3xl border border-blue-100 bg-blue-50/20 p-6 flex flex-col md:flex-row items-start gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-sm border border-blue-100">
-                    <Video className="w-6 h-6 text-blue-500" />
+              {/* 6. Media Section or Spark Info Card */}
+              <div className="border-t border-gray-100 pt-6">
+                {adType === 'SPARK' ? (
+                  <div className="rounded-3xl border border-blue-100 bg-blue-50/20 p-6 flex flex-col md:flex-row items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 shadow-sm border border-blue-100">
+                      <Video className="w-6 h-6 text-blue-500" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-semibold text-gray-900">Organic Video Selected</h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">
+                        You have selected a <strong>Spark Ad</strong>. The video and caption from the authorized organic TikTok post will be used directly. Local and cloud file uploads are automatically bypassed.
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-semibold text-gray-900">Organic Video Selected</h4>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      You have selected a <strong>Spark Ad</strong>. The video and caption from the authorized organic TikTok post will be used directly. Local and cloud file uploads are automatically bypassed.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2">
-                      {renderDiffMark("videoFile")}
-                      Video (.mp4, .mov)
-                    </Label>
-                    <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className={cn(
-                            "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
-                            formFieldChrome
-                          )}
-                        >
-                          <CloudUpload className="h-4 w-4" />
-                          Manage Sources
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" side="bottom" avoidCollisions={false} className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
-                        <div className="flex flex-col">
-                          {UPLOAD_SOURCE_OPTIONS.map((src) => {
-                            const checked = uploadSources.includes(src.id)
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2">
+                        {renderDiffMark("videoFile")}
+                        Video (.mp4, .mov)
+                      </Label>
+                      <Popover open={uploadSourcesOpen} onOpenChange={handleUploadSourcesOpenChange}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className={cn(
+                              "h-9 px-3 flex items-center gap-1.5 text-black hover:bg-white border !border-gray-200",
+                              formFieldChrome
+                            )}
+                          >
+                            <CloudUpload className="h-4 w-4" />
+                            Manage Sources
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" side="bottom" avoidCollisions={false} className="bg-white rounded-xl p-2 w-64 border border-gray-200 shadow-lg">
+                          <div className="flex flex-col">
+                            {UPLOAD_SOURCE_OPTIONS.map((src) => {
+                              const checked = uploadSources.includes(src.id)
+                              return (
+                                <label
+                                  key={src.id}
+                                  className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={() => toggleUploadSource(src.id)}
+                                  />
+                                  <img
+                                    src={src.icon}
+                                    alt=""
+                                    className={'h-4 w-4 object-contain'}
+                                  />
+                                  <span className="text-sm text-gray-800">{src.compactLabel}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
+                      <div
+                        onClick={() => fileRef.current?.click()}
+                        className="group cursor-pointer border-2 border-dashed border-gray-300 rounded-3xl p-8 text-center transition-all hover:border-gray-400 hover:bg-gray-50"
+                      >
+                        <input
+                          ref={fileRef}
+                          type="file"
+                          accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/gif"
+                          multiple
+                          className="hidden"
+                          onChange={handleVideoSelect}
+                        />
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-700">Click to upload video or image</p>
+                            <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok videos</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cloud Source Buttons */}
+                    {(() => {
+                      const rowSources = uploadSources.filter((s) => s !== 'local')
+                      if (rowSources.length === 0) return null
+
+                      return (
+                        <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
+                          {rowSources.map((id) => {
+                            const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
+                            if (!src) return null
+
+                            let onClick
+                            if (id === 'drive') onClick = handleDriveClick
+                            else if (id === 'dropbox') onClick = handleDropboxClick
+
                             return (
-                              <label
-                                key={src.id}
-                                className="flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer hover:bg-gray-100"
+                              <Button
+                                key={id}
+                                type="button"
+                                onClick={onClick}
+                                className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
                               >
-                                <Checkbox
-                                  checked={checked}
-                                  onCheckedChange={() => toggleUploadSource(src.id)}
-                                />
                                 <img
-                                  src={src.icon}
-                                  alt=""
-                                  className={'h-4 w-4 object-contain'}
+                                  src={typeof src.icon === 'string' ? src.icon : undefined}
+                                  alt={src.name}
+                                  className="h-4 w-4 object-contain"
+                                  style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
                                 />
-                                <span className="text-sm text-gray-800">{src.compactLabel}</span>
-                              </label>
+                                {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
+                                <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
+                              </Button>
                             )
                           })}
                         </div>
-                      </PopoverContent>
-                    </Popover>
+                      )
+                    })()}
+
+                    {/* Progress bar */}
+                    {(isUploading || videoUploading) && !isSubmitting && (
+                      <div className="mt-2">
+                        <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 transition-all duration-300"
+                            style={{ width: `${videoUploading ? videoUploadProgress : uploadProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] font-medium text-emerald-600 mt-1">
+                          Uploading {videoUploading ? videoUploadProgress : uploadProgress}%
+                        </p>
+                      </div>
+                    )}
                   </div>
+                )}
+              </div>
 
-                  {uploadSources.includes('local') && !driveFiles.length && !dropboxFiles.length && (
-                    <div
-                      onClick={() => fileRef.current?.click()}
-                      className="group cursor-pointer border-2 border-dashed border-gray-300 rounded-3xl p-8 text-center transition-all hover:border-gray-400 hover:bg-gray-50"
-                    >
-                      <input
-                        ref={fileRef}
-                        type="file"
-                        accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/gif"
-                        multiple
-                        className="hidden"
-                        onChange={handleVideoSelect}
-                      />
-                      <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Upload className="w-6 h-6 text-gray-400 group-hover:text-gray-600" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-700">Click to upload video or image</p>
-                          <p className="text-xs text-gray-400 mt-1">Recommended ratio: 9:16 for TikTok videos</p>
-                        </div>
-                      </div>
-                    </div>
+              {/* Submit Button */}
+              <div className="pt-6 border-t border-gray-100 space-y-4">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !isFormValid}
+                  className={cn(
+                    "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50",
+                    (isSubmitting || !isFormValid) && "opacity-50 cursor-not-allowed"
                   )}
+                >
+                  {isSubmitting ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader className="w-5 h-5 animate-spin" />
+                      {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
+                    </div>
+                  ) : (
+                    'Publish Ads'
+                  )}
+                </Button>
 
-                  {/* Cloud Source Buttons */}
-                  {(() => {
-                    const rowSources = uploadSources.filter((s) => s !== 'local')
-                    if (rowSources.length === 0) return null
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between mt-2 mb-2">
+                    <div className="flex items-center space-x-2">
+                      <Label className="text-sm font-medium inline-flex items-center gap-1">
+                        {renderDiffMark("launchPaused")}
+                        <span>Ad Status:</span>
+                      </Label>
 
-                    return (
-                      <div className={cn("grid gap-2", rowSources.length === 1 ? "grid-cols-1" : "grid-cols-2")}>
-                        {rowSources.map((id) => {
-                          const src = UPLOAD_SOURCE_OPTIONS.find((o) => o.id === id)
-                          if (!src) return null
-
-                          let onClick
-                          if (id === 'drive') onClick = handleDriveClick
-                          else if (id === 'dropbox') onClick = handleDropboxClick
-
-                          return (
-                            <Button
-                              key={id}
-                              type="button"
-                              onClick={onClick}
-                              className="bg-black hover:bg-zinc-800 text-white rounded-2xl h-[48px] flex items-center justify-center gap-2 px-3 transition-all active:scale-95"
-                            >
-                              <img
-                                src={typeof src.icon === 'string' ? src.icon : undefined}
-                                alt={src.name}
-                                className="h-4 w-4 object-contain"
-                                style={typeof src.icon !== 'string' ? { display: 'none' } : {}}
-                              />
-                              {typeof src.icon === 'function' && <src.icon className="h-4 w-4" />}
-                              <span className="truncate text-xs font-semibold">{src.fullLabel}</span>
-                            </Button>
-                          )
-                        })}
-                      </div>
-                    )
-                  })()}
-
-                  {/* Progress bar */}
-                  {(isUploading || videoUploading) && !isSubmitting && (
-                    <div className="mt-2">
-                      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                      <RadioGroup
+                        value={launchPaused ? "paused" : "active"}
+                        onValueChange={(value) => setLaunchPaused(value === "paused")}
+                        disabled={isSubmitting}
+                        className="flex items-center space-x-2"
+                      >
                         <div
-                          className="h-full bg-emerald-500 transition-all duration-300"
-                          style={{ width: `${videoUploading ? videoUploadProgress : uploadProgress}%` }}
-                        />
-                      </div>
-                      <p className="text-[10px] font-medium text-emerald-600 mt-1">
-                        Uploading {videoUploading ? videoUploadProgress : uploadProgress}%
-                      </p>
+                          className={cn(
+                            "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                            !launchPaused
+                              ? "bg-green-50 border border-green-300"
+                              : "border border-transparent"
+                          )}
+                        >
+                          <RadioGroupItem
+                            value="active"
+                            id="statusActive"
+                            className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
+                          />
+                          <Label
+                            htmlFor="statusActive"
+                            className={cn(
+                              "text-sm font-medium leading-none cursor-pointer",
+                              !launchPaused ? "text-green-600" : "text-gray-600"
+                            )}
+                          >
+                            Active
+                          </Label>
+                        </div>
+
+                        <div
+                          className={cn(
+                            "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
+                            launchPaused
+                              ? "bg-red-50 border border-red-300"
+                              : "border border-transparent"
+                          )}
+                        >
+                          <RadioGroupItem
+                            value="paused"
+                            id="statusPaused"
+                            className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
+                          />
+                          <Label
+                            htmlFor="statusPaused"
+                            className={cn(
+                              "text-sm font-medium leading-none cursor-pointer",
+                              launchPaused ? "text-red-600" : "text-gray-600"
+                            )}
+                          >
+                            Paused
+                          </Label>
+                        </div>
+                      </RadioGroup>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Submit Button */}
-            <div className="pt-6 border-t border-gray-100 space-y-4">
-              <Button
-                type="submit"
-                disabled={isSubmitting || !isFormValid}
-                className={cn(
-                  "w-full h-14 rounded-2xl font-bold text-base transition-all shadow-lg bg-black hover:bg-zinc-800 text-white hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50",
-                  (isSubmitting || !isFormValid) && "opacity-50 cursor-not-allowed"
-                )}
-              >
-                {isSubmitting ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader className="w-5 h-5 animate-spin" />
-                    {(isUploading || videoUploading) ? 'Uploading Media...' : 'Creating TikTok Ad...'}
                   </div>
-                ) : (
-                  'Publish Ads'
-                )}
-              </Button>
 
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Label className="text-sm font-medium inline-flex items-center gap-1">
-                      {renderDiffMark("launchPaused")}
-                      <span>Ad Status:</span>
-                    </Label>
-
-                    <RadioGroup
-                      value={launchPaused ? "paused" : "active"}
-                      onValueChange={(value) => setLaunchPaused(value === "paused")}
-                      disabled={isSubmitting}
-                      className="flex items-center space-x-2"
+                  <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
+                    <Checkbox
+                      id="preserveMedia"
+                      checked={preserveMedia}
+                      onCheckedChange={setPreserveMedia}
+                      className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    />
+                    <Label
+                      htmlFor="preserveMedia"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                     >
-                      <div
-                        className={cn(
-                          "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                          !launchPaused
-                            ? "bg-green-50 border border-green-300"
-                            : "border border-transparent"
-                        )}
-                      >
-                        <RadioGroupItem
-                          value="active"
-                          id="statusActive"
-                          className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-green-500 data-[state=checked]:text-green-500 [&[data-state=checked]_svg_circle]:fill-green-500"
-                        />
-                        <Label
-                          htmlFor="statusActive"
-                          className={cn(
-                            "text-sm font-medium leading-none cursor-pointer",
-                            !launchPaused ? "text-green-600" : "text-gray-600"
-                          )}
-                        >
-                          Active
-                        </Label>
-                      </div>
-
-                      <div
-                        className={cn(
-                          "flex items-center space-x-2 p-2 rounded-xl transition-colors duration-150",
-                          launchPaused
-                            ? "bg-red-50 border border-red-300"
-                            : "border border-transparent"
-                        )}
-                      >
-                        <RadioGroupItem
-                          value="paused"
-                          id="statusPaused"
-                          className="focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 data-[state=checked]:border-red-500 data-[state=checked]:text-red-500 [&[data-state=checked]_svg_circle]:fill-red-500"
-                        />
-                        <Label
-                          htmlFor="statusPaused"
-                          className={cn(
-                            "text-sm font-medium leading-none cursor-pointer",
-                            launchPaused ? "text-red-600" : "text-gray-600"
-                          )}
-                        >
-                          Paused
-                        </Label>
-                      </div>
-                    </RadioGroup>
+                      Don't clear media after publishing ads
+                    </Label>
                   </div>
-                </div>
-
-                <div className="flex items-center space-x-2 rounded-xl transition-colors duration-150">
-                  <Checkbox
-                    id="preserveMedia"
-                    checked={preserveMedia}
-                    onCheckedChange={setPreserveMedia}
-                    className="rounded-md focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                  <Label
-                    htmlFor="preserveMedia"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                  >
-                    Don't clear media after publishing ads
-                  </Label>
                 </div>
               </div>
             </div>
-          </div>
 
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <FolderPickerOverlay
-        show={showFolderInput}
-        linkValue={folderLinkValue}
-        setLinkValue={setFolderLinkValue}
-        onImport={handleImportFromFolder}
-        onCancel={() => setShowFolderInput(false)}
-        isImporting={isImportingFolder}
-      />
+        <FolderPickerOverlay
+          show={showFolderInput}
+          linkValue={folderLinkValue}
+          setLinkValue={setFolderLinkValue}
+          onImport={handleImportFromFolder}
+          onCancel={() => setShowFolderInput(false)}
+          isImporting={isImportingFolder}
+        />
 
-      {/* FLOATING VARIANT PICKER BAR AT BOTTOM */}
-      {
-        variants.length > 1 && (
-          <TooltipProvider delayDuration={0}>
-            <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
-              <ScrollArea
-                type="always"
-                className={cn(
-                  "rounded-full",
-                  shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2"
-                )}
-              >
-                <div className="flex w-max items-center gap-1 pr-1">
-                  {variants.map((variant) => {
-                    const isActive = variant.id === activeVariantId
-                    const assignedCount = countFilesForVariant(variant.id)
+        {/* FLOATING VARIANT PICKER BAR AT BOTTOM */}
+        {
+          variants.length > 1 && (
+            <TooltipProvider delayDuration={0}>
+              <div className="fixed bottom-6 left-1/2 z-40 flex max-w-[calc(100vw-1rem)] -translate-x-1/2 items-center gap-2 rounded-full border border-black bg-black px-2 py-2 text-white shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <ScrollArea
+                  type="always"
+                  className={cn(
+                    "rounded-full",
+                    shouldScrollVariantPicker && "w-[34rem] max-w-[calc(100vw-9rem)] pb-2"
+                  )}
+                >
+                  <div className="flex w-max items-center gap-1 pr-1">
+                    {variants.map((variant) => {
+                      const isActive = variant.id === activeVariantId
+                      const assignedCount = countFilesForVariant(variant.id)
 
-                    return (
-                      <div key={variant.id} className="group flex shrink-0 items-center">
-                        <button
-                          type="button"
-                          onClick={() => switchVariant(variant.id)}
-                          className={cn(
-                            "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
-                            isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
-                          )}
-                        >
-                          <VariantDot variantId={variant.id} variants={variants} />
-                          <span className="whitespace-nowrap">{variant.name}</span>
-                          <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
-                            · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
-                          </span>
-                        </button>
-                        {variant.id !== 'default' && (
+                      return (
+                        <div key={variant.id} className="group flex shrink-0 items-center">
                           <button
                             type="button"
-                            onClick={() => handleDeleteVariant(variant.id)}
-                            className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
-                            title="Delete variant"
+                            onClick={() => switchVariant(variant.id)}
+                            className={cn(
+                              "flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2.5 text-sm transition",
+                              isActive ? "bg-zinc-700 text-white" : "text-white/75 hover:bg-white/10 hover:text-white"
+                            )}
                           >
-                            <X className="h-3 w-3" />
+                            <VariantDot variantId={variant.id} variants={variants} />
+                            <span className="whitespace-nowrap">{variant.name}</span>
+                            <span className={cn("text-xs whitespace-nowrap", isActive ? "text-white/70" : "text-white/55")}>
+                              · {assignedCount} ad{assignedCount !== 1 ? "s" : ""}
+                            </span>
                           </button>
-                        )}
-                      </div>
-                    )
-                  })}
+                          {variant.id !== 'default' && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteVariant(variant.id)}
+                              className="ml-0.5 rounded-full p-1 text-white/60 opacity-0 transition group-hover:opacity-100 hover:bg-white/10 hover:text-white"
+                              title="Delete variant"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </ScrollArea>
+                <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={handleAddVariant}
+                        className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Add variant</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteAllVariantsDialog(true)}
+                        className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete all variants</TooltipContent>
+                  </Tooltip>
                 </div>
-              </ScrollArea>
-              <div className="flex shrink-0 items-center gap-1 border-l border-white/50 pl-2">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={handleAddVariant}
-                      className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Add variant</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={() => setShowDeleteAllVariantsDialog(true)}
-                      className="rounded-full p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
-                    >
-                      <Trash className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Delete all variants</TooltipContent>
-                </Tooltip>
               </div>
-            </div>
-          </TooltipProvider>
-        )
-      }
+            </TooltipProvider>
+          )
+        }
+
+      </form >
 
       {
         showDeleteAllVariantsDialog && (
@@ -4344,10 +4348,11 @@ export default function TikTokAdCreationForm({
                 </p>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <Button variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
+                <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => setShowDeleteAllVariantsDialog(false)}>
                   Cancel
                 </Button>
                 <Button
+                  type="button"
                   variant="destructive"
                   className="w-full rounded-xl"
                   onClick={() => {
@@ -4394,6 +4399,7 @@ export default function TikTokAdCreationForm({
               </div>
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <Button
+                  type="button"
                   variant="outline"
                   className="w-full rounded-xl border border-zinc-200"
                   onClick={() => {
@@ -4404,6 +4410,7 @@ export default function TikTokAdCreationForm({
                   Cancel
                 </Button>
                 <Button
+                  type="button"
                   disabled={!newTemplateNameInput.trim() || isSavingNew}
                   className="w-full rounded-xl bg-zinc-800 text-white hover:bg-zinc-900"
                   onClick={handleSaveAsNewTemplate}
@@ -4416,8 +4423,7 @@ export default function TikTokAdCreationForm({
           </div>
         )
       }
-
-    </form >
+    </>
   )
 }
 
