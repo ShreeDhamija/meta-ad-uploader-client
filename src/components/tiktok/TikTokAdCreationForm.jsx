@@ -2698,7 +2698,7 @@ export default function TikTokAdCreationForm({
                     <CopyIcon className="w-4 h-4" />
                     Select a campaign to duplicate
                   </Label>
-                  <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad sets</Label>
+                  <Label className="text-gray-500 text-[12px] font-regular">We'll copy the campaign and all its ad groups</Label>
 
                   {/* Dropdown/Popover to select campaign to duplicate */}
                   <Popover open={openDuplicateCampaign} onOpenChange={setOpenDuplicateCampaign}>
@@ -2933,7 +2933,6 @@ export default function TikTokAdCreationForm({
                       }}
                       className="h-10 w-full px-4 py-3 rounded-2xl bg-zinc-800 text-white hover:!bg-black hover:!text-white shadow-md flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border-none"
                     >
-                      <AdSetIcon className="mr-2 h-4 w-4 text-white" />
                       🚀 Launch in a New Ad Group
                     </Button>
                   </div>
