@@ -1320,7 +1320,11 @@ export default function TikTokAdCreationForm({
 
   const handleSaveAsNewTemplate = async () => {
     const name = newTemplateNameInput.trim();
-    if (!name || copyTemplates[name]) return;
+    if (!name) return;
+    if (copyTemplates && copyTemplates[name]) {
+      toast.error("Template name already exists");
+      return;
+    }
     setIsSavingNew(true);
     try {
       const templateData = {
@@ -3742,11 +3746,11 @@ export default function TikTokAdCreationForm({
                       </button>
                     </div>
                   </div>
-                  <p className="text-gray-500 text-[12px] font-regular">
+                  <p className="text-gray-500 text-[12px] font-regular mt-0.5 mb-0">
                     Your UTMs will be auto applied from Preferences
                   </p>
 
-                  <div className="relative group">
+                  <div className="relative group mt-1">
                     <Input
                       type="text"
                       placeholder={urlMode === 'WEBSITE' ? "https://myshop.com/product" : "Select an Instant Page"}
@@ -4469,6 +4473,9 @@ export default function TikTokAdCreationForm({
                   className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 mt-2"
                   autoFocus
                 />
+                {newTemplateNameInput.trim() && copyTemplates && copyTemplates[newTemplateNameInput.trim()] && (
+                  <p className="text-xs text-red-500 mt-1">This template name already exists</p>
+                )}
               </div>
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <Button
@@ -4483,8 +4490,8 @@ export default function TikTokAdCreationForm({
                 </Button>
                 <Button
                   type="button"
-                  disabled={!newTemplateNameInput.trim() || isSavingNew}
-                  className="bg-blue-600 text-white rounded-xl hover:bg-blue-700 min-w-[80px]"
+                  disabled={!newTemplateNameInput.trim() || isSavingNew || !!(copyTemplates && copyTemplates[newTemplateNameInput.trim()])}
+                  className="bg-blue-600 text-white rounded-xl hover:bg-blue-700 min-w-[80px] disabled:opacity-50"
                   onClick={handleSaveAsNewTemplate}
                 >
                   {isSavingNew ? <Loader className="h-4 w-4 animate-spin mr-1" /> : null}

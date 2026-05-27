@@ -560,7 +560,7 @@ export default function TikTokCopyTemplates({
                     </div>
                     <Button
                         variant="outline"
-                        className="shrink-0 rounded-2xl px-4 h-[56px] border border-gray-300 bg-white hover:bg-gray-50 shadow text-sm font-medium"
+                        className={`shrink-0 ${settingsFieldChrome} px-4 hover:bg-gray-50 text-sm font-medium`}
                         disabled={!templateName.trim() || defaultName === templateName || isProcessing}
                         onClick={handleSetAsDefault}
                     >
@@ -727,7 +727,7 @@ export default function TikTokCopyTemplates({
                                         </div>
 
                                         {recentAds.length > 0 ? (
-                                            <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2 max-h-[450px] overflow-y-auto">
+                                            <div className="border bg-gray-50 border-gray-200 rounded-2xl p-2 space-y-2">
                                                 {recentAds.map((text, index) => (
                                                     <div key={index} className="rounded-lg p-4">
                                                         <div className="flex justify-between items-center mb-2">
