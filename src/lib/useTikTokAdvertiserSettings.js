@@ -17,10 +17,10 @@ export default function useTikTokAdvertiserSettings(advertiserId) {
   const loading = advertiserId ? (tiktokSettingsLoading[advertiserId] || false) : false;
 
   useEffect(() => {
-    if (advertiserId && !tiktokSettings[advertiserId]) {
-      fetchTikTokSettings(advertiserId);
+    if (advertiserId) {
+      fetchTikTokSettings(advertiserId, true);
     }
-  }, [advertiserId, fetchTikTokSettings, tiktokSettings]);
+  }, [advertiserId, fetchTikTokSettings]);
 
   const setSettings = (nextVal) => {
     if (advertiserId) {

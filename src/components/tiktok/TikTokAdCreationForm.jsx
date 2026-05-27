@@ -3336,19 +3336,17 @@ export default function TikTokAdCreationForm({
                     <LabelIcon className="w-4 h-4" />
                     <span className="font-semibold text-sm">Ad Name</span>
                   </div>
-                  {selectedAdvertiser && !adNameFormulaV2?.rawInput?.trim() && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
-                      className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
-                      title="Configure ad name formula in settings"
-                    >
-                      <CogIcon className="w-3 h-3 text-white mr-1" />
-                      Set Up Ad Name Formula
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/settings?tab=tiktok&adsaccount=${selectedAdvertiser}`)}
+                    className="text-xs px-3 pl-2 py-0.5 border-gray-300 text-white bg-zinc-800 rounded-xl hover:text-white hover:bg-zinc-900 ml-auto h-7 flex items-center gap-1 font-medium"
+                    title="Configure ad name formula in settings"
+                  >
+                    <CogIcon className="w-3 h-3 text-white mr-1" />
+                    Set Up Ad Name Formula
+                  </Button>
                 </Label>
 
                 <ReorderAdNameParts
@@ -3726,6 +3724,9 @@ export default function TikTokAdCreationForm({
                       <LinkIcon className="w-4 h-4 text-gray-500" />
                       Landing Page URL
                     </Label>
+                    <p className="text-gray-500 text-[12px] font-regular">
+                      Your UTMs will be auto applied from Preferences
+                    </p>
                     <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
                       <button
                         type="button"
@@ -4443,14 +4444,14 @@ export default function TikTokAdCreationForm({
               }}
             />
             <div
-              className="relative w-[min(26rem,calc(100vw-2rem))] rounded-[32px] border border-gray-200 bg-white p-6 shadow-xl animate-in zoom-in-95 duration-150"
+              className="relative bg-white rounded-2xl shadow-xl border border-gray-200 w-[400px] p-6 space-y-4"
               style={{ animation: 'templateBtnIn 0.2s ease-out forwards' }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-zinc-900">Save Ad Text Template</h3>
-                <p className="text-xs text-zinc-500">
-                  Enter a name for this text template:
+                <h3 className="text-lg font-semibold">Save Ad Text Template</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Give your new copy template a name.
                 </p>
                 <Input
                   type="text"
@@ -4463,9 +4464,8 @@ export default function TikTokAdCreationForm({
               </div>
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <Button
-                  type="button"
                   variant="outline"
-                  className="w-full rounded-xl border border-zinc-200"
+                  className="rounded-xl"
                   onClick={() => {
                     setShowSaveNewDialog(false);
                     setNewTemplateNameInput("");
@@ -4476,7 +4476,7 @@ export default function TikTokAdCreationForm({
                 <Button
                   type="button"
                   disabled={!newTemplateNameInput.trim() || isSavingNew}
-                  className="w-full rounded-xl bg-zinc-800 text-white hover:bg-zinc-900"
+                  className="bg-blue-600 text-white rounded-xl hover:bg-blue-700 min-w-[80px]"
                   onClick={handleSaveAsNewTemplate}
                 >
                   {isSavingNew ? <Loader className="h-4 w-4 animate-spin mr-1" /> : null}
