@@ -1330,7 +1330,7 @@ export default function TikTokAdCreationForm({
       const updated = { ...(copyTemplates || {}) };
       updated[name] = templateData;
 
-      const nextSettings = { ...advertiserPrefs, copyTemplates: updated };
+      const nextSettings = { copyTemplates: updated };
       await saveTikTokSettings(selectedAdvertiser, nextSettings);
 
       if (refetchAdvertiserPrefs) {
@@ -1360,7 +1360,7 @@ export default function TikTokAdCreationForm({
       const updated = { ...(copyTemplates || {}) };
       updated[selectedTemplate] = templateData;
 
-      const nextSettings = { ...advertiserPrefs, copyTemplates: updated };
+      const nextSettings = { copyTemplates: updated };
       await saveTikTokSettings(selectedAdvertiser, nextSettings);
 
       if (refetchAdvertiserPrefs) {

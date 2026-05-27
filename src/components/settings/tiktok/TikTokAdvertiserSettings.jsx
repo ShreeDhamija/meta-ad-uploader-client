@@ -411,25 +411,86 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                         advertiserId={selectedAdvertiser}
                         templates={currentSettings.copyTemplates || {}}
                         defaultName={currentSettings.defaultTemplateName || ""}
-                        onSaveTemplate={(name, data, oldName) => {
+                        onSaveTemplate={async (name, data, oldName) => {
                             const updated = { ...currentSettings.copyTemplates };
                             if (oldName && oldName !== name) delete updated[oldName];
                             updated[name] = data;
-                            const next = { ...currentSettings, copyTemplates: updated };
+
+                            const wasDefault = currentSettings.defaultTemplateName === oldName;
+                            const nextDefaultName = wasDefault && oldName !== name ? name : currentSettings.defaultTemplateName;
+
+                            const next = { 
+                                ...currentSettings, 
+                                copyTemplates: updated,
+                                ...(wasDefault && oldName !== name && { defaultTemplateName: name })
+                            };
                             setSettings(next);
-                            handleSave(next);
+
+                            try {
+                                await saveTikTokSettings(selectedAdvertiser, { 
+                                    copyTemplates: updated,
+                                    ...(wasDefault && oldName !== name && { defaultTemplateName: name })
+                                });
+                                setInitialSettings((prev) => {
+                                    if (!prev) return null;
+                                    return {
+                                        ...prev,
+                                        copyTemplates: updated,
+                                        ...(wasDefault && oldName !== name && { defaultTemplateName: name })
+                                    };
+                                });
+                            } catch (err) {
+                                console.error("Failed to save template:", err);
+                                toast.error("Failed to save template");
+                            }
                         }}
-                        onSetDefault={(name) => {
+                        onSetDefault={async (name) => {
                             const next = { ...currentSettings, defaultTemplateName: name };
                             setSettings(next);
-                            handleSave(next);
+
+                            try {
+                                await saveTikTokSettings(selectedAdvertiser, { defaultTemplateName: name });
+                                setInitialSettings((prev) => {
+                                    if (!prev) return null;
+                                    return {
+                                        ...prev,
+                                        defaultTemplateName: name
+                                    };
+                                });
+                            } catch (err) {
+                                console.error("Failed to set default template:", err);
+                                toast.error("Failed to set default template");
+                            }
                         }}
-                        onDeleteTemplate={(name) => {
+                        onDeleteTemplate={async (name) => {
                             const updated = { ...currentSettings.copyTemplates };
                             delete updated[name];
-                            const next = { ...currentSettings, copyTemplates: updated };
-                            if (currentSettings.defaultTemplateName === name) next.defaultTemplateName = "";
+
+                            const wasDefault = currentSettings.defaultTemplateName === name;
+
+                            const next = { 
+                                ...currentSettings, 
+                                copyTemplates: updated,
+                                ...(wasDefault && { defaultTemplateName: "" })
+                            };
                             setSettings(next);
+
+                            if (wasDefault) {
+                                try {
+                                    await saveTikTokSettings(selectedAdvertiser, { defaultTemplateName: "" });
+                                } catch (err) {
+                                    console.error("Failed to clear default template name:", err);
+                                }
+                            }
+
+                            setInitialSettings((prev) => {
+                                if (!prev) return null;
+                                return {
+                                    ...prev,
+                                    copyTemplates: updated,
+                                    ...(wasDefault && { defaultTemplateName: "" })
+                                };
+                            });
                         }}
                     />
 
