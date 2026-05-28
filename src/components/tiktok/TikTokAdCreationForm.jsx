@@ -3955,7 +3955,7 @@ export default function TikTokAdCreationForm({
 
                 {/* Landing URL Selector */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between m-0">
                     <Label className="flex items-center gap-1.5">
                       {renderDiffMark("landingUrl")}
                       <LinkIcon className="w-4 h-4 text-gray-500" />
@@ -4455,10 +4455,10 @@ export default function TikTokAdCreationForm({
                     } catch (_) { }
                     return false;
                   })() && (
-                    <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
-                      Landing Page URL must be a valid URL starting with http:// or https://
-                    </div>
-                  )}
+                      <div className="text-xs text-red-600 text-left p-2 bg-red-50 border border-red-200 rounded-xl">
+                        Landing Page URL must be a valid URL starting with http:// or https://
+                      </div>
+                    )}
                 </div>
 
                 <div className="flex flex-col gap-2">

@@ -352,19 +352,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                                             <div className="flex items-center gap-2">
                                                 {(() => {
                                                     const found = identities.find(i => i.identity_id === currentSettings.defaultIdentityId);
-                                                    if (!found && currentSettings.defaultIdentityId) {
-                                                        return <span className="text-sm font-medium">{currentSettings.defaultIdentityId}</span>;
-                                                    }
                                                     return (
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className="text-sm font-medium text-gray-900">
-                                                                {found ? found.display_name : "Select TikTok Identity"}
-                                                            </span>
-                                                            {found && (
-                                                                <span className="text-xs text-gray-400 font-normal">
-                                                                    {found.identity_id}
-                                                                </span>
-                                                            )}
+                                                        <span className="text-sm font-medium text-gray-900">
+                                                            {found ? found.display_name : (currentSettings.defaultIdentityId || "Select TikTok Identity")}
                                                         </span>
                                                     );
                                                 })()}
