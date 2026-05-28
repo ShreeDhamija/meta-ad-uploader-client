@@ -83,6 +83,141 @@ function VariantDot({ variantId, variants }) {
   return <span className="inline-block h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
 }
 
+const CTA_ASSET_MAPPING = {
+  LEARN_MORE: {
+    asset_content: "Learn more ",
+    asset_ids: ["201781", "201535"]
+  },
+  SHOP_NOW: {
+    asset_content: "Shop now",
+    asset_ids: ["201885", "201387"]
+  },
+  SIGN_UP: {
+    asset_content: "Sign up",
+    asset_ids: ["202162", "201512"]
+  },
+  DOWNLOAD_NOW: {
+    asset_content: "Download",
+    asset_ids: ["201902", "201404"]
+  },
+  CONTACT_US: {
+    asset_content: "Contact us",
+    asset_ids: ["202006", "201562"]
+  },
+  ORDER_NOW: {
+    asset_content: "Order now",
+    asset_ids: ["202046", "201641"]
+  },
+  BOOK_NOW: {
+    asset_content: "Book now",
+    asset_ids: ["201751", "201455"]
+  },
+  PLAY_GAME: {
+    asset_content: "Play game",
+    asset_ids: ["202005", "201561"]
+  },
+  APPLY_NOW: {
+    asset_content: "Apply now",
+    asset_ids: ["201963", "201489"]
+  },
+  WATCH_NOW: {
+    asset_content: "Watch now",
+    asset_ids: ["201964", "201490"]
+  },
+  INSTALL_NOW: {
+    asset_content: "Install now",
+    asset_ids: ["202114", "201743"]
+  },
+  GET_QUOTE: {
+    asset_content: "Get quote",
+    asset_ids: ["202023", "201579"]
+  },
+  SUBSCRIBE: {
+    asset_content: "Subscribe",
+    asset_ids: ["201753", "201457"]
+  },
+  LISTEN_NOW: {
+    asset_content: "Listen now",
+    asset_ids: ["201995", "201523"]
+  },
+  VISIT_STORE: {
+    asset_content: "Visit store",
+    asset_ids: ["201824", "201616"]
+  },
+  READ_MORE: {
+    asset_content: "Read more",
+    asset_ids: ["201829", "201621"]
+  },
+  GET_TICKETS_NOW: {
+    asset_content: "Get tickets now",
+    asset_ids: ["201913", "201415"]
+  },
+  GET_SHOWTIMES: {
+    asset_content: "Get showtimes",
+    asset_ids: ["201953", "201452"]
+  },
+  EXPERIENCE_NOW: {
+    asset_content: "Experience now",
+    asset_ids: ["202098", "201693"]
+  },
+  INTERESTED: {
+    asset_content: "Interested",
+    asset_ids: ["201867", "201369"]
+  },
+  VIEW_NOW: {
+    asset_content: "View now",
+    asset_ids: ["202001", "201529"]
+  },
+  PREORDER_NOW: {
+    asset_content: "Pre-order now",
+    asset_ids: ["202013", "201569"]
+  },
+  TAKE_A_LOOK: {
+    asset_content: "Take a look",
+    asset_ids: ["201960", "201486"]
+  },
+  GO_STREAM_IT: {
+    asset_content: "Go stream it",
+    asset_ids: ["201912", "201414"]
+  },
+  FOLLOW_US_TO_WATCH: {
+    asset_content: "Follow us to watch",
+    asset_ids: ["201924", "201426"]
+  },
+  CLICK_TO_WATCH: {
+    asset_content: "Click to watch",
+    asset_ids: ["201783", "201537"]
+  },
+  CLICK_TO_WATCH_NOW: {
+    asset_content: "Click to watch now",
+    asset_ids: ["201898", "201400"]
+  },
+  FOLLOW_FOR_MORE: {
+    asset_content: "Follow for more",
+    asset_ids: ["201789", "201545"]
+  },
+  FOLLOW_US_NOW: {
+    asset_content: "Follow us now",
+    asset_ids: ["201826", "201618"]
+  },
+  STREAM_NOW: {
+    asset_content: "Stream now",
+    asset_ids: ["202038", "201633"]
+  },
+  CHECK_IT_OUT: {
+    asset_content: "Check it out",
+    asset_ids: ["202156", "202150"]
+  },
+  DONATE_NOW: {
+    asset_content: "Donate now",
+    asset_ids: ["201865", "201367"]
+  },
+  COMPARE_NOW: {
+    asset_content: "Compare now",
+    asset_ids: ["205597", "205596"]
+  }
+};
+
 const CTA_OPTIONS = [
   { value: 'LEARN_MORE', label: 'Learn More' },
   { value: 'SHOP_NOW', label: 'Shop Now' },
@@ -97,24 +232,27 @@ const CTA_OPTIONS = [
   { value: 'INSTALL_NOW', label: 'Install Now' },
   { value: 'GET_QUOTE', label: 'Get Quote' },
   { value: 'SUBSCRIBE', label: 'Subscribe' },
-  { value: 'CALL_NOW', label: 'Call Now' },
   { value: 'LISTEN_NOW', label: 'Listen Now' },
   { value: 'VISIT_STORE', label: 'Visit Store' },
-  { value: 'SEND_MESSAGE', label: 'Send Message' },
-  { value: 'VIEW_PROFILE', label: 'View Profile' },
   { value: 'READ_MORE', label: 'Read More' },
   { value: 'GET_TICKETS_NOW', label: 'Get Tickets Now' },
-  { value: 'WATCH_LIVE', label: 'Watch Live' },
   { value: 'GET_SHOWTIMES', label: 'Get Showtimes' },
-  { value: 'CHECK_AVAILABILITY', label: 'Check Availability' },
   { value: 'EXPERIENCE_NOW', label: 'Experience Now' },
   { value: 'INTERESTED', label: 'Interested' },
   { value: 'VIEW_NOW', label: 'View Now' },
-  { value: 'SHOOT_WITH_THIS_EFFECT', label: 'Shoot with this effect' },
-  { value: 'PREORDER_NOW', label: 'Preorder Now' },
-  { value: 'VIEW_VIDEO_WITH_THIS_EFFECT', label: 'View video with this effect' },
-  { value: 'JOIN_THIS_HASHTAG', label: 'Join this hashtag' },
-]
+  { value: 'PREORDER_NOW', label: 'Pre-order Now' },
+  { value: 'TAKE_A_LOOK', label: 'Take a Look' },
+  { value: 'GO_STREAM_IT', label: 'Go Stream It' },
+  { value: 'FOLLOW_US_TO_WATCH', label: 'Follow Us to Watch' },
+  { value: 'CLICK_TO_WATCH', label: 'Click to Watch' },
+  { value: 'CLICK_TO_WATCH_NOW', label: 'Click to Watch Now' },
+  { value: 'FOLLOW_FOR_MORE', label: 'Follow for More' },
+  { value: 'FOLLOW_US_NOW', label: 'Follow Us Now' },
+  { value: 'STREAM_NOW', label: 'Stream Now' },
+  { value: 'CHECK_IT_OUT', label: 'Check It Out' },
+  { value: 'DONATE_NOW', label: 'Donate Now' },
+  { value: 'COMPARE_NOW', label: 'Compare Now' }
+];
 
 const UPLOAD_SOURCE_OPTIONS = [
   {
@@ -750,6 +888,8 @@ export default function TikTokAdCreationForm({
       setProgressMessage(msg)
     }
 
+
+
     try {
       let sparkVideoId = null
       if (adType === 'SPARK') {
@@ -875,24 +1015,16 @@ export default function TikTokAdCreationForm({
 
           const creatives = []
           for (const singleCaption of finalCaptions) {
-            for (const singleCta of creativeCTAs) {
+            if (creativeCTAs.length > 1) {
               let creativeAdName = finalAdName
-              const modifiers = []
               if (finalCaptions.length > 1) {
                 const cleanCap = singleCaption.trim().substring(0, 15)
-                modifiers.push(cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`)
-              }
-              if (creativeCTAs.length > 1) {
-                modifiers.push(singleCta)
-              }
-              if (modifiers.length > 0) {
-                creativeAdName = `${finalAdName} - ${modifiers.join(' - ')}`
+                creativeAdName = `${finalAdName} - ${cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`}`
               }
 
               const creative = {
                 video_id: videoId,
                 ad_text: singleCaption,
-                call_to_action: singleCta,
                 ad_name: creativeAdName,
                 identity_type: currentIdentityType,
                 landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
@@ -909,6 +1041,42 @@ export default function TikTokAdCreationForm({
               }
               if (currentIdentityId) creative.identity_id = currentIdentityId
               creatives.push(creative)
+            } else {
+              for (const singleCta of creativeCTAs) {
+                let creativeAdName = finalAdName
+                const modifiers = []
+                if (finalCaptions.length > 1) {
+                  const cleanCap = singleCaption.trim().substring(0, 15)
+                  modifiers.push(cleanCap ? `"${cleanCap}"` : `Text ${finalCaptions.indexOf(singleCaption) + 1}`)
+                }
+                if (creativeCTAs.length > 1) {
+                  modifiers.push(singleCta)
+                }
+                if (modifiers.length > 0) {
+                  creativeAdName = `${finalAdName} - ${modifiers.join(' - ')}`
+                }
+
+                const creative = {
+                  video_id: videoId,
+                  ad_text: singleCaption,
+                  call_to_action: singleCta,
+                  ad_name: creativeAdName,
+                  identity_type: currentIdentityType,
+                  landing_page_type: urlMode === 'WEBSITE' ? 'EXTERNAL_WEBSITE' : 'INSTANT_PAGE',
+                  operation_status: launchPaused ? 'DISABLE' : 'ENABLE',
+                  ...(urlMode === 'WEBSITE'
+                    ? { landing_page_url: finalUrl }
+                    : { page_id: landingUrl }
+                  ),
+                  ...(adType === 'SPARK' ? {
+                    is_spark_ad: true,
+                    spark_ad_auth_code: sparkAuthCode.trim(),
+                    adType: 'SPARK'
+                  } : {})
+                }
+                if (currentIdentityId) creative.identity_id = currentIdentityId
+                creatives.push(creative)
+              }
             }
           }
 
@@ -920,7 +1088,8 @@ export default function TikTokAdCreationForm({
             adName: finalAdName,
             adType: adType,
             creatives: creatives,
-            jobId: jobToProcess.id
+            jobId: jobToProcess.id,
+            cta: creativeCTAs
           }
 
           try {

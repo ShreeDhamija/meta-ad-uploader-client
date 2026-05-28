@@ -29,7 +29,7 @@ export default function TikTokCallback() {
     if (isTikTokLoggedIn) {
       console.log('✅ [TikTokCallback] User already logged in via context. Redirecting...')
       setStatus('success')
-      setTimeout(() => navigate('/tiktok-ads'), 1000)
+      navigate('/tiktok-ads')
       return
     }
 
@@ -94,7 +94,7 @@ export default function TikTokCallback() {
               // Clean up URL to prevent reuse on refresh
               window.history.replaceState({}, document.title, window.location.pathname)
               
-              setTimeout(() => navigate('/tiktok-ads'), 1500)
+              navigate('/tiktok-ads')
             } else {
               console.warn('⚠️ [TikTokCallback] Exchange returned connected=false:', data)
               
@@ -103,7 +103,7 @@ export default function TikTokCallback() {
                  console.log('🔄 [TikTokCallback] Token already consumed. Checking session status...')
                  return refreshTikTokUser().then(() => {
                    setStatus('success')
-                   setTimeout(() => navigate('/tiktok-ads'), 1500)
+                   navigate('/tiktok-ads')
                  })
               }
               
@@ -123,7 +123,7 @@ export default function TikTokCallback() {
         console.log('⚠️ [TikTokCallback] No exchange token — falling back to refreshTikTokUser()')
         refreshTikTokUser().then(() => {
           setStatus('success')
-          setTimeout(() => navigate('/tiktok-ads'), 1500)
+          navigate('/tiktok-ads')
         })
       }
     } else if (connected === 'false' || (!connected && !errorMsg)) {
