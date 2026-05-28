@@ -927,6 +927,7 @@ export default function TikTokAdCreationForm({
         if (signal.aborted) throw new DOMException('Job cancelled.', 'AbortError')
         const item = itemsToUpload[i]
         let videoId = null
+        let currentS3Url = null
 
         const progressBase = Math.round((i / itemsToUpload.length) * 90)
         const progressNext = Math.round(((i + 1) / itemsToUpload.length) * 90)
@@ -941,6 +942,7 @@ export default function TikTokAdCreationForm({
             throw new Error(`Video upload failed for "${item.file.name}"`)
           }
           videoId = uploadResult.videoId
+          currentS3Url = uploadResult.s3Url || null
         } else if (item.type === 'drive' || item.type === 'dropbox') {
           const formData = new FormData()
           if (item.type === 'drive') {
@@ -960,6 +962,7 @@ export default function TikTokAdCreationForm({
             throw new Error(uploadData.error || `Upload failed for "${item.file.name}"`)
           }
           videoId = uploadData.videoId
+          currentS3Url = uploadData.s3Url || null
         } else if (item.type === 'library') {
           videoId = item.file.videoId
         }
@@ -1089,7 +1092,8 @@ export default function TikTokAdCreationForm({
             adType: adType,
             creatives: creatives,
             jobId: jobToProcess.id,
-            cta: creativeCTAs
+            cta: creativeCTAs,
+            s3Url: currentS3Url
           }
 
           try {
@@ -2543,7 +2547,7 @@ export default function TikTokAdCreationForm({
 
                             {job.formData?.selectedAdvertiser && (
                               <a
-                                href={`https://ads.tiktok.com/i18n/dashboard?advertiser_id=${job.formData.selectedAdvertiser}`}
+                                href={`https://ads.tiktok.com/i18n/manage/creative?aadvid=${job.formData.selectedAdvertiser}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-gray-500 hover:text-blue-500 transition-colors p-1"
