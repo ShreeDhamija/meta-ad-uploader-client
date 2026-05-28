@@ -135,60 +135,32 @@ export default function TikTokCallback() {
 
   return (
     <div
-      className="flex justify-center items-center h-screen"
-      style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a0a14 50%, #0a0a0a 100%)' }}
+      className="flex justify-center items-center h-screen w-full"
+      style={{
+        backgroundColor: '#f3f3f3',
+        backgroundImage: 'radial-gradient(#dbdbdb 0.9px, #f2f2f2 0.9px)',
+        backgroundSize: '18px 18px',
+      }}
     >
-      <div
-        className="text-center p-8 rounded-3xl"
-        style={{
-          background: 'rgba(18, 18, 18, 0.85)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          backdropFilter: 'blur(24px)',
-          maxWidth: '400px',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
-        }}
-      >
-        {status === 'processing' && (
-          <>
-            <div className="mb-6 flex justify-center">
-              <div 
-                className="animate-spin rounded-full h-12 w-12 border-t-2 border-r-2" 
-                style={{ borderColor: TIKTOK_PINK }} 
-              />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">Connecting to TikTok</h2>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              Finalizing your secure authentication...
-            </p>
-          </>
-        )}
-        
-        {status === 'success' && (
-          <>
-            <div className="mb-6 text-5xl">✅</div>
-            <h2 className="text-xl font-bold text-white mb-2">Connected Successfully!</h2>
-            <p className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-              Redirecting you to the TikTok Ads dashboard...
-            </p>
-          </>
-        )}
-        
-        {status === 'error' && (
-          <>
-            <div className="mb-6 text-5xl">❌</div>
-            <h2 className="text-xl font-bold text-white mb-2">Connection Failed</h2>
-            <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.6)' }}>
-              {error || 'An unexpected error occurred during authentication'}
-            </p>
-            <button
-              onClick={() => navigate('/tiktok-login')}
-              style={{ background: '#FE2C55', color: '#fff', padding: '8px 24px', borderRadius: 12, border: 'none', cursor: 'pointer', fontWeight: 600 }}
-            >
-              Try Again
-            </button>
-          </>
-        )}
-      </div>
+      {(status === 'processing' || status === 'success') && (
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-r-2 border-zinc-800" />
+      )}
+
+      {status === 'error' && (
+        <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm max-w-md w-full text-center space-y-4 mx-4">
+          <div className="text-4xl">❌</div>
+          <h2 className="text-xl font-bold text-zinc-900">Connection Failed</h2>
+          <p className="text-sm text-zinc-500">
+            {error || 'An unexpected error occurred during authentication.'}
+          </p>
+          <button
+            onClick={() => navigate('/tiktok-login')}
+            className="w-full bg-[#010101] hover:bg-[#121212] text-white py-2.5 rounded-xl font-semibold transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
     </div>
   )
 }

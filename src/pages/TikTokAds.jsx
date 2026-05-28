@@ -481,45 +481,10 @@ export default function TikTokAds() {
         }
       }
 
-      // 5. Default Campaign & Ad Group — restore saved defaults only when both selections are empty (e.g. on initial load or full clear)
-      if (selectedCampaign.length === 0 && selectedAdGroup.length === 0) {
-        if (advertiserPrefs.defaultCampaignId) {
-          const val = advertiserPrefs.defaultCampaignId;
-          setSelectedCampaign(Array.isArray(val) ? val : [val]);
-        }
-        if (advertiserPrefs.defaultAdGroupId) {
-          const val = advertiserPrefs.defaultAdGroupId;
-          setSelectedAdGroup(Array.isArray(val) ? val : [val]);
-        }
-      }
-
       // Mark as restored
       restoredDefaultsRef.current[selectedAdvertiser] = true;
     }
   }, [advertiserPrefs, selectedAdvertiser]);
-
-  // Auto-save campaign + adgroup selection as defaults whenever they change.
-  // Debounced to avoid hammering Firestore on rapid changes.
-  const saveDefaultsTimerRef = useRef(null);
-  useEffect(() => {
-    // Only save once we have a loaded pref object (prevents saving empty values on first mount)
-    if (!selectedAdvertiser || advertiserPrefs === null) return;
-
-    clearTimeout(saveDefaultsTimerRef.current);
-    saveDefaultsTimerRef.current = setTimeout(async () => {
-      try {
-        await saveTikTokSettings(selectedAdvertiser, {
-          defaultCampaignId: selectedCampaign.length > 0 ? selectedCampaign : null,
-          defaultAdGroupId: selectedAdGroup.length > 0 ? selectedAdGroup : null,
-        });
-        console.log('[TikTok] Saved default campaign/adgroup:', selectedCampaign, selectedAdGroup);
-      } catch (err) {
-        console.warn('[TikTok] Failed to auto-save default campaign/adgroup:', err.message);
-      }
-    }, 1500); // 1.5s debounce
-
-    return () => clearTimeout(saveDefaultsTimerRef.current);
-  }, [selectedCampaign, selectedAdGroup, selectedAdvertiser, advertiserPrefs]);
 
   // Variant helper methods matching Home.jsx pattern
   const cloneSnapshotValue = (value) => {
@@ -920,7 +885,7 @@ export default function TikTokAds() {
                     setSelectedIgOrganicPosts={setSelectedIgOrganicPosts}
                     variants={variants}
                     activeVariantId={activeVariantId}
-                    handleAddVariant={() => {}} // Safe no-op to disable adding variants in TikTok
+                    handleAddVariant={() => { }} // Safe no-op to disable adding variants in TikTok
                     handleDeleteAllVariants={handleDeleteAllVariants}
                     fileVariantMap={fileVariantMap}
                     setFileVariantMap={setFileVariantMap}

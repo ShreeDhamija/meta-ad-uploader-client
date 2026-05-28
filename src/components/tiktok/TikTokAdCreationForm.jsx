@@ -1344,12 +1344,6 @@ export default function TikTokAdCreationForm({
       return
     }
 
-    // The saved default ad group for this campaign (from Firestore prefs)
-    const savedDefaultAdGroupId = advertiserPrefs?.defaultAdGroupId || ''
-    const defaultAdGroupIds = Array.isArray(savedDefaultAdGroupId)
-      ? savedDefaultAdGroupId
-      : (savedDefaultAdGroupId ? [savedDefaultAdGroupId] : [])
-
     setLoadingAdGroups(true)
     setAdGroups([]) // Clear old ad groups immediately to avoid showing stale data from the previous campaign!
 
@@ -1393,13 +1387,7 @@ export default function TikTokAdCreationForm({
         setAdGroups(unique)
         setSelectedAdGroup(prevSelected => {
           // Keep any currently selected ad groups that are actually present in the newly fetched ad groups
-          const stillValidSelected = prevSelected.filter(id => unique.some(g => g.adgroup_id === id))
-          if (stillValidSelected.length > 0) {
-            return stillValidSelected
-          } else {
-            // Fallback to defaults if none of the previously selected ones are still valid
-            return defaultAdGroupIds.filter(id => unique.some(g => g.adgroup_id === id))
-          }
+          return prevSelected.filter(id => unique.some(g => g.adgroup_id === id))
         })
       })
       .catch(() => {
@@ -1413,7 +1401,7 @@ export default function TikTokAdCreationForm({
     return () => {
       active = false
     }
-  }, [selectedCampaign, selectedAdvertiser, setAdGroups, setSelectedAdGroup, tiktokFetch, advertiserPrefs, campaigns])
+  }, [selectedCampaign, selectedAdvertiser, setAdGroups, setSelectedAdGroup, tiktokFetch, campaigns])
 
   // Fetch Instant Pages on Advertiser change
   useEffect(() => {
