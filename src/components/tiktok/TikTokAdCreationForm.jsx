@@ -1692,10 +1692,36 @@ export default function TikTokAdCreationForm({
 
     let mainView
     if (initialFolderId) {
-      mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false).setParent(initialFolderId)
+      mainView = new google.picker.DocsView()
+        .setIncludeFolders(true)
+        .setMimeTypes(mimeTypes)
+        .setSelectFolderEnabled(false)
+        .setParent(initialFolderId)
     } else {
-      mainView = new google.picker.DocsView().setIncludeFolders(true).setMimeTypes(mimeTypes).setSelectFolderEnabled(false)
+      mainView = new google.picker.DocsView()
+        .setIncludeFolders(true)
+        .setMimeTypes(mimeTypes)
+        .setSelectFolderEnabled(false)
     }
+
+    const myFolders = new google.picker.DocsView()
+      .setOwnedByMe(true)
+      .setIncludeFolders(true)
+      .setMimeTypes(mimeTypes)
+      .setSelectFolderEnabled(false)
+
+    const sharedDriveFolders = new google.picker.DocsView()
+      .setOwnedByMe(true)
+      .setIncludeFolders(true)
+      .setMimeTypes(mimeTypes)
+      .setSelectFolderEnabled(false)
+      .setEnableDrives(true)
+
+    const onlySharedFolders = new google.picker.DocsView()
+      .setOwnedByMe(false)
+      .setIncludeFolders(true)
+      .setMimeTypes(mimeTypes)
+      .setSelectFolderEnabled(false)
 
     const pickerBuilder = new google.picker.PickerBuilder()
       .setOAuthToken(token)
@@ -1705,14 +1731,21 @@ export default function TikTokAdCreationForm({
       .setAppId("102886794705")
       .setCallback((data) => {
         if (data.action === "picked") {
-          const selected = data.docs.map(doc => ({
-            id: doc.id,
-            name: doc.name,
-            mimeType: doc.mimeType,
-            size: doc.sizeBytes,
-            accessToken: token,
-            isDrive: true
-          }))
+          const selected = data.docs.map(doc => {
+            const thumb = doc.thumbnails && doc.thumbnails.length > 0
+              ? doc.thumbnails[doc.thumbnails.length - 1].url
+              : null
+
+            return {
+              id: doc.id,
+              name: doc.name,
+              mimeType: doc.mimeType,
+              size: doc.sizeBytes,
+              accessToken: token,
+              isDrive: true,
+              pickerThumbnail: thumb
+            }
+          })
           setDriveFiles(selected)
           if (selected.length > 0) {
             const file = selected[0]
@@ -1728,7 +1761,14 @@ export default function TikTokAdCreationForm({
         }
       })
 
-    pickerBuilder.addView(mainView)
+    if (initialFolderId) {
+      pickerBuilder.addView(mainView)
+    }
+    pickerBuilder
+      .addView(myFolders)
+      .addView(sharedDriveFolders)
+      .addView(onlySharedFolders)
+
     const picker = pickerBuilder.build()
     pickerInstanceRef.current = picker
     picker.setVisible(true)
@@ -1782,12 +1822,20 @@ export default function TikTokAdCreationForm({
     if (fileId) {
       try {
         setIsImportingFolder(true)
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size`, {
+        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,mimeType,size,thumbnailLink`, {
           headers: { Authorization: `Bearer ${googleAuthStatus.accessToken}` }
         })
         if (!response.ok) throw new Error("File not found or permission denied.")
         const data = await response.json()
-        const newFile = { id: data.id, name: data.name, mimeType: data.mimeType, size: parseInt(data.size || "0", 10), accessToken: googleAuthStatus.accessToken, isDrive: true }
+        const newFile = {
+          id: data.id,
+          name: data.name,
+          mimeType: data.mimeType,
+          size: parseInt(data.size || "0", 10),
+          accessToken: googleAuthStatus.accessToken,
+          isDrive: true,
+          pickerThumbnail: data.thumbnailLink || null
+        }
         setDriveFiles([newFile])
         setVideoFile(null)
         setDropboxFiles([])
@@ -4509,38 +4557,54 @@ export default function TikTokAdCreationForm({
 function FolderPickerOverlay({ show, linkValue, setLinkValue, onImport, onCancel, isImporting }) {
   if (!show) return null
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-gray-900 tracking-tight">Quick Import</h3>
-          <Button variant="ghost" size="icon" onClick={onCancel} className="rounded-full">
+    <div
+      className="fixed left-1/2 transform -translate-x-1/2 z-[2147483647] bg-white rounded-lg shadow-lg border border-gray-200 p-4 w-[500px]"
+      style={{
+        top: 'calc(50vh - 500px)' // Positions it above center where picker usually appears
+      }}
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm text-gray-900">Quick Navigate to Folder</h3>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            className="h-6 w-6 p-0 rounded-full hover:bg-gray-100"
+          >
             <X className="w-4 h-4" />
           </Button>
         </div>
-        <div className="space-y-4">
-          <p className="text-xs text-gray-500 font-medium leading-relaxed">
-            Paste a Google Drive folder or file link to quickly navigate to it or import it.
-          </p>
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="Paste Google Drive link here"
-              value={linkValue}
-              onChange={(e) => setLinkValue(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && onImport()}
-              className="border-gray-200 rounded-2xl focus:ring-black"
-            />
-            <Button
-              onClick={onImport}
-              disabled={!linkValue || isImporting}
-              className="bg-black text-white rounded-2xl px-6"
-            >
-              {isImporting ? <Loader className="w-4 h-4 animate-spin" /> : "Go"}
-            </Button>
-          </div>
-          <p className="text-[10px] text-gray-400 text-center font-bold">
-            Or browse in the picker window
-          </p>
+
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="Paste Google Drive folder or file link here"
+            value={linkValue}
+            onChange={(e) => setLinkValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onImport()
+              }
+            }}
+            className="flex-1 border border-gray-200 focus:ring-black focus:border-black rounded-lg text-sm px-3 py-2 h-9"
+          />
+          <Button
+            type="button"
+            onClick={onImport}
+            disabled={!linkValue || isImporting}
+            className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 text-sm h-9 flex items-center justify-center min-w-[70px] disabled:opacity-50"
+          >
+            {isImporting ? (
+              <>
+                <Loader className="h-4 w-4 mr-2 animate-spin" />
+                Opening...
+              </>
+            ) : (
+              "Open"
+            )}
+          </Button>
         </div>
       </div>
     </div>

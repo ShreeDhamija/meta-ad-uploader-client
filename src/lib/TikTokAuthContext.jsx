@@ -11,8 +11,21 @@ console.log('🌐 [TikTokAuthContext] VITE_API_URL env =', import.meta.env.VITE_
 const TikTokAuthContext = createContext(null)
 
 export function TikTokAuthProvider({ children }) {
-  const [isTikTokLoggedIn, setIsTikTokLoggedIn] = useState(false)
-  const [tiktokUser, setTikTokUser] = useState(null)
+  const [tiktokUser, setTikTokUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('tiktok_user')
+      return stored ? JSON.parse(stored) : null
+    } catch (_) {
+      return null
+    }
+  })
+  const [isTikTokLoggedIn, setIsTikTokLoggedIn] = useState(() => {
+    try {
+      return !!localStorage.getItem('tiktok_uid')
+    } catch (_) {
+      return false
+    }
+  })
   const [tiktokAdvertisers, setTikTokAdvertisers] = useState(readCache('tiktokAdvertisers') || [])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -21,6 +34,9 @@ export function TikTokAuthProvider({ children }) {
     console.log('✅ [TikTokAuthContext] setTikTokSession called with user:', user?.name)
     setIsTikTokLoggedIn(true)
     setTikTokUser(user)
+    if (user) {
+      try { localStorage.setItem('tiktok_user', JSON.stringify(user)) } catch (_) {}
+    }
     setTikTokAdvertisers(advertisers)
     writeCache('tiktokAdvertisers', advertisers)
     setIsLoading(false)
@@ -94,6 +110,7 @@ export function TikTokAuthProvider({ children }) {
           console.log('✅ [TikTok Auth] User IS connected:', data.user.name)
           setIsTikTokLoggedIn(true)
           setTikTokUser(data.user)
+          try { localStorage.setItem('tiktok_user', JSON.stringify(data.user)) } catch (_) {}
           setTikTokAdvertisers(data.advertisers || [])
           writeCache('tiktokAdvertisers', data.advertisers || [])
           // Keep localStorage in sync
@@ -113,6 +130,7 @@ export function TikTokAuthProvider({ children }) {
           console.warn('⚠️ [TikTok Auth] Response OK but connected=false. Reason:', data.error || 'unknown')
           setIsTikTokLoggedIn(false)
           setTikTokUser(null)
+          try { localStorage.removeItem('tiktok_user') } catch (_) {}
           setTikTokAdvertisers([])
           writeCache('tiktokAdvertisers', [])
         }
@@ -120,6 +138,7 @@ export function TikTokAuthProvider({ children }) {
         console.warn('⚠️ [TikTok Auth] Non-OK HTTP status:', res.status, '| body:', rawText)
         setIsTikTokLoggedIn(false)
         setTikTokUser(null)
+        try { localStorage.removeItem('tiktok_user') } catch (_) {}
         setTikTokAdvertisers([])
         writeCache('tiktokAdvertisers', [])
       }
@@ -127,6 +146,7 @@ export function TikTokAuthProvider({ children }) {
       console.error('❌ [TikTok Auth] Network/fetch error calling', endpoint, err)
       setIsTikTokLoggedIn(false)
       setTikTokUser(null)
+      try { localStorage.removeItem('tiktok_user') } catch (_) {}
       setTikTokAdvertisers([])
       writeCache('tiktokAdvertisers', [])
     } finally {
@@ -147,6 +167,7 @@ export function TikTokAuthProvider({ children }) {
         try { localStorage.removeItem('tiktok_uid') } catch (_) {}
         try { localStorage.removeItem('tiktok_token') } catch (_) {}
         try { localStorage.removeItem('tiktok_advertiser_ids') } catch (_) {}
+        try { localStorage.removeItem('tiktok_user') } catch (_) {}
 
         clearCache('tiktokAdvertisers')
         clearCache('tiktokIdentities')
