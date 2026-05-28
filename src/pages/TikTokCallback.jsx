@@ -38,7 +38,7 @@ export default function TikTokCallback() {
       console.log('⏳ [TikTokCallback] Exchange already in progress or completed (Global Guard). Skipping.')
       return
     }
-    
+
     console.log('\n🟡====== [TikTokCallback] Starting Exchange Process ======')
     console.log('  Param [connected]  :', connected)
     console.log('  Param [error]      :', errorMsg)
@@ -77,7 +77,7 @@ export default function TikTokCallback() {
           .then(async (res) => {
             const body = await res.text()
             console.log('  Exchange response   :', body)
-            
+
             let data
             try {
               data = JSON.parse(body)
@@ -90,23 +90,23 @@ export default function TikTokCallback() {
               setStatus('success')
               toast.success('Successfully connected to TikTok Ads!')
               setTikTokSession(data.user, data.advertisers || [], data.accessToken || null)
-              
+
               // Clean up URL to prevent reuse on refresh
               window.history.replaceState({}, document.title, window.location.pathname)
-              
+
               navigate('/tiktok-ads')
             } else {
               console.warn('⚠️ [TikTokCallback] Exchange returned connected=false:', data)
-              
+
               // Handle "token consumed" as a possible success if we already have a session
               if (data.error === 'Invalid or expired exchange token') {
-                 console.log('🔄 [TikTokCallback] Token already consumed. Checking session status...')
-                 return refreshTikTokUser().then(() => {
-                   setStatus('success')
-                   navigate('/tiktok-ads')
-                 })
+                console.log('🔄 [TikTokCallback] Token already consumed. Checking session status...')
+                return refreshTikTokUser().then(() => {
+                  setStatus('success')
+                  navigate('/tiktok-ads')
+                })
               }
-              
+
               setStatus('error')
               setError(data.error || 'Failed to connect TikTok account')
               isExchangeInProgress = false // Allow retry on real failure
@@ -142,9 +142,6 @@ export default function TikTokCallback() {
         backgroundSize: '18px 18px',
       }}
     >
-      {(status === 'processing' || status === 'success') && (
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-r-2 border-zinc-800" />
-      )}
 
       {status === 'error' && (
         <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm max-w-md w-full text-center space-y-4 mx-4">
