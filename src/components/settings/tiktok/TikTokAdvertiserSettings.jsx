@@ -8,7 +8,7 @@ import useTikTokAdvertiserSettings from "@/lib/useTikTokAdvertiserSettings"
 import { useAppData } from "@/lib/AppContext"
 import { cn } from "@/lib/utils"
 import { Check, ChevronsUpDown, HelpCircle, Layout, Loader, Loader2, RefreshCcw, Info, Trash, Plus, X, Upload, Pencil, Folder } from "lucide-react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import { toast } from "sonner"
 import TikTokCopyTemplates from "./TikTokCopyTemplates"
@@ -86,6 +86,9 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
     const [openAdvertiser, setOpenAdvertiser] = useState(false);
     const [initialSettings, setInitialSettings] = useState(null);
     const [hasChanges, setHasChanges] = useState(false);
+    // Ref to prevent initialSettings from being clobbered when a template/default
+    // save triggers a settings cache update (mirrors Meta's skipFormResetRef)
+    const skipSettingsResetRef = useRef(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [newSellingPoint, setNewSellingPoint] = useState("");
 
@@ -110,9 +113,17 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
         }
     };
 
-    // Track initial settings for dirty detection
+    // Track initial settings for dirty detection.
+    // When skipSettingsResetRef is set (template/default saves), only sync
+    // initialSettings to the incoming server data — don't reset the form.
     useEffect(() => {
-        if (settings && !initialSettings) {
+        if (!settings) return;
+        if (skipSettingsResetRef.current) {
+            skipSettingsResetRef.current = false;
+            setInitialSettings(JSON.parse(JSON.stringify(settings)));
+            return;
+        }
+        if (!initialSettings) {
             setInitialSettings(JSON.parse(JSON.stringify(settings)));
         }
     }, [settings, initialSettings]);
@@ -166,6 +177,10 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
             toast.success("Settings saved successfully");
             setInitialSettings(JSON.parse(JSON.stringify(updatedSettings)));
             setHasChanges(false);
+            // Mark so the next settings cache update (from AppContext) only
+            // syncs initialSettings, instead of treating data as a new baseline
+            // that would incorrectly clear or re-show the save bar.
+            skipSettingsResetRef.current = true;
             refetch();
         } catch (err) {
             toast.error("Failed to save settings");
@@ -417,49 +432,46 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             updated[name] = data;
 
                             const wasDefault = currentSettings.defaultTemplateName === oldName;
-                            const nextDefaultName = wasDefault && oldName !== name ? name : currentSettings.defaultTemplateName;
-
-                            const next = { 
-                                ...currentSettings, 
+                            const partialUpdate = {
                                 copyTemplates: updated,
                                 ...(wasDefault && oldName !== name && { defaultTemplateName: name })
                             };
+
+                            const next = { ...currentSettings, ...partialUpdate };
+
+                            // Prevent the settings cache update from re-triggering
+                            // a dirty-state check and re-showing the save bar
+                            skipSettingsResetRef.current = true;
                             setSettings(next);
 
                             try {
-                                await saveTikTokSettings(selectedAdvertiser, { 
-                                    copyTemplates: updated,
-                                    ...(wasDefault && oldName !== name && { defaultTemplateName: name })
-                                });
+                                await saveTikTokSettings(selectedAdvertiser, partialUpdate);
                                 setInitialSettings((prev) => {
                                     if (!prev) return null;
-                                    return {
-                                        ...prev,
-                                        copyTemplates: updated,
-                                        ...(wasDefault && oldName !== name && { defaultTemplateName: name })
-                                    };
+                                    return { ...prev, ...partialUpdate };
                                 });
                             } catch (err) {
                                 console.error("Failed to save template:", err);
                                 toast.error("Failed to save template");
+                                // Roll back the skip flag on failure
+                                skipSettingsResetRef.current = false;
                             }
                         }}
                         onSetDefault={async (name) => {
-                            const next = { ...currentSettings, defaultTemplateName: name };
-                            setSettings(next);
+                            // Prevent the settings cache update from re-showing the save bar
+                            skipSettingsResetRef.current = true;
+                            setSettings({ ...currentSettings, defaultTemplateName: name });
 
                             try {
                                 await saveTikTokSettings(selectedAdvertiser, { defaultTemplateName: name });
                                 setInitialSettings((prev) => {
                                     if (!prev) return null;
-                                    return {
-                                        ...prev,
-                                        defaultTemplateName: name
-                                    };
+                                    return { ...prev, defaultTemplateName: name };
                                 });
                             } catch (err) {
                                 console.error("Failed to set default template:", err);
                                 toast.error("Failed to set default template");
+                                skipSettingsResetRef.current = false;
                             }
                         }}
                         onDeleteTemplate={async (name) => {
@@ -467,29 +479,25 @@ export default function TikTokAdvertiserSettings({ advertisers = [] }) {
                             delete updated[name];
 
                             const wasDefault = currentSettings.defaultTemplateName === name;
-
-                            const next = { 
-                                ...currentSettings, 
+                            const partialUpdate = {
                                 copyTemplates: updated,
                                 ...(wasDefault && { defaultTemplateName: "" })
                             };
-                            setSettings(next);
 
-                            if (wasDefault) {
-                                try {
-                                    await saveTikTokSettings(selectedAdvertiser, { defaultTemplateName: "" });
-                                } catch (err) {
-                                    console.error("Failed to clear default template name:", err);
-                                }
+                            // Prevent the settings cache update from re-showing the save bar
+                            skipSettingsResetRef.current = true;
+                            setSettings({ ...currentSettings, ...partialUpdate });
+
+                            try {
+                                await saveTikTokSettings(selectedAdvertiser, partialUpdate);
+                            } catch (err) {
+                                console.error("Failed to delete template:", err);
+                                skipSettingsResetRef.current = false;
                             }
 
                             setInitialSettings((prev) => {
                                 if (!prev) return null;
-                                return {
-                                    ...prev,
-                                    copyTemplates: updated,
-                                    ...(wasDefault && { defaultTemplateName: "" })
-                                };
+                                return { ...prev, ...partialUpdate };
                             });
                         }}
                     />
